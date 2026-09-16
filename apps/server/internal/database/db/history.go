@@ -25,12 +25,14 @@ func (r *WatchHistoryRepository) UpsertBatch(items []models.WatchHistory) error 
 		return nil
 	}
 
-	return r.DB.Clauses(clause.OnConflict{
-		Columns: []clause.Column{
-			{Name: "account_id"},
-			{Name: "media_id"},
-			{Name: "episode_number"},
-		},
-		DoUpdates: clause.AssignmentColumns([]string{"current_time", "duration"}),
-	}).CreateInBatches(items, 50).Error
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		return tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "account_id"},
+				{Name: "media_id"},
+				{Name: "episode_number"},
+			},
+			DoUpdates: clause.AssignmentColumns([]string{"current_time", "duration"}),
+		}).CreateInBatches(items, 50).Error
+	})
 }

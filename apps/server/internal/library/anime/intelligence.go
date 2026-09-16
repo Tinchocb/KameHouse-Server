@@ -88,6 +88,19 @@ var dragonBallArcs = map[int][]arcRange{
 		{195, 199, "Torneo del Otro Mundo"},
 		{200, 291, "Saga de Majin Buu"},
 	},
+	// ─── Dragon Ball Kai (61709 / 42705) ──────────────────────────────
+	61709: {
+		{1, 17, "Saga de los Saiyajin"},
+		{18, 54, "Saga de Freezer"},
+		{55, 98, "Saga de los Androides y Cell"},
+		{99, 167, "Saga de Majin Buu"},
+	},
+	42705: {
+		{1, 17, "Saga de los Saiyajin"},
+		{18, 54, "Saga de Freezer"},
+		{55, 98, "Saga de los Androides y Cell"},
+		{99, 167, "Saga de Majin Buu"},
+	},
 	// ─── Dragon Ball GT (12697) ───────────────────────────────────────
 	12697: {
 		{1, 16, "Saga de las Esferas Definitivas"},
@@ -214,19 +227,24 @@ func (s *IntelligenceService) computeIntelligence(mediaID, episodeNum int, base 
 		intel.Tag = TagFiller
 	}
 
-	// ── Rating + Epic detection ───────────────────────────────────────
+	// ── Rating + Epic detection + Vibe derivation ────────────────────
+	var media *models.LibraryMedia
 	func() {
 		defer func() { recover() }() //nolint:errcheck
-		var media models.LibraryMedia
-		if err := s.db.Gorm().Where("id = ?", mediaID).First(&media).Error; err != nil {
-			return
+		var m models.LibraryMedia
+		if err := s.db.Gorm().Where("tmdb_id = ?", mediaID).First(&m).Error; err == nil {
+			media = &m
+		} else if err := s.db.Gorm().Where("id = ?", mediaID).First(&m).Error; err == nil {
+			media = &m
 		}
-		if media.Score > 0 {
-			intel.Rating = float64(media.Score) / 10.0
-		}
-		// Override to Epic only when not already classified as Filler.
-		if media.Score >= epicScoreThreshold && intel.Tag != TagFiller {
-			intel.Tag = TagEpic
+		if media != nil {
+			if media.Score > 0 {
+				intel.Rating = float64(media.Score) / 10.0
+			}
+			// Override to Epic only when not already classified as Filler.
+			if media.Score >= epicScoreThreshold && intel.Tag != TagFiller {
+				intel.Tag = TagEpic
+			}
 		}
 	}()
 
@@ -234,7 +252,11 @@ func (s *IntelligenceService) computeIntelligence(mediaID, episodeNum int, base 
 	intel.ArcName = resolveArc(mediaID, episodeNum)
 
 	// ── Vibe derivation ──────────────────────────────────────────────
-	intel.Vibes = s.deriveVibes(mediaID, episodeNum, base, intel)
+	if media != nil {
+		intel.Vibes = s.DeriveSeriesVibes(media)
+	} else {
+		intel.Vibes = make([]string, 0)
+	}
 
 	return intel
 }
@@ -474,10 +496,7 @@ func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHo
 	// 2. Curated Episode-level lanes by LibraryEpisode.suggested_swimlane
 	// These values exactly match the output of IntelligenceTagger.suggestSwimlane().
 	// Using LIKE '%substring%' queries so small encoding differences don't block results.
-	epNameLanes := []struct {
-		ID   string
-		Name string // exact match with the suggestSwimlane() output
-	}{
+	epNameLanes := []EpisodeLaneDef{
 		// ── Combate y Transformaciones ──────────────────────────────────────────
 		{"capitulos_imperdibles", "Capítulos Imperdibles: Las Batallas Más Épicas"},
 		{"eleva_tu_ki_ep", "¡Eleva tu Ki!: Batallas que rompieron los límites"},
@@ -528,10 +547,8 @@ func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHo
 		{"esencia_cinema_ep", "Esencia de Cinema: Películas Legendarias"},
 	}
 
-	for _, l := range epNameLanes {
-		if lane := s.buildEpisodeSwimlaneByName(l.ID, l.Name); lane != nil {
-			resp.Swimlanes = append(resp.Swimlanes, lane)
-		}
+	if batchLanes := s.buildEpisodeSwimlanesBatch(epNameLanes); len(batchLanes) > 0 {
+		resp.Swimlanes = append(resp.Swimlanes, batchLanes...)
 	}
 
 	// 2.2 Dynamic Tag-based swimlanes (Tags with >= 50 episodes)

@@ -21,7 +21,18 @@ type MediaFillerItem struct {
 // GetCachedMediaFillers will return all the media fillers (cache-first).
 // If the cache is empty, it will fetch the media fillers from the database.
 func (db *Database) GetCachedMediaFillers() (map[int]*MediaFillerItem, error) {
+	db.mediaFillerMu.RLock()
+	if db.CurrMediaFillers.IsPresent() {
+		res := db.CurrMediaFillers.MustGet()
+		db.mediaFillerMu.RUnlock()
+		return res, nil
+	}
+	db.mediaFillerMu.RUnlock()
 
+	db.mediaFillerMu.Lock()
+	defer db.mediaFillerMu.Unlock()
+
+	// Double check after acquiring write lock
 	if db.CurrMediaFillers.IsPresent() {
 		return db.CurrMediaFillers.MustGet(), nil
 	}
@@ -109,7 +120,9 @@ func (db *Database) InsertMediaFiller(
 	}
 
 	// Update the cache
+	db.mediaFillerMu.Lock()
 	db.CurrMediaFillers = mo.None[map[int]*MediaFillerItem]()
+	db.mediaFillerMu.Unlock()
 
 	return nil
 }
@@ -117,8 +130,11 @@ func (db *Database) InsertMediaFiller(
 // SaveCachedMediaFillerItems will save the cached media filler items in the database.
 // Call this function after editing the cached media filler items.
 func (db *Database) SaveCachedMediaFillerItems() error {
+	db.mediaFillerMu.RLock()
+	isAbsent := db.CurrMediaFillers.IsAbsent()
+	db.mediaFillerMu.RUnlock()
 
-	if db.CurrMediaFillers.IsAbsent() {
+	if isAbsent {
 		return nil
 	}
 
@@ -154,7 +170,9 @@ func (db *Database) SaveCachedMediaFillerItems() error {
 	}
 
 	// Update the cache
+	db.mediaFillerMu.Lock()
 	db.CurrMediaFillers = mo.None[map[int]*MediaFillerItem]()
+	db.mediaFillerMu.Unlock()
 
 	return nil
 }
@@ -177,7 +195,9 @@ func (db *Database) DeleteMediaFiller(mediaID int) error {
 	}
 
 	// Update the cache
+	db.mediaFillerMu.Lock()
 	db.CurrMediaFillers = mo.None[map[int]*MediaFillerItem]()
+	db.mediaFillerMu.Unlock()
 
 	return nil
 }

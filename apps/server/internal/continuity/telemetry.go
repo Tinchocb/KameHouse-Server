@@ -31,9 +31,12 @@ type telemetryKey struct {
 type TelemetryManager struct {
 	mu         sync.RWMutex
 	buffer     map[telemetryKey]telemetryEntry
+	manager    *Manager
 	repository *db.WatchHistoryRepository
 	ticker     *time.Ticker
 	quit       chan struct{}
+	wg         sync.WaitGroup
+	stopOnce   sync.Once
 	logger     *zerolog.Logger
 }
 
@@ -41,6 +44,7 @@ type TelemetryManager struct {
 func NewTelemetryManager(manager *Manager, logger *zerolog.Logger, flushInterval time.Duration) *TelemetryManager {
 	tm := &TelemetryManager{
 		buffer:     make(map[telemetryKey]telemetryEntry),
+		manager:    manager,
 		repository: db.NewWatchHistoryRepository(manager.db.Gorm()),
 		quit:       make(chan struct{}),
 		logger:     logger,
@@ -50,7 +54,7 @@ func NewTelemetryManager(manager *Manager, logger *zerolog.Logger, flushInterval
 	return tm
 }
 
-// UpdateProgress safely and instantly updates the memory buffer with a typed entry.
+// UpdateProgress safely and instantly updates the memory buffer and file cache.
 func (tm *TelemetryManager) UpdateProgress(accountID uint, mediaID, episodeNumber int, currentTime, duration float64) {
 	tm.mu.Lock()
 	key := telemetryKey{AccountID: accountID, MediaID: mediaID, EpisodeNumber: episodeNumber}
@@ -62,12 +66,31 @@ func (tm *TelemetryManager) UpdateProgress(accountID uint, mediaID, episodeNumbe
 		Duration:      duration,
 	}
 	tm.mu.Unlock()
+
+	// Update continuity file cache simultaneously for instant sync across endpoints
+	if tm.manager != nil {
+		_ = tm.manager.UpdateWatchHistoryItem(&UpdateWatchHistoryItemOptions{
+			CurrentTime:   currentTime,
+			Duration:      duration,
+			MediaID:       mediaID,
+			EpisodeNumber: episodeNumber,
+			Kind:          MediastreamKind,
+			Predictive:    false,
+		})
+	}
 }
 
 // Start launches the Flush Engine Background Worker.
 func (tm *TelemetryManager) Start(flushInterval time.Duration) {
 	tm.ticker = time.NewTicker(flushInterval)
+	tm.wg.Add(1)
 	go func() {
+		defer tm.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				tm.logger.Error().Interface("panic", r).Msg("telemetry: panic in background flush worker")
+			}
+		}()
 		for {
 			select {
 			case <-tm.ticker.C:
@@ -113,14 +136,17 @@ func (tm *TelemetryManager) flush() {
 			Duration:      entry.Duration,
 		})
 
-		// If ratio is >= 90%, mark the media/episode as completed
+		// If ratio is >= 90%, record the progress
 		if entry.Duration > 0 && (entry.CurrentTime/entry.Duration) >= IgnoreRatioThreshold {
-			// Convert AccountID to string (or handle appropriately since UserMediaProgress uses AnonUserId as string)
 			anonUserId := fmt.Sprintf("%d", entry.AccountID)
+			status := "watching"
+			if entry.MediaID >= 1_000_000 {
+				status = "completed"
+			}
 			completedProgress = append(completedProgress, models.UserMediaProgress{
 				AnonUserId: anonUserId,
 				MediaID:    entry.MediaID,
-				Status:     "completed",
+				Status:     status,
 				Progress:   entry.EpisodeNumber,
 			})
 		}
@@ -135,32 +161,32 @@ func (tm *TelemetryManager) flush() {
 	}
 
 	if len(completedProgress) > 0 {
-		// Update UserMediaProgress to status='completed' in db
-		// Using the repository's underlying DB (gorm.DB)
-		for _, prog := range completedProgress {
-			err := tm.repository.DB.Clauses(clause.OnConflict{
-				Columns: []clause.Column{
-					{Name: "anon_user_id"},
-					{Name: "media_id"},
-				},
-				DoUpdates: clause.AssignmentColumns([]string{"status", "progress"}),
-			}).Create(&prog).Error
-			if err != nil {
-				tm.logger.Error().Err(err).Int("mediaID", prog.MediaID).Msg("telemetry: Failed to mark media progress as completed")
-			} else {
-				tm.logger.Debug().Int("mediaID", prog.MediaID).Msg("telemetry: Automatically marked media progress as completed")
-			}
+		// Bulk Upsert in batches to avoid locking SQLite
+		err := tm.repository.DB.Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "anon_user_id"},
+				{Name: "media_id"},
+			},
+			DoUpdates: clause.AssignmentColumns([]string{"status", "progress"}),
+		}).CreateInBatches(completedProgress, 50).Error
+		if err != nil {
+			tm.logger.Error().Err(err).Msg("telemetry: Bulk media progress update failed")
+		} else {
+			tm.logger.Debug().Int("count", len(completedProgress)).Msg("telemetry: Bulk updated media progress")
 		}
 	}
 }
 
 // Stop initiates a graceful shutdown and blocks until the final synchronous flush is performed.
 func (tm *TelemetryManager) Stop() {
-	if tm.ticker != nil {
-		tm.ticker.Stop()
-	}
-	// Send signal to close the background worker
-	tm.quit <- struct{}{}
+	tm.stopOnce.Do(func() {
+		if tm.ticker != nil {
+			tm.ticker.Stop()
+		}
+		// Signal background worker to do final flush and wait for completion
+		close(tm.quit)
+		tm.wg.Wait()
+	})
 }
 
 

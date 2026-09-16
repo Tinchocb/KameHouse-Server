@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -41,6 +42,22 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	if b.Mode == "" {
 		b.Mode = "fast"
 	}
+	if b.Mode != "fast" && b.Mode != "deep" && b.Mode != "metadata" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid scan mode, expected 'fast', 'deep' or 'metadata'"))
+	}
+
+	// +---------------------+
+	// |   Concurrent Lock   |
+	// +---------------------+
+	if !globalScanActive.CompareAndSwap(false, true) {
+		return h.RespondWithCodeError(c, http.StatusConflict, errors.New("ya hay un escaneo de biblioteca en curso, por favor espera"))
+	}
+	cleanupLock := true
+	defer func() {
+		if cleanupLock {
+			globalScanActive.Store(false)
+		}
+	}()
 
 	if h.App.Settings == nil {
 		return h.RespondWithError(c, errors.New("ajustes no encontrados, por favor configura la biblioteca primero"))
@@ -91,14 +108,6 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	ffprobePath := ffmpegutil.ResolveFFprobePath(h.App.Config.Cache.Dir, customFfprobe)
 
 	// +---------------------+
-	// |   Concurrent Lock   |
-	// +---------------------+
-	
-	if !globalScanActive.CompareAndSwap(false, true) {
-		return h.RespondWithError(c, errors.New("ya hay un escaneo de biblioteca en curso, por favor espera"))
-	}
-
-	// +---------------------+
 	// |       Scanner       |
 	// +---------------------+
 
@@ -146,14 +155,20 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		BackgroundQueue:            h.App.BackgroundQueue,
 	})
 
+	cleanupLock = false
 	// EXECUTE ASYNCHRONOUSLY to prevent HTTP Timeout & 504 errors on massive scans
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				h.App.Logger.Error().Interface("panic", r).Msg("scan: panic during background library scan")
+			}
+		}()
 		defer globalScanActive.Store(false)
 		defer scanLogger.Done()
 
 		// Timeout safety: if any external API or DB call hangs indefinitely,
-		// globalScanActive would never be reset without this.
-		scanCtx, scanCancel := context.WithTimeout(context.Background(), 2*time.Hour)
+		// globalScanActive would never be reset without this. Also cancels immediately on shutdown.
+		scanCtx, scanCancel := context.WithTimeout(h.App.ShutdownCtx(), 2*time.Hour)
 		defer scanCancel()
 
 		allLfs, err := sc.Scan(scanCtx)
@@ -191,7 +206,14 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 					paths = append(paths, lf.Path)
 				}
 			}
-			go h.App.MediastreamRepository.WarmMediaInfo(paths)
+			go func(p []string) {
+				defer func() {
+					if r := recover(); r != nil {
+						h.App.Logger.Warn().Interface("panic", r).Msg("scan: panic during WarmMediaInfo")
+					}
+				}()
+				h.App.MediastreamRepository.WarmMediaInfo(p)
+			}(paths)
 		}
 
 		// Save the scan summary
@@ -200,12 +222,12 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		// Force WAL checkpoint to consolidate WAL changes to main DB
 		h.App.Database.Gorm().Exec("PRAGMA wal_checkpoint(PASSIVE);")
 
-		// Background maintenance tasks
-		go func() {
-			ClearLibraryCollectionCache()
-			anime.InvalidateCuratedHomeCache()
-			_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
-		}()
+		// Post-scan maintenance tasks executed under scanCtx before clearing scan lock
+		ClearLibraryCollectionCache()
+		anime.InvalidateCuratedHomeCache()
+		if h.App.Metadata.Platform != nil {
+			_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(scanCtx)
+		}
 	}()
 
 	// Respond immediately (202 Accepted logic). 

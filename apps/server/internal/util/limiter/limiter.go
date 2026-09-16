@@ -12,6 +12,11 @@ func NewPlatformLimiter() *Limiter {
 	return NewLimiter(10*time.Second, 5)
 }
 
+// NewJikanLimiter creates a rate limiter for Jikan API (e.g. 3 req per 1s)
+func NewJikanLimiter() *Limiter {
+	return NewLimiter(1*time.Second, 3)
+}
+
 // NewTmdbLimiter creates a rate limiter for TMDB (e.g. 50 req per 1s, TMDB default)
 func NewTmdbLimiter() *Limiter {
 	return NewLimiter(1*time.Second, 50)

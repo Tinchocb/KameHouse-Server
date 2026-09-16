@@ -176,20 +176,28 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 	}()
 
 	localFiles := make([]*dto.LocalFile, 0, len(paths))
+	total := len(paths)
+	lastEventTime := time.Now()
+
 	for lf := range results {
 		if lf != nil {
 			localFiles = append(localFiles, lf)
+			current := len(localFiles)
 
 			if scn.EventDispatcher != nil {
-				scn.EventDispatcher.Publish(events.Event{
-					Topic: "library.scan",
-					Payload: map[string]any{
-						"status":  "PROCESSING",
-						"current": len(localFiles),
-						"total":   len(paths),
-						"file":    lf.Name,
-					},
-				})
+				shouldPublish := current == 1 || current == total || current%25 == 0 || time.Since(lastEventTime) > 200*time.Millisecond
+				if shouldPublish {
+					scn.EventDispatcher.Publish(events.Event{
+						Topic: "library.scan",
+						Payload: map[string]any{
+							"status":  "PROCESSING",
+							"current": current,
+							"total":   total,
+							"file":    lf.Name,
+						},
+					})
+					lastEventTime = time.Now()
+				}
 			}
 		}
 	}

@@ -9,16 +9,36 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream"
+	"kamehouse/internal/util"
 	"kamehouse/internal/util/ffmpegutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+
+
+var (
+	jikanHTTPClient = &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:     30 * time.Second,
+		},
+	}
+	jikanSingleFlight singleflight.Group
+)
+
+
 
 // HandleGetMediastreamSettings returns the mediastream settings.
 //
@@ -102,6 +122,33 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	if b.Path == "" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("path parameter is required"))
+	}
+	if strings.HasPrefix(b.Path, "http://") || strings.HasPrefix(b.Path, "https://") {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("remote URLs are not allowed for local playback"))
+	}
+	if _, err := os.Stat(b.Path); os.IsNotExist(err) {
+		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media file not found"))
+	}
+
+	// Prevent path traversal: ensure the file is within configured library directories
+	// Deny-by-default: si no hay librerías o falla la DB, denegar (antes fail-open).
+	libPaths, libErr := h.App.Database.GetAllLibraryPathsFromSettings()
+	if libErr != nil || len(libPaths) == 0 {
+		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("library not available"))
+	}
+	allowed := false
+	for _, lp := range libPaths {
+		if util.IsFileUnderDir(lp, b.Path) {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied: file is not within configured library folders"))
+	}
+
 	var mediaContainer *mediastream.MediaContainer
 	var err error
 
@@ -117,6 +164,16 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	}
 	if err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	if mediaContainer != nil && h.App.Config != nil && h.App.Config.Server.Password != "" {
+		if token, tokenErr := h.App.GetServerPasswordHMACAuth().GenerateToken("*"); tokenErr == nil {
+			sep := "?"
+			if strings.Contains(mediaContainer.StreamURL, "?") {
+				sep = "&"
+			}
+			mediaContainer.StreamURL += sep + "token=" + token
+		}
 	}
 
 	return h.RespondWithData(c, mediaContainer)
@@ -141,6 +198,33 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 	if err := c.Bind(&b); err != nil {
 		return h.RespondWithError(c, err)
 	}
+
+	if b.Path == "" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("path parameter is required"))
+	}
+	if strings.HasPrefix(b.Path, "http://") || strings.HasPrefix(b.Path, "https://") {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("remote URLs are not allowed for local playback"))
+	}
+	if _, err := os.Stat(b.Path); os.IsNotExist(err) {
+		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media file not found"))
+	}
+
+	// Prevent path traversal: ensure the file is within configured library directories
+	libPaths, libErr := h.App.Database.GetAllLibraryPathsFromSettings()
+	if libErr != nil || len(libPaths) == 0 {
+		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("library not available"))
+	}
+	allowed := false
+	for _, lp := range libPaths {
+		if util.IsFileUnderDir(lp, b.Path) {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied: file is not within configured library folders"))
+	}
+
 
 	var err error
 
@@ -258,9 +342,22 @@ func (h *Handler) HandleGetEpisodeSkipTimes(c echo.Context) error {
 	malIdStr := c.QueryParam("malId")
 	episodeNumStr := c.QueryParam("episodeNumber")
 
-	mediaId, _ := strconv.Atoi(mediaIdStr)
-	malId, _ := strconv.Atoi(malIdStr)
-	episodeNum, _ := strconv.Atoi(episodeNumStr)
+	var mediaId, malId, episodeNum int
+	if mediaIdStr != "" {
+		if v, err := strconv.Atoi(mediaIdStr); err == nil && v > 0 {
+			mediaId = v
+		}
+	}
+	if malIdStr != "" {
+		if v, err := strconv.Atoi(malIdStr); err == nil && v > 0 {
+			malId = v
+		}
+	}
+	if episodeNumStr != "" {
+		if v, err := strconv.Atoi(episodeNumStr); err == nil && v > 0 {
+			episodeNum = v
+		}
+	}
 
 	// Resolve mediaId if malId is provided instead
 	if mediaId == 0 && malId > 0 {
@@ -270,8 +367,8 @@ func (h *Handler) HandleGetEpisodeSkipTimes(c echo.Context) error {
 		}
 	}
 
-	if mediaId == 0 || episodeNum == 0 {
-		return h.RespondWithError(c, fmt.Errorf("invalid mediaId/malId or episodeNumber"))
+	if mediaId <= 0 || episodeNum <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid mediaId/malId or episodeNumber"))
 	}
 
 	var skipTime models.EpisodeSkipTime
@@ -295,7 +392,12 @@ func (h *Handler) HandleGetEpisodeSkipTimes(c echo.Context) error {
 			// próximo episodio sin marcas). Solo entonces marcamos attempted.
 			if d := h.App.SkipDetector; d != nil && h.autoDetectSkipTimesEnabled() && !d.IsScanning(mediaId) && !h.transcodeActive() && d.MarkAttemptedOnce(mediaId) {
 				go func(id int) {
-					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+					defer func() {
+						if r := recover(); r != nil {
+							h.App.Logger.Error().Interface("panic", r).Int("mediaId", id).Msg("mediastream: panic in opportunistic skip-time scan")
+						}
+					}()
+					ctx, cancel := context.WithTimeout(h.App.ShutdownCtx(), 30*time.Minute)
 					defer cancel()
 					if err := d.ScanSeries(ctx, id); err != nil {
 						h.App.Logger.Debug().Err(err).Int("mediaId", id).Msg("mediastream: scan oportunista de skip times falló")
@@ -521,7 +623,12 @@ func (h *Handler) HandleScanEpisodeSkipTimes(c echo.Context) error {
 
 	// Async para no bloquear el request HTTP: un scan puede tardar minutos.
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer func() {
+			if r := recover(); r != nil {
+				h.App.Logger.Error().Interface("panic", r).Int("mediaId", b.MediaID).Msg("mediastream: panic in auto skip-time scan")
+			}
+		}()
+		ctx, cancel := context.WithTimeout(h.App.ShutdownCtx(), 30*time.Minute)
 		defer cancel()
 		if err := detector.ScanSeries(ctx, b.MediaID); err != nil {
 			h.App.Logger.Error().Err(err).Int("mediaId", b.MediaID).Msg("mediastream: auto skip-time scan failed")
@@ -548,7 +655,12 @@ func (h *Handler) HandleScanAllSkipTimes(c echo.Context) error {
 	// Async y sin timeout global: una biblioteca grande puede tardar horas; cada
 	// serie ya tiene su propio timeout dentro de ScanLibrary.
 	go func() {
-		if err := detector.ScanLibrary(context.Background()); err != nil {
+		defer func() {
+			if r := recover(); r != nil {
+				h.App.Logger.Error().Interface("panic", r).Msg("mediastream: panic in library-wide skip-time scan")
+			}
+		}()
+		if err := detector.ScanLibrary(h.App.ShutdownCtx()); err != nil {
 			h.App.Logger.Error().Err(err).Msg("mediastream: library-wide skip-time scan failed")
 		}
 	}()
@@ -563,9 +675,9 @@ func (h *Handler) HandleScanAllSkipTimes(c echo.Context) error {
 //	@route /api/v1/mediastream/skip-times/resolve-mal [GET]
 func (h *Handler) HandleResolveMAL(c echo.Context) error {
 	mediaIdStr := c.QueryParam("mediaId")
-	mediaId, _ := strconv.Atoi(mediaIdStr)
-	if mediaId == 0 {
-		return h.RespondWithError(c, fmt.Errorf("invalid mediaId"))
+	mediaId, err := strconv.Atoi(mediaIdStr)
+	if err != nil || mediaId <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive mediaId is required"))
 	}
 
 	// mediaId es el id EXTERNO (derivado de TMDB), no la PK de library_media:
@@ -613,9 +725,16 @@ func (h *Handler) HandleResolveMAL(c echo.Context) error {
 	}
 
 	if searchTitle != "" {
-		reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&limit=1", url.QueryEscape(searchTitle))
-		resp, err := http.Get(reqUrl)
-		if err == nil {
+		res, sfErr, _ := jikanSingleFlight.Do(searchTitle, func() (interface{}, error) {
+			reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&limit=1", url.QueryEscape(searchTitle))
+			req, err := http.NewRequestWithContext(c.Request().Context(), http.MethodGet, reqUrl, nil)
+			if err != nil {
+				return 0, err
+			}
+			resp, err := jikanHTTPClient.Do(req)
+			if err != nil {
+				return 0, err
+			}
 			defer resp.Body.Close()
 			var jikanResp struct {
 				Data []struct {
@@ -623,14 +742,19 @@ func (h *Handler) HandleResolveMAL(c echo.Context) error {
 				} `json:"data"`
 			}
 			if err := json.NewDecoder(resp.Body).Decode(&jikanResp); err == nil && len(jikanResp.Data) > 0 {
-				malId := jikanResp.Data[0].MalId
-				if malId > 0 {
-					db.UpdateLibraryMediaMappings(h.App.Database, lm.ID, lm.AnidbId, malId)
-					return h.RespondWithData(c, map[string]interface{}{"malId": malId})
-				}
+				return jikanResp.Data[0].MalId, nil
+			}
+			return 0, errors.New("no mal_id found")
+		})
+
+		if sfErr == nil {
+			if malId, ok := res.(int); ok && malId > 0 {
+				db.UpdateLibraryMediaMappings(h.App.Database, lm.ID, lm.AnidbId, malId)
+				return h.RespondWithData(c, map[string]interface{}{"malId": malId})
 			}
 		}
 	}
+
 
 	return h.RespondWithData(c, map[string]interface{}{"malId": nil})
 }
@@ -660,7 +784,12 @@ func (h *Handler) HandleGetFFmpegStatus(c echo.Context) error {
 //	@route /api/v1/mediastream/ffmpeg/install [POST]
 func (h *Handler) HandleInstallFFmpeg(c echo.Context) error {
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		defer func() {
+			if r := recover(); r != nil {
+				h.App.Logger.Error().Interface("panic", r).Msg("mediastream: panic installing FFmpeg binaries")
+			}
+		}()
+		ctx, cancel := context.WithTimeout(h.App.ShutdownCtx(), 15*time.Minute)
 		defer cancel()
 
 		err := h.App.FFmpegManager.EnsureBinaries(ctx, func(pct int, msg string) {

@@ -48,10 +48,13 @@ func nvencCapFromEnv() int {
 // NewGovernor creates a governor with max concurrency
 func NewGovernor(maxConcurrency int, hwAccelEnabled bool, logger *zerolog.Logger) *Governor {
 	if maxConcurrency <= 0 {
+		numCPU := runtime.NumCPU()
 		if hwAccelEnabled {
-			maxConcurrency = max(runtime.NumCPU(), 6) // lowered default to not overcommit CPU when spilling
+			// En hardware acelerado, permitir hasta 2x cores pero con un piso sensato y techo razonable
+			maxConcurrency = min(max(numCPU, 2), 6)
 		} else {
-			maxConcurrency = max(runtime.NumCPU(), 1)
+			// En codificación por software puro, no saturar todos los núcleos para que Echo y SQLite respondan
+			maxConcurrency = max(numCPU-1, 1)
 		}
 	}
 	
@@ -91,11 +94,14 @@ func (g *Governor) TryAcquireNVENC(reserve int) (func(), bool) {
 		g.mu.Lock()
 		g.stats.ActiveNVENC++
 		g.mu.Unlock()
+		var once sync.Once
 		return func() {
-			g.mu.Lock()
-			g.stats.ActiveNVENC--
-			g.mu.Unlock()
-			<-g.nvencSem
+			once.Do(func() {
+				g.mu.Lock()
+				g.stats.ActiveNVENC--
+				g.mu.Unlock()
+				<-g.nvencSem
+			})
 		}, true
 	default:
 		return nil, false
@@ -130,13 +136,16 @@ func (g *Governor) Acquire(ctx context.Context) (release func(), err error) {
 			Msg("cassette/governor: slot acquired after wait")
 	}
 
+	var once sync.Once
 	return func() {
-		remaining := g.active.Add(-1)
-		g.mu.Lock()
-		g.stats.TotalCompleted++
-		g.stats.ActiveProcesses = remaining
-		g.mu.Unlock()
-		<-g.sem
+		once.Do(func() {
+			remaining := g.active.Add(-1)
+			g.mu.Lock()
+			g.stats.TotalCompleted++
+			g.stats.ActiveProcesses = remaining
+			g.mu.Unlock()
+			<-g.sem
+		})
 	}, nil
 }
 

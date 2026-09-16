@@ -45,7 +45,7 @@ func TestSettingsPersistence(t *testing.T) {
 	}
 
 	// Reset global state cache to ensure we fetch from GORM
-	CurrSettings = nil
+	currSettings.Store(nil)
 
 	// 2. Perform the Upsert operation
 	savedSettings, err := database.UpsertSettings(testSettings)
@@ -62,7 +62,7 @@ func TestSettingsPersistence(t *testing.T) {
 	}
 
 	// 3. Clear cache and retrieve settings from the database again
-	CurrSettings = nil
+	currSettings.Store(nil)
 	retrievedSettings, err := database.GetSettings()
 	if err != nil {
 		t.Fatalf("Failed to retrieve settings: %v", err)

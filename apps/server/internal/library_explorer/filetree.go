@@ -346,19 +346,26 @@ func (l *LibraryExplorer) hydrateLocalFileData(tree *FileTree) (map[string]*dto.
 func (l *LibraryExplorer) hydrateLocalFileDataDirect(tree *FileTree, localFiles []*dto.LocalFile) map[string]*dto.LocalFile {
 	// Create a map for quick LocalFile lookup by normalized path
 	localFileMap := make(map[string]*dto.LocalFile)
+	// Also group by parent directory for O(1) directory→files lookup
+	dirToFiles := make(map[string][]*dto.LocalFile)
 	for _, lf := range localFiles {
 		normalizedPath := util.NormalizePath(lf.Path)
 		localFileMap[normalizedPath] = lf
+		parentDir := util.NormalizePath(filepath.Dir(lf.Path))
+		if !strings.HasSuffix(parentDir, "/") {
+			parentDir += "/"
+		}
+		dirToFiles[parentDir] = append(dirToFiles[parentDir], lf)
 	}
 
 	// Recursively hydrate the tree
-	l.hydrateNode(tree.Root, localFileMap)
+	l.hydrateNode(tree.Root, localFileMap, dirToFiles)
 
 	return localFileMap
 }
 
 // hydrateNode recursively hydrates a node and its children with local file data
-func (l *LibraryExplorer) hydrateNode(node *FileTreeNode, localFileMap map[string]*dto.LocalFile) {
+func (l *LibraryExplorer) hydrateNode(node *FileTreeNode, localFileMap map[string]*dto.LocalFile, dirToFiles map[string][]*dto.LocalFile) {
 	// Clear existing media IDs
 	node.MediaIds = make([]int, 0)
 	mediaIdSet := make(map[int]struct{})
@@ -379,7 +386,7 @@ func (l *LibraryExplorer) hydrateNode(node *FileTreeNode, localFileMap map[strin
 	} else {
 		// For directory nodes, collect media IDs from children if they are loaded
 		for _, child := range node.Children {
-			l.hydrateNode(child, localFileMap)
+			l.hydrateNode(child, localFileMap, dirToFiles)
 			// Collect media IDs from children
 			for _, mediaID := range child.MediaIds {
 				mediaIdSet[mediaID] = struct{}{}
@@ -391,8 +398,21 @@ func (l *LibraryExplorer) hydrateNode(node *FileTreeNode, localFileMap map[strin
 		}
 
 		// Additionally, collect media IDs from local files that are under this directory
-		// even if children haven't been loaded yet
-		l.hydrateDirectoryMediaIds(node, localFileMap, mediaIdSet, localFileSet)
+		// even if children haven't been loaded yet - O(1) via dirToFiles index.
+		normalizedDirPath := node.NormalizedPath
+		if !strings.HasSuffix(normalizedDirPath, "/") {
+			normalizedDirPath += "/"
+		}
+		if files := dirToFiles[normalizedDirPath]; len(files) > 0 {
+			for _, localFile := range files {
+				if !localFile.Ignored && localFile.MediaID > 0 {
+					mediaIdSet[localFile.MediaID] = struct{}{}
+				}
+				if !localFile.Ignored {
+					localFileSet[localFile.GetNormalizedPath()] = localFile
+				}
+			}
+		}
 
 		// Convert set to slice and sort
 		node.MediaIds = make([]int, 0, len(mediaIdSet))
@@ -405,29 +425,6 @@ func (l *LibraryExplorer) hydrateNode(node *FileTreeNode, localFileMap map[strin
 		node.LocalFiles = make([]*dto.LocalFile, 0, len(localFileSet))
 		for _, localFile := range localFileSet {
 			node.LocalFiles = append(node.LocalFiles, localFile)
-		}
-	}
-}
-
-// hydrateDirectoryMediaIds collects MediaIds from local files under a directory path
-func (l *LibraryExplorer) hydrateDirectoryMediaIds(dirNode *FileTreeNode, localFileMap map[string]*dto.LocalFile, mediaIdSet map[int]struct{}, localFileSet map[string]*dto.LocalFile) {
-	normalizedDirPath := dirNode.NormalizedPath
-
-	// Ensure directory path ends with a separator for proper matching
-	if !strings.HasSuffix(normalizedDirPath, "/") {
-		normalizedDirPath += "/"
-	}
-
-	// Iterate through all local files to find ones under this directory
-	for localFilePath, localFile := range localFileMap {
-		// Check if this local file is under the current directory
-		if strings.HasPrefix(localFilePath, normalizedDirPath) {
-			if !localFile.Ignored && localFile.MediaID > 0 {
-				mediaIdSet[localFile.MediaID] = struct{}{}
-			}
-			if !localFile.Ignored {
-				localFileSet[localFilePath] = localFile
-			}
 		}
 	}
 }

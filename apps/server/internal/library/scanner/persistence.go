@@ -11,6 +11,7 @@ import (
 	librarymetadata "kamehouse/internal/library/metadata"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -44,10 +45,17 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 	// titles and description of records that were already enriched.
 	alreadyPersisted := make(map[string]bool)
 	if scn.Database != nil && len(allTmdbIds) > 0 {
-		var persisted []*models.LibraryMedia
-		scn.Database.Gorm().Where("tmdb_id IN ?", allTmdbIds).Find(&persisted)
-		for _, m := range persisted {
-			alreadyPersisted[fmt.Sprintf("%d_%s", m.TmdbID, m.Type)] = true
+		for i := 0; i < len(allTmdbIds); i += 500 {
+			end := i + 500
+			if end > len(allTmdbIds) {
+				end = len(allTmdbIds)
+			}
+			chunk := allTmdbIds[i:end]
+			var persisted []*models.LibraryMedia
+			scn.Database.Gorm().Where("tmdb_id IN ?", chunk).Find(&persisted)
+			for _, m := range persisted {
+				alreadyPersisted[fmt.Sprintf("%d_%s", m.TmdbID, m.Type)] = true
+			}
 		}
 	}
 
@@ -73,13 +81,13 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			if isMovie {
 				if mRes, err := scn.TMDBClient.GetMovieDetails(ctx, strconv.Itoa(realTmdbId)); err == nil && mRes != nil {
-					nm = librarymetadata.TmdbMovieDetailsToNormalizedMedia(mRes)
+					nm = librarymetadata.TmdbMovieDetailsToNormalizedMedia(mRes, "")
 					normalizedMap[id] = nm
 					hasNM = true
 				}
 			} else {
 				if tRes, err := scn.TMDBClient.GetTVDetails(ctx, strconv.Itoa(realTmdbId)); err == nil && tRes != nil {
-					nm = librarymetadata.TmdbTVDetailsToNormalizedMedia(tRes)
+					nm = librarymetadata.TmdbTVDetailsToNormalizedMedia(tRes, "")
 					normalizedMap[id] = nm
 					hasNM = true
 				}
@@ -124,6 +132,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			} else if isMovie {
 				newMedia.TotalEpisodes = 1
 			}
+			if (newMedia.TmdbID == 61709 || newMedia.TmdbID == 42705) && newMedia.TotalEpisodes < 167 {
+				newMedia.TotalEpisodes = 167
+			}
 			if nm.CoverImage != nil && nm.CoverImage.Large != nil {
 				newMedia.PosterImage = *nm.CoverImage.Large
 			}
@@ -167,16 +178,33 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			newMedia.SuggestedSwimlane = analysis.SuggestedSwimlane
 		}
 
-		// Fallback to offline Dragon Ball pre-hydrated catalog if poster or description is still empty
-		if newMedia.PosterImage == "" || newMedia.Description == "" {
-			if pre := CreatePrehydratedDragonBallMedia(id); pre != nil {
-				if newMedia.TitleSpanish == "" && pre.Title.Spanish != nil {
+		isGenericSpanish := newMedia.TitleSpanish == "" ||
+			strings.EqualFold(newMedia.TitleSpanish, "Dragon Ball Serie") ||
+			strings.EqualFold(newMedia.TitleSpanish, "Dragon Ball Series")
+
+		isEnglishDescription := newMedia.Description != "" && (
+			strings.HasPrefix(strings.ToLower(newMedia.Description), "five years after") ||
+			strings.HasPrefix(strings.ToLower(newMedia.Description), "the ") ||
+			strings.HasPrefix(strings.ToLower(newMedia.Description), "after ") ||
+			strings.HasPrefix(strings.ToLower(newMedia.Description), "during ") ||
+			strings.HasPrefix(strings.ToLower(newMedia.Description), "goku and his friends ") ||
+			strings.HasPrefix(strings.ToLower(newMedia.Description), "a ") ||
+			strings.HasPrefix(strings.ToLower(newMedia.Description), "with "))
+
+		// Fallback to offline Dragon Ball pre-hydrated catalog if poster, description or Spanish title is missing/generic/English
+		if newMedia.PosterImage == "" || newMedia.Description == "" || isGenericSpanish || isEnglishDescription {
+			lookupID := id
+			if isMovie && lookupID < 1_000_000 {
+				lookupID += 1_000_000
+			}
+			if pre := CreatePrehydratedDragonBallMedia(lookupID); pre != nil {
+				if (isGenericSpanish || newMedia.TitleSpanish == "") && pre.Title != nil && pre.Title.Spanish != nil {
 					newMedia.TitleSpanish = *pre.Title.Spanish
 				}
-				if newMedia.TitleEnglish == "" && pre.Title.English != nil {
+				if newMedia.TitleEnglish == "" && pre.Title != nil && pre.Title.English != nil {
 					newMedia.TitleEnglish = *pre.Title.English
 				}
-				if newMedia.TitleRomaji == "" && pre.Title.Romaji != nil {
+				if newMedia.TitleRomaji == "" && pre.Title != nil && pre.Title.Romaji != nil {
 					newMedia.TitleRomaji = *pre.Title.Romaji
 				}
 				if newMedia.PosterImage == "" && pre.CoverImage != nil && pre.CoverImage.Large != nil {
@@ -185,7 +213,7 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 				if newMedia.BannerImage == "" && pre.BannerImage != nil {
 					newMedia.BannerImage = *pre.BannerImage
 				}
-				if newMedia.Description == "" && pre.Description != nil {
+				if (newMedia.Description == "" || isEnglishDescription) && pre.Description != nil && *pre.Description != "" {
 					newMedia.Description = *pre.Description
 				}
 				if newMedia.TotalEpisodes == 0 && pre.Episodes != nil {
@@ -233,7 +261,16 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 	// above still need their association with local files.
 	if upsertOk && scn.Database != nil && len(allTmdbIds) > 0 {
 		var insertedMedia []*models.LibraryMedia
-		scn.Database.Gorm().Where("tmdb_id IN ?", allTmdbIds).Find(&insertedMedia)
+		for i := 0; i < len(allTmdbIds); i += 500 {
+			end := i + 500
+			if end > len(allTmdbIds) {
+				end = len(allTmdbIds)
+			}
+			chunk := allTmdbIds[i:end]
+			var chunkMedia []*models.LibraryMedia
+			scn.Database.Gorm().Where("tmdb_id IN ?", chunk).Find(&chunkMedia)
+			insertedMedia = append(insertedMedia, chunkMedia...)
+		}
 
 		scn.Logger.Debug().Int("insertedCount", len(insertedMedia)).Msg("scanner: Retrieved persisted LibraryMedia records")
 

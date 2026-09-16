@@ -18,18 +18,6 @@ func StringToInt(str string) (int, bool) {
 	return i, true
 }
 
-func StringToIntMust(str string) int {
-	dotIndex := strings.IndexByte(str, '.')
-	if dotIndex != -1 {
-		str = str[:dotIndex]
-	}
-	i, err := strconv.Atoi(str)
-	if err != nil {
-		return 0
-	}
-	return i
-}
-
 // Ordinal returns the ordinal string for a specific integer.
 func toOrdinal(number int) string {
 	absNumber := int(math.Abs(float64(number)))

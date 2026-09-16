@@ -1,6 +1,7 @@
 package mediastream
 
 import (
+	"bufio"
 	"encoding/binary"
 	"fmt"
 	"image/png"
@@ -33,60 +34,39 @@ func ParseSupFile(path string) ([]*PgsEvent, error) {
 	}
 	defer file.Close()
 
+	br := bufio.NewReaderSize(file, 128*1024)
 	decoder := pgs.NewPgsDecoder()
 	var events []*PgsEvent
 	var lastEvent *PgsEvent
 
+	// Header buffer: 2 bytes magic + 4 PTS + 4 DTS + 1 segType + 2 segSize = 13 bytes
+	var header [13]byte
+
 	for {
-		// Read Magic
-		magic := make([]byte, 2)
-		if _, err := io.ReadFull(file, magic); err != nil {
+		if _, err := io.ReadFull(br, header[:]); err != nil {
 			if err == io.EOF {
 				break
 			}
 			return nil, err
 		}
-		if magic[0] != 0x50 || magic[1] != 0x47 { // 'P', 'G'
-			return nil, fmt.Errorf("invalid sup magic: %x %x", magic[0], magic[1])
+
+		if header[0] != 0x50 || header[1] != 0x47 { // 'P', 'G'
+			return nil, fmt.Errorf("invalid sup magic: %x %x", header[0], header[1])
 		}
 
-		// Read PTS (4 bytes)
-		ptsBytes := make([]byte, 4)
-		if _, err := io.ReadFull(file, ptsBytes); err != nil {
+		pts := binary.BigEndian.Uint32(header[2:6])
+		segType := header[10]
+		size := binary.BigEndian.Uint16(header[11:13])
+
+		// Single packet buffer: segType(1) + segSize(2) + data(size)
+		packet := make([]byte, 3+int(size))
+		packet[0] = segType
+		packet[1] = header[11]
+		packet[2] = header[12]
+
+		if _, err := io.ReadFull(br, packet[3:]); err != nil {
 			return nil, err
 		}
-		pts := binary.BigEndian.Uint32(ptsBytes)
-
-		// Read DTS (4 bytes)
-		dtsBytes := make([]byte, 4)
-		if _, err := io.ReadFull(file, dtsBytes); err != nil {
-			return nil, err
-		}
-
-		// Read Segment Type (1 byte)
-		segType := make([]byte, 1)
-		if _, err := io.ReadFull(file, segType); err != nil {
-			return nil, err
-		}
-
-		// Read Segment Size (2 bytes)
-		segSize := make([]byte, 2)
-		if _, err := io.ReadFull(file, segSize); err != nil {
-			return nil, err
-		}
-		size := binary.BigEndian.Uint16(segSize)
-
-		// Read Segment Data
-		data := make([]byte, size)
-		if _, err := io.ReadFull(file, data); err != nil {
-			return nil, err
-		}
-
-		// Reconstruct raw packet for pgs.DecodePacket: type(1) + size(2) + data(size)
-		packet := make([]byte, 3+size)
-		packet[0] = segType[0]
-		copy(packet[1:3], segSize)
-		copy(packet[3:], data)
 
 		startTime := float64(pts) / 90000.0
 

@@ -475,6 +475,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 
 		nfoJobs := make(chan *dto.LocalFile, 100)
 		go func() {
+			defer close(nfoJobs)
 			for _, lf := range localFiles {
 				select {
 				case <-ctx.Done():
@@ -482,7 +483,6 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 				case nfoJobs <- lf:
 				}
 			}
-			close(nfoJobs)
 		}()
 
 		// ── Worker pool: pure CPU/IO — no DB calls ────────────────────────────

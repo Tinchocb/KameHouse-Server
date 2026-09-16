@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"kamehouse/internal/database/models"
 	"net/http"
 
@@ -18,9 +19,12 @@ type SaveProgressRequest struct {
 func (h *Handler) HandleGetProgress(c echo.Context) error {
 	clientIDRaw := c.Get("KameHouse-Client-Id")
 	if clientIDRaw == nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing client id"})
+		return h.RespondWithCodeError(c, http.StatusUnauthorized, errors.New("missing client id"))
 	}
-	clientID := clientIDRaw.(string)
+	clientID, ok := clientIDRaw.(string)
+	if !ok || clientID == "" {
+		return h.RespondWithCodeError(c, http.StatusUnauthorized, errors.New("invalid client id"))
+	}
 
 	var progress []models.UserMediaProgress
 	if err := h.App.Database.Gorm().Where("anon_user_id = ?", clientID).Find(&progress).Error; err != nil {
@@ -34,17 +38,20 @@ func (h *Handler) HandleGetProgress(c echo.Context) error {
 func (h *Handler) HandleSaveProgress(c echo.Context) error {
 	clientIDRaw := c.Get("KameHouse-Client-Id")
 	if clientIDRaw == nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing client id"})
+		return h.RespondWithCodeError(c, http.StatusUnauthorized, errors.New("missing client id"))
 	}
-	clientID := clientIDRaw.(string)
+	clientID, ok := clientIDRaw.(string)
+	if !ok || clientID == "" {
+		return h.RespondWithCodeError(c, http.StatusUnauthorized, errors.New("invalid client id"))
+	}
 
 	var req SaveProgressRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid request body"))
 	}
 
 	if req.MediaID == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "mediaID is required"})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("mediaID is required"))
 	}
 
 	var progress models.UserMediaProgress

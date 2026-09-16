@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -16,6 +17,23 @@ import (
 	"golang.org/x/text/language"
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
+
+var (
+	ffprobePathMu      sync.Mutex
+	currentFfprobePath string
+)
+
+func SetGlobalFFProbePath(path string) {
+	if path == "" {
+		return
+	}
+	ffprobePathMu.Lock()
+	defer ffprobePathMu.Unlock()
+	if currentFfprobePath != path {
+		currentFfprobePath = path
+		ffprobe.SetFFProbeBinPath(path)
+	}
+}
 
 type MediaInfo struct {
 	// The sha1 of the video file
@@ -209,7 +227,7 @@ func (e *MediaInfoExtractor) GetInfo(ffprobePath, path string) (mi *MediaInfo, e
 func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 
 	if ffprobePath != "" {
-		ffprobe.SetFFProbeBinPath(ffprobePath)
+		SetGlobalFFProbePath(ffprobePath)
 	}
 
 	ffprobeCtx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
@@ -220,7 +238,7 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 		return nil, err
 	}
 
-	ext := filepath.Ext(path)[1:]
+	ext := strings.TrimPrefix(filepath.Ext(path), ".")
 
 	sizeUint64, _ := strconv.ParseUint(data.Format.Size, 10, 64)
 

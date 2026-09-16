@@ -15,6 +15,7 @@ import (
 	"kamehouse/internal/util/result"
 	"net/http"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
@@ -96,8 +97,8 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mID int) (
 func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 	idParam := c.Param("id")
 	mID, err := strconv.Atoi(idParam)
-	if err != nil {
-		return h.RespondWithError(c, err)
+	if err != nil || mID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive anime media id is required"))
 	}
 
 	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, mID)
@@ -123,8 +124,8 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 func (h *Handler) HandleGetAnimeEntryLocalFiles(c echo.Context) error {
 	idParam := c.Param("id")
 	mID, err := strconv.Atoi(idParam)
-	if err != nil {
-		return h.RespondWithError(c, err)
+	if err != nil || mID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive anime media id is required"))
 	}
 
 	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, mID)
@@ -433,25 +434,6 @@ func (h *Handler) HandleAnimeEntryUnmatch(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleDeletePlatformEntry will delete the given media entry from Platform.
-func (h *Handler) HandleDeletePlatformEntry(c echo.Context) error {
-	type body struct {
-		MediaID int `json:"mediaId"`
-	}
-	b := new(body)
-	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Delete the entry from the user's collection
-	if err := h.App.Metadata.Platform.DeleteEntry(c.Request().Context(), b.MediaID, b.MediaID); err != nil {
-		return h.RespondWithError(c, errors.New("error: Platform responded with an error, this is most likely a rate limit issue"))
-	}
-	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
-
-	return h.RespondWithData(c, true)
-}
-
 
 
 // HandleGetMissingEpisodes returns a list of missing episodes.
@@ -476,23 +458,6 @@ func (h *Handler) HandleGetMissingEpisodes(c echo.Context) error {
 	})
 
 	return h.RespondWithData(c, missing)
-}
-
-// HandleSilenceMissingEpisodes will silence the missing episodes for the given media.
-func (h *Handler) HandleSilenceMissingEpisodes(c echo.Context) error {
-	type body struct {
-		MediaID int `json:"mediaId"`
-	}
-	b := new(body)
-	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if err := h.App.Database.InsertSilencedMediaEntry(uint(b.MediaID)); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	return h.RespondWithData(c, true)
 }
 
 // HandleGetUpcomingEpisodes returns a list of upcoming episodes.
@@ -524,10 +489,17 @@ func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
 	}
 	var b body
 	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
 	}
-	if b.MediaID == 0 {
-		return c.JSON(http.StatusBadRequest, NewErrorResponse(fmt.Errorf("mediaID is required")))
+	if b.MediaID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive mediaId is required"))
+	}
+
+	validActions := map[string]bool{
+		"lock": true, "unlock": true, "ignore": true, "unignore": true,
+	}
+	if !validActions[b.Action] {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid action, expected 'lock', 'unlock', 'ignore', or 'unignore'"))
 	}
 
 	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, b.MediaID)
@@ -564,7 +536,10 @@ func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
 	}
 	var b body
 	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
+	}
+	if b.MediaID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive mediaId is required"))
 	}
 
 	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, b.MediaID)
@@ -574,29 +549,31 @@ func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
 
 	var targetPath string
 	for _, lf := range lfs {
-		if lf.MediaID == b.MediaID && lf.Path != "" {
+		if lf.Path != "" {
 			targetPath = lf.Path
 			break
 		}
 	}
 
 	if targetPath == "" {
-		return c.JSON(http.StatusNotFound, NewErrorResponse(fmt.Errorf("no local files found for mediaID %d", b.MediaID)))
+		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("no local files found for this media entry"))
 	}
 
+	// Reveal in file explorer
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
 		cmd = exec.Command("explorer", "/select,", targetPath)
 	case "darwin":
 		cmd = exec.Command("open", "-R", targetPath)
-	default:
-		cmd = exec.Command("xdg-open", targetPath)
+	default: // linux, bsd, etc.
+		cmd = exec.Command("xdg-open", filepath.Dir(targetPath))
 	}
 
 	if err := cmd.Start(); err != nil {
-		h.App.Logger.Warn().Err(err).Str("path", targetPath).Msg("handlers: Could not open file explorer")
+		return h.RespondWithError(c, fmt.Errorf("failed to open file explorer: %w", err))
 	}
+
 	return h.RespondWithData(c, true)
 }
 
@@ -608,8 +585,8 @@ func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
 //	@returns bool
 func (h *Handler) HandleGetAnimeEntrySilenceStatus(c echo.Context) error {
 	mID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return h.RespondWithError(c, err)
+	if err != nil || mID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive anime media id is required"))
 	}
 
 	entry, _ := h.App.Database.GetSilencedMediaEntry(uint(mID))

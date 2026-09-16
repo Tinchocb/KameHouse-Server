@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog/log"
 
 	"github.com/rs/zerolog"
@@ -40,28 +41,23 @@ func NewLogger() *zerolog.Logger {
 	fieldsOrder := []string{"method", "status", "error", "uri", "latency_human"}
 	fieldsExclude := []string{"host", "latency", "referer", "remote_ip", "user_agent", "bytes_in", "bytes_out", "file"}
 
-	// Set up logger
+	// Detect TTY and NO_COLOR for portable ANSI handling
+	noColor := os.Getenv("NO_COLOR") != "" || !isatty.IsTerminal(os.Stdout.Fd())
+
+	// Dual writer: console + in-memory buffer (for crash dumps / signal handler)
+	mw := zerolog.MultiLevelWriter(os.Stdout, &logBuffer)
+
 	consoleOutput := zerolog.ConsoleWriter{
-		Out:           os.Stdout,
+		Out:           mw,
 		TimeFormat:    timeFormat,
 		FormatLevel:   ZerologFormatLevelPretty,
 		FormatMessage: ZerologFormatMessagePretty,
 		FieldsExclude: fieldsExclude,
 		FieldsOrder:   fieldsOrder,
+		NoColor:       noColor,
 	}
 
-	fileOutput := zerolog.ConsoleWriter{
-		Out:           &logBuffer,
-		TimeFormat:    timeFormat,
-		FormatMessage: ZerologFormatMessageSimple,
-		FormatLevel:   ZerologFormatLevelSimple,
-		NoColor:       true, // Needed to prevent color codes from being written to the file
-		FieldsExclude: fieldsExclude,
-		FieldsOrder:   fieldsOrder,
-	}
-
-	multi := zerolog.MultiLevelWriter(consoleOutput, fileOutput)
-	logger := zerolog.New(multi).With().Timestamp().Logger()
+	logger := zerolog.New(consoleOutput).With().Timestamp().Logger()
 	log.Logger = logger
 	return &logger
 }
@@ -173,5 +169,9 @@ func ZerologFormatLevelSimple(i interface{}) string {
 }
 
 func colorizeb(s interface{}, c int) string {
+	// Color output disabled when NO_COLOR or not a TTY
+	if os.Getenv("NO_COLOR") != "" || !isatty.IsTerminal(os.Stdout.Fd()) {
+		return fmt.Sprint(s)
+	}
 	return fmt.Sprintf("\x1b[%dm%v\x1b[0m", c, s)
 }

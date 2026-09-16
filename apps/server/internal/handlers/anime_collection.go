@@ -79,6 +79,10 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 
 var animeScheduleCache = result.NewCache[int, []*anime.ScheduleItem]()
 
+func ClearAnimeScheduleCache() {
+	animeScheduleCache.Clear()
+}
+
 // HandleGetAnimeCollectionSchedule returns the anime collection schedule.
 //
 //	@summary returns anime collection schedule
@@ -86,11 +90,6 @@ var animeScheduleCache = result.NewCache[int, []*anime.ScheduleItem]()
 //	@route /api/v1/library/schedule [GET]
 //	@returns []anime.ScheduleItem
 func (h *Handler) HandleGetAnimeCollectionSchedule(c echo.Context) error {
-
-	// Invalidate the cache when the platform collection is refreshed
-	h.App.AddOnRefreshAnimeCollectionFunc("HandleGetAnimeCollectionSchedule", func() {
-		animeScheduleCache.Clear()
-	})
 
 	if ret, ok := animeScheduleCache.Get(1); ok {
 		return h.RespondWithData(c, ret)
@@ -100,7 +99,10 @@ func (h *Handler) HandleGetAnimeCollectionSchedule(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
-	animeSchedule := animeScheduleData.(*platform.UnifiedAiringSchedule)
+	animeSchedule, ok := animeScheduleData.(*platform.UnifiedAiringSchedule)
+	if !ok || animeSchedule == nil {
+		return h.RespondWithError(c, errors.New("handlers: unexpected or nil schedule data"))
+	}
 
 	animeCollection, err := h.App.GetAnimeCollection(false)
 	if err != nil {

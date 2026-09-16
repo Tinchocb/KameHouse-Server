@@ -331,6 +331,10 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 				mu.Lock()
 				defer mu.Unlock()
 				if result != nil {
+					if id == 61709 || id == 42705 {
+						kaiEps := 167
+						result.Episodes = &kaiEps
+					}
 					mf.AllMedia = append(mf.AllMedia, result)
 				}
 				return nil

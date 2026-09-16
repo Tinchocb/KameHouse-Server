@@ -1,7 +1,8 @@
-﻿package handlers
+package handlers
 
 import (
 	"errors"
+	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/platforms/platform"
@@ -39,9 +40,17 @@ func (h *Handler) HandlePopulateFillerData(c echo.Context) error {
 		if err != nil {
 			return h.RespondWithError(c, err)
 		}
-		media = m.(*platform.UnifiedMedia)
+		var ok bool
+		media, ok = m.(*platform.UnifiedMedia)
+		if !ok || media == nil {
+			return h.RespondWithError(c, errors.New("invalid media metadata"))
+		}
 	} else {
 		media = entry.Media
+	}
+
+	if media == nil {
+		return h.RespondWithError(c, errors.New("media not found"))
 	}
 
 	// Fetch filler data
@@ -144,6 +153,44 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 	anime.ClearEpisodeCollectionCache()
 
 	return h.RespondWithData(c, savedParent)
+}
+
+// HandleClearMetadataCache ...
+//
+//	@summary clears provider metadata cache.
+//	@desc Deletes persisted TMDB/Jikan/AniList episode & media detail caches (all
+//	@desc language variants) so the next scan re-fetches them — e.g. after changing
+//	@desc the metadata language — and clears the in-memory metadata caches.
+//	@desc Migration markers and raw TMDB API responses are preserved.
+//	@route /api/v1/metadata/cache [DELETE]
+//	@returns bool
+func (h *Handler) HandleClearMetadataCache(c echo.Context) error {
+	// Explicit provider allowlist: never wipe "migrations" markers or other buckets.
+	providers := []string{
+		"tmdb-anime-episodes",
+		"tmdb-media-details",
+		"tmdb-season-details",
+		"tmdb-tv-details",
+		"tmdb-movie-details",
+		"jikan-anime-episodes",
+		"jikan-media-details",
+		"anilist-anime-episodes",
+		"anilist-media-details",
+		"anidb-anime-episodes",
+		"anidb-media-details",
+		"mal-anime-episodes",
+		"mal-media-details",
+		"animethemes",
+		"scanner",
+	}
+	for _, p := range providers {
+		_ = db.DeleteMetadataCacheByProvider(h.App.Database, p)
+	}
+
+	h.App.Metadata.Provider.ClearCache()
+	anime.ClearEpisodeCollectionCache()
+
+	return h.RespondWithData(c, true)
 }
 
 // HandleDeleteMediaMetadataParent ...

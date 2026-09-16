@@ -378,7 +378,7 @@ func TestEBMLReader_ReadElementHeader(t *testing.T) {
 
 		// Check that we can read the rest of the data
 		data := make([]byte, size)
-		n, err := io.ReadFull(reader.r, data)
+		n, err := io.ReadFull(reader, data)
 		if err != nil {
 			t.Fatalf("Failed to read data after header: %v", err)
 		}

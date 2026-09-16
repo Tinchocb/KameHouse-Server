@@ -3,11 +3,13 @@ package handlers
 import (
 	"errors"
 	"kamehouse/internal/intelligence"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
 )
+
 
 // HandleGetBestSource retorna el mejor archivo para un título/episodio.
 //
@@ -20,15 +22,18 @@ func (h *Handler) HandleGetBestSource(c echo.Context) error {
 	episodeStr := c.QueryParam("episode")
 	langStr := c.QueryParam("preferredLangs")
 
-	tmdbID, _ := strconv.Atoi(tmdbIDStr)
-	episode, _ := strconv.Atoi(episodeStr)
-
-	if tmdbID == 0 {
-		return h.RespondWithCodeError(c, 400, errors.New("tmdbId is required"))
+	tmdbID, err := strconv.Atoi(tmdbIDStr)
+	if err != nil || tmdbID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive tmdbId is required"))
 	}
 
-	if episode == 0 {
-		episode = 1
+	episode := 1
+	if episodeStr != "" {
+		ep, err := strconv.Atoi(episodeStr)
+		if err != nil || ep < 0 {
+			return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid episode number"))
+		}
+		episode = ep
 	}
 
 	preferredLangs := []string{"spa", "eng"}

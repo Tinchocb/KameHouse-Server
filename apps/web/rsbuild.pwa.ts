@@ -4,8 +4,18 @@ export const getPwaPlugin = () => {
     return new GenerateSW({
         clientsClaim: true,
         skipWaiting: true,
-        importScripts: ['/sw-runtime.js'],
-        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        importScripts: ['/sw-custom.js'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        exclude: [
+            /\.map$/,
+            /\.wasm$/,
+            /\.(?:m4a|mp3|ogg|wav)$/,
+            /^backdrops\//,
+            /^sagas\//,
+            /^sounds\//,
+            /^jassub\//,
+            /LICENSE/i,
+        ],
         navigateFallback: "/index.html",
         runtimeCaching: [
             {

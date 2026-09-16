@@ -36,6 +36,39 @@ func (k PipelineKind) String() string {
 	return "audio"
 }
 
+// LimitedBuffer keeps the last max bytes written to it in a thread-safe circular buffer.
+type LimitedBuffer struct {
+	mu  sync.Mutex
+	buf []byte
+	max int
+}
+
+func newLimitedBuffer(max int) *LimitedBuffer {
+	return &LimitedBuffer{buf: make([]byte, 0, max), max: max}
+}
+
+func (b *LimitedBuffer) Write(p []byte) (n int, err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	n = len(p)
+	if len(b.buf)+len(p) > b.max {
+		overflow := (len(b.buf) + len(p)) - b.max
+		if overflow < len(b.buf) {
+			b.buf = b.buf[overflow:]
+		} else {
+			b.buf = b.buf[:0]
+		}
+	}
+	b.buf = append(b.buf, p...)
+	return n, nil
+}
+
+func (b *LimitedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return string(b.buf)
+}
+
 // head represents an ffmpeg process encoding segments
 type head struct {
 	segment     int32              // Current segment (updated as ffmpeg writes segments).
@@ -245,7 +278,7 @@ func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
 		}
 
 		if distance > threshold || !scheduled {
-			if err := p.runHead(seg, false); err != nil {
+			if err := p.runHead(ctx, seg, false); err != nil {
 				return "", err
 			}
 		}
@@ -330,11 +363,22 @@ func (p *Pipeline) killHeadLocked(id int) {
 		h.released.Do(h.release)
 	}
 	if h.segment == -1 || h.cmd == nil {
+		p.heads[id].segment = -1
+		p.heads[id].end = -1
 		return
 	}
-	// Use util.KillCmd to guarantee tree termination across platforms (including Windows HW sub-processes)
-	_ = util.KillCmd(h.cmd)
+	cmd := h.cmd
 	p.heads[id].cmd = nil
+	p.heads[id].segment = -1
+	p.heads[id].end = -1
+
+	// Use util.KillCmd to guarantee tree termination across platforms asynchronously
+	// so taskkill on Windows doesn't block headsMu/videosMu during seek.
+	if cmd != nil {
+		go func(c *exec.Cmd) {
+			_ = util.KillCmd(c)
+		}(cmd)
+	}
 }
 
 // killAllHeads kills all active heads in the pipeline
@@ -356,7 +400,7 @@ func (p *Pipeline) killAllHeads() {
 // isScheduled reports if any head covers seg
 func (p *Pipeline) isScheduled(seg int32) bool {
 	for _, h := range p.heads {
-		if h.segment >= 0 && h.segment <= seg && seg < h.end {
+		if h.segment >= 0 && h.cmd != nil && h.segment <= seg && seg < h.end {
 			return true
 		}
 	}
@@ -368,7 +412,7 @@ func (p *Pipeline) minHeadDistance(seg int32) float64 {
 	t := p.session.Keyframes.Get(seg)
 	best := math.Inf(1)
 	for _, h := range p.heads {
-		if h.segment < 0 || seg >= h.end {
+		if h.segment < 0 || h.cmd == nil || seg >= h.end {
 			continue
 		}
 		ht := p.session.Keyframes.Get(h.segment)
@@ -402,7 +446,7 @@ func (p *Pipeline) prefetch(current int32) {
 		if d := p.minHeadDistance(i); d < 60+5*float64(i-current) {
 			continue
 		}
-		go func(s int32) { _ = p.runHead(s, true) }(i)
+		go func(s int32) { _ = p.runHead(p.ctx, s, true) }(i)
 		return // only one speculative head per request
 	}
 }
@@ -417,7 +461,10 @@ func boolToReserve(speculative bool) int {
 
 // runHead launches an ffmpeg process from [start, end).
 // it acquires a slot from the governor.
-func (p *Pipeline) runHead(start int32, speculative bool) error {
+func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) error {
+	if ctx == nil {
+		ctx = p.ctx
+	}
 	length, isDone := p.session.Keyframes.Length()
 	end := min(start+100, length)
 	// keep a 2-segment padding when keyframes are still arriving so we
@@ -438,14 +485,14 @@ func (p *Pipeline) runHead(start int32, speculative bool) error {
 	}
 
 	// acquire a slot from the governor
-	release, err := p.governor.Acquire(p.ctx)
+	release, err := p.governor.Acquire(ctx)
 	if err != nil {
 		return fmt.Errorf("cassette: governor denied slot: %w", err)
 	}
 	// guard against the select race: when both the semaphore and ctx.Done()
 	// are immediately ready, Go picks randomly. If the semaphore won but the
 	// context was already cancelled (e.g. pipeline was Kill()ed), bail now.
-	if p.ctx.Err() != nil {
+	if p.ctx.Err() != nil || ctx.Err() != nil {
 		release()
 		return fmt.Errorf("cassette: pipeline cancelled")
 	}
@@ -657,13 +704,16 @@ func (p *Pipeline) runHead(start int32, speculative bool) error {
 	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
+		_ = stdout.Close()
 		combinedRelease()
 		return err
 	}
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
+	stderr := newLimitedBuffer(64 * 1024)
+	cmd.Stderr = stderr
 
 	if err := cmd.Start(); err != nil {
+		_ = stdout.Close()
+		_ = stdin.Close()
 		combinedRelease()
 		return err
 	}
@@ -691,7 +741,7 @@ func (p *Pipeline) runHead(start int32, speculative bool) error {
 	// Goroutine: reap process and release governor slot.
 	// reapProcess uses once.Do(combinedRelease) so the slot is freed exactly once,
 	// even if killHeadLocked already released it early.
-	go p.reapProcess(headCtx, encoderID, cmd, &stderr, once, combinedRelease, headCancel, headProfile)
+	go p.reapProcess(headCtx, encoderID, cmd, stderr, once, combinedRelease, headCancel, headProfile)
 
 	success = true
 	return nil
@@ -721,28 +771,34 @@ func (p *Pipeline) readSegments(
 		p.heads[encoderID].segment = seg
 		p.headsMu.Unlock()
 
+		drainAndQuit := func() {
+			go func() {
+				defer func() {
+					_ = recover()
+				}()
+				_, _ = stdin.Write([]byte("q\n"))
+				_ = stdin.Close()
+				_, _ = io.Copy(io.Discard, stdout)
+			}()
+		}
+
 		if p.segments.IsReady(seg) {
 			// another encoder beat us, quit to avoid duplicate work.
-			// write q in a goroutine so readSegments never blocks on a full pipe.
-			go func() {
-				_, _ = stdin.Write([]byte("q"))
-				_ = stdin.Close()
-			}()
+			// write q and drain stdout in a goroutine so readSegments never blocks on a full pipe.
+			drainAndQuit()
 			return
 		}
 
 		p.segments.MarkReady(seg, encoderID)
 
 		if seg == end-1 {
+			drainAndQuit()
 			return // range complete, ffmpeg will finish naturally
 		}
 		if p.segments.IsReady(seg + 1) {
 			// next segment already done by another head, no point continuing.
-			// write q in a goroutine so readSegments never blocks on a full pipe.
-			go func() {
-				_, _ = stdin.Write([]byte("q"))
-				_ = stdin.Close()
-			}()
+			// write q and drain stdout in a goroutine so readSegments never blocks on a full pipe.
+			drainAndQuit()
 			return
 		}
 	}
@@ -755,7 +811,7 @@ func (p *Pipeline) readSegments(
 // reapProcess waits for the ffmpeg process to exit, marks its head as deleted,
 // and releases the governor slot. If a hardware acceleration failure is
 // detected, it logs actionable guidance.
-func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, cmd *exec.Cmd, stderr *strings.Builder, once *sync.Once, combinedRelease func(), headCancel context.CancelFunc, headProfile HwAccelProfile) {
+func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, cmd *exec.Cmd, stderr *LimitedBuffer, once *sync.Once, combinedRelease func(), headCancel context.CancelFunc, headProfile HwAccelProfile) {
 	defer p.activeHeadsWg.Done() // Signal that this head has completely exited
 	defer once.Do(combinedRelease) // Always release the governor slot exactly once
 	defer headCancel()           // Cancel the head context to free the soft-close goroutine
@@ -788,21 +844,13 @@ func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, cmd *exec.Cmd
 	//     if the GPU still encodes, we keep the profile and let GetSegment retry on
 	//     GPU (the `case err != nil` branch below closes killCh to trigger that).
 	if isHwAccelEnabled && !intentionalKill && DetectHwAccelFailure(stderr.String()) {
-		encoder := encoderName(hwProfile)
-		if encoder != "" && testEncoder(p.settings.FfmpegPath, encoder) {
-			p.logger.Warn().Int("eid", encoderID).
-				Str("hwaccel", FormatHwAccelSummary(hwProfile)).
-				Str("ffmpeg_error", stderr.String()).
-				Msg("cassette: transient hardware-accel error, GPU still probes OK; retrying on GPU")
-		} else {
-			p.logger.Warn().Int("eid", encoderID).
-				Str("hwaccel", FormatHwAccelSummary(hwProfile)).
-				Str("ffmpeg_error", stderr.String()).
-				Msg("cassette: hardware acceleration failed, falling back to CPU...")
-			p.settings.SetHwAccel(FallbackToCPU("superfast"))
-			notifier.Global().Notify(notifier.TypeMediastream, "Aceleración por hardware desactivada",
-				fmt.Sprintf("FFmpeg falló usando %s; la transcodificación continúa por CPU.", hwProfile.Name))
-		}
+		p.logger.Warn().Int("eid", encoderID).
+			Str("hwaccel", FormatHwAccelSummary(hwProfile)).
+			Str("ffmpeg_error", stderr.String()).
+			Msg("cassette: hardware acceleration failed, falling back to CPU...")
+		p.settings.SetHwAccel(FallbackToCPU("superfast"))
+		notifier.Global().Notify(notifier.TypeMediastream, "Aceleración por hardware desactivada",
+			fmt.Sprintf("FFmpeg falló usando %s; la transcodificación continúa por CPU.", hwProfile.Name))
 	}
 
 	switch {

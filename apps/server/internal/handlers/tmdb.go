@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"kamehouse/internal/api/jikan"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/constants"
@@ -36,21 +37,27 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 	}
 
 	if b.Query == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "query is required"})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("query is required"))
 	}
 
 	client := h.App.Metadata.TMDBClient
-	hasTmdbKey := (client != nil && client.HasApiKey()) || b.BearerToken != ""
+	if client == nil && b.BearerToken != "" {
+		client = tmdb.NewClient(b.BearerToken)
+	}
+	hasTmdbKey := client != nil && (client.HasApiKey() || b.BearerToken != "")
 
 	searchType := b.SearchType
 	if searchType == "" {
 		searchType = "multi"
 	}
+	if searchType != "tv" && searchType != "movie" && searchType != "multi" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid searchType, expected 'tv', 'movie', or 'multi'"))
+	}
 
 	// Collect results with media_type annotation
 	var combined []map[string]interface{}
 
-	if hasTmdbKey {
+	if hasTmdbKey && client != nil {
 		if searchType == "tv" || searchType == "multi" {
 			tvResults, err := client.SearchTV(c.Request().Context(), b.Query)
 			if err == nil {
@@ -139,8 +146,11 @@ func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
 		id = b.TVID
 	}
 
-	if id == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "id is required"})
+	if id <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive id is required"))
+	}
+	if b.MediaType != "" && b.MediaType != "tv" && b.MediaType != "movie" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid mediaType, expected 'tv' or 'movie'"))
 	}
 
 	client := h.App.Metadata.TMDBClient
@@ -212,10 +222,13 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	}
 
 	if len(b.Paths) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "paths is required"})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("paths is required"))
 	}
-	if b.TmdbID == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "tmdbId is required"})
+	if b.TmdbID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive tmdbId is required"))
+	}
+	if b.MediaType != "" && b.MediaType != "tv" && b.MediaType != "movie" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid mediaType, expected 'tv' or 'movie'"))
 	}
 
 	// 1. Fetch full details from TMDB or Jikan

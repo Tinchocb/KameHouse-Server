@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"kamehouse/internal/constants"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 )
+
 
 // resolveLibraryMediaForSagas finds the LibraryMedia for a route media ID
 // using the same resolution order as anime.NewSimpleEntry: try the ID as a
@@ -41,8 +44,8 @@ func (h *Handler) resolveLibraryMediaForSagas(mID int) (*models.LibraryMedia, er
 func (h *Handler) HandleGetSeriesSagas(c echo.Context) error {
 	idParam := c.Param("id")
 	mID, err := strconv.Atoi(idParam)
-	if err != nil {
-		return h.RespondWithError(c, err)
+	if err != nil || mID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive anime media id is required"))
 	}
 
 	media, err := h.resolveLibraryMediaForSagas(mID)

@@ -50,15 +50,17 @@ impl TrayManager {
             .tooltip("KameHouse")
             .on_menu_event(move |app, event| match event.id.as_ref() {
                 "toggle_visibility" => {
-                    if !menu_sidecar_manager.get_status().eq(&crate::sidecar::ServerStatus::Running) {
-                        return;
-                    }
-                    if let Some(main) = app.get_webview_window("main") {
-                        if main.is_visible().unwrap_or(false) {
-                            let _ = main.hide();
+                    let target_win = app.get_webview_window("main").or_else(|| app.get_webview_window("crash"));
+                    if let Some(win) = target_win {
+                        if win.is_visible().unwrap_or(false) {
+                            let _ = win.hide();
                         } else {
-                            let _ = main.show();
-                            let _ = main.set_focus();
+                            // El splash ya cumplió si el usuario pide la ventana a mano.
+                            if let Some(splash) = app.get_webview_window("splash") {
+                                let _ = splash.destroy();
+                            }
+                            let _ = win.show();
+                            let _ = win.set_focus();
                         }
                     }
                 }
@@ -75,16 +77,17 @@ impl TrayManager {
             .on_tray_icon_event(move |tray, event| {
                 if let TrayIconEvent::Click { button, button_state, .. } = event {
                     if button == MouseButton::Left && button_state == MouseButtonState::Up {
-                        if !sidecar_manager.get_status().eq(&crate::sidecar::ServerStatus::Running) {
-                            return;
-                        }
                         let app = tray.app_handle();
-                        if let Some(main) = app.get_webview_window("main") {
-                            if main.is_visible().unwrap_or(false) {
-                                let _ = main.hide();
+                        let target_win = app.get_webview_window("main").or_else(|| app.get_webview_window("crash"));
+                        if let Some(win) = target_win {
+                            if win.is_visible().unwrap_or(false) {
+                                let _ = win.hide();
                             } else {
-                                let _ = main.show();
-                                let _ = main.set_focus();
+                                if let Some(splash) = app.get_webview_window("splash") {
+                                    let _ = splash.destroy();
+                                }
+                                let _ = win.show();
+                                let _ = win.set_focus();
                             }
                         }
                     }
@@ -116,8 +119,7 @@ impl TrayManager {
         };
 
         tauri::image::Image::from_path(icon_path).unwrap_or_else(|_| {
-            // Fallback to a simple generated icon
-            tauri::image::Image::from_bytes(include_bytes!("../../assets/icon.png")).unwrap()
+            tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap()
         })
     }
 }

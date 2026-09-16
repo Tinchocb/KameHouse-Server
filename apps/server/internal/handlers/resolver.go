@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"kamehouse/internal/core"
 
@@ -28,27 +30,19 @@ func (h *Handler) HandleResolveStreams(c echo.Context) error {
 
 	mediaIDStr := c.QueryParam("mediaID")
 	if mediaIDStr == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "query parameter 'mediaID' is required",
-		})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("query parameter 'mediaID' is required"))
 	}
 	if _, err := strconv.Atoi(mediaIDStr); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "'mediaID' must be a valid integer",
-		})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("'mediaID' must be a valid integer"))
 	}
 
 	episodeStr := c.QueryParam("episode")
 	if episodeStr == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "query parameter 'episode' is required",
-		})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("query parameter 'episode' is required"))
 	}
 	episode, err := strconv.Atoi(episodeStr)
 	if err != nil || episode <= 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "'episode' must be a positive integer",
-		})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("'episode' must be a positive integer"))
 	}
 
 	// ── Parse optional param ──────────────────────────────────────────────────
@@ -56,6 +50,9 @@ func (h *Handler) HandleResolveStreams(c echo.Context) error {
 	mediaType := c.QueryParam("mediaType")
 	if mediaType == "" {
 		mediaType = "anime" // default
+	}
+	if mediaType != "anime" && mediaType != "movie" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid 'mediaType', expected 'anime' or 'movie'"))
 	}
 
 	// ── Resolve ───────────────────────────────────────────────────────────────
@@ -69,6 +66,20 @@ func (h *Handler) HandleResolveStreams(c echo.Context) error {
 			Int("episode", episode).
 			Msg("resolver: handler error")
 		return h.RespondWithError(c, err)
+	}
+
+	if unifiedResponse != nil && h.App.Config != nil && h.App.Config.Server.Password != "" {
+		if token, tokenErr := h.App.GetServerPasswordHMACAuth().GenerateToken("*"); tokenErr == nil {
+			for i := range unifiedResponse.Sources {
+				if strings.HasPrefix(unifiedResponse.Sources[i].URLPath, "/") {
+					sep := "?"
+					if strings.Contains(unifiedResponse.Sources[i].URLPath, "?") {
+						sep = "&"
+					}
+					unifiedResponse.Sources[i].URLPath += sep + "token=" + token
+				}
+			}
+		}
 	}
 
 	return h.RespondWithData(c, unifiedResponse)

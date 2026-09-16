@@ -2,6 +2,7 @@ package mediastream
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream/videofile"
@@ -9,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,6 +53,11 @@ func (r *Repository) ServeEchoExtractedSubtitles(c echo.Context) error {
 	if trackIndex == "" {
 		return echo.NewHTTPError(400, "trackIndex query parameter is required")
 	}
+	trackIdx, err := strconv.Atoi(trackIndex)
+	if err != nil || trackIdx < 0 {
+		return echo.NewHTTPError(400, "invalid trackIndex parameter: must be a non-negative integer")
+	}
+	trackIndexStr := strconv.Itoa(trackIdx)
 
 	entries, err := os.ReadDir(cacheDir)
 	if err != nil {
@@ -58,7 +65,7 @@ func (r *Repository) ServeEchoExtractedSubtitles(c echo.Context) error {
 	}
 
 	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasPrefix(entry.Name(), trackIndex+".") {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), trackIndexStr+".") {
 			r.logger.Trace().Msgf("mediastream: Serving subtitle %s", entry.Name())
 			return c.File(filepath.Join(cacheDir, entry.Name()))
 		}
@@ -102,6 +109,11 @@ func (r *Repository) ServeEchoParsedPGS(c echo.Context) error {
 	if trackIndex == "" {
 		return echo.NewHTTPError(400, "trackIndex query parameter is required")
 	}
+	trackIdx, err := strconv.Atoi(trackIndex)
+	if err != nil || trackIdx < 0 {
+		return echo.NewHTTPError(400, "invalid trackIndex parameter: must be a non-negative integer")
+	}
+	trackIndexStr := strconv.Itoa(trackIdx)
 
 	entries, err := os.ReadDir(cacheDir)
 	if err != nil {
@@ -109,12 +121,22 @@ func (r *Repository) ServeEchoParsedPGS(c echo.Context) error {
 	}
 
 	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasPrefix(entry.Name(), trackIndex+".sup") {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), trackIndexStr+".sup") {
+			jsonCachePath := filepath.Join(cacheDir, trackIndexStr+".pgs.json")
+			if _, statErr := os.Stat(jsonCachePath); statErr == nil {
+				return c.File(jsonCachePath)
+			}
+
 			r.logger.Trace().Msgf("mediastream: Parsing PGS subtitle %s", entry.Name())
 			events, err := ParseSupFile(filepath.Join(cacheDir, entry.Name()))
 			if err != nil {
 				r.logger.Error().Err(err).Msg("mediastream: Failed to parse PGS subtitle")
 				return err
+			}
+
+			if jsonData, err := json.Marshal(events); err == nil {
+				_ = os.WriteFile(jsonCachePath, jsonData, 0644)
+				return c.Blob(http.StatusOK, "application/json", jsonData)
 			}
 			return c.JSON(200, events)
 		}
@@ -164,6 +186,12 @@ func (r *Repository) ServeEchoExtractedAttachments(c echo.Context) error {
 	}
 
 	subFilePath, _ = url.PathUnescape(subFilePath)
+	targetPath := filepath.Clean(filepath.Join(retPath, subFilePath))
+	cleanRetPath := filepath.Clean(retPath)
+	rel, err := filepath.Rel(cleanRetPath, targetPath)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid path")
+	}
 
-	return c.File(filepath.Join(retPath, subFilePath))
+	return c.File(targetPath)
 }

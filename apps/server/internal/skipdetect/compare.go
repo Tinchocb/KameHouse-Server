@@ -48,26 +48,28 @@ func CompareFingerprints(f1, f2 []int) MatchWindow {
 	m := len(f2)
 
 	// 1. Histograma de offsets relativos (i - j).
-	matchesForOffset := make(map[int]int)
+	offsetCounts := make([]int, n+m+1)
+	hasMatches := false
 	for i := 0; i < n; i++ {
 		fi := uint32(f1[i])
 		for j := 0; j < m; j++ {
 			if bits.OnesCount32(fi^uint32(f2[j])) <= maxHammingDistance {
-				matchesForOffset[i-j]++
+				offsetCounts[i-j+m]++
+				hasMatches = true
 			}
 		}
 	}
-	if len(matchesForOffset) == 0 {
+	if !hasMatches {
 		return none
 	}
 
 	// 2. Offset pico.
 	bestOffset := 0
 	maxMatches := 0
-	for offset, count := range matchesForOffset {
+	for idx, count := range offsetCounts {
 		if count > maxMatches {
 			maxMatches = count
-			bestOffset = offset
+			bestOffset = idx - m
 		}
 	}
 	if maxMatches < minPeakMatches {
@@ -83,21 +85,33 @@ func CompareFingerprints(f1, f2 []int) MatchWindow {
 		}
 	}
 
-	// 4. Acotar el segmento contiguo por densidad y contar los matcheados dentro.
+	// 4. Acotar el segmento contiguo por densidad y contar los matcheados dentro (O(N) sliding window).
 	firstMatchIdx := -1
 	lastMatchIdx := -1
-	for i := 0; i <= n-densityWindow; i++ {
+	if n >= densityWindow {
 		matchCount := 0
 		for w := 0; w < densityWindow; w++ {
-			if isMatching[i+w] {
+			if isMatching[w] {
 				matchCount++
 			}
 		}
 		if float64(matchCount)/float64(densityWindow) >= minDensity {
-			if firstMatchIdx == -1 {
-				firstMatchIdx = i
+			firstMatchIdx = 0
+			lastMatchIdx = densityWindow
+		}
+		for i := 1; i <= n-densityWindow; i++ {
+			if isMatching[i-1] {
+				matchCount--
 			}
-			lastMatchIdx = i + densityWindow
+			if isMatching[i+densityWindow-1] {
+				matchCount++
+			}
+			if float64(matchCount)/float64(densityWindow) >= minDensity {
+				if firstMatchIdx == -1 {
+					firstMatchIdx = i
+				}
+				lastMatchIdx = i + densityWindow
+			}
 		}
 	}
 	if firstMatchIdx == -1 || lastMatchIdx == -1 {

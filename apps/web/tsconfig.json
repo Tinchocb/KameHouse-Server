@@ -31,7 +31,10 @@
             "@/*": [
                 "./src/*"
             ]
-        }
+        },
+        /* Incremental compilation */
+        "incremental": true,
+        "tsBuildInfoFile": ".tsbuildinfo"
     },
     "include": [
         "src"

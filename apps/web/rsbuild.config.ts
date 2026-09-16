@@ -3,10 +3,13 @@ import { pluginBabel } from "@rsbuild/plugin-babel"
 import { pluginReact } from "@rsbuild/plugin-react"
 import { RsdoctorRspackPlugin } from "@rsdoctor/rspack-plugin"
 import { TanStackRouterRspack } from "@tanstack/router-plugin/rspack"
+import { createRequire } from "node:module"
 import path from "path"
 import { pluginJassubTranspile } from "./rsbuild.jassub"
 import { getPwaPlugin } from "./rsbuild.pwa"
 import { pluginImageCompress } from "@rsbuild/plugin-image-compress"
+
+const require = createRequire(import.meta.url)
 
 const { publicVars } = loadEnv({ prefixes: ["SEA_"] })
 
@@ -19,20 +22,24 @@ const devBackendPort =
     "43212"
 const devBackendTarget = `http://127.0.0.1:${devBackendPort}`
 
+/** `true` solo en `rsbuild build` (prod). En dev se recorta todo lo costoso
+ *  que no aporta al iterar: compresión de imágenes, React Compiler y
+ *  transpilación con minify — el boot del dev server es lo que bloquea a `tauri dev`. */
+const isProd = process.env.NODE_ENV === "production"
+
 const config: RsbuildConfig = {
     plugins: [
         pluginReact(),
         pluginJassubTranspile(),
-        pluginImageCompress(),
-        pluginBabel({
+        // Solo prod: en dev la compresión de imágenes suma segundos a cada arranque.
+        isProd && pluginImageCompress(),
+        // Solo prod: React Compiler es una optimización; en dev el transform
+        // extra ralentiza el boot sin cambiar el comportamiento.
+        isProd && pluginBabel({
             include: /\.(?:jsx|tsx|m?js|m?jsx)$/,
             exclude: [/[\\/]node_modules[\\/]/],
             babelLoaderOptions(opts) {
                 opts.presets ??= []
-                opts.presets.push(["@babel/preset-env", {
-                    targets: ["chrome >= 100"],
-                    modules: false,
-                }])
                 opts.plugins ??= []
                 // React Compiler — must be first plugin so it runs on untransformed source.
                 // Files with 'use no memo' are automatically skipped (e.g. usePlayerHls, debug).
@@ -52,11 +59,12 @@ const config: RsbuildConfig = {
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "./src"),
-            "react-grab/package.json": path.resolve(__dirname, "./src/lib/shims/react-grab-pkg.js"),
         },
     },
     dev: {
-        lazyCompilation: false,
+        // Compilación perezosa en dev: el server arranca en segundos y cada
+        // ruta se compila al visitarla (ideal con el code-splitting por ruta).
+        lazyCompilation: true,
     },
     server: { // dev server
         port: Number(process.env.PORT) || 43210,
@@ -73,7 +81,22 @@ const config: RsbuildConfig = {
                 logLevel: 'silent',
                 onError: (err, req, res) => {
                     const code = (err as any).code || '';
+                    // Silently drop broken-pipe / aborted connections (browser closed tab, etc.)
                     if (code === 'ECONNRESET' || code === 'ECONNABORTED' || code === 'EPIPE') {
+                        return;
+                    }
+                    // Backend not ready yet (sidecar still starting) — return 503 so the
+                    // frontend can distinguish a transient startup delay from a real error.
+                    if (code === 'ECONNREFUSED' || code === 'ETIMEDOUT') {
+                        if (res && 'writeHead' in res && !(res as any).headersSent) {
+                            (res as any).writeHead(503, {
+                                'Content-Type': 'application/json',
+                                'Retry-After': '2',
+                            });
+                            (res as any).end(JSON.stringify({
+                                error: 'Backend server is starting up, please wait...',
+                            }));
+                        }
                         return;
                     }
                     if (res && 'writeHead' in res && !(res as any).headersSent) {
@@ -107,16 +130,23 @@ const config: RsbuildConfig = {
         } : false,
         chunkSplit: process.env.NODE_ENV === "production" ? {
             forceSplitting: {
-                "react": /react|react-dom/,
-                "hls": /hls\.js/,
-                "rrweb": /rrweb/,
-                "lucide": /lucide-react/,
-                "tanstack-query": /@tanstack\/react-query/,
-                "tanstack-router": /@tanstack\/react-router/,
-                "framer-motion": /framer-motion|[\/\\]motion[\/\\]/,
-                "fontsource": /fontsource/,
-                "gsap": /gsap/,
-                "zod": /zod/,
+                "react-core": /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+                "hls": /[\\/]node_modules[\\/]hls\.js[\\/]/,
+                "jassub": /[\\/]node_modules[\\/]jassub[\\/]/,
+                "lucide": /[\\/]node_modules[\\/]lucide-react[\\/]/,
+                "tanstack-query": /[\\/]node_modules[\\/]@tanstack[\\/]react-query/,
+                "tanstack-router": /[\\/]node_modules[\\/]@tanstack[\\/]react-router/,
+                "framer-motion": /[\\/]node_modules[\\/](framer-motion|motion)[\\/]/,
+                "ui-primitives": /[\\/]node_modules[\\/](@radix-ui|vaul|cmdk)[\\/]/,
+                "fontsource": /[\\/]node_modules[\\/]@fontsource/,
+                "zod": /[\\/]node_modules[\\/]zod[\\/]/,
+            },
+            // Route-level code splitting for heavy pages
+            manualChunks: {
+                "series-detail": /[\\/]src[\\/]routes[\\/]series[\\/]\$seriesId/,
+                "movie-detail": /[\\/]src[\\/]routes[\\/]movies[\\/]\$movieId/,
+                "settings": /[\\/]src[\\/]routes[\\/]settings/,
+                "admin": /[\\/]src[\\/]routes[\\/]admin/,
             },
         } : {
             strategy: "all-in-one",
@@ -142,6 +172,9 @@ const config: RsbuildConfig = {
                 process.env.RSDOCTOR && new RsdoctorRspackPlugin({}),
             ].filter(Boolean),
             resolve: {
+                alias: {
+                    "react-scan$": require.resolve("react-scan/dist/index.js"),
+                },
                 mainFields: ["module", "main"],
                 conditionNames: ["import", "module", "browser", "default"],
                 fallback: {

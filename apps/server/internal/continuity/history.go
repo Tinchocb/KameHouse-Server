@@ -7,7 +7,6 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -237,7 +236,7 @@ func (m *Manager) DeleteWatchHistoryItem(mediaID int) (err error) {
 
 	// Delete any items matching the mediaID (since key format is mediaID_episodeNumber)
 	prefix := fmt.Sprintf("%d_", mediaID)
-	err = m.fileCacher.RemoveAllBy(func(key string) bool {
+	err = filecache.DeleteIf[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket, func(key string, val *WatchHistoryItem) bool {
 		return strings.HasPrefix(key, prefix)
 	})
 	if err != nil {
@@ -403,7 +402,7 @@ func (m *Manager) UpdateExternalPlayerEpisodeWatchHistoryItem(currentTime, durat
 	}
 
 	// Save the i
-	_ = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, strconv.Itoa(opts.MediaID), i)
+	_ = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, fmt.Sprintf("%d_%d", opts.MediaID, opts.EpisodeNumber), i)
 
 	// If the item was added, check if we need to remove the oldest item
 	if added {

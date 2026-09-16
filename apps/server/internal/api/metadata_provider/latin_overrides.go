@@ -12,13 +12,12 @@ var resources embed.FS
 var dragonBallLatinTitles map[int]map[string]string
 
 func init() {
+	dragonBallLatinTitles = make(map[int]map[string]string)
 	data, err := resources.ReadFile("latin_overrides.json")
 	if err != nil {
-		panic("failed to read latin_overrides.json: " + err.Error())
+		return
 	}
-	if err := json.Unmarshal(data, &dragonBallLatinTitles); err != nil {
-		panic("failed to unmarshal latin_overrides.json: " + err.Error())
-	}
+	_ = json.Unmarshal(data, &dragonBallLatinTitles)
 }
 
 // GetLatinTitle returns the Latin Spanish title for a Dragon Ball episode if available.

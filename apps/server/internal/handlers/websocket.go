@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 )
@@ -17,6 +18,28 @@ import (
 // is never blocked by a missing Authorization header (browsers can't send one during WS connect).
 // Clients that need auth send their token via ?token=<value> as a query parameter instead.
 func (h *Handler) webSocketEventHandler(c echo.Context) error {
+	// Client identity — passed as query parameters since WS browsers can't set custom headers.
+	id := c.QueryParam("id")
+	if id == "" || id == "0" {
+		id = uuid.New().String()
+	}
+
+	// Optional bearer token via ?token=<value> (browser WS API cannot set Authorization headers).
+	token := c.QueryParam("token")
+	if h.App.Config.Server.Password != "" {
+		isAuthed := h.isCorrectPasswordToken(token)
+		if !isAuthed && token != "" {
+			hmacAuth := h.App.GetServerPasswordHMACAuth()
+			if _, errHmac := hmacAuth.ValidateToken(token, c.Request().URL.Path); errHmac == nil {
+				isAuthed = true
+			}
+		}
+		if !isAuthed {
+			h.App.Logger.Warn().Str("id", id).Msg("ws: Unauthorized WebSocket connection attempt rejected")
+			return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
+		}
+	}
+
 	var upgrader = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
@@ -33,7 +56,7 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 
 			// Allow if origin matches the request's own Host (same-origin direct access)
 			scheme := "http"
-			if r.TLS != nil {
+			if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 				scheme = "https"
 			}
 			requestOrigin := fmt.Sprintf("%s://%s", scheme, r.Host)
@@ -52,15 +75,6 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 	}
 	defer ws.Close()
 
-	// Client identity — passed as query parameters since WS browsers can't set custom headers.
-	id := c.QueryParam("id")
-	if id == "" {
-		id = "0"
-	}
-
-	// Optional bearer token via ?token=<value>  (browser WS API cannot set Authorization headers).
-	// Currently stored for tracing; apply additional auth checks here if/when required.
-	token := c.QueryParam("token")
 	logCtx := h.App.Logger.Debug().Str("id", id)
 	if token != "" {
 		logCtx = logCtx.Str("tokenLen", strconv.Itoa(len(token)))
@@ -73,7 +87,7 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 	// Set handlers to reset read deadline upon receiving control frames
 	ws.SetPingHandler(func(appData string) error {
 		_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second))
-		return ws.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(5*time.Second))
+		return h.App.WSEventManager.WritePong(id, appData, time.Now().Add(5*time.Second))
 	})
 	ws.SetPongHandler(func(string) error {
 		_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second))

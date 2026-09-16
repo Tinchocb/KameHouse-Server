@@ -1,0 +1,2706 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KameHouse Dragon Ball Story Spans & Catch-Up Chronology",
+  "version": "1.0.0",
+  "updatedAt": "2026-09-05T12:40:00Z",
+  "totalSpans": 33,
+  "seriesSummary": [
+    {
+      "id": "classic",
+      "tmdbId": 12609,
+      "title": "Dragon Ball (Clásico)",
+      "totalEpisodes": 153,
+      "spansCount": 7,
+      "canon": true
+    },
+    {
+      "id": "z",
+      "tmdbId": 12971,
+      "title": "Dragon Ball Z",
+      "totalEpisodes": 291,
+      "spansCount": 14,
+      "canon": true
+    },
+    {
+      "id": "super",
+      "tmdbId": 62715,
+      "title": "Dragon Ball Super",
+      "totalEpisodes": 131,
+      "spansCount": 6,
+      "canon": true
+    },
+    {
+      "id": "daima",
+      "tmdbId": 236994,
+      "title": "Dragon Ball Daima",
+      "totalEpisodes": 20,
+      "spansCount": 2,
+      "canon": true
+    },
+    {
+      "id": "gt",
+      "tmdbId": 12697,
+      "title": "Dragon Ball GT",
+      "totalEpisodes": 64,
+      "spansCount": 4,
+      "canon": false
+    }
+  ],
+  "spans": [
+    {
+      "id": "db-pilaf",
+      "seriesId": "classic",
+      "seriesTitle": "Dragon Ball",
+      "tmdbId": 12609,
+      "order": 1,
+      "seriesOrder": 1,
+      "sagaId": "pilaf",
+      "sagaName": "Saga del Emperador Pilaf",
+      "title": "El Inicio de la Aventura y el Despertar de Shenlong",
+      "startEpisode": 1,
+      "endEpisode": 13,
+      "inUniverseYears": "Año 749",
+      "dominantVibe": "Aventura Mística / Comedia",
+      "previouslyOn": "Goku es un niño huérfano con cola de mono que vive en soledad en la remota Montaña Paoz tras la muerte de su abuelo adoptivo, Son Gohan. Goku atesora como único recuerdo la misteriosa esfera de cristal de 4 estrellas dejada por su abuelo, desconociendo por completo que forma parte de un conjunto mágico legendario.",
+      "detailedPlot": "Bulma, una joven científica de 16 años de la Capital del Oeste que inventó el Radar del Dragón, llega a la Montaña Paoz buscando la esfera de cuatro estrellas. Al comprobar la fuerza descomunal de Goku y su báculo sagrado (Nyoibo), Bulma lo convence de acompañarla en el viaje para reunir las 7 Esferas del Dragón, capaces de conceder cualquier deseo. En su travesía conocen al Maestro Roshi (quien regala a Goku la Nube Voladora y la esfera de 3 estrellas tras rescatar a su tortuga marina), a Oolong, a Yamcha y Puar en el desierto, y a Ox-Satán y Milk en la Montaña de Fuego (donde Roshi demuestra por primera vez el legendario Kamehameha para apagar las llamas). La búsqueda es saboteada por el mezquino Emperador Pilaf y sus secuaces Shu y Mai, quienes atrapan al grupo en su fortaleza y convocan al imponente Dragón Shenlong. Antes de que Pilaf pida gobernar el mundo, Oolong se adelanta pidiendo unas bragas, arruinando su plan. Encerrados en una celda con techo de cristal, Goku observa la luna llena y sufre una violenta mutación involuntaria en un simio gigante desenfrenado (Oozaru), arrasando el castillo de Pilaf hasta que Yamcha y Puar logran cortarle la cola con unas tijeras voladoras.",
+      "worldStateAtStart": {
+        "threatLevel": "Bajo / Cómico",
+        "activeVillains": [
+          "Emperador Pilaf",
+          "Shu",
+          "Mai"
+        ],
+        "dragonBallsStatus": "Dispersas por el mundo; Goku conserva la de 4 estrellas y Bulma tiene 2.",
+        "characterStatus": {
+          "goku": "Niño de 12 años, inocente y salvaje, viviendo en la Montaña Paoz.",
+          "vegeta": "Fuera de pantalla en el espacio, conquistando mundos para el ejército de Freezer.",
+          "gohan": "No ha nacido.",
+          "piccolo": "Encerrado dentro del termo eléctrico tras el Mafuba del Maestro Mutaito.",
+          "allies": "Bulma, Oolong, Yamcha, Puar, Maestro Roshi."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Goku conoce a Bulma e inician el mito fundacional de la búsqueda de las esferas.",
+        "El Maestro Roshi regala la Nube Voladora y enseña el concepto del Kamehameha.",
+        "Se revela la maldición de la cola Saiyajin: la transformación en Oozaru ante la luna llena."
+      ],
+      "milestones": [
+        {
+          "episode": 1,
+          "title": "El Encuentro",
+          "description": "Bulma atropella a Goku y comienza la búsqueda de las 7 Esferas."
+        },
+        {
+          "episode": 2,
+          "title": "Presentación del Radar del Dragón",
+          "description": "Bulma muestra su invento que detecta las Esferas del Dragón por su radiación."
+        },
+        {
+          "episode": 5,
+          "title": "Conocen al Maestro Roshi",
+          "description": "Roshi les regala la Nube Voladora y la esfera de 3 estrellas tras salvar a su tortuga."
+        },
+        {
+          "episode": 8,
+          "title": "El Primer Kamehameha",
+          "description": "El Maestro Roshi apaga la Montaña de Fuego con su técnica destructiva."
+        },
+        {
+          "episode": 9,
+          "title": "Capturados por Pilaf",
+          "description": "El grupo cae en la trampa del castillo de Pilaf y Oolong arruina el deseo de dominación mundial."
+        },
+        {
+          "episode": 12,
+          "title": "Invocación de Shenlong y Oozaru",
+          "description": "Oolong arruina el deseo de Pilaf; Goku se transforma en simio gigante destruyendo el castillo."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 1
+    },
+    {
+      "id": "db-torneo-21",
+      "seriesId": "classic",
+      "seriesTitle": "Dragon Ball",
+      "tmdbId": 12609,
+      "order": 2,
+      "seriesOrder": 2,
+      "sagaId": "torneo-21",
+      "sagaName": "Saga del 21° Torneo de Artes Marciales",
+      "title": "El Entrenamiento en Kame House y la Sabiduría de Jackie Chun",
+      "startEpisode": 14,
+      "endEpisode": 28,
+      "inUniverseYears": "Año 749 – 750",
+      "dominantVibe": "Artes Marciales / Superación Personal",
+      "previouslyOn": "Tras la destrucción del castillo de Pilaf, las esferas del dragón se dispersaron por todo el planeta convertidas en piedra durante un año. Goku se separa de Bulma y viaja en la Nube Voladora hacia la isla de Kame House para cumplir su sueño: entrenar bajo la tutela del legendario ermitaño de las tortugas, el Maestro Roshi.",
+      "detailedPlot": "Goku llega a la isla de Roshi, donde se suma un monje shaolin pícaro y competitivo llamado Krilin. Roshi pone como condición para entrenarlos que le lleven una chica hermosa; los niños rescatan a Launch, una joven con doble personalidad que muta a una rubia armada cada vez que estornuda. El entrenamiento de la Escuela Tortuga no enseña golpes, sino disciplina sobrehumana: repartir leche al amanecer saltando riscos, arar campos de cultivo con las manos desnudas y esquivar tiburones, todo cargando pesados caparazones de tortuga en la espalda. Ocho meses después, se inscriben en el 21° Torneo de Artes Marciales. Para evitar que sus alumnos se vuelvan soberbios y crean que alcanzaron la cúspide de la fuerza, el Maestro Roshi participa en secreto disfrazado de Jackie Chun. El torneo presenta combates memorables entre Yamcha, Krilin, Nam y monstruos como Giran. En la gran final, Goku se enfrenta a Jackie Chun en una batalla agotadora de más de 4 horas. Cuando Goku vuelve a transformarse en Oozaru al ver la luna llena, Jackie Chun desata un Kamehameha a máxima potencia que destruye la Luna para revertirlo a humano. Tras un brutal intercambio cuerpo a cuerpo en el que ambos caen al suelo noqueados, Jackie Chun logra levantarse primero por una milésima de segundo, consagrándose campeón.",
+      "worldStateAtStart": {
+        "threatLevel": "Competitivo / Deportivo",
+        "activeVillains": [
+          "Ninguno directo; rivalidades deportivas."
+        ],
+        "dragonBallsStatus": "Inactivas, convertidas en piedra durante 1 año.",
+        "characterStatus": {
+          "goku": "Discípulo novato que desarrolla por primera vez condición atlética de élite.",
+          "vegeta": "En el espacio.",
+          "gohan": "No ha nacido.",
+          "piccolo": "Sellado.",
+          "allies": "Krilin (nuevo mejor amigo y rival), Maestro Roshi, Launch."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Nace la amistad fraternal e inquebrantable entre Goku y Krilin.",
+        "Jackie Chun (Roshi) le enseña a Goku que 'siempre hay alguien superior en el mundo'.",
+        "El Maestro Roshi destruye la luna de la Tierra con un Kamehameha para salvar el torneo."
+      ],
+      "milestones": [
+        {
+          "episode": 14,
+          "title": "Llegada de Krilin",
+          "description": "Krilin se une a Goku como aspirante a discípulo en Kame House."
+        },
+        {
+          "episode": 15,
+          "title": "Rescate de Launch",
+          "description": "Goku y Krilin rescatan a Launch de unos tiburones, cumpliendo la prueba de Roshi."
+        },
+        {
+          "episode": 17,
+          "title": "La Rutina de la Leche",
+          "description": "El extenuante y mítico entrenamiento con caparazones pesados."
+        },
+        {
+          "episode": 21,
+          "title": "Inicio del 21° Torneo",
+          "description": "Comienza el torneo con las preliminares y los combates de Yamcha y Nam."
+        },
+        {
+          "episode": 25,
+          "title": "Semifinales: Goku vs Krilin",
+          "description": "Amigos rivales se enfrentan en una batalla de alto nivel técnico."
+        },
+        {
+          "episode": 28,
+          "title": "La Gran Final: Goku vs Jackie Chun",
+          "description": "Roshi destruye la Luna y vence a Goku por ventaja física en un final dramático."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 14
+    },
+    {
+      "id": "db-red-ribbon",
+      "seriesId": "classic",
+      "seriesTitle": "Dragon Ball",
+      "tmdbId": 12609,
+      "order": 3,
+      "seriesOrder": 3,
+      "sagaId": "red-ribbon",
+      "sagaName": "Saga del Ejército de la Patrulla Roja",
+      "title": "La Cruzada Solitaria contra el Ejército Más Temido",
+      "startEpisode": 29,
+      "endEpisode": 68,
+      "inUniverseYears": "Año 750",
+      "dominantVibe": "Aventura Épica / Bélica / Pulp",
+      "previouslyOn": "Concluido el 21° Torneo, Goku decide emprender un viaje solitario por el mundo para recuperar la esfera de cuatro estrellas de su abuelo, ya que se cumplió el año de enfriamiento y el radar de Bulma vuelve a detectar señales mágicas.",
+      "detailedPlot": "En su camino, Goku colisiona contra el Ejército de la Patrulla Roja (Red Ribbon Army), una despiadada fuerza militar global liderada por el Comandante Red y el Oficial Black, quienes buscan las 7 esferas. En las frías tierras del norte, Goku asalta la Torre de la Fuerza (Torre de Músculo), derrotando al General White y trabando amistad con el pacífico Androide 8 (Octavio). Más tarde, colabora con Bulma y Krilin en una cueva pirata submarina para vencer al sádico General Blue, una persecución que culmina en la surrealista Aldea Pingüino con la ayuda de Arale Norimaki (crossover con Dr. Slump). La historia toma un tono oscuro y sangriento en la Tierra Sagrada de Karin: la Red Ribbon contrata al mercenario más letal del mundo, Tao Pai Pai, quien asesina fríamente a Bora (padre del niño indígena Upa) y derrota a Goku dejándolo casi muerto con un Dodonpa en el pecho. Goku se salva milagrosamente gracias a que la esfera de cuatro estrellas en su ropa amortiguó el disparo. Goku escala la colosal Torre de Karin, entrena durante 3 días con el ermitaño felino Karin intentando arrebatarle el Agua Sagrada (ganando velocidad y reflejos asombrosos) y desciende para humillar a Tao Pai Pai, quien muere aparentemente al rebotarle su propia granada. Finalmente, un Goku imparable asalta en solitario el cuartel general de la Patrulla Roja, destrozando tanques, mechas y soldados, hasta que el Comandante Red revela que solo quería las esferas para ser más alto; Black lo asesina indignado, se enfrenta a Goku en un robot blindado y es desintegrado, borrando a la Patrulla Roja del mapa.",
+      "worldStateAtStart": {
+        "threatLevel": "Alto / Paramilitar",
+        "activeVillains": [
+          "Comandante Red",
+          "Oficial Black",
+          "General Blue",
+          "Tao Pai Pai"
+        ],
+        "dragonBallsStatus": "En disputa militar entre Goku y los batallones de la Patrulla Roja.",
+        "characterStatus": {
+          "goku": "Guerrero con madurez técnica que enfrenta la primera pérdida de una vida inocente (Bora).",
+          "vegeta": "En el espacio.",
+          "gohan": "No ha nacido.",
+          "piccolo": "Sellado.",
+          "allies": "Androide 8 (Octavio), Upa, Arale, Maestro Karin."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Aparece el Dr. Gero en el trasfondo (creador del Androide 8 y origen de Cell en DBZ).",
+        "Tao Pai Pai asesina a Bora; Goku aprende a entrenar su agilidad con el Maestro Karin.",
+        "Goku desmantela solo al ejército militar más poderoso del planeta."
+      ],
+      "milestones": [
+        {
+          "episode": 35,
+          "title": "Torre de la Fuerza y General White",
+          "description": "Goku asciende la torre derrotando al General White y liberando al Androide 8."
+        },
+        {
+          "episode": 38,
+          "title": "Nace el Androide 8",
+          "description": "Goku libera a Octavio en la Torre de la Fuerza, rechazando órdenes de matar."
+        },
+        {
+          "episode": 46,
+          "title": "General Blue y la Aldea Pingüino",
+          "description": "Crossover con Dr. Slump: Arale ayuda a derrotar al General Blue."
+        },
+        {
+          "episode": 54,
+          "title": "Entrenamiento con el Maestro Karin",
+          "description": "Goku sube la Torre de Karin y entrena 3 días para ganar velocidad y reflejos."
+        },
+        {
+          "episode": 58,
+          "title": "La Crueldad de Tao Pai Pai",
+          "description": "El mercenario asesina a Bora y vence a Goku con el Dodonpa."
+        },
+        {
+          "episode": 62,
+          "title": "Goku vs Tao Pai Pai (Revancha)",
+          "description": "Goku regresa mejorado y derrota al mercenario con un solo golpe."
+        },
+        {
+          "episode": 68,
+          "title": "Caída de la Patrulla Roja",
+          "description": "Goku destruye el cuartel general y aniquila al robot del Oficial Black."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        29,
+        30,
+        31,
+        32,
+        44,
+        45
+      ],
+      "recommendedStartEpisode": 34
+    },
+    {
+      "id": "db-uranai-baba",
+      "seriesId": "classic",
+      "seriesTitle": "Dragon Ball",
+      "tmdbId": 12609,
+      "order": 4,
+      "seriesOrder": 4,
+      "sagaId": "uranai-baba",
+      "sagaName": "Saga de Uranai Baba",
+      "title": "El Torneo del Más Allá y el Reencuentro con el Abuelo Gohan",
+      "startEpisode": 69,
+      "endEpisode": 82,
+      "inUniverseYears": "Año 750",
+      "dominantVibe": "Misticismo / Emotivo",
+      "previouslyOn": "Goku reunió 6 Esferas del Dragón tras aniquilar a la Patrulla Roja, pero la última esfera no aparece en el Radar del Dragón de Bulma, impidiendo revivir a Bora como Goku había prometido a Upa.",
+      "detailedPlot": "El Maestro Roshi aconseja a Goku acudir a su hermana mayor, la adivina Uranai Baba, quien cobra 10 millones de zenis por una lectura o exige derrotar a sus cinco guerreros místicos. Goku, Krilin y Yamcha aceptan el desafío. Krilin cae ante Fangs el Vampiro, pero Upa y Puar lo vencen con ajo y cruces sagradas. Yamcha derrota al Hombre Invisible gracias a una estratagema cómica de Krilin (mostrando los pechos de Bulma a Roshi para que su sangrado nasal bañe al enemigo). En el Coliseo del Demonio, Yamcha es derrotado por la Momia, a quien Goku vence de un solo golpe, superando también al demonio Spike Devilman esquivando su rayo que expande la maldad del corazón. El quinto guerrero misterioso lleva una máscara de gato y una aureola de muerto. El combate cuerpo a cuerpo es feroz e igualado; el enmascarado toma la cola de Goku para inmovilizarlo hasta que se desprende por completo. El guerrero se quita la máscara: es el difunto Abuelo Gohan, a quien Baba le otorgó un día de visita en la Tierra. En una de las escenas más conmovedoras de toda la franquicia, Goku rompe en llanto abrazando a su abuelo. Tras la despedida, Baba revela que la última esfera está oculta en una caja antibloqueo en posesión de la banda de Pilaf. Goku los vence en su robot combinado, convoca a Shenlong y revive al padre de Upa.",
+      "worldStateAtStart": {
+        "threatLevel": "Místico / Desafío Mágico",
+        "activeVillains": [
+          "Emperador Pilaf (ocultando la última esfera)"
+        ],
+        "dragonBallsStatus": "6 reunidas por Goku; 1 oculta por Pilaf en una cápsula aislante.",
+        "characterStatus": {
+          "goku": "Pierde definitivamente la cola de mono, eliminando su debilidad motriz.",
+          "vegeta": "En el espacio.",
+          "gohan": "No ha nacido.",
+          "piccolo": "Sellado.",
+          "allies": "Abuelo Gohan (espíritu), Uranai Baba, Yamcha, Krilin, Puar, Upa."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Goku se reencuentra con su abuelo fallecido y pierde la debilidad de la cola.",
+        "Se explica la regla de que Uranai Baba puede traer almas del Más Allá por 24 horas (vital en Buu).",
+        "Shenlong revive a Bora, cerrando la promesa de la Patrulla Roja."
+      ],
+      "milestones": [
+        {
+          "episode": 71,
+          "title": "Los Cinco Guerreros",
+          "description": "Comienza el torneo en el Palacio de Baba para localizar la última esfera."
+        },
+        {
+          "episode": 72,
+          "title": "Krilin vs Fangs el Vampiro",
+          "description": "Upa y Puar derrotan al vampiro con ajo y cruces sagradas."
+        },
+        {
+          "episode": 74,
+          "title": "Yamcha vs Hombre Invisible",
+          "description": "Krilin usa la estratagema con Bulma y Roshi para revelar al enemigo invisible."
+        },
+        {
+          "episode": 75,
+          "title": "Goku vs Momia y Spike Devilman",
+          "description": "Goku vence a la Momia y esquiva el rayo Devilmite del demonio Spike."
+        },
+        {
+          "episode": 76,
+          "title": "El Abrazo del Abuelo",
+          "description": "El enmascarado se revela como Son Gohan; emotivo reencuentro con Goku entre lágrimas."
+        },
+        {
+          "episode": 77,
+          "title": "Resurrección de Bora",
+          "description": "Shenlong es invocado y Bora vuelve a la vida."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        79,
+        80,
+        81,
+        82
+      ],
+      "recommendedStartEpisode": 69
+    },
+    {
+      "id": "db-torneo-22",
+      "seriesId": "classic",
+      "seriesTitle": "Dragon Ball",
+      "tmdbId": 12609,
+      "order": 5,
+      "seriesOrder": 5,
+      "sagaId": "torneo-22",
+      "sagaName": "Saga del 22° Torneo de Artes Marciales",
+      "title": "El Duelo de Escuelas: Tortuga vs Grulla y la Redención de Tenshinhan",
+      "startEpisode": 83,
+      "endEpisode": 101,
+      "inUniverseYears": "Año 753",
+      "dominantVibe": "Artes Marciales Puras / Rivalidad Filosófica",
+      "previouslyOn": "Siguiendo el consejo de Roshi, Goku decide recorrer el mundo a pie sin usar la Nube Voladora para endurecer su cuerpo durante tres años, mientras Krilin y Yamcha entrenan en Kame House para el próximo campeonato mundial.",
+      "detailedPlot": "Llega el 22° Torneo de Artes Marciales. Una escuela rival liderada por el Maestro Tsuru (antiguo condiscípulo y rival de Roshi) inscribe a sus dos asesinos estrella: Tenshinhan (con tres ojos y dominio del Dodonpa) y Chaoz (con poderes telequinéticos). El Torneo de Grulla promueve la crueldad y el asesinato, mientras la Escuela Tortuga defiende el valor de la vida. Yamcha es brutalmente noqueado por Tenshinhan, quien le parte la pierna intencionalmente tras el combate. Krilin derrota a Chaoz superando su telequinesis haciéndolo contar con los dedos. Jackie Chun (Roshi) se enfrenta a Tenshinhan en semifinales; al notar el enorme potencial y la nobleza oculta en el joven, Roshi se retira voluntariamente del cuadrilátero, advirtiéndole que no manche sus manos convirtiéndose en un sicario como su maestro Tsuru o su hermano Tao Pai Pai. La final entre Goku y Tenshinhan es una obra maestra de artes marciales: choques en el aire, técnicas de clonación (Shishin no Ken) y ráfagas destructivas (Kikoho de Tenshinhan, que hace desaparecer la plataforma entera). Tenshinhan renuncia a la Escuela Grulla al negarse a hacer trampa con la telequinesis de Chaoz. En el salto final, ambos caen agotados fuera del ring; Goku choca accidentalmente contra una camioneta milisegundos antes de que Tenshinhan toque el suelo, otorgando la victoria formal a Tenshinhan, quien promete devolver el dinero del premio y convertirse en un protector.",
+      "worldStateAtStart": {
+        "threatLevel": "Deportivo / Ideológico",
+        "activeVillains": [
+          "Maestro Tsuru (Escuela Grulla)"
+        ],
+        "dragonBallsStatus": "Convertidas en piedra.",
+        "characterStatus": {
+          "goku": "Joven prodigio de 15 años con una condición marcial cercana a la perfección.",
+          "vegeta": "En el espacio.",
+          "gohan": "No ha nacido.",
+          "piccolo": "Sellado en el fondo del océano.",
+          "allies": "Tenshinhan y Chaoz (futuros Guerreros Z), Maestro Roshi, Krilin, Yamcha."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Debut de Tenshinhan y Chaoz como discípulos oscuros que eligen el camino noble.",
+        "Tenshinhan aprende la futilidad del asesinato y se convierte en aliado fraterno de Goku.",
+        "Se introduce el Kikoho como la técnica mortal más peligrosa de las artes marciales."
+      ],
+      "milestones": [
+        {
+          "episode": 86,
+          "title": "Inicio del 22° Torneo",
+          "description": "Rivalidad abierta entre la Escuela Tortuga de Roshi y la Escuela Grulla de Tsuru."
+        },
+        {
+          "episode": 88,
+          "title": "Yamcha vs Tenshinhan",
+          "description": "Tenshinhan destruye la pierna de Yamcha demostrando la crueldad de la Escuela Grulla."
+        },
+        {
+          "episode": 91,
+          "title": "Krilin vs Chaoz",
+          "description": "Krilin vence la telequinesis de Chaoz haciéndolo contar con los dedos."
+        },
+        {
+          "episode": 94,
+          "title": "La Sabiduría de Roshi",
+          "description": "Jackie Chun se baja del ring para guiar a Tenshinhan hacia el camino del bien."
+        },
+        {
+          "episode": 97,
+          "title": "Semifinal: Tenshinhan vs Jackie Chun",
+          "description": "Roshi se retira para guiar a Tenshinhan hacia el camino noble."
+        },
+        {
+          "episode": 101,
+          "title": "La Gran Final Tenshinhan vs Goku",
+          "description": "Tenshinhan gana por caída fortuita; renuncia al mal y forja una alianza con Goku."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 86
+    },
+    {
+      "id": "db-piccolo-daimaku",
+      "seriesId": "classic",
+      "seriesTitle": "Dragon Ball",
+      "tmdbId": 12609,
+      "order": 6,
+      "seriesOrder": 6,
+      "sagaId": "piccolo",
+      "sagaName": "Saga de Piccolo Daimaoh",
+      "title": "La Noche Más Oscura: El Rey Demonio y el Despertar de Piccolo Jr.",
+      "startEpisode": 102,
+      "endEpisode": 122,
+      "inUniverseYears": "Año 753",
+      "dominantVibe": "Terror / Tragedia / Venganza",
+      "previouslyOn": "Minutos después de concluir la premiación del 22° Torneo, Krilin regresa a los vestuarios a buscar la esfera de cuatro estrellas y el báculo sagrado de Goku. Al demorarse, Goku corre a buscarlo y se topa con una escena escalofriante que quiebra la inocencia de la serie para siempre: Krilin yace muerto en el suelo con el cuello roto junto a una nota marcada con el kanji de 'Demonio'.",
+      "detailedPlot": "El asesino es Tambourine, un engendro demoníaco engendrado por el Rey Demonio Piccolo Daimaoh, liberado de su encierro por el Emperador Pilaf. Piccolo Daimaoh, envejecido y hambriento de poder, ordena cazar y ejecutar a todos los campeones de artes marciales del mundo para que nadie vuelva a aprender el Mafuba (la técnica que lo selló siglos atrás) mientras reúne las esferas del dragón para recuperar la juventud eterna. Goku, ciego de ira, persigue a Tambourine pero cae exhausto; tras recuperarse con la carne asada del samurái Yajirobe en el bosque, Goku pulveriza a Tambourine con un Kamehameha. Piccolo Daimaoh acude en persona y apalea a Goku dejándolo al borde de un paro cardíaco. Mientras tanto, el Maestro Roshi y Tenshinhan intentan frenarlo: Roshi duerme a Tenshinhan para salvarle la vida y ejecuta el Mafuba contra Piccolo; la técnica falla por centímetros y Roshi cae muerto por el agotamiento de su ki vital. Piccolo reúne las 7 esferas, invoca a Shenlong, pide ser joven otra vez y asesina al dragón con una ráfaga de fuego para que nadie pueda deshacer sus actos, instalándose como rey absoluto en el Palacio del Rey de la Tierra. Yajirobe lleva a Goku a la Torre Karin, donde Goku bebe el veneno mortal del Agua Ultra Divina (Choushinsui); tras superar horas de agonía al borde de la muerte, su poder latente es desbloqueado. Goku llega al palacio justo cuando Piccolo iba a asesinar a Tenshinhan. En un duelo desgarrador donde Piccolo le rompe una pierna y ambos brazos a Goku usando a Tenshinhan como rehén, Goku concentra todo su ki en su puño hábil restante y se propulsa con un Kamehameha hacia el cielo, atravesando el torso de Piccolo con el Puño del Gran Mono (Oozaru). Antes de estallar en pedazos, Piccolo escupe un huevo que contiene a su reencarnación e hijo: Piccolo Jr.",
+      "worldStateAtStart": {
+        "threatLevel": "Crítico / Apocalíptico",
+        "activeVillains": [
+          "Rey Demonio Piccolo Daimaoh",
+          "Tambourine",
+          "Cymbal",
+          "Drum"
+        ],
+        "dragonBallsStatus": "Destruidas: Shenlong fue asesinado por Piccolo Daimaoh.",
+        "characterStatus": {
+          "goku": "Golpeado emocionalmente por la muerte de su mejor amigo Krilin y su maestro Roshi.",
+          "vegeta": "En el espacio.",
+          "gohan": "No ha nacido.",
+          "piccolo": "Piccolo Daimaoh reina sembrando el caos; engendra a Piccolo Jr. al morir.",
+          "allies": "Krilin (muerto), Roshi (muerto), Chaoz (muerto), Tenshinhan, Yajirobe."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Primera muerte de Krilin y sacrificio supremo del Maestro Roshi.",
+        "Piccolo Daimaoh asesina al Dragón Shenlong, demostrando que los dragones no son omnipotentes.",
+        "Goku atraviesa a Piccolo con el golpe del Oozaru; nace el huevo de Piccolo Jr."
+      ],
+      "milestones": [
+        {
+          "episode": 102,
+          "title": "La Muerte de Krilin",
+          "description": "El tono de la serie cambia a tragedia con el hallazgo del cadáver de Krilin."
+        },
+        {
+          "episode": 104,
+          "title": "Goku vs Tambourine",
+          "description": "Goku venganza la muerte de Krilin pulverizando a Tambourine con un Kamehameha."
+        },
+        {
+          "episode": 108,
+          "title": "Goku vs Piccolo Daimaoh (Primera vez)",
+          "description": "Piccolo aplasta a Goku dejándolo al borde de la muerte; Yajirobe lo rescata."
+        },
+        {
+          "episode": 111,
+          "title": "El Fin del Maestro Roshi",
+          "description": "Roshi falla el Mafuba y muere por el desgaste de su energía vital."
+        },
+        {
+          "episode": 113,
+          "title": "Mafuba fallido de Roshi",
+          "description": "Roshi sacrifica su vida intentando sellar a Piccolo; la técnica falla por centímetros."
+        },
+        {
+          "episode": 119,
+          "title": "Agua Ultra Divina",
+          "description": "Goku bebe el veneno mortal en la Torre Karin y desbloquea su poder latente."
+        },
+        {
+          "episode": 122,
+          "title": "El Golpe del Mono",
+          "description": "Goku atraviesa el pecho de Piccolo Daimaoh; Piccolo engendra a Piccolo Jr. antes de explotar."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 102
+    },
+    {
+      "id": "db-piccolo-jr",
+      "seriesId": "classic",
+      "seriesTitle": "Dragon Ball",
+      "tmdbId": 12609,
+      "order": 7,
+      "seriesOrder": 7,
+      "sagaId": "piccolo-jr",
+      "sagaName": "Saga de Piccolo Jr.",
+      "title": "El Templo Sagrado, la Madurez y el Combate Final por la Tierra",
+      "startEpisode": 123,
+      "endEpisode": 153,
+      "inUniverseYears": "Año 753 – 756",
+      "dominantVibe": "Artes Marciales Divinas / Clímax Épico",
+      "previouslyOn": "Goku derrotó a Piccolo Daimaoh, pero las esferas del dragón desaparecieron con la muerte de Shenlong, dejando a Krilin, Roshi y Chaoz muertos en la Tierra. Karin revela a Goku que para restaurar el dragón debe subir al Templo Sagrado más allá del cielo con su báculo.",
+      "detailedPlot": "Goku sube al Templo Sagrado y se encuentra con Mr. Popo y con Kami-sama (Dios de la Tierra), cuya apariencia idéntica a Piccolo aterra a Goku. Kami-sama revela la verdad: él y Piccolo Daimaoh eran una sola entidad alienígena que se dividió en dos para poder aspirar al puesto de Dios, expulsando su parte maligna. Por ende, si uno muere, el otro también muere. Kami-sama reconstruye la figura de Shenlong y le insufla vida; Shenlong reaparece en la Tierra y revive a todas las víctimas de Piccolo. Goku se queda 3 años entrenando en el Templo Sagrado aprendiendo a dominar el ki sin depender de la vista. Llega el 23° Torneo de Artes Marciales (Año 756). Todos los guerreros se reúnen y quedan atónitos al ver llegar a un Goku adulto de 18 años, alto y fornido. También participa Milk (exigiendo a Goku que cumpla su promesa de casarse con ella hecha de niños, a lo que Goku acepta con inocencia) y un participante siniestro llamado Ma Junior (Piccolo Jr.). Kami-sama participa disfrazado de humano como 'Shen' intentando sellar a Piccolo con el Mafuba, pero Piccolo invierte la técnica atrapando a Kami-sama dentro de una botella y tragándosela. La gran final entre Goku y Piccolo Jr. es una masacre colosal: Piccolo revela su identidad, destruye la ciudad circundante y adopta un tamaño gigante; Goku se mete por la garganta de Piccolo y rescata la botella de Kami-sama. Piccolo atraviesa el pecho de Goku con un rayo y le rompe las extremidades con ondas explosivas. Sin embargo, Goku utiliza por primera vez la técnica de volar por los aires (Bukujutsu) propulsándose como un misil humano y arrojando a Piccolo fuera del ring con un cabezazo desgarrador, coronándose por fin campeón mundial. Goku le da una semilla del ermitaño a Piccolo para salvarle la vida y preservar a Kami-sama, iniciando su viaje en la Nube Voladora junto a Milk.",
+      "worldStateAtStart": {
+        "threatLevel": "Divino / Supervivencia Global",
+        "activeVillains": [
+          "Piccolo Jr. (Ma Junior)"
+        ],
+        "dragonBallsStatus": "Restauradas por Kami-sama; resucitaron a Krilin, Roshi y Chaoz.",
+        "characterStatus": {
+          "goku": "Adulto joven de 18 años, entrenado en el Templo Sagrado con control total del ki.",
+          "vegeta": "En el espacio.",
+          "gohan": "No ha nacido.",
+          "piccolo": "Piccolo Jr. crecido y sediento de vengar la muerte de su padre.",
+          "allies": "Kami-sama, Mr. Popo, Milk (futura esposa), Krilin, Yamcha, Tenshinhan."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Se revela el vínculo vital indivisible entre Kami-sama y Piccolo (si uno muere, mueren ambos).",
+        "Goku se convierte en adulto y se casa formalmente con Milk tras ganar el torneo.",
+        "Goku se consagra Campeón Mundial de Artes Marciales por primera y única vez en la serie."
+      ],
+      "milestones": [
+        {
+          "episode": 125,
+          "title": "Dios de la Tierra",
+          "description": "Goku conoce a Kami-sama y descubre el origen dual del bien y el mal."
+        },
+        {
+          "episode": 126,
+          "title": "Entrenamiento con Mr. Popo",
+          "description": "Goku aprende a controlar el ki y luchar con los ojos cerrados durante 3 años."
+        },
+        {
+          "episode": 133,
+          "title": "El Reencuentro de Goku Adulto",
+          "description": "Goku regresa crecido al 23° Torneo de Artes Marciales."
+        },
+        {
+          "episode": 137,
+          "title": "Matrimonio de Goku y Milk",
+          "description": "Goku cumple su promesa infantil y se casa formalmente con Milk."
+        },
+        {
+          "episode": 142,
+          "title": "Kami-sama vs Piccolo Jr (como Shen)",
+          "description": "Kami-sama intenta el Mafuba pero Piccolo lo invierte y lo traga en una botella."
+        },
+        {
+          "episode": 146,
+          "title": "Goku rescata a Kami-sama",
+          "description": "Goku entra por la garganta de Piccolo gigante y recupera la botella con Kami-sama."
+        },
+        {
+          "episode": 148,
+          "title": "La Gran Final: Goku vs Piccolo Jr",
+          "description": "Batalla brutal de proporciones épicas; Goku gana volando por primera vez."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        149,
+        150,
+        151,
+        152,
+        153
+      ],
+      "recommendedStartEpisode": 133
+    },
+    {
+      "id": "dbz-saiyajin-raditz",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 8,
+      "seriesOrder": 1,
+      "sagaId": "saiyajin",
+      "sagaName": "Saga de los Saiyajin",
+      "title": "El Origen Revelado, la Caída de Goku y el Camino de la Serpiente",
+      "startEpisode": 1,
+      "endEpisode": 20,
+      "inUniverseYears": "Año 761 – 762",
+      "dominantVibe": "Ciencia Ficción / Giro Cósmico / Entrenamiento Divino",
+      "previouslyOn": "Pasaron 5 años desde que Goku derrotó a Piccolo Jr. y se casó con Milk. La Tierra vive una era de paz idílica. Goku vive en el bosque de la Montaña Paoz criando a su hijo de 4 años, Son Gohan. Piccolo se entrena en aislamiento buscando una revancha.",
+      "detailedPlot": "Goku asiste a la Kame House para presentar a su hijo Gohan. Una nave espacial cilíndrica se estrella en la Tierra y emerge Raditz, un guerrero extraterrestre con armadura y rastreador. Raditz localiza a Goku y le revela que su verdadero nombre es Kakarotto, miembro de la raza guerrera de los Saiyajin, extinta tras la supuesta colisión de un meteorito con su planeta natal. Raditz secuestra a Gohan. Piccolo ofrece una tregua a Goku al comprender que Raditz los supera abrumadoramente. En la batalla, Gohan estalla en ira rompiendo la nave de Raditz con un ki de 1.307 y embistiéndolo en el pecho. Goku inmoviliza a Raditz y Piccolo los mata a ambos con el Makankosappo. Antes de expirar, Raditz advierte que dos Saiyajin mucho más poderosos llegarán en un año. Kami-sama lleva a Goku al Más Allá para recorrer el Camino de la Serpiente hacia el planeta de Kaio-sama. Piccolo entrena brutalmente a Gohan en la naturaleza tras destruir la luna para frenar su transformación en Oozaru. En el Más Allá, Kaio-sama entrena a Goku en gravedad x10 y le enseña dos técnicas divinas: el Kaio-ken y la Genkidama.",
+      "worldStateAtStart": {
+        "threatLevel": "Grave / Invasión Extraterrestre",
+        "activeVillains": [
+          "Raditz",
+          "Vegeta (en camino)",
+          "Nappa (en camino)"
+        ],
+        "dragonBallsStatus": "Activas en la Tierra.",
+        "characterStatus": {
+          "goku": "Muerto al final del ep. 5; viaja por el Camino de la Serpiente.",
+          "vegeta": "Príncipe Saiyajin navegando por el espacio hacia la Tierra.",
+          "gohan": "Niño secuestrado que revela un poder latente salvaje.",
+          "piccolo": "Rival que se alía por necesidad y adopta el rol de mentor de Gohan.",
+          "allies": "Krilin, Roshi, Yamcha, Tenshinhan, Chaoz."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Goku descubre que es un alienígena Saiyajin llamado Kakarotto.",
+        "Goku y Raditz mueren por el Makankosappo de Piccolo.",
+        "Goku aprende el Kaio-ken y la Genkidama con Kaio-sama."
+      ],
+      "milestones": [
+        {
+          "episode": 1,
+          "title": "Llegada de Raditz",
+          "description": "Se revela la herencia Saiyajin y el secuestro de Gohan."
+        },
+        {
+          "episode": 3,
+          "title": "Gohan muestra su poder oculto",
+          "description": "Gohan rompe la nave de Raditz con un estallido de ki de 1307."
+        },
+        {
+          "episode": 5,
+          "title": "Muerte de Goku",
+          "description": "Piccolo mata a Goku y Raditz con el Makankosappo; aviso de la invasión en 1 año."
+        },
+        {
+          "episode": 6,
+          "title": "Camino de la Serpiente",
+          "description": "Goku comienza su travesía por el Camino de la Serpiente hacia Kaio-sama."
+        },
+        {
+          "episode": 12,
+          "title": "Entrenamiento en gravedad x10",
+          "description": "Goku completa el entrenamiento de Kaio-sama atrapando a Bubbles y golpeando a Gregory."
+        },
+        {
+          "episode": 20,
+          "title": "Técnicas de Kaio-sama",
+          "description": "Goku domina el Kaio-ken y la Genkidama en el planeta de gravedad x10."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "recommendedStartEpisode": 1
+    },
+    {
+      "id": "dbz-saiyajin-vegeta",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 9,
+      "seriesOrder": 2,
+      "sagaId": "saiyajin",
+      "sagaName": "Saga de los Saiyajin",
+      "title": "La Invasión Saiyajin, el Sacrificio de Piccolo y el Duelo Legendario",
+      "startEpisode": 21,
+      "endEpisode": 35,
+      "inUniverseYears": "Año 762 (Noviembre)",
+      "dominantVibe": "Tragedia Bélica / Clímax Agónico",
+      "previouslyOn": "Se cumplió el año de tregua. Las Esferas del Dragón fueron usadas para revivir a Goku, pero este debe descender desde el planeta de Kaio-sama. Nappa y Vegeta han aterrizado en la Tierra antes de que Goku llegue.",
+      "detailedPlot": "Vegeta y Nappa destruyen una ciudad y confrontan a los Guerreros Z. Nappa planta Saibamen: uno mata a Yamcha autodestruyéndose. Chaoz se inmola en vano sobre la espalda de Nappa y Tenshinhan muere por agotamiento de ki con un Kikoho de un solo brazo. Cuando Nappa dispara un proyectil mortal a Gohan, Piccolo se interpone con su cuerpo, muriendo por su discípulo; esto causa la muerte de Kami-sama y la petrificación de las esferas del dragón terrestres. Goku aterriza, quiebra la espalda de Nappa con el Kaio-ken, y Vegeta ejecuta a Nappa arrojándolo al aire. El choque entre Goku y Vegeta es brutal: Goku recurre al Kaio-ken x3 y al Kaio-ken x4 para contrarrestar el Galick Gun con un Kamehameha. Vegeta crea una luna artificial mutando a Oozaru y triturando los huesos de Goku. Yajirobe le corta la cola con su katana. Krilin y Gohan lanzan la Genkidama de Goku, y Gohan Oozaru aplasta a Vegeta. Krilin intenta rematar a Vegeta con la espada de Yajirobe, pero Goku suplica que le perdonen la vida. Vegeta escapa moribundo en su cápsula.",
+      "worldStateAtStart": {
+        "threatLevel": "Apocalíptico",
+        "activeVillains": [
+          "Vegeta",
+          "Nappa"
+        ],
+        "dragonBallsStatus": "Se apagan y petrifican tras la muerte de Piccolo en el ep. 25.",
+        "characterStatus": {
+          "goku": "Volando a máxima velocidad de regreso del Más Allá.",
+          "vegeta": "Guerrero supremo despiadado de 18.000 de ki.",
+          "gohan": "Entrenado en combate pero aterrorizado por la masacre.",
+          "piccolo": "Se inmola para salvar a Gohan, muriendo como un protector noble.",
+          "allies": "Yamcha (muerto), Chaoz (muerto), Tenshinhan (muerto), Krilin, Yajirobe."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Mueren Yamcha, Chaoz, Tenshinhan y Piccolo; desaparecen las esferas de la Tierra.",
+        "Choque mítico del Kamehameha Kaio-ken x4 vs Galick Gun.",
+        "Goku le perdona la vida a Vegeta, permitiéndole huir al espacio."
+      ],
+      "milestones": [
+        {
+          "episode": 22,
+          "title": "Muerte de Yamcha",
+          "description": "Un Saibamán se autodestruye en el pecho de Yamcha."
+        },
+        {
+          "episode": 23,
+          "title": "Saibamen y muerte de Yamcha",
+          "description": "Un Saibamen se autodestruye matando a Yamcha; Krilin elimina a los restantes."
+        },
+        {
+          "episode": 25,
+          "title": "El Sacrificio de Piccolo",
+          "description": "Piccolo da su vida por Gohan; las esferas de la Tierra se convierten en piedra."
+        },
+        {
+          "episode": 26,
+          "title": "Sacrificio de Chaoz y Tenshinhan",
+          "description": "Chaoz se inmola en vano; Tenshinhan muere agotando su ki en un Kikoho final."
+        },
+        {
+          "episode": 30,
+          "title": "Choque de Titanes",
+          "description": "Kamehameha Kaio-ken x4 vs Galick Gun de Vegeta."
+        },
+        {
+          "episode": 32,
+          "title": "Yajirobe corta la cola a Vegeta Oozaru",
+          "description": "Yajirobe desciende del cielo y corta la cola artificial, revirtiendo a Vegeta."
+        },
+        {
+          "episode": 34,
+          "title": "Gohan Oozaru aplasta a Vegeta",
+          "description": "La Genkidama de Goku + Gohan Oozaru dejan a Vegeta moribundo."
+        },
+        {
+          "episode": 35,
+          "title": "El Perdón de Goku",
+          "description": "Goku detiene a Krilin y permite el escape de Vegeta en su nave."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 21
+    },
+    {
+      "id": "dbz-namek-viaje",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 10,
+      "seriesOrder": 3,
+      "sagaId": "freezer",
+      "sagaName": "Saga de Freezer",
+      "title": "La Carrera por las Esferas en Namekusei y el Terror de Freezer",
+      "startEpisode": 36,
+      "endEpisode": 67,
+      "inUniverseYears": "Año 762 (Diciembre)",
+      "dominantVibe": "Thriller Espacial / Guerra a Tres Bandas",
+      "previouslyOn": "La Tierra quedó en ruinas. Al recordar que Piccolo era originario del Planeta Namek, Krilin y Bulma deducen que en ese planeta deben existir las esferas del dragón creadoras. Con Goku hospitalizado, Bulma, Krilin y Gohan viajan a Namek en la nave de Kami-sama.",
+      "detailedPlot": "Al llegar a Namek, los héroes descubren que el emperador galáctico Freezer y su ejército están exterminando aldeas enteras para robar las esferas y obtener la inmortalidad. Vegeta también llega a Namek en rebeldía contra Freezer buscando el mismo deseo. Krilin y Gohan salvan al niño namekiano Dende. Vegeta aprovecha que sabe sentir el ki para matar a Dodoria y Zarbon, aprovechando el Zenkai que multiplica su poder tras cada combate. Dende lleva a Krilin ante el Gran Patriarca, quien desbloquea los poderes ocultos de Krilin y Gohan. Mientras tanto, Goku sana con las semillas de Karin y despega en una nave a gravedad 100g. Desesperado, Freezer convoca a las temibles Fuerzas Especiales Ginyu. Vegeta se alía con Krilin y Gohan. Guldo es decapitado por Vegeta, pero Recoome masacra a Vegeta, Krilin y le rompe el cuello a Gohan. En el instante final, aterriza la nave de Goku.",
+      "worldStateAtStart": {
+        "threatLevel": "Galáctico / Extinción",
+        "activeVillains": [
+          "Freezer",
+          "Zarbon",
+          "Dodoria",
+          "Fuerzas Especiales Ginyu"
+        ],
+        "dragonBallsStatus": "Las 7 esferas de Namek están en disputa entre Freezer, Vegeta y Krilin.",
+        "characterStatus": {
+          "goku": "Entrenando en el espacio a gravedad 100g, alcanzando 90.000 de ki.",
+          "vegeta": "Rival solitario que asesina a los soldados de Freezer uno por uno.",
+          "gohan": "Potencial latente desbloqueado por el Gran Patriarca.",
+          "piccolo": "Muerto, entrenando con Kaio-sama en el Más Allá.",
+          "allies": "Krilin, Bulma, Dende, Gran Patriarca."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Guerra a tres bandas en Namek: Guerreros Z vs Vegeta vs Imperio de Freezer.",
+        "El Gran Patriarca desbloquea los poderes ocultos de Gohan y Krilin.",
+        "Llegan las Fuerzas Especiales Ginyu y destrozan a los protagonistas."
+      ],
+      "milestones": [
+        {
+          "episode": 37,
+          "title": "Llegada a Namek y aldeas masacradas",
+          "description": "Bulma, Krilin y Gohan descubren el genocidio de Freezer en Namek."
+        },
+        {
+          "episode": 44,
+          "title": "Llegada a Namek",
+          "description": "Descubren la presencia de Freezer masacrando aldeanos namekianos."
+        },
+        {
+          "episode": 48,
+          "title": "Vegeta vs Zarbon (Revancha)",
+          "description": "Vegeta usa su Zenkai tras curarse y destruye a Zarbon."
+        },
+        {
+          "episode": 50,
+          "title": "Dende presenta a Krilin al Gran Patriarca",
+          "description": "El Gran Patriarca desbloquea el potencial oculto de Krilin y Gohan."
+        },
+        {
+          "episode": 54,
+          "title": "El Gran Patriarca",
+          "description": "Desbloqueo de potencial místico de Gohan y Krilin."
+        },
+        {
+          "episode": 61,
+          "title": "Llegan las Fuerzas Ginyu",
+          "description": "El Captain Ginyu y su escuadrón de élite aterrizan en Namek."
+        },
+        {
+          "episode": 67,
+          "title": "Llegada de Goku a Namek",
+          "description": "Goku aterriza en Namek cuando Recoome está por matar a Gohan."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "recommendedStartEpisode": 44
+    },
+    {
+      "id": "dbz-namek-ginyu-freezer",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 11,
+      "seriesOrder": 4,
+      "sagaId": "freezer",
+      "sagaName": "Saga de Freezer",
+      "title": "Las Fuerzas Ginyu, el Despertar de Polunga y las Formas del Tirano",
+      "startEpisode": 68,
+      "endEpisode": 82,
+      "inUniverseYears": "Año 762 (Diciembre)",
+      "dominantVibe": "Acción Frenética / Revelación de Poder",
+      "previouslyOn": "Goku aterriza en Namek. Con semillas del ermitaño salva a Gohan, Krilin y Vegeta, exhibiendo una calma y una velocidad que dejan perplejo a Vegeta, quien sospecha que Goku podría ser el legendario Super Saiyajin.",
+      "detailedPlot": "Goku vence a Recoome de un solo golpe y humilla a Burter. El Capitán Ginyu intercambia cuerpos con Goku usando su técnica de cambio, pero no logra controlar el ki de Goku. Al intentar pasar al cuerpo de Vegeta, Goku lanza una rana interponiéndola en el rayo, atrapando a Ginyu en el cuerpo del batracio. Goku queda herido e ingresa a la cámara médica de Freezer. Dende invoca a Polunga con la clave en namekiano: con los primeros dos deseos reviven a Piccolo y lo teletransportan a Namek (lo que revive a Kami-sama y reactiva las esferas terrestres). El Gran Patriarca muere antes del tercer deseo. Piccolo se fusiona en el camino con Nail superando el millón de poder. Freezer regresa enfurecido e inicia sus transformaciones: en segunda forma empala a Krilin y combate contra Piccolo; en tercera forma abruma a Piccolo con rayos veloces; y finalmente pasa a su Forma Final.",
+      "worldStateAtStart": {
+        "threatLevel": "Catastrófico",
+        "activeVillains": [
+          "Freezer (Forma 1)",
+          "Capitán Ginyu",
+          "Jeice"
+        ],
+        "dragonBallsStatus": "Invocan a Polunga para revivir a Piccolo antes de que se apaguen.",
+        "characterStatus": {
+          "goku": "Gravemente lastimado en la cápsula médica de recuperación.",
+          "vegeta": "Aliado táctico que incrementó masivamente su poder por Zenkai.",
+          "gohan": "Consciente y listo para defender el planeta.",
+          "piccolo": "Revivido en Namek, fusionado con Nail.",
+          "allies": "Dende, Krilin."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Ginyu queda atrapado en el cuerpo de una rana namekiana.",
+        "Piccolo es revivido y se fusiona con Nail, alcanzando un poder descomunal.",
+        "Freezer despliega sus transformaciones hasta alcanzar su aterradora Forma Final."
+      ],
+      "milestones": [
+        {
+          "episode": 69,
+          "title": "Goku vs Recoome (Un golpe)",
+          "description": "Goku derrota a Recoome de un solo golpe en el estómago, sorprendiendo a todos."
+        },
+        {
+          "episode": 71,
+          "title": "Goku vs Burter y Jeice",
+          "description": "Goku humilla a Burter con su velocidad y perdona a Jeice para que se vaya."
+        },
+        {
+          "episode": 73,
+          "title": "Ginyu en Rana",
+          "description": "Goku atrapa al Capitán Ginyu en el cuerpo de un sapo espacial."
+        },
+        {
+          "episode": 74,
+          "title": "Cambio de cuerpos: Ginyu en Goku",
+          "description": "Ginyu roba el cuerpo de Goku, pero Goku atrapa a Ginyu en una rana namekiana."
+        },
+        {
+          "episode": 76,
+          "title": "Invocación de Polunga",
+          "description": "Piccolo revive, reactivando las esferas de la Tierra."
+        },
+        {
+          "episode": 79,
+          "title": "Freezer segunda y tercera forma",
+          "description": "Freezer transforma empalando a Krilin y abrumando a Piccolo fusionado con Nail."
+        },
+        {
+          "episode": 83,
+          "title": "La Forma Final de Freezer",
+          "description": "Freezer revela su aspecto original blanco y liso."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 68
+    },
+    {
+      "id": "dbz-freezer-super-saiyajin",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 12,
+      "seriesOrder": 5,
+      "sagaId": "freezer",
+      "sagaName": "Saga de Freezer",
+      "title": "El Despertar del Super Saiyajin Legendario y el Colapso de Namek",
+      "startEpisode": 83,
+      "endEpisode": 107,
+      "inUniverseYears": "Año 762 (Diciembre)",
+      "dominantVibe": "Clímax Histórico del Anime / Ira Trascendental",
+      "previouslyOn": "Freezer alcanzó su Forma Final. Asesinó a Dende para evitar curaciones y torturó despiadadamente a Vegeta. Goku acaba de salir curado de la cámara médica para pisar el campo de batalla final.",
+      "detailedPlot": "Vegeta, agonizante, le suplica a Goku que mate a Freezer con manos de Saiyajin antes de que Freezer le atraviese el corazón con un rayo. Goku sepulta a Vegeta e inicia el combate. Ni el Kaio-ken x20 ni la Genkidama planetaria logran matar a Freezer. Cuando creen haber ganado, Freezer reaparece: hiere de gravedad a Piccolo y hace estallar en pedazos a Krilin por los aires. La ira pura desborda a Goku, despertando el legendario Super Saiyajin (SSJ1) en el episodio 95. Aterrado, Freezer destruye el núcleo de Namek anunciando que colapsará en 5 minutos y sube a su 100%. Goku domina el combate. Freezer se corta a sí mismo por la mitad con sus discos y Goku lo remata con una ráfaga final de ki tras darle una oportunidad de vivir. Goku escapa en una cápsula de las Fuerzas Ginyu segundos antes de la explosión del planeta.",
+      "worldStateAtStart": {
+        "threatLevel": "Extremo Universal",
+        "activeVillains": [
+          "Freezer (Forma Final / 100%)"
+        ],
+        "dragonBallsStatus": "Reactivadas en la Tierra gracias a la resurrección de Kami-sama.",
+        "characterStatus": {
+          "goku": "Despierta el Super Saiyajin (pelo dorado, ojos verdes, ki colosal).",
+          "vegeta": "Muerto por Freezer (revivido luego con Shenlong y teletransportado a la Tierra).",
+          "gohan": "Evacuado a la Tierra con los supervivientes.",
+          "piccolo": "Herido gravemente por Freezer, evacuado a la Tierra.",
+          "allies": "Krilin (asesinado por Freezer, detonante del SSJ)."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Muerte desgarradora de Vegeta tras rogarle a Goku en lágrimas.",
+        "Muerte de Krilin detona la primera transformación en Super Saiyajin (Ep. 95).",
+        "Freezer es derrotado y Namek explota; Goku desaparece en el espacio."
+      ],
+      "milestones": [
+        {
+          "episode": 86,
+          "title": "Muerte de Vegeta",
+          "description": "Vegeta llora ante Goku y es asesinado por un rayo de Freezer."
+        },
+        {
+          "episode": 88,
+          "title": "Goku sale de la cámara médica",
+          "description": "Goku curado aterriza en el campo de batalla final contra Freezer."
+        },
+        {
+          "episode": 92,
+          "title": "Kaio-ken x20 y Genkidama planetaria",
+          "description": "Goku usa sus técnicas máximas pero Freezer sobrevive a ambas."
+        },
+        {
+          "episode": 95,
+          "title": "El Super Saiyajin Nace",
+          "description": "Krilin muere; Goku se transforma por primera vez en Super Saiyajin."
+        },
+        {
+          "episode": 96,
+          "title": "Freezer al 100% vs Super Saiyajin",
+          "description": "Combate equilibrado en Namek agonizante; Freezer se corta con sus propios discos."
+        },
+        {
+          "episode": 104,
+          "title": "Goku escapa en cápsula Ginyu",
+          "description": "Goku huye segundos antes de la explosión de Namek, dando a Freezer una oportunidad de vida."
+        },
+        {
+          "episode": 106,
+          "title": "Explosión de Namek",
+          "description": "Freezer cae ante su propia arrogancia y Namek se desintegra."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 86
+    },
+    {
+      "id": "dbz-garlic-jr",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 13,
+      "seriesOrder": 6,
+      "sagaId": "garlic-jr",
+      "sagaName": "Saga de Garlic Jr. (Relleno)",
+      "title": "La Niebla del Mal y el Retorno de la Zona Muerta",
+      "startEpisode": 108,
+      "endEpisode": 117,
+      "inUniverseYears": "Año 764",
+      "dominantVibe": "Fantasía Oscura / Relleno Toei",
+      "previouslyOn": "Namek fue destruido y todos los habitantes fueron trasladados a la Tierra. Las esferas del dragón de Namek revivieron a Krilin y a Yamcha. Goku sigue en el espacio negándose a volver de inmediato.",
+      "detailedPlot": "Garlic Jr. escapa de la Zona Muerta gracias a la aproximación de la Estrella Makyo. Utiliza la Neblina del Mal para convertir a los habitantes de la Tierra y a los Guerreros Z (incluyendo a Piccolo y Krilin) en monstruos demoníacos subordinados. Gohan, ayudado por Krilin (quien fingía estar poseído), lucha en el Templo Sagrado. Kami-sama y Mr. Popo viajan a la zona más sagrada del templo para liberar el Agua Ultra Sagrada y curar a la humanidad. Gohan desata su poder latente destruyendo la Estrella Makyo en el cielo nocturno y desterrando a Garlic Jr. nuevamente a la Zona Muerta.",
+      "worldStateAtStart": {
+        "threatLevel": "Mágico / Demoníaco",
+        "activeVillains": [
+          "Garlic Jr.",
+          "Los Cuatro Reyes Celestiales"
+        ],
+        "dragonBallsStatus": "Activas en la Tierra.",
+        "characterStatus": {
+          "goku": "Ausente en el planeta Yardrat.",
+          "vegeta": "Buscando a Goku por el espacio en una nave de Capsule Corp.",
+          "gohan": "Líder defensor temporal de la Tierra.",
+          "piccolo": "Poseído temporalmente para infiltrarse en el templo.",
+          "allies": "Krilin, Kami-sama, Mr. Popo."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Arco 100% de relleno de Toei Animation; conecta con la película Dead Zone.",
+        "Se puede saltear sin ninguna alteración a la línea principal canon del manga."
+      ],
+      "milestones": [
+        {
+          "episode": 108,
+          "title": "El Escape de Garlic Jr.",
+          "description": "La Neblina del Mal infecta el mundo."
+        },
+        {
+          "episode": 110,
+          "title": "Neblina del Mal infecta a los Guerreros Z",
+          "description": "Piccolo y Krilin caen bajo el control de Garlic Jr.; Gohan resiste."
+        },
+        {
+          "episode": 114,
+          "title": "Kami-sama y Mr. Popo buscan Agua Ultra Sagrada",
+          "description": "Viajan a la zona sagrada del templo para curar a la humanidad poseída."
+        },
+        {
+          "episode": 117,
+          "title": "Destrucción de la Estrella Makyo",
+          "description": "Gohan sella a Garlic Jr. en la Zona Muerta."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117
+      ],
+      "recommendedStartEpisode": 108
+    },
+    {
+      "id": "dbz-androides-trunks",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 14,
+      "seriesOrder": 7,
+      "sagaId": "androides",
+      "sagaName": "Saga de los Androides",
+      "title": "El Joven del Futuro y el Despertar de los Androides 17 y 18",
+      "startEpisode": 118,
+      "endEpisode": 139,
+      "inUniverseYears": "Año 764 – 767",
+      "dominantVibe": "Viajes en el Tiempo / Tensión Tecnológica / Desesperación",
+      "previouslyOn": "Pasó más de un año sin noticias de Goku. Repentinamente, dos energías colosales caen del cielo: Freezer sobrevivió a Namek como Mecha Freezer junto a su padre King Cold para vengarse de la Tierra antes de que Goku aterrice.",
+      "detailedPlot": "Un joven de cabello lila con una espada aparece, se transforma en Super Saiyajin y pulveriza a Mecha Freezer y King Cold. Al llegar Goku en su nave, el joven le revela su nombre: Trunks, hijo de Vegeta y Bulma del futuro. Advierte que Goku morirá de un virus cardíaco y que dentro de 3 años dos androides del Dr. Gero (Patrulla Roja) masacrarán a todos. Le entrega una medicina del futuro. Pasan 3 años: el 12 de mayo aparecen N°19 y N°20 (Dr. Gero). Goku enferma del corazón en combate. Vegeta llega transformado en Super Saiyajin y pulveriza a 19 con el Big Bang Attack. Gero huye a su laboratorio y activa a los verdaderos monstruos: Androide 17 y Androide 18, junto a 16. N°17 decapita a Gero y N°18 le rompe ambos brazos a Vegeta en combate. Los androides derrotan a todos con facilidad y parten buscando a Goku para matarlo por juego.",
+      "worldStateAtStart": {
+        "threatLevel": "Apocalipsis Inminente",
+        "activeVillains": [
+          "Mecha Freezer (al inicio)",
+          "Dr. Gero (N°20)",
+          "N°19",
+          "N°17",
+          "N°18",
+          "N°16"
+        ],
+        "dragonBallsStatus": "Activas en la Tierra.",
+        "characterStatus": {
+          "goku": "Regresa de Yardrat sabiendo la Teletransportación; cae enfermo del corazón en ep. 127.",
+          "vegeta": "Alcanza por primera vez el Super Saiyajin; humillado por N°18.",
+          "gohan": "Entrenando con Goku y Piccolo.",
+          "piccolo": "Comprende que su poder es inútil y decide subir al Templo Sagrado.",
+          "allies": "Trunks del Futuro, Bulma, Krilin, Tenshinhan."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Debut de Trunks del Futuro y muerte definitiva de Mecha Freezer.",
+        "Debut del Super Saiyajin de Vegeta y destrucción de N°19.",
+        "N°18 rompe el orgullo y los brazos de Vegeta; los androides van tras Goku."
+      ],
+      "milestones": [
+        {
+          "episode": 119,
+          "title": "Trunks el Super Saiyajin",
+          "description": "Trunks descuartiza a Mecha Freezer con su espada."
+        },
+        {
+          "episode": 121,
+          "title": "Trunks revela su origen y la advertencia",
+          "description": "Trunks explica ser hijo de Vegeta y Bulma del futuro; entrega medicina a Goku."
+        },
+        {
+          "episode": 124,
+          "title": "Goku enferma del corazón",
+          "description": "Goku cae enfermo en medio del combate contra el Androide 19."
+        },
+        {
+          "episode": 129,
+          "title": "Vegeta Super Saiyajin",
+          "description": "Debut del SSJ de Vegeta y destrucción del Androide 19."
+        },
+        {
+          "episode": 132,
+          "title": "Activación de N°17, N°18 y N°16",
+          "description": "Dr. Gero activa a los androides verdaderos; N°17 mata a Gero y N°18 rompe los brazos a Vegeta."
+        },
+        {
+          "episode": 136,
+          "title": "Vegeta vs Androide 18",
+          "description": "N°18 quiebra el brazo de Vegeta; caída de los Guerreros Z."
+        },
+        {
+          "episode": 138,
+          "title": "Piccolo sube al Templo Sagrado",
+          "description": "Piccolo decide fusionarse con Kami-sama para enfrentar la amenaza."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        125
+      ],
+      "recommendedStartEpisode": 118
+    },
+    {
+      "id": "dbz-cell-imperfecto-perfeccion",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 15,
+      "seriesOrder": 8,
+      "sagaId": "cell",
+      "sagaName": "Saga de Cell",
+      "title": "La Criatura del Futuro, el Super Namekiano y la Búsqueda de la Perfección",
+      "startEpisode": 140,
+      "endEpisode": 165,
+      "inUniverseYears": "Año 767",
+      "dominantVibe": "Horror Biológico / Soberbia y Arrogancia",
+      "previouslyOn": "Los androides viajan en camioneta buscando la casa de Goku. Bulma descubre una segunda máquina del tiempo abandonada en el bosque con un cascarón biomecánico abierto hace 4 años. Piccolo se fusiona con Kami-sama dando nacimiento al Super Namekiano.",
+      "detailedPlot": "Piccolo viaja a Ginger Town y descubre a Cell Imperfecto, un bio-androide creado con células de los guerreros que absorbe humanos para crecer. Piccolo lucha con N°17 de igual a igual, pero Cell irrumpe y absorbe a 17 a pesar del sacrificio de Tenshinhan con el Shin Kikoho, mutando a Cell Semiperfecto. Vegeta y Trunks salen de la Habitación del Tiempo con el nivel Super Saiyajin Segundo Grado (Super Vegeta). Vegeta humilla a Cell, pero llevado por su ego permite que Cell absorba a N°18 para pelear con su 'forma perfecta'. Cell absorbe a 18 alcanzando su Forma Perfecta. Noquea a Vegeta y humilla a Trunks Ultra Super Saiyajin (quien sacrificó velocidad por masa muscular). Cell perdona sus vidas temporalmente anunciando un torneo público: los Juegos de Cell.",
+      "worldStateAtStart": {
+        "threatLevel": "Terrorífico Biológico",
+        "activeVillains": [
+          "Cell Imperfecto / Semiperfecto / Perfecto"
+        ],
+        "dragonBallsStatus": "Desaparecidas temporalmente por la fusión de Piccolo y Kami-sama.",
+        "characterStatus": {
+          "goku": "Recuperado del corazón; entra a la Habitación del Tiempo con Gohan.",
+          "vegeta": "Super Vegeta (SSJ Grade 2); enceguecido por su soberbia.",
+          "gohan": "Entrenando en la Habitación del Tiempo para despertar el SSJ.",
+          "piccolo": "Super Namekiano (fusionado permanentemente con Kami-sama).",
+          "allies": "Trunks del Futuro, Tenshinhan, Krilin, Androide 16."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Fusión permanente de Piccolo y Kami-sama (las esferas terrestres se apagan).",
+        "Vegeta permite voluntariamente que Cell absorba a N°18 por arrogancia.",
+        "Cell alcanza su Forma Perfecta y anuncia los Juegos de Cell."
+      ],
+      "milestones": [
+        {
+          "episode": 141,
+          "title": "Nace el Super Namekiano",
+          "description": "Piccolo y Kami-sama se vuelven uno solo para enfrentar a Cell."
+        },
+        {
+          "episode": 143,
+          "title": "Piccolo descubre a Cell en Ginger Town",
+          "description": "Cell imperfecto absorbiendo humanos para crecer; Piccolo lo enfrenta."
+        },
+        {
+          "episode": 149,
+          "title": "Tenshinhan usa Shin Kikoho contra Cell",
+          "description": "Tenshinhan sacrifica su energía para retrasar a Cell y salvar a N°18."
+        },
+        {
+          "episode": 152,
+          "title": "Vegeta y Trunks salen de la Habitación del Tiempo",
+          "description": "Vegeta alcanza Super Saiyajin Grade 2 (Super Vegeta) y humilla a Cell Semiperfecto."
+        },
+        {
+          "episode": 156,
+          "title": "Super Vegeta",
+          "description": "Vegeta domina a Cell Semiperfecto con el poder del Grade 2."
+        },
+        {
+          "episode": 158,
+          "title": "Vegeta permite que Cell absorba a N°18",
+          "description": "Por orgullo, Vegeta deja que Cell alcance su Forma Perfecta."
+        },
+        {
+          "episode": 160,
+          "title": "Cell Perfecto",
+          "description": "Cell absorbe a N°18 y alcanza su forma definitiva invencible."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 140
+    },
+    {
+      "id": "dbz-juegos-de-cell",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 16,
+      "seriesOrder": 9,
+      "sagaId": "cell",
+      "sagaName": "Saga de Cell",
+      "title": "Los Juegos de Cell, la Furia de Gohan SSJ2 y el Sacrificio de Goku",
+      "startEpisode": 166,
+      "endEpisode": 194,
+      "inUniverseYears": "Año 767",
+      "dominantVibe": "Clímax Absoluto / Traspaso Generacional / Épico",
+      "previouslyOn": "Cell construyó un cuadrilátero y dio 10 días de plazo. Goku trajo a Dende desde el Nuevo Namek para asumir como nuevo Kami-sama y reactivar las Esferas del Dragón con 2 deseos. Goku y Gohan salen de la Habitación del Tiempo dominando el Super Saiyajin al máximo poder.",
+      "detailedPlot": "Inician los Juegos de Cell. Tras el ridículo de Mr. Satán, Goku combate contra Cell en un duelo magistral que incluye el Kamehameha con Teletransportación. Para sorpresa de todos, Goku se rinde y envía a Gohan, afirmando que es el único capaz de ganar. Cell crea 7 Cell Juniors que torturan a los Guerreros Z para obligar a Gohan a enfurecerse. Androide 16 es destruido y Cell aplasta su cabeza parlante; este crujido emocional desata el Super Saiyajin 2 (SSJ2) en Gohan. Gohan aniquila a los Cell Juniors de un golpe y golpea a Cell tan fuerte que le hace vomitar a N°18. Cuando Cell intenta autodestruirse, Goku usa la teletransportación llevándose a Cell al planeta de Kaio-sama, muriendo en la explosión. Sin embargo, Cell se regenera en Cell Super Perfecto, regresa a la Tierra y asesina a Trunks. Gohan, con un brazo roto, desintegra a Cell con el Kamehameha Padre e Hijo con la ayuda espiritual de Goku y la distracción final de Vegeta.",
+      "worldStateAtStart": {
+        "threatLevel": "Extinción Total de la Tierra",
+        "activeVillains": [
+          "Cell Perfecto / Cell Super Perfecto",
+          "Cell Juniors"
+        ],
+        "dragonBallsStatus": "Reactivadas por Dende (conceden 2 deseos sin matar al portador).",
+        "characterStatus": {
+          "goku": "Super Saiyajin Full Power; se rinde y muere teletransportando a Cell.",
+          "vegeta": "Superado; estalla en furia ciega cuando Cell mata a Trunks.",
+          "gohan": "Alcanza el Super Saiyajin 2; salvador definitivo de la Tierra.",
+          "piccolo": "Espectador estratégico.",
+          "allies": "Trunks (muerto y revivido con esferas), Dende, Mr. Satán."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Goku se rinde y confía el destino del universo a su hijo Gohan.",
+        "Muerte del Androide 16 detona el Super Saiyajin 2 de Gohan.",
+        "Goku muere sacrificándose; Kamehameha Padre e Hijo destruye a Cell."
+      ],
+      "milestones": [
+        {
+          "episode": 168,
+          "title": "Mr. Satán y su ridículo en los Juegos",
+          "description": "Mr. Satán rompe ladrillos y es enviado volando por Cell con un golpe suave."
+        },
+        {
+          "episode": 174,
+          "title": "Goku se rinde y envía a Gohan",
+          "description": "Goku admite que no puede ganar y confía el destino de la Tierra a su hijo."
+        },
+        {
+          "episode": 177,
+          "title": "Goku vs Cell",
+          "description": "Kamehameha con teletransportación instantánea que vuela el torso de Cell."
+        },
+        {
+          "episode": 179,
+          "title": "Cell Juniors torturan a los Guerreros Z",
+          "description": "7 Cell Juniors golpean a Vegeta, Trunks, Piccolo y los demás para enfurecer a Gohan."
+        },
+        {
+          "episode": 184,
+          "title": "Despertar del SSJ2",
+          "description": "Cell aplasta a N°16; Gohan despierta el Super Saiyajin 2."
+        },
+        {
+          "episode": 187,
+          "title": "Goku se teletransporta con Cell al planeta Kaio",
+          "description": "Goku se sacrifica llevándose a Cell que iba a autodestruirse."
+        },
+        {
+          "episode": 189,
+          "title": "Cell Super Perfecto regresa y mata a Trunks",
+          "description": "Cell se regenera más fuerte, asesina a Trunks y Vegeta estalla en furia."
+        },
+        {
+          "episode": 191,
+          "title": "Kamehameha Padre e Hijo",
+          "description": "Gohan desintegra a Cell con la guía del espíritu de Goku."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        170,
+        171,
+        174
+      ],
+      "recommendedStartEpisode": 166
+    },
+    {
+      "id": "dbz-torneo-otro-mundo",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 17,
+      "seriesOrder": 10,
+      "sagaId": "torneo-otro-mundo",
+      "sagaName": "Torneo del Otro Mundo (Relleno)",
+      "title": "El Campeonato Celestial y el Duelo contra Paikuhan",
+      "startEpisode": 195,
+      "endEpisode": 199,
+      "inUniverseYears": "Año 767",
+      "dominantVibe": "Artes Marciales Celéstiales / Relleno Toei",
+      "previouslyOn": "Goku decidió no revivir con las esferas para proteger la Tierra y entrenar en el Más Allá junto a Kaio-sama del Norte.",
+      "detailedPlot": "El Gran Kaio-sama organiza un torneo entre los mejores guerreros muertos de las cuatro galaxias. Goku enfrenta a guerreros de las galaxias Este y Sur hasta llegar a la final contra Paikuhan (Pikkon) de la Galaxia Oeste. Goku combina el Super Saiyajin con el Kaio-ken (Super Kaio-ken) y vence a Paikuhan, pero ambos son descalificados por tocar el techo de la arena.",
+      "worldStateAtStart": {
+        "threatLevel": "Deportivo Celestial",
+        "activeVillains": [
+          "Paikuhan (rival de honor)"
+        ],
+        "dragonBallsStatus": "Activas en la Tierra.",
+        "characterStatus": {
+          "goku": "Entrenando como difunto con aureola en el planeta del Gran Kaio-sama.",
+          "vegeta": "En la Tierra entrenando.",
+          "gohan": "En la Tierra viviendo en paz con Milk.",
+          "piccolo": "En el Templo Sagrado.",
+          "allies": "Kaio-sama del Norte, Paikuhan, Gran Kaio-sama."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Goku usa por primera y única vez el Super Kaio-ken.",
+        "Arco de relleno entretenido que conecta conceptualmente con la película de Janemba."
+      ],
+      "milestones": [
+        {
+          "episode": 195,
+          "title": "Torneo del Más Allá",
+          "description": "Goku conoce a los mejores luchadores fallecidos del cosmos."
+        },
+        {
+          "episode": 196,
+          "title": "Goku vs Olibu (Galaxia Sur)",
+          "description": "Combate técnico contra el guerrero de la galaxia sur en semifinales."
+        },
+        {
+          "episode": 198,
+          "title": "Goku usa Super Kaio-ken",
+          "description": "Goku combina SSJ con Kaio-ken por primera y única vez contra Paikuhan."
+        },
+        {
+          "episode": 199,
+          "title": "Goku vs Paikuhan",
+          "description": "Goku utiliza el Super Kaio-ken en la final del torneo."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        195,
+        196,
+        197,
+        198,
+        199
+      ],
+      "recommendedStartEpisode": 195
+    },
+    {
+      "id": "dbz-buu-majin-vegeta",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 18,
+      "seriesOrder": 11,
+      "sagaId": "majin-buu",
+      "sagaName": "Saga de Majin Buu",
+      "title": "Siete Años de Paz, el 25° Torneo y la Oscuridad de Majin Vegeta",
+      "startEpisode": 200,
+      "endEpisode": 232,
+      "inUniverseYears": "Año 774",
+      "dominantVibe": "Comedia Juvenil / Misterio Antiguo / Traición Trágica",
+      "previouslyOn": "Pasaron 7 años de paz. Gohan asiste a la preparatoria como El Gran Saiyaman y conoce a Videl. Nació Goten (segundo hijo de Goku) y Trunks niño. Goku recibe permiso de Uranai Baba de regresar a la Tierra por 24 horas para el 25° Torneo.",
+      "detailedPlot": "Goku se reúne con sus amigos y conoce a Goten. Dos participantes extraños (el Supremo Kaioshin Shin y Kibito) advierten sobre Babidi, un brujo que busca revivir al demonio Majin Buu. Spopovich y Yamu roban la energía de Gohan SSJ2. En la nave de Babidi, Goku y Vegeta derrotan a sus esbirros. Vegeta, frustrado por la superioridad de Goku, se deja poseer por Babidi para recuperar su maldad: nace Majin Vegeta. Vegeta mata civiles en el torneo para forzar a Goku a pelear. Ambos se baten en SSJ2; la energía del combate despierta a Majin Buu Gordo. Vegeta noquea a Goku a traición y se autodestruye en una explosión gigantesca para matar a Buu, sacrificándose en vano.",
+      "worldStateAtStart": {
+        "threatLevel": "Antiguo / Despertar Demoníaco",
+        "activeVillains": [
+          "Babidi",
+          "Dabra",
+          "Majin Vegeta (temporal)",
+          "Majin Buu"
+        ],
+        "dragonBallsStatus": "Activas en la Tierra.",
+        "characterStatus": {
+          "goku": "Vivo por 24 horas con aureola; combate contra Majin Vegeta en SSJ2.",
+          "vegeta": "Majin Vegeta; se inmola en la Explosión Final del ep. 232.",
+          "gohan": "Adolescente que descuidó el entrenamiento; herido por Buu.",
+          "piccolo": "Convertido en piedra por la saliva de Dabra (luego restaurado).",
+          "allies": "Supremo Kaioshin Shin, Kibito, Videl, Goten, Trunks niño."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Goku regresa a la Tierra por 24 horas y conoce a su hijo Goten.",
+        "Vegeta se vende a Babidi (Majin Vegeta) para saldar su duelo pendiente con Goku.",
+        "Sacrificio legendario de Majin Vegeta en la Explosión Final (Ep. 232)."
+      ],
+      "milestones": [
+        {
+          "episode": 200,
+          "title": "Gohan va a la Preparatoria",
+          "description": "Inicio de la vida civil de Gohan y debut del Gran Saiyaman."
+        },
+        {
+          "episode": 203,
+          "title": "Gohan como Gran Saiyaman",
+          "description": "Gohan combate el crimen en la ciudad con su identidad secreta y conoce a Videl."
+        },
+        {
+          "episode": 207,
+          "title": "Goten y Trunks en el 25° Torneo",
+          "description": "Los niños participan en la división junior; Goten se transforma en SSJ naturalmente."
+        },
+        {
+          "episode": 215,
+          "title": "Spopovich y Yamu roban energía a Gohan",
+          "description": "Los siervos de Babidi drenan el ki de Gohan SSJ2 para revivir a Buu."
+        },
+        {
+          "episode": 223,
+          "title": "Vegeta se deja poseer por Babidi",
+          "description": "Vegeta acepta la marca M para recuperar su maldad y forzar el duelo con Goku."
+        },
+        {
+          "episode": 228,
+          "title": "Nace Majin Vegeta",
+          "description": "Vegeta sucumbe a la marca M de Babidi y desafía a Goku."
+        },
+        {
+          "episode": 229,
+          "title": "Goku vs Majin Vegeta SSJ2",
+          "description": "Duelo brutal entre rivales; la energía despierta a Majin Buu Gordo."
+        },
+        {
+          "episode": 232,
+          "title": "La Explosión Final",
+          "description": "Vegeta abraza a Trunks y se autodestruye para intentar destruir a Buu."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        202,
+        203,
+        204
+      ],
+      "recommendedStartEpisode": 200
+    },
+    {
+      "id": "dbz-buu-ssj3-fusion",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 19,
+      "seriesOrder": 12,
+      "sagaId": "majin-buu",
+      "sagaName": "Saga de Majin Buu",
+      "title": "El Super Saiyajin 3, la Danza de la Fusión y el Nacimiento de Super Buu",
+      "startEpisode": 233,
+      "endEpisode": 253,
+      "inUniverseYears": "Año 774",
+      "dominantVibe": "Desesperación / Magia Primordial / Humor Negro",
+      "previouslyOn": "La autodestrucción de Vegeta fracasó: Majin Buu se regeneró completamente. Vegeta está en el infierno y Goku despierta solo en el Templo Sagrado.",
+      "detailedPlot": "Babidi y Buu inician una ola de destrucción global. Goku enseña la Danza de la Fusión a Goten y Trunks. Para ganar tiempo mientras Trunks busca el Radar del Dragón, Goku encara a Buu y revela el Super Saiyajin 3 (SSJ3), consumiendo su tiempo en la Tierra. Buu asesina a Babidi y se hace amigo de Mr. Satán y el perro Bee. Cuando unos pistoleros hieren al perro y a Satán, Buu expulsa a su mitad maligna (Evil Buu), quien lo absorbe convirtiéndose en Super Buu.",
+      "worldStateAtStart": {
+        "threatLevel": "Apocalipsis Global",
+        "activeVillains": [
+          "Majin Buu Gordo",
+          "Babidi",
+          "Super Buu"
+        ],
+        "dragonBallsStatus": "Activas pero amenazadas por la búsqueda del radar.",
+        "characterStatus": {
+          "goku": "Regresa al Más Allá tras mostrar el SSJ3.",
+          "vegeta": "En el Más Allá como alma purificándose.",
+          "gohan": "Entrenando en el Planeta Kaioshin con la Espada Z.",
+          "piccolo": "Instructor de la Danza de la Fusión de Goten y Trunks.",
+          "allies": "Mr. Satán (pacifica temporalmente a Buu), Goten, Trunks."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Debut del legendario Super Saiyajin 3 de Goku.",
+        "Goten y Trunks aprenden la Danza de la Fusión.",
+        "Buu purga su maldad y muta al peligroso Super Buu."
+      ],
+      "milestones": [
+        {
+          "episode": 235,
+          "title": "Babidi y Buu destruyen ciudades",
+          "description": "Ola de terror global; Buu convierte humanos en chocolate y los come."
+        },
+        {
+          "episode": 238,
+          "title": "Debut del Super Saiyajin 3",
+          "description": "Goku estremece la Tierra transformándose en SSJ3 ante Buu."
+        },
+        {
+          "episode": 240,
+          "title": "Goku SSJ3 consume su tiempo en la Tierra",
+          "description": "La transformación drena su energía vital y acorta su estancia de 24 horas."
+        },
+        {
+          "episode": 244,
+          "title": "Buu asesina a Babidi",
+          "description": "Buu ya no necesita a su amo y lo destruye; se hace amigo de Mr. Satán y Bee."
+        },
+        {
+          "episode": 247,
+          "title": "La Danza de la Fusión",
+          "description": "Goku instruye a Goten y Trunks en la técnica metamorana."
+        },
+        {
+          "episode": 249,
+          "title": "Nace Evil Buu y luego Super Buu",
+          "description": "La ira de Buu expulsa su mitad maligna, que lo absorbe mutando a Super Buu."
+        },
+        {
+          "episode": 253,
+          "title": "Nace Super Buu",
+          "description": "Evil Buu devora a Buu Gordo; nace el sanguinario Super Buu."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 233
+    },
+    {
+      "id": "dbz-buu-gotenks-gohan-mistico",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 20,
+      "seriesOrder": 13,
+      "sagaId": "majin-buu",
+      "sagaName": "Saga de Majin Buu",
+      "title": "La Extinción Humana, Gotenks SSJ3 y el Despertar de Gohan Definitivo",
+      "startEpisode": 254,
+      "endEpisode": 275,
+      "inUniverseYears": "Año 774",
+      "dominantVibe": "Exterminio / Acción Extrema / Arrogancia Trágica",
+      "previouslyOn": "Super Buu llega al Templo Sagrado exigiendo pelear contra el guerrero prometido.",
+      "detailedPlot": "Super Buu extermina a casi toda la humanidad con su Genocidio Humano de ki teledirigido. Piccolo lo lleva a la Habitación del Tiempo donde Gotenks alcanza el SSJ3 en un combate lleno de técnicas disparatadas. Al romper la Espada Z en el Reino Kaioshin, se libera el Anciano Kaioshin, quien despierta el poder de Gohan Definitivo. Gohan regresa y apalea a Buu, pero este absorbe a Gotenks SSJ3 y a Piccolo, superando a Gohan y absorbiéndolo también.",
+      "worldStateAtStart": {
+        "threatLevel": "Extinción Humana",
+        "activeVillains": [
+          "Super Buu",
+          "Buu Gotenks",
+          "Buu Gohan"
+        ],
+        "dragonBallsStatus": "Inactivas.",
+        "characterStatus": {
+          "goku": "Observando con el Anciano Kaioshin en la bola de cristal.",
+          "vegeta": "En el Más Allá esperando su momento.",
+          "gohan": "Gohan Definitivo / Místico; luego absorbido por Buu.",
+          "piccolo": "Absorbido por Super Buu.",
+          "allies": "Gotenks SSJ3 (absorbido), Mr. Satán, Dende."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Super Buu extermina a la humanidad desde el Templo Sagrado.",
+        "Gohan Definitivo regresa con el potencial desbloqueado por el Anciano Kaioshin.",
+        "Buu absorbe a Gotenks, Piccolo y Gohan, volviéndose imparable."
+      ],
+      "milestones": [
+        {
+          "episode": 255,
+          "title": "El Ataque de Extinción Humana",
+          "description": "Super Buu aniquila la población mundial de un solo ataque."
+        },
+        {
+          "episode": 256,
+          "title": "Gotenks en la Habitación del Tiempo",
+          "description": "Piccolo entrena a Gotenks quien crea técnicas absurdas como el Super Ghost Kamikaze Attack."
+        },
+        {
+          "episode": 259,
+          "title": "Gotenks alcanza SSJ3",
+          "description": "La fusión infantil logra el Super Saiyajin 3 combatiendo a Super Buu."
+        },
+        {
+          "episode": 261,
+          "title": "Espada Z rota y Anciano Kaioshin liberado",
+          "description": "Gohan rompe la Espada Z en el Reino Kaioshin liberando al Anciano Kaioshin."
+        },
+        {
+          "episode": 263,
+          "title": "Gohan Definitivo",
+          "description": "Gohan llega a la Tierra y humilla a Super Buu."
+        },
+        {
+          "episode": 265,
+          "title": "Absorción de Gotenks",
+          "description": "Buu absorbe a Gotenks y Piccolo, revirtiendo la batalla."
+        },
+        {
+          "episode": 267,
+          "title": "Gohan Definitivo apalea a Super Buu",
+          "description": "Gohan con poder desbloqueado domina a Buu sin transformarse en Super Saiyajin."
+        },
+        {
+          "episode": 270,
+          "title": "Buu absorbe a Gohan Definitivo",
+          "description": "Tras absorber a Gotenks y Piccolo, Buu engaña y absorbe también a Gohan."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 254
+    },
+    {
+      "id": "dbz-buu-vegetto-kidbuu-final",
+      "seriesId": "z",
+      "seriesTitle": "Dragon Ball Z",
+      "tmdbId": 12971,
+      "order": 21,
+      "seriesOrder": 14,
+      "sagaId": "majin-buu",
+      "sagaName": "Saga de Majin Buu",
+      "title": "El Nacimiento de Vegetto, el Terror de Kid Buu y la Salvación Universal",
+      "startEpisode": 276,
+      "endEpisode": 291,
+      "inUniverseYears": "Año 774 – 784",
+      "dominantVibe": "Clímax Absoluto de la Franquicia / Redención y Despedida",
+      "previouslyOn": "Super Buu absorbió a Gohan Definitivo. El Anciano Kaioshin entrega su vida para revivir a Goku y le da los Pendientes Pothala. Enma-sama envía a Vegeta de vuelta a la Tierra con su cuerpo.",
+      "detailedPlot": "Goku y Vegeta se fusionan con los pendientes Pothala dando nacimiento a Vegetto, quien humilla a Buu en Super Saiyajin. Vegetto se deja absorber a propósito para rescatar a sus hijos y amigos; al arrancar a Buu Gordo del interior, Buu muta a Kid Buu y destruye la Tierra entera de un disparo. El Supremo Kaioshin teletransporta a Goku, Vegeta, Dende y Satán al Planeta Kaioshin. Kid Buu los persigue. Goku combate en SSJ3 mientras Vegeta resiste palizas para darle tiempo. Polunga reconstruye la Tierra y revive a la humanidad; Goku reúne la Genkidama Universal gracias al llamado de Mr. Satán al pueblo de la Tierra, destruyendo a Kid Buu definitivamente. Diez años después (Año 784), Goku conoce en el 28° Torneo a la reencarnación de Buu, un niño llamado Uub, y parte a entrenarlo.",
+      "worldStateAtStart": {
+        "threatLevel": "Destrucción Multiversal",
+        "activeVillains": [
+          "Kid Buu"
+        ],
+        "dragonBallsStatus": "Esferas de Namek restauran la Tierra y su gente.",
+        "characterStatus": {
+          "goku": "Vivo; lanza la Genkidama Universal definitiva.",
+          "vegeta": "Reconoce con admiración: 'Kakarotto, tú eres el número uno'.",
+          "gohan": "Revivido en la Tierra aportando energía a la Genkidama.",
+          "piccolo": "Revivido en la Tierra.",
+          "allies": "Mr. Satán (héroe moral de la humanidad), Uub (epílogo)."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Debut de Vegetto humillando a Buu con los pendientes Pothala.",
+        "Kid Buu destruye la Tierra en una explosión instantánea.",
+        "La Genkidama Universal salva el cosmos; 10 años después Goku parte con Uub."
+      ],
+      "milestones": [
+        {
+          "episode": 268,
+          "title": "Nace Vegetto",
+          "description": "Fusión Pothala de Goku y Vegeta."
+        },
+        {
+          "episode": 271,
+          "title": "Anciano Kaioshin da su vida por Goku",
+          "description": "El Anciano Kaioshin muere para revivir a Goku y le entrega los Pendientes Pothala."
+        },
+        {
+          "episode": 274,
+          "title": "Vegetto SSJ humilla a Super Buu",
+          "description": "La fusión Pothala juega con Buu convertido en caramelo pero sigue combatiendo."
+        },
+        {
+          "episode": 277,
+          "title": "Destrucción de la Tierra",
+          "description": "Kid Buu destruye el planeta; evacuación al Planeta Kaioshin."
+        },
+        {
+          "episode": 279,
+          "title": "Vegetto se deja absorber a propósito",
+          "description": "Plan para rescatar a Gohan, Goten, Trunks y Piccolo desde dentro de Buu."
+        },
+        {
+          "episode": 282,
+          "title": "Kid Buu destruye la Tierra",
+          "description": "Al sacar a Buu Gordo, Buu regresa a su forma original pura y aniquila el planeta."
+        },
+        {
+          "episode": 286,
+          "title": "La Genkidama Universal",
+          "description": "Goku erradica a Kid Buu deseando que reencarne como un hombre bueno."
+        },
+        {
+          "episode": 288,
+          "title": "Mr. Satán convence a la humanidad",
+          "description": "Satán pide a la gente de la Tierra que levante las manos para la Genkidama Universal."
+        },
+        {
+          "episode": 291,
+          "title": "El Adiós de Goku",
+          "description": "Goku se marcha con Uub en el 28° Torneo de Artes Marciales."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        287,
+        288
+      ],
+      "recommendedStartEpisode": 276
+    },
+    {
+      "id": "dbs-batalla-dioses",
+      "seriesId": "super",
+      "seriesTitle": "Dragon Ball Super",
+      "tmdbId": 62715,
+      "order": 22,
+      "seriesOrder": 1,
+      "sagaId": "batalla-dioses",
+      "sagaName": "Saga de la Batalla de los Dioses",
+      "title": "El Despertar de Bills y el Ritual del Super Saiyajin Dios",
+      "startEpisode": 1,
+      "endEpisode": 14,
+      "inUniverseYears": "Año 778",
+      "dominantVibe": "Mitología Divina / Escala Cósmica",
+      "previouslyOn": "Pasaron unos años desde la derrota de Kid Buu. La Tierra vive en paz y Mr. Satán recibió el Premio de la Paz Mundial. Goku trabaja la tierra como granjero mientras entrena a escondidas.",
+      "detailedPlot": "Bills, el Dios de la Destrucción del Universo 7, despierta tras un sueño premonitorio sobre el 'Super Saiyajin Dios'. Acompañado por su ángel Whis, visita a Kaio-sama y noquea a Goku SSJ3 de dos golpes. Llega a la fiesta de cumpleaños de Bulma en la Tierra; tras enojarse con Buu por un pudín, vence a todos los guerreros. Shenlong revela que el Super Saiyajin Dios se alcanza mediante un ritual de 6 Saiyajin puros (Goku, Vegeta, Gohan, Goten, Trunks y Pan en el vientre de Videl). Goku alcanza el Super Saiyajin Dios (aura roja ardiente) y batalla contra Bills en la estratósfera, quien decide no destruir la Tierra y revela la existencia de 12 Universos.",
+      "worldStateAtStart": {
+        "threatLevel": "Deidad de la Destrucción",
+        "activeVillains": [
+          "Bills (Dios de la Destrucción / Antagonista neutral)"
+        ],
+        "dragonBallsStatus": "Activas en la Tierra (usadas para consultar a Shenlong).",
+        "characterStatus": {
+          "goku": "Alcanza el Ki Divino (Super Saiyajin Dios).",
+          "vegeta": "Defiende a Bulma en furia ('¡Nadie toca a mi Bulma!').",
+          "gohan": "Casado con Videl; esperan el nacimiento de Pan.",
+          "piccolo": "Guerrero pacífico en la Tierra.",
+          "allies": "Bills, Whis, Bulma, Krilin."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Introducción de Bills y Whis y el concepto de Dioses de la Destrucción y Ángeles.",
+        "El ritual de los 6 Saiyajin despierta el Super Saiyajin Dios (SSG).",
+        "Se revela que existen 12 Universos en el multiverso."
+      ],
+      "milestones": [
+        {
+          "episode": 2,
+          "title": "Bills despierta de su sueño premonitorio",
+          "description": "Bills sueña con el Super Saiyajin Dios y busca al Saiyajin que lo derrotó."
+        },
+        {
+          "episode": 5,
+          "title": "Bills vs Goku SSJ3",
+          "description": "Bills derrota a Goku de un golpe en el cuello en el planeta Kaio."
+        },
+        {
+          "episode": 6,
+          "title": "Bills en la fiesta de Bulma",
+          "description": "Buu come todo el pudín; Bills se enoja y vence a todos los Guerreros Z fácilmente."
+        },
+        {
+          "episode": 9,
+          "title": "El Super Saiyajin Dios",
+          "description": "Ritual divino y transformación de Goku en SSG de aura roja."
+        },
+        {
+          "episode": 11,
+          "title": "Ritual de los 6 Saiyajin",
+          "description": "Goku, Vegeta, Gohan, Goten, Trunks y Pan (en vientre) transfieren su ki a Goku."
+        },
+        {
+          "episode": 13,
+          "title": "Batalla en la estratósfera",
+          "description": "Goku SSG vs Bills; el choque de sus puños amenaza con destruir el universo."
+        },
+        {
+          "episode": 14,
+          "title": "La Batalla de los Dioses",
+          "description": "Bills reconoce el valor de Goku y le perdona la vida a la Tierra."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 1
+    },
+    {
+      "id": "dbs-resurreccion-f",
+      "seriesId": "super",
+      "seriesTitle": "Dragon Ball Super",
+      "tmdbId": 62715,
+      "order": 23,
+      "seriesOrder": 2,
+      "sagaId": "resurreccion-f",
+      "sagaName": "Saga de la Resurrección de 'F'",
+      "title": "El Retorno del Tirano, Golden Freezer y el Super Saiyajin Blue",
+      "startEpisode": 15,
+      "endEpisode": 27,
+      "inUniverseYears": "Año 779",
+      "dominantVibe": "Venganza Cósmica / Control del Ki Divino",
+      "previouslyOn": "Goku y Vegeta entrenan en el planeta de Bills bajo la tutela del ángel Whis, aprendiendo a contener el ki dentro del cuerpo para que no se desborde.",
+      "detailedPlot": "Sorbet, lugarteniente del ejército de Freezer, roba las esferas de la Tierra y revive a Freezer en trozos cibernéticos regenerados en una cámara médica. Freezer entrena por primera vez en su vida durante 4 meses y ataca la Tierra con mil soldados. Gohan, Piccolo y los Guerreros Z resisten (Piccolo muere protegiendo a Gohan). Whis teletransporta a Goku y Vegeta. Goku revela el Super Saiyajin Blue (SSJ God SSJ) y Freezer muestra su forma dorada (Golden Freezer). Aunque Freezer es más fuerte al inicio, su forma drena energía rápidamente. Vegeta toma el relevo en SSJ Blue y apalea a Freezer. En un último acto de rabia, Freezer hace estallar la Tierra; Whis retrocede el tiempo 3 minutos y Goku desintegra a Freezer con un Kamehameha definitivo.",
+      "worldStateAtStart": {
+        "threatLevel": "Invasión Galáctica de Venganza",
+        "activeVillains": [
+          "Freezer Dorado",
+          "Sorbet",
+          "Tagoma"
+        ],
+        "dragonBallsStatus": "Usadas por Sorbet para resucitar a Freezer.",
+        "characterStatus": {
+          "goku": "Domina el Super Saiyajin Blue (pelo celeste y ki divino sereno).",
+          "vegeta": "Domina el Super Saiyajin Blue por mérito propio.",
+          "gohan": "Descuidado físicamente; pierde condición marcial.",
+          "piccolo": "Muere defendiendo a Gohan y es revivido en Namek.",
+          "allies": "Jaco el Patrullero Galáctico, Whis, Bills."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Freezer resucita y alcanza Golden Freezer en 4 meses de entrenamiento.",
+        "Goku y Vegeta presentan el Super Saiyajin Blue.",
+        "Whis demuestra su técnica angelical de retroceder el tiempo 3 minutos."
+      ],
+      "milestones": [
+        {
+          "episode": 16,
+          "title": "Sorbet revive a Freezer en trozos",
+          "description": "Los restos de Freezer son regenerados en una cámara médica del ejército."
+        },
+        {
+          "episode": 18,
+          "title": "Freezer entrena 4 meses por primera vez",
+          "description": "Freezer descubre su forma Golden y ataca la Tierra con 1000 soldados."
+        },
+        {
+          "episode": 19,
+          "title": "Regreso de Freezer",
+          "description": "Freezer aterriza con su ejército buscando vengarse de Goku."
+        },
+        {
+          "episode": 21,
+          "title": "Piccolo muere protegiendo a Gohan",
+          "description": "Piccolo se interpone ante un rayo de Tagoma dirigido a Gohan."
+        },
+        {
+          "episode": 24,
+          "title": "Super Saiyajin Blue",
+          "description": "Goku muestra la combinación de SSJ con Ki Divino."
+        },
+        {
+          "episode": 25,
+          "title": "Vegeta SSJ Blue vs Golden Freezer",
+          "description": "Vegeta domina completamente a Freezer tras tomar el relevo de Goku."
+        },
+        {
+          "episode": 27,
+          "title": "El Retroceso Temporal de Whis",
+          "description": "Whis revierte la destrucción de la Tierra y Goku remata a Freezer."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 15
+    },
+    {
+      "id": "dbs-torneo-u6",
+      "seriesId": "super",
+      "seriesTitle": "Dragon Ball Super",
+      "tmdbId": 62715,
+      "order": 24,
+      "seriesOrder": 3,
+      "sagaId": "universo-6",
+      "sagaName": "Saga del Torneo del Universo 6",
+      "title": "El Torneo entre Hermanos y el Salto Temporal de Hit",
+      "startEpisode": 28,
+      "endEpisode": 41,
+      "inUniverseYears": "Año 779 – 780",
+      "dominantVibe": "Torneo Multiversal / Estrategia",
+      "previouslyOn": "Champa, el Dios de la Destrucción del Universo 6 gemelo y hermano de Bills, llega junto a su asistente Vados retando a Bills a un torneo de 5 guerreros por las Súper Esferas del Dragón del tamaño de planetas.",
+      "detailedPlot": "El equipo del Universo 7 (Goku, Vegeta, Piccolo, Monaka y Buu dormido) viaja al Planeta Sin Nombre. Se enfrentan al Universo 6: Botamo, Frost (un tirano tramposo similar a Freezer), Magetta, Cabba (un joven Saiyajin del U6 a quien Vegeta enseña el SSJ) y Hit, un legendario asesino capaz de congelar el tiempo 0.1 segundos (Salto Temporal). Goku contrarresta el Salto Temporal combinando el Super Saiyajin Blue con el Kaio-ken x10. Monaka le da la victoria final a U7 cuando Hit se deja caer. Bills invoca a Super Shenlong y pide restaurar la Tierra del Universo 6 en un gesto fraternal hacia su hermano. Aparece Zeno-sama, el Rey de Todo, anunciando un torneo con todos los universos.",
+      "worldStateAtStart": {
+        "threatLevel": "Deportivo Multiversal",
+        "activeVillains": [
+          "Hit (rival honorable)",
+          "Frost"
+        ],
+        "dragonBallsStatus": "Las Súper Esferas del Dragón del tamaño de planetas.",
+        "characterStatus": {
+          "goku": "Combina el SSJ Blue con el Kaio-ken x10.",
+          "vegeta": "Mentor de Cabba enseñándole el orgullo Saiyajin.",
+          "gohan": "Ausente por compromisos académicos.",
+          "piccolo": "Eliminado con trampas por Frost.",
+          "allies": "Bills, Whis, Champa, Vados, Cabba."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Se revela que el Universo 6 es gemelo del Universo 7.",
+        "Goku combina el Super Saiyajin Blue con el Kaio-ken x10 ante Hit.",
+        "Debut de Zeno-sama (Rey de Todo), soberano absoluto del multiverso."
+      ],
+      "milestones": [
+        {
+          "episode": 30,
+          "title": "Goku vs Botamo (Golpes inútiles)",
+          "description": "Botamo absorbe el daño; Goku lo saca del ring por la fuerza bruta."
+        },
+        {
+          "episode": 33,
+          "title": "Frost envenena a Goku y Piccolo",
+          "description": "Frost usa agujas venenosas ocultas; es desenmascarado como tramposo tirano."
+        },
+        {
+          "episode": 36,
+          "title": "Vegeta vs Magetta",
+          "description": "Vegeta lucha contra el robot de metal volcánico en un ring sin oxígeno."
+        },
+        {
+          "episode": 37,
+          "title": "Vegeta vs Cabba",
+          "description": "Vegeta enseña a Cabba a despertar el Super Saiyajin."
+        },
+        {
+          "episode": 39,
+          "title": "SSJ Blue + Kaio-ken x10",
+          "description": "Goku rompe el Salto Temporal de Hit combinando ambas técnicas."
+        },
+        {
+          "episode": 40,
+          "title": "Hit se deja caer; Monaka gana",
+          "description": "Hit reconoce la fuerza de Monaka y se autoelimina; U7 gana el torneo."
+        },
+        {
+          "episode": 41,
+          "title": "Invocación de Super Shenlong",
+          "description": "El dragón dorado planetario concede el deseo de Bills."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        42,
+        43,
+        44,
+        45,
+        46
+      ],
+      "recommendedStartEpisode": 28
+    },
+    {
+      "id": "dbs-goku-black",
+      "seriesId": "super",
+      "seriesTitle": "Dragon Ball Super",
+      "tmdbId": 62715,
+      "order": 25,
+      "seriesOrder": 4,
+      "sagaId": "trunks-futuro",
+      "sagaName": "Saga de Trunks del Futuro",
+      "title": "La Pesadilla en el Futuro: Goku Black, Zamasu y el Juicio de los Mortales",
+      "startEpisode": 47,
+      "endEpisode": 76,
+      "inUniverseYears": "Año 780",
+      "dominantVibe": "Distopía Apocalíptica / Filosofía Oscura / Misterio",
+      "previouslyOn": "Trunks del Futuro vivía en paz tras destruir a los androides y a Cell en su línea temporal. De pronto, un ser idéntico a Goku aparece masacrando a la humanidad.",
+      "detailedPlot": "Trunks escapa en la máquina del tiempo al pasado tras ver morir a Mai. Revela que un enemigo con el rostro de Goku ('Goku Black') devastó su mundo. Se descubre la verdad: Zamasu, un aprendiz de Supremo Kaioshin del Universo 10, desarrolló un odio desmedido hacia los mortales; en otra línea temporal usó las Súper Esferas para cambiar de cuerpo con Goku y aliarse con el Zamasu de la línea de Trunks, quien pidió la inmortalidad. Goku, Vegeta y Trunks viajan al futuro. Goku Black revela el Super Saiyajin Rosé. Ante la desventaja, Black y Zamasu se fusionan con los pendientes en Zamasu Fusionado. Goku y Vegeta se fusionan en Vegetto Blue librando una batalla titánica antes de agotarse el tiempo de fusión. Trunks corta a Zamasu en dos con la Espada de la Esperanza nutrida con el ki de los humanos sobrevivientes. Sin cuerpo físico, la esencia de Zamasu se expande consumiendo el cosmos entero. Goku presiona el botón de Zeno-sama: el Zeno-sama del Futuro borra por completo esa línea temporal. Goku rescata a Zeno y lo lleva al presente con su doble.",
+      "worldStateAtStart": {
+        "threatLevel": "Extinción Multiversal / Deicidio",
+        "activeVillains": [
+          "Goku Black (SSJ Rosé)",
+          "Zamasu del Futuro (Inmortal)",
+          "Zamasu Fusionado"
+        ],
+        "dragonBallsStatus": "Destruidas en el futuro por Black y Zamasu.",
+        "characterStatus": {
+          "goku": "Viaja en el tiempo; invoca a Zeno-sama con el control remoto.",
+          "vegeta": "Supera su límite humillando a Goku Black en revancha.",
+          "gohan": "Vive una vida pacífica de padre de familia en el presente.",
+          "piccolo": "Enseña el Mafuba en el presente.",
+          "allies": "Trunks del Futuro, Mai del Futuro, Vegetto Blue."
+        }
+      },
+      "quickCatchUpKeys": [
+        "El villano es el aprendiz de Kaioshin Zamasu en el cuerpo de Goku.",
+        "Regreso legendario de Vegetto en Super Saiyajin Blue.",
+        "Zeno-sama del Futuro borra la línea temporal de Trunks; Trunks se muda a otra época."
+      ],
+      "milestones": [
+        {
+          "episode": 47,
+          "title": "Llegada de Trunks del Futuro",
+          "description": "Debut del terror de Goku Black en el futuro destruido."
+        },
+        {
+          "episode": 49,
+          "title": "Goku Black aparece en el presente",
+          "description": "Black ataca a Goku, Vegeta y Trunks; usa el Anillo del Tiempo para escapar."
+        },
+        {
+          "episode": 53,
+          "title": "Zamasu y su odio a los mortales",
+          "description": "Flashback del aprendiz de Kaioshin U10 desarrollando su plan \"Cero Mortales\"."
+        },
+        {
+          "episode": 56,
+          "title": "Super Saiyajin Rosé",
+          "description": "Goku Black revela su transformación divina rosada."
+        },
+        {
+          "episode": 59,
+          "title": "Vegeta vs Goku Black (Revancha)",
+          "description": "Vegeta humilla a Black en SSJ Blue tras entender su estilo de combate."
+        },
+        {
+          "episode": 62,
+          "title": "Fusión Zamasu (Pendientes Pothala)",
+          "description": "Black y Zamasu del Futuro se fusionan en Zamasu Fusionado inmortal."
+        },
+        {
+          "episode": 64,
+          "title": "Trunks aprende el Mafuba de Piccolo",
+          "description": "Intento fallido de sellar a Zamasu Fusionado; la urna se rompe."
+        },
+        {
+          "episode": 66,
+          "title": "Vegetto Blue y la Espada de Trunks",
+          "description": "Combate de Vegetto Blue y corte final de Trunks a Zamasu."
+        },
+        {
+          "episode": 67,
+          "title": "Zeno-sama Borra el Universo",
+          "description": "Zeno borra la línea temporal corrupta."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76
+      ],
+      "recommendedStartEpisode": 47
+    },
+    {
+      "id": "dbs-reclutamiento-u7",
+      "seriesId": "super",
+      "seriesTitle": "Dragon Ball Super",
+      "tmdbId": 62715,
+      "order": 26,
+      "seriesOrder": 5,
+      "sagaId": "reclutamiento-u7",
+      "sagaName": "Saga de la Supervivencia Universal",
+      "title": "El Decreto de Zeno-sama y el Reclutamiento del Universo 7",
+      "startEpisode": 77,
+      "endEpisode": 96,
+      "inUniverseYears": "Año 780",
+      "dominantVibe": "Tensión Previa / Reagrupación de Leyendas",
+      "previouslyOn": "Goku, aburrido de la paz, le recuerda a los dos Zeno-sama su promesa del torneo multiversal. Los Reyes de Todo acceden, pero con una condición escalofriante.",
+      "detailedPlot": "El Gran Sacerdote (Daishinkan) anuncia las reglas: será un Battle Royale de 80 luchadores de 8 universos en el Reino de la Nada; los universos derrotados serán borrados de la existencia por Zeno-sama. Tras el Torneo de Exhibición Zen contra el Universo 9, Goku debe reclutar a 10 guerreros: Vegeta, Gohan (recuperando su instinto marcial como capitán), Piccolo, Krilin, Tenshinhan, Roshi, Androide 18 y Androide 17 (ahora guardabosques con un poder descomunal). Cuando Majin Buu cae en un sueño profundo, Goku toma una decisión extrema y desesperada: reclutar a Freezer desde el infierno por 24 horas mediante Uranai Baba a cambio de prometerle revivirlo.",
+      "worldStateAtStart": {
+        "threatLevel": "Borrado de la Existencia Universal",
+        "activeVillains": [
+          "Ninguno directo; amenaza del borrado de Zeno-sama."
+        ],
+        "dragonBallsStatus": "Activas en la Tierra.",
+        "characterStatus": {
+          "goku": "Promotor inconsciente del torneo; cuestionado por los otros universos.",
+          "vegeta": "Nace su hija Bra con ayuda de Whis.",
+          "gohan": "Capitán del equipo U7 tras recuperar su estado Definitivo.",
+          "piccolo": "Entrena a Gohan devolviéndole sus reflejos marciales.",
+          "allies": "Androide 17, Androide 18, Krilin, Roshi, Tenshinhan, Freezer (pacto temporal)."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Los universos eliminados serán borrados de la existencia por Zeno-sama.",
+        "Gohan recupera su poder y es nombrado capitán del Universo 7.",
+        "Goku recluta a Freezer desde el infierno con un pacto de resurrección."
+      ],
+      "milestones": [
+        {
+          "episode": 77,
+          "title": "La Petición de Goku",
+          "description": "Zeno-sama anuncia el Torneo del Poder con borrado universal."
+        },
+        {
+          "episode": 78,
+          "title": "Torneo de Exhibición Zen vs U9",
+          "description": "Bergamo vs Buu; Zeno-sama confirma la regla del borrado universal."
+        },
+        {
+          "episode": 82,
+          "title": "Gohan recupera su instinto marcial",
+          "description": "Piccolo entrena duramente a Gohan quien despierta su poder Definitivo de nuevo."
+        },
+        {
+          "episode": 86,
+          "title": "El Regreso del Androide 17",
+          "description": "Goku encuentra a N°17 convertido en un poderoso guardabosques."
+        },
+        {
+          "episode": 89,
+          "title": "Tenshinhan y Roshi reclutados",
+          "description": "Veteranos se unen al equipo; Roshi muestra técnicas de sellado (Mafuba)."
+        },
+        {
+          "episode": 92,
+          "title": "Freezer negociado desde el Infierno",
+          "description": "Uranai Baba trae a Freezer por 24 horas; pacto de resurrección futura."
+        },
+        {
+          "episode": 95,
+          "title": "Pacto con Freezer",
+          "description": "Goku recluta a Freezer por 24 horas desde el infierno."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 77
+    },
+    {
+      "id": "dbs-torneo-del-poder",
+      "seriesId": "super",
+      "seriesTitle": "Dragon Ball Super",
+      "tmdbId": 62715,
+      "order": 27,
+      "seriesOrder": 6,
+      "sagaId": "torneo-poder",
+      "sagaName": "Saga del Torneo del Poder",
+      "title": "La Batalla Real en el Reino de la Nada y el Ultra Instinto",
+      "startEpisode": 97,
+      "endEpisode": 131,
+      "inUniverseYears": "Año 780",
+      "dominantVibe": "Supervivencia Extrema / Épica Máxima / Despertar Divino",
+      "previouslyOn": "Los 80 guerreros están posicionados en la gigantesca plataforma en el Reino de la Nada. Tienen 48 minutos para decidir qué universo sobrevivirá.",
+      "detailedPlot": "Comienza el torneo. El Universo 7 opera con tácticas de equipo: Roshi muestra su maestría marcial y casi muere; Krilin y Tenshinhan caen defendiendo aliados; Gohan y Piccolo derrotan a los guerreros namekianos del U6. Los universos derrotados son borrados uno por uno por Zeno-sama. El obstáculo supremo es Jiren del Universo 11, un mortal cuyo poder supera al de su propio Dios de la Destrucción. Goku absorbe su propia Genkidama repelida por Jiren rompiendo sus límites y desatando el Ultra Instinto Señal (Migatte no Gokui). Vegeta despierta el SSJ Blue Evolución y derrota a Toppo Dios de la Destrucción. Goku domina el Ultra Instinto Completo (cabello plateado) superando a Jiren antes de que su cuerpo colapse por el contragolpe. En el clímax final, Goku y Freezer se alían en un ataque coordinado suicida arrojándose junto a Jiren fuera de la pista. El Androide 17 queda como único sobreviviente y pide a Super Shenlong restaurar todos los universos borrados. Whis resucita a Freezer en premio por su heroísmo.",
+      "worldStateAtStart": {
+        "threatLevel": "Borrado Cósmico Inminente",
+        "activeVillains": [
+          "Jiren (rival invencible)",
+          "Toppo",
+          "Disfra"
+        ],
+        "dragonBallsStatus": "Super Esferas del Dragón como premio para el último superviviente.",
+        "characterStatus": {
+          "goku": "Despierta el Ultra Instinto (Doctrina Egoísta de pelo plateado).",
+          "vegeta": "Despierta el Super Saiyajin Blue Evolución; cede su energía a Goku.",
+          "gohan": "Se sacrifica arrojando a Dyspo fuera de la pista con Golden Freezer.",
+          "piccolo": "Eliminado tras defender a los androides.",
+          "allies": "Androide 17 (ganador absoluto del torneo), Freezer (revivido por Whis)."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Debut del Ultra Instinto (Migatte no Gokui) de Goku.",
+        "Alianza histórica y conmovedora entre Goku y Freezer contra Jiren.",
+        "El Androide 17 pide restaurar todos los universos eliminados."
+      ],
+      "milestones": [
+        {
+          "episode": 98,
+          "title": "Inicio del Battle Royale (80 guerreros)",
+          "description": "48 minutos en el Reino de la Nada; Universos 9 y 10 borrados temprano."
+        },
+        {
+          "episode": 103,
+          "title": "Roshi casi muere y enseña Mafuba",
+          "description": "Roshi usa el Mafuba contra guerreros del U4 y casi sacrifica su vida."
+        },
+        {
+          "episode": 109,
+          "title": "Goku vs Jiren: Despertar del Ultra Instinto",
+          "description": "Goku rompe sus límites y despierta el Ultra Instinto Señal."
+        },
+        {
+          "episode": 112,
+          "title": "Krilin y Tenshinhan eliminados defendiendo aliados",
+          "description": "Sacrificio táctico del equipo U7; Krilin elimina a una guerrera del U4."
+        },
+        {
+          "episode": 118,
+          "title": "Gohan y Piccolo vs Namekianos U6",
+          "description": "Combate estratégico; Piccolo se elimina para salvar a Gohan de un ataque."
+        },
+        {
+          "episode": 122,
+          "title": "Vegeta SSJ Blue Evolución vs Toppo Dios",
+          "description": "Vegeta rompe sus límites por Bulma y Trunks; destruye a Toppo Hakaishin."
+        },
+        {
+          "episode": 126,
+          "title": "Universo 6 borrado; Frost y Hit caen",
+          "description": "Hit es eliminado por Jiren; Frost intenta atacar a Zeno y es borrado."
+        },
+        {
+          "episode": 129,
+          "title": "Ultra Instinto Dominado",
+          "description": "Goku domina por completo el Ultra Instinto de cabello plateado."
+        },
+        {
+          "episode": 130,
+          "title": "Goku Ultra Instinto Completo vs Jiren",
+          "description": "Cabello plateado; Goku supera a Jiren pero su cuerpo colapsa por el calor."
+        },
+        {
+          "episode": 131,
+          "title": "La Alianza Final y el Deseo de 17",
+          "description": "Goku y Freezer derrotan a Jiren; 17 restaura el multiverso."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 97
+    },
+    {
+      "id": "db-daima-conspiracion",
+      "seriesId": "daima",
+      "seriesTitle": "Dragon Ball Daima",
+      "tmdbId": 236994,
+      "order": 28,
+      "seriesOrder": 1,
+      "sagaId": "daima-misterio",
+      "sagaName": "Saga del Misterio del Reino Demoníaco",
+      "title": "La Conspiración de Gomah y el Viaje al Reino de las Tinieblas",
+      "startEpisode": 1,
+      "endEpisode": 10,
+      "inUniverseYears": "Año 774 – 775",
+      "dominantVibe": "Aventura Clásica / Magia Toriyama / Exploración",
+      "previouslyOn": "Ubicado pocos meses después de la derrota de Kid Buu en el año 774. La Tierra disfruta de la paz y todos celebran el cumpleaños de Trunks en la Corporación Cápsula.",
+      "detailedPlot": "En el Reino Demoníaco, el nuevo Rey Gomah y la hechicera Degesu temen que los Guerreros Z que derrotaron a Majin Buu vayan por ellos. Utilizan las Esferas del Dragón del Reino de las Tinieblas custodiadas por los Tamagami para pedirle a Shenlong que convierta a Goku y a todos sus amigos en niños pequeños. Goku vuelve a empuñar su Báculo Sagrado (Nyoibo). Junto al Supremo Kaioshin (también convertido en niño) y un misterioso viajero llamado Glorio, parten en una nave interestelar hacia el Tercer Mundo Demoníaco, donde conocen a Panzy y descubren los secretos ancestrales sobre la raza namekiana y el origen de las esferas mágicas.",
+      "worldStateAtStart": {
+        "threatLevel": "Mágico / Rejuvenecimiento Forzado",
+        "activeVillains": [
+          "Rey Gomah",
+          "Degesu",
+          "Dra. Arinsu"
+        ],
+        "dragonBallsStatus": "Esferas oscuras del Reino Demoníaco vigiladas por Tamagami.",
+        "characterStatus": {
+          "goku": "Convertido en niño pero conservando su mente y técnicas marciales.",
+          "vegeta": "Convertido en niño en la Tierra.",
+          "gohan": "Convertido en niño en la Tierra.",
+          "piccolo": "Convertido en niño en el Templo Sagrado.",
+          "allies": "Glorio, Panzy, Supremo Kaioshin niño."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Última obra concebida y diseñada directamente por Akira Toriyama.",
+        "Ocurre en el canon oficial meses después de Majin Buu.",
+        "Goku vuelve a ser niño y usa su Báculo Sagrado para explorar mundos mágicos."
+      ],
+      "milestones": [
+        {
+          "episode": 1,
+          "title": "La Maldición de Gomah",
+          "description": "Goku y sus amigos son transformados en niños por Shenlong."
+        },
+        {
+          "episode": 2,
+          "title": "Goku niño recupera el Nyoibo",
+          "description": "Goku vuelve a empuñar su Báculo Sagrado como en su infancia original."
+        },
+        {
+          "episode": 3,
+          "title": "Hacia el Reino Demoníaco",
+          "description": "Goku y Glorio despegan hacia las dimensiones oscuras."
+        },
+        {
+          "episode": 5,
+          "title": "Primer Mundo Demoníaco: Encuentro con Panzy",
+          "description": "Conocen a la habitante del mundo demoníaco que guía al grupo."
+        },
+        {
+          "episode": 6,
+          "title": "Batalla contra Tamagami del 3er Mundo",
+          "description": "Goku enfrenta al guardián colosal de la primera esfera demoníaca."
+        },
+        {
+          "episode": 8,
+          "title": "El Guardián Tamagami",
+          "description": "Goku enfrenta a los colosos guardianes de las esferas del reino."
+        },
+        {
+          "episode": 10,
+          "title": "Degesu revela la conspiración completa",
+          "description": "El plan de Gomah y el origen de las esferas en el Reino Demoníaco."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 1
+    },
+    {
+      "id": "db-daima-climax",
+      "seriesId": "daima",
+      "seriesTitle": "Dragon Ball Daima",
+      "tmdbId": 236994,
+      "order": 29,
+      "seriesOrder": 2,
+      "sagaId": "daima-travesia",
+      "sagaName": "Saga de la Gran Batalla Demoníaca",
+      "title": "El Ojo del Mal, los Mundos Subterráneos y la Caída de Gomah",
+      "startEpisode": 11,
+      "endEpisode": 20,
+      "inUniverseYears": "Año 775",
+      "dominantVibe": "Fantasía Mágica / Duelo Final",
+      "previouslyOn": "Goku, Glorio y Panzy avanzan a través del Segundo y Primer Mundo Demoníaco reuniendo las esferas demoníacas y desmantelando las trampas de Degesu y la Dra. Arinsu.",
+      "detailedPlot": "Goku y sus aliados asaltan el palacio principal de Gomah. Vegeta y Piccolo se unen a la refriega tras cruzar portales mágicos. Gomah se fusiona con el Ojo Maligno aumentando su masa y poder a límites divinos. Goku desata el poder del Super Saiyajin en su cuerpo infantil coordinando técnicas con su báculo y logra derrotar al tirano demoníaco, deshaciendo la maldición y regresando a todos a sus edades normales en la Tierra.",
+      "worldStateAtStart": {
+        "threatLevel": "Soberanía Demoníaca",
+        "activeVillains": [
+          "Rey Gomah (Forma Ojo Maligno)",
+          "Degesu"
+        ],
+        "dragonBallsStatus": "Reunidas para restaurar las edades de los héroes.",
+        "characterStatus": {
+          "goku": "Niño desatando el Super Saiyajin.",
+          "vegeta": "Llega al Reino Demoníaco para combatir junto a Goku.",
+          "gohan": "En la Tierra.",
+          "piccolo": "Asiste con conocimientos namekianos ancestrales.",
+          "allies": "Glorio, Panzy, Shin."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Exploración profunda del lore de los Namekianos y su origen en el Reino Demoníaco.",
+        "Goku y Vegeta combaten juntos en sus formas infantiles.",
+        "Conclusión que conecta limpiamente con los años previos a Dragon Ball Super."
+      ],
+      "milestones": [
+        {
+          "episode": 12,
+          "title": "Segundo Mundo Demoníaco y trampa de Arinsu",
+          "description": "La Dra. Arinsu manipula desde las sombras; Goku y Panzy avanzan."
+        },
+        {
+          "episode": 14,
+          "title": "Vegeta y Piccolo cruzan portales mágicos",
+          "description": "Llegan al Reino Demoníaco para reunirse con Goku en la batalla final."
+        },
+        {
+          "episode": 15,
+          "title": "Llegada de Vegeta",
+          "description": "Vegeta interviene en el Primer Mundo Demoníaco."
+        },
+        {
+          "episode": 17,
+          "title": "Gomah fusiona con el Ojo Maligno",
+          "description": "El Rey Demíaco absorbe el artefacto ancestral alcanzando poder divino."
+        },
+        {
+          "episode": 18,
+          "title": "Goku SSJ en cuerpo infantil + Nyoibo",
+          "description": "Goku combina Super Saiyajin con su báculo para contrarrestar a Gomah."
+        },
+        {
+          "episode": 19,
+          "title": "Goku vs Rey Gomah",
+          "description": "Batalla mágica definitiva en el trono del reino."
+        },
+        {
+          "episode": 20,
+          "title": "Regreso a la Normalidad",
+          "description": "Restauración de las edades y despedida del Reino Demoníaco."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 11
+    },
+    {
+      "id": "dbgt-black-star",
+      "seriesId": "gt",
+      "seriesTitle": "Dragon Ball GT",
+      "tmdbId": 12697,
+      "order": 30,
+      "seriesOrder": 1,
+      "sagaId": "black-star",
+      "sagaName": "Saga de las Esferas de Estrella Negra",
+      "title": "El Deseo Accidental de Pilaf y el Gran Tour por la Galaxia",
+      "startEpisode": 1,
+      "endEpisode": 16,
+      "inUniverseYears": "Año 789",
+      "dominantVibe": "Aventura Cósmica / Tono Clásico Nostálgico",
+      "previouslyOn": "Pasaron 5 años desde que Goku se fue a entrenar con Uub al final de Dragon Ball Z. Goku y Uub entrenan en el Templo Sagrado de Dende.",
+      "detailedPlot": "El anciano Emperador Pilaf se infiltra en el Templo Sagrado y descubre las Esferas del Dragón de Estrella Negra (creadas por el Kami-sama original antes de separarse de Piccolo). Al ver a Goku, Pilaf grita accidentalmente que desearía que Goku fuera niño de nuevo para poder vencerlo: el dragón rojo concede el deseo y Goku vuelve a tener 12 años. Kaio-sama advierte que la Tierra explotará en exactamente un año a menos que las 7 esferas sean recolectadas por el universo y devueltas al planeta. Goku, su nieta Pan (14 años) y Trunks despegan en la nave espacial Tako. En su viaje exploran planetas extraños como Imegga (donde conocen al pequeño robot Giru), enfrentan al gigante Zunama y derrotan al culto del monstruo Luud en el planeta M2.",
+      "worldStateAtStart": {
+        "threatLevel": "Planetario (1 año para la destrucción de la Tierra)",
+        "activeVillains": [
+          "Emperador Pilaf (al inicio)",
+          "Cardenal Mutchy Mutchy",
+          "Monstruo Luud"
+        ],
+        "dragonBallsStatus": "Esferas de Estrella Negra dispersas por las cuatro galaxias.",
+        "characterStatus": {
+          "goku": "Niño de 12 años físicamente pero con poder de SSJ3.",
+          "vegeta": "En la Tierra con bigote y vida civil de padre.",
+          "gohan": "Investigador casado con Videl; padre de Pan.",
+          "piccolo": "Vigilante silencioso en el templo.",
+          "allies": "Pan, Trunks, Giru."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Continuación alternativa de Toei Animation post-episodio 291 de DBZ.",
+        "Goku vuelve a ser niño accidentalmente por las Esferas de Estrella Negra.",
+        "Viaje espacial con Pan y Trunks emulando la esencia de aventura del DB clásico."
+      ],
+      "milestones": [
+        {
+          "episode": 1,
+          "title": "Goku Vuelve a Ser Niño",
+          "description": "El deseo de Pilaf y la revelación de la maldición de las esferas negras."
+        },
+        {
+          "episode": 3,
+          "title": "Despegue Espacial",
+          "description": "Goku, Pan y Trunks inician el Gran Tour por la galaxia."
+        },
+        {
+          "episode": 5,
+          "title": "Planeta Imegga y estafa comercial",
+          "description": "Goku, Pan y Trunks son estafados por comerciantes; conocen al robot Giru."
+        },
+        {
+          "episode": 8,
+          "title": "Zunama el gigante terremoto",
+          "description": "Goku combate al monstruo que causa terremotos con sus bigotes."
+        },
+        {
+          "episode": 12,
+          "title": "Planeta M2 y culto a Luud",
+          "description": "Descubren la base del Dr. Myuu y el monstruo mecánico Luud."
+        },
+        {
+          "episode": 14,
+          "title": "Giru revela ser espía de Myuu",
+          "description": "El pequeño robot traiciona al grupo y entrega datos al Dr. Myuu."
+        },
+        {
+          "episode": 16,
+          "title": "Llegada al Planeta M2",
+          "description": "Descubrimiento de la conspiración de los mutantes mecánicos."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 1
+    },
+    {
+      "id": "dbgt-baby-ssj4",
+      "seriesId": "gt",
+      "seriesTitle": "Dragon Ball GT",
+      "tmdbId": 12697,
+      "order": 31,
+      "seriesOrder": 2,
+      "sagaId": "baby",
+      "sagaName": "Saga de Baby",
+      "title": "La Venganza Tsufuru, la Posesión de la Tierra y el Super Saiyajin 4",
+      "startEpisode": 17,
+      "endEpisode": 40,
+      "inUniverseYears": "Año 789 – 790",
+      "dominantVibe": "Horror Parasitario / Transformación Legendaria / Drama",
+      "previouslyOn": "En el planeta M2, los héroes descubren que el científico Dr. Myuu trabaja en secreto para una entidad parasitaria bio-mecánica creada con el ADN del Rey de los Tsufuru.",
+      "detailedPlot": "Baby despierta y busca venganza contra los Saiyajin por el exterminio de su pueblo. Llega a la Tierra antes que Goku e implanta parásitos en los cerebros de Goten, Gohan y finalmente toma posesión del cuerpo de Vegeta, mutando a Baby Vegeta. Baby esclaviza a toda la humanidad y recrea el Planeta Tsufuru (Planeta Plant). Goku regresa a la Tierra y es derrotado en SSJ3. En el reino Sugoroku, el Anciano Kaioshin extrae de nuevo la cola de Goku con unas tenazas. Goku regresa a combatir, mira a la Tierra llena y muta en un salvaje Gran Mono Dorado (Oozaru Dorado). Las lágrimas de Pan le devuelven la consciencia, comprimiendo ese poder primitivo en el legendario Super Saiyajin 4 (SSJ4). Goku SSJ4 humilla a Baby Vegeta y lo manda al Sol con un Kamehameha x10. Piccolo decide quedarse en la Tierra mientras evacúan a la población para que las Esferas de Estrella Negra se destruyan en la explosión, sacrificando su vida para siempre.",
+      "worldStateAtStart": {
+        "threatLevel": "Extinción y Control Mental Total",
+        "activeVillains": [
+          "Baby Vegeta",
+          "Tierra entera poseída"
+        ],
+        "dragonBallsStatus": "Usadas por Baby para recrear el Planeta Tsufuru.",
+        "characterStatus": {
+          "goku": "Alcanza el legendario Super Saiyajin 4 de pelaje rojo.",
+          "vegeta": "Poseído como huésped principal de Baby.",
+          "gohan": "Poseído por Baby.",
+          "piccolo": "Se sacrifica muriendo en la explosión de la Tierra para destruir las esferas negras.",
+          "allies": "Pan, Mr. Satán, Majin Buu Gordo, Uub (fusionado en Majuub)."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Debut del icónico Super Saiyajin 4 (pelaje rojo, cola y aspecto adulto).",
+        "Fusión definitiva entre Buu Gordo y Uub (Majuub).",
+        "Muerte definitiva y conmovedora de Piccolo para destruir las esferas de estrella negra."
+      ],
+      "milestones": [
+        {
+          "episode": 19,
+          "title": "Baby infecta a Goten y Gohan",
+          "description": "Parásitos toman control de los hijos de Goku antes de llegar a Vegeta."
+        },
+        {
+          "episode": 22,
+          "title": "Baby Vegeta esclaviza a la Tierra",
+          "description": "Toda la población tiene la marca de Baby; recrean el Planeta Tsufuru."
+        },
+        {
+          "episode": 25,
+          "title": "Goku SSJ3 vs Baby Vegeta (Derrota)",
+          "description": "Goku es aplastado; enviado al reino Sugoroku por el Anciano Kaioshin."
+        },
+        {
+          "episode": 27,
+          "title": "Nace Baby Vegeta",
+          "description": "Baby infecta el cuerpo de Vegeta controlando la Tierra."
+        },
+        {
+          "episode": 30,
+          "title": "Anciano Kaioshin extrae la cola con tenazas",
+          "description": "Ritual doloroso para restaurar la cola de Goku y permitir el Oozaru Dorado."
+        },
+        {
+          "episode": 33,
+          "title": "Oozaru Dorado salvaje",
+          "description": "Goku mira la Tierra llena y muta en mono dorado descontrolado; Pan lo calma con lágrimas."
+        },
+        {
+          "episode": 35,
+          "title": "Nacimiento del Super Saiyajin 4",
+          "description": "Goku comprime el poder del Oozaru Dorado alcanzando el SSJ4."
+        },
+        {
+          "episode": 38,
+          "title": "Kamehameha x10 al Sol",
+          "description": "Goku SSJ4 lanza a Baby Vegeta al Sol destruyendo al parásito Tsufuru."
+        },
+        {
+          "episode": 40,
+          "title": "El Adiós de Piccolo",
+          "description": "Piccolo muere en la explosión de la Tierra despidiéndose de Gohan."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 17
+    },
+    {
+      "id": "dbgt-super-17",
+      "seriesId": "gt",
+      "seriesTitle": "Dragon Ball GT",
+      "tmdbId": 12697,
+      "order": 32,
+      "seriesOrder": 3,
+      "sagaId": "super-17",
+      "sagaName": "Saga de Super 17",
+      "title": "La Brecha del Infierno y la Creación del Androide Definitivo",
+      "startEpisode": 41,
+      "endEpisode": 47,
+      "inUniverseYears": "Año 790",
+      "dominantVibe": "Caos Urbano / Viejos Villanos / Acción Rápida",
+      "previouslyOn": "La Tierra fue restaurada usando las esferas de Namek tras el sacrificio de Piccolo. El planeta vive una corta tregua de paz.",
+      "detailedPlot": "En el Infierno, el Dr. Gero y el Dr. Myuu unen sus conocimientos para crear un clon exacto del Androide 17 (Hell 17). Abren una brecha dimensional entre el Infierno y la Tierra liberando a antiguos villanos (Freezer, Cell, Nappa, Rildo). Goku baja al Infierno a detener a Cell y Freezer y queda atrapado. Hell 17 se fusiona con el Androide 17 de la Tierra creando a Super 17, quien absorbe todo ataque de ki y masacra a Vegeta, Gohan y los Guerreros Z. Piccolo ayuda a Goku a escapar del Infierno coordinando ondas de ki con Dende. Androide 18 encara a Super 17 enfurecida por el asesinato de Krilin; al notar que Super 17 queda vulnerable al absorber energía, Goku lo atraviesa con el Puño del Dragón (Ryūken) y lo remata con un Kamehameha.",
+      "worldStateAtStart": {
+        "threatLevel": "Brecha Dimensional e Invasión de Muertos",
+        "activeVillains": [
+          "Super 17",
+          "Dr. Gero",
+          "Dr. Myuu",
+          "Freezer",
+          "Cell"
+        ],
+        "dragonBallsStatus": "Agrietadas por energía negativa.",
+        "characterStatus": {
+          "goku": "Atrapado en el Infierno al inicio; vence con el Puño del Dragón.",
+          "vegeta": "Defiende la ciudad contra Super 17.",
+          "gohan": "Combate a viejos villanos en la Tierra.",
+          "piccolo": "Guardián eterno en el Infierno para salvar a Goku.",
+          "allies": "Androide 18, Dende."
+        }
+      },
+      "quickCatchUpKeys": [
+        "Regresan viejos villanos de DBZ desde el Infierno.",
+        "Krilin es asesinado por el Androide 17 controlado mentalmente.",
+        "Goku utiliza el Puño del Dragón (Ryūken) en el anime para destruir a Super 17."
+      ],
+      "milestones": [
+        {
+          "episode": 42,
+          "title": "La Brecha del Infierno",
+          "description": "Los muertos escapan a la Tierra; Goku queda atrapado."
+        },
+        {
+          "episode": 43,
+          "title": "Goku en el Infierno vs Cell y Freezer",
+          "description": "Goku atrapado combate a sus viejos rivales; Piccolo y Dende coordinan escape."
+        },
+        {
+          "episode": 44,
+          "title": "Nace Super 17",
+          "description": "Fusión de ambos androides 17 creando a la máquina definitiva."
+        },
+        {
+          "episode": 45,
+          "title": "Super 17 absorbe ataques de Vegeta y Gohan",
+          "description": "La habilidad de absorción de ki hace invulnerable a Super 17."
+        },
+        {
+          "episode": 46,
+          "title": "Androide 18 ataca a Super 17 por Krilin",
+          "description": "La furia de 18 revela la vulnerabilidad: al absorber no puede defenderse físicamente."
+        },
+        {
+          "episode": 47,
+          "title": "El Puño del Dragón",
+          "description": "A18 y Goku coordinan el ataque que destruye a Super 17."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 41
+    },
+    {
+      "id": "dbgt-dragones-malignos",
+      "seriesId": "gt",
+      "seriesTitle": "Dragon Ball GT",
+      "tmdbId": 12697,
+      "order": 33,
+      "seriesOrder": 4,
+      "sagaId": "shadow-dragons",
+      "sagaName": "Saga de los Dragones Malignos",
+      "title": "La Corrupción de las Esferas, Gogeta SSJ4 y la Despedida Eterna de Goku",
+      "startEpisode": 48,
+      "endEpisode": 64,
+      "inUniverseYears": "Año 790 – 889",
+      "dominantVibe": "Tragedia Mítica / Clímax Final / Nostalgia Pura",
+      "previouslyOn": "Super 17 fue destruido y Krilin yace muerto. Los guerreros reúnen las Esferas del Dragón para revivir a las víctimas, pero las esferas se agrietan y emiten un humo negro tenebroso.",
+      "detailedPlot": "El uso excesivo y egoísta de las esferas durante 40 años acumuló energía negativa que el dragón no pudo purgar. De las esferas nacen 7 Dragones Malignos. Goku y Pan viajan derrotándolos uno a uno (incluyendo a Suu Shenron, el noble dragón de 4 estrellas). El dragón de 1 estrella, Syn Shenron, devora las 7 esferas corrompidas mutando a Omega Shenron. Bulma crea la Máquina de Rayos Blantz para que Vegeta alcance el SSJ4. Goku SSJ4 y Vegeta SSJ4 se fusionan en Gogeta Super Saiyajin 4 (cabello rojo), quien juega arrogantemente con Omega Shenron hasta que la fusión se disuelve. Goku, dado por muerto en un cráter, reúne la Genkidama Universal con la energía de todos los seres vivos de la galaxia y desintegra a Omega Shenron. El Shenlong original reaparece sanado y le dice a Goku que las esferas deben marcharse del mundo. Goku se acuesta sobre Shenlong, absorbe las 7 esferas en su cuerpo y se marcha despidiéndose de Krilin y Piccolo. Cien años después (Año 889), Goku Jr. combate contra Vegeta Jr. en el 64° Torneo de Artes Marciales mientras una anciana Pan sonríe y el espíritu de Goku contempla la batalla antes de desvanecerse.",
+      "worldStateAtStart": {
+        "threatLevel": "Corrupción Total del Universo",
+        "activeVillains": [
+          "Los 7 Dragones Malignos",
+          "Omega Shenron (1★)"
+        ],
+        "dragonBallsStatus": "Corrompidas por energía negativa; encarnadas en monstruos.",
+        "characterStatus": {
+          "goku": "Se fusiona en Gogeta SSJ4; se marcha eternamente con Shenlong.",
+          "vegeta": "Alcanza el SSJ4; acepta su deber como protector de la Tierra en ausencia de Goku.",
+          "gohan": "Combate contra los dragones.",
+          "piccolo": "En el Infierno despidiéndose de Goku con un apretón de manos.",
+          "allies": "Pan (anciana 100 años después), Goku Jr., Gogeta SSJ4."
+        }
+      },
+      "quickCatchUpKeys": [
+        "El exceso de deseos egoístas engendra a los 7 Dragones Malignos.",
+        "Aparición mítica de Gogeta Super Saiyajin 4.",
+        "Goku se marcha con Shenlong en el desenlace más emotivo de la historia del anime."
+      ],
+      "milestones": [
+        {
+          "episode": 48,
+          "title": "Nacen los Dragones Malignos",
+          "description": "Humo negro y nacimiento de las 7 sombras corrompidas."
+        },
+        {
+          "episode": 50,
+          "title": "Goku y Pan vs Dragones 2★ a 5★",
+          "description": "Viaje derrotando a Ryan, Uu, Ryu y Chuu Shenron uno por uno."
+        },
+        {
+          "episode": 54,
+          "title": "Suu Shenron (4★) el dragón noble",
+          "description": "El dragón de 4 estrellas ayuda a Goku y es absorbido por su hermano Syn."
+        },
+        {
+          "episode": 56,
+          "title": "Syn Shenron devora las 7 esferas = Omega Shenron",
+          "description": "El dragón de 1 estrella se vuelve la amenaza suprema corrompida."
+        },
+        {
+          "episode": 58,
+          "title": "Máquina de Rayos Blantz: Vegeta SSJ4",
+          "description": "Bulma obliga a Vegeta a transformarse en Oozaru Dorado para alcanzar SSJ4."
+        },
+        {
+          "episode": 60,
+          "title": "Gogeta Super Saiyajin 4",
+          "description": "Fusión de Goku y Vegeta SSJ4 con el Big Bang Kamehameha x100."
+        },
+        {
+          "episode": 62,
+          "title": "Genkidama Universal de toda la galaxia",
+          "description": "Goku moribundo reúne energía de todos los seres vivos y destruye a Omega Shenron."
+        },
+        {
+          "episode": 63,
+          "title": "Shenlong original reaparece sano",
+          "description": "El dragón anuncia que las esferas deben irse; Goku se monta en su lomo."
+        },
+        {
+          "episode": 64,
+          "title": "El Adiós de Goku",
+          "description": "Goku se marcha sobre el lomo de Shenlong concluyendo la era GT."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 48
+    }
+  ]
+}

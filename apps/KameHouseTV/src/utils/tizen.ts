@@ -19,35 +19,37 @@ export function exitTizenApp() {
   } catch (e) {}
 }
 
-export function getTizenLocalIP(callback: (ip: string | null) => void) {
-  try {
-    if (typeof (window as any).tizen !== 'undefined' && (window as any).tizen.systeminfo) {
-      (window as any).tizen.systeminfo.getPropertyValue("WIFI_NETWORK", (wifi: any) => {
-        if (wifi && wifi.ipAddress) {
-          callback(wifi.ipAddress);
-        } else {
-          tryEthernet();
-        }
-      }, () => tryEthernet());
-    } else {
-      callback(null);
-    }
-  } catch (e) {
-    callback(null);
-  }
-
-  function tryEthernet() {
+export function getTizenLocalIP(): Promise<string | null> {
+  return new Promise((resolve) => {
     try {
-      (window as any).tizen.systeminfo.getPropertyValue("ETHERNET_NETWORK", (eth: any) => {
-        if (eth && eth.ipAddress) {
-          callback(eth.ipAddress);
-        } else {
-          callback(null);
-        }
-      }, () => callback(null));
+      if (typeof (window as any).tizen !== 'undefined' && (window as any).tizen.systeminfo) {
+        (window as any).tizen.systeminfo.getPropertyValue("WIFI_NETWORK", (wifi: any) => {
+          if (wifi && wifi.ipAddress) {
+            resolve(wifi.ipAddress);
+          } else {
+            tryEthernet();
+          }
+        }, () => tryEthernet());
+      } else {
+        resolve(null);
+      }
     } catch (e) {
-      callback(null);
+      resolve(null);
     }
-  }
+
+    function tryEthernet() {
+      try {
+        (window as any).tizen.systeminfo.getPropertyValue("ETHERNET_NETWORK", (eth: any) => {
+          if (eth && eth.ipAddress) {
+            resolve(eth.ipAddress);
+          } else {
+            resolve(null);
+          }
+        }, () => resolve(null));
+      } catch (e) {
+        resolve(null);
+      }
+    }
+  });
 }
 

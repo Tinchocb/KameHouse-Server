@@ -29,7 +29,7 @@ func NewJikanProvider(database *db.Database, logger *zerolog.Logger) *JikanProvi
 		client:      jikan.NewClient(logger),
 		db:          database,
 		logger:      logger,
-		rateLimiter: limiter.NewPlatformLimiter(),
+		rateLimiter: limiter.NewJikanLimiter(),
 	}
 }
 

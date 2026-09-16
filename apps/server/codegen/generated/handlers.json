@@ -233,7 +233,7 @@
     "name": "enrichEpisodesWithTMDB",
     "trimmedName": "enrichEpisodesWithTMDB",
     "comments": [
-      "enrichEpisodesWithTMDB fetches episode-level metadata from TMDB and fills in",
+      "enrichEpisodesWithTMDB fetches episode-level metadata from TMDB or Jikan and fills in",
       "any fields that AniDB/Animap left empty (title, overview/summary, still image, runtime).",
       "Supports multi-season series by fetching all available seasons in parallel.",
       "This is purely additive — never overwrites existing non-empty values.",
@@ -254,10 +254,33 @@
     }
   },
   {
+    "name": "isBrokenImageURL",
+    "trimmedName": "isBrokenImageURL",
+    "comments": [
+      "isBrokenImageURL returns true if the given URL is clearly an invalid / placeholder path that",
+      "will return a 404. These are short filename-style hashes (e.g. \"daima_poster.jpg\",",
+      "\"bardock_poster.jpg\") that were hardcoded without a real TMDB hash, or genuinely empty strings.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_enrichment.go",
+    "filename": "anime_enrichment.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "enrichMediaWithTMDB",
     "trimmedName": "enrichMediaWithTMDB",
     "comments": [
-      "enrichMediaWithTMDB fetches series-level metadata from TMDB if the local description is missing.",
+      "enrichMediaWithTMDB fetches series-level metadata from TMDB or Jikan API if the local metadata or poster is missing/broken.",
       ""
     ],
     "filepath": "internal/handlers/anime_enrichment.go",
@@ -680,37 +703,6 @@
     }
   },
   {
-    "name": "HandleDeletePlatformEntry",
-    "trimmedName": "DeletePlatformEntry",
-    "comments": [
-      "HandleDeletePlatformEntry will delete the given media entry from Platform.",
-      ""
-    ],
-    "filepath": "internal/handlers/anime_entries.go",
-    "filename": "anime_entries.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "MediaID",
-          "jsonName": "mediaId",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "HandleGetMissingEpisodes",
     "trimmedName": "GetMissingEpisodes",
     "comments": [
@@ -738,37 +730,6 @@
       "returns": "anime.MissingEpisodes",
       "returnGoType": "anime.MissingEpisodes",
       "returnTypescriptType": "Anime_MissingEpisodes"
-    }
-  },
-  {
-    "name": "HandleSilenceMissingEpisodes",
-    "trimmedName": "SilenceMissingEpisodes",
-    "comments": [
-      "HandleSilenceMissingEpisodes will silence the missing episodes for the given media.",
-      ""
-    ],
-    "filepath": "internal/handlers/anime_entries.go",
-    "filename": "anime_entries.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "MediaID",
-          "jsonName": "mediaId",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -805,7 +766,7 @@
     "name": "HandleGetAnimeEntrySilenceStatus",
     "trimmedName": "GetAnimeEntrySilenceStatus",
     "comments": [
-      "HandleGetAnimeEntrySilenceStatus returns a stable no-op silence status.",
+      "HandleGetAnimeEntrySilenceStatus returns the silence status of an anime entry.",
       "",
       "\t@summary returns the silence status.",
       "\t@param id - int - true - \"Anime media ID\"",
@@ -845,7 +806,7 @@
     "name": "HandleToggleAnimeEntrySilenceStatus",
     "trimmedName": "ToggleAnimeEntrySilenceStatus",
     "comments": [
-      "HandleToggleAnimeEntrySilenceStatus toggles the silence flag (no-op until DB column exists).",
+      "HandleToggleAnimeEntrySilenceStatus toggles the silence flag for an anime entry.",
       "",
       "\t@summary toggles the silence flag.",
       "\t@route /api/v1/library/anime-entry/silence [POST]",
@@ -1363,27 +1324,6 @@
     }
   },
   {
-    "name": "NewLibraryHandler",
-    "trimmedName": "NewLibraryHandler",
-    "comments": [
-      "NewLibraryHandler crea un handler de biblioteca con sus dependencias específicas.",
-      ""
-    ],
-    "filepath": "internal/handlers/handlers.go",
-    "filename": "handlers.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "HandleGetHomeCurated",
     "trimmedName": "GetHomeCurated",
     "comments": [
@@ -1509,6 +1449,66 @@
     }
   },
   {
+    "name": "HandleGetChronologyTimeline",
+    "trimmedName": "GetChronologyTimeline",
+    "comments": [
+      "HandleGetChronologyTimeline returns the Dragon Ball in-universe canonical timeline with user progress.",
+      "",
+      "\t@summary get Dragon Ball canon timeline.",
+      "\t@desc Returns full historical timeline order with user progress.",
+      "\t@returns intelligence.ChronologyResponse",
+      "\t@route /api/v1/intelligence/chronology [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/intelligence.go",
+    "filename": "intelligence.go",
+    "api": {
+      "summary": "get Dragon Ball canon timeline.",
+      "descriptions": [
+        "Returns full historical timeline order with user progress."
+      ],
+      "endpoint": "/api/v1/intelligence/chronology",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "intelligence.ChronologyResponse",
+      "returnGoType": "intelligence.ChronologyResponse",
+      "returnTypescriptType": "ChronologyResponse"
+    }
+  },
+  {
+    "name": "HandleSemanticSearch",
+    "trimmedName": "SemanticSearch",
+    "comments": [
+      "HandleSemanticSearch returns lore entities and smart recommendations for a query.",
+      "",
+      "\t@summary search lore entities and sagas.",
+      "\t@desc Searches characters, transformations, sagas and milestones.",
+      "\t@returns []intelligence.SemanticSearchResult",
+      "\t@route /api/v1/intelligence/search [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/intelligence.go",
+    "filename": "intelligence.go",
+    "api": {
+      "summary": "search lore entities and sagas.",
+      "descriptions": [
+        "Searches characters, transformations, sagas and milestones."
+      ],
+      "endpoint": "/api/v1/intelligence/search",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "[]intelligence.SemanticSearchResult",
+      "returnGoType": "intelligence.SemanticSearchResult",
+      "returnTypescriptType": "Array\u003cSemanticSearchResult\u003e"
+    }
+  },
+  {
     "name": "HandleGetLibraryExplorerFileTree",
     "trimmedName": "GetLibraryExplorerFileTree",
     "comments": [
@@ -1567,48 +1567,6 @@
       ],
       "params": [],
       "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleLoadLibraryExplorerDirectoryChildren",
-    "trimmedName": "LoadLibraryExplorerDirectoryChildren",
-    "comments": [
-      "HandleLoadLibraryExplorerDirectoryChildren ...",
-      "",
-      "\t@summary loads the children of a specific directory into the file tree.",
-      "\t@desc This endpoint loads directory children into the cached file tree. Frontend should re-fetch the tree afterwards.",
-      "\t@desc The directory path must be within the configured library paths for security.",
-      "\t@route /api/v1/library/explorer/directory-children [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/library_explorer.go",
-    "filename": "library_explorer.go",
-    "api": {
-      "summary": "loads the children of a specific directory into the file tree.",
-      "descriptions": [
-        "This endpoint loads directory children into the cached file tree. Frontend should re-fetch the tree afterwards.",
-        "The directory path must be within the configured library paths for security."
-      ],
-      "endpoint": "/api/v1/library/explorer/directory-children",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "DirectoryPath",
-          "jsonName": "directoryPath",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": true,
-          "descriptions": []
-        }
-      ],
       "returns": "bool",
       "returnGoType": "bool",
       "returnTypescriptType": "boolean"
@@ -2321,6 +2279,15 @@
         },
         {
           "name": "MediaID",
+          "jsonName": "mediaId",
+          "goType": "int",
+          "usedStructType": "",
+          "typescriptType": "number",
+          "required": false,
+          "descriptions": []
+        },
+        {
+          "name": "LegacyMediaID",
           "jsonName": "mediaID",
           "goType": "int",
           "usedStructType": "",
@@ -2411,9 +2378,7 @@
     "trimmedName": "GetDragonballLore",
     "comments": [
       "HandleGetDragonballLore returns the local Dragon Ball character wiki used to",
-      "populate the character detail modal. No character data has been authored",
-      "yet, so it currently returns an empty list — the client gates this query to",
-      "Dragon Ball media only and treats an empty wiki as \"no entry found\".",
+      "populate the character detail modal.",
       ""
     ],
     "filepath": "internal/handlers/lore.go",
@@ -3007,6 +2972,65 @@
     }
   },
   {
+    "name": "HandleGetFFmpegStatus",
+    "trimmedName": "GetFFmpegStatus",
+    "comments": [
+      "HandleGetFFmpegStatus returns the current status and resolved paths of FFmpeg and FFprobe.",
+      "",
+      "\t@summary get ffmpeg binary status.",
+      "\t@desc This returns the status and version of ffmpeg and ffprobe binaries.",
+      "\t@returns ffmpegutil.FFmpegStatus",
+      "\t@route /api/v1/mediastream/ffmpeg/status [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/mediastream.go",
+    "filename": "mediastream.go",
+    "api": {
+      "summary": "get ffmpeg binary status.",
+      "descriptions": [
+        "This returns the status and version of ffmpeg and ffprobe binaries."
+      ],
+      "endpoint": "/api/v1/mediastream/ffmpeg/status",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "ffmpegutil.FFmpegStatus",
+      "returnGoType": "ffmpegutil.FFmpegStatus",
+      "returnTypescriptType": "FFmpegStatus"
+    }
+  },
+  {
+    "name": "HandleInstallFFmpeg",
+    "trimmedName": "InstallFFmpeg",
+    "comments": [
+      "HandleInstallFFmpeg starts background download and installation of FFmpeg and FFprobe.",
+      "",
+      "\t@summary install ffmpeg binaries.",
+      "\t@desc Downloads and extracts ffmpeg and ffprobe into cache/bin directory.",
+      "\t@route /api/v1/mediastream/ffmpeg/install [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/mediastream.go",
+    "filename": "mediastream.go",
+    "api": {
+      "summary": "install ffmpeg binaries.",
+      "descriptions": [
+        "Downloads and extracts ffmpeg and ffprobe into cache/bin directory."
+      ],
+      "endpoint": "/api/v1/mediastream/ffmpeg/install",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandlePopulateFillerData",
     "trimmedName": "PopulateFillerData",
     "comments": [
@@ -3176,6 +3200,42 @@
       "returns": "models.MediaMetadataParent",
       "returnGoType": "models.MediaMetadataParent",
       "returnTypescriptType": "Models_MediaMetadataParent"
+    }
+  },
+  {
+    "name": "HandleClearMetadataCache",
+    "trimmedName": "ClearMetadataCache",
+    "comments": [
+      "HandleClearMetadataCache ...",
+      "",
+      "\t@summary clears provider metadata cache.",
+      "\t@desc Deletes persisted TMDB/Jikan/AniList episode \u0026 media detail caches (all",
+      "\t@desc language variants) so the next scan re-fetches them — e.g. after changing",
+      "\t@desc the metadata language — and clears the in-memory metadata caches.",
+      "\t@desc Migration markers and raw TMDB API responses are preserved.",
+      "\t@route /api/v1/metadata/cache [DELETE]",
+      "\t@returns bool",
+      ""
+    ],
+    "filepath": "internal/handlers/metadata.go",
+    "filename": "metadata.go",
+    "api": {
+      "summary": "clears provider metadata cache.",
+      "descriptions": [
+        "Deletes persisted TMDB/Jikan/AniList episode \u0026 media detail caches (all",
+        "language variants) so the next scan re-fetches them — e.g. after changing",
+        "the metadata language — and clears the in-memory metadata caches.",
+        "Migration markers and raw TMDB API responses are preserved."
+      ],
+      "endpoint": "/api/v1/metadata/cache",
+      "methods": [
+        "DELETE"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -3946,7 +4006,7 @@
     "name": "RegisterIntelligenceRoutes",
     "trimmedName": "RegisterIntelligenceRoutes",
     "comments": [
-      "RegisterIntelligenceRoutes registra las rutas del motor de selección inteligente.",
+      "RegisterIntelligenceRoutes registra las rutas del motor de selección e inteligencia.",
       ""
     ],
     "filepath": "internal/handlers/routes.go",
@@ -4332,6 +4392,28 @@
     }
   },
   {
+    "name": "isAuthorized",
+    "trimmedName": "isAuthorized",
+    "comments": [
+      "isAuthorized comprueba si el request cuenta con credenciales válidas",
+      "(X-KameHouse-Token, Authorization Bearer o HMAC token con TTL en query param o header).",
+      ""
+    ],
+    "filepath": "internal/handlers/server_auth_middleware.go",
+    "filename": "server_auth_middleware.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleGetSettings",
     "trimmedName": "GetSettings",
     "comments": [
@@ -4496,7 +4578,7 @@
         },
         {
           "name": "Platform",
-          "jsonName": "Platform",
+          "jsonName": "platform",
           "goType": "models.PlatformSettings",
           "usedStructType": "models.PlatformSettings",
           "typescriptType": "Models_PlatformSettings",
@@ -4766,7 +4848,7 @@
       "",
       "\t@summary returns the home items.",
       "\t@route /api/v1/status/home-items [GET]",
-      "\t@returns []models.HomeItem",
+      "\t@returns []string",
       ""
     ],
     "filepath": "internal/handlers/status.go",
@@ -4780,9 +4862,9 @@
       ],
       "params": [],
       "bodyFields": [],
-      "returns": "[]models.HomeItem",
-      "returnGoType": "models.HomeItem",
-      "returnTypescriptType": "Array\u003cModels_HomeItem\u003e"
+      "returns": "[]string",
+      "returnGoType": "string",
+      "returnTypescriptType": "Array\u003cstring\u003e"
     }
   },
   {
@@ -4806,20 +4888,37 @@
         "POST"
       ],
       "params": [],
-      "bodyFields": [
-        {
-          "name": "Items",
-          "jsonName": "items",
-          "goType": "[]models.HomeItem",
-          "usedStructType": "models.HomeItem",
-          "typescriptType": "Array\u003cModels_HomeItem\u003e",
-          "required": true,
-          "descriptions": []
-        }
-      ],
+      "bodyFields": [],
       "returns": "nil",
       "returnGoType": "nil",
       "returnTypescriptType": "null"
+    }
+  },
+  {
+    "name": "HandleShutdown",
+    "trimmedName": "Shutdown",
+    "comments": [
+      "HandleShutdown handles graceful shutdown requests from local clients (e.g. desktop sidecar).",
+      "",
+      "\t@summary gracefully shuts down the server.",
+      "\t@route /api/v1/shutdown [POST]",
+      "\t@returns status message",
+      ""
+    ],
+    "filepath": "internal/handlers/status.go",
+    "filename": "status.go",
+    "api": {
+      "summary": "gracefully shuts down the server.",
+      "descriptions": [],
+      "endpoint": "/api/v1/shutdown",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "status message",
+      "returnGoType": "status message",
+      "returnTypescriptType": "status message"
     }
   },
   {
@@ -5005,18 +5104,18 @@
     "comments": [
       "HandleTMDBSearch ...",
       "",
-      "\t@summary search TMDB for anime/TV show metadata.",
-      "\t@desc Searches TMDB for TV shows matching the query. Requires TMDB bearer token in the request body.",
-      "\t@returns []tmdb.SearchResult",
+      "\t@summary search TMDB (or Jikan fallback) for anime/TV show metadata.",
+      "\t@desc Searches TMDB for TV shows matching the query, falling back to Jikan if no TMDB API key exists.",
+      "\t@returns []map[string]interface{}",
       "\t@route /api/v1/tmdb/search [POST]",
       ""
     ],
     "filepath": "internal/handlers/tmdb.go",
     "filename": "tmdb.go",
     "api": {
-      "summary": "search TMDB for anime/TV show metadata.",
+      "summary": "search TMDB (or Jikan fallback) for anime/TV show metadata.",
       "descriptions": [
-        "Searches TMDB for TV shows matching the query. Requires TMDB bearer token in the request body."
+        "Searches TMDB for TV shows matching the query, falling back to Jikan if no TMDB API key exists."
       ],
       "endpoint": "/api/v1/tmdb/search",
       "methods": [
@@ -5052,9 +5151,9 @@
           "descriptions": []
         }
       ],
-      "returns": "[]tmdb.SearchResult",
-      "returnGoType": "tmdb.SearchResult",
-      "returnTypescriptType": "Array\u003cSearchResult\u003e"
+      "returns": "[]map[string]interface{}",
+      "returnGoType": "interface{}",
+      "returnTypescriptType": "Array\u003cRecord\u003cstring, interface{}\u003e\u003e"
     }
   },
   {
@@ -5063,8 +5162,8 @@
     "comments": [
       "HandleTMDBGetDetails ...",
       "",
-      "\t@summary get TMDB TV show details and alternative titles.",
-      "\t@desc Returns detailed metadata and alternative titles for a TMDB TV show.",
+      "\t@summary get TMDB (or Jikan) anime details and alternative titles.",
+      "\t@desc Returns detailed metadata and alternative titles for a show.",
       "\t@returns map[string]interface{}",
       "\t@route /api/v1/tmdb/details [POST]",
       ""
@@ -5072,9 +5171,9 @@
     "filepath": "internal/handlers/tmdb.go",
     "filename": "tmdb.go",
     "api": {
-      "summary": "get TMDB TV show details and alternative titles.",
+      "summary": "get TMDB (or Jikan) anime details and alternative titles.",
       "descriptions": [
-        "Returns detailed metadata and alternative titles for a TMDB TV show."
+        "Returns detailed metadata and alternative titles for a show."
       ],
       "endpoint": "/api/v1/tmdb/details",
       "methods": [
@@ -5130,17 +5229,17 @@
     "comments": [
       "HandleTMDBAssign ...",
       "",
-      "\t@summary manually assign a TMDB ID to a set of local files.",
-      "\t@desc Fetches full TMDB details, upserts LibraryMedia, and updates the local files.",
+      "\t@summary manually assign a metadata ID to a set of local files.",
+      "\t@desc Fetches full details from TMDB or Jikan, upserts LibraryMedia, and updates local files.",
       "\t@route /api/v1/library/local-files/tmdb-assign [POST]",
       ""
     ],
     "filepath": "internal/handlers/tmdb.go",
     "filename": "tmdb.go",
     "api": {
-      "summary": "manually assign a TMDB ID to a set of local files.",
+      "summary": "manually assign a metadata ID to a set of local files.",
       "descriptions": [
-        "Fetches full TMDB details, upserts LibraryMedia, and updates the local files."
+        "Fetches full details from TMDB or Jikan, upserts LibraryMedia, and updates local files."
       ],
       "endpoint": "/api/v1/library/local-files/tmdb-assign",
       "methods": [

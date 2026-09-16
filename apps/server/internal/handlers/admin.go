@@ -48,13 +48,15 @@ type AdminLibraryStatsResponse struct {
 func (h *Handler) HandleGetTranscodeStats(c echo.Context) error {
 	res := AdminTranscodeStatsResponse{}
 
-	if gov, ok := h.App.MediastreamRepository.TranscoderStats(); ok {
-		res.TranscoderInitialized = true
-		res.Governor = gov
-	}
+	if h.App.MediastreamRepository != nil {
+		if gov, ok := h.App.MediastreamRepository.TranscoderStats(); ok {
+			res.TranscoderInitialized = true
+			res.Governor = gov
+		}
 
-	if pre, ok := h.App.MediastreamRepository.PreTranscoder(); ok {
-		res.PreTranscodeQueue = pre.QueueLength()
+		if pre, ok := h.App.MediastreamRepository.PreTranscoder(); ok {
+			res.PreTranscodeQueue = pre.QueueLength()
+		}
 	}
 
 	// System stats

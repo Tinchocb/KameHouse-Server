@@ -20,30 +20,36 @@ func LevenshteinDistance(s1, s2 string) int {
 		return len1
 	}
 
-	dp := make([][]int, len1+1)
-	for i := range dp {
-		dp[i] = make([]int, len2+1)
-		dp[i][0] = i
+	// Ensure r2 is the shorter slice to minimize memory allocation
+	if len1 < len2 {
+		r1, r2 = r2, r1
+		len1, len2 = len2, len1
 	}
+
+	v0 := make([]int, len2+1)
+	v1 := make([]int, len2+1)
+
 	for j := 0; j <= len2; j++ {
-		dp[0][j] = j
+		v0[j] = j
 	}
 
 	for i := 1; i <= len1; i++ {
+		v1[0] = i
 		for j := 1; j <= len2; j++ {
 			cost := 0
 			if r1[i-1] != r2[j-1] {
 				cost = 1
 			}
-			dp[i][j] = min3(
-				dp[i-1][j]+1,      // deletion
-				dp[i][j-1]+1,      // insertion
-				dp[i-1][j-1]+cost, // substitution
+			v1[j] = min3(
+				v0[j]+1,      // deletion
+				v1[j-1]+1,    // insertion
+				v0[j-1]+cost, // substitution
 			)
 		}
+		copy(v0, v1)
 	}
 
-	return dp[len1][len2]
+	return v0[len2]
 }
 
 // LevenshteinRatio returns a normalized similarity score between 0.0 and 1.0.

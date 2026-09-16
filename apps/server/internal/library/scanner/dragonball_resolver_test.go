@@ -16,6 +16,13 @@ func TestResolveDragonBallID(t *testing.T) {
 		{name: "Dragon Ball Kai", title: "Dragon Ball Kai", wantID: 61709, wantMovie: false, wantFound: true},
 		{name: "Dragon Ball Z Kai", title: "Dragon Ball Z Kai", wantID: 61709, wantMovie: false, wantFound: true},
 		{name: "DBZ Kai", title: "DBZ Kai", wantID: 61709, wantMovie: false, wantFound: true},
+		{name: "Kai Saga Saiyajin Ep 15", title: "(2009-07-12) Saga de los Saiyajin - E015 - ¡Goku contra las cuerdas! Tengamos esperanza en la Genkidama.mkv", wantID: 61709, wantMovie: false, wantFound: true},
+		{name: "Kai Saga Saiyajin Ep 16", title: "(2009-07-19) Saga de los Saiyajin - E016 - ¡La derrota del invencible Vegeta! Haz un milagro, Gohan.mkv", wantID: 61709, wantMovie: false, wantFound: true},
+		{name: "Kai Saga Freezer Ep 18", title: "(2009-08-09) Saga de Freezer - E018 - ¡La nave está en Yunzabit! Es hora de despegar al planeta Namekusei.mkv", wantID: 61709, wantMovie: false, wantFound: true},
+		{name: "Kai Saga Cell Ep 98 with brace", title: "(2011-08-02} Saga de los Androides y Cell - E098 - Trayendo la paz al futuro. El espiritu de Goku es eterno.mkv", wantID: 61709, wantMovie: false, wantFound: true},
+		{name: "Kai Saga Majin Boo Ep 99 with brace", title: "(2014-04-06} Saga de Majin Boo - E099 - ¡Siete años han pasado! Gohan está en la preparatoria.mkv", wantID: 61709, wantMovie: false, wantFound: true},
+		{name: "Kai Saga Majin Boo Ep 164", title: "(2015-06-14) Saga de Majin Boo - E164 - ¡¡Eres el mejor Goku!! La muerte de Majin Boo.mkv", wantID: 61709, wantMovie: false, wantFound: true},
+		{name: "GT Saga Baby Ep 35", title: "(1997-01-29) Saga de Baby - E035 - Goku se convierte en super saiyajin 4.mkv", wantID: 12697, wantMovie: false, wantFound: true},
 		{name: "Dragon Ball GT", title: "Dragon Ball GT", wantID: 12697, wantMovie: false, wantFound: true},
 		{name: "DBGT", title: "DBGT", wantID: 12697, wantMovie: false, wantFound: true},
 		{name: "Dragon Ball Super", title: "Dragon Ball Super", wantID: 62715, wantMovie: false, wantFound: true},
@@ -208,10 +215,10 @@ func TestGetDragonBallSagas(t *testing.T) {
 		episode  int
 		wantSaga string
 	}{
-		{episode: 23, wantSaga: "saiyajin"},   // Muerte de Yamcha
-		{episode: 24, wantSaga: "saiyajin"},   // Muerte de Tien y Chaoz
-		{episode: 95, wantSaga: "freezer"},    // Despertar del Super Saiyajin (Goku vs Freezer)
-		{episode: 232, wantSaga: "majin-buu"}, // Saga de Majin Buu
+		{episode: 23, wantSaga: "saiyajin"},       // Muerte de Yamcha
+		{episode: 24, wantSaga: "saiyajin"},       // Muerte de Tien y Chaoz
+		{episode: 95, wantSaga: "namek-freezer"},  // Despertar del Super Saiyajin (Goku vs Freezer)
+		{episode: 232, wantSaga: "majin-buu"},     // Saga de Majin Buu
 	}
 
 	for _, tt := range milestoneTests {

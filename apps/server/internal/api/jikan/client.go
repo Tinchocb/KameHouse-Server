@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,30 +12,32 @@ import (
 
 	httputil "kamehouse/internal/util/http"
 	"github.com/rs/zerolog"
+	"golang.org/x/time/rate"
 )
 
 type Client struct {
-	logger      *zerolog.Logger
-	httpClient  *http.Client
-	rateLimiter chan struct{}
+	logger     *zerolog.Logger
+	httpClient *http.Client
+	limiter    *rate.Limiter
 }
 
 func NewClient(logger *zerolog.Logger) *Client {
 	return &Client{
-		logger:      logger,
-		httpClient:  httputil.NewFastClient(),
+		logger:     logger,
+		httpClient: httputil.NewFastClient(),
 		// Jikan has a rate limit of 3 requests per second, 60 requests per minute.
-		rateLimiter: make(chan struct{}, 2),
+		// We set a conservative 2 req/s with burst of 3.
+		limiter: rate.NewLimiter(rate.Limit(2), 3),
 	}
 }
 
 type AnimeSearchResponse struct {
 	Data []struct {
-		MalID  int    `json:"mal_id"`
-		Title  string `json:"title"`
+		MalID    int    `json:"mal_id"`
+		Title    string `json:"title"`
 		TitleEng string `json:"title_english"`
 		TitleJpn string `json:"title_japanese"`
-		Images struct {
+		Images   struct {
 			Jpg struct {
 				LargeImageUrl string `json:"large_image_url"`
 			} `json:"jpg"`
@@ -60,11 +63,11 @@ type AnimeEpisodesResponse struct {
 
 type AnimeFullResponse struct {
 	Data struct {
-		MalID  int    `json:"mal_id"`
-		Title  string `json:"title"`
+		MalID    int    `json:"mal_id"`
+		Title    string `json:"title"`
 		TitleEng string `json:"title_english"`
 		TitleJpn string `json:"title_japanese"`
-		Images struct {
+		Images   struct {
 			Jpg struct {
 				LargeImageUrl string `json:"large_image_url"`
 			} `json:"jpg"`
@@ -114,44 +117,77 @@ type AnimeCharactersResponse struct {
 	} `json:"data"`
 }
 
+func (c *Client) executeRequest(ctx context.Context, reqURL string, target interface{}) error {
+	const maxRetries = 3
+	var lastErr error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		if err := c.limiter.Wait(ctx); err != nil {
+			return err
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Accept", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = err
+			if !c.sleepBackoff(ctx, attempt) {
+				return ctx.Err()
+			}
+			continue
+		}
+
+		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("http status: %d", resp.StatusCode)
+			if !c.sleepBackoff(ctx, attempt) {
+				return ctx.Err()
+			}
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return fmt.Errorf("jikan api returned status %d", resp.StatusCode)
+		}
+
+		err = json.NewDecoder(resp.Body).Decode(target)
+		resp.Body.Close()
+		return err
+	}
+
+	return fmt.Errorf("jikan: request failed after %d retries: %w", maxRetries, lastErr)
+}
+
+func (c *Client) sleepBackoff(ctx context.Context, attempt int) bool {
+	base := time.Duration(1<<attempt) * time.Second
+	jitter := time.Duration(rand.Intn(400)) * time.Millisecond
+	select {
+	case <-time.After(base + jitter):
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
 // SearchAnime queries the Jikan API by title and returns the first match.
 func (c *Client) SearchAnime(ctx context.Context, title string) (*AnimeSearchResponse, error) {
 	escapedQuery := strings.ReplaceAll(url.QueryEscape(title), "+", "%20")
-	url := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&limit=1", escapedQuery)
-	
-	for attempt := 0; attempt < 3; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
+	reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&limit=1", escapedQuery)
 
-		c.rateLimiter <- struct{}{}
-		resp, err := c.httpClient.Do(req)
-		<-c.rateLimiter
-
-		if err != nil {
-			return nil, err
-		}
-		
-		if resp.StatusCode == http.StatusTooManyRequests {
-			resp.Body.Close()
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("jikan api returned status %d", resp.StatusCode)
-		}
-
-		var res AnimeSearchResponse
-		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-			return nil, err
-		}
-
-		return &res, nil
+	var res AnimeSearchResponse
+	if err := c.executeRequest(ctx, reqUrl, &res); err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("jikan rate limited after retries")
+	return &res, nil
 }
 
 // GetAnimeEpisodes fetches all episodes for a specific MAL ID, handling pagination.
@@ -160,36 +196,11 @@ func (c *Client) GetAnimeEpisodes(ctx context.Context, malID int) (*AnimeEpisode
 	page := 1
 
 	for {
-		url := fmt.Sprintf("https://api.jikan.moe/v4/anime/%d/episodes?page=%d", malID, page)
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		c.rateLimiter <- struct{}{}
-		resp, err := c.httpClient.Do(req)
-		<-c.rateLimiter
-
-		if err != nil {
-			return nil, err
-		}
-		
-		if resp.StatusCode == http.StatusTooManyRequests {
-			resp.Body.Close()
-			time.Sleep(1 * time.Second)
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			return nil, fmt.Errorf("jikan api returned status %d", resp.StatusCode)
-		}
-
+		reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime/%d/episodes?page=%d", malID, page)
 		var res AnimeEpisodesResponse
-		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-			resp.Body.Close()
+		if err := c.executeRequest(ctx, reqUrl, &res); err != nil {
 			return nil, err
 		}
-		resp.Body.Close()
 
 		fullRes.Data = append(fullRes.Data, res.Data...)
 
@@ -197,9 +208,6 @@ func (c *Client) GetAnimeEpisodes(ctx context.Context, malID int) (*AnimeEpisode
 			break
 		}
 		page++
-		
-		// Respect rate limit slightly during pagination
-		time.Sleep(350 * time.Millisecond)
 	}
 
 	return &fullRes, nil
@@ -209,114 +217,30 @@ func (c *Client) GetAnimeEpisodes(ctx context.Context, malID int) (*AnimeEpisode
 func (c *Client) SearchAnimeAdvanced(ctx context.Context, query string, page int, limit int) (*AnimeSearchResponse, error) {
 	escapedQuery := strings.ReplaceAll(url.QueryEscape(query), "+", "%20")
 	reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&page=%d&limit=%d", escapedQuery, page, limit)
-	
-	for attempt := 0; attempt < 3; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, "GET", reqUrl, nil)
-		if err != nil {
-			return nil, err
-		}
 
-		c.rateLimiter <- struct{}{}
-		resp, err := c.httpClient.Do(req)
-		<-c.rateLimiter
-
-		if err != nil {
-			return nil, err
-		}
-		
-		if resp.StatusCode == http.StatusTooManyRequests {
-			resp.Body.Close()
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("jikan api returned status %d", resp.StatusCode)
-		}
-
-		var res AnimeSearchResponse
-		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-			return nil, err
-		}
-
-		return &res, nil
+	var res AnimeSearchResponse
+	if err := c.executeRequest(ctx, reqUrl, &res); err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("jikan rate limited after retries")
+	return &res, nil
 }
 
 // GetAnimeFull fetches the complete details of an anime by MAL ID.
 func (c *Client) GetAnimeFull(ctx context.Context, malID int) (*AnimeFullResponse, error) {
-	url := fmt.Sprintf("https://api.jikan.moe/v4/anime/%d/full", malID)
-	for attempt := 0; attempt < 3; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		c.rateLimiter <- struct{}{}
-		resp, err := c.httpClient.Do(req)
-		<-c.rateLimiter
-
-		if err != nil {
-			return nil, err
-		}
-		
-		if resp.StatusCode == http.StatusTooManyRequests {
-			resp.Body.Close()
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("jikan api returned status %d", resp.StatusCode)
-		}
-
-		var res AnimeFullResponse
-		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-			return nil, err
-		}
-
-		return &res, nil
+	reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime/%d/full", malID)
+	var res AnimeFullResponse
+	if err := c.executeRequest(ctx, reqUrl, &res); err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("jikan rate limited after retries on GetAnimeFull")
+	return &res, nil
 }
 
 // GetAnimeCharacters fetches the characters of an anime by MAL ID.
 func (c *Client) GetAnimeCharacters(ctx context.Context, malID int) (*AnimeCharactersResponse, error) {
-	url := fmt.Sprintf("https://api.jikan.moe/v4/anime/%d/characters", malID)
-	for attempt := 0; attempt < 3; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		c.rateLimiter <- struct{}{}
-		resp, err := c.httpClient.Do(req)
-		<-c.rateLimiter
-
-		if err != nil {
-			return nil, err
-		}
-		
-		if resp.StatusCode == http.StatusTooManyRequests {
-			resp.Body.Close()
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("jikan api returned status %d", resp.StatusCode)
-		}
-
-		var res AnimeCharactersResponse
-		if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-			return nil, err
-		}
-
-		return &res, nil
+	reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime/%d/characters", malID)
+	var res AnimeCharactersResponse
+	if err := c.executeRequest(ctx, reqUrl, &res); err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("jikan rate limited after retries on GetAnimeCharacters")
+	return &res, nil
 }

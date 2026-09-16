@@ -56,7 +56,8 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		return c.String(200, ret)
+		c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		return c.Blob(200, "application/vnd.apple.mpegurl", []byte(ret))
 	}
 
 	// Video stream
@@ -78,7 +79,8 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		return c.String(200, ret)
+		c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		return c.Blob(200, "application/vnd.apple.mpegurl", []byte(ret))
 	}
 
 	// Audio stream
@@ -100,7 +102,8 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		return c.String(200, ret)
+		c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		return c.Blob(200, "application/vnd.apple.mpegurl", []byte(ret))
 	}
 
 	// Video segment
@@ -127,6 +130,8 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return segmentHTTPError(err)
 		}
 
+		c.Response().Header().Set("Content-Type", "video/mp2t")
+		c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		return c.File(ret)
 	}
 
@@ -154,6 +159,8 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return segmentHTTPError(err)
 		}
 
+		c.Response().Header().Set("Content-Type", "video/mp2t")
+		c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		return c.File(ret)
 	}
 
@@ -192,6 +199,14 @@ func (r *Repository) ServeEchoOptimizedStream(c echo.Context, clientID string) e
 		return errors.New("invalid path (directory traversal)")
 	}
 
+	if strings.HasSuffix(absPath, ".m3u8") {
+		c.Response().Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+		c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	} else if strings.HasSuffix(absPath, ".ts") {
+		c.Response().Header().Set("Content-Type", "video/mp2t")
+		c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	}
+
 	return c.File(absPath)
 }
 
@@ -214,6 +229,10 @@ func (r *Repository) ShutdownTranscodeStream(clientID string) {
 	r.playbackManager.clientMediaContainers.Delete(clientID)
 	r.transcoder.MustGet().RemoveClient(clientID)
 
-	// Send event
-	r.wsEventManager.SendEvent(events.MediastreamShutdownStream, nil)
+	// Send event only to the requesting client
+	if clientID != "" {
+		r.wsEventManager.SendEventTo(clientID, events.MediastreamShutdownStream, nil)
+	} else {
+		r.wsEventManager.SendEvent(events.MediastreamShutdownStream, nil)
+	}
 }

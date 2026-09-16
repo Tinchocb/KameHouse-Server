@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"kamehouse/internal/util"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,6 +23,10 @@ var audioExtensions = map[string]bool{
 	".flac": true,
 	".wav":  true,
 	".webm": true,
+}
+
+func isAllowedSystemDir(cleanDir string) bool {
+	return !util.IsBlockedSystemDir(cleanDir)
 }
 
 type BackgroundMusicTrack struct {
@@ -44,9 +50,25 @@ func (h *Handler) HandleScanBackgroundMusic(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "missing 'dir' query parameter")
 	}
 
-	entries, err := os.ReadDir(dir)
+	cleanDir, verr := validateBrowserPath(dir)
+	if verr != nil {
+		msg := verr.Error()
+		if strings.Contains(msg, "system directory") {
+			return echo.NewHTTPError(http.StatusForbidden, "access to system directory forbidden")
+		}
+		return echo.NewHTTPError(http.StatusBadRequest, "path traversal not allowed")
+	}
+	if !isAllowedSystemDir(cleanDir) {
+		return echo.NewHTTPError(http.StatusForbidden, "access to system directory forbidden")
+	}
+	info, err := os.Stat(cleanDir)
+	if err != nil || !info.IsDir() {
+		return echo.NewHTTPError(http.StatusBadRequest, "directory does not exist or is not a directory")
+	}
+
+	entries, err := os.ReadDir(cleanDir)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "could not read directory: "+err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, "could not read directory")
 	}
 
 	tracks := make([]BackgroundMusicTrack, 0)
@@ -69,7 +91,7 @@ func (h *Handler) HandleScanBackgroundMusic(c echo.Context) error {
 	})
 
 	return JSONSuccess(c, BackgroundMusicScanResponse{
-		Dir:    dir,
+		Dir:    cleanDir,
 		Tracks: tracks,
 	})
 }
@@ -89,11 +111,29 @@ func (h *Handler) HandleStreamBackgroundMusic(c echo.Context) error {
 	if file != filepath.Base(file) || file == "." || file == ".." {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid file name")
 	}
+	if strings.Contains(strings.ToLower(file), "%2e") || strings.Contains(file, "\x00") {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid file name")
+	}
 	if !audioExtensions[strings.ToLower(filepath.Ext(file))] {
 		return echo.NewHTTPError(http.StatusBadRequest, "unsupported audio format")
 	}
 
-	path := filepath.Join(dir, file)
+	cleanDir, verr := validateBrowserPath(dir)
+	if verr != nil {
+		msg := verr.Error()
+		if strings.Contains(msg, "system directory") {
+			return echo.NewHTTPError(http.StatusForbidden, "access to system directory forbidden")
+		}
+		return echo.NewHTTPError(http.StatusBadRequest, "path traversal not allowed")
+	}
+	if !isAllowedSystemDir(cleanDir) {
+		return echo.NewHTTPError(http.StatusForbidden, "access to system directory forbidden")
+	}
+	path := filepath.Clean(filepath.Join(cleanDir, file))
+	if !util.IsFileUnderDir(cleanDir, path) {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid file path")
+	}
+
 	info, err := os.Stat(path)
 	if err != nil || info.IsDir() {
 		return echo.NewHTTPError(http.StatusNotFound, "file not found")

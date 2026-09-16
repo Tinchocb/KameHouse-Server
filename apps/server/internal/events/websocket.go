@@ -2,7 +2,6 @@ package events
 
 import (
 	"encoding/json"
-	"fmt"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
 	"sync"
@@ -188,15 +187,37 @@ func (m *WSEventManager) ExitIfNoConnsAsDesktopSidecar() {
 	}()
 }
 
+// TriggerShutdown signals the server to initiate graceful shutdown immediately.
+func (m *WSEventManager) TriggerShutdown() {
+	if m != nil && m.ShutdownSignal != nil {
+		select {
+		case m.ShutdownSignal <- struct{}{}:
+		default:
+		}
+	}
+}
+
 // AddConn registers a new websocket connection.
 func (m *WSEventManager) AddConn(id string, conn *websocket.Conn) {
 	m.connsMu.Lock()
-	defer m.connsMu.Unlock()
+	var oldConn *WSConn
+	for i, c := range m.Conns {
+		if c.ID == id {
+			oldConn = c
+			m.Conns = append(m.Conns[:i], m.Conns[i+1:]...)
+			break
+		}
+	}
 	m.hasHadConnection = true
 	m.Conns = append(m.Conns, &WSConn{
 		ID:   id,
 		Conn: conn,
 	})
+	m.connsMu.Unlock()
+
+	if oldConn != nil {
+		_ = oldConn.Conn.Close()
+	}
 }
 
 // GetConnIDs returns a snapshot of the IDs of all currently connected clients.
@@ -229,6 +250,27 @@ func (m *WSEventManager) RemoveConn(id string) {
 
 	// Cleanup subscribers after releasing connsMu to avoid lock ordering issues
 	m.UnsubscribeFromClientEvents(id)
+}
+
+// WritePong writes a pong control frame safely synchronized with writeMu.
+func (m *WSEventManager) WritePong(id string, appData string, deadline time.Time) error {
+	m.connsMu.RLock()
+	var targetConn *WSConn
+	for _, conn := range m.Conns {
+		if conn.ID == id {
+			targetConn = conn
+			break
+		}
+	}
+	m.connsMu.RUnlock()
+
+	if targetConn == nil {
+		return nil
+	}
+
+	targetConn.writeMu.Lock()
+	defer targetConn.writeMu.Unlock()
+	return targetConn.Conn.WriteControl(websocket.PongMessage, []byte(appData), deadline)
 }
 
 // SendEvent sends a websocket event to all connected clients.
@@ -264,18 +306,48 @@ func (m *WSEventManager) SendEvent(t string, payload interface{}) {
 		return
 	}
 
-	for _, conn := range conns {
-		func() {
-			conn.writeMu.Lock()
-			defer conn.writeMu.Unlock()
-			defer func() {
-				if r := recover(); r != nil {
-					m.Logger.Error().Interface("panic", r).Msg("ws: Recovered from panic in SendEvent write (possibly closed websocket)")
-				}
-			}()
-			_ = conn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-			_ = conn.Conn.WriteMessage(websocket.TextMessage, data)
+	var deadConnsMu sync.Mutex
+	var deadConns []string
+
+	writeConn := func(c *WSConn) {
+		c.writeMu.Lock()
+		defer c.writeMu.Unlock()
+		defer func() {
+			if r := recover(); r != nil {
+				m.Logger.Error().Interface("panic", r).Msg("ws: Recovered from panic in SendEvent write (possibly closed websocket)")
+				deadConnsMu.Lock()
+				deadConns = append(deadConns, c.ID)
+				deadConnsMu.Unlock()
+			}
 		}()
+		_ = c.Conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+		if err := c.Conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			deadConnsMu.Lock()
+			deadConns = append(deadConns, c.ID)
+			deadConnsMu.Unlock()
+		}
+	}
+
+	if len(conns) <= 4 {
+		// Fast path for local / small setups: write sequentially without goroutine allocation overhead
+		for _, conn := range conns {
+			writeConn(conn)
+		}
+	} else {
+		var wg sync.WaitGroup
+		for _, conn := range conns {
+			c := conn
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				writeConn(c)
+			}()
+		}
+		wg.Wait()
+	}
+
+	for _, id := range deadConns {
+		m.RemoveConn(id)
 	}
 }
 
@@ -295,14 +367,8 @@ func (m *WSEventManager) SendEventTo(clientID string, t string, payload interfac
 		return
 	}
 
-	if t != "pong" {
-		if len(noLog) == 0 || !noLog[0] {
-			truncated := fmt.Sprintf("%v", payload)
-			if len(truncated) > 500 {
-				truncated = truncated[:500] + "..."
-			}
-			m.Logger.Trace().Str("to", clientID).Str("type", t).Str("payload", truncated).Msg("ws: Sending message")
-		}
+	if len(noLog) == 0 || !noLog[0] {
+		m.Logger.Trace().Str("type", t).Str("clientId", clientID).Msg("ws: Sending message to client")
 	}
 
 	env := wsEventPool.Get().(*WSEventEnvelope)
@@ -311,32 +377,42 @@ func (m *WSEventManager) SendEventTo(clientID string, t string, payload interfac
 	env.Payload = payload
 	env.Timestamp = time.Now().UnixMilli()
 
-	targetConn.writeMu.Lock()
-	defer targetConn.writeMu.Unlock()
-
 	defer func() {
-		if r := recover(); r != nil {
-			m.Logger.Error().Interface("panic", r).Msg("ws: Recovered from panic in SendEventTo (possibly closed websocket)")
-		}
 		env.Payload = nil // Reset for GC
 		wsEventPool.Put(env)
 	}()
 
-	_ = targetConn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	_ = targetConn.Conn.WriteJSON(env)
+	data, err := json.Marshal(env)
+	if err != nil {
+		return
+	}
+
+	targetConn.writeMu.Lock()
+	defer targetConn.writeMu.Unlock()
+	_ = targetConn.Conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+	if err := targetConn.Conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		go m.RemoveConn(clientID)
+	}
 }
 
 func (m *WSEventManager) SendStringTo(clientID string, s string) {
 	m.connsMu.RLock()
-	defer m.connsMu.RUnlock()
-
+	var targetConn *WSConn
 	for _, conn := range m.Conns {
 		if conn.ID == clientID {
-			conn.writeMu.Lock()
-			_ = conn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-			_ = conn.Conn.WriteMessage(websocket.TextMessage, []byte(s))
-			conn.writeMu.Unlock()
+			targetConn = conn
+			break
 		}
+	}
+	m.connsMu.RUnlock()
+
+	if targetConn != nil {
+		targetConn.writeMu.Lock()
+		_ = targetConn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		if err := targetConn.Conn.WriteMessage(websocket.TextMessage, []byte(s)); err != nil {
+			go m.RemoveConn(clientID)
+		}
+		targetConn.writeMu.Unlock()
 	}
 }
 
@@ -345,19 +421,16 @@ func (m *WSEventManager) OnClientEvent(event *WebsocketClientEvent) {
 	defer m.eventMu.RUnlock()
 
 	onEvent := func(key string, subscriber *ClientEventSubscriber) bool {
-		go func() {
-			defer util.HandlePanicInModuleThen("events/OnClientEvent/clientNativePlayerEventSubscribers", func() {})
-			subscriber.mu.RLock()
-			defer subscriber.mu.RUnlock()
-			if !subscriber.closed {
-				select {
-				case subscriber.Channel <- event:
-				default:
-					// Channel is blocked, skip sending
-					m.Logger.Warn().Msgf("ws: Client event channel is blocked, event dropped, %v", subscriber)
-				}
+		subscriber.mu.RLock()
+		defer subscriber.mu.RUnlock()
+		if !subscriber.closed {
+			select {
+			case subscriber.Channel <- event:
+			default:
+				// Channel is blocked, skip sending
+				m.Logger.Warn().Msgf("ws: Client event channel is blocked, event dropped, %v", subscriber)
 			}
-		}()
+		}
 		return true
 	}
 

@@ -72,12 +72,12 @@ func TestGetVideoFilePathsFromDir_WithSymlinks(t *testing.T) {
 	// Create a symlink to the external directory
 	symlinkPath := filepath.Join(libDir, "symlink_to_external")
 	if err := os.Symlink(externalLibDir, symlinkPath); err != nil {
-		t.Fatalf("Failed to create symlink: %s", err)
+		t.Skipf("Skipping symlink test (insufficient OS privilege for symlink creation): %s", err)
 	}
 	// Create a recursive symlink to the library directory
 	symlinkToLibPath := filepath.Join(externalLibDir, "symlink_to_library")
 	if err := os.Symlink(libDir, symlinkToLibPath); err != nil {
-		t.Fatalf("Failed to create symlink: %s", err)
+		t.Skipf("Skipping symlink test (insufficient OS privilege for symlink creation): %s", err)
 	}
 
 	// Expected files

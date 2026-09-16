@@ -154,7 +154,8 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 			realID := numID - constants.MovieIDOffset
 			movieRes, err := p.client.GetMovieDetails(ctx, strconv.Itoa(realID))
 			if err == nil {
-				res := TmdbMovieDetailsToNormalizedMedia(movieRes)
+				englishTitle := p.fetchEnglishTitle(ctx, realID, true)
+				res := TmdbMovieDetailsToNormalizedMedia(movieRes, englishTitle)
 				if p.db != nil {
 					_ = db.UpsertMetadataCache(p.db, "tmdb-media-details", id, res, 7*24*time.Hour)
 				}
@@ -164,7 +165,8 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 			// TV
 			tvRes, err := p.client.GetTVDetails(ctx, id)
 			if err == nil {
-				res := TmdbTVDetailsToNormalizedMedia(tvRes)
+				englishTitle := p.fetchEnglishTitle(ctx, numID, false)
+				res := TmdbTVDetailsToNormalizedMedia(tvRes, englishTitle)
 				if p.db != nil {
 					_ = db.UpsertMetadataCache(p.db, "tmdb-media-details", id, res, 7*24*time.Hour)
 				}
@@ -178,12 +180,14 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 				realID := posID - 1000000
 				movieRes, err := p.client.GetMovieDetails(ctx, strconv.Itoa(realID))
 				if err == nil {
-					return TmdbMovieDetailsToNormalizedMedia(movieRes), nil
+					englishTitle := p.fetchEnglishTitle(ctx, realID, true)
+					return TmdbMovieDetailsToNormalizedMedia(movieRes, englishTitle), nil
 				}
 			} else {
 				tvRes, err := p.client.GetTVDetails(ctx, strconv.Itoa(posID))
 				if err == nil {
-					return TmdbTVDetailsToNormalizedMedia(tvRes), nil
+					englishTitle := p.fetchEnglishTitle(ctx, posID, false)
+					return TmdbTVDetailsToNormalizedMedia(tvRes, englishTitle), nil
 				}
 			}
 		}
@@ -192,14 +196,25 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 	// Try TV first
 	tvRes, tvErr := p.client.GetTVDetails(ctx, id)
 	if tvErr == nil {
-		nm := TmdbTVDetailsToNormalizedMedia(tvRes)
+		// Try to extract numeric ID for fetching English title
+		if numID, err := strconv.Atoi(id); err == nil && numID > 0 {
+			englishTitle := p.fetchEnglishTitle(ctx, numID, false)
+			nm := TmdbTVDetailsToNormalizedMedia(tvRes, englishTitle)
+			return nm, nil
+		}
+		nm := TmdbTVDetailsToNormalizedMedia(tvRes, "")
 		return nm, nil
 	}
 
 	// Try Movie next
 	movieRes, movieErr := p.client.GetMovieDetails(ctx, id)
 	if movieErr == nil {
-		nm := TmdbMovieDetailsToNormalizedMedia(movieRes)
+		if numID, err := strconv.Atoi(id); err == nil && numID > 0 {
+			englishTitle := p.fetchEnglishTitle(ctx, numID, true)
+			nm := TmdbMovieDetailsToNormalizedMedia(movieRes, englishTitle)
+			return nm, nil
+		}
+		nm := TmdbMovieDetailsToNormalizedMedia(movieRes, "")
 		return nm, nil
 	}
 
@@ -212,6 +227,35 @@ func (p *TMDBProvider) GetMediaDetails(ctx context.Context, id string) (*dto.Nor
 	return nil, fmt.Errorf("TMDB fetch failed. TV err: %v, Movie err: %v", tvErr, movieErr)
 }
 
+// fetchEnglishTitle fetches the English title from TMDB alternative titles endpoint.
+func (p *TMDBProvider) fetchEnglishTitle(ctx context.Context, tmdbID int, isMovie bool) string {
+	var altTitles []tmdb.AlternativeTitle
+	var err error
+	if isMovie {
+		altTitles, err = p.client.GetMovieAlternativeTitles(ctx, tmdbID)
+	} else {
+		altTitles, err = p.client.GetTVAlternativeTitles(ctx, tmdbID)
+	}
+	if err != nil {
+		return ""
+	}
+	// Look for English titles (US, GB, etc.)
+	for _, alt := range altTitles {
+		if alt.ISO31661 == "US" || alt.ISO31661 == "GB" {
+			if alt.Title != "" {
+				return alt.Title
+			}
+		}
+	}
+	// Fallback: any title with Latin characters that's not the original
+	for _, alt := range altTitles {
+		if alt.Title != "" && alt.ISO31661 != "JP" {
+			return alt.Title
+		}
+	}
+	return ""
+}
+
 // GetClient returns the underlying TMDB client for direct API access.
 func (p *TMDBProvider) GetClient() *tmdb.Client {
 	return p.client
@@ -222,14 +266,19 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	tmdbID := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Name != "" {
-		title.English = &r.Name
 		title.Spanish = &r.Name
 		title.UserPreferred = &r.Name
+		// Don't set English here - search results don't have English titles readily available
+		// English will be fetched properly in GetMediaDetails via alternative titles
 	}
 	if r.OriginalName != "" && r.OriginalName != r.Name {
 		title.Romaji = &r.OriginalName
 		if r.OriginalLanguage == "ja" {
 			title.Native = &r.OriginalName
+		}
+		// If original language is English, use it for English title
+		if r.OriginalLanguage == "en" {
+			title.English = &r.OriginalName
 		}
 	}
 
@@ -288,13 +337,19 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 }
 
 // TmdbTVDetailsToNormalizedMedia converts full TMDB TVDetails to NormalizedMedia.
-func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails) *dto.NormalizedMedia {
+// englishTitle is the English title fetched from alternative titles (optional).
+func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails, englishTitle string) *dto.NormalizedMedia {
 	tmdbID := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Name != "" {
-		title.English = &r.Name
 		title.Spanish = &r.Name
 		title.UserPreferred = &r.Name
+		if englishTitle != "" {
+			title.English = &englishTitle
+		} else {
+			// Fallback: use Spanish title if English not available
+			title.English = &r.Name
+		}
 	}
 	if r.OriginalName != "" && r.OriginalName != r.Name {
 		title.Romaji = &r.OriginalName
@@ -375,14 +430,19 @@ func TmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 	tmdbID := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Title != "" {
-		title.English = &r.Title
 		title.Spanish = &r.Title
 		title.UserPreferred = &r.Title
+		// Don't set English here - search results don't have English titles readily available
+		// English will be fetched properly in GetMediaDetails via alternative titles
 	}
 	if r.OriginalTitle != "" && r.OriginalTitle != r.Title {
 		title.Romaji = &r.OriginalTitle
 		if r.OriginalLanguage == "ja" {
 			title.Native = &r.OriginalTitle
+		}
+		// If original language is English, use it for English title
+		if r.OriginalLanguage == "en" {
+			title.English = &r.OriginalTitle
 		}
 	}
 
@@ -437,13 +497,19 @@ func TmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 }
 
 // TmdbMovieDetailsToNormalizedMedia converts full TMDB MovieDetails to NormalizedMedia.
-func TmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails) *dto.NormalizedMedia {
+// englishTitle is the English title fetched from alternative titles (optional).
+func TmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails, englishTitle string) *dto.NormalizedMedia {
 	tmdbID := r.ID
 	title := &dto.NormalizedMediaTitle{}
 	if r.Title != "" {
-		title.English = &r.Title
 		title.Spanish = &r.Title
 		title.UserPreferred = &r.Title
+		if englishTitle != "" {
+			title.English = &englishTitle
+		} else {
+			// Fallback: use Spanish title if English not available
+			title.English = &r.Title
+		}
 	}
 	if r.OriginalTitle != "" && r.OriginalTitle != r.Title {
 		title.Romaji = &r.OriginalTitle

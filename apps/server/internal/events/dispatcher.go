@@ -54,9 +54,7 @@ func (d *InternalDispatcher) Publish(e Event) {
 	}
 
 	d.mu.RLock()
-	subs := d.subscribers[e.Topic]
-	wildcards := d.subscribers["*"]
-	d.mu.RUnlock()
+	defer d.mu.RUnlock()
 
 	notify := func(channels []chan Event) {
 		for _, ch := range channels {
@@ -69,8 +67,8 @@ func (d *InternalDispatcher) Publish(e Event) {
 		}
 	}
 
-	notify(subs)
-	notify(wildcards)
+	notify(d.subscribers[e.Topic])
+	notify(d.subscribers["*"])
 }
 
 // Subscribe creates a buffered channel for topic, registers it, and returns it.

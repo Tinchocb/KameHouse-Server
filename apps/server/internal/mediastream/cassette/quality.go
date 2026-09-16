@@ -49,7 +49,8 @@ func QualityFromHeight(height uint32) Quality {
 	return P240
 }
 
-// Height returns the vertical resolution in pixels
+// Height returns the vertical resolution in pixels.
+// For Original or unknown quality, returns 0.
 func (q Quality) Height() uint32 {
 	switch q {
 	case P240:
@@ -68,13 +69,13 @@ func (q Quality) Height() uint32 {
 		return 2160
 	case P8k:
 		return 4320
-	case Original:
-		panic("cassette: Original quality must be handled specially")
+	default:
+		return 0
 	}
-	panic("cassette: invalid quality value")
 }
 
-// AverageBitrate returns the target average bitrate in bits/s for this tier
+// AverageBitrate returns the target average bitrate in bits/s for this tier.
+// For Original or unknown quality, returns 0.
 func (q Quality) AverageBitrate() uint32 {
 	switch q {
 	case P240:
@@ -93,13 +94,13 @@ func (q Quality) AverageBitrate() uint32 {
 		return 16_000_000
 	case P8k:
 		return 28_000_000
-	case Original:
-		panic("cassette: Original quality must be handled specially")
+	default:
+		return 0
 	}
-	panic("cassette: invalid quality value")
 }
 
-// MaxBitrate returns the peak bitrate used for VBV/HRD in bits/s
+// MaxBitrate returns the peak bitrate used for VBV/HRD in bits/s.
+// For Original or unknown quality, returns 0.
 func (q Quality) MaxBitrate() uint32 {
 	switch q {
 	case P240:
@@ -118,10 +119,9 @@ func (q Quality) MaxBitrate() uint32 {
 		return 28_000_000
 	case P8k:
 		return 40_000_000
-	case Original:
-		panic("cassette: Original quality must be handled specially")
+	default:
+		return 0
 	}
-	panic("cassette: invalid quality value")
 }
 
 // dynamic quality ladder
@@ -242,16 +242,14 @@ type AudioTranscodeDecision struct {
 // AAC stereo, porque el remux a MPEG-TS sin resample causa deriva de sync
 // (los PTS del audio copiado no se ajustan a las variaciones del encoder de video).
 //   - ≤ 2 canales: AAC estéreo @ 128k
-//   - > 2 canales: AAC multicanal @ 384k con aresample=async=1 para A/V sync.
+// DecideAudioTranscode determines how an audio track should be processed for HLS delivery.
 func DecideAudioTranscode(audio *videofile.Audio) AudioTranscodeDecision {
 	channels := 2
-	bitrate := "128k"
+	bitrate := "192k"
 
-	if audio.Channels > 2 {
-		channels = int(audio.Channels)
-		bitrate = "384k"
-	} else if audio.Channels > 0 {
-		channels = int(audio.Channels)
+	if audio.Channels == 1 {
+		channels = 1
+		bitrate = "96k"
 	}
 
 	return AudioTranscodeDecision{

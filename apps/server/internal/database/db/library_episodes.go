@@ -35,7 +35,7 @@ func UpsertLibraryEpisodeBatch(d *Database, episodes []*models.LibraryEpisode, b
 			{Name: "episode_number"},
 		},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"absolute_number", "type", "title", "description", "image", "air_date", "runtime_minutes", "saga_id", "saga_name", "audio_tracks", "subtitle_tracks",
+			"absolute_number", "type", "title", "description", "image", "air_date", "runtime_minutes", "saga_id", "saga_name", "audio_tracks", "subtitle_tracks", "tags", "dominant_vibe", "suggested_swimlane",
 		}),
 	}).CreateInBatches(episodes, batchSize).Error
 }

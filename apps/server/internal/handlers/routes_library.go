@@ -50,7 +50,6 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1LibraryExplorer := v1Library.Group("/explorer")
 	v1LibraryExplorer.GET("/file-tree", h.HandleGetLibraryExplorerFileTree)
 	v1LibraryExplorer.POST("/file-tree/refresh", h.HandleRefreshLibraryExplorerFileTree)
-	v1LibraryExplorer.POST("/directory-children", h.HandleLoadLibraryExplorerDirectoryChildren)
 
 	// Platform
 	v1Platform := v1.Group("/platform")

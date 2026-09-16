@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"kamehouse/internal/util"
+	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
+
 
 // HandleSetOfflineMode ...
 //
@@ -57,10 +60,14 @@ func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 
 	var err error
 	for _, m := range b.Media {
+		if m.MediaID <= 0 {
+			return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive mediaId is required"))
+		}
 		switch m.Type {
 		case "anime":
 			err = h.App.LocalManager.TrackAnime(m.MediaID)
-		
+		default:
+			return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("unsupported media type, expected 'anime'"))
 		}
 	}
 
@@ -85,14 +92,18 @@ func (h *Handler) HandleLocalRemoveTrackedMedia(c echo.Context) error {
 
 	var b body
 	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
+	}
+	if b.MediaID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive mediaId is required"))
 	}
 
 	var err error
 	switch b.Type {
 	case "anime":
 		err = h.App.LocalManager.UntrackAnime(b.MediaID)
-	
+	default:
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("unsupported media type, expected 'anime'"))
 	}
 
 	if err != nil {
@@ -111,11 +122,14 @@ func (h *Handler) HandleLocalRemoveTrackedMedia(c echo.Context) error {
 //	@returns bool
 func (h *Handler) HandleLocalGetIsMediaTracked(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return h.RespondWithError(c, err)
+	if err != nil || id <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive media id is required"))
 	}
 
 	kind := c.Param("type")
+	if kind != "anime" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("unsupported media type, expected 'anime'"))
+	}
 	tracked := h.App.LocalManager.IsMediaTracked(id, kind)
 
 	return h.RespondWithData(c, tracked)
@@ -128,7 +142,8 @@ func (h *Handler) HandleLocalGetIsMediaTracked(c echo.Context) error {
 //	@returns bool
 func (h *Handler) HandleLocalSyncData(c echo.Context) error {
 	// Do not allow syncing if the user is simulated
-	if h.App.GetUser().IsSimulated {
+	user := h.App.GetUser()
+	if user != nil && user.IsSimulated {
 		return h.RespondWithData(c, true)
 	}
 	err := h.App.LocalManager.ScanLocal()

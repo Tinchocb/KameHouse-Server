@@ -7,6 +7,7 @@ import (
 	"kamehouse/internal/util/crashlog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -36,9 +37,10 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 				textSubCount++
 			}
 		}
-		if len(subsDir) == textSubCount {
+		attDir, _ := os.ReadDir(attachmentPath)
+		if len(subsDir) == textSubCount && (len(mediaInfo.Fonts) == 0 || len(attDir) >= len(mediaInfo.Fonts)) {
 			logger.Debug().Str("hash", hash).Msgf("videofile: Attachments already extracted")
-			return
+			return nil
 		}
 	}
 	for _, sub := range mediaInfo.Subtitles {
@@ -79,16 +81,20 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 
 	// Fonts are dumped individually to avoid empty string / directory path issues on Windows.
 	for i, fontName := range mediaInfo.Fonts {
-		if fontName == "" {
-			fontName = fmt.Sprintf("font_%d.ttf", i)
+		safeFontName := filepath.Base(filepath.Clean(fontName))
+		if safeFontName == "" || safeFontName == "." || safeFontName == ".." {
+			safeFontName = fmt.Sprintf("font_%d.ttf", i)
 		}
-		args = append(args, fmt.Sprintf("-dump_attachment:t:%d", i), filepath.Join(attachmentPath, fontName))
+		args = append(args, fmt.Sprintf("-dump_attachment:t:%d", i), filepath.Join(attachmentPath, safeFontName))
 	}
 	
 	args = append(args, "-i", path)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
 	cmd := util.NewCmdCtx(
-		context.Background(),
+		ctx,
 		ffmpegPath,
 		args...
 	)

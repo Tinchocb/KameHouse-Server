@@ -73,13 +73,16 @@ type (
 
 	// ExternalAudioFile represents an external audio track found alongside a video file.
 	// Follows Jellyfin's naming convention: MovieName.{language}.{ext}
+	// Example: "Movie.ja.commentary.ac3" → Language="ja", Title="commentary"
 	ExternalAudioFile struct {
 		Path     string `json:"path"`               // Absolute path to the audio file
 		Filename string `json:"filename"`           // Base filename
-		Format   string `json:"format"`             // File extension: dts, ac3, truehd, etc.
+		Format   string `json:"format"`             // File extension: ac3, dts, flac, etc.
 		Language string `json:"language,omitempty"` // ISO 639-1 code
+		Title    string `json:"title,omitempty"`    // Track title (e.g. "Director Commentary")
 	}
 
+	// VideoStreamInfo holds video stream specifications.
 	VideoStreamInfo struct {
 		Codec          string `json:"codec,omitempty"`          // e.g. h264, hevc
 		Profile        string `json:"profile,omitempty"`        // e.g. High 10, Main
@@ -91,6 +94,7 @@ type (
 		ColorPrimaries string `json:"colorPrimaries,omitempty"` // e.g. bt2020
 	}
 
+	// AudioStreamInfo holds audio stream specifications.
 	AudioStreamInfo struct {
 		Codec    string `json:"codec,omitempty"`    // e.g. aac, flac
 		Language string `json:"language,omitempty"` // e.g. jpn, eng
@@ -99,7 +103,7 @@ type (
 
 	// LocalFileMetadata holds metadata related to a media episode.
 	LocalFileMetadata struct {
-		Episodes     []int         `json:"episodes"` // Multi-episode support for files like "01-03"
+		Episodes     []int         `json:"episodes,omitempty"` // Multi-episode support for files like "01-03"
 		AniDBEpisode string        `json:"aniDBEpisode"`
 		Type         LocalFileType `json:"type"`
 		EpisodeType  EpisodeType   `json:"episodeType,omitempty"` // Canon, Filler, Hyped
@@ -107,7 +111,6 @@ type (
 		// Deprecated: Use Episodes instead. Kept for backwards compatibility.
 		Episode int `json:"episode"`
 	}
-
 	// LocalFileParsedData holds parsed data from a media file's name.
 	// This data is used to identify the media file during the scanning process.
 	LocalFileParsedData struct {
@@ -124,6 +127,33 @@ type (
 		Year         string   `json:"year,omitempty"`
 	}
 )
+
+func (fti FileTechnicalInfo) MarshalJSON() ([]byte, error) {
+	type Alias FileTechnicalInfo
+	return json.Marshal(&struct {
+		Alias
+		Duration float64 `json:"duration,omitempty"`
+	}{
+		Alias:    Alias(fti),
+		Duration: fti.Duration.Seconds(),
+	})
+}
+
+func (fti *FileTechnicalInfo) UnmarshalJSON(data []byte) error {
+	type Alias FileTechnicalInfo
+	aux := &struct {
+		*Alias
+		Duration float64 `json:"duration,omitempty"`
+	}{
+		Alias: (*Alias)(fti),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	fti.Duration = time.Duration(aux.Duration * float64(time.Second))
+	return nil
+}
+
 
 // NewLocalFileS creates and returns a reference to a new LocalFile struct.
 // It will parse the file's name and its directory names to extract necessary information.
@@ -262,13 +292,6 @@ func GetAnitogoParsedTitle(filename string) string {
 
 // GetSeasonNumber parses the season number or returns 1 as default.
 func (lf *LocalFile) GetSeasonNumber() int {
-	// Heuristic: If Episode is extremely high (anime absolute format), the Season is likely a Sonarr/ReleaseGroup dummy wrapper.
-	if lf.ParsedData != nil && lf.ParsedData.Episode != "" {
-		if ep, err := strconv.Atoi(lf.ParsedData.Episode); err == nil && ep >= 100 {
-			return 1 // Drop fake season
-		}
-	}
-
 	if lf.ParsedData != nil && lf.ParsedData.Season != "" {
 		if s, err := strconv.Atoi(lf.ParsedData.Season); err == nil {
 			return s

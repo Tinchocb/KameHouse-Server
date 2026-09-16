@@ -3,6 +3,7 @@ package platform
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -160,6 +161,9 @@ func (m *UnifiedMedia) IsMovie() bool {
 func (m *UnifiedMedia) GetTitleSafe() string {
 	if m.Title == nil {
 		return ""
+	}
+	if m.Title.Spanish != nil && *m.Title.Spanish != "" && !strings.EqualFold(*m.Title.Spanish, "Dragon Ball Serie") && !strings.EqualFold(*m.Title.Spanish, "Dragon Ball Series") {
+		return *m.Title.Spanish
 	}
 	if m.Title.Romaji != nil {
 		return *m.Title.Romaji

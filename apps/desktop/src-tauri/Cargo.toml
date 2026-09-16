@@ -24,16 +24,14 @@ log = "0.4"
 tauri = { version = "2.11.3", features = ["tray-icon", "image-png", "image-ico"] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
-tauri-plugin-fs = "2"
-tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
-tauri-plugin-global-shortcut = "2"
 tokio = { version = "1.40", features = ["rt-multi-thread", "macros", "process", "io-util", "time", "net", "sync"] }
 dirs = "5.0"
 reqwest = { version = "0.12", features = ["json", "stream"] }
+bincode = "1.3"
 
 [profile.dev]
 debug = 0
@@ -44,7 +42,18 @@ split-debuginfo = "off"
 # Se omite panic = "abort" a propósito: mantiene el unwinding para que un panic
 # en un handler IPC no tumbe toda la app.
 [profile.release]
-codegen-units = 1   # mejor optimización entre unidades (compila más lento)
+codegen-units = 4   # 4 unidades: balance entre velocidad de compilación y optimización cross-crate
 lto = true          # link-time optimization: binario más chico y rápido
 opt-level = "s"     # optimizar para tamaño
 strip = true        # quitar símbolos de debug del binario final
+
+# Profile-Guided Optimization (PGO) configuration
+# 1. Compile with: RUSTFLAGS="-Zprofile -Ccodegen-units=1" cargo build --release
+# 2. Run representative workload (play video, scan library, etc.)
+# 3. Compile with: RUSTFLAGS="-Zprofile-use=default_<hash>.profdata" cargo build --release
+# See: https://doc.rust-lang.org/rustc/profile-guided-optimization.html
+
+# [profile.release.pgo]
+# # Uncomment after generating profile data
+# # codegen-units = 1
+# # lto = true

@@ -147,28 +147,35 @@ func run(ctx context.Context) error {
 	case <-ctx.Done():
 		app.Logger.Info().Msg("initiating graceful shutdown")
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
+		httpShutdownCtx, cancelHttp := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancelHttp()
 
-		// 1. Stop accepting new HTTP requests
-		if err := srv.Shutdown(shutdownCtx); err != nil {
+		// 1. Stop accepting new HTTP requests and drain active ones
+		if err := srv.Shutdown(httpShutdownCtx); err != nil {
 			app.Logger.Error().Err(err).Msg("server shutdown error")
 		}
-		// 2. Flush pending writes & close DB within deadline
-		app.Cleanup(shutdownCtx)
+
+		// 2. Flush pending writes, stop background workers & close DB with dedicated timeout
+		cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), 45*time.Second)
+		defer cancelCleanup()
+		app.Cleanup(cleanupCtx)
 		return nil
 	case <-app.WSEventManager.ShutdownSignal:
 		app.Logger.Info().Msg("desktop sidecar: no WebSocket connections, initiating graceful shutdown")
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
+		httpShutdownCtx, cancelHttp := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancelHttp()
 
-		if err := srv.Shutdown(shutdownCtx); err != nil {
+		if err := srv.Shutdown(httpShutdownCtx); err != nil {
 			app.Logger.Error().Err(err).Msg("server shutdown error")
 		}
-		app.Cleanup(shutdownCtx)
+
+		cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), 45*time.Second)
+		defer cancelCleanup()
+		app.Cleanup(cleanupCtx)
 		return nil
 	}
+
 }
 
 func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger *zerolog.Logger) (net.Listener, string, int, error) {
@@ -223,6 +230,11 @@ func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger
 	if err2 != nil {
 		return nil, "", 0, err2
 	}
-	ephemeralPort := l2.Addr().(*net.TCPAddr).Port
+	ephemeralPort := 0
+	if ta, ok := l2.Addr().(*net.TCPAddr); ok {
+		ephemeralPort = ta.Port
+	} else {
+		return nil, "", 0, fmt.Errorf("ephemeral listener has unexpected address type %T", l2.Addr())
+	}
 	return l2, host, ephemeralPort, nil
 }

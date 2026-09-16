@@ -1,10 +1,9 @@
 packages:
-  - "apps/*"
+  - "apps/web"
+  - "apps/desktop"
+  - "apps/KameHouseTV"
 allowBuilds:
   core-js: true
-  electron: true
   esbuild: true
 patchedDependencies:
   jassub@2.5.1: patches/jassub@2.5.1.patch
-overrides:
-  react-grab: 0.1.43

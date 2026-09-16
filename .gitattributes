@@ -1,4 +1,23 @@
-# Normalizar finales de línea. El codebase Go usa LF (estándar de gofmt);
-# sin esto, con core.autocrlf=false, se colaban archivos con CRLF y quedaban
-# finales de línea mezclados en el repo.
+# Normalización global: LF por defecto, CRLF solo para batch
+* text=auto eol=lf
+
+# Archivos batch: CRLF obligatorio en Windows
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Go: LF estricto (gofmt)
 *.go text eol=lf
+
+# Binarios/artefactos: nunca tocar
+*.exe binary
+*.wgt binary
+*.zip binary
+*.sqlite binary
+*.db binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+# Documentación: LF
+*.md text eol=lf
+*.txt text eol=lf

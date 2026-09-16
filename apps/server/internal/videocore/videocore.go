@@ -1,7 +1,6 @@
 package videocore
 
 import (
-	"context"
 	"encoding/json"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models"
@@ -10,7 +9,6 @@ import (
 	"kamehouse/internal/mkvparser"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util/result"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -55,10 +53,10 @@ type (
 
 	// Subscriber listens to the player events
 	Subscriber struct {
-		id        string
-		eventCh   chan VideoEvent
-		isClosed  atomic.Bool
-		closeOnce sync.Once
+		id      string
+		eventCh chan VideoEvent
+		mu      sync.RWMutex
+		closed  bool
 	}
 
 	NewVideoCoreOptions struct {
@@ -147,27 +145,35 @@ func (vc *VideoCore) dispatchEvent(event VideoEvent) {
 	//	//vc.logger.Trace().Msgf("videocore: Dispatching status, playbackId: %s, clientID: %s", event.GetPlaybackId(), event.GetClientId())
 	//}
 	vc.subscribers.Range(func(id string, subscriber *Subscriber) bool {
-		if subscriber.isClosed.Load() {
-			return true
-		}
-		if event.IsCritical() {
-			timer := time.NewTimer(50 * time.Millisecond)
-			select {
-			case subscriber.eventCh <- event:
-				timer.Stop()
-			case <-timer.C:
-				vc.logger.Warn().Msgf("videocore: Subscriber %s blocked critical event %T", id, event)
-			}
-		} else {
-			// Drop non-critical events if busy
-			select {
-			case subscriber.eventCh <- event:
-			default:
-				//vc.logger.Warn().Msgf("videocore: Subscriber %s dropped non-critical event %T", id, event)
-			}
-		}
+		subscriber.Send(event, vc.logger)
 		return true
 	})
+}
+
+// Send dispatches an event safely to the subscriber channel.
+func (s *Subscriber) Send(event VideoEvent, logger *zerolog.Logger) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return
+	}
+	if event.IsCritical() {
+		timer := time.NewTimer(50 * time.Millisecond)
+		select {
+		case s.eventCh <- event:
+			timer.Stop()
+		case <-timer.C:
+			if logger != nil {
+				logger.Warn().Msgf("videocore: Subscriber %s blocked critical event %T", s.id, event)
+			}
+		}
+	} else {
+		// Drop non-critical events if busy
+		select {
+		case s.eventCh <- event:
+		default:
+		}
+	}
 }
 
 // sendPlayerEventTo sends an event of type events.VideoCoreEventType to the client.
@@ -225,10 +231,12 @@ func (vc *VideoCore) Subscribe(id string) *Subscriber {
 // Unsubscribe removes a subscriber from the player.
 func (vc *VideoCore) Unsubscribe(id string) {
 	if subscriber, ok := vc.subscribers.Pop(id); ok {
-		subscriber.isClosed.Store(true)
-		subscriber.closeOnce.Do(func() {
+		subscriber.mu.Lock()
+		if !subscriber.closed {
+			subscriber.closed = true
 			close(subscriber.eventCh)
-		})
+		}
+		subscriber.mu.Unlock()
 	}
 }
 
@@ -634,13 +642,16 @@ func (vc *VideoCore) GetTextTracks() (ret []*VideoTextTrack, ok bool) {
 		}
 		return true // keep listening
 	})
-	go func(cancel func()) {
-		defer cancel()
-		<-time.After(5 * time.Second)
-	}(cancel)
+	defer cancel()
+
 	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetTextTracks), nil)
-	<-done
-	return ret, ret != nil
+
+	select {
+	case <-done:
+		return ret, ret != nil
+	case <-time.After(5 * time.Second):
+		return nil, false
+	}
 }
 
 // PullStatus pulls the current playback status from the video player.
@@ -659,13 +670,16 @@ func (vc *VideoCore) PullStatus() (ret VideoStatusEvent, ok bool) {
 		}
 		return true // keep listening
 	})
-	go func(cancel func()) {
-		defer cancel()
-		<-time.After(5 * time.Second)
-	}(cancel)
+	defer cancel()
+
 	vc.sendPlayerEventTo(state.ClientID, string(ServerEventGetStatus), nil, true)
-	<-done
-	return ret, true
+
+	select {
+	case <-done:
+		return ret, true
+	case <-time.After(5 * time.Second):
+		return VideoStatusEvent{}, false
+	}
 }
 
 func (vc *VideoCore) RecordEvent(event *mkvparser.SubtitleEvent) {
@@ -690,10 +704,12 @@ func (vc *VideoCore) listenToClientEvents() {
 			marshaled, _ := json.Marshal(clientEvent.Payload)
 			// Unmarshal the player event
 			if err := json.Unmarshal(marshaled, &playerEvent); err == nil {
-				// Validate that the event is from the current client
+				// Validate that the event is from the current client (except for initial load/state events which can take over)
 				currentState, hasState := vc.GetPlaybackState()
 				if hasState && clientEvent.ClientID != "" && clientEvent.ClientID != currentState.ClientID {
-					continue
+					if playerEvent.Type != PlayerEventVideoLoaded && playerEvent.Type != PlayerEventVideoPlaybackState {
+						continue
+					}
 				}
 
 				// Handle events
@@ -900,69 +916,6 @@ func (vc *VideoCore) listenToClientEvents() {
 						vc.PushEvent(&VideoTextTracksEvent{
 							TextTracks: payload.TextTracks,
 						})
-					}
-				case PlayerEventTranslateText:
-					payload := &clientTranslateTextPayload{}
-					if err := playerEvent.UnmarshalAs(payload); err == nil {
-						// Translate in a goroutine
-						go func() {
-							state, ok := vc.GetPlaybackState()
-							if !ok {
-								return
-							}
-							translated := vc.TranslateText(context.Background(), payload.Text)
-							// Send the result
-							vc.sendPlayerEventTo(state.ClientID, string(ServerEventTranslatedText), struct {
-								Original   string `json:"original"`
-								Translated string `json:"translated"`
-							}{
-								Original:   payload.Text,
-								Translated: translated,
-							}, true)
-						}()
-					}
-				case PlayerEventTranslateSubtitleFileTrack:
-					payload := &VideoSubtitleTrack{}
-					if err := playerEvent.UnmarshalAs(payload); err == nil {
-						// Translate in a goroutine
-						go func() {
-							vc.logger.Trace().Msgf("videocore: Received subtitle track translation request")
-							state, ok := vc.GetPlaybackState()
-							if !ok {
-								return
-							}
-							var translated string
-							if payload.Src != nil && len(*payload.Src) > 0 {
-								resp := vc.httpClient.Get(*payload.Src).Do()
-
-								if resp.IsErrorState() {
-									vc.logger.Error().Err(resp.Err).Msgf("videocore: Failed to download subtitle file %s", *payload.Src)
-									return
-								}
-
-								content := resp.String()
-
-								from := mkvparser.DetectSubtitleType(content)
-								translated = vc.TranslateContent(context.Background(), content, from)
-
-							} else if payload.Content != nil && len(*payload.Content) > 0 {
-								content := *payload.Content
-								from := mkvparser.DetectSubtitleType(content)
-								translated = vc.TranslateContent(context.Background(), content, from)
-							}
-							if translated != "" {
-								// Modify the payload but keep the same index
-								payload.Content = &translated
-								payload.Src = nil
-								payload.Label = payload.Label + " (translated)"
-								payload.Language = strings.ToLower(vc.GetTranslationTargetLanguage())
-								// Send the result
-								vc.logger.Debug().Str("clientID", state.ClientID).Int("length", len(*payload.Content)).Msgf("videocore: Sending translated subtitle track")
-								vc.sendPlayerEventTo(state.ClientID, string(ServerEventAddExternalSubtitleTrack), payload, true)
-							} else {
-								vc.logger.Error().Msgf("videocore: Failed to translate subtitle track")
-							}
-						}()
 					}
 				}
 			}

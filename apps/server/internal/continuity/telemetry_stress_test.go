@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +21,7 @@ func TestTelemetryManager_Stress(t *testing.T) {
 	logger := util.NewLogger()
 	tempDir := t.TempDir()
 
-	database, err := db.NewDatabase(context.Background(), test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
+	database, err := db.NewDatabase(context.Background(), tempDir, "test-telemetry", logger)
 	require.NoError(t, err)
 
 	cacher, err := filecache.NewCacher(filepath.Join(tempDir, "cache"))
@@ -47,7 +46,6 @@ func TestTelemetryManager_Stress(t *testing.T) {
 			// Each worker pushes 10 fast progress updates (simulating a few seconds of watching)
 			for j := 0; j < 10; j++ {
 				manager.TelemetryManager.UpdateProgress(1, 1, 1, float64(workerID*10+j), 1000.0)
-				time.Sleep(2 * time.Millisecond)
 			}
 		}(i)
 	}
@@ -55,11 +53,8 @@ func TestTelemetryManager_Stress(t *testing.T) {
 	// Wait for all HTTP handlers to finish queuing
 	wg.Wait()
 
-	// Give the TelemetryManager a moment to flush cleanly.
-	// Since flush interval is 5s, we can either wait 5s or call Stop() which triggers a final flush.
-	time.Sleep(100 * time.Millisecond) // Let all queue events reach memoryBatch
-	manager.TelemetryManager.Stop()    // Force the context done and flush memory
-	time.Sleep(500 * time.Millisecond) // Give time for the real DB to commit
+	// Stop() cleanly flushes remaining queue events and stops background workers
+	manager.TelemetryManager.Stop()
 
 	// Verify that the entry exists in the DB
 	var records []models.WatchHistory

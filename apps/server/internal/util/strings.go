@@ -13,6 +13,8 @@ import (
 	"github.com/dustin/go-humanize"
 )
 
+var reBase64Chars = regexp.MustCompile("^[A-Za-z0-9+/]*=*$")
+
 func Bytes(size uint64) string {
 	switch runtime.GOOS {
 	case "darwin":
@@ -50,12 +52,6 @@ func isLatinRune(r rune) bool {
 	return unicode.In(r, unicode.Latin)
 }
 
-func Pluralize(count int, singular, plural string) string {
-	if count == 1 {
-		return singular
-	}
-	return plural
-}
 
 // NormalizePath normalizes a path by converting it to lowercase and replacing backslashes with forward slashes
 // Warning: Do not use the returned string for anything filesystem related, only for comparison
@@ -97,8 +93,7 @@ func IsBase64(s string) bool {
 	}
 
 	// 5. Check if string contains only valid base64 characters
-	validChars := regexp.MustCompile("^[A-Za-z0-9+/]*=*$")
-	if !validChars.MatchString(s) {
+	if !reBase64Chars.MatchString(s) {
 		return false
 	}
 
@@ -126,31 +121,3 @@ func HashSHA256Hex(s string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func CleanMediaTitle(title string) string {
-	replacer := strings.NewReplacer(
-		" - ", " ",
-		":", "",
-		"!", "",
-		"'", "",
-		";", "",
-		"*", "",
-		"(", "",
-		")", "",
-		"[", "",
-		"]", "",
-	)
-	return strings.TrimSpace(replacer.Replace(title))
-}
-
-// HashStringToInt96 converts a string to a 32-bit integer.
-// It uses FNV-1a, masking it to fit safely in JS MAX_SAFE_INTEGER bounds if necessary,
-// though typical FNV 32-bit fits well within JS numbers.
-func HashStringToInt96(s string) int {
-	var hash uint32 = 2166136261
-	for i := 0; i < len(s); i++ {
-		hash ^= uint32(s[i])
-		hash *= 16777619
-	}
-	// Return as positive int
-	return int(hash & 0x7FFFFFFF)
-}

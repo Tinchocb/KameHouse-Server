@@ -6,3 +6,7 @@
 # Local machine-specific fast-linker override (rust-lld) for dev builds.
 # Path in config.toml points into this machine's Rust toolchain.
 /.cargo/
+
+# Sidecar binaries generated during server build
+/binaries/
+*.exe

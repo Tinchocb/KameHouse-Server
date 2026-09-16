@@ -37,6 +37,7 @@ type (
 		transcodeDir       string // where stream segments are stored
 		database           *db.Database
 		warmingActive      atomic.Bool // guards WarmMediaInfo against overlapping runs
+		settingsMu         sync.RWMutex
 	}
 
 	NewRepositoryOptions struct {
@@ -64,11 +65,24 @@ func NewRepository(opts *NewRepositoryOptions) *Repository {
 }
 
 func (r *Repository) IsInitialized() bool {
+	r.settingsMu.RLock()
+	defer r.settingsMu.RUnlock()
 	return r.settings.IsPresent()
 }
 
-func (r *Repository) OnCleanup() {
+func (r *Repository) GetSettings() mo.Option[*models.MediastreamSettings] {
+	r.settingsMu.RLock()
+	defer r.settingsMu.RUnlock()
+	return r.settings
+}
 
+func (r *Repository) OnCleanup() {
+	if r.transcoder.IsPresent() {
+		r.transcoder.MustGet().Destroy()
+	}
+	if r.preTranscoder.IsPresent() {
+		r.preTranscoder.MustGet().Stop()
+	}
 }
 
 func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cacheDir string, transcodeDir string) {
@@ -85,14 +99,15 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 	settings.FfmpegPath = ffmpegutil.ResolveFFmpegPath(cacheDir, settings.FfmpegPath)
 	settings.FfprobePath = ffmpegutil.ResolveFFprobePath(cacheDir, settings.FfprobePath)
 
-	// Set the settings
+	r.settingsMu.Lock()
 	r.settings = mo.Some(settings)
-
 	r.cacheDir = cacheDir
 	r.transcodeDir = transcodeDir
+	currentSettings := r.settings
+	r.settingsMu.Unlock()
 
 	// Initialize the transcoder (respects the TranscodeEnabled setting on startup)
-	_ = r.initializeTranscoder(r.settings, false)
+	_ = r.initializeTranscoder(currentSettings, false)
 
 	// Initialize the pre-transcoder (respects the PreTranscodeEnabled setting)
 	r.initializePreTranscoder(settings)
@@ -108,6 +123,8 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 // beside the rest of the cache, which is also where the "optimized" stream type
 // has always looked.
 func (r *Repository) PreTranscodeDir() string {
+	r.settingsMu.RLock()
+	defer r.settingsMu.RUnlock()
 	if r.settings.IsPresent() {
 		if s := r.settings.MustGet(); s != nil && strings.TrimSpace(s.PreTranscodeLibraryDir) != "" {
 			return strings.TrimSpace(s.PreTranscodeLibraryDir)
@@ -188,7 +205,14 @@ func (r *Repository) WarmMediaInfo(paths []string) {
 	}
 	defer r.warmingActive.Store(false)
 
+	r.settingsMu.RLock()
+	if !r.settings.IsPresent() {
+		r.settingsMu.RUnlock()
+		return
+	}
 	ffprobePath := r.settings.MustGet().FfprobePath
+	r.settingsMu.RUnlock()
+
 	start := time.Now()
 	r.logger.Info().Int("files", len(paths)).Msg("mediastream: Warming media-info cache")
 
@@ -206,6 +230,14 @@ func (r *Repository) WarmMediaInfo(paths []string) {
 		go func(path string) {
 			defer wg.Done()
 			defer func() { <-sem }()
+			defer func() {
+				if rec := recover(); rec != nil {
+					r.logger.Warn().Msgf("mediastream: panic in WarmMediaInfo worker: %v", rec)
+				}
+			}()
+			if !r.IsInitialized() {
+				return
+			}
 			if _, err := r.mediaInfoExtractor.GetInfo(ffprobePath, path); err != nil {
 				r.logger.Debug().Err(err).Str("filepath", path).Msg("mediastream: Media-info warm failed")
 				return
@@ -234,16 +266,20 @@ func (r *Repository) ClearTranscodeDir() {
 
 	r.logger.Trace().Msg("mediastream: Clearing transcode directory")
 
+	r.settingsMu.RLock()
+	transDir := r.transcodeDir
+	r.settingsMu.RUnlock()
+
 	// Empty the transcode directory
-	if r.transcodeDir != "" {
-		files, err := os.ReadDir(r.transcodeDir)
+	if transDir != "" {
+		files, err := os.ReadDir(transDir)
 		if err != nil {
 			r.logger.Error().Err(err).Msg("mediastream: Failed to read transcode directory")
 			return
 		}
 
 		for _, file := range files {
-			err = os.RemoveAll(filepath.Join(r.transcodeDir, file.Name()))
+			err = os.RemoveAll(filepath.Join(transDir, file.Name()))
 			if err != nil {
 				r.logger.Error().Err(err).Msg("mediastream: Failed to remove file from transcode directory")
 			}
@@ -311,9 +347,10 @@ func (r *Repository) RequestTranscodeStream(filepath string, clientID string, fo
 	if !r.transcoder.IsPresent() {
 		r.reqMu.Lock()
 		if !r.transcoder.IsPresent() { // double-check under the lock
-			if ok := r.initializeTranscoder(r.settings, force); !ok {
+			settings := r.GetSettings()
+			if ok := r.initializeTranscoder(settings, force); !ok {
 				r.reqMu.Unlock()
-				if !force && !r.settings.MustGet().TranscodeEnabled {
+				if !force && settings.IsPresent() && !settings.MustGet().TranscodeEnabled {
 					return nil, errors.New("La transcodificación está desactivada. Actívala en Ajustes -> Streaming.")
 				}
 				return nil, errors.New("real-time transcoder not initialized, check your settings")
@@ -343,7 +380,8 @@ func (r *Repository) RequestPreloadTranscodeStream(filepath string, preferredAud
 	if r.transcoder.IsAbsent() {
 		r.reqMu.Lock()
 		if !r.transcoder.IsPresent() { // double-check under the lock
-			if ok := r.initializeTranscoder(r.settings, false); !ok {
+			settings := r.GetSettings()
+			if ok := r.initializeTranscoder(settings, false); !ok {
 				r.reqMu.Unlock()
 				return errors.New("real-time transcoder not initialized, check your settings")
 			}
@@ -382,7 +420,8 @@ func (r *Repository) RequestDirectPlay(filepath string, clientID string, caps *C
 	if ret != nil && ret.StreamType == StreamTypeTranscode && !r.transcoder.IsPresent() {
 		r.reqMu.Lock()
 		if !r.transcoder.IsPresent() { // double-check under the lock
-			if ok := r.initializeTranscoder(r.settings, true); !ok {
+			settings := r.GetSettings()
+			if ok := r.initializeTranscoder(settings, true); !ok {
 				r.logger.Error().Str("filepath", filepath).Msg("mediastream: Direct→transcode fallback could not initialize the transcoder on-demand")
 			}
 		}

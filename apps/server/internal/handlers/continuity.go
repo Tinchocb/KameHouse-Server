@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"kamehouse/internal/continuity"
+	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
+
 
 // HandleUpdateContinuityWatchHistoryItem updates the watch history item.
 //
@@ -25,7 +28,7 @@ func (h *Handler) HandleUpdateContinuityWatchHistoryItem(c echo.Context) error {
 	}
 
 	// Zero-Latency Telemetry Dispatch
-	if h.App.ContinuityManager.TelemetryManager != nil {
+	if h.App.ContinuityManager != nil && h.App.ContinuityManager.TelemetryManager != nil {
 		userID := uint(1)
 		if val := c.Get("user_id"); val != nil {
 			if id, ok := val.(uint); ok {
@@ -47,11 +50,18 @@ func (h *Handler) HandleUpdateContinuityWatchHistoryItem(c echo.Context) error {
 //	@returns continuity.WatchHistoryItemResponse
 func (h *Handler) HandleGetContinuityWatchHistoryItem(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return h.RespondWithError(c, err)
+	if err != nil || id <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive anime media id is required"))
 	}
 
-	if !h.App.ContinuityManager.GetSettings().WatchContinuityEnabled {
+	if h.App.ContinuityManager == nil {
+		return h.RespondWithData(c, &continuity.WatchHistoryItemResponse{
+			Item:  nil,
+			Found: false,
+		})
+	}
+	cSettings := h.App.ContinuityManager.GetSettings()
+	if cSettings == nil || !cSettings.WatchContinuityEnabled {
 		return h.RespondWithData(c, &continuity.WatchHistoryItemResponse{
 			Item:  nil,
 			Found: false,
@@ -69,7 +79,12 @@ func (h *Handler) HandleGetContinuityWatchHistoryItem(c echo.Context) error {
 //	@route /api/v1/continuity/history [GET]
 //	@returns continuity.WatchHistory
 func (h *Handler) HandleGetContinuityWatchHistory(c echo.Context) error {
-	if !h.App.ContinuityManager.GetSettings().WatchContinuityEnabled {
+	if h.App.ContinuityManager == nil {
+		ret := make(map[int]*continuity.WatchHistoryItem)
+		return h.RespondWithData(c, ret)
+	}
+	cSettings := h.App.ContinuityManager.GetSettings()
+	if cSettings == nil || !cSettings.WatchContinuityEnabled {
 		ret := make(map[int]*continuity.WatchHistoryItem)
 		return h.RespondWithData(c, ret)
 	}

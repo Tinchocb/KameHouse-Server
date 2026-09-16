@@ -160,6 +160,12 @@ func (as *AutoScanner) Notify(path string) {
 
 		for {
 			select {
+			case <-as.shutdownCtx.Done():
+				as.mu.Lock()
+				as.waiting = false
+				as.pendingPaths = nil
+				as.mu.Unlock()
+				return
 			case <-timer.C:
 				as.mu.Lock()
 				as.waiting = false
@@ -170,7 +176,10 @@ func (as *AutoScanner) Notify(path string) {
 				return
 			case <-as.fileActionCh:
 				if !timer.Stop() {
-					<-timer.C
+					select {
+					case <-timer.C:
+					default:
+					}
 				}
 				timer.Reset(as.waitTime)
 			}

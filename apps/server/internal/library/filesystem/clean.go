@@ -12,38 +12,30 @@ import (
 // It ignores errors.
 func RemoveEmptyDirectories(root string, logger *zerolog.Logger) {
 
+	var dirs []string
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
+		if err != nil || path == root || !d.IsDir() {
 			return nil
 		}
-
-		// Skip the root directory
-		if path == root {
-			return nil
-		}
-
-		if d.IsDir() {
-			// Check if the directory is empty
-			isEmpty, err := isDirectoryEmpty(path)
-			if err != nil {
-				return nil
-			}
-
-			// Delete the empty directory
-			if isEmpty {
-				err := os.Remove(path)
-				if err != nil {
-					logger.Warn().Err(err).Str("path", path).Msg("filesystem: Could not delete empty directory")
-				}
-				logger.Info().Str("path", path).Msg("filesystem: Deleted empty directory")
-				// ignore error
-			}
-		}
-
+		dirs = append(dirs, path)
 		return nil
 	})
 
+	// Process deepest directories first (bottom-up)
+	for i := len(dirs) - 1; i >= 0; i-- {
+		p := dirs[i]
+		isEmpty, err := isDirectoryEmpty(p)
+		if err != nil || !isEmpty {
+			continue
+		}
+		if err := os.Remove(p); err != nil {
+			logger.Warn().Err(err).Str("path", p).Msg("filesystem: Could not delete empty directory")
+		} else {
+			logger.Info().Str("path", p).Msg("filesystem: Deleted empty directory")
+		}
+	}
 }
+
 
 func isDirectoryEmpty(path string) (bool, error) {
 	dir, err := os.Open(path)

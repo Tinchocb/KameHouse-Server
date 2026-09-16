@@ -403,41 +403,26 @@ func resolveCorsOrigins(cfg *Config) {
 		origins = []string{"http://localhost", "http://127.0.0.1"}
 	}
 
-	// Always add gstatic origins (needed for remote assets)
-	gstaticOrigins := []string{
-		"https://www.gstatic.com",
-		"https://gstatic.com",
-	}
-	for _, origin := range gstaticOrigins {
-		if !containsString(origins, origin) {
-			origins = append(origins, origin)
-		}
-	}
-
-	// Always add local IPv4 addresses to allowed origins so clients on the local network (like Smart TVs) can fetch resources
-	localIPs := util.GetLocalIPv4Addresses()
-	for _, ip := range localIPs {
-		ipOrigins := []string{
-			fmt.Sprintf("http://%s:43210", ip),
-			fmt.Sprintf("http://%s:5173", ip),
-			fmt.Sprintf("http://%s:3000", ip),
-			fmt.Sprintf("http://%s", ip),
-		}
-		// Add the actual server port as well for direct LAN access
-		if cfg.Server.Port > 0 {
-			ipOrigins = append(ipOrigins, fmt.Sprintf("http://%s:%d", ip, cfg.Server.Port))
-		}
-		for _, io := range ipOrigins {
-			if !containsString(origins, io) {
-				origins = append(origins, io)
+	// Orígenes extra (gstatic/LAN) solo opt-in para no ampliar superficie con credenciales.
+	// KAMEHOUSE_ALLOW_LAN=1 habilita IPs LAN locales (solo puerto del server, no dev ports).
+	if os.Getenv("KAMEHOUSE_ALLOW_LAN") == "1" || strings.EqualFold(os.Getenv("KAMEHOUSE_ALLOW_LAN"), "true") {
+		localIPs := util.GetLocalIPv4Addresses()
+		for _, ip := range localIPs {
+			ipOrigins := []string{}
+			if cfg.Server.Port > 0 {
+				ipOrigins = append(ipOrigins, fmt.Sprintf("http://%s:%d", ip, cfg.Server.Port))
+			} else {
+				ipOrigins = append(ipOrigins, fmt.Sprintf("http://%s", ip))
+			}
+			for _, io := range ipOrigins {
+				if !containsString(origins, io) {
+					origins = append(origins, io)
+				}
 			}
 		}
 	}
 
-	// Allow null origin for file:// smart TV apps (Tizen, webOS)
-	if !containsString(origins, "null") {
-		origins = append(origins, "null")
-	}
+
 
 	// Always add the server's own address (with port) so that direct-browser access
 	// (without a frontend dev proxy) is accepted by both the CORS middleware and

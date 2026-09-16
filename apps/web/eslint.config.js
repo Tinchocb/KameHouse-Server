@@ -12,7 +12,6 @@ export default tseslint.config(
             "node_modules/**",
             "src/api/generated/**",
             "src/routeTree.gen.ts",
-            ".storybook/**",
         ],
     },
     // Avoid js.configs.recommended because it contains a typo in v9.10.0 (no-unassigned-vars)

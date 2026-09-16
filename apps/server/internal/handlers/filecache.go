@@ -1,8 +1,11 @@
 package handlers
 
 import (
-	"kamehouse/internal/util"
+	"errors"
+	"net/http"
 	"strings"
+
+	"kamehouse/internal/util"
 
 	"github.com/labstack/echo/v4"
 )
@@ -40,16 +43,21 @@ func (h *Handler) HandleRemoveFileCacheBucket(c echo.Context) error {
 	// Parse the request body
 	var b body
 	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
+	}
+
+	bucket := strings.TrimSpace(b.Bucket)
+	if bucket == "" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("bucket prefix cannot be empty"))
 	}
 
 	// Remove all files in the cache directory that match the given filter
 	err := h.App.FileCacher.RemoveAllBy(func(filename string) bool {
-		return strings.HasPrefix(filename, b.Bucket)
+		return strings.HasPrefix(filename, bucket)
 	})
 
 	if err != nil {
-		return h.RespondWithError(c, err)
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, err)
 	}
 
 	// Return a success response
@@ -89,9 +97,8 @@ func (h *Handler) HandleClearFileCacheMediastreamVideoFiles(c echo.Context) erro
 	}
 
 	// Clear the transcode dir
-	h.App.MediastreamRepository.ClearTranscodeDir()
-
 	if h.App.MediastreamRepository != nil {
+		h.App.MediastreamRepository.ClearTranscodeDir()
 		go h.App.MediastreamRepository.CacheWasCleared()
 	}
 

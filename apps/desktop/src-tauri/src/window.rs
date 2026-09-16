@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use log::{debug, info, warn};
@@ -8,26 +8,29 @@ use tauri::{
 
 use crate::settings::{DesktopSettings, SettingsManager, WindowBounds};
 
-#[allow(dead_code)]
 pub struct WindowManager {
-    startup_ready: Arc<std::sync::RwLock<bool>>,
-    should_maximize: Arc<std::sync::RwLock<bool>>,
-    is_shutdown: Arc<std::sync::RwLock<bool>>,
     settings_manager: Arc<SettingsManager>,
     /// Monotonic counter used to debounce window-state saves: only the most
     /// recent queued save (matching the latest generation) is written to disk.
     save_generation: Arc<AtomicU64>,
+    /// Handshake de arranque: la ventana principal solo se revela cuando el
+    /// backend está listo (sidecar) Y el renderer terminó de pintar (React).
+    /// Mientras tanto el usuario ve la ventana `splash` (HTML local, instantánea).
+    server_ready: Arc<AtomicBool>,
+    renderer_ready: Arc<AtomicBool>,
+    splash_closed: Arc<AtomicBool>,
+    open_in_background: Arc<AtomicBool>,
 }
 
-#[allow(dead_code)]
 impl WindowManager {
     pub fn new(settings_manager: Arc<SettingsManager>) -> Self {
         Self {
-            startup_ready: Arc::new(std::sync::RwLock::new(false)),
-            should_maximize: Arc::new(std::sync::RwLock::new(false)),
-            is_shutdown: Arc::new(std::sync::RwLock::new(false)),
             settings_manager,
             save_generation: Arc::new(AtomicU64::new(0)),
+            server_ready: Arc::new(AtomicBool::new(false)),
+            renderer_ready: Arc::new(AtomicBool::new(false)),
+            splash_closed: Arc::new(AtomicBool::new(false)),
+            open_in_background: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -39,11 +42,22 @@ impl WindowManager {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("[WindowManager] Creating windows");
 
-        // Create main window
-        self.create_main_window(app_handle, is_dev, &settings)?;
+        self.server_ready.store(false, Ordering::SeqCst);
+        self.renderer_ready.store(false, Ordering::SeqCst);
+        self.splash_closed.store(false, Ordering::SeqCst);
+        self.open_in_background.store(settings.open_in_background, Ordering::SeqCst);
 
-        // Create crash screen
-        self.create_crash_window(app_handle, is_dev)?;
+        // Splash primero: es HTML local, pinta al instante mientras el sidecar
+        // arranca y el WebView principal carga el bundle React.
+        if !settings.open_in_background {
+            self.create_splash_window(app_handle, is_dev)?;
+        } else {
+            // Arranque en segundo plano: sin splash, la app vive en el tray.
+            self.splash_closed.store(true, Ordering::SeqCst);
+        }
+
+        // Create main window (siempre oculta al inicio; se revela en try_reveal_main)
+        self.create_main_window(app_handle, is_dev, &settings)?;
 
         Ok(())
     }
@@ -56,12 +70,10 @@ impl WindowManager {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("[WindowManager] Creating main window");
 
-        *self.startup_ready.write().unwrap() = false;
-
         let url = if is_dev {
             WebviewUrl::External("http://127.0.0.1:43210".parse().unwrap())
         } else {
-            WebviewUrl::App("app://-".into())
+            WebviewUrl::App("index.html".into())
         };
 
         // Calculate dynamic initial dimensions based on primary monitor (e.g. 85% of logical size)
@@ -81,8 +93,11 @@ impl WindowManager {
             .min_inner_size(800.0, 600.0)
             .resizable(true)
             .fullscreen(false)
-            .visible(!settings.open_in_background)
-            .background_color(tauri::window::Color(9, 9, 11, 255))
+            // Siempre oculta al inicio: se revela en try_reveal_main cuando el
+            // backend (sidecar) y el renderer (React) están listos. Mientras
+            // tanto el usuario ve la ventana splash.
+            .visible(false)
+            .background_color(tauri::window::Color(0, 0, 0, 255))
             .decorations(true)
             .transparent(false);
 
@@ -154,6 +169,41 @@ impl WindowManager {
         Ok(())
     }
 
+    /// Ventana de carga instantánea (HTML local, sin depender del dev server ni
+    /// del backend). Se muestra mientras el sidecar arranca y React carga.
+    fn create_splash_window<R: Runtime>(
+        &self,
+        app_handle: &AppHandle<R>,
+        is_dev: bool,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!("[WindowManager] Creating splash window");
+
+        let url = if is_dev {
+            WebviewUrl::External("http://127.0.0.1:43210/splash.html".parse().unwrap())
+        } else {
+            WebviewUrl::App("splash.html".into())
+        };
+
+        WebviewWindowBuilder::new(app_handle, "splash", url)
+            .title("KameHouse")
+            .inner_size(460.0, 380.0)
+            .min_inner_size(380.0, 320.0)
+            .resizable(false)
+            .maximizable(false)
+            .minimizable(false)
+            .decorations(false)
+            .transparent(false)
+            .background_color(tauri::window::Color(9, 9, 11, 255))
+            .visible(true)
+            .center()
+            .focused(true)
+            .skip_taskbar(true)
+            .always_on_top(true)
+            .build()?;
+
+        Ok(())
+    }
+
     fn create_crash_window<R: Runtime>(
         &self,
         app_handle: &AppHandle<R>,
@@ -164,7 +214,7 @@ impl WindowManager {
         let url = if is_dev {
             WebviewUrl::External("http://127.0.0.1:43210/splashscreen/crash".parse().unwrap())
         } else {
-            WebviewUrl::App("app://-/splashscreen/crash".into())
+            WebviewUrl::App("index.html".into())
         };
 
         WebviewWindowBuilder::new(app_handle, "crash", url)
@@ -182,13 +232,54 @@ impl WindowManager {
 
     pub fn finalize_startup<R: Runtime>(&self, app_handle: &AppHandle<R>, source: &str) {
         info!("[WindowManager] Finalizing startup from: {}", source);
-        *self.startup_ready.write().unwrap() = true;
+        self.server_ready.store(true, Ordering::SeqCst);
         self.emit_to_main(app_handle, "server-status", "ready");
+        self.try_reveal_main(app_handle);
+    }
+
+    /// El renderer (React) avisa cuando terminó de pintar la interfaz
+    /// (ver `__root.tsx`). Solo entonces, con el backend ya listo, se revela
+    /// la ventana principal y se cierra el splash.
+    pub fn on_renderer_ready<R: Runtime>(&self, app_handle: &AppHandle<R>) {
+        if !self.renderer_ready.swap(true, Ordering::SeqCst) {
+            info!("[WindowManager] Renderer ready, checking reveal");
+        }
+        self.try_reveal_main(app_handle);
+    }
+
+    /// Muestra la ventana principal una única vez, cuando backend y renderer
+    /// están listos. Antes de eso el usuario solo ve el splash.
+    fn try_reveal_main<R: Runtime>(&self, app_handle: &AppHandle<R>) {
+        if !self.server_ready.load(Ordering::SeqCst) || !self.renderer_ready.load(Ordering::SeqCst) {
+            return;
+        }
+        if self.splash_closed.swap(true, Ordering::SeqCst) {
+            return; // ya revelada (o cerrada por crash / tray)
+        }
+        if let Some(splash) = app_handle.get_webview_window("splash") {
+            let _ = splash.destroy();
+        }
+        if self.open_in_background.load(Ordering::SeqCst) {
+            info!("[WindowManager] Startup complete in background (tray only)");
+            return;
+        }
+        info!("[WindowManager] Revealing main window");
+        self.show_main_window(app_handle);
     }
 
     pub fn show_crash_screen<R: Runtime>(&self, app_handle: &AppHandle<R>, message: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // El crash reemplaza a todo: ni splash ni main tienen sentido ya.
+        self.splash_closed.store(true, Ordering::SeqCst);
+        if let Some(splash) = app_handle.get_webview_window("splash") {
+            let _ = splash.destroy();
+        }
         if let Some(main) = app_handle.get_webview_window("main") {
             let _ = main.destroy();
+        }
+
+        if app_handle.get_webview_window("crash").is_none() {
+            let is_dev = cfg!(debug_assertions);
+            let _ = self.create_crash_window(app_handle, is_dev);
         }
 
         if let Some(crash) = app_handle.get_webview_window("crash") {
@@ -200,6 +291,14 @@ impl WindowManager {
     }
 
     pub fn show_main_window<R: Runtime>(&self, app_handle: &AppHandle<R>) {
+        // Si el usuario fuerza la ventana (tray / segunda instancia) durante el
+        // arranque, el splash ya cumplió: se cierra y se muestra la principal
+        // aunque el handshake aún no terminó (React muestra su propio loader).
+        if !self.splash_closed.swap(true, Ordering::SeqCst) {
+            if let Some(splash) = app_handle.get_webview_window("splash") {
+                let _ = splash.destroy();
+            }
+        }
         if let Some(window) = app_handle.get_webview_window("main") {
             let settings = self.settings_manager.load(app_handle);
 
@@ -219,27 +318,6 @@ impl WindowManager {
         }
     }
 
-    pub fn hide_main_window<R: Runtime>(&self, app_handle: &AppHandle<R>) {
-        if let Some(window) = app_handle.get_webview_window("main") {
-            let _ = window.hide();
-        }
-    }
-
-    pub fn set_shutdown(&self, val: bool) {
-        *self.is_shutdown.write().unwrap() = val;
-    }
-
-    pub fn is_shutdown(&self) -> bool {
-        *self.is_shutdown.read().unwrap()
-    }
-
-    pub fn is_startup_ready(&self) -> bool {
-        *self.startup_ready.read().unwrap()
-    }
-
-    pub fn set_startup_ready(&self, val: bool) {
-        *self.startup_ready.write().unwrap() = val;
-    }
 
     pub fn emit_to_main<R: Runtime>(&self, app_handle: &AppHandle<R>, event: &str, payload: impl serde::Serialize + Clone) {
         if let Some(main) = app_handle.get_webview_window("main") {
@@ -257,13 +335,16 @@ impl WindowManager {
         
         let position = window.outer_position().unwrap_or(tauri::PhysicalPosition { x: 0, y: 0 });
         let size = window.inner_size().unwrap_or(tauri::PhysicalSize { width: 800, height: 600 });
+        let scale_factor = window.scale_factor().unwrap_or(1.0);
+        let logical_pos = position.to_logical::<f64>(scale_factor);
+        let logical_size = size.to_logical::<f64>(scale_factor);
         
         let bounds = if !is_maximized {
             let candidate = WindowBounds {
-                x: position.x,
-                y: position.y,
-                width: size.width,
-                height: size.height,
+                x: logical_pos.x.round() as i32,
+                y: logical_pos.y.round() as i32,
+                width: logical_size.width.round() as u32,
+                height: logical_size.height.round() as u32,
             };
             if candidate.is_valid() {
                 Some(candidate)
@@ -311,13 +392,16 @@ impl WindowManager {
             let is_maximized = window_clone.is_maximized().unwrap_or(false);
             let position = window_clone.outer_position().unwrap_or(tauri::PhysicalPosition { x: 0, y: 0 });
             let size = window_clone.inner_size().unwrap_or(tauri::PhysicalSize { width: 800, height: 600 });
+            let scale_factor = window_clone.scale_factor().unwrap_or(1.0);
+            let logical_pos = position.to_logical::<f64>(scale_factor);
+            let logical_size = size.to_logical::<f64>(scale_factor);
 
             let bounds = if !is_maximized {
                 let candidate = WindowBounds {
-                    x: position.x,
-                    y: position.y,
-                    width: size.width,
-                    height: size.height,
+                    x: logical_pos.x.round() as i32,
+                    y: logical_pos.y.round() as i32,
+                    width: logical_size.width.round() as u32,
+                    height: logical_size.height.round() as u32,
                 };
                 if candidate.is_valid() {
                     Some(candidate)

@@ -89,6 +89,15 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 		return c.String(echo.ErrBadRequest.Code, "No URL provided")
 	}
 
+	// Fast path: check local disk cache first. If already downloaded, serve immediately
+	// without any network or DNS lookup overhead.
+	cachePath := ip.getCachePath(url)
+	if data, err := os.ReadFile(cachePath); err == nil && len(data) > 0 {
+		contentType := http.DetectContentType(data)
+		ip.setHeaders(c, contentType)
+		return c.Blob(http.StatusOK, contentType, data)
+	}
+
 	if !util.IsValidProxyURL(url) {
 		return c.String(echo.ErrForbidden.Code, "SSRF blocked: invalid proxy URL")
 	}

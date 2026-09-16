@@ -3,18 +3,20 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/filesystem"
 	"kamehouse/internal/library_explorer"
-	"time"
+	"kamehouse/internal/util"
 
 	"github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
@@ -46,48 +48,76 @@ func resolveLibraryMediaID(database *db.Database, mediaID int) uint {
 //	@route /api/v1/library/local-files [GET]
 //	@returns []dto.LocalFile
 func (h *Handler) HandleGetLocalFiles(c echo.Context) error {
-
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
 	pageStr := c.QueryParam("page")
 	perPageStr := c.QueryParam("perPage")
 
+	// Paginado por defecto para no cargar toda la tabla en memoria (OOM).
+	page := 1
+	perPage := 50
 	if pageStr != "" {
-		page, err := strconv.Atoi(pageStr)
-		if err != nil {
-			page = 1
+		if p, err := strconv.Atoi(pageStr); err == nil && p >= 1 {
+			page = p
 		}
-		perPage, err := strconv.Atoi(perPageStr)
-		if err != nil {
-			perPage = 50
+	}
+	if perPageStr != "" {
+		if pp, err := strconv.Atoi(perPageStr); err == nil && pp >= 1 {
+			perPage = pp
+		}
+	}
+	if perPage > 200 {
+		perPage = 200
+	}
+
+	{
+		offset := (page - 1) * perPage
+
+		var total int64
+		if err := h.App.Database.Gorm().Model(&models.LocalFile{}).Count(&total).Error; err != nil {
+			return h.RespondWithError(c, err)
 		}
 
-		start := (page - 1) * perPage
-		end := start + perPage
-
-		if start >= len(lfs) {
-			return h.RespondWithData(c, map[string]interface{}{
-				"items":    []*dto.LocalFile{},
-				"hasMore":  false,
-				"nextPage": 0,
-			})
+		var dbFiles []*models.LocalFile
+		if err := h.App.Database.Gorm().
+			Order("id asc").
+			Offset(offset).
+			Limit(perPage).
+			Find(&dbFiles).Error; err != nil {
+			return h.RespondWithError(c, err)
 		}
 
-		if end > len(lfs) {
-			end = len(lfs)
+		items := make([]*dto.LocalFile, len(dbFiles))
+		for i, dbf := range dbFiles {
+			conv, err := db.LocalFileModelToDto(dbf)
+			if err != nil {
+				h.App.Logger.Warn().Err(err).Str("path", dbf.Path).Msg("handlers: Skipping corrupt JSON fields in local file row")
+				conv = &dto.LocalFile{Path: dbf.Path, Name: dbf.Name}
+			}
+			items[i] = conv
+		}
+
+		hasMore := int64(offset+len(items)) < total
+		nextPage := 0
+		if hasMore {
+			nextPage = page + 1
+		}
+
+		// Compat: si el cliente pidió explícitamente sin paginar vía ?page=all, devolver todo.
+		// Por defecto (y sin ?page) se devuelve la primera página paginada.
+		if pageStr == "all" {
+			lfs, _, err := db.GetLocalFiles(h.App.Database)
+			if err != nil {
+				return h.RespondWithError(c, err)
+			}
+			return h.RespondWithData(c, lfs)
 		}
 
 		return h.RespondWithData(c, map[string]interface{}{
-			"items":    lfs[start:end],
-			"hasMore":  end < len(lfs),
-			"nextPage": page + 1,
+			"items":    items,
+			"hasMore":  hasMore,
+			"nextPage": nextPage,
+			"total":    total,
 		})
 	}
-
-	return h.RespondWithData(c, lfs)
 }
 
 func (h *Handler) HandleDumpLocalFilesToFile(c echo.Context) error {
@@ -126,6 +156,33 @@ func (h *Handler) HandleImportLocalFiles(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	if b.DataFilePath == "" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("empty data file path"))
+	}
+
+	allowed := false
+	if h.App.Config != nil && h.App.Config.Data.AppDataDir != "" {
+		if util.IsFileUnderDir(h.App.Config.Data.AppDataDir, b.DataFilePath) {
+			allowed = true
+		}
+	}
+	if !allowed && h.App.Database != nil {
+		libPaths, _ := h.App.Database.GetAllLibraryPathsFromSettings()
+		for _, lp := range libPaths {
+			if util.IsFileUnderDir(lp, b.DataFilePath) {
+				allowed = true
+				break
+			}
+		}
+	}
+	if !allowed {
+		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("file path not allowed"))
+	}
+
+	// Límite anti-DoS: no leer imports gigantes a memoria.
+	if st, serr := os.Stat(b.DataFilePath); serr != nil || st.Size() > 15*1024*1024 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("data file too large or unreadable"))
+	}
 	contentB, err := os.ReadFile(b.DataFilePath)
 	if err != nil {
 		return h.RespondWithError(c, err)
@@ -133,11 +190,11 @@ func (h *Handler) HandleImportLocalFiles(c echo.Context) error {
 
 	var lfs []*dto.LocalFile
 	if err := json.Unmarshal(contentB, &lfs); err != nil {
-		return h.RespondWithError(c, err)
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid data file"))
 	}
 
 	if len(lfs) == 0 {
-		return h.RespondWithError(c, errors.New("no local files found"))
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("no local files found"))
 	}
 
 	_, err = db.InsertLocalFiles(h.App.Database, lfs)
@@ -165,7 +222,11 @@ func (h *Handler) HandleLocalFileBulkAction(c echo.Context) error {
 
 	b := new(body)
 	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
+	}
+
+	if b.Action != "lock" && b.Action != "unlock" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid action, expected 'lock' or 'unlock'"))
 	}
 
 	// Get all the local files
@@ -221,7 +282,7 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 	}
 
 	// Get all the local files
-	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
+	lfs, _, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -245,13 +306,12 @@ func (h *Handler) HandleUpdateLocalFileData(c echo.Context) error {
 		lf.LibraryMediaId = 0
 	}
 
-	// Save the local files
-	retLfs, err := db.SaveLocalFiles(h.App.Database, lfsID, lfs)
-	if err != nil {
+	// Save the single updated local file
+	if _, err := db.UpdateSingleLocalFileRelational(h.App.Database, lf); err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	return h.RespondWithData(c, retLfs)
+	return h.RespondWithData(c, lfs)
 }
 
 // HandleSuperUpdateLocalFiles updates local files with the given paths.
@@ -288,14 +348,26 @@ func (h *Handler) HandleSuperUpdateLocalFiles(c echo.Context) error {
 func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 
 	type body struct {
-		Paths   []string `json:"paths"`
-		Action  string   `json:"action"`
-		MediaID int      `json:"mediaID,omitempty"`
+		Paths         []string `json:"paths"`
+		Action        string   `json:"action"`
+		MediaID       int      `json:"mediaId,omitempty"`
+		LegacyMediaID int      `json:"mediaID,omitempty"`
 	}
 
 	b := new(body)
 	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
+	}
+	if b.MediaID == 0 && b.LegacyMediaID > 0 {
+		b.MediaID = b.LegacyMediaID
+	}
+
+	validActions := map[string]bool{
+		"lock": true, "unlock": true, "ignore": true,
+		"unignore": true, "unmatch": true, "match": true,
+	}
+	if !validActions[b.Action] {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid action"))
 	}
 
 	// Get all the local files

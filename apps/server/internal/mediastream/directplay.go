@@ -18,6 +18,38 @@ import (
 // Direct
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func resolveVideoContentType(ext string) string {
+	switch strings.ToLower(ext) {
+	case ".mp4", ".m4v":
+		return "video/mp4"
+	case ".webm":
+		return "video/webm"
+	case ".ogg", ".ogv":
+		return "video/ogg"
+	case ".mov":
+		return "video/quicktime"
+	case ".mkv":
+		return "video/x-matroska"
+	case ".avi":
+		return "video/x-msvideo"
+	case ".wmv":
+		return "video/x-ms-wmv"
+	case ".flv":
+		return "video/x-flv"
+	case ".ts", ".mts", ".m2ts":
+		return "video/mp2t"
+	default:
+		return "video/mp4"
+	}
+}
+
+func sanitizeHeaderFilename(filename string) string {
+	safe := strings.ReplaceAll(filename, "\"", "\\\"")
+	safe = strings.ReplaceAll(safe, "\r", "")
+	safe = strings.ReplaceAll(safe, "\n", "")
+	return safe
+}
+
 func (r *Repository) ServeEchoFile(c echo.Context, rawFilePath string, clientID string, libraryPaths []string) error {
 	// Unescape the file path, ignore errors
 	filePath, _ := url.PathUnescape(rawFilePath)
@@ -35,7 +67,7 @@ func (r *Repository) ServeEchoFile(c echo.Context, rawFilePath string, clientID 
 	// Make sure the file is in the library directories
 	inLibrary := false
 	for _, libraryPath := range libraryPaths {
-		if util.IsFileUnderDir(filePath, libraryPath) {
+		if util.IsFileUnderDir(libraryPath, filePath) {
 			inLibrary = true
 			break
 		}
@@ -46,8 +78,10 @@ func (r *Repository) ServeEchoFile(c echo.Context, rawFilePath string, clientID 
 	}
 
 	r.logger.Trace().Str("filepath", filePath).Str("payload", rawFilePath).Msg("mediastream: Served file")
-	// Content disposition
-	filename := filepath.Base(filePath)
+	ext := strings.ToLower(filepath.Ext(filePath))
+	c.Response().Header().Set("Content-Type", resolveVideoContentType(ext))
+	c.Response().Header().Set("Accept-Ranges", "bytes")
+	filename := sanitizeHeaderFilename(filepath.Base(filePath))
 	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
 
 	return c.File(filePath)
@@ -70,6 +104,9 @@ func (r *Repository) ServeEchoDirectPlay(c echo.Context, clientID string) error 
 		}
 	}
 
+	ext := strings.ToLower(filepath.Ext(mediaContainer.Filepath))
+	contentType := resolveVideoContentType(ext)
+
 	if c.Request().Method == http.MethodHead {
 		r.logger.Trace().Msg("mediastream: Received HEAD request for direct play")
 
@@ -80,58 +117,17 @@ func (r *Repository) ServeEchoDirectPlay(c echo.Context, clientID string) error 
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
-		// Set the content length
 		c.Response().Header().Set("Content-Length", fmt.Sprintf("%d", fileInfo.Size()))
-		ext := strings.ToLower(filepath.Ext(mediaContainer.Filepath))
-		contentType := "video/mp4"
-		switch ext {
-		case ".webm":
-			contentType = "video/webm"
-		case ".ogg", ".ogv":
-			contentType = "video/ogg"
-		case ".mov":
-			contentType = "video/quicktime"
-		}
 		c.Response().Header().Set("Content-Type", contentType)
 		c.Response().Header().Set("Accept-Ranges", "bytes")
-		filename := filepath.Base(mediaContainer.Filepath)
+		filename := sanitizeHeaderFilename(filepath.Base(mediaContainer.Filepath))
 		c.Response().Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
 		return c.NoContent(http.StatusOK)
 	}
 
-	// Set proper Content-Type for all supported container formats.
-	// Echo's c.File() uses http.ServeContent which detects MIME from extension,
-	// but it doesn't know .mkv or some niche formats — the browser delays parsing
-	// without a proper Content-Type.
-	ext := strings.ToLower(filepath.Ext(mediaContainer.Filepath))
-	contentType := ""
-	switch ext {
-	case ".mp4", ".m4v":
-		contentType = "video/mp4"
-	case ".webm":
-		contentType = "video/webm"
-	case ".ogg", ".ogv":
-		contentType = "video/ogg"
-	case ".mov":
-		contentType = "video/quicktime"
-	case ".mkv":
-		contentType = "video/x-matroska"
-	case ".avi":
-		contentType = "video/x-msvideo"
-	case ".wmv":
-		contentType = "video/x-ms-wmv"
-	case ".flv":
-		contentType = "video/x-flv"
-	case ".ts":
-		contentType = "video/mp2t"
-	case ".mts", ".m2ts":
-		contentType = "video/mp2t"
-	}
-	if contentType != "" {
-		c.Response().Header().Set("Content-Type", contentType)
-	}
+	c.Response().Header().Set("Content-Type", contentType)
 	c.Response().Header().Set("Accept-Ranges", "bytes")
-	filename := filepath.Base(mediaContainer.Filepath)
+	filename := sanitizeHeaderFilename(filepath.Base(mediaContainer.Filepath))
 	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
 	return c.File(mediaContainer.Filepath)
 }

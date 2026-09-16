@@ -295,7 +295,11 @@ func (s *Session) getAudioPipeline(idx int32) *Pipeline {
 			if decision.Bitrate != "" {
 				args = append(args, "-b:a", decision.Bitrate)
 			}
-			args = append(args, "-af", "aresample=async=1")
+			if srcAudio != nil && srcAudio.Channels > 2 {
+				args = append(args, "-af", "aresample=async=1:matrix_encoding=dplii")
+			} else {
+				args = append(args, "-af", "aresample=async=1")
+			}
 		}
 		return args
 	}

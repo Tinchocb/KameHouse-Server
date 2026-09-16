@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
+	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/platforms/platform"
 
 	"github.com/rs/zerolog"
@@ -255,6 +257,11 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		ch := make(chan seasonResult, numSeasonsNeeded-1)
 		for sn := 2; sn <= numSeasonsNeeded; sn++ {
 			go func(seasonNum int) {
+				defer func() {
+					if r := recover(); r != nil {
+						ch <- seasonResult{num: seasonNum, err: fmt.Errorf("panic in season fetch: %v", r)}
+					}
+				}()
 				s, e := tmdbProvider.GetTVSeason(ctx, tmdbID, seasonNum)
 				ch <- seasonResult{season: s, num: seasonNum, err: e}
 			}(sn)
@@ -361,10 +368,64 @@ func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry, s
 		return
 	}
 
+	isGenericSpanish := entry.Media.TitleSpanish == "" ||
+		strings.EqualFold(entry.Media.TitleSpanish, "Dragon Ball Serie") ||
+		strings.EqualFold(entry.Media.TitleSpanish, "Dragon Ball Series")
+
+	isEnglishDescription := entry.Media.Description != "" && (
+		strings.HasPrefix(strings.ToLower(entry.Media.Description), "five years after") ||
+		strings.HasPrefix(strings.ToLower(entry.Media.Description), "the ") ||
+		strings.HasPrefix(strings.ToLower(entry.Media.Description), "after ") ||
+		strings.HasPrefix(strings.ToLower(entry.Media.Description), "during ") ||
+		strings.HasPrefix(strings.ToLower(entry.Media.Description), "goku and his friends ") ||
+		strings.HasPrefix(strings.ToLower(entry.Media.Description), "a ") ||
+		strings.HasPrefix(strings.ToLower(entry.Media.Description), "with "))
+
+	isMovie := entry.Media.Format == string(platform.MediaFormatMovie) || entry.Media.Type == "MOVIE"
+
+	// Attempt local prehydrated metadata first for Dragon Ball media
+	if entry.Media.TmdbID > 0 && (isGenericSpanish || isEnglishDescription || isBrokenImageURL(entry.Media.PosterImage)) {
+		lookupID := entry.Media.TmdbID
+		if isMovie && lookupID < 1_000_000 {
+			lookupID += 1_000_000
+		}
+		if pre := scanner.CreatePrehydratedDragonBallMedia(lookupID); pre != nil {
+			preHydratedUpdated := false
+			if (isGenericSpanish || entry.Media.TitleSpanish == "") && pre.Title != nil && pre.Title.Spanish != nil && *pre.Title.Spanish != "" {
+				entry.Media.TitleSpanish = *pre.Title.Spanish
+				preHydratedUpdated = true
+			}
+			if entry.Media.TitleEnglish == "" && pre.Title != nil && pre.Title.English != nil && *pre.Title.English != "" {
+				entry.Media.TitleEnglish = *pre.Title.English
+				preHydratedUpdated = true
+			}
+			if entry.Media.TitleRomaji == "" && pre.Title != nil && pre.Title.Romaji != nil && *pre.Title.Romaji != "" {
+				entry.Media.TitleRomaji = *pre.Title.Romaji
+				preHydratedUpdated = true
+			}
+			if (isBrokenImageURL(entry.Media.PosterImage) || entry.Media.PosterImage == "") && pre.CoverImage != nil && pre.CoverImage.Large != nil && *pre.CoverImage.Large != "" {
+				entry.Media.PosterImage = *pre.CoverImage.Large
+				preHydratedUpdated = true
+			}
+			if (isBrokenImageURL(entry.Media.BannerImage) || entry.Media.BannerImage == "") && pre.BannerImage != nil && *pre.BannerImage != "" {
+				entry.Media.BannerImage = *pre.BannerImage
+				preHydratedUpdated = true
+			}
+			if (isEnglishDescription || entry.Media.Description == "" || entry.Media.Description == "Sin descripción") && pre.Description != nil && *pre.Description != "" {
+				entry.Media.Description = *pre.Description
+				preHydratedUpdated = true
+			}
+			if preHydratedUpdated {
+				_, _ = db.InsertLibraryMedia(h.App.Database, entry.Media)
+			}
+		}
+	}
+
 	// Only enrich if important metadata is missing OR if the stored image URL is a broken placeholder
 	missingMetadata := entry.Media.Description == "" ||
 		entry.Media.Description == "Sin descripción" ||
-		(entry.Media.TitleSpanish == "" && entry.Media.TitleEnglish == "") ||
+		entry.Media.TitleSpanish == "" ||
+		isGenericSpanish ||
 		isBrokenImageURL(entry.Media.PosterImage) ||
 		isBrokenImageURL(entry.Media.BannerImage)
 
@@ -445,12 +506,12 @@ func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry, s
 	}
 
 	updated := false
-	if nm.Description != nil && *nm.Description != "" && (entry.Media.Description == "" || entry.Media.Description == "Sin descripción") {
+	if nm.Description != nil && *nm.Description != "" && (entry.Media.Description == "" || entry.Media.Description == "Sin descripción" || isEnglishDescription) {
 		entry.Media.Description = *nm.Description
 		updated = true
 	}
 	if nm.Title != nil {
-		if nm.Title.Spanish != nil && *nm.Title.Spanish != "" && entry.Media.TitleSpanish == "" {
+		if nm.Title.Spanish != nil && *nm.Title.Spanish != "" && (entry.Media.TitleSpanish == "" || isGenericSpanish) {
 			entry.Media.TitleSpanish = *nm.Title.Spanish
 			updated = true
 		}

@@ -54,7 +54,10 @@ func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
 		return nil, 0, err
 	}
 
-	lfs := val.([]*dto.LocalFile)
+	lfs, ok := val.([]*dto.LocalFile)
+	if !ok || lfs == nil {
+		return nil, 0, errors.New("db: Local files cache returned unexpected type")
+	}
 
 	d.Logger.Debug().Int("count", len(lfs)).Msg("db: Local files retrieved from relational storage")
 	return lfs, 0, nil

@@ -3,13 +3,12 @@ let ctx = null
 let offscreenCanvas = null
 const events = new Map()
 const imageCache = new Map()
-let currentEvent = null
-let currentEventRendered = false
+let currentEventsKey = ""
 let timeOffset = 0
 let debug = false
 
 function getEventKey(event) {
-    return `${event.startTime}-${event.duration}-${event.imageData.substring(0, 50)}`
+    return `${event.startTime}-${event.duration}-${event.x || 0}-${event.y || 0}-${(event.imageData || "").substring(0, 30)}`
 }
 
 async function preloadImage(base64Data) {
@@ -36,32 +35,22 @@ async function handleAddEvent(event) {
 
     events.set(key, event)
 
-    try {
-        const img = await preloadImage(event.imageData)
-        imageCache.set(event.imageData, img)
-        logDebug("Preloaded image", {
-            startTime: event.startTime,
-            width: img.width,
-            height: img.height,
-        })
-    } catch (err) {
-        self.postMessage({
-            type: "error",
-            payload: { message: "Failed to preload image", error: err },
-        })
+    if (!imageCache.has(event.imageData)) {
+        try {
+            const img = await preloadImage(event.imageData)
+            imageCache.set(event.imageData, img)
+            logDebug("Preloaded image", {
+                startTime: event.startTime,
+                width: img.width,
+                height: img.height,
+            })
+        } catch (err) {
+            self.postMessage({
+                type: "error",
+                payload: { message: "Failed to preload image", error: err },
+            })
+        }
     }
-
-    logDebug("Added PGS event", {
-        startTime: event.startTime,
-        endTime: event.startTime + event.duration,
-        duration: event.duration,
-        width: event.width,
-        height: event.height,
-        x: event.x,
-        y: event.y,
-        canvasWidth: event.canvasWidth,
-        canvasHeight: event.canvasHeight,
-    })
 }
 
 function handleRender(payload) {
@@ -71,46 +60,24 @@ function handleRender(payload) {
 
     const currentTime = payload.currentTime + timeOffset
 
-    // Find the event that should be displayed at current time
-    let eventToDisplay = null
-
+    // Find all active events at current time
+    const activeEvents = []
     for (const event of events.values()) {
         const startTime = event.startTime
         const endTime = event.startTime + event.duration
 
         if (currentTime >= startTime && currentTime <= endTime) {
-            eventToDisplay = event
-            break
+            activeEvents.push(event)
         }
     }
 
-    // If event changed, clear canvas
-    if (eventToDisplay !== currentEvent) {
+    const keysNow = activeEvents.map(e => getEventKey(e)).join("|")
+    if (keysNow !== currentEventsKey) {
         ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height)
-        currentEventRendered = false
-
-        if (eventToDisplay) {
-            logDebug("Displaying new PGS event", {
-                currentTime,
-                startTime: eventToDisplay.startTime,
-                endTime: eventToDisplay.startTime + eventToDisplay.duration,
-                canvasWidth: offscreenCanvas.width,
-                canvasHeight: offscreenCanvas.height,
-            })
-        } else if (currentEvent) {
-            logDebug("Cleared PGS event", { currentTime })
+        currentEventsKey = keysNow
+        for (const event of activeEvents) {
+            renderEvent(event, payload.canvasWidth, payload.canvasHeight)
         }
-
-        currentEvent = eventToDisplay
-    }
-
-    // Render current event only if it hasn't been rendered yet
-    if (eventToDisplay && !currentEventRendered) {
-        renderEvent(eventToDisplay, payload.canvasWidth, payload.canvasHeight)
-        currentEventRendered = true
-    } else if (!eventToDisplay) {
-        ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height)
-        currentEventRendered = false
     }
 }
 
@@ -191,7 +158,7 @@ function handleResize(payload) {
 
     offscreenCanvas.width = payload.width
     offscreenCanvas.height = payload.height
-    currentEventRendered = false
+    currentEventsKey = ""
 
     logDebug("Resized canvas", {
         width: payload.width,
@@ -201,9 +168,15 @@ function handleResize(payload) {
 
 function handleClear() {
     events.clear()
+    for (const img of imageCache.values()) {
+        if (img && typeof img.close === "function") {
+            try {
+                img.close()
+            } catch (_) {}
+        }
+    }
     imageCache.clear()
-    currentEvent = null
-    currentEventRendered = false
+    currentEventsKey = ""
 
     if (ctx && offscreenCanvas) {
         ctx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height)
@@ -231,7 +204,14 @@ self.onmessage = async (e) => {
             break
 
         case "addEvents":
-            await Promise.all(payload.map(ev => handleAddEvent(ev)))
+            // Process in batches of 25 to prevent event loop choking
+            if (Array.isArray(payload)) {
+                const batchSize = 25
+                for (let i = 0; i < payload.length; i += batchSize) {
+                    const batch = payload.slice(i, i + batchSize)
+                    await Promise.all(batch.map(ev => handleAddEvent(ev)))
+                }
+            }
             break
 
         case "render":

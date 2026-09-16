@@ -10,16 +10,17 @@ export default function PlayerScreen() {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const [streamUrl, setStreamUrl] = useState('');
-  const [progress, setProgress] = useState(0);
   const [showOSD, setShowOSD] = useState(true);
   const osdTimerRef = useRef<any>(null);
 
   useEffect(() => {
+    let isCancelled = false;
     // Resolve stream
     const fetchStream = async () => {
       try {
         const res = await fetch(`${serverUrl}/api/v1/resolver/streams?episodeId=${selectedEpisodeId}`);
         const data = await res.json();
+        if (isCancelled) return;
         if (data && data.length > 0) {
           let url = data[0].url;
           if (!url.startsWith('http')) url = serverUrl + url;
@@ -28,6 +29,7 @@ export default function PlayerScreen() {
           // fallback to local-files fetch (simplified for this example)
           const localRes = await fetch(`${serverUrl}/api/v1/library/anime-entry/${selectedAnimeId}/local-files`);
           const localFiles = await localRes.json();
+          if (isCancelled) return;
           const fileInfo = localFiles.find((f: any) => f.episodeId === selectedEpisodeId);
           if (fileInfo) {
             const clientID = getDeviceId();
@@ -37,6 +39,7 @@ export default function PlayerScreen() {
               body: JSON.stringify({ path: fileInfo.path, streamType: 'direct', clientID, force: false })
             });
             const reqData = await reqRes.json();
+            if (isCancelled) return;
             if (reqData && reqData.streamUrl) {
               let url = reqData.streamUrl;
               if (!url.startsWith('http')) url = serverUrl + url;
@@ -45,10 +48,11 @@ export default function PlayerScreen() {
           }
         }
       } catch (err) {
-        console.error("Stream resolution failed", err);
+        if (!isCancelled) console.error("Stream resolution failed", err);
       }
     };
     fetchStream();
+    return () => { isCancelled = true; };
   }, [serverUrl, selectedAnimeId, selectedEpisodeId]);
 
   useEffect(() => {
@@ -60,10 +64,19 @@ export default function PlayerScreen() {
     return () => {
       if (videoRef.current) {
         videoRef.current.pause();
-        videoRef.current.src = '';
+        videoRef.current.removeAttribute('src');
+        videoRef.current.load();
       }
     };
   }, [streamUrl]);
+
+  const lastSyncRef = useRef<number>(0);
+
+  useEffect(() => {
+    return () => {
+      if (osdTimerRef.current) clearTimeout(osdTimerRef.current);
+    };
+  }, []);
 
   const triggerOSD = () => {
     setShowOSD(true);
@@ -73,10 +86,36 @@ export default function PlayerScreen() {
     }, 4000);
   };
 
+  const progressFillRef = useRef<HTMLDivElement>(null);
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      const perc = (videoRef.current.currentTime / videoRef.current.duration) * 100;
-      setProgress(isNaN(perc) ? 0 : perc);
+      const curr = videoRef.current.currentTime;
+      const dur = videoRef.current.duration;
+      const perc = dur > 0 ? (curr / dur) * 100 : 0;
+      if (progressFillRef.current) {
+        progressFillRef.current.style.width = `${perc}%`;
+      }
+
+      // Throttled continuity sync every 10 seconds
+      const now = Date.now();
+      if (now - lastSyncRef.current > 10000 && selectedEpisodeId && curr > 0) {
+        lastSyncRef.current = now;
+        fetch(`${serverUrl}/api/v1/continuity/item`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            options: {
+              mediaId: Number(selectedAnimeId) || 0,
+              episodeNumber: Number(selectedEpisodeId) || 1,
+              currentTime: curr,
+              duration: dur || 0,
+              kind: 'mediastream',
+              predictive: false,
+            },
+          }),
+        }).catch(() => {});
+      }
     }
   };
 
@@ -102,22 +141,22 @@ export default function PlayerScreen() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       triggerOSD();
-      if (!videoRef.current) return;
       
-      const key = e.key;
-      if (key === 'Enter' || e.keyCode === 13 || key === 'MediaPlayPause' || e.keyCode === 10014) {
-        if (videoRef.current.paused) videoRef.current.play();
-        else videoRef.current.pause();
-        e.preventDefault();
-      } else if (key === 'ArrowRight' || e.keyCode === 39) {
-        videoRef.current.currentTime += 10;
-        e.preventDefault();
-      } else if (key === 'ArrowLeft' || e.keyCode === 37) {
-        videoRef.current.currentTime -= 10;
-        e.preventDefault();
+      if (!videoRef.current) return;
+
+      if (e.key === ' ' || e.key === 'Enter' || e.keyCode === 13) {
+        if (videoRef.current.paused) {
+          videoRef.current.play().catch(() => {});
+        } else {
+          videoRef.current.pause();
+        }
+      } else if (e.key === 'ArrowRight' || e.keyCode === 39) {
+        videoRef.current.currentTime = Math.min(videoRef.current.duration, videoRef.current.currentTime + 10);
+      } else if (e.key === 'ArrowLeft' || e.keyCode === 37) {
+        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -134,7 +173,7 @@ export default function PlayerScreen() {
       <div className={`player-osd ${!showOSD ? 'hidden' : ''}`}>
         <div className="osd-title">Reproduciendo...</div>
         <div className="progress-bar-bg">
-          <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+          <div ref={progressFillRef} className="progress-bar-fill" style={{ width: '0%' }}></div>
         </div>
       </div>
     </div>

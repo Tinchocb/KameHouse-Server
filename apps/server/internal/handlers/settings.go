@@ -100,7 +100,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
 		Theme         *models.Theme                 `json:"theme"`
 		Notifications *models.NotificationSettings `json:"notifications"`
-		Platform      *models.PlatformSettings     `json:"Platform"`
+		Platform      *models.PlatformSettings     `json:"platform"`
 	}
 
 	var b body

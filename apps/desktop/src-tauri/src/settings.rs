@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, Runtime};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WindowBounds {
     pub x: i32,
     pub y: i32,
@@ -21,6 +22,7 @@ impl WindowBounds {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DesktopSettings {
     pub minimize_to_tray: bool,
     pub open_in_background: bool,
@@ -34,14 +36,13 @@ pub struct DesktopSettings {
     #[serde(default)]
     pub mpv_path: Option<String>,
 }
-
 impl Default for DesktopSettings {
     fn default() -> Self {
         Self {
             minimize_to_tray: true,
             open_in_background: false,
             open_at_launch: false,
-            update_channel: "github".to_string(),
+            update_channel: "kamehouse".to_string(),
             window_bounds: None,
             window_maximized: true,
             disable_hardware_acceleration: false,
@@ -53,6 +54,32 @@ impl Default for DesktopSettings {
 
 pub struct SettingsManager {
     settings: Arc<std::sync::RwLock<DesktopSettings>>,
+}
+
+/// Allowlist validation for a user-supplied mpv binary path (P0: LPE guard).
+/// Accepts `None`/empty (resolves `mpv` from PATH) or a path whose file name
+/// is exactly `mpv` / `mpv.exe`. Rejects shell interpreters, control chars,
+/// shell metacharacters and over-long values. The `--version` probe in
+/// `mpv.rs` remains as a second factor (binary must actually be mpv).
+pub fn is_allowed_mpv_binary(path: &str) -> bool {
+    let p = path.trim();
+    if p.is_empty() || p.len() > 260 {
+        return false;
+    }
+    if p.chars().any(|c| c.is_control()) {
+        return false;
+    }
+    // No shell metacharacters / argument injection via the setting value.
+    if p.chars().any(|c| matches!(c, ';' | '|' | '&' | '$' | '`' | '\n' | '\r' | '"' | '\'')) {
+        return false;
+    }
+    // File name must be mpv (optionally .exe); rejects powershell/cmd/sh/...
+    let file_name = p
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(p)
+        .to_ascii_lowercase();
+    file_name == "mpv" || file_name == "mpv.exe"
 }
 
 impl SettingsManager {
@@ -97,7 +124,12 @@ impl SettingsManager {
                             settings.window_maximized = loaded.window_maximized;
                             settings.disable_hardware_acceleration = loaded.disable_hardware_acceleration;
                             settings.enable_aggressive_gpu_flags = loaded.enable_aggressive_gpu_flags;
-                            settings.mpv_path = loaded.mpv_path;
+                            // P0: sanitize persisted value written by older versions.
+                            let persisted_mpv = loaded.mpv_path.clone().filter(|p| is_allowed_mpv_binary(p));
+                            if loaded.mpv_path.is_some() && persisted_mpv.is_none() {
+                                warn!("[Settings] Discarded unsafe persisted mpv_path");
+                            }
+                            settings.mpv_path = persisted_mpv;
                             info!("[Settings] Loaded from {:?}", path);
                         }
                         Err(e) => {
@@ -176,7 +208,18 @@ impl SettingsManager {
                     }
                 }
                 "mpvPath" | "mpv_path" => {
-                    settings.mpv_path = value.as_str().map(|s| s.to_string()).filter(|s| !s.trim().is_empty());
+                    // P0: allowlist — a hostile frontend value must never become Command::new(bin).
+                    match value.as_str() {
+                        Some(s) if !s.trim().is_empty() && is_allowed_mpv_binary(s) => {
+                            settings.mpv_path = Some(s.trim().to_string());
+                        }
+                        Some(s) if s.trim().is_empty() => {
+                            settings.mpv_path = None;
+                        }
+                        _ => {
+                            warn!("[Settings] Rejected unsafe mpv_path value, keeping previous");
+                        }
+                    }
                 }
                 _ => {
                     warn!("[Settings] Unknown setting key: {}", key);
@@ -210,5 +253,36 @@ impl SettingsManager {
 impl Default for SettingsManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_allowed_mpv_binary;
+
+    #[test]
+    fn mpv_path_allows_plain_and_real_paths() {
+        assert!(is_allowed_mpv_binary("mpv"));
+        assert!(is_allowed_mpv_binary("mpv.exe"));
+        assert!(is_allowed_mpv_binary("C:\\Program Files\\mpv\\mpv.exe"));
+        assert!(is_allowed_mpv_binary("/usr/bin/mpv"));
+    }
+
+    #[test]
+    fn mpv_path_rejects_shells_and_injection() {
+        for evil in [
+            "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "C:\\Windows\\System32\\cmd.exe",
+            "/bin/sh",
+            "mpv; rm -rf ~",
+            "mpv | cat /etc/passwd",
+            "mpv$(id)",
+            "mpv`id`",
+            "\"mpv\"",
+            "",
+            "   ",
+        ] {
+            assert!(!is_allowed_mpv_binary(evil), "should reject: {evil:?}");
+        }
     }
 }

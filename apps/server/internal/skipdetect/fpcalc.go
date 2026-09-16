@@ -331,6 +331,7 @@ func FingerprintRange(ctx context.Context, fpcalcBin, ffmpegPath, path string, s
 		pr.Close()
 		pw.Close()
 		_ = util.KillCmd(ffmpegCmd)
+		_ = ffmpegCmd.Wait()
 		return nil, 0, fmt.Errorf("failed to start fpcalc: %w", err)
 	}
 

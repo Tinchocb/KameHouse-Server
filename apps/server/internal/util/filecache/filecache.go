@@ -15,7 +15,8 @@ import (
 // CacheStore represents a single-process, file-based, key/value cache store.
 type CacheStore struct {
 	filePath string
-	mu       sync.Mutex
+	mu       sync.RWMutex
+	saveMu   sync.Mutex
 	data     map[string]*cacheItem
 }
 
@@ -23,10 +24,6 @@ type CacheStore struct {
 type Bucket struct {
 	name string
 	ttl  time.Duration
-}
-
-type PermanentBucket struct {
-	name string
 }
 
 func NewBucket(name string, ttl time.Duration) Bucket {
@@ -37,13 +34,6 @@ func (b *Bucket) Name() string {
 	return b.name
 }
 
-func NewPermanentBucket(name string) PermanentBucket {
-	return PermanentBucket{name: name}
-}
-
-func (b *PermanentBucket) Name() string {
-	return b.name
-}
 
 // Cacher represents a single-process, file-based, key/value cache.
 type Cacher struct {
@@ -122,8 +112,8 @@ func (c *Cacher) Set(bucket Bucket, key string, value interface{}) error {
 		return err
 	}
 	store.mu.Lock()
-	defer store.mu.Unlock()
 	store.data[key] = &cacheItem{Value: value, Expiration: lo.ToPtr(time.Now().Add(bucket.ttl))}
+	store.mu.Unlock()
 	return store.saveToFile()
 }
 
@@ -133,19 +123,21 @@ func Range[T any](c *Cacher, bucket Bucket, f func(key string, value T) bool) er
 		return err
 	}
 	store.mu.Lock()
-	defer store.mu.Unlock()
-
+	hasExpired := false
 	for key, item := range store.data {
 		if item.Expiration != nil && time.Now().After(*item.Expiration) {
 			delete(store.data, key)
+			hasExpired = true
 		} else {
 			itemVal, err := json.Marshal(item.Value)
 			if err != nil {
+				store.mu.Unlock()
 				return err
 			}
 			var out T
 			err = json.Unmarshal(itemVal, &out)
 			if err != nil {
+				store.mu.Unlock()
 				return err
 			}
 			if !f(key, out) {
@@ -153,8 +145,12 @@ func Range[T any](c *Cacher, bucket Bucket, f func(key string, value T) bool) er
 			}
 		}
 	}
+	store.mu.Unlock()
 
-	return store.saveToFile()
+	if hasExpired {
+		return store.saveToFile()
+	}
+	return nil
 }
 
 // Get retrieves the value for the given key from the given bucket.
@@ -163,18 +159,26 @@ func (c *Cacher) Get(bucket Bucket, key string, out interface{}) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	store.mu.RLock()
 	item, ok := store.data[key]
 	if !ok {
+		store.mu.RUnlock()
 		return false, nil
 	}
 	if item.Expiration != nil && time.Now().After(*item.Expiration) {
-		delete(store.data, key)
-		_ = store.saveToFile() // Ignore errors here
+		store.mu.RUnlock()
+		store.mu.Lock()
+		if cur, exists := store.data[key]; exists && cur.Expiration != nil && time.Now().After(*cur.Expiration) {
+			delete(store.data, key)
+		}
+		store.mu.Unlock()
+		go func() { _ = store.saveToFile() }()
 		return false, nil
 	}
-	data, err := json.Marshal(item.Value)
+	itemVal := item.Value
+	store.mu.RUnlock()
+
+	data, err := json.Marshal(itemVal)
 	if err != nil {
 		return false, err
 	}
@@ -182,24 +186,15 @@ func (c *Cacher) Get(bucket Bucket, key string, out interface{}) (bool, error) {
 }
 
 func GetAll[T any](c *Cacher, bucket Bucket) (map[string]T, error) {
-	store, err := c.getStore(bucket.name)
-	if err != nil {
-		return nil, err
-	}
-
 	data := make(map[string]T)
-	err = Range(c, bucket, func(key string, value T) bool {
+	err := Range(c, bucket, func(key string, value T) bool {
 		data[key] = value
 		return true
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
-	return data, store.saveToFile()
+	return data, nil
 }
 
 // Delete deletes the value for the given key from the given bucket.
@@ -209,8 +204,8 @@ func (c *Cacher) Delete(bucket Bucket, key string) error {
 		return err
 	}
 	store.mu.Lock()
-	defer store.mu.Unlock()
 	delete(store.data, key)
+	store.mu.Unlock()
 	return store.saveToFile()
 }
 
@@ -220,24 +215,30 @@ func DeleteIf[T any](c *Cacher, bucket Bucket, cond func(key string, value T) bo
 		return err
 	}
 	store.mu.Lock()
-	defer store.mu.Unlock()
-
+	deleted := false
 	for key, item := range store.data {
 		itemVal, err := json.Marshal(item.Value)
 		if err != nil {
+			store.mu.Unlock()
 			return err
 		}
 		var out T
 		err = json.Unmarshal(itemVal, &out)
 		if err != nil {
+			store.mu.Unlock()
 			return err
 		}
 		if cond(key, out) {
 			delete(store.data, key)
+			deleted = true
 		}
 	}
+	store.mu.Unlock()
 
-	return store.saveToFile()
+	if deleted {
+		return store.saveToFile()
+	}
+	return nil
 }
 
 // Empty empties the given bucket.
@@ -247,8 +248,8 @@ func (c *Cacher) Empty(bucket Bucket) error {
 		return err
 	}
 	store.mu.Lock()
-	defer store.mu.Unlock()
 	store.data = make(map[string]*cacheItem)
+	store.mu.Unlock()
 	return store.saveToFile()
 }
 
@@ -264,95 +265,13 @@ func (c *Cacher) Remove(bucketName string) error {
 	return nil
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// SetPerm sets the value for the given key in the permanent bucket (no expiration).
-func (c *Cacher) SetPerm(bucket PermanentBucket, key string, value interface{}) error {
-	store, err := c.getStore(bucket.name)
-	if err != nil {
-		return err
-	}
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	store.data[key] = &cacheItem{Value: value, Expiration: nil, UpdatedAt: lo.ToPtr(time.Now())} // No expiration
-	return store.saveToFile()
-}
-
-// GetPerm retrieves the value for the given key from the permanent bucket (ignores expiration).
-func (c *Cacher) GetPerm(bucket PermanentBucket, key string, out interface{}) (bool, error) {
-	store, err := c.getStore(bucket.name)
-	if err != nil {
-		return false, err
-	}
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	item, ok := store.data[key]
-	if !ok {
-		return false, nil
-	}
-	data, err := json.Marshal(item.Value)
-	if err != nil {
-		return false, err
-	}
-	return true, json.Unmarshal(data, out)
-}
-
-// DeletePerm deletes the value for the given key from the permanent bucket.
-func (c *Cacher) DeletePerm(bucket PermanentBucket, key string) error {
-	store, err := c.getStore(bucket.name)
-	if err != nil {
-		return err
-	}
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	delete(store.data, key)
-	return store.saveToFile()
-}
-
-// DeletePermOldest deletes the oldest value from the permanent bucket.
-func (c *Cacher) DeletePermOldest(bucket PermanentBucket) error {
-	store, err := c.getStore(bucket.name)
-	if err != nil {
-		return err
-	}
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	oldestKey := ""
-	oldestTime := time.Now()
-	for key, item := range store.data {
-		updatedAt := time.Time{} // Default to 0 time
-		if item.UpdatedAt != nil {
-			updatedAt = *item.UpdatedAt
-		}
-		if updatedAt.Before(oldestTime) {
-			oldestKey = key
-			oldestTime = updatedAt
-		}
-	}
-	delete(store.data, oldestKey)
-	return store.saveToFile()
-}
-
-// EmptyPerm empties the permanent bucket.
-func (c *Cacher) EmptyPerm(bucket PermanentBucket) error {
-	store, err := c.getStore(bucket.name)
-	if err != nil {
-		return err
-	}
-	store.mu.Lock()
-	defer store.mu.Unlock()
-	store.data = make(map[string]*cacheItem)
-	return store.saveToFile()
-}
-
-// RemovePerm calls Remove.
-func (c *Cacher) RemovePerm(bucketName string) error {
-	return c.Remove(bucketName)
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (cs *CacheStore) loadFromFile() error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
 	file, err := os.Open(cs.filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -372,13 +291,24 @@ func (cs *CacheStore) loadFromFile() error {
 }
 
 func (cs *CacheStore) saveToFile() error {
+	cs.saveMu.Lock()
+	defer cs.saveMu.Unlock()
+
+	// Fast snapshot of the map under read lock; releases cs.mu immediately so readers/writers aren't blocked by disk I/O
+	cs.mu.RLock()
+	snapshot := make(map[string]*cacheItem, len(cs.data))
+	for k, v := range cs.data {
+		snapshot[k] = v
+	}
+	cs.mu.RUnlock()
+
 	file, err := os.Create(cs.filePath)
 	if err != nil {
 		return fmt.Errorf("filecache: failed to create cache file: %w", err)
 	}
 	defer file.Close()
 
-	if err := json.NewEncoder(file).Encode(cs.data); err != nil {
+	if err := json.NewEncoder(file).Encode(snapshot); err != nil {
 		return fmt.Errorf("filecache: failed to encode cache data: %w", err)
 	}
 	return nil

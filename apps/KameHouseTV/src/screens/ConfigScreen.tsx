@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useFocusable } from '@noriginmedia/norigin-spatial-navigation';
+import React, { useState, useEffect, useRef } from 'react';
+import { useFocusable, FocusContext, setFocus } from '@noriginmedia/norigin-spatial-navigation';
 import { useStore } from '../store';
 import { scanNetwork } from '../utils/scanner';
 
@@ -37,18 +37,16 @@ const FocusableButton = ({ onClick, className, children, focusKey }: any) => {
   );
 };
 
-const FocusableInput = ({ value, onChange, placeholder, onEnter }: any) => {
+const FocusableInput = ({ value, onChange, placeholder, onEnter, focusKey }: any) => {
   const { ref, focused } = useFocusable({
-    onEnterPress: onEnter,
+    focusKey,
+    onEnterPress: () => {
+      if (ref.current) {
+        (ref.current as any).focus();
+      }
+      if (onEnter) onEnter();
+    },
   });
-  
-  useEffect(() => {
-    if (focused && ref.current) {
-      (ref.current as any).focus();
-    } else if (ref.current) {
-      (ref.current as any).blur();
-    }
-  }, [focused]);
 
   return (
     <input
@@ -69,6 +67,19 @@ export default function ConfigScreen() {
   
   const setServerUrl = useStore(state => state.setServerUrl);
   const setScreen = useStore(state => state.setScreen);
+
+  const { ref, focusKey } = useFocusable({
+    focusKey: 'CONFIG_SCREEN',
+    trackChildren: true,
+    autoRestoreFocus: true,
+  });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFocus('input-server-ip');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleConnect = async (urlToTest?: string) => {
     const rawUrl = urlToTest || ip;
@@ -91,60 +102,79 @@ export default function ConfigScreen() {
     }
   };
 
+  const connectTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (connectTimerRef.current) {
+        clearTimeout(connectTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleScan = () => {
     setScanning(true);
     setScanStatus('Buscando servidores en la red...');
+    let found = false;
     
     scanNetwork(
       (foundUrl) => {
+        found = true;
         setScanning(false);
         setIp(foundUrl);
         setScanStatus(`Encontrado: ${foundUrl}. Conectando...`);
-        setTimeout(() => handleConnect(foundUrl), 1000);
+        if (connectTimerRef.current) clearTimeout(connectTimerRef.current);
+        connectTimerRef.current = setTimeout(() => handleConnect(foundUrl), 1000);
       },
       (subnet) => {
         setScanStatus(`Escaneando subred ${subnet}.x...`);
       }
     ).then(() => {
-      if (scanning) {
-        setScanning(false);
-        setScanStatus('No se encontraron servidores.');
-      }
+      setScanning((isScanning) => {
+        if (isScanning && !found) {
+          setScanStatus('No se encontraron servidores.');
+          return false;
+        }
+        return isScanning;
+      });
     });
   };
 
   return (
-    <div className="screen" id="screen-config">
-      <div className="logo">Kame<span>House</span><small>TV</small></div>
-      <div className="subtitle">Configura tu servidor KameHouse</div>
-      <div className="panel">
-        <h2>Dirección del servidor</h2>
-        {error && <div style={{color: 'var(--error)', marginBottom: '16px', textAlign: 'center'}}>{error}</div>}
-        <div className="input-group">
-          <label>IP o dominio</label>
-          <FocusableInput 
-            value={ip} 
-            onChange={(e: any) => setIp(e.target.value)} 
-            placeholder="ej: 192.168.1.100:43211" 
-            onEnter={() => handleConnect()}
-          />
-          <div className="input-hint">Incluí el puerto si no usás el predeterminado (43211)</div>
-        </div>
-        <div className="btn-group">
-          <FocusableButton className="btn btn-primary" onClick={() => handleConnect()}>Conectar</FocusableButton>
-          <FocusableButton className="btn btn-secondary" onClick={handleScan}>
-            {scanning ? 'Buscando...' : 'Buscar en la red'}
-          </FocusableButton>
-        </div>
-        {scanStatus && (
-          <div style={{marginTop: '20px', color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center'}}>
-            {scanStatus}
+    <FocusContext.Provider value={focusKey}>
+      <div ref={ref as any} className="screen" id="screen-config">
+        <div className="logo">Kame<span>House</span><small>TV</small></div>
+        <div className="subtitle">Configura tu servidor KameHouse</div>
+        <div className="panel">
+          <h2>Dirección del servidor</h2>
+          {error && <div style={{color: 'var(--error)', marginBottom: '16px', textAlign: 'center'}}>{error}</div>}
+          <div className="input-group">
+            <label>IP o dominio</label>
+            <FocusableInput 
+              focusKey="input-server-ip"
+              value={ip} 
+              onChange={(e: any) => setIp(e.target.value)} 
+              placeholder="ej: 192.168.1.100:43211" 
+              onEnter={() => handleConnect()}
+            />
+            <div className="input-hint">Incluí el puerto si no usás el predeterminado (43211)</div>
           </div>
-        )}
+          <div className="btn-group">
+            <FocusableButton focusKey="btn-connect" className="btn btn-primary" onClick={() => handleConnect()}>Conectar</FocusableButton>
+            <FocusableButton focusKey="btn-scan" className="btn btn-secondary" onClick={handleScan}>
+              {scanning ? 'Buscando...' : 'Buscar en la red'}
+            </FocusableButton>
+          </div>
+          {scanStatus && (
+            <div style={{marginTop: '20px', color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center'}}>
+              {scanStatus}
+            </div>
+          )}
+        </div>
+        <div className="help-text" style={{ marginTop: '24px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6 }}>
+          Presioná <strong>Enter</strong> para conectar &middot; Usá las <strong>flechas</strong> para navegar &middot; <strong>Return</strong> para salir
+        </div>
       </div>
-      <div className="help-text" style={{ marginTop: '24px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6 }}>
-        Presioná <strong>Enter</strong> para conectar &middot; Usá las <strong>flechas</strong> para navegar &middot; <strong>Return</strong> para salir
-      </div>
-    </div>
+    </FocusContext.Provider>
   );
 }

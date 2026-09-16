@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+	"sync"
 )
 
 // Segment Types
@@ -172,6 +173,18 @@ func (d *PgsDecoder) parsePDS(data []byte) error {
 	return nil
 }
 
+// ResetDisplaySet clears stored objects and windows from previous display epochs to prevent memory leaks.
+func (d *PgsDecoder) ResetDisplaySet() {
+	for k := range d.objects {
+		delete(d.objects, k)
+	}
+	for k := range d.windows {
+		delete(d.windows, k)
+	}
+	d.currentObject = nil
+	d.currentComposition = nil
+}
+
 // parsePCS parses the Presentation Composition Segment
 // Contains timing and positioning information
 func (d *PgsDecoder) parsePCS(data []byte) error {
@@ -188,6 +201,11 @@ func (d *PgsDecoder) parsePCS(data []byte) error {
 		CompositionState: data[7],
 		PaletteUpdate:    data[8] == 0x80,
 		PaletteID:        data[9],
+	}
+
+	// Purge stale objects and windows when a new display epoch starts
+	if comp.CompositionState == CompStateEpochStart || comp.CompositionState == CompStateNormal || comp.CompositionState == CompStateAcquisitionPoint {
+		d.ResetDisplaySet()
 	}
 
 	numObjects := int(data[10])
@@ -284,6 +302,20 @@ func (d *PgsDecoder) parseODS(data []byte) (image.Image, error) {
 	width := binary.BigEndian.Uint16(data[7:9])
 	height := binary.BigEndian.Uint16(data[9:11])
 
+	// Caps anti-OOM: ODS craft con W/H 65535 o dataLength 16MB tumba el server.
+	const maxPGSData = 8 * 1024 * 1024
+	const maxPGSDim = 4096
+	const maxPGSPixels = 33 * 1024 * 1024 // ~8K
+	if dataLength > maxPGSData {
+		return nil, errors.New("PGS ODS dataLength exceeds safety limit")
+	}
+	if width == 0 || height == 0 || width > maxPGSDim || height > maxPGSDim {
+		return nil, errors.New("PGS ODS dimensions out of range")
+	}
+	if uint64(width)*uint64(height) > maxPGSPixels {
+		return nil, errors.New("PGS ODS pixel count exceeds safety limit")
+	}
+
 	// RLE data starts after header
 	rleData := data[11:]
 
@@ -343,6 +375,12 @@ func (d *PgsDecoder) parseODS(data []byte) (image.Image, error) {
 
 // decodeRLE implements the specific Run-Length Encoding used in PGS
 func decodeRLE(data []byte, pix []byte, width, height int) error {
+	if width <= 0 || height <= 0 {
+		return errors.New("invalid PGS dimensions")
+	}
+	if len(pix) != width*height {
+		return errors.New("pixel buffer size mismatch")
+	}
 	buf := bytes.NewReader(data)
 	idx := 0
 	limit := width * height
@@ -426,11 +464,12 @@ func decodeRLE(data []byte, pix []byte, width, height int) error {
 					}
 				}
 
-				// Fill pixels with bounds checking
-				endIdx := idx + runLength
-				if endIdx > limit {
-					endIdx = limit
-				}
+			// Fill pixels with bounds checking: RLE corrupto que excede se rechaza,
+			// no se trunca en silencio (ocultaba PGS falsos).
+			endIdx := idx + runLength
+			if endIdx > limit {
+				return fmt.Errorf("RLE run exceeds frame at idx %d (run %d, limit %d)", idx, runLength, limit)
+			}
 				for idx < endIdx {
 					if idx >= len(pix) {
 						return fmt.Errorf("pixel buffer overflow at idx %d during run fill", idx)
@@ -455,18 +494,27 @@ func clamp(f float64) uint8 {
 	return uint8(f)
 }
 
+var pgsBufferPool = sync.Pool{
+	New: func() any {
+		return bytes.NewBuffer(make([]byte, 0, 64*1024))
+	},
+}
+
 // EncodePgsImageToBase64PNG encodes a PGS image to a base64-encoded PNG string
 func EncodePgsImageToBase64PNG(img image.Image, compressionLevel png.CompressionLevel) (string, error) {
 	if img == nil {
 		return "", errors.New("image is nil")
 	}
 
-	var buf bytes.Buffer
+	buf := pgsBufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer pgsBufferPool.Put(buf)
+
 	encoder := &png.Encoder{
 		CompressionLevel: compressionLevel,
 	}
 
-	if err := encoder.Encode(&buf, img); err != nil {
+	if err := encoder.Encode(buf, img); err != nil {
 		return "", fmt.Errorf("failed to encode image: %w", err)
 	}
 

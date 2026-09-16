@@ -4,13 +4,13 @@
   "version": "0.1.0",
   "identifier": "com.kamehouse.desktop",
   "build": {
-    "frontendDist": "../web",
+    "frontendDist": "../../web/out",
     "devUrl": "http://127.0.0.1:43210",
     "beforeBuildCommand": "pnpm --filter kamehouse-web build"
   },
   "app": {
     "security": {
-      "csp": "default-src 'self' data: blob: https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https: http:; img-src 'self' data: blob: https: http:; font-src 'self' data: https: http:; connect-src 'self' https: http: ws: wss:; media-src 'self' data: blob: https: http:; worker-src 'self' blob:; frame-src https: http:;"
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* http://localhost:* ws://localhost:* https: wss:; media-src 'self' data: blob: http://127.0.0.1:* http://localhost:* https:; worker-src 'self' blob:; frame-src 'none';"
     }
   },
   "bundle": {
@@ -37,22 +37,20 @@
       "signingIdentity": "-"
     },
     "externalBin": [
-      "binaries/kamehouse-server-windows.exe",
-      "binaries/kamehouse-server-darwin-amd64",
-      "binaries/kamehouse-server-darwin-arm64",
-      "binaries/kamehouse-server-linux-amd64",
-      "binaries/kamehouse-server-linux-arm64"
+      "binaries/kamehouse-server"
     ]
   },
   "plugins": {
     "shell": {
-      "open": true
+      "open": false
     },
     "updater": {
-      "pubkey": "",
       "endpoints": [
-        "https://kamehouse.app/api/updates/{{target}}/{{current_version}}"
+        "https://kamehouse.app/api/updates/stable/latest.json"
       ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmtleSByZXF1aXJlZCBmb3IgdXBkYXRlciB0byB3b3JrCg==",
+      "asyncDownload": true,
+      "downloadInBackground": true,
       "dialog": true
     }
   }

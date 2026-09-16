@@ -4,3 +4,12 @@ kamehouse
 build_errors.log
 coverage.out
 .env
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+test_data_dir/
+logs/
+cache/
+*.cache
+

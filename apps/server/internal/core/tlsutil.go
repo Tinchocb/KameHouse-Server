@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"kamehouse/internal/util"
+
 	"github.com/rs/zerolog"
 )
 
@@ -42,6 +44,13 @@ func GenerateSelfSignedCert(certPath, keyPath string, logger *zerolog.Logger) er
 		return err
 	}
 
+	ips := []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
+	for _, ipStr := range util.GetLocalIPv4Addresses() {
+		if ip := net.ParseIP(ipStr); ip != nil {
+			ips = append(ips, ip)
+		}
+	}
+
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -54,7 +63,7 @@ func GenerateSelfSignedCert(certPath, keyPath string, logger *zerolog.Logger) er
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		DNSNames:              []string{"localhost"},
-		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+		IPAddresses:           ips,
 	}
 
 	// Create certificate
@@ -63,8 +72,8 @@ func GenerateSelfSignedCert(certPath, keyPath string, logger *zerolog.Logger) er
 		return err
 	}
 
-	// Save certificate
-	certOut, err := os.Create(certPath)
+	// Save certificate with safe permissions
+	certOut, err := os.OpenFile(certPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}

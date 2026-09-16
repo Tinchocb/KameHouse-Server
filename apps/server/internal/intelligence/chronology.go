@@ -1,6 +1,8 @@
 package intelligence
 
 import (
+	"strings"
+
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 )
@@ -154,15 +156,15 @@ var CanonicalTimeline = []*TimelineMilestone{
 	{
 		ID:           "m_dbz_freezer",
 		Order:        9,
-		Year:         "Año 762",
-		Title:        "Dragon Ball Z: Saga de Freezer y Namekusei",
+		Year:         "Año 762 - 763",
+		Title:        "Dragon Ball Z: Saga de Freezer, Namekusei y Garlic Jr.",
 		Era:          "dbz",
 		MediaType:    "SHOW",
 		MediaID:      12971,
 		TmdbID:       12971,
 		StartEpisode: 36,
-		EndEpisode:   107,
-		Description:  "Viaje a Namekusei, batalla contra las Fuerzas Especiales Ginyu y el legendario despertar del Súper Saiyajin.",
+		EndEpisode:   117,
+		Description:  "Viaje a Namekusei, batalla contra las Fuerzas Especiales Ginyu, despertar del Súper Saiyajin y crisis de Garlic Jr.",
 		CanonStatus:  "CANON",
 		Importance:   "CRUCIAL",
 	},
@@ -183,14 +185,14 @@ var CanonicalTimeline = []*TimelineMilestone{
 		ID:           "m_dbz_androids_cell",
 		Order:        11,
 		Year:         "Año 767",
-		Title:        "Dragon Ball Z: Saga de los Androides y los Juegos de Cell",
+		Title:        "Dragon Ball Z: Saga de los Androides, Cell y Torneo del Otro Mundo",
 		Era:          "dbz",
 		MediaType:    "SHOW",
 		MediaID:      12971,
 		TmdbID:       12971,
 		StartEpisode: 118,
-		EndEpisode:   194,
-		Description:  "Llegada de Trunks, la amenaza del bio-androide Cell y el ascenso de Gohan a Súper Saiyajin 2.",
+		EndEpisode:   199,
+		Description:  "Llegada de Trunks, la amenaza de Cell, el ascenso de Gohan a SSJ2 y el torneo de artes marciales del más allá.",
 		CanonStatus:  "CANON",
 		Importance:   "CRUCIAL",
 	},
@@ -249,8 +251,23 @@ var CanonicalTimeline = []*TimelineMilestone{
 		Importance:  "RECOMMENDED",
 	},
 	{
-		ID:           "m_dbs_gods_frieza",
+		ID:           "m_db_daima",
 		Order:        16,
+		Year:         "Año 774 - 775",
+		Title:        "Dragon Ball Daima: La Gran Aventura en el Reino Demonio",
+		Era:          "dbdaima",
+		MediaType:    "SHOW",
+		MediaID:      236994,
+		TmdbID:       236994,
+		StartEpisode: 1,
+		EndEpisode:   20,
+		Description:  "La última obra concebida por Akira Toriyama. Goku y sus amigos convertidos en niños exploran el misterioso Reino Demoniaco.",
+		CanonStatus:  "CANON",
+		Importance:   "CRUCIAL",
+	},
+	{
+		ID:           "m_dbs_gods_frieza",
+		Order:        17,
 		Year:         "Año 778 - 779",
 		Title:        "Dragon Ball Super: Batalla de los Dioses y Resurrección de Freezer",
 		Era:          "dbs",
@@ -265,7 +282,7 @@ var CanonicalTimeline = []*TimelineMilestone{
 	},
 	{
 		ID:           "m_dbs_u6_black",
-		Order:        17,
+		Order:        18,
 		Year:         "Año 779 - 780",
 		Title:        "Dragon Ball Super: Torneo del Universo 6 y la Saga de Goku Black",
 		Era:          "dbs",
@@ -280,7 +297,7 @@ var CanonicalTimeline = []*TimelineMilestone{
 	},
 	{
 		ID:           "m_dbs_top",
-		Order:        18,
+		Order:        19,
 		Year:         "Año 780",
 		Title:        "Dragon Ball Super: Torneo del Poder (Supervivencia Universal)",
 		Era:          "dbs",
@@ -295,7 +312,7 @@ var CanonicalTimeline = []*TimelineMilestone{
 	},
 	{
 		ID:          "m_dbs_broly",
-		Order:       19,
+		Order:       20,
 		Year:        "Año 780",
 		Title:       "Dragon Ball Super: Broly (2018)",
 		Era:         "dbs",
@@ -308,7 +325,7 @@ var CanonicalTimeline = []*TimelineMilestone{
 	},
 	{
 		ID:          "m_dbs_superhero",
-		Order:       20,
+		Order:       21,
 		Year:        "Año 783",
 		Title:       "Dragon Ball Super: Super Hero (2022)",
 		Era:         "dbs",
@@ -318,21 +335,6 @@ var CanonicalTimeline = []*TimelineMilestone{
 		Description: "La nueva Patrulla Roja crea a Gamma 1 y 2 y a Cell Max. Gohan Bestia y Piccolo Naranja desatan su máximo poder.",
 		CanonStatus: "CANON",
 		Importance:  "CRUCIAL",
-	},
-	{
-		ID:           "m_db_daima",
-		Order:        21,
-		Year:         "Año 784",
-		Title:        "Dragon Ball Daima: La Gran Aventura en el Reino Demonio",
-		Era:          "dbdaima",
-		MediaType:    "SHOW",
-		MediaID:      236994,
-		TmdbID:       236994,
-		StartEpisode: 1,
-		EndEpisode:   20,
-		Description:  "La última obra concebida por Akira Toriyama. Goku y sus amigos convertidos en niños exploran el misterioso Reino Demoniaco.",
-		CanonStatus:  "CANON",
-		Importance:   "CRUCIAL",
 	},
 	{
 		ID:           "m_db_gt",
@@ -385,6 +387,18 @@ func BuildChronologyResponse(database *db.Database) *ChronologyResponse {
 	watchedCount := 0
 	var nextCandidate *TimelineMilestone
 
+	completedMedia := make(map[uint]bool)
+	if database != nil {
+		var listData []*models.MediaEntryListData
+		if err := database.Gorm().Find(&listData).Error; err == nil {
+			for _, ld := range listData {
+				if strings.EqualFold(ld.Status, "COMPLETED") {
+					completedMedia[ld.LibraryMediaID] = true
+				}
+			}
+		}
+	}
+
 	for _, tm := range CanonicalTimeline {
 		item := *tm // copy
 
@@ -395,11 +409,14 @@ func BuildChronologyResponse(database *db.Database) *ChronologyResponse {
 			if item.BackdropImage == "" && lm.BannerImage != "" {
 				item.BackdropImage = lm.BannerImage
 			}
+			if completedMedia[lm.ID] {
+				item.IsWatched = true
+				item.WatchedPercent = 100
+			}
 		}
 
 		if item.IsWatched {
 			watchedCount++
-			item.WatchedPercent = 100
 		} else if nextCandidate == nil {
 			nextCandidate = &item
 		}

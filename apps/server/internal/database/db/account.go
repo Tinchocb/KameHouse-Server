@@ -3,11 +3,12 @@ package db
 import (
 	"errors"
 	"kamehouse/internal/database/models"
+	"sync/atomic"
 
 	"gorm.io/gorm/clause"
 )
 
-var accountCache *models.Account
+var accountCache atomic.Pointer[models.Account]
 
 func (db *Database) UpsertAccount(acc *models.Account) (*models.Account, error) {
 	err := db.gormdb.Clauses(clause.OnConflict{
@@ -21,9 +22,9 @@ func (db *Database) UpsertAccount(acc *models.Account) (*models.Account, error) 
 	}
 
 	if acc.Username != "" {
-		accountCache = acc
+		accountCache.Store(acc)
 	} else {
-		accountCache = nil
+		accountCache.Store(nil)
 	}
 
 	return acc, nil
@@ -31,8 +32,8 @@ func (db *Database) UpsertAccount(acc *models.Account) (*models.Account, error) 
 
 func (db *Database) GetAccount() (*models.Account, error) {
 
-	if accountCache != nil {
-		return accountCache, nil
+	if cached := accountCache.Load(); cached != nil {
+		return cached, nil
 	}
 
 	var acc models.Account
@@ -44,7 +45,7 @@ func (db *Database) GetAccount() (*models.Account, error) {
 		return nil, errors.New("account not found")
 	}
 
-	accountCache = &acc
+	accountCache.Store(&acc)
 
 	return &acc, err
 }

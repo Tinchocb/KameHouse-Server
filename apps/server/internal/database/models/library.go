@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"kamehouse/internal/platforms/platform"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -106,6 +107,9 @@ func (m *LibraryMedia) GetPreferredTitle() string {
 	if m == nil {
 		return ""
 	}
+	if m.TitleSpanish != "" && !strings.EqualFold(m.TitleSpanish, "Dragon Ball Serie") && !strings.EqualFold(m.TitleSpanish, "Dragon Ball Series") {
+		return m.TitleSpanish
+	}
 	if m.TitleEnglish != "" {
 		return m.TitleEnglish
 	}
@@ -176,8 +180,8 @@ type LibraryEpisode struct {
 	RuntimeMinutes int       `gorm:"column:runtime_minutes" json:"runtimeMinutes"`
 
 	// Saga/Story Arc association
-	SagaName string `gorm:"column:saga_name" json:"sagaName"`
-	SagaId   string `gorm:"column:saga_id" json:"sagaId"`
+	SagaName string `gorm:"column:saga_name;index:idx_episode_saga" json:"sagaName"`
+	SagaId   string `gorm:"column:saga_id;index:idx_episode_saga" json:"sagaId"`
 
 	Tags              json.RawMessage `gorm:"column:tags;type:text" json:"tags"`
 	DominantVibe      string          `gorm:"column:dominant_vibe" json:"dominantVibe"`
@@ -205,8 +209,8 @@ type ProviderMapping struct {
 	LibraryMediaID uint          `gorm:"column:library_media_id;index" json:"libraryMediaId"`
 	LibraryMedia   *LibraryMedia `gorm:"foreignKey:LibraryMediaID" json:"-"`
 
-	Provider   string `gorm:"column:provider;index" json:"provider"` // "tmdb", "platform", "tvdb"
-	ExternalID string `gorm:"column:external_id;index" json:"externalId"`
+	Provider   string `gorm:"column:provider;index;index:idx_provider_external" json:"provider"` // "tmdb", "platform", "tvdb"
+	ExternalID string `gorm:"column:external_id;index;index:idx_provider_external" json:"externalId"`
 }
 
 // MediaEntryListData stores the user's progress and watch status for a specific LibraryMedia

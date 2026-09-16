@@ -11,6 +11,12 @@ import (
 	"github.com/samber/mo"
 )
 
+var (
+	reAlphaLetters = regexp.MustCompile(`[A-Za-z]`)
+	reDigitsOnly   = regexp.MustCompile(`[0-9]+`)
+	reDigitsGroup  = regexp.MustCompile(`([0-9]+)`)
+)
+
 type (
 	AnimeWrapperImpl struct {
 		metadata  mo.Option[*metadata.AnimeMetadata]
@@ -103,7 +109,7 @@ func getDefaultOverview(baseAnime *platform.UnifiedMedia, ep string, epNumber in
 	if ep == "" {
 		return ""
 	}
-	if regexp.MustCompile(`[A-Za-z]`).MatchString(ep) {
+	if reAlphaLetters.MatchString(ep) {
 		return "Episode " + ep + " of " + baseAnime.GetTitleSafe() + "."
 	}
 
@@ -150,11 +156,8 @@ func getOrdinal(n int) string {
 }
 
 func ExtractEpisodeInteger(s string) (int, bool) {
-	pattern := "[0-9]+"
-	regex := regexp.MustCompile(pattern)
-
 	// Find the first match in the input string.
-	match := regex.FindString(s)
+	match := reDigitsOnly.FindString(s)
 
 	if match != "" {
 		// Convert the matched string to an integer.
@@ -172,11 +175,9 @@ func OffsetAnidbEpisode(s string, offset int) string {
 	if offset == 0 {
 		return s
 	}
-	pattern := "([0-9]+)"
-	regex := regexp.MustCompile(pattern)
 
 	// Replace the first matched integer with the incremented value.
-	result := regex.ReplaceAllStringFunc(s, func(matched string) string {
+	result := reDigitsGroup.ReplaceAllStringFunc(s, func(matched string) string {
 		num, err := strconv.Atoi(matched)
 		if err == nil {
 			num = num + offset

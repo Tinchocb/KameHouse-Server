@@ -3,7 +3,10 @@ package skipdetect
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sort"
+	"sync"
+	"sync/atomic"
 )
 
 // crossChunkLen es la ventana (en segundos) que se huella al inicio y al final de
@@ -46,34 +49,74 @@ func (d *Detector) crossEpisodeScan(ctx context.Context, fpcalcBin string, media
 		}
 	}
 
-	fps := make(map[int]*epFingerprint)
-	total := len(toFingerprint)
-	done := 0
+	toFingerprintSlice := make([]int, 0, len(toFingerprint))
 	for epNum := range toFingerprint {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-		}
-		ep := byNum[epNum]
-		done++
-		d.emit(mediaID, "fingerprinting", fmt.Sprintf("Generando huella de audio (episodio %d)...", ep.EpisodeNumber), int(float64(done)/float64(total)*100))
+		toFingerprintSlice = append(toFingerprintSlice, epNum)
+	}
 
-		chunk := chunkLenFor(ep.Duration)
-		// Vía ffmpeg con track explícito: este método compara episodios ENTRE SÍ,
-		// así que si la autoselección de ffmpeg eligiera un track distinto en cada
-		// uno, se compararían idiomas distintos y no habría subsecuencia común.
-		introFP, _, err := FingerprintRange(ctx, fpcalcBin, d.ffmpegPath, ep.Path, 0, chunk, ep.AudioIdx)
-		if err != nil {
-			d.logger.Warn().Err(err).Str("path", ep.Path).Msg("skipdetect: fallo al huellar intro")
-			continue
-		}
-		outroFP, _, err := FingerprintRange(ctx, fpcalcBin, d.ffmpegPath, ep.Path, ep.Duration-chunk, chunk, ep.AudioIdx)
-		if err != nil {
-			d.logger.Warn().Err(err).Str("path", ep.Path).Msg("skipdetect: fallo al huellar outro")
-			continue
-		}
-		fps[epNum] = &epFingerprint{introFP: introFP, outroFP: outroFP, duration: ep.Duration}
+	fps := make(map[int]*epFingerprint)
+	var fpsMu sync.Mutex
+	total := len(toFingerprintSlice)
+	var doneCount atomic.Int32
+
+	numWorkers := runtime.NumCPU()
+	if numWorkers > 4 {
+		numWorkers = 4
+	}
+	if numWorkers < 2 {
+		numWorkers = 2
+	}
+	if len(toFingerprintSlice) < numWorkers {
+		numWorkers = len(toFingerprintSlice)
+	}
+
+	epChan := make(chan int, len(toFingerprintSlice))
+	for _, epNum := range toFingerprintSlice {
+		epChan <- epNum
+	}
+	close(epChan)
+
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for epNum := range epChan {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				ep := byNum[epNum]
+				chunk := chunkLenFor(ep.Duration)
+				// Vía ffmpeg con track explícito: este método compara episodios ENTRE SÍ,
+				// así que si la autoselección de ffmpeg eligiera un track distinto en cada
+				// uno, se compararían idiomas distintos y no habría subsecuencia común.
+				introFP, _, err := FingerprintRange(ctx, fpcalcBin, d.ffmpegPath, ep.Path, 0, chunk, ep.AudioIdx)
+				if err != nil {
+					d.logger.Warn().Err(err).Str("path", ep.Path).Msg("skipdetect: fallo al huellar intro")
+					continue
+				}
+				outroFP, _, err := FingerprintRange(ctx, fpcalcBin, d.ffmpegPath, ep.Path, ep.Duration-chunk, chunk, ep.AudioIdx)
+				if err != nil {
+					d.logger.Warn().Err(err).Str("path", ep.Path).Msg("skipdetect: fallo al huellar outro")
+					continue
+				}
+
+				currentDone := doneCount.Add(1)
+				d.emit(mediaID, "fingerprinting", fmt.Sprintf("Generando huella de audio (episodio %d)...", ep.EpisodeNumber), int(float64(currentDone)/float64(total)*100))
+
+				fpsMu.Lock()
+				fps[epNum] = &epFingerprint{introFP: introFP, outroFP: outroFP, duration: ep.Duration}
+				fpsMu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+
+	if ctx.Err() != nil {
+		return nil
 	}
 
 	if len(fps) < 2 {

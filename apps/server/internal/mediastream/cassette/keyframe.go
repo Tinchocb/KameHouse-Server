@@ -2,6 +2,7 @@ package cassette
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -55,6 +56,27 @@ func (ki *KeyframeIndex) Length() (int32, bool) {
 	return int32(len(ki.Keyframes)), ki.IsDone
 }
 
+// GetError returns any extraction error under read lock.
+func (ki *KeyframeIndex) GetError() error {
+	ki.mu.RLock()
+	defer ki.mu.RUnlock()
+	return ki.Err
+}
+
+// SetError stores an extraction error under write lock.
+func (ki *KeyframeIndex) SetError(err error) {
+	ki.mu.Lock()
+	defer ki.mu.Unlock()
+	ki.Err = err
+}
+
+// SetDone marks the keyframe extraction as complete under write lock.
+func (ki *KeyframeIndex) SetDone() {
+	ki.mu.Lock()
+	defer ki.mu.Unlock()
+	ki.IsDone = true
+}
+
 // AddListener registers a callback for new keyframes
 func (ki *KeyframeIndex) AddListener(fn func([]float64)) {
 	ki.mu.Lock()
@@ -96,7 +118,7 @@ func getOrExtractKeyframes(
 	if v, ok := kfCache.Load(hash); ok {
 		ki := v.(*KeyframeIndex)
 		ki.ready.Wait()
-		return ki, ki.Err
+		return ki, ki.GetError()
 	}
 
 	kfCacheMu.Lock()
@@ -104,7 +126,7 @@ func getOrExtractKeyframes(
 		kfCacheMu.Unlock()
 		ki := v.(*KeyframeIndex)
 		ki.ready.Wait()
-		return ki, ki.Err
+		return ki, ki.GetError()
 	}
 
 	ki := &KeyframeIndex{Sha: hash}
@@ -117,14 +139,18 @@ func getOrExtractKeyframes(
 		doneOnce.Do(ki.ready.Done)
 	}
 
-	var err error
 	go func() {
+		var err error
 		defer func() {
-			ki.Err = err
-			unblock()
+			if r := recover(); r != nil {
+				err = fmt.Errorf("panic extracting keyframes: %v", r)
+				logger.Error().Msgf("cassette: %v", err)
+			}
 			if err != nil {
+				ki.SetError(err)
 				kfCache.Delete(hash)
 			}
+			unblock()
 		}()
 
 		diskPath := filepath.Join(settings.KeyframeCacheDir, hash+".json")
@@ -132,17 +158,19 @@ func getOrExtractKeyframes(
 		// Try disk cache first
 		if err = getSavedInfo(diskPath, ki); err == nil {
 			logger.Trace().Msg("cassette: keyframes disk cache HIT")
+			ki.SetDone()
 			return
 		}
 
 		// Extract from the file
 		if err = extractKeyframes(settings.FfprobePath, path, ki, hash, unblock, logger); err == nil {
+			ki.SetDone()
 			_ = saveInfo(diskPath, ki)
 		}
 	}()
 
 	ki.ready.Wait()
-	return ki, ki.Err
+	return ki, ki.GetError()
 }
 // extractKeyframes probes the file for keyframes
 func extractKeyframes(
@@ -171,7 +199,11 @@ func extractKeyframes(
 	}
 
 	// Optimize keyframe extraction by reading packet headers (avoids decoding the video)
-	cmd := util.NewCmd(
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	cmd := util.NewCmdCtx(
+		ctx,
 		probeBin,
 		"-loglevel", "error",
 		"-select_streams", "v:0",
@@ -185,8 +217,14 @@ func extractKeyframes(
 		return err
 	}
 	if err := cmd.Start(); err != nil {
+		_ = stdout.Close()
 		return err
 	}
+	defer func() {
+		cancel()
+		_ = stdout.Close()
+		_ = cmd.Wait()
+	}()
 
 	scanner := bufio.NewScanner(stdout)
 	buf := make([]float64, 0, 1000)
@@ -250,7 +288,7 @@ func extractKeyframes(
 	}
 
 	flush(true)
-	ki.IsDone = true
+	ki.SetDone()
 	return nil
 }
 // makeDummyKeyframes at 2s intervals
@@ -295,7 +333,7 @@ func extractKeyframesFromMatroska(path string, ki *KeyframeIndex, unblock func()
 
 	ki.append(buf)
 	unblock()
-	ki.IsDone = true
+	ki.SetDone()
 
 	logger.Info().
 		Int("keyframes", len(cues)).

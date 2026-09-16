@@ -3,13 +3,7 @@ package httputil
 import (
 	"net"
 	"net/http"
-	"sync"
 	"time"
-)
-
-var (
-	defaultClient     *http.Client
-	defaultClientOnce sync.Once
 )
 
 type ClientOptions struct {
@@ -56,23 +50,9 @@ func NewClient(opts *ClientOptions) *http.Client {
 	}
 }
 
-func DefaultClient() *http.Client {
-	defaultClientOnce.Do(func() {
-		defaultClient = NewClient(DefaultClientOptions())
-	})
-	return defaultClient
-}
-
 func NewClientWithTimeout(timeout time.Duration) *http.Client {
 	opts := DefaultClientOptions()
 	opts.Timeout = timeout
-	return NewClient(opts)
-}
-
-func NewStreamingClient() *http.Client {
-	opts := DefaultClientOptions()
-	opts.Timeout = 0
-	opts.IdleConnTimeout = 120 * time.Second
 	return NewClient(opts)
 }
 

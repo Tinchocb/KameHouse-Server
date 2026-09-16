@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"fmt"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -176,6 +177,32 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 	mediaMap := make(map[int]*models.LibraryMedia)
 	listDataMap := make(map[int]*models.MediaEntryListData)
 
+	// Batch preload all LibraryMedia and MediaEntryListData to eliminate N+1 queries
+	var allLibraryMedia []*models.LibraryMedia
+	if err := dbInfo.Gorm().Find(&allLibraryMedia).Error; err != nil {
+		opts.Database.Logger.Error().Err(err).Msg("anime/collection: Failed to preload LibraryMedia")
+	}
+
+	byPK := make(map[uint]*models.LibraryMedia, len(allLibraryMedia))
+	byTmdbType := make(map[string]*models.LibraryMedia, len(allLibraryMedia))
+	byTmdb := make(map[int]*models.LibraryMedia, len(allLibraryMedia))
+	for _, m := range allLibraryMedia {
+		byPK[m.ID] = m
+		byTmdbType[fmt.Sprintf("%d-%s", m.TmdbID, m.Type)] = m
+		if _, exists := byTmdb[m.TmdbID]; !exists {
+			byTmdb[m.TmdbID] = m
+		}
+	}
+
+	var allListData []*models.MediaEntryListData
+	if err := dbInfo.Gorm().Find(&allListData).Error; err != nil {
+		opts.Database.Logger.Error().Err(err).Msg("anime/collection: Failed to preload MediaEntryListData")
+	}
+	listDataByMediaID := make(map[uint]*models.MediaEntryListData, len(allListData))
+	for _, ld := range allListData {
+		listDataByMediaID[ld.LibraryMediaID] = ld
+	}
+
 	for _, id := range mIds {
 		if id == 0 {
 			continue
@@ -186,54 +213,43 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 		var lookupId uint
 
 		// 1. First, try looking up by MediaID directly.
-		// If id >= 1_000_000, it's a TMDB movie ID with offset.
-		// We should look it up by the tmdb_id column.
 		if id >= 1_000_000 {
-			m, err := db.GetLibraryMediaByTmdbIdAndType(dbInfo, id-1_000_000, "MOVIE")
-			if err == nil && m != nil {
+			tmdbID := id - 1_000_000
+			if m, ok := byTmdbType[fmt.Sprintf("%d-MOVIE", tmdbID)]; ok {
 				media = m
 				lookupId = m.ID
-			} else {
-				m, err = db.GetLibraryMediaByTmdbIdAndType(dbInfo, id-1_000_000, "SHOW")
-				if err == nil && m != nil {
-					media = m
-					lookupId = m.ID
-				}
+			} else if m, ok := byTmdbType[fmt.Sprintf("%d-SHOW", tmdbID)]; ok {
+				media = m
+				lookupId = m.ID
 			}
 		} else if id > 0 {
-			// Try as a direct primary key (common for AniList or existing entries)
-			m, err := db.GetLibraryMediaByID(dbInfo, uint(id))
-			if err == nil && m != nil {
+			if m, ok := byPK[uint(id)]; ok {
 				media = m
 				lookupId = uint(id)
 			}
 		}
 
-		// 2. If not found by direct lookup, try using the LibraryMediaId association 
-		// from local files (the "explicit" link created by the scanner)
+		// 2. If not found by direct lookup, try using the LibraryMediaId association from local files
 		if media == nil {
 			if libMediaId, ok := mediaIdToLibraryMediaId[id]; ok && libMediaId > 0 {
-				m, err := db.GetLibraryMediaByID(dbInfo, libMediaId)
-				if err == nil && m != nil {
+				if m, ok := byPK[libMediaId]; ok {
 					media = m
 					lookupId = libMediaId
 				}
 			}
 		}
 
-		// 3. Fallback: If it's a positive ID but not >= 1M, it might STILL be a TMDB ID
-		// stored in the tmdb_id column instead of being the primary key.
+		// 3. Fallback: If it's a positive ID but not >= 1M, look up in tmdb map
 		if media == nil && id > 0 && id < 1_000_000 {
-			m, err := db.GetLibraryMediaByTmdbIdAndType(dbInfo, id, "SHOW")
-			if err == nil && m != nil {
+			if m, ok := byTmdbType[fmt.Sprintf("%d-SHOW", id)]; ok {
 				media = m
 				lookupId = m.ID
-			} else {
-				m, err = db.GetLibraryMediaByTmdbIdAndType(dbInfo, id, "MOVIE")
-				if err == nil && m != nil {
-					media = m
-					lookupId = m.ID
-				}
+			} else if m, ok := byTmdbType[fmt.Sprintf("%d-MOVIE", id)]; ok {
+				media = m
+				lookupId = m.ID
+			} else if m, ok := byTmdb[id]; ok {
+				media = m
+				lookupId = m.ID
 			}
 		}
 
@@ -243,10 +259,9 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 			opts.Database.Logger.Debug().Int("mediaID", id).Msg("anime/collection: Failed to hydrate media entry")
 		}
 
-		// Look up list data using the same ID that successfully found the media
+		// Look up list data using the lookupId
 		if lookupId > 0 {
-			ld, err := db.GetMediaEntryListData(dbInfo, lookupId)
-			if err == nil && ld != nil {
+			if ld, ok := listDataByMediaID[lookupId]; ok {
 				listData = ld
 			}
 		}
@@ -425,16 +440,94 @@ func (lc *LibraryCollection) hydrateContinueWatchingList(
 		mIds[i] = entry.MediaID
 	}
 
-	// Create a new Entry for each media id
-	mEntryPool := pool.NewWithResults[*Entry]()
+	// Batch preload LibraryEpisodes across all media IDs in 1 query to avoid N+1 lookups.
+	// Map external MediaID (TMDB ID or +1M movie offset) to internal LibraryMedia.ID (PK).
+	mediaIDToLibraryMediaID := make(map[int]uint)
+	for _, lf := range localFiles {
+		if lf.LibraryMediaId > 0 && lf.MediaID > 0 {
+			mediaIDToLibraryMediaID[lf.MediaID] = lf.LibraryMediaId
+		}
+	}
+
+	var unmappedMIDs []int
 	for _, mID := range mIds {
+		if _, ok := mediaIDToLibraryMediaID[mID]; !ok {
+			unmappedMIDs = append(unmappedMIDs, mID)
+		}
+	}
+
+	if len(unmappedMIDs) > 0 && database != nil {
+		var tmdbIDs []int
+		for _, id := range unmappedMIDs {
+			if id >= 1_000_000 {
+				tmdbIDs = append(tmdbIDs, id-1_000_000)
+			} else {
+				tmdbIDs = append(tmdbIDs, id)
+			}
+		}
+		var foundMedias []*models.LibraryMedia
+		if err := database.Gorm().Where("tmdb_id IN (?) OR id IN (?)", tmdbIDs, unmappedMIDs).Find(&foundMedias).Error; err == nil {
+			for _, m := range foundMedias {
+				mediaIDToLibraryMediaID[int(m.ID)] = m.ID
+				mediaIDToLibraryMediaID[m.TmdbID] = m.ID
+				if m.Type == "MOVIE" || m.TmdbID+1_000_000 > 1_000_000 {
+					mediaIDToLibraryMediaID[m.TmdbID+1_000_000] = m.ID
+				}
+			}
+		}
+	}
+
+	libIDSet := make(map[uint]struct{})
+	for _, mID := range mIds {
+		if libID, ok := mediaIDToLibraryMediaID[mID]; ok && libID > 0 {
+			libIDSet[libID] = struct{}{}
+		}
+	}
+	var libraryMediaIDs []uint
+	for libID := range libIDSet {
+		libraryMediaIDs = append(libraryMediaIDs, libID)
+	}
+
+	var batchEpisodes []*models.LibraryEpisode
+	episodesByMedia := make(map[uint]map[string]*models.LibraryEpisode)
+	if len(libraryMediaIDs) > 0 && database != nil {
+		if err := database.Gorm().Where("library_media_id IN (?)", libraryMediaIDs).Find(&batchEpisodes).Error; err == nil {
+			for _, ep := range batchEpisodes {
+				if _, ok := episodesByMedia[ep.LibraryMediaID]; !ok {
+					episodesByMedia[ep.LibraryMediaID] = make(map[string]*models.LibraryEpisode)
+				}
+				key := fmt.Sprintf("%d-%d", ep.SeasonNumber, ep.EpisodeNumber)
+				episodesByMedia[ep.LibraryMediaID][key] = ep
+				if ep.AbsoluteNumber > 0 {
+					absKey := fmt.Sprintf("abs-%d", ep.AbsoluteNumber)
+					episodesByMedia[ep.LibraryMediaID][absKey] = ep
+				}
+			}
+		}
+	}
+
+	// Create a new Entry for each media id
+	mEntryPool := pool.NewWithResults[*Entry]().WithMaxGoroutines(8)
+	for _, mID := range mIds {
+		mID := mID
 		mEntryPool.Go(func() *Entry {
+			var eps map[string]*models.LibraryEpisode
+			if libID, ok := mediaIDToLibraryMediaID[mID]; ok {
+				if m, found := episodesByMedia[libID]; found {
+					eps = m
+				} else {
+					// Preloaded but 0 episodes exist in DB for this media;
+					// passing non-nil empty map prevents NewEntry from executing redundant individual query
+					eps = make(map[string]*models.LibraryEpisode)
+				}
+			}
 			me, _ := NewEntry(ctx, &NewEntryOptions{
 				MediaID:             mID,
 				LocalFiles:          localFiles,
 				Database:            database,
 				PlatformRef:         platformRef,
 				MetadataProviderRef: metadataProviderRef,
+				LibraryEpisodes:     eps,
 			})
 			return me
 		})

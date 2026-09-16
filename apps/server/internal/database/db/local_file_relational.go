@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+
 	"github.com/goccy/go-json"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
@@ -10,17 +12,50 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// localFileUpsertColumns lists every data column refreshed on path-conflict
+// upserts. `id` and `created_at` are deliberately excluded so rescans never
+// rewrite the original creation timestamp (UpdateAll:true used to clobber it).
+var localFileUpsertColumns = []string{
+	"name", "file_hash", "file_size", "file_mod_time", "locked", "ignored",
+	"library_media_id", "media_id", "parsed_data", "parsed_folder_data",
+	"embedded_metadata", "metadata", "technical_info", "tags", "updated_at",
+}
+
+// escapeLikePattern escapes SQLite LIKE wildcards so a library path containing
+// `%`, `_` or `\` matches literally instead of acting as a wildcard.
+func escapeLikePattern(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
+}
+
 // GetAllLocalFilesRelational retrieves all local files from the relational table.
+// Accepts optional page/perPage for pagination; if both 0, returns all (legacy compat).
 func GetAllLocalFilesRelational(d *Database) ([]*dto.LocalFile, error) {
+	query := d.gormdb.Order("id asc")
+
 	var dbFiles []*models.LocalFile
-	err := d.gormdb.Find(&dbFiles).Error
+	err := query.Find(&dbFiles).Error
 	if err != nil {
 		return nil, err
 	}
 
 	res := make([]*dto.LocalFile, len(dbFiles))
 	for i, dbf := range dbFiles {
-		res[i] = LocalFileModelToDto(dbf)
+		conv, err := LocalFileModelToDto(dbf)
+		if err != nil {
+			// Una fila corrupta no debe tumbar todo el listado: se conserva la
+			// fila con los campos escalares y se registra el problema.
+			d.Logger.Warn().Err(err).Str("path", dbf.Path).Msg("db: Skipping corrupt JSON fields in local file row")
+			conv = &dto.LocalFile{
+				Path: dbf.Path, Name: dbf.Name, FileHash: dbf.FileHash,
+				Locked: dbf.Locked, Ignored: dbf.Ignored,
+				LibraryMediaId: dbf.LibraryMediaId, MediaID: dbf.MediaID,
+				FileSize: dbf.FileSize, FileModTime: dbf.FileModTime,
+			}
+		}
+		res[i] = conv
 	}
 	return res, nil
 }
@@ -40,15 +75,17 @@ func GetAllLocalFilesRelational(d *Database) ([]*dto.LocalFile, error) {
 //
 // Devuelve ErrRecordNotFound si la media no está en la librería local.
 func GetLibraryMediaByExternalMediaID(d *Database, mediaID int) (*models.LibraryMedia, error) {
-	var lf models.LocalFile
-	if err := d.gormdb.
+	var libraryMediaID uint
+	if err := d.gormdb.Model(&models.LocalFile{}).
+		Select("library_media_id").
 		Where("media_id = ? AND library_media_id > 0", mediaID).
-		First(&lf).Error; err != nil {
+		Limit(1).
+		Pluck("library_media_id", &libraryMediaID).Error; err != nil {
 		return nil, err
 	}
 
 	var lm models.LibraryMedia
-	if err := d.gormdb.Where("id = ?", lf.LibraryMediaId).First(&lm).Error; err != nil {
+	if err := d.gormdb.Where("id = ?", libraryMediaID).First(&lm).Error; err != nil {
 		return nil, err
 	}
 	return &lm, nil
@@ -63,7 +100,17 @@ func GetLocalFilesByMediaIDRelational(d *Database, mediaID int) ([]*dto.LocalFil
 
 	res := make([]*dto.LocalFile, len(dbFiles))
 	for i, dbf := range dbFiles {
-		res[i] = LocalFileModelToDto(dbf)
+		conv, err := LocalFileModelToDto(dbf)
+		if err != nil {
+			d.Logger.Warn().Err(err).Str("path", dbf.Path).Msg("db: Skipping corrupt JSON fields in local file row")
+			conv = &dto.LocalFile{
+				Path: dbf.Path, Name: dbf.Name, FileHash: dbf.FileHash,
+				Locked: dbf.Locked, Ignored: dbf.Ignored,
+				LibraryMediaId: dbf.LibraryMediaId, MediaID: dbf.MediaID,
+				FileSize: dbf.FileSize, FileModTime: dbf.FileModTime,
+			}
+		}
+		res[i] = conv
 	}
 	return res, nil
 }
@@ -76,13 +123,17 @@ func UpsertLocalFileRelationalBatch(d *Database, files []*dto.LocalFile) error {
 
 	dbFiles := make([]*models.LocalFile, len(files))
 	for i, f := range files {
-		dbFiles[i] = LocalFileDtoToModel(f)
+		m, err := LocalFileDtoToModel(f)
+		if err != nil {
+			return fmt.Errorf("upsert local file %q: %w", f.Path, err)
+		}
+		dbFiles[i] = m
 	}
 
 	err := d.gormdb.Transaction(func(tx *gorm.DB) error {
 		return tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "path"}},
-			UpdateAll: true,
+			DoUpdates: clause.AssignmentColumns(localFileUpsertColumns),
 		}).CreateInBatches(dbFiles, 60).Error
 	})
 	if err != nil {
@@ -94,19 +145,33 @@ func UpsertLocalFileRelationalBatch(d *Database, files []*dto.LocalFile) error {
 
 // SyncLocalFilesRelational performs a full sync: upserts the given files and deletes any other file in the DB.
 func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
-	err := UpsertLocalFileRelationalBatch(d, files)
-	if err != nil {
-		return err
+	if len(files) == 0 {
+		return nil // Safety guard: scan returning 0 files must not wipe database
 	}
 
-	// Delete files that are no longer present
 	paths := make([]string, len(files))
 	for i, f := range files {
 		paths[i] = f.Path
 	}
 
-	err = d.gormdb.Transaction(func(tx *gorm.DB) error {
-		// If the library is small, we can use a simple NOT IN clause
+	err := d.gormdb.Transaction(func(tx *gorm.DB) error {
+		// 1. Upsert files in batches
+		dbModels := make([]*models.LocalFile, len(files))
+		for i, f := range files {
+			m, err := LocalFileDtoToModel(f)
+			if err != nil {
+				return fmt.Errorf("sync local file %q: %w", f.Path, err)
+			}
+			dbModels[i] = m
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "path"}},
+			DoUpdates: clause.AssignmentColumns(localFileUpsertColumns),
+		}).CreateInBatches(dbModels, 100).Error; err != nil {
+			return err
+		}
+
+		// 2. Delete files that are no longer present
 		if len(paths) < 950 {
 			return tx.Where("path NOT IN ?", paths).Delete(&models.LocalFile{}).Error
 		}
@@ -130,7 +195,6 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 			}
 			batch := paths[i:end]
 
-			// GORM doesn't easily support batch insert of primitives into raw tables, so we build the SQL
 			placeholders := make([]string, len(batch))
 			vals := make([]interface{}, len(batch))
 			for j, p := range batch {
@@ -143,10 +207,14 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 			}
 		}
 
-		// Delete files not in the temporary table
+		// Delete files not in the temporary table. The project uses the literal
+		// table name "local_file" (mapped from models.LocalFile via default GORM
+		// convention). If a custom NamingStrategy is ever applied, the migration
+		// paths must be updated accordingly.
 		if err := tx.Exec("DELETE FROM local_file WHERE path NOT IN (SELECT path FROM sync_paths)").Error; err != nil {
 			return err
 		}
+
 
 		// Cleanup
 		return tx.Exec("DROP TABLE sync_paths").Error
@@ -160,6 +228,9 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 
 // SyncPartialLocalFilesRelational performs a partial sync: upserts given files and deletes missing files ONLY within targeted paths.
 func SyncPartialLocalFilesRelational(d *Database, files []*dto.LocalFile, targetPaths []string) error {
+	if len(files) == 0 {
+		return nil
+	}
 	if len(targetPaths) == 0 {
 		return SyncLocalFilesRelational(d, files)
 	}
@@ -175,23 +246,74 @@ func SyncPartialLocalFilesRelational(d *Database, files []*dto.LocalFile, target
 	}
 
 	// Create a query to delete files that belong to targetPaths but were not found in this scan
-	query := d.gormdb.Model(&models.LocalFile{}).Where("path NOT IN ?", newPaths)
+	// Chunk NOT IN to avoid SQLite variable limit (999).
+	if len(newPaths) == 0 {
+		return nil
+	}
+	chunkSize := 500
+	var lastErr error
+	for i := 0; i < len(newPaths); i += chunkSize {
+		end := i + chunkSize
+		if end > len(newPaths) {
+			end = len(newPaths)
+		}
+		chunk := newPaths[i:end]
 
-	// Filter by targetPaths (using LIKE for directories)
-	for i, target := range targetPaths {
-		if i == 0 {
-			query = query.Where("path LIKE ?", target+"%")
-		} else {
-			query = query.Or("path LIKE ?", target+"%")
+		query := d.gormdb.Model(&models.LocalFile{}).Where("path NOT IN ?", chunk)
+
+		if len(targetPaths) > 0 {
+			pathGroup := d.gormdb.Where("path LIKE ? ESCAPE '\\'", escapeLikePattern(targetPaths[0])+"%")
+			for _, target := range targetPaths[1:] {
+				pathGroup = pathGroup.Or("path LIKE ? ESCAPE '\\'", escapeLikePattern(target)+"%")
+			}
+			query = query.Where(pathGroup)
+		}
+
+		if err := query.Delete(&models.LocalFile{}).Error; err != nil {
+			lastErr = err
 		}
 	}
-
-	err = query.Delete(&models.LocalFile{}).Error
-	if err != nil {
-		return err
+	if lastErr != nil {
+		return lastErr
 	}
 	InvalidateLocalFilesCache()
 	return nil
+}
+
+// UpdateSingleLocalFileRelational actualiza un único archivo local en SQLite sin re-escribir toda la tabla.
+// Devuelve (true, nil) si la fila existía y fue actualizada, (false, nil) si
+// no había fila con ese path (el caller decide si insertar).
+func UpdateSingleLocalFileRelational(d *Database, f *dto.LocalFile) (bool, error) {
+	if f == nil || f.Path == "" {
+		return false, nil
+	}
+	m, err := LocalFileDtoToModel(f)
+	if err != nil {
+		return false, fmt.Errorf("update local file %q: %w", f.Path, err)
+	}
+	res := d.gormdb.Model(&models.LocalFile{}).Where("path = ?", f.Path).Updates(map[string]interface{}{
+		"name":               m.Name,
+		"file_hash":          m.FileHash,
+		"locked":             m.Locked,
+		"ignored":            m.Ignored,
+		"library_media_id":   m.LibraryMediaId,
+		"media_id":           m.MediaID,
+		"file_size":          m.FileSize,
+		"file_mod_time":      m.FileModTime,
+		"parsed_data":        m.ParsedData,
+		"parsed_folder_data": m.ParsedFolderData,
+		"embedded_metadata":  m.EmbeddedMetadata,
+		"metadata":           m.Metadata,
+		"technical_info":     m.TechnicalInfo,
+	})
+	if res.Error != nil {
+		return false, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return false, nil
+	}
+	InvalidateLocalFilesCache()
+	return true, nil
 }
 
 // DeleteLocalFilesRelationalByPaths removes local files with the given paths.
@@ -199,9 +321,16 @@ func DeleteLocalFilesRelationalByPaths(d *Database, paths []string) error {
 	if len(paths) == 0 {
 		return nil
 	}
-	err := d.gormdb.Where("path IN ?", paths).Delete(&models.LocalFile{}).Error
-	if err != nil {
-		return err
+	for i := 0; i < len(paths); i += 500 {
+		end := i + 500
+		if end > len(paths) {
+			end = len(paths)
+		}
+		chunk := paths[i:end]
+		err := d.gormdb.Where("path IN ?", chunk).Delete(&models.LocalFile{}).Error
+		if err != nil {
+			return err
+		}
 	}
 	InvalidateLocalFilesCache()
 	return nil
@@ -211,7 +340,7 @@ func DeleteLocalFilesRelationalByPaths(d *Database, paths []string) error {
 // Converters
 // ─────────────────────────────────────────────────────────────────────────────
 
-func LocalFileDtoToModel(f *dto.LocalFile) *models.LocalFile {
+func LocalFileDtoToModel(f *dto.LocalFile) (*models.LocalFile, error) {
 	m := &models.LocalFile{
 		Path:           f.Path,
 		Name:           f.Name,
@@ -225,25 +354,45 @@ func LocalFileDtoToModel(f *dto.LocalFile) *models.LocalFile {
 	}
 
 	if f.ParsedData != nil {
-		m.ParsedData, _ = json.Marshal(f.ParsedData)
+		raw, err := json.Marshal(f.ParsedData)
+		if err != nil {
+			return nil, fmt.Errorf("marshal ParsedData: %w", err)
+		}
+		m.ParsedData = raw
 	}
 	if f.ParsedFolderData != nil {
-		m.ParsedFolderData, _ = json.Marshal(f.ParsedFolderData)
+		raw, err := json.Marshal(f.ParsedFolderData)
+		if err != nil {
+			return nil, fmt.Errorf("marshal ParsedFolderData: %w", err)
+		}
+		m.ParsedFolderData = raw
 	}
 	if f.EmbeddedMetadata != nil {
-		m.EmbeddedMetadata, _ = json.Marshal(f.EmbeddedMetadata)
+		raw, err := json.Marshal(f.EmbeddedMetadata)
+		if err != nil {
+			return nil, fmt.Errorf("marshal EmbeddedMetadata: %w", err)
+		}
+		m.EmbeddedMetadata = raw
 	}
 	if f.Metadata != nil {
-		m.Metadata, _ = json.Marshal(f.Metadata)
+		raw, err := json.Marshal(f.Metadata)
+		if err != nil {
+			return nil, fmt.Errorf("marshal Metadata: %w", err)
+		}
+		m.Metadata = raw
 	}
 	if f.TechnicalInfo != nil {
-		m.TechnicalInfo, _ = json.Marshal(f.TechnicalInfo)
+		raw, err := json.Marshal(f.TechnicalInfo)
+		if err != nil {
+			return nil, fmt.Errorf("marshal TechnicalInfo: %w", err)
+		}
+		m.TechnicalInfo = raw
 	}
 
-	return m
+	return m, nil
 }
 
-func LocalFileModelToDto(m *models.LocalFile) *dto.LocalFile {
+func LocalFileModelToDto(m *models.LocalFile) (*dto.LocalFile, error) {
 	f := &dto.LocalFile{
 		Path:           m.Path,
 		Name:           m.Name,
@@ -257,20 +406,30 @@ func LocalFileModelToDto(m *models.LocalFile) *dto.LocalFile {
 	}
 
 	if len(m.ParsedData) > 0 {
-		_ = json.Unmarshal(m.ParsedData, &f.ParsedData)
+		if err := json.Unmarshal(m.ParsedData, &f.ParsedData); err != nil {
+			return nil, fmt.Errorf("unmarshal ParsedData: %w", err)
+		}
 	}
 	if len(m.ParsedFolderData) > 0 {
-		_ = json.Unmarshal(m.ParsedFolderData, &f.ParsedFolderData)
+		if err := json.Unmarshal(m.ParsedFolderData, &f.ParsedFolderData); err != nil {
+			return nil, fmt.Errorf("unmarshal ParsedFolderData: %w", err)
+		}
 	}
 	if len(m.EmbeddedMetadata) > 0 {
-		_ = json.Unmarshal(m.EmbeddedMetadata, &f.EmbeddedMetadata)
+		if err := json.Unmarshal(m.EmbeddedMetadata, &f.EmbeddedMetadata); err != nil {
+			return nil, fmt.Errorf("unmarshal EmbeddedMetadata: %w", err)
+		}
 	}
 	if len(m.Metadata) > 0 {
-		_ = json.Unmarshal(m.Metadata, &f.Metadata)
+		if err := json.Unmarshal(m.Metadata, &f.Metadata); err != nil {
+			return nil, fmt.Errorf("unmarshal Metadata: %w", err)
+		}
 	}
 	if len(m.TechnicalInfo) > 0 {
-		_ = json.Unmarshal(m.TechnicalInfo, &f.TechnicalInfo)
+		if err := json.Unmarshal(m.TechnicalInfo, &f.TechnicalInfo); err != nil {
+			return nil, fmt.Errorf("unmarshal TechnicalInfo: %w", err)
+		}
 	}
 
-	return f
+	return f, nil
 }

@@ -334,6 +334,28 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 			// Absolute episode count
 			if episode > dto.GetCurrentEpisodeCount(media) && fh.ForceMediaId == 0 {
 
+				// Check if this media belongs to the Dragon Ball franchise and has canonical sagas
+				maxDbEp := 0
+				tmdbId := mID
+				if media.TmdbID != nil && *media.TmdbID > 0 {
+					tmdbId = *media.TmdbID
+				}
+				if dbSagas := GetDragonBallSagas(tmdbId); len(dbSagas) > 0 {
+					maxDbEp = dbSagas[len(dbSagas)-1].endEp
+				}
+
+				if maxDbEp > 0 && episode <= maxDbEp {
+					lf.Metadata.Episode = episode
+					lf.Metadata.AniDBEpisode = strconv.Itoa(episode)
+					lf.Metadata.Type = dto.LocalFileTypeMain
+					if fh.ScanLogger != nil {
+						fh.logFileHydration(zerolog.DebugLevel, lf, mID, episode).
+							Msg("File normalized via Dragon Ball saga definition")
+					}
+					fh.ScanSummaryLogger.LogMetadataMain(lf, lf.Metadata.Episode, lf.Metadata.AniDBEpisode)
+					return
+				}
+
 				// Try part-relative normalization before expensive media tree analysis.
 				// This handles cases where filenames use numbering relative to a previous part of the same season
 				// (e.g., S04E12 for the first episode of Part 2, where Part 1 had 11 episodes).

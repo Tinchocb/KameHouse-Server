@@ -2,14 +2,15 @@ package handlers
 
 import (
 	"errors"
+	"strings"
 	"kamehouse/internal/api/dragonball"
 	"kamehouse/internal/core"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/intelligence"
+	"kamehouse/internal/library/anime"
 	util "kamehouse/internal/util/proxies"
 	"net/http"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -20,6 +21,15 @@ import (
 	"github.com/ziflex/lecho/v3"
 )
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 type Handler struct {
 	App                  *core.App
 	settingsMu           sync.RWMutex
@@ -29,6 +39,34 @@ type Handler struct {
 
 func InitRoutes(app *core.App, e *echo.Echo) {
 	allowedOrigins := app.Config.Server.CorsOrigins
+
+	// CORS — fail-fast if wildcard " *" is present with AllowCredentials
+	// (Echo + credentials + "*" = session hijack via reflected origin).
+	if contains(allowedOrigins, "*") {
+		for _, o := range allowedOrigins {
+			if o == "*" {
+				app.Logger.Warn().Msg("CORS: wildcard origin with credentials detected — rejecting to prevent session hijack")
+				// Reconfigure CORS to deny credentials with any origin
+				e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+					AllowOrigins: allowedOrigins,
+					AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions, http.MethodHead},
+					AllowHeaders: []string{
+						"Origin", "Content-Type", "Accept", "Cookie", "Authorization",
+						"Range", "Accept-Ranges", "Content-Range", "If-Range",
+						"X-KameHouse-Token",
+					},
+					ExposeHeaders: []string{
+						"Accept-Ranges", "Content-Range", "Content-Length", "Content-Disposition",
+					},
+					AllowCredentials: false,
+					Skipper: func(c echo.Context) bool {
+						return c.Path() == "/api/health"
+					},
+				}))
+				return
+			}
+		}
+	}
 
 	// CORS — incluye cabeceras byte-range requeridas por el reproductor web de video
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -61,6 +99,9 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		"/events",
 		"/api/v1/image-proxy",
 		"/api/v1/mediastream/transcode/",
+		"/api/v1/mediastream/direct/play",
+		"/api/v1/mediastream/hls/",
+		"/api/v1/mediastream/video-thumbnail",
 		"/api/v1/proxy",
 	}
 
@@ -96,6 +137,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		Skipper: func(c echo.Context) bool {
 			path := c.Request().URL.Path
 			return strings.HasPrefix(path, "/api/v1/mediastream") ||
+				strings.HasPrefix(path, "/api/v1/image-proxy") ||
 				strings.HasPrefix(path, "/api/v1/proxy") ||
 				strings.HasPrefix(path, "/api/v1/events") ||
 				strings.HasPrefix(path, "/api/v1/ws")
@@ -104,13 +146,22 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			// Vary: Origin siempre que hay CORS con credenciales.
+			c.Response().Header().Set("Vary", "Origin")
 			cookie, err := c.Cookie("KameHouse-Client-Id")
-			if err != nil || cookie.Value == "" {
+			clientID := ""
+			if err == nil {
+				// Validar formato UUID para evitar fijación/enumeración con valores forjados.
+				if _, perr := uuid.Parse(strings.TrimSpace(cookie.Value)); perr == nil {
+					clientID = cookie.Value
+				}
+			}
+			if clientID == "" {
 				u := uuid.New().String()
 				newCookie := new(http.Cookie)
 				newCookie.Name = "KameHouse-Client-Id"
 				newCookie.Value = u
-				newCookie.HttpOnly = false
+				newCookie.HttpOnly = true
 				newCookie.Expires = time.Now().Add(30 * 24 * time.Hour)
 				newCookie.Path = "/"
 				newCookie.Domain = ""
@@ -119,7 +170,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 				c.SetCookie(newCookie)
 				c.Set("KameHouse-Client-Id", u)
 			} else {
-				c.Set("KameHouse-Client-Id", cookie.Value)
+				c.Set("KameHouse-Client-Id", clientID)
 			}
 			return next(c)
 		}
@@ -134,6 +185,12 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	app.AddOnRefreshAnimeCollectionFunc("ClearLibraryCollectionCache", func() {
 		ClearLibraryCollectionCache()
+	})
+	app.AddOnRefreshAnimeCollectionFunc("ClearAnimeScheduleCache", func() {
+		ClearAnimeScheduleCache()
+	})
+	app.AddOnRefreshAnimeCollectionFunc("ClearEpisodeCollectionCache", func() {
+		anime.ClearEpisodeCollectionCache()
 	})
 
 	h.StartPlaybackHeartbeatSubscriber()
@@ -178,6 +235,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.DELETE("/notifications", h.HandleClearNotifications)
 	v1.POST("/directory-selector", h.HandleDirectorySelector)
 	v1.POST("/open-in-explorer", h.HandleOpenInExplorer)
+	v1.POST("/shutdown", h.HandleShutdown)
 	v1.GET("/lore/dragonball", h.HandleGetDragonballLore)
 	v1.GET("/music/scan", h.HandleScanBackgroundMusic)
 	v1.GET("/music/stream", h.HandleStreamBackgroundMusic)
@@ -220,7 +278,24 @@ func (h *Handler) RespondWithData(c echo.Context, data interface{}) error {
 }
 
 func (h *Handler) RespondWithError(c echo.Context, err error) error {
-	return c.JSON(500, NewErrorResponse(err))
+	// Mapeo mínimo para no devolver 500 en errores de validación.
+	// Los call-sites específicos deben migrar a RespondWithCodeError(400/404/403).
+	msg := ""
+	if err != nil {
+		msg = strings.ToLower(err.Error())
+	}
+	switch {
+	case strings.Contains(msg, "not found") || strings.Contains(msg, "no such") || strings.Contains(msg, "no rows"):
+		return c.JSON(404, NewErrorResponse(err))
+	case strings.Contains(msg, "invalid") || strings.Contains(msg, "empty") || strings.Contains(msg, "required") ||
+		strings.Contains(msg, "bad request") || strings.Contains(msg, "malformed") || strings.Contains(msg, "too large") ||
+		strings.Contains(msg, "not allowed") && strings.Contains(msg, "file"):
+		return c.JSON(400, NewErrorResponse(err))
+	case strings.Contains(msg, "forbidden") || strings.Contains(msg, "not allowed") || strings.Contains(msg, "blocked"):
+		return c.JSON(403, NewErrorResponse(err))
+	default:
+		return c.JSON(500, NewErrorResponse(err))
+	}
 }
 
 func (h *Handler) RespondWithCodeError(c echo.Context, code int, err error) error {
@@ -236,17 +311,23 @@ func (h *Handler) invalidateSettingsCache() {
 func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		if c.Request().Method == http.MethodHead {
-			c.Request().Method = http.MethodGet
-			defer func() {
-				c.Request().Method = http.MethodHead
-			}()
-			if err := next(c); err != nil {
-				if errors.Is(err, echo.ErrMethodNotAllowed) {
-					return c.NoContent(http.StatusOK)
+			// Execute handler natively first so HEAD handlers or c.File() can respond with headers only
+			err := next(c)
+			if err != nil && errors.Is(err, echo.ErrMethodNotAllowed) {
+				// Fallback to GET handler if HEAD is not explicitly registered on this route
+				c.Request().Method = http.MethodGet
+				defer func() {
+					c.Request().Method = http.MethodHead
+				}()
+				if getErr := next(c); getErr != nil {
+					if errors.Is(getErr, echo.ErrMethodNotAllowed) {
+						return c.NoContent(http.StatusOK)
+					}
+					return getErr
 				}
-				return err
+				return nil
 			}
-			return nil
+			return err
 		}
 		return next(c)
 	}

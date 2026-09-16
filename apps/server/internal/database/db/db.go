@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -17,21 +18,21 @@ import (
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/util/result"
+	"kamehouse/internal/util"
 )
 
 type Database struct {
 	gormdb                   *gorm.DB
 	Logger                   *zerolog.Logger
+	mediaFillerMu            sync.RWMutex
 	CurrMediaFillers         mo.Option[map[int]*MediaFillerItem]
 	cleanupManager           *CleanupManager
 	bufferedWriter           *BufferedWriter
-	OnError                  func(error)
-	LibraryMediaCache        sync.Map // L1 read cache scoped to the database instance
-	MediaIDMappingCache      *result.Map[string, *models.MediaIDMapping]
-	OnlinestreamMappingCache *result.Map[string, *models.OnlinestreamMapping]
-	slowTraceLogger          *SlowTraceLogger
-	sqlitePath               string
+	OnError           func(error)
+	LibraryMediaCache sync.Map // L1 read cache scoped to the database instance
+	slowTraceLogger   *SlowTraceLogger
+	sqlitePath        string
+	cancelWal         context.CancelFunc
 }
 
 func (db *Database) SetOnError(f func(error)) {
@@ -71,11 +72,10 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	//  journal_mode=WAL        → writers don't block readers; much better concurrency.
 	//  busy_timeout=5000       → wait up to 5 s before returning SQLITE_BUSY.
 	//  synchronous=NORMAL      → fsync only at WAL checkpoints, not every commit.
-	//  cache_size              → per-connection page cache (reduces repeated I/O).
-	//  mmap_size               → memory-mapped I/O for read-heavy workloads.
-	//  journal_size_limit      → caps WAL file growth to 64 MiB.
+	//  temp_store=MEMORY       → keeps temporary tables and indices in RAM instead of disk.
+	//  wal_autocheckpoint=1000 → automatic checkpointing every 1,000 pages to keep WAL size controlled.
 	dsn := fmt.Sprintf(
-		"%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)&_pragma=cache_size(%s)&_pragma=mmap_size(%s)&_pragma=journal_size_limit(67108864)",
+		"%s?_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)&_pragma=cache_size(%s)&_pragma=mmap_size(%s)&_pragma=journal_size_limit(67108864)&_pragma=temp_store(MEMORY)&_pragma=wal_autocheckpoint(1000)",
 		sqlitePath, cacheSize, mmapSize,
 	)
 
@@ -103,7 +103,7 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	}
 
 	sqlDB.SetMaxOpenConns(4)
-	sqlDB.SetMaxIdleConns(2)
+	sqlDB.SetMaxIdleConns(4)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	if err := sqlDB.PingContext(ctx); err != nil {
@@ -111,20 +111,19 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	}
 
 	// DDL síncrono: esquema e índices
-	if err := migrateSchema(ctx, db); err != nil {
+	if err := migrateSchema(ctx, db, logger); err != nil {
 		logger.Fatal().Err(err).Msg("db: Failed to perform auto migration. Schema out of date.")
 		return nil, err
 	}
 
+
 	logger.Info().Str("name", fmt.Sprintf("%s.db", dbName)).Msg("db: Database instantiated and migrated")
 
 	database := &Database{
-		gormdb:                   db,
-		Logger:                   logger,
-		CurrMediaFillers:         mo.None[map[int]*MediaFillerItem](),
-		MediaIDMappingCache:      result.NewMap[string, *models.MediaIDMapping](),
-		OnlinestreamMappingCache: result.NewMap[string, *models.OnlinestreamMapping](),
-		sqlitePath:               sqlitePath,
+		gormdb:           db,
+		Logger:           logger,
+		CurrMediaFillers: mo.None[map[int]*MediaFillerItem](),
+		sqlitePath:       sqlitePath,
 	}
 
 	database.cleanupManager = NewCleanupManager(database.gormdb, database.Logger)
@@ -142,15 +141,22 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	database.runDataMigrations()
 
 	// Start background WAL checkpointing ticker (every 5 minutes)
+	walCtx, walCancel := context.WithCancel(ctx)
+	database.cancelWal = walCancel
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error().Interface("panic", r).Msg("db: panic in WAL checkpointing ticker")
+			}
+		}()
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 		for {
 			select {
-			case <-ctx.Done():
+			case <-walCtx.Done():
 				return
 			case <-ticker.C:
-				database.gormdb.Exec("PRAGMA wal_checkpoint(PASSIVE);")
+				database.Checkpoint()
 			}
 		}
 	}()
@@ -163,17 +169,15 @@ func (db *Database) EnqueueWrite(op DbWriteOperation) {
 	if db.bufferedWriter != nil {
 		db.bufferedWriter.Enqueue(op)
 	} else {
-		db.Logger.Warn().Msg("db: EnqueueWrite fallback to synchronous operation because bufferedWriter is nil")
-		if err := op(db.gormdb); err != nil {
-			db.Logger.Error().Err(err).Msg("db: EnqueueWrite fallback operation failed")
-			if db.OnError != nil {
-				db.OnError(err)
-			}
+		// Fallback inmediato si no hay buffered writer inicializado
+		if err := db.gormdb.Transaction(op); err != nil {
+			db.Logger.Error().Err(err).Msg("db: Synchronous fallback write failed")
 		}
 	}
 }
 
-// Shutdown cierra gracefulmente todas las operaciones de base de datos pendientes.
+// Shutdown detiene el buffered writer y asegura que todas las escrituras
+// pendientes se vuelquen antes de que el proceso termine.
 func (db *Database) Shutdown() {
 	if db.bufferedWriter != nil {
 		db.bufferedWriter.Shutdown()
@@ -181,12 +185,11 @@ func (db *Database) Shutdown() {
 	if db.slowTraceLogger != nil {
 		db.slowTraceLogger.Flush()
 	}
-	// TRUNCATE waits for all readers and resets the WAL to zero length, so the
-	// next startup has nothing to replay and begins faster than with PASSIVE.
-	db.gormdb.Exec("PRAGMA wal_checkpoint(TRUNCATE);")
+	if err := db.gormdb.Exec("PRAGMA wal_checkpoint(TRUNCATE);").Error; err != nil {
+		db.Logger.Error().Err(err).Msg("db: Failed to checkpoint WAL on shutdown")
+	}
 }
 
-// Checkpoint performs a WAL checkpoint (PASSIVE mode).
 func (db *Database) Checkpoint() {
 	if err := db.gormdb.Exec("PRAGMA wal_checkpoint(PASSIVE);").Error; err != nil {
 		db.Logger.Error().Err(err).Msg("db: Failed to execute WAL checkpoint")
@@ -195,6 +198,9 @@ func (db *Database) Checkpoint() {
 
 // Close libera el pool de conexiones subyacente.
 func (db *Database) Close() error {
+	if db.cancelWal != nil {
+		db.cancelWal()
+	}
 	sqlDB, err := db.gormdb.DB()
 	if err != nil {
 		return err
@@ -216,20 +222,22 @@ func (db *Database) runDataMigrations() {
 		db.Logger.Error().Err(err).Msg("db: fallo en migración de datos legacy LocalFiles -> LocalFile")
 		return
 	}
-	migrateDefaultSettings(db.gormdb, db.Logger)
+	migrateDefaultSettings(db, db.Logger)
 	migrateSkipTimesSemantics(db.gormdb, db.Logger)
 	seedDragonBallMalIds(db.gormdb, db.Logger)
+	healDragonBallKai(db, db.Logger)
 	purgeStaleSkipTimes(db, db.Logger)
 	purgeEdlessAnimeThemesSkipTimes(db, db.Logger)
 	defaultAutoDetectSkipTimes(db, db.Logger)
 	db.Logger.Info().Msg("db: migraciones de datos completadas")
+
 }
 
 // migrateSchema ejecuta exclusivamente operaciones DDL (AutoMigrate + índices)
 // de forma síncrona durante el inicio. No contiene lógica de migración de datos.
-func migrateSchema(ctx context.Context, db *gorm.DB) error {
+func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) error {
 	// Limpia duplicados de LibraryMedia (los TMDB ID deben ser únicos POR TIPO)
-	db.Exec(`
+	if err := db.Exec(`
 		DELETE FROM library_media
 		WHERE tmdb_id IS NOT NULL
 		  AND tmdb_id != 0
@@ -239,7 +247,9 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 			WHERE tmdb_id IS NOT NULL AND tmdb_id != 0
 			GROUP BY tmdb_id, type
 		  )
-		`)
+		`).Error; err != nil {
+		logger.Warn().Err(err).Msg("db: notice while cleaning duplicate library_media entries")
+	}
 
 	if err := db.WithContext(ctx).AutoMigrate(
 		&models.LocalFile{},
@@ -257,7 +267,6 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 		&models.LibraryMedia{},
 		&models.LibraryEpisode{},
 		&models.LibrarySeason{},
-		&models.Token{},
 		&models.ProviderMapping{},
 		&models.MediaEntryListData{},
 		&models.WatchHistory{},
@@ -265,7 +274,6 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 
 		&models.MetadataCache{},
 		&models.EpisodeSkipTime{},
-		&models.MediaIDMapping{},
 		&models.ShelvedLocalFiles{},
 		&models.Notification{},
 	); err != nil {
@@ -273,34 +281,66 @@ func migrateSchema(ctx context.Context, db *gorm.DB) error {
 	}
 
 	// 1. Eliminar duplicados de watch_histories antes de crear el índice único compuesto
-	_ = db.Exec(`
+	if err := db.Exec(`
 		DELETE FROM watch_histories
 		WHERE id NOT IN (
 			SELECT MAX(id)
 			FROM watch_histories
 			GROUP BY account_id, media_id, episode_number
 		)
-	`).Error
+	`).Error; err != nil {
+		logger.Warn().Err(err).Msg("db: notice while deduplicating watch_histories")
+	}
 
 	// 2. Asegurar que el índice único compuesto exista para evitar errores de ON CONFLICT
 	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_media_episode ON watch_histories (account_id, media_id, episode_number)").Error; err != nil {
-		println("db: failed to create unique index on watch_histories:", err.Error())
+		logger.Error().Err(err).Msg("db: failed to create unique index on watch_histories")
+	}
+
+	// 3. Índices compuestos para consultas de alto tráfico (Continue Watching, catálogo, escaneo y caché)
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_watch_history_acc_updated ON watch_histories (account_id, updated_at DESC)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_watch_history_acc_updated")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_library_media_mal_id ON library_media (myanimelist_id)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_library_media_mal_id")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_library_media_type_format ON library_media (type, format)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_library_media_type_format")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_local_file_media_locked ON local_file (media_id, locked)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_local_file_media_locked")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_local_file_lib_media ON local_file (library_media_id)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_local_file_lib_media")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_metadata_cache_provider_key ON metadata_caches (provider, key)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_metadata_cache_provider_key")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_media_entry_list_status ON media_entry_list_data (status)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_media_entry_list_status")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_media_filler_media_id ON media_fillers (media_id)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_media_filler_media_id")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_library_episodes_media_ep ON library_episodes (library_media_id, episode_number)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_library_episodes_media_ep")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_local_file_media_ignored_locked ON local_file (media_id, ignored, locked)").Error; err != nil {
+		logger.Error().Err(err).Msg("db: failed to create index idx_local_file_media_ignored_locked")
 	}
 
 	// Migración manual: actualiza el índice único de LibraryMedia para manejar
 	// colisiones entre películas y series.
 	if db.Migrator().HasIndex(&models.LibraryMedia{}, "idx_library_media_tmdb_id") {
-		_ = db.Migrator().DropIndex(&models.LibraryMedia{}, "idx_library_media_tmdb_id")
+		if err := db.Migrator().DropIndex(&models.LibraryMedia{}, "idx_library_media_tmdb_id"); err != nil {
+			logger.Warn().Err(err).Msg("db: notice while dropping idx_library_media_tmdb_id")
+		}
 		_ = db.AutoMigrate(&models.LibraryMedia{})
-	}
-
-	// Purge legacy local_files table if it exists
-	if db.Migrator().HasTable("local_files") {
-		_ = db.Migrator().DropTable("local_files")
 	}
 
 	return nil
 }
+
 
 // migrateLegacyLocalFiles convierte el blob legacy LocalFiles al modelo relacional
 // LocalFile. Se ejecuta en segundo plano una vez que el pool WAL está activo.
@@ -343,25 +383,49 @@ func migrateLegacyLocalFiles(gormDB *gorm.DB) error {
 					}
 					dbFiles[i] = dbf
 				}
-				return gormDB.CreateInBatches(dbFiles, 100).Error
+
+				if err := gormDB.Transaction(func(tx *gorm.DB) error {
+					if err := tx.CreateInBatches(dbFiles, 100).Error; err != nil {
+						return err
+					}
+					return tx.Migrator().DropTable("local_files")
+				}); err != nil {
+					return err
+				}
+				return nil
 			}
 		}
+	}
+
+	// Si no hay datos pendientes por migrar, purgar la tabla legacy de forma segura
+	if gormDB.Migrator().HasTable("local_files") {
+		_ = gormDB.Migrator().DropTable("local_files")
 	}
 	return nil
 }
 
 // migrateDefaultSettings aplica valores por defecto a columnas booleanas que se
 // almacenaron históricamente como false pero cuyo default correcto es true.
-// Solo modifica filas que no han sido configuradas explícitamente por el usuario
-// (detectadas porque otros campos de preferencia también están en su valor inicial).
-func migrateDefaultSettings(gormDB *gorm.DB, logger *zerolog.Logger) {
-	result := gormDB.Exec("UPDATE settings SET library_auto_play_next_episode = 1 WHERE library_auto_play_next_episode = 0")
+// Se ejecuta una sola vez usando metadata_cache como gate para no pisar cambios del usuario.
+func migrateDefaultSettings(d *Database, logger *zerolog.Logger) {
+	const migrationKey = "default_auto_play_next_episode_v1"
+	var done bool
+	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+		return
+	}
+	result := d.gormdb.Exec("UPDATE settings SET library_auto_play_next_episode = 1 WHERE library_auto_play_next_episode = 0")
 	if result.Error != nil {
 		logger.Error().Err(result.Error).Msg("db: fallo al migrar auto_play_next_episode")
-	} else if result.RowsAffected > 0 {
-		logger.Info().Int64("rows", result.RowsAffected).Msg("db: auto_play_next_episode habilitado en configuración existente")
+		return
+	}
+	if result.RowsAffected > 0 {
+		logger.Info().Int64("rows", result.RowsAffected).Msg("db: auto_play_next_episode habilitado en configuración existente (one-shot)")
+	}
+	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
+		logger.Error().Err(err).Msg("db: no se pudo marcar default_auto_play_next_episode como completado")
 	}
 }
+
 
 // defaultAutoDetectSkipTimes habilita, UNA SOLA VEZ, el scan oportunista de
 // skip times en la configuración existente. Se gatea con metadata_cache para no
@@ -403,32 +467,46 @@ func migrateSkipTimesSemantics(gormDB *gorm.DB, logger *zerolog.Logger) {
 	}
 
 	migrated := 0
-	for _, t := range times {
-		updated := false
-		if t.EdEnd > 0 {
-			diff := t.EdEnd - t.EdOffset
-			if t.EdOffset < t.EdEnd && diff <= 300 {
-				// Es probable que ya sea absoluto
-				t.Source = "manual"
-				updated = true
-			} else if diff > 300 {
-				// Es un tiempo relativo (ej: offset desde el final). Suponiendo duration ~= edEnd
-				t.EdOffset = t.EdEnd - t.EdOffset
-				if t.EdOffset < 0 {
-					t.EdOffset = 0
-				}
-				t.Source = "aniskip"
-				updated = true
-			}
-		} else if t.EdOffset > 0 {
-			// Si no hay fin especificado, asume que es el resultado del detector de huella absoluta
-			t.Source = "fingerprint"
-			updated = true
+	// Bulk update in batches of 500 to avoid N+1 Save()
+	for i := 0; i < len(times); i += 500 {
+		end := i + 500
+		if end > len(times) {
+			end = len(times)
 		}
+		batch := times[i:end]
 
-		if updated {
-			gormDB.Save(&t)
-			migrated++
+		err := gormDB.Transaction(func(tx *gorm.DB) error {
+			for _, t := range batch {
+				updated := false
+				if t.EdEnd > 0 {
+					diff := t.EdEnd - t.EdOffset
+					if t.EdOffset < t.EdEnd && diff <= 300 {
+						t.Source = "manual"
+						updated = true
+					} else if diff > 300 {
+						t.EdOffset = t.EdEnd - t.EdOffset
+						if t.EdOffset < 0 {
+							t.EdOffset = 0
+						}
+						t.Source = "aniskip"
+						updated = true
+					}
+				} else if t.EdOffset > 0 {
+					t.Source = "fingerprint"
+					updated = true
+				}
+				if updated {
+					if err := tx.Save(&t).Error; err != nil {
+						return err
+					}
+					migrated++
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("db: fallo en batch migrate SkipTimes")
+			return
 		}
 	}
 
@@ -447,6 +525,8 @@ func seedDragonBallMalIds(gormDB *gorm.DB, logger *zerolog.Logger) {
 		12609:  223,   // Dragon Ball
 		12971:  813,   // Dragon Ball Z
 		12697:  225,   // Dragon Ball GT
+		61709:  6033,  // Dragon Ball Kai
+		42705:  6033,  // Dragon Ball Kai
 		62715:  30694, // Dragon Ball Super
 		236994: 56894, // Dragon Ball Daima
 	}
@@ -469,6 +549,92 @@ func seedDragonBallMalIds(gormDB *gorm.DB, logger *zerolog.Logger) {
 	}
 	if total > 0 {
 		logger.Info().Int64("total", total).Msg("db: MAL IDs Dragon Ball sembrados correctamente")
+	}
+}
+
+// healDragonBallKai repara automáticamente en la base de datos el conteo de episodios
+// de Dragon Ball Kai (167 canónicos) y restaura como episodios regulares (tipo main)
+// cualquier archivo de Kai que hubiera sido erróneamente clasificado como 'special'.
+func healDragonBallKai(d *Database, logger *zerolog.Logger) {
+	const migrationKey = "heal_dragonball_kai_v1"
+	var done bool
+	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+		return
+	}
+
+	// 1. Asegurar 167 episodios en library_media para Dragon Ball Kai
+	resMedia := d.gormdb.Exec("UPDATE library_media SET total_episodes = 167 WHERE tmdb_id IN (61709, 42705) AND (total_episodes IS NULL OR total_episodes < 167)")
+	if resMedia.Error != nil {
+		logger.Warn().Err(resMedia.Error).Msg("db: error actualizando total_episodes de Dragon Ball Kai")
+	} else if resMedia.RowsAffected > 0 {
+		logger.Info().Int64("rows", resMedia.RowsAffected).Msg("db: total_episodes de Dragon Ball Kai actualizado a 167")
+	}
+
+	// 2. Corregir cualquier local_file de Kai que haya sido clasificado erróneamente como 'special'
+	// Bulk fetch + batch update instead of per-row Update()
+	var kaiFiles []*models.LocalFile
+	if err := d.gormdb.Where("media_id IN (61709, 42705)").Find(&kaiFiles).Error; err == nil {
+		type fixItem struct {
+			id      uint
+			meta    []byte
+			path    string
+			episode int
+		}
+		var fixes []fixItem
+		for _, f := range kaiFiles {
+			if len(f.Metadata) == 0 {
+				continue
+			}
+			var meta dto.LocalFileMetadata
+			if err := json.Unmarshal(f.Metadata, &meta); err == nil {
+				if meta.Type == dto.LocalFileTypeSpecial {
+					meta.Type = dto.LocalFileTypeMain
+					if len(f.ParsedData) > 0 {
+						var parsed dto.LocalFileParsedData
+						if err := json.Unmarshal(f.ParsedData, &parsed); err == nil && len(parsed.Episode) > 0 {
+							if epNum, ok := util.StringToInt(parsed.Episode); ok && epNum > 0 {
+								meta.Episode = epNum
+								meta.Episodes = []int{epNum}
+								meta.AniDBEpisode = strconv.Itoa(epNum)
+							}
+						}
+					}
+					if newMetaBytes, err := json.Marshal(meta); err == nil {
+						fixes = append(fixes, fixItem{id: f.ID, meta: newMetaBytes, path: f.Path, episode: meta.Episode})
+					}
+				}
+			}
+		}
+		// Batch update in chunks of 500
+		for i := 0; i < len(fixes); i += 500 {
+			end := i + 500
+			if end > len(fixes) {
+				end = len(fixes)
+			}
+			batch := fixes[i:end]
+
+			err := d.gormdb.Transaction(func(tx *gorm.DB) error {
+				for _, fx := range batch {
+					if err := tx.Model(&models.LocalFile{}).Where("id = ?", fx.id).Update("metadata", fx.meta).Error; err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				logger.Error().Err(err).Msg("db: fallo en batch heal Kai files")
+				continue
+			}
+			for _, fx := range batch {
+				if fx.episode > 0 {
+					logger.Info().Str("path", fx.path).Int("episode", fx.episode).Msg("db: restaurado archivo de Dragon Ball Kai a episodio principal")
+				}
+			}
+		}
+	}
+
+	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
+		logger.Error().Err(err).Msg("db: no se pudo marcar heal_dragonball_kai_v1 como completado")
 	}
 }
 
@@ -541,26 +707,28 @@ func (db *Database) RunDatabaseCleanup() {
 
 // ResetLocalFilesMediaIds resetea todos los media IDs y library media IDs en la base de datos
 // de archivos locales. Fuerza al escáner a re-coincidir todos los archivos en el próximo escaneo.
+// Bulk UPDATE instead of per-row Save() to avoid O(N) writes and WAL lock contention.
 func (db *Database) ResetLocalFilesMediaIds() error {
-	lfs, id, err := GetLocalFiles(db)
+	err := db.gormdb.Transaction(func(tx *gorm.DB) error {
+		// Single bulk UPDATE sets both FKs to 0
+		if err := tx.Model(&models.LocalFile{}).Updates(map[string]interface{}{
+			"media_id": 0,
+			"library_media_id": 0,
+		}).Error; err != nil {
+			return err
+		}
+		// Clear ghost associations in same transaction
+		if err := tx.Exec("DELETE FROM ghost_associated_media").Error; err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		db.Logger.Error().Err(err).Msg("db: Failed to get local files for reset")
+		db.Logger.Error().Err(err).Msg("db: Failed to reset local file media associations")
 		return err
 	}
 
-	for _, lf := range lfs {
-		lf.MediaID = 0
-		lf.LibraryMediaId = 0
-	}
-
-	_, err = SaveLocalFiles(db, id, lfs)
-	if err != nil {
-		db.Logger.Error().Err(err).Msg("db: Failed to save reset local files")
-		return err
-	}
-
-	_ = db.Gorm().Exec("DELETE FROM ghost_associated_media").Error
-
+	InvalidateLocalFilesCache()
 	db.Logger.Info().Msg("db: All local file media associations and ghost associations have been reset")
 	return nil
 }

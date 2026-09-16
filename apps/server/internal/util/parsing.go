@@ -42,6 +42,8 @@ func NormalizeResolution(val string) string {
 	return val // Return original if no standard resolution found
 }
 
+var reResolutionP = regexp.MustCompile(`^(\d{3,4})[pP]$`)
+
 // ExtractResolutionInt extracts the resolution from a string and returns it as an integer.
 // This is used for comparing resolutions.
 // If the resolution is not found, it returns 0.
@@ -67,8 +69,7 @@ func ExtractResolutionInt(val string) int {
 		return 480
 	}
 
-	re := regexp.MustCompile(`^\d{3,4}([pP])$`)
-	matches := re.FindStringSubmatch(val)
+	matches := reResolutionP.FindStringSubmatch(val)
 	if len(matches) > 1 {
 		res, err := strconv.Atoi(matches[1])
 		if err != nil {

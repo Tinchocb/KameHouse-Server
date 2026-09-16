@@ -156,7 +156,7 @@ func (c *metadataFetchCache) FetchOnce(
 				continue // try next provider
 			}
 
-			if providerID == "tmdb" || providerID == "anidb" || providerID == "jikan" || providerID == "mal" {
+			if providerID == "tmdb" || providerID == "anidb" || providerID == "jikan" || providerID == "mal" || providerID == "anilist" {
 				best, score := pickBestCandidate(title, searchRes)
 				if best == nil || score < 0.75 {
 					continue

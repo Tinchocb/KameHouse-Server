@@ -98,24 +98,51 @@ func (s *IntelligenceService) buildEpisodeSwimlaneByTag(id, title, tag string) *
 	return lane
 }
 
-func (s *IntelligenceService) buildEpisodeSwimlaneByName(id, name string) *CuratedSwimlane {
-	var episodes []models.LibraryEpisode
-	if err := s.db.Gorm().
-		Where("suggested_swimlane = ?", name).
-		Order("episode_number ASC").
-		Limit(20).
-		Find(&episodes).Error; err != nil || len(episodes) == 0 {
+type EpisodeLaneDef struct {
+	ID   string
+	Name string
+}
+
+func (s *IntelligenceService) buildEpisodeSwimlanesBatch(laneDefs []EpisodeLaneDef) []*CuratedSwimlane {
+	if len(laneDefs) == 0 {
 		return nil
 	}
 
-	title := name
-	if episodes[0].SuggestedSwimlane != "" {
-		title = episodes[0].SuggestedSwimlane
+	laneNames := make([]string, len(laneDefs))
+	for i, l := range laneDefs {
+		laneNames[i] = l.Name
 	}
 
-	mediaIDs := make([]uint, 0, len(episodes))
-	for _, ep := range episodes {
-		mediaIDs = append(mediaIDs, ep.LibraryMediaID)
+	var allEpisodes []models.LibraryEpisode
+	if err := s.db.Gorm().
+		Select("id, library_media_id, episode_number, title, suggested_swimlane").
+		Where("suggested_swimlane IN (?)", laneNames).
+		Order("episode_number ASC").
+		Limit(len(laneNames) * 50).
+		Find(&allEpisodes).Error; err != nil || len(allEpisodes) == 0 {
+		return nil
+	}
+
+
+	// Group episodes by lane name (max 20 per lane)
+	episodesByLane := make(map[string][]models.LibraryEpisode)
+	mediaIDMap := make(map[uint]struct{})
+
+	for _, ep := range allEpisodes {
+		list := episodesByLane[ep.SuggestedSwimlane]
+		if len(list) < 20 {
+			episodesByLane[ep.SuggestedSwimlane] = append(list, ep)
+			mediaIDMap[ep.LibraryMediaID] = struct{}{}
+		}
+	}
+
+	if len(mediaIDMap) == 0 {
+		return nil
+	}
+
+	mediaIDs := make([]uint, 0, len(mediaIDMap))
+	for id := range mediaIDMap {
+		mediaIDs = append(mediaIDs, id)
 	}
 
 	var mediaList []models.LibraryMedia
@@ -131,39 +158,61 @@ func (s *IntelligenceService) buildEpisodeSwimlaneByName(id, name string) *Curat
 		mediaMap[mediaList[i].ID] = &mediaList[i]
 	}
 
-	lane := &CuratedSwimlane{
-		ID:      id,
-		Title:   title,
-		Type:    "episode_tag",
-		Entries: make([]*LibraryCollectionEntry, 0, len(episodes)),
+	resultLanes := make([]*CuratedSwimlane, 0, len(laneDefs))
+	for _, def := range laneDefs {
+		episodes, ok := episodesByLane[def.Name]
+		if !ok || len(episodes) == 0 {
+			continue
+		}
+
+		title := def.Name
+		if episodes[0].SuggestedSwimlane != "" {
+			title = episodes[0].SuggestedSwimlane
+		}
+
+		lane := &CuratedSwimlane{
+			ID:      def.ID,
+			Title:   title,
+			Type:    "episode_tag",
+			Entries: make([]*LibraryCollectionEntry, 0, len(episodes)),
+		}
+
+		added := make(map[uint]bool)
+		for i := range episodes {
+			ep := &episodes[i]
+			if added[ep.ID] {
+				continue
+			}
+			media, ok := mediaMap[ep.LibraryMediaID]
+			if !ok {
+				continue
+			}
+			if media.PosterImage == "" || media.GetPreferredTitle() == "" {
+				continue
+			}
+			added[ep.ID] = true
+			lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
+				Media:            media,
+				MediaID:          int(media.ID),
+				Episode:          ep,
+				AvailabilityType: "FULL_LOCAL",
+			})
+		}
+
+		if len(lane.Entries) > 0 {
+			resultLanes = append(resultLanes, lane)
+		}
 	}
 
-	added := make(map[uint]bool)
-	for i := range episodes {
-		ep := &episodes[i]
-		if added[ep.ID] {
-			continue
-		}
-		media, ok := mediaMap[ep.LibraryMediaID]
-		if !ok {
-			continue
-		}
-		if media.PosterImage == "" || media.GetPreferredTitle() == "" {
-			continue
-		}
-		added[ep.ID] = true
-		lane.Entries = append(lane.Entries, &LibraryCollectionEntry{
-			Media:            media,
-			MediaID:          int(media.ID),
-			Episode:          ep,
-			AvailabilityType: "FULL_LOCAL",
-		})
-	}
+	return resultLanes
+}
 
-	if len(lane.Entries) == 0 {
-		return nil
+func (s *IntelligenceService) buildEpisodeSwimlaneByName(id, name string) *CuratedSwimlane {
+	lanes := s.buildEpisodeSwimlanesBatch([]EpisodeLaneDef{{ID: id, Name: name}})
+	if len(lanes) > 0 {
+		return lanes[0]
 	}
-	return lane
+	return nil
 }
 
 func (s *IntelligenceService) buildLocalLibraryLane() *CuratedSwimlane {

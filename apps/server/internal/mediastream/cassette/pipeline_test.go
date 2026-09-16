@@ -16,16 +16,12 @@ import (
 func TestPipeline_Initialization(t *testing.T) {
 	logger := zerolog.New(os.Stderr)
 	keyframes := &KeyframeIndex{Keyframes: []float64{0, 2, 4, 6, 8, 10}, IsDone: true}
-	
-	sessionOut := filepath.Join(os.TempDir(), "kamehouse-test-session-init")
-	streamDir := filepath.Join(os.TempDir(), "kamehouse-test-stream-init")
+
+	tempDir := t.TempDir()
+	sessionOut := filepath.Join(tempDir, "session-init")
+	streamDir := filepath.Join(tempDir, "stream-init")
 	_ = os.MkdirAll(sessionOut, 0755)
 	_ = os.MkdirAll(streamDir, 0755)
-	defer func() {
-		// Attempt cleanup, ignore errors since reclaim goroutine might still be running
-		_ = os.RemoveAll(sessionOut)
-		_ = os.RemoveAll(streamDir)
-	}()
 
 	session := &Session{
 		Path:      "test.mp4",
@@ -64,27 +60,22 @@ func TestPipeline_Initialization(t *testing.T) {
 	if p == nil {
 		t.Fatal("expected pipeline to be created")
 	}
+	defer p.Kill()
 
 	if p.kind != VideoKind {
 		t.Errorf("expected kind to be VideoKind, got %v", p.kind)
 	}
-
-	// Give a tiny moment for reclaim goroutine to run before exiting test
-	time.Sleep(5 * time.Millisecond)
 }
 
 func TestPipeline_GetSegment_Concurrent_ThreadSafety(t *testing.T) {
 	logger := zerolog.New(os.Stderr)
 	keyframes := &KeyframeIndex{Keyframes: []float64{0, 2, 4, 6, 8, 10}, IsDone: true}
-	
-	sessionOut := filepath.Join(os.TempDir(), "kamehouse-test-session-concurrent")
-	streamDir := filepath.Join(os.TempDir(), "kamehouse-test-stream-concurrent")
+
+	tempDir := t.TempDir()
+	sessionOut := filepath.Join(tempDir, "session-concurrent")
+	streamDir := filepath.Join(tempDir, "stream-concurrent")
 	_ = os.MkdirAll(sessionOut, 0755)
 	_ = os.MkdirAll(streamDir, 0755)
-	defer func() {
-		_ = os.RemoveAll(sessionOut)
-		_ = os.RemoveAll(streamDir)
-	}()
 
 	session := &Session{
 		Path:      "test.mp4",
@@ -120,6 +111,7 @@ func TestPipeline_GetSegment_Concurrent_ThreadSafety(t *testing.T) {
 	}
 
 	p := NewPipeline(cfg)
+	defer p.Kill()
 
 	// Mark segment 0 as ready so WaitFor returns immediately without spawning process/waiting
 	p.segments.MarkReady(0, 0)
@@ -135,22 +127,17 @@ func TestPipeline_GetSegment_Concurrent_ThreadSafety(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-
-	time.Sleep(5 * time.Millisecond)
 }
 
 func TestPipeline_Heads_SlotReuse(t *testing.T) {
 	logger := zerolog.New(os.Stderr)
 	keyframes := &KeyframeIndex{Keyframes: []float64{0, 2, 4, 6, 8, 10}, IsDone: true}
-	
-	sessionOut := filepath.Join(os.TempDir(), "kamehouse-test-session-heads")
-	streamDir := filepath.Join(os.TempDir(), "kamehouse-test-stream-heads")
+
+	tempDir := t.TempDir()
+	sessionOut := filepath.Join(tempDir, "session-heads")
+	streamDir := filepath.Join(tempDir, "stream-heads")
 	_ = os.MkdirAll(sessionOut, 0755)
 	_ = os.MkdirAll(streamDir, 0755)
-	defer func() {
-		_ = os.RemoveAll(sessionOut)
-		_ = os.RemoveAll(streamDir)
-	}()
 
 	session := &Session{
 		Path:      "test.mp4",
@@ -186,6 +173,7 @@ func TestPipeline_Heads_SlotReuse(t *testing.T) {
 	}
 
 	p := NewPipeline(cfg)
+	defer p.Kill()
 
 	// Simulate adding two heads
 	_, cancel1 := context.WithCancel(context.Background())
@@ -226,6 +214,4 @@ func TestPipeline_Heads_SlotReuse(t *testing.T) {
 	if len(p.heads) != 2 {
 		t.Errorf("expected heads array length to remain 2, got %d", len(p.heads))
 	}
-
-	time.Sleep(5 * time.Millisecond)
 }

@@ -2,6 +2,7 @@ package db
 
 import (
 	"kamehouse/internal/database/models"
+	"time"
 
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
@@ -26,6 +27,7 @@ func (cm *CleanupManager) RunAllCleanupOperations() {
 	cm.trimScanSummaryEntries()
 	cm.trimLocalFileEntries()
 	cm.removeOrphanedAndCollidedMedia()
+	cm.purgeExpiredMetadataCache()
 
 	cm.logger.Debug().Msg("database: Cleanup operations completed")
 }
@@ -99,10 +101,18 @@ func (cm *CleanupManager) trimLocalFileEntries() {
 		}
 
 		if len(idsToDelete) > 0 {
-			err = cm.gormdb.Delete(&models.LocalFiles{}, idsToDelete).Error
-			if err != nil {
-				cm.logger.Error().Err(err).Msg("database: Failed to delete old legacy local file entries")
-				return
+			batchSize := 900
+			for i := 0; i < len(idsToDelete); i += batchSize {
+				end := i + batchSize
+				if end > len(idsToDelete) {
+					end = len(idsToDelete)
+				}
+				chunk := idsToDelete[i:end]
+				err = cm.gormdb.Delete(&models.LocalFiles{}, chunk).Error
+				if err != nil {
+					cm.logger.Error().Err(err).Msg("database: Failed to delete old legacy local file entries")
+					return
+				}
 			}
 			cm.logger.Debug().Int("deleted", len(idsToDelete)).Msg("database: Deleted old legacy local file entries (blob storage)")
 		}
@@ -148,12 +158,52 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 			Str("title", row.TitleEnglish).
 			Msg("database cleanup: Deleting collided show with no local files")
 
-		_ = cm.gormdb.Transaction(func(tx *gorm.DB) error {
-			_ = tx.Where("library_media_id = ?", row.ID).Delete(&models.LibraryEpisode{})
-			_ = tx.Where("library_media_id = ?", row.ID).Delete(&models.LibrarySeason{})
-			_ = tx.Where("library_media_id = ?", row.ID).Delete(&models.MediaEntryListData{})
-			_ = tx.Delete(&models.LibraryMedia{}, row.ID)
+		err := cm.gormdb.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Where("library_media_id = ?", row.ID).Delete(&models.LibraryEpisode{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("library_media_id = ?", row.ID).Delete(&models.LibrarySeason{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("library_media_id = ?", row.ID).Delete(&models.MediaEntryListData{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_id = ?", row.ID).Delete(&models.ProviderMapping{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_id = ?", row.ID).Delete(&models.WatchHistory{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_id = ?", row.ID).Delete(&models.UserMediaProgress{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_id = ?", row.ID).Delete(&models.EpisodeSkipTime{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("media_id = ?", row.ID).Delete(&models.MediaFiller{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Delete(&models.LibraryMedia{}, row.ID).Error; err != nil {
+				return err
+			}
 			return nil
 		})
+
+		if err != nil {
+			cm.logger.Error().Err(err).Uint("id", row.ID).Msg("database cleanup: Failed to delete collided show")
+		}
+	}
+}
+
+// purgeExpiredMetadataCache removes cached metadata rows whose expires_at is in the past.
+func (cm *CleanupManager) purgeExpiredMetadataCache() {
+	zeroTime := time.Time{}
+	res := cm.gormdb.Where("expires_at < ? AND expires_at > ?", time.Now(), zeroTime).Delete(&models.MetadataCache{})
+	if res.Error != nil {
+		cm.logger.Error().Err(res.Error).Msg("database cleanup: Failed to delete expired metadata cache entries")
+		return
+	}
+	if res.RowsAffected > 0 {
+		cm.logger.Info().Int64("deleted", res.RowsAffected).Msg("database cleanup: Purged expired metadata cache entries")
 	}
 }

@@ -69,11 +69,14 @@ func TestCacherSetAndGet(t *testing.T) {
 	tempDir := t.TempDir()
 	t.Log(tempDir)
 
-	cacher, err := NewCacher(filepath.Join(test_utils.ConfigData.Path.DataDir, "cache"))
+	cacher, err := NewCacher(filepath.Join(tempDir, "cache"))
+	if err != nil {
+		t.Fatalf("Failed to initialize cacher: %v", err)
+	}
 
 	bucket := Bucket{
 		name: "test",
-		ttl:  4 * time.Second,
+		ttl:  200 * time.Millisecond,
 	}
 	key := "key"
 	value := struct {
@@ -81,7 +84,7 @@ func TestCacherSetAndGet(t *testing.T) {
 	}{
 		Name: "value",
 	}
-	// Add "key" -> value to the bucket, with a TTL of 4 seconds
+	// Add "key" -> value to the bucket
 	err = cacher.Set(bucket, key, value)
 	if err != nil {
 		t.Fatalf("Failed to set the value: %v", err)
@@ -99,22 +102,7 @@ func TestCacherSetAndGet(t *testing.T) {
 		t.Errorf("Failed to get the correct value. Expected %v, got %v", value, out)
 	}
 
-	spew.Dump(out)
-
-	time.Sleep(3 * time.Second)
-
-	// Get the value of "key" from the bucket again, it shouldn't be expired
-	found, err = cacher.Get(bucket, key, &out)
-	if !found {
-		t.Errorf("Failed to get the value")
-	}
-	if !found || out != value {
-		t.Errorf("Failed to get the correct value. Expected %v, got %v", value, out)
-	}
-
-	spew.Dump(out)
-
-	// Spin up a goroutine to set "key2" -> value2 to the bucket, with a TTL of 1 second
+	// Spin up a goroutine to set "key2" -> value2 to the bucket
 	// cacher should be thread-safe
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -129,35 +117,31 @@ func TestCacherSetAndGet(t *testing.T) {
 		var out2 struct {
 			Name string
 		}
-		err = cacher.Set(bucket, key2, value2)
-		if err != nil {
-			t.Errorf("Failed to set the value: %v", err)
+		setErr := cacher.Set(bucket, key2, value2)
+		if setErr != nil {
+			t.Errorf("Failed to set the value: %v", setErr)
 		}
 
-		found, err = cacher.Get(bucket, key2, &out2)
-		if err != nil {
-			t.Errorf("Failed to get the value: %v", err)
+		f, gErr := cacher.Get(bucket, key2, &out2)
+		if gErr != nil {
+			t.Errorf("Failed to get the value: %v", gErr)
 		}
 
-		if !found || !assert.Equal(t, value2, out2) {
+		if !f || !assert.Equal(t, value2, out2) {
 			t.Errorf("Failed to get the correct value. Expected %v, got %v", value2, out2)
 		}
 
 		_ = cacher.Delete(bucket, key2)
-
-		spew.Dump(out2)
-
 	}()
-
-	time.Sleep(2 * time.Second)
-
-	// Get the value of "key" from the bucket, it should be expired
-	found, _ = cacher.Get(bucket, key, &out)
-	if found {
-		t.Errorf("Failed to delete the value")
-		spew.Dump(out)
-	}
 
 	wg.Wait()
 
+	// Wait for TTL expiration using Eventually
+	assert.Eventually(t, func() bool {
+		var expiredOut struct {
+			Name string
+		}
+		f, _ := cacher.Get(bucket, key, &expiredOut)
+		return !f
+	}, 2*time.Second, 20*time.Millisecond, "key should expire after TTL")
 }

@@ -55,11 +55,8 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(move |app, _args, _cwd| {
             single_instance_window_manager.show_main_window(app);
         }))
@@ -73,19 +70,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             ipc::get_desktop_settings,
             ipc::set_desktop_settings,
-            ipc::restart_server,
             ipc::kill_server,
-            ipc::write_to_clipboard,
             ipc::get_local_server_port,
-            ipc::check_for_updates,
-            ipc::install_update,
-            ipc::get_window_state,
-            ipc::set_window_fullscreen,
-            ipc::toggle_window_maximize,
-            ipc::minimize_window,
-            ipc::hide_window,
-            ipc::show_window,
-            ipc::is_main_window,
             ipc::startup_renderer_ready,
             ipc::shell_open,
             ipc::mpv_play,
@@ -188,17 +174,23 @@ pub fn run() {
                             api.prevent_close();
                             let _ = window.hide();
                         } else {
-                            // Persist final window bounds synchronously before we tear down.
+                            api.prevent_close();
+                            // Save window state BEFORE hiding, otherwise is_minimized() returns true
+                            // and save_window_state returns early without persisting the bounds.
                             let _ = window_manager.save_window_state(window);
-                            // Block so the server process is actually killed before the app exits;
-                            // `shutdown()` is async and would otherwise be dropped without running.
-                            tauri::async_runtime::block_on(sidecar_manager.shutdown());
+                            let _ = window.hide();
+                            let sidecar_mgr = sidecar_manager.clone();
+                            let app_handle = window.app_handle().clone();
+                            tauri::async_runtime::spawn(async move {
+                                sidecar_mgr.shutdown().await;
+                                app_handle.exit(0);
+                            });
                         }
                     }
                 }
                 tauri::WindowEvent::Focused(focused) => {
                     if *focused && label == "main" {
-                        window_manager.set_startup_ready(true);
+                        window_manager.on_renderer_ready(window.app_handle());
                     }
                 }
                 tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_)

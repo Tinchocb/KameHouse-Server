@@ -46,6 +46,7 @@ func GetKameHouseFlags() KameHouseFlags {
 	}
 
 	flag.StringVar(&flags.DataDir, "datadir", "", "Directory that contains all KameHouse data")
+	flag.StringVar(&flags.DataDir, "data-dir", "", "Alias for --datadir")
 	flag.StringVar(&flags.Host, "host", "", "Host address to bind to")
 	flag.IntVar(&flags.Port, "port", 0, "Port to bind to")
 	flag.BoolVar(&flags.Update, "update", false, "Update the application")

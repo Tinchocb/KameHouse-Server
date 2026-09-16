@@ -1,23 +1,21 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"kamehouse/internal/constants"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
+	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 )
 
+
 func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mID int) (*anime.EpisodeCollection, error) {
-
-	h.App.AddOnRefreshAnimeCollectionFunc("HandleGetAnimeEpisodeCollection", func() {
-		anime.ClearEpisodeCollectionCache()
-	})
-
 	// For TMDB-only media (negative IDs), build episode collection from local LibraryEpisode data
 	if mID <= 0 {
 		return h.getTMDBEpisodeCollection(mID)
@@ -134,8 +132,8 @@ func (h *Handler) getTMDBEpisodeCollection(mID int) (*anime.EpisodeCollection, e
 //	@route /api/v1/anime/episode-collection/{id} [GET]
 func (h *Handler) HandleGetAnimeEpisodeCollection(c echo.Context) error {
 	mID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return h.RespondWithError(c, err)
+	if err != nil || mID == 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid non-zero anime media id is required"))
 	}
 
 	ec, err := h.getAnimeEpisodeCollection(c, mID)

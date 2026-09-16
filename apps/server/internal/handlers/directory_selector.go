@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"errors"
+	"kamehouse/internal/util"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +22,45 @@ type DirectorySelectorResponse struct {
 	BasePath    string          `json:"basePath"`
 	Suggestions []DirectoryInfo `json:"suggestions"`
 	Directories []DirectoryInfo `json:"Directories"`
+}
+
+func isBlockedSystemDirectory(p string) bool {
+	return util.IsBlockedSystemDir(p)
+}
+
+// validateBrowserPath canonicaliza y rechaza traversal codificado, UNC y dirs de sistema.
+// Se usa en endpoints que navegan FS arbitrario (selector). No sustituye el jail
+// a librerías que sí hacen explorer/mediastream.
+func validateBrowserPath(input string) (string, error) {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" || trimmed == "." {
+		return "", errors.New("empty path")
+	}
+	lowered := strings.ToLower(trimmed)
+	if strings.Contains(lowered, "%2e") || strings.Contains(lowered, "%2f") || strings.Contains(lowered, "%5c") || strings.Contains(trimmed, "\x00") {
+		return "", errors.New("path traversal not allowed")
+	}
+	cleaned := filepath.Clean(trimmed)
+	if cleaned == "." || strings.HasPrefix(cleaned, `\\`) || strings.HasPrefix(cleaned, `//`) {
+		return "", errors.New("path not allowed")
+	}
+	// Rechazar segmentos ".." supervivientes y paths que escapan vía Clean.
+	for _, seg := range strings.Split(filepath.ToSlash(cleaned), "/") {
+		if seg == ".." {
+			return "", errors.New("path traversal not allowed")
+		}
+	}
+	if isBlockedSystemDirectory(cleaned) {
+		return "", errors.New("access to system directory forbidden")
+	}
+	// Resolver symlinks si el path existe para no enumerar fuera vía enlace.
+	if real, err := filepath.EvalSymlinks(cleaned); err == nil {
+		if isBlockedSystemDirectory(real) {
+			return "", errors.New("access to system directory forbidden")
+		}
+		return filepath.ToSlash(real), nil
+	}
+	return filepath.ToSlash(cleaned), nil
 }
 
 // HandleDirectorySelector returns directory content based on the input path.
@@ -40,7 +82,28 @@ func (h *Handler) HandleDirectorySelector(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	input := filepath.ToSlash(filepath.Clean(request.Input))
+	trimmed := strings.TrimSpace(request.Input)
+	if trimmed == "" || trimmed == "." {
+		return h.RespondWithData(c, DirectorySelectorResponse{
+			FullPath:    "",
+			BasePath:    "",
+			Exists:      false,
+			Suggestions: []DirectoryInfo{},
+			Directories: []DirectoryInfo{},
+		})
+	}
+
+	input, verr := validateBrowserPath(trimmed)
+	if verr != nil {
+		msg := verr.Error()
+		if strings.Contains(msg, "system directory") {
+			return h.RespondWithCodeError(c, http.StatusForbidden, verr)
+		}
+		return h.RespondWithCodeError(c, http.StatusBadRequest, verr)
+	}
+	if isBlockedSystemDirectory(input) {
+		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access to system directory forbidden"))
+	}
 	directoryExists, err := checkDirectoryExists(input)
 	if err != nil {
 		return h.RespondWithError(c, err)
@@ -91,13 +154,13 @@ func checkDirectoryExists(path string) (bool, error) {
 }
 
 func getAutocompletionSuggestions(input string) ([]DirectoryInfo, error) {
-	var suggestions []DirectoryInfo
+	suggestions := []DirectoryInfo{}
 	baseDir := filepath.Dir(input)
 	prefix := filepath.Base(input)
 
 	entries, err := os.ReadDir(baseDir)
 	if err != nil {
-		return nil, nil
+		return suggestions, nil
 	}
 
 	for _, entry := range entries {
@@ -106,6 +169,9 @@ func getAutocompletionSuggestions(input string) ([]DirectoryInfo, error) {
 				FullPath:   filepath.Join(baseDir, entry.Name()),
 				FolderName: entry.Name(),
 			})
+			if len(suggestions) >= 100 {
+				break
+			}
 		}
 	}
 

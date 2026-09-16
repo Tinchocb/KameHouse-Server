@@ -85,6 +85,16 @@ func TestFolderStructureAndEpisodeIntegration(t *testing.T) {
 			wantIsMovie:    false,
 		},
 		{
+			name:             "Dragon Ball Kai Saga de Majin Boo E164",
+			filePath:         "C:/Series/Dragon ball KAI/(2015-06-14) Saga de Majin Boo - E164 - ¡¡Eres el mejor Goku!! La muerte de Majin Boo.mkv",
+			wantSeriesName:   "Dragon ball KAI",
+			wantSeason:       1,
+			wantEpisode:      164,
+			wantEpisodeTitle: "¡¡Eres el mejor Goku!! La muerte de Majin Boo",
+			wantTMDBID:       61709,
+			wantIsMovie:      false,
+		},
+		{
 			name:           "Dragon Ball Clásico bare number 153",
 			filePath:       "C:/Anime/Dragon Ball/153.mp4",
 			wantSeriesName: "Dragon Ball",

@@ -9,6 +9,8 @@ import (
 	"kamehouse/internal/user"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -21,6 +23,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 )
+
 
 var (
 	cpuProfileMu       sync.Mutex
@@ -118,11 +121,7 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		Pid:                   os.Getpid(),
 	}
 
-	isAuthenticated := true
-	if h.App.Config.Server.Password != "" {
-		passwordHash := c.Request().Header.Get("X-KameHouse-Token")
-		isAuthenticated = h.isCorrectPasswordToken(passwordHash)
-	}
+	isAuthenticated := h.isAuthorized(c)
 
 	if !isAuthenticated {
 		// If the user is unauthenticated, return a status with no user data
@@ -196,7 +195,7 @@ func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 
 	var filenames []string
 	filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() || filepath.Ext(path) != ".log" {
+		if err != nil || d == nil || d.IsDir() || filepath.Ext(path) != ".log" {
 			return nil
 		}
 		filenames = append(filenames, filepath.Base(path))
@@ -241,7 +240,7 @@ func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 	}
 
 	err := filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() || filepath.Ext(path) != ".log" {
+		if err != nil || d == nil || d.IsDir() || filepath.Ext(path) != ".log" {
 			return nil
 		}
 		for _, filename := range b.Filenames {
@@ -531,5 +530,36 @@ func (h *Handler) HandleGetHomeItems(c echo.Context) error {
 //	@route /api/v1/status/home-items [POST]
 //	@returns nil
 func (h *Handler) HandleUpdateHomeItems(c echo.Context) error {
-	return nil
+	return h.RespondWithData(c, true)
 }
+
+// HandleShutdown handles graceful shutdown requests from local clients (e.g. desktop sidecar).
+//
+//	@summary gracefully shuts down the server.
+//	@route /api/v1/shutdown [POST]
+//	@returns status message
+func (h *Handler) HandleShutdown(c echo.Context) error {
+	remoteHost, _, err := net.SplitHostPort(c.Request().RemoteAddr)
+	if err != nil {
+		remoteHost = c.Request().RemoteAddr
+	}
+	if remoteHost != "127.0.0.1" && remoteHost != "::1" && remoteHost != "localhost" && remoteHost != "" {
+		return h.RespondWithCodeError(c, http.StatusForbidden, fmt.Errorf("shutdown only allowed from loopback"))
+	}
+
+	h.App.Logger.Info().Msg("handlers: graceful shutdown requested via /api/v1/shutdown")
+	if h.App.WSEventManager != nil {
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					h.App.Logger.Error().Interface("panic", r).Msg("status: panic during trigger shutdown")
+				}
+			}()
+			time.Sleep(50 * time.Millisecond) // allow HTTP 200 response to flush
+			h.App.WSEventManager.TriggerShutdown()
+		}()
+	}
+
+	return h.RespondWithData(c, map[string]string{"status": "shutting_down"})
+}
+

@@ -7,8 +7,8 @@ import (
 	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/dustin/go-humanize"
 )
@@ -39,12 +39,15 @@ func TestDatabaseCleanupManager(t *testing.T) {
 	database.RunDatabaseCleanup()
 
 	t.Log("Launching many write operations...")
-	time.Sleep(100 * time.Millisecond)
+	var writeWg sync.WaitGroup
+	writeWg.Add(1000)
 	for i := 0; i < 1000; i++ {
-		go database.Gorm().Create(&models.ScanSummary{Value: []byte(fmt.Sprintf("scan summary data %d - %s", i, generateCleanupTestData(5)))})
+		go func(idx int) {
+			defer writeWg.Done()
+			_ = database.Gorm().Create(&models.ScanSummary{Value: []byte(fmt.Sprintf("scan summary data %d - %s", idx, generateCleanupTestData(5)))}).Error
+		}(i)
 	}
-
-	time.Sleep(1 * time.Second)
+	writeWg.Wait()
 
 	checkTableCounts(t, database, "after cleanup")
 

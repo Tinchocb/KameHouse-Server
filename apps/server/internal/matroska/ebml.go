@@ -32,6 +32,7 @@
 package matroska
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -495,6 +496,7 @@ type EBMLElement struct {
 //	fmt.Printf("Element ID: 0x%X, Size: %d\n", element.ID, element.Size)
 type EBMLReader struct {
 	r   io.ReadSeeker // The underlying reader for the EBML data
+	br  *bufio.Reader // Buffered reader to avoid millions of 1-byte syscalls
 	pos int64         // The current position in the stream
 }
 
@@ -519,7 +521,24 @@ type EBMLReader struct {
 //
 //	reader := NewEBMLReader(file)
 func NewEBMLReader(r io.ReadSeeker) *EBMLReader {
-	return &EBMLReader{r: r}
+	return &EBMLReader{
+		r:   r,
+		br:  bufio.NewReaderSize(r, 64*1024),
+		pos: 0,
+	}
+}
+
+func (er *EBMLReader) getReader() *bufio.Reader {
+	if er.br == nil {
+		er.br = bufio.NewReaderSize(er.r, 64*1024)
+	}
+	return er.br
+}
+
+func (er *EBMLReader) Read(p []byte) (int, error) {
+	n, err := er.getReader().Read(p)
+	er.pos += int64(n)
+	return n, err
 }
 
 // ReadVInt reads a variable-length integer from the stream.
@@ -560,51 +579,59 @@ func (er *EBMLReader) ReadVIntID() (uint64, error) {
 //   - The value of the variable-length integer
 //   - An error if the read operation failed or the VINT is invalid
 func (er *EBMLReader) readVInt(keepLengthMarker bool) (uint64, error) {
-	var b [1]byte
+	var firstByte byte
+	br := er.getReader()
 
 	// Skip any 0x00 padding bytes to resync to the next element/header
+	// Acotado a 16 para evitar DoS con archivos llenos de ceros.
+	padCount := 0
 	for {
-		if _, err := er.r.Read(b[:]); err != nil {
+		b, err := br.ReadByte()
+		if err != nil {
 			return 0, err
 		}
 		er.pos++
-		if b[0] != 0x00 {
+		if b != 0x00 {
+			firstByte = b
 			break
+		}
+		padCount++
+		if padCount > 16 {
+			return 0, errors.New("invalid VINT: too much zero padding")
 		}
 	}
 
 	// Find the number of bytes to read based on the first bit pattern
-	firstByte := b[0]
-
 	// Count leading zeros to determine length
 	var length int
 	var lengthMask uint8
 
-	if firstByte&0x80 != 0 {
+	switch {
+	case firstByte&0x80 != 0:
 		length = 1
 		lengthMask = 0x80
-	} else if firstByte&0x40 != 0 {
+	case firstByte&0x40 != 0:
 		length = 2
 		lengthMask = 0x40
-	} else if firstByte&0x20 != 0 {
+	case firstByte&0x20 != 0:
 		length = 3
 		lengthMask = 0x20
-	} else if firstByte&0x10 != 0 {
+	case firstByte&0x10 != 0:
 		length = 4
 		lengthMask = 0x10
-	} else if firstByte&0x08 != 0 {
+	case firstByte&0x08 != 0:
 		length = 5
 		lengthMask = 0x08
-	} else if firstByte&0x04 != 0 {
+	case firstByte&0x04 != 0:
 		length = 6
 		lengthMask = 0x04
-	} else if firstByte&0x02 != 0 {
+	case firstByte&0x02 != 0:
 		length = 7
 		lengthMask = 0x02
-	} else if firstByte&0x01 != 0 {
+	case firstByte&0x01 != 0:
 		length = 8
 		lengthMask = 0x01
-	} else {
+	default:
 		return 0, fmt.Errorf("invalid VINT: no length marker found")
 	}
 
@@ -616,13 +643,14 @@ func (er *EBMLReader) readVInt(keepLengthMarker bool) (uint64, error) {
 		result = uint64(firstByte & (lengthMask - 1))
 	}
 
-	// Read remaining bytes
+	// Read remaining bytes from the buffer
 	for i := 1; i < length; i++ {
-		if _, err := er.r.Read(b[:]); err != nil {
+		b, err := br.ReadByte()
+		if err != nil {
 			return 0, err
 		}
 		er.pos++
-		result = (result << 8) | uint64(b[0])
+		result = (result << 8) | uint64(b)
 	}
 
 	return result, nil
@@ -667,15 +695,19 @@ func (er *EBMLReader) ReadElement() (*EBMLElement, error) {
 		return nil, fmt.Errorf("failed to read element size: %w", err)
 	}
 
-	// Check for unknown size marker
+	// Check for unknown size marker or excessively large elements (> 64MB)
 	if size == (1<<(7*8))-1 {
 		return nil, fmt.Errorf("unknown size elements not supported")
+	}
+	const maxElementSize = 64 * 1024 * 1024 // 64 MB safety limit
+	if size > maxElementSize {
+		return nil, fmt.Errorf("ebml element size %d exceeds safety limit of %d bytes", size, maxElementSize)
 	}
 
 	// Read element data
 	data := make([]byte, size)
 	if size > 0 {
-		n, errReadFull := io.ReadFull(er.r, data)
+		n, errReadFull := io.ReadFull(er.getReader(), data)
 		if errReadFull != nil {
 			return nil, fmt.Errorf("failed to read element data: %w", errReadFull)
 		}
@@ -702,11 +734,34 @@ func (er *EBMLReader) ReadElement() (*EBMLElement, error) {
 //   - The new position relative to the beginning of the stream
 //   - An error if the seek operation failed
 func (er *EBMLReader) Seek(offset int64, whence int) (int64, error) {
-	pos, err := er.r.Seek(offset, whence)
+	var targetPos int64
+	switch whence {
+	case io.SeekStart:
+		targetPos = offset
+	case io.SeekCurrent:
+		targetPos = er.pos + offset
+	case io.SeekEnd:
+		endPos, err := er.r.Seek(offset, io.SeekEnd)
+		if err != nil {
+			return 0, err
+		}
+		er.pos = endPos
+		if er.br != nil {
+			er.br.Reset(er.r)
+		}
+		return endPos, nil
+	default:
+		return 0, errors.New("invalid whence")
+	}
+
+	pos, err := er.r.Seek(targetPos, io.SeekStart)
 	if err != nil {
 		return 0, err
 	}
 	er.pos = pos
+	if er.br != nil {
+		er.br.Reset(er.r)
+	}
 	return pos, nil
 }
 
@@ -771,7 +826,9 @@ func (el *EBMLElement) ReadInt() int64 {
 		case 8:
 			return int64(result)
 		default:
-			// Handle arbitrary length negative numbers
+			if len(el.Data) > 8 {
+				return int64(result)
+			}
 			mask := uint64(1<<(uint(len(el.Data))*8-1)) - 1
 			return -int64((^result & mask) + 1)
 		}
@@ -805,17 +862,17 @@ func (el *EBMLElement) ReadFloat() float64 {
 	}
 }
 
-// ReadString reads a UTF-8 string from the element's data.
+// ReadString reads a string from the element's data.
 //
-// This method interprets the element's data as a UTF-8 encoded string.
-// It removes any null terminator if present at the end of the data.
+// This method interprets the element's data as a string (either ASCII or UTF-8)
+// and returns its value. Null bytes at the end of the string are trimmed.
 //
 // Returns:
 //   - The string value stored in the element's data.
 func (el *EBMLElement) ReadString() string {
-	// Remove null terminator if present
+	// Trim null bytes from the end of the string
 	data := el.Data
-	if len(data) > 0 && data[len(data)-1] == 0 {
+	for len(data) > 0 && data[len(data)-1] == 0 {
 		data = data[:len(data)-1]
 	}
 	return string(data)
@@ -832,31 +889,32 @@ func (el *EBMLElement) ReadBytes() []byte {
 	return el.Data
 }
 
-// SkipElement skips the current element by seeking past its data in the stream.
+// SkipElement skips the current element's data in the stream.
 //
-// This method is useful for efficiently moving past elements whose content
-// is not needed for current processing. It updates the reader's internal
-// position tracker.
+// This method moves the reader past the current element's data without reading it.
+// It is useful for quickly navigating through elements that are not needed.
 //
 // Parameters:
-//   - element: The EBMLElement to skip.
+//   - element: The element to skip.
 //
 // Returns:
-//   - An error if the seek operation failed.
+//   - An error if the skip operation failed.
 func (er *EBMLReader) SkipElement(element *EBMLElement) error {
-	_, err := er.r.Seek(int64(element.Size), io.SeekCurrent)
-	if err != nil {
-		return err
-	}
-	er.pos += int64(element.Size)
-	return nil
+	_, err := er.Seek(int64(element.Size), io.SeekCurrent)
+	return err
 }
 
 // Skip reads and discards the next n bytes from the underlying reader.
 func (er *EBMLReader) Skip(n int64) (int64, error) {
-	total, err := io.CopyN(io.Discard, er.r, n)
-	er.pos += total
-	return total, err
+	if n <= 0 {
+		return 0, nil
+	}
+	if n <= int64(er.br.Buffered()) {
+		discarded, err := er.br.Discard(int(n))
+		er.pos += int64(discarded)
+		return int64(discarded), err
+	}
+	return er.Seek(n, io.SeekCurrent)
 }
 
 // ReadElementHeader reads only the element ID and size from the stream, without reading the actual data.
@@ -887,6 +945,15 @@ func (er *EBMLReader) ReadElementHeader() (uint32, uint64, error) {
 			return 0, 0, err
 		}
 		return 0, 0, fmt.Errorf("failed to read element size: %w", err)
+	}
+
+	// Cap anti-OOM: ReadElementHeader no debe limitar contenedores de nivel superior
+	// (como IDSegment que contiene todo el archivo de varios GB o streams con tamaño desconocido),
+	// pero para elementos de datos individuales, previene overflow/DoS.
+	const unknownSize = (1 << (7 * 8)) - 1
+	const maxHeaderSize = 256 * 1024 * 1024
+	if uint32(id) != IDSegment && size != unknownSize && size > maxHeaderSize {
+		return 0, 0, fmt.Errorf("ebml element size %d exceeds safety limit of %d bytes", size, maxHeaderSize)
 	}
 
 	return uint32(id), size, nil
@@ -939,7 +1006,7 @@ func (er *EBMLReader) ReadEBMLHeader() (*EBMLHeader, error) {
 
 	header := &EBMLHeader{}
 	reader := bytes.NewReader(element.Data)
-	childReader := &EBMLReader{r: &seekableReader{reader}, pos: 0}
+	childReader := NewEBMLReader(&seekableReader{reader})
 
 	for childReader.pos < int64(len(element.Data)) {
 		childElement, errReadElement := childReader.ReadElement()

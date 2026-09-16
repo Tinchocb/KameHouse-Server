@@ -61,6 +61,8 @@ func BuildHwAccelProfile(opts HwAccelOptions, ffmpegPath string, logger *zerolog
 	switch name {
 	case "disabled":
 		return cpuProfile(preset)
+	case "amf", "amd":
+		return amfProfile(preset)
 	case "vaapi":
 		return vaAPIProfile(defaultDevice)
 	case "qsv", "intel":
@@ -95,6 +97,7 @@ func probeHardwareEncoder(ffmpegPath string, logger *zerolog.Logger) string {
 	candidates := []candidate{
 		{"nvidia", "h264_nvenc"},
 		{"qsv", "h264_qsv"},
+		{"amf", "h264_amf"},
 		{"vaapi", "h264_vaapi"},
 	}
 	if runtime.GOOS == "darwin" {
@@ -283,6 +286,38 @@ func videotoolboxProfile() HwAccelProfile {
 			// "-realtime", "true",
 			// "-prio_speed", "true",
 			"-profile:v", "main",
+		},
+		ScaleFilter:   "scale=%d:%d",
+		NoScaleFilter: "format=yuv420p",
+		ForcedIDR:     true,
+	}
+}
+
+func amfProfile(preset string) HwAccelProfile {
+	amfQuality := "speed"
+	switch preset {
+	case "slow", "slower", "veryslow":
+		amfQuality = "quality"
+	case "medium":
+		amfQuality = "balanced"
+	default:
+		amfQuality = "speed"
+	}
+
+	decodeFlags := []string{"-hwaccel", "d3d11va"}
+	if runtime.GOOS != "windows" {
+		decodeFlags = []string{"-hwaccel", "vaapi"}
+	}
+
+	return HwAccelProfile{
+		Name:        "amf",
+		DecodeFlags: decodeFlags,
+		EncodeFlags: []string{
+			"-c:v", "h264_amf",
+			"-usage", "transcoding",
+			"-quality", amfQuality,
+			"-rc", "cbr",
+			"-profile:v", "high",
 		},
 		ScaleFilter:   "scale=%d:%d",
 		NoScaleFilter: "format=yuv420p",

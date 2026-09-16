@@ -61,12 +61,6 @@ func (c *BoundedCache[K, V]) SetT(key K, value V, ttl time.Duration) {
 	// Add new item to front
 	elem := c.order.PushFront(item)
 	c.items[key] = elem
-
-	// Set up expiration cleanup
-	go func() {
-		<-time.After(ttl)
-		c.Delete(key)
-	}()
 }
 
 // Get retrieves an item from the cache and marks it as recently used

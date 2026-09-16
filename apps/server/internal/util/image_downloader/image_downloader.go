@@ -74,8 +74,12 @@ func NewImageDownloader(downloadDir string, logger *zerolog.Logger) *ImageDownlo
 	}
 }
 
-// DownloadImages downloads multiple images concurrently.
+// DownloadImages downloads multiple images concurrently using a bounded worker pool.
 func (id *ImageDownloader) DownloadImages(urls []string) (err error) {
+	if len(urls) == 0 {
+		return nil
+	}
+
 	id.cancelChannel = make(chan struct{})
 
 	if err = id.registry.setup(); err != nil {
@@ -83,20 +87,41 @@ func (id *ImageDownloader) DownloadImages(urls []string) (err error) {
 	}
 
 	rateLimiter := limiter.NewLimiter(1*time.Second, 10)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		select {
+		case <-id.cancelChannel:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	numWorkers := 8
+	if len(urls) < numWorkers {
+		numWorkers = len(urls)
+	}
+
+	urlChan := make(chan string, len(urls))
+	for _, u := range urls {
+		urlChan <- u
+	}
+	close(urlChan)
+
 	var wg sync.WaitGroup
-	for _, url := range urls {
+	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-		go func(url string) {
+		go func() {
 			defer wg.Done()
-			select {
-			case <-id.cancelChannel:
-				id.logger.Warn().Msg("image downloader: Download process canceled")
-				return
-			default:
-				_ = rateLimiter.Wait(context.Background())
-				id.downloadImage(url)
+			for u := range urlChan {
+				if err := rateLimiter.Wait(ctx); err != nil {
+					id.logger.Warn().Msg("image downloader: Download process canceled or timed out")
+					return
+				}
+				id.downloadImage(ctx, u)
 			}
-		}(url)
+		}()
 	}
 	wg.Wait()
 
@@ -200,8 +225,17 @@ func (id *ImageDownloader) DeleteImagesByUrls(urls []string) (err error) {
 	return
 }
 
+func (id *ImageDownloader) getClient() *http.Client {
+	id.actionMu.Lock()
+	defer id.actionMu.Unlock()
+	if id.client == nil {
+		id.client = httputil.NewFastClient()
+	}
+	return id.client
+}
+
 // downloadImage downloads an image from a URL.
-func (id *ImageDownloader) downloadImage(url string) {
+func (id *ImageDownloader) downloadImage(ctx context.Context, url string) {
 
 	defer util.HandlePanicInModuleThen("util/image_downloader/downloadImage", func() {
 	})
@@ -225,11 +259,14 @@ func (id *ImageDownloader) downloadImage(url string) {
 
 	imgID := uuid.NewString()
 
-	// Download the image
-	if id.client == nil {
-		id.client = httputil.NewFastClient()
+	client := id.getClient()
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		id.logger.Error().Err(err).Msgf("image downloader: Failed to create request for URL %s", url)
+		return
 	}
-	resp, err := id.client.Get(url)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		id.logger.Error().Err(err).Msgf("image downloader: Failed to download image from URL %s", url)
 		return

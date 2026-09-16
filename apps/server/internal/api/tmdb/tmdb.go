@@ -134,9 +134,7 @@ func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*
 		if err != nil {
 			lastErr = err
 			waitTime := time.Duration(math.Pow(2, float64(attempt))) * time.Second
-			select {
-			case <-time.After(waitTime):
-			case <-ctx.Done():
+			if !sleepWithContext(ctx, waitTime) {
 				return nil, ctx.Err()
 			}
 			continue
@@ -152,9 +150,7 @@ func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*
 				waitTime = time.Duration(math.Pow(2, float64(attempt))) * time.Second
 			}
 
-			select {
-			case <-time.After(waitTime):
-			case <-ctx.Done():
+			if !sleepWithContext(ctx, waitTime) {
 				return nil, ctx.Err()
 			}
 
@@ -179,4 +175,18 @@ func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*
 	}
 
 	return nil, lastErr
+}
+
+func sleepWithContext(ctx context.Context, d time.Duration) bool {
+	if d <= 0 {
+		return ctx.Err() == nil
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
+	}
 }

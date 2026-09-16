@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -12,11 +13,6 @@ type BaseModel struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
-}
-
-type Token struct {
-	BaseModel
-	Value string `json:"value"`
 }
 
 type Account struct {
@@ -50,17 +46,11 @@ type Settings struct {
 	Library       LibrarySettings      `json:"library" gorm:"embedded;embeddedPrefix:library_"`
 	MediaPlayer   MediaPlayerSettings  `json:"mediaPlayer" gorm:"embedded;embeddedPrefix:media_player_"`
 	Notifications NotificationSettings `json:"notifications" gorm:"embedded;embeddedPrefix:notifications_"`
-	Platform      PlatformSettings     `json:"Platform" gorm:"embedded;embeddedPrefix:platform_"`
+	Platform      PlatformSettings     `json:"platform" gorm:"embedded;embeddedPrefix:platform_"`
 	// Separate tables
 	Mediastream *MediastreamSettings `json:"mediastream" gorm:"-"`
 	Theme       *Theme               `json:"theme" gorm:"-"`
 	Updated     bool                 `gorm:"-" json:"updated"`
-}
-
-type UserAnime struct {
-	ID      int
-	MediaID int
-	Status  string
 }
 
 type LibrarySettings struct {
@@ -189,12 +179,45 @@ func (o IntSlice) Value() (driver.Value, error) {
 	return strings.Join(strs, ","), nil
 }
 
-type MediaPlayerSettings struct {
+type BgMusicTrack struct {
+	Name string `json:"name"`
+	File string `json:"file"`
 }
 
-type ListSyncSettings struct {
-	Automatic bool   `gorm:"column:automatic_sync" json:"automatic"`
-	Origin    string `gorm:"column:sync_origin" json:"origin"`
+type BgMusicTrackSlice []BgMusicTrack
+
+func (o *BgMusicTrackSlice) Scan(src interface{}) error {
+	if src == nil {
+		*o = []BgMusicTrack{}
+		return nil
+	}
+	str, ok := src.(string)
+	if !ok {
+		b, ok := src.([]byte)
+		if !ok {
+			return errors.New("src value cannot cast to string")
+		}
+		str = string(b)
+	}
+	if str == "" {
+		*o = []BgMusicTrack{}
+		return nil
+	}
+	return json.Unmarshal([]byte(str), o)
+}
+
+func (o BgMusicTrackSlice) Value() (driver.Value, error) {
+	if len(o) == 0 {
+		return "[]", nil
+	}
+	b, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
+}
+
+type MediaPlayerSettings struct {
 }
 
 type NotificationSettings struct {
@@ -267,6 +290,15 @@ type Theme struct {
 	CustomCSS         string      `gorm:"column:custom_css" json:"themeCustomCSS"`
 	MobileCustomCSS   string      `gorm:"column:mobile_custom_css" json:"themeMobileCustomCSS"`
 	UnpinnedMenuItems StringSlice `gorm:"column:unpinned_menu_items;type:text" json:"themeUnpinnedMenuItems"`
+
+	// ── Audio e Interfaz ──────────────────────────────────────────────────
+	BgMusicEnabled       bool              `gorm:"column:bg_music_enabled;default:true" json:"bgMusicEnabled"`
+	BgMusicVolume        float64           `gorm:"column:bg_music_volume;default:0.25" json:"bgMusicVolume"`
+	BgMusicDir           string            `gorm:"column:bg_music_dir" json:"bgMusicDir"`
+	BgMusicTracks        BgMusicTrackSlice `gorm:"column:bg_music_tracks;type:text" json:"bgMusicTracks"`
+	SeriesSoundtrackMode bool              `gorm:"column:series_soundtrack_mode;default:true" json:"seriesSoundtrackMode"`
+	UiSoundsEnabled      bool              `gorm:"column:ui_sounds_enabled;default:true" json:"uiSoundsEnabled"`
+	UiSoundsVolume       float64           `gorm:"column:ui_sounds_volume;default:1.0" json:"uiSoundsVolume"`
 }
 
 type MediastreamSettings struct {
@@ -304,13 +336,6 @@ type MediaMetadataParent struct {
 	SpecialOffset int `json:"specialOffset"`
 }
 
-type OnlinestreamMapping struct {
-	BaseModel
-	MediaID  int    `gorm:"column:media_id;uniqueIndex:idx_provider_media" json:"mediaId"`
-	AnimeID  string `json:"animeId"`
-	Provider string `gorm:"column:provider;uniqueIndex:idx_provider_media" json:"provider"`
-}
-
 type SilencedMediaEntry struct {
 	BaseModel
 }
@@ -318,8 +343,8 @@ type SilencedMediaEntry struct {
 type MediaFiller struct {
 	BaseModel
 	Data          []byte    `json:"data"`
-	MediaID       int       `json:"mediaId"`
-	Provider      string    `json:"provider"`
+	MediaID       int       `gorm:"column:media_id;index:idx_media_filler" json:"mediaId"`
+	Provider      string    `gorm:"column:provider;index:idx_media_filler" json:"provider"`
 	Slug          string    `json:"slug"`
 	LastFetchedAt time.Time `json:"lastFetchedAt"`
 }
@@ -340,7 +365,7 @@ type MetadataCache struct {
 	Provider  string    `gorm:"column:provider;uniqueIndex:idx_provider_key" json:"provider"`
 	Key       string    `gorm:"column:key;uniqueIndex:idx_provider_key" json:"key"`
 	Value     []byte    `gorm:"column:value" json:"value"`
-	ExpiresAt time.Time `gorm:"column:expires_at" json:"expiresAt"`
+	ExpiresAt time.Time `gorm:"column:expires_at;index" json:"expiresAt"`
 }
 
 type EpisodeSkipTime struct {
@@ -355,18 +380,4 @@ type EpisodeSkipTime struct {
 	EdEnd      float64 `gorm:"column:ed_end" json:"edEnd"`
 	Source     string  `gorm:"column:source;default:legacy" json:"source"`
 	Confidence float64 `gorm:"column:confidence;default:0" json:"confidence"`
-}
-
-// MediaIDMapping centraliza el mapeo de IDs entre plataformas (TMDB, MAL, Jellyfin).
-// Permite al frontend comunicarse exclusivamente con TMDB IDs mientras el backend
-// traduce internamente a los IDs específicos de Jellyfin u otras fuentes.
-type MediaIDMapping struct {
-	BaseModel
-	InternalID int       `gorm:"column:internal_id;uniqueIndex" json:"internalId"`
-	TMDBID     int       `gorm:"column:tmdb_id;index" json:"tmdbId,omitempty"`
-	MALID      int       `gorm:"column:mal_id;index" json:"malId,omitempty"`
-	JellyfinID string    `gorm:"column:jellyfin_id;index" json:"jellyfinId,omitempty"`
-	MediaType  string    `gorm:"column:media_type" json:"mediaType"` // "movie" | "tv"
-	Title      string    `gorm:"column:title" json:"title"`
-	LastSyncAt time.Time `gorm:"column:last_sync_at" json:"lastSyncAt"`
 }

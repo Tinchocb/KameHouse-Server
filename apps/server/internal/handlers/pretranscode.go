@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"kamehouse/internal/mediastream/pretranscode"
+	"kamehouse/internal/util"
 
 	"github.com/labstack/echo/v4"
 )
@@ -35,6 +36,23 @@ func (h *Handler) HandleEnqueuePreTranscode(c echo.Context) error {
 	}
 	if b.Path == "" {
 		return h.RespondWithError(c, errors.New("path is required"))
+	}
+
+	libraryPaths, err := h.App.Database.GetAllLibraryPathsFromSettings()
+	if err != nil {
+		return h.RespondWithCodeError(c, 500, errors.New("failed to retrieve library paths"))
+	}
+
+	isPathAllowed := false
+	for _, libPath := range libraryPaths {
+		if util.IsFileUnderDir(libPath, b.Path) {
+			isPathAllowed = true
+			break
+		}
+	}
+
+	if !isPathAllowed {
+		return h.RespondWithCodeError(c, 403, errors.New("access denied to requested file path"))
 	}
 
 	m, err := h.preTranscoder()

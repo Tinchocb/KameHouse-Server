@@ -44,20 +44,19 @@ export async function scanNetwork(onFound: (url: string) => void, onProgress: (s
     }
   };
 
-  getTizenLocalIP(async (detectedIP) => {
-    const subnetsToScan = new Set(COMMON_SUBNETS);
-    
-    if (detectedIP && /^\d+\.\d+\.\d+\.\d+/.test(detectedIP)) {
-      const detectedSubnet = detectedIP.split('.').slice(0, 3).join('.');
-      // Prioritize the detected subnet
-      await processSubnet(detectedSubnet);
-      subnetsToScan.delete(detectedSubnet);
-    }
-    
-    for (const subnet of Array.from(subnetsToScan)) {
-      if (abort) break;
-      await processSubnet(subnet);
-    }
-  });
+  const detectedIP = await getTizenLocalIP();
+  const subnetsToScan = new Set(COMMON_SUBNETS);
+  
+  if (detectedIP && /^\d+\.\d+\.\d+\.\d+/.test(detectedIP)) {
+    const detectedSubnet = detectedIP.split('.').slice(0, 3).join('.');
+    // Prioritize the detected subnet
+    await processSubnet(detectedSubnet);
+    subnetsToScan.delete(detectedSubnet);
+  }
+  
+  for (const subnet of Array.from(subnetsToScan)) {
+    if (abort) break;
+    await processSubnet(subnet);
+  }
 }
 

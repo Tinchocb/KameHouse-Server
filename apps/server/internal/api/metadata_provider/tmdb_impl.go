@@ -57,9 +57,18 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	}
 	p.mu.Unlock()
 
-	// Resolve the real TMDB ID and type from the database.
+	// Resolve the real TMDB ID and type from the database first.
 	tmdbID := id
-	
+	isMovie := false
+	if p.db != nil {
+		if m, err := db.GetLibraryMediaByID(p.db, uint(id)); err == nil && m != nil {
+			if m.TmdbID > 0 {
+				tmdbID = m.TmdbID
+			}
+			isMovie = m.Format == "MOVIE"
+		}
+	}
+
 	// 2. Check Database Persistent Cache
 	if p.db != nil {
 		var cachedData apiMetadata.AnimeMetadata
@@ -72,27 +81,16 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 				expiresAt: time.Now().Add(tmdbMetadataTTL),
 			}
 			p.mu.Unlock()
-			
+
 			// Always re-apply enrichments to cached data to ensure local logic changes are reflected
 			p.applyEnrichments(tmdbID, &cachedData)
-			
+
 			return &cachedData, nil
 		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-
-	// Resolve the real TMDB ID and type from the database.
-	isMovie := false
-	if p.db != nil {
-		if m, err := db.GetLibraryMediaByID(p.db, uint(id)); err == nil && m != nil {
-			if m.TmdbID > 0 {
-				tmdbID = m.TmdbID
-			}
-			isMovie = m.Format == "MOVIE"
-		}
-	}
 
 	var episodes map[string]*apiMetadata.EpisodeMetadata
 	var totalEpisodes, totalSpecials int
@@ -130,13 +128,10 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 		episodes = make(map[string]*apiMetadata.EpisodeMetadata)
 		description = tvDetails.Overview
 
-		// Fetch seasons 0 (specials) through N, tracking absolute episode counter
-		maxSeasons := 5
-		if tvDetails.NumberOfEpisodes > 0 {
-			maxSeasons = (tvDetails.NumberOfEpisodes / 12) + 2
-			if maxSeasons > 20 {
-				maxSeasons = 20
-			}
+		// Fetch seasons 0 (specials) through NumberOfSeasons, tracking absolute episode counter
+		maxSeasons := tvDetails.NumberOfSeasons
+		if maxSeasons <= 0 {
+			maxSeasons = 1
 		}
 
 		absEpCounter := 0 // running counter across seasons for the flat episode key

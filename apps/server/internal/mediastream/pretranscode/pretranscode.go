@@ -427,12 +427,16 @@ func probeDurationWithFfprobe(ffprobePath string, filePath string) (float64, err
 		ffprobePath = "ffprobe"
 	}
 
-	out, err := exec.Command(ffprobePath,
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, ffprobePath,
 		"-v", "error",
 		"-show_entries", "format=duration",
 		"-of", "default=noprint_wrappers=1:nokey=1",
 		filePath,
-	).Output()
+	)
+	out, err := cmd.Output()
 	if err != nil {
 		return 0, err
 	}

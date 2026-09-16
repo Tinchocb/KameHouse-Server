@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
@@ -242,6 +243,13 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	return app
 }
 
+func (a *KameHouse) ShutdownCtx() context.Context {
+	if a.shutdownCtx != nil {
+		return a.shutdownCtx
+	}
+	return context.Background()
+}
+
 func initLogger() *zerolog.Logger {
 	return util.NewLogger()
 }
@@ -295,12 +303,16 @@ func startLogTrimmer(cfg *Config, logger *zerolog.Logger) {
 }
 
 func initDatabase(cfg *Config, logger *zerolog.Logger) *db.Database {
-	database, err := db.NewDatabase(context.Background(), cfg.Data.AppDataDir, cfg.Database.Name, logger)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	database, err := db.NewDatabase(ctx, cfg.Data.AppDataDir, cfg.Database.Name, logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("app: Failed to initialize database")
 	}
 	return database
 }
+
 
 func initAppDatabaseEntries(database *db.Database, logger *zerolog.Logger) {
 	HandleNewDatabaseEntries(database, logger)
@@ -440,6 +452,13 @@ func (a *KameHouse) Cleanup(ctx context.Context) {
 			f()
 		}
 
+		if a.FileCacher != nil {
+			a.Logger.Info().Msg("app: Closing file cacher...")
+			if err := a.FileCacher.Close(); err != nil {
+				a.Logger.Warn().Err(err).Msg("app: Error closing file cacher")
+			}
+		}
+
 		a.Logger.Info().Msg("app: Flushing buffered writer...")
 		a.Database.Shutdown()
 
@@ -481,7 +500,11 @@ func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedColle
 	if res == nil {
 		return &platform.UnifiedCollection{}, nil
 	}
-	return res.(*platform.UnifiedCollection), nil
+	uc, ok := res.(*platform.UnifiedCollection)
+	if !ok {
+		return nil, fmt.Errorf("metadata platform returned unexpected collection type %T", res)
+	}
+	return uc, nil
 }
 
 func (a *KameHouse) AddOnRefreshAnimeCollectionFunc(id string, f func()) {

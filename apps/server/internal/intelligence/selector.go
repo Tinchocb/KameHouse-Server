@@ -50,7 +50,9 @@ func (s *Selector) SelectBestSource(
 	preferredLangs []string,
 ) (*SelectionResult, error) {
 	// 1. Buscar en caché
-	cacheKey := fmt.Sprintf("%d-%d", tmdbID, episodeNumber)
+	langsCopy := append([]string(nil), preferredLangs...)
+	sort.Strings(langsCopy)
+	cacheKey := fmt.Sprintf("%d-%d-%s", tmdbID, episodeNumber, strings.Join(langsCopy, ","))
 	if cached, ok := s.cache.Get(cacheKey); ok {
 		s.logger.Debug().Int("tmdbId", tmdbID).Msg("intelligence: cache hit")
 		return cached, nil

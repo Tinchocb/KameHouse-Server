@@ -40,6 +40,9 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 //   - The dispatcher's non-blocking publish ensures slow DB writes never
 //     stall the WebSocket read loop or block other event subscribers.
 func (h *Handler) StartPlaybackHeartbeatSubscriber() {
+	if h.App.WSEventManager == nil {
+		return
+	}
 	dispatcher := h.App.WSEventManager.Dispatcher()
 	if dispatcher == nil {
 		return
@@ -48,22 +51,35 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 	ch := dispatcher.Subscribe(events.PlaybackHeartbeatProgress)
 
 	go func() {
-		for event := range ch {
-			heartbeat, ok := event.Payload.(PlaybackHeartbeatPayload)
-			if !ok {
-				continue
+		defer func() {
+			if r := recover(); r != nil {
+				h.App.Logger.Error().Interface("panic", r).Msg("playback_sync: panic in playback heartbeat subscriber")
 			}
+		}()
+		for {
+			select {
+			case <-h.App.ShutdownCtx().Done():
+				return
+			case event, ok := <-ch:
+				if !ok {
+					return
+				}
+				heartbeat, ok := event.Payload.(PlaybackHeartbeatPayload)
+				if !ok {
+					continue
+				}
 
-			if h.App.ContinuityManager == nil || h.App.ContinuityManager.TelemetryManager == nil {
-				continue
+				if h.App.ContinuityManager == nil || h.App.ContinuityManager.TelemetryManager == nil {
+					continue
+				}
+
+				accountID := uint(0)
+				if acc, err := h.App.Database.GetAccount(); err == nil && acc != nil {
+					accountID = acc.ID
+				}
+
+				h.App.ContinuityManager.TelemetryManager.UpdateProgress(accountID, heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration)
 			}
-
-			accountID := uint(0)
-			if acc, err := h.App.Database.GetAccount(); err == nil && acc != nil {
-				accountID = acc.ID
-			}
-
-			h.App.ContinuityManager.TelemetryManager.UpdateProgress(accountID, heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration)
 		}
 	}()
 }

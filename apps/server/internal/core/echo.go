@@ -3,7 +3,6 @@ package core
 import (
 	"embed"
 	"io/fs"
-	"kamehouse/internal/constants"
 	"log"
 	"net/http"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/valyala/bytebufferpool"
 )
 
 func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
@@ -21,12 +21,16 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	e.JSONSerializer = &CustomJSONSerializer{}
 	e.StdLogger = log.Default()
 
-	// Set long-lived Cache-Control headers for static web assets
+	// Set Cache-Control headers: immutable for fingerprinted assets, no-cache for entrypoints (index.html, sw.js)
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			path := c.Request().URL.Path
 			if strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/offline-assets/") || strings.HasPrefix(path, "/static/") {
 				c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else if path == "/" || path == "/index.html" || path == "/sw.js" || path == "/manifest.json" || strings.HasSuffix(path, ".html") {
+				c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+				c.Response().Header().Set("Pragma", "no-cache")
+				c.Response().Header().Set("Expires", "0")
 			}
 			return next(c)
 		}
@@ -48,7 +52,7 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 
 	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
 		Filesystem: http.FS(distFS),
-		Browse:     !constants.IsRspackFrontend,
+		Browse:     false,
 		HTML5:      true,
 		Skipper: func(c echo.Context) bool {
 			cURL := c.Request().URL
@@ -89,11 +93,22 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 type CustomJSONSerializer struct{}
 
 func (j *CustomJSONSerializer) Serialize(c echo.Context, i interface{}, indent string) error {
-	enc := json.NewEncoder(c.Response())
-	return enc.Encode(i)
+	buf := bytebufferpool.Get()
+	defer bytebufferpool.Put(buf)
+
+	if err := json.NewEncoder(buf).Encode(i); err != nil {
+		return err
+	}
+
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
+	_, err := c.Response().Write(buf.Bytes())
+	return err
 }
 
 func (j *CustomJSONSerializer) Deserialize(c echo.Context, i interface{}) error {
+	// Limit request body to 15 MB to prevent OOM denial of service
+	const maxBodyBytes = 15 * 1024 * 1024
+	c.Request().Body = http.MaxBytesReader(c.Response().Writer, c.Request().Body, maxBodyBytes)
 	dec := json.NewDecoder(c.Request().Body)
 	return dec.Decode(i)
 }

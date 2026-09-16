@@ -30,13 +30,21 @@ func TestResolveFFmpegPath(t *testing.T) {
 		t.Errorf("expected cached path %s, got %s", fakeFfmpeg, resolved)
 	}
 
-	// Custom path override
-	customPath := filepath.Join(tempDir, "custom_ffmpeg"+ext)
+	// Custom path override inside binDir (allowed)
+	customPath := filepath.Join(binDir, "custom_ffmpeg"+ext)
 	_ = os.WriteFile(customPath, []byte("custom fake binary"), 0755)
 
 	resolvedCustom := ResolveFFmpegPath(tempDir, customPath)
 	if resolvedCustom != customPath {
 		t.Errorf("expected custom path %s, got %s", customPath, resolvedCustom)
+	}
+
+	// Arbitrary path outside binDir (rejected)
+	outsidePath := filepath.Join(tempDir, "outside_ffmpeg"+ext)
+	_ = os.WriteFile(outsidePath, []byte("unsafe binary"), 0755)
+	resolvedOutside := ResolveFFmpegPath(tempDir, outsidePath)
+	if resolvedOutside == outsidePath {
+		t.Errorf("expected outside path %s to be rejected, got %s", outsidePath, resolvedOutside)
 	}
 }
 

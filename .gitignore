@@ -63,6 +63,7 @@ package.json.md5
 # Project specific
 codegen/nonext/
 codegen/generated/
+apps/web/src/api/generated/hooks_template.ts
 whats-new.md
 TODO-priv.md
 CHANGELOG-priv.md
@@ -78,7 +79,6 @@ apps/KameHouseTV/Release/
 # AI Agent Config
 .clauderc
 .cursorrules
-skills/
 
 # AI Data and Prompts
 .github/prompts/
@@ -96,8 +96,9 @@ apps/server/deadcode_report.txt
 .antigravityignore
 .cursorignore
 
-# Zip archives and electron build zips
+# Zip archives
 *.zip
-apps/desktop/electron.zip
 
 comandos.md
+/apps/desktop/src-tauri/gen
+docs/dragonball/dragonball_chronology.sqlite

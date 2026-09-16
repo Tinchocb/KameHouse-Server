@@ -12,8 +12,10 @@ import (
 )
 
 func (vc *VideoCore) FetchAndConvertSubsTo(url string, to int) (string, error) {
-	client := req.C()
-	client.SetTimeout(30 * time.Second)
+	client := vc.httpClient
+	if client == nil {
+		client = req.C().SetTimeout(30 * time.Second)
+	}
 	resp := client.Get(url).Do()
 
 	if resp.IsErrorState() {

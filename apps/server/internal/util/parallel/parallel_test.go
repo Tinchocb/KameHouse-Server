@@ -15,25 +15,12 @@ func fakeAPICall(id int) (int, error) {
 	return id, nil
 }
 
-func TestAllSettled(t *testing.T) {
-
-	ids := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}
-
-	sr := NewSettledResults[int, int](ids)
-	sr.AllSettled(func(item int, index int) (int, error) {
-		return fakeAPICall(item)
+func TestEachTask(t *testing.T) {
+	ids := []int{1, 2, 3, 4, 5}
+	var count int
+	EachTask(ids, func(item int, index int) {
+		count += item
 	})
-
-	fulfilled, ok := sr.GetFulfilledResults()
-
-	if !ok {
-		t.Error("expected results, got error")
-	}
-
-	for _, v := range *fulfilled {
-		t.Log(v)
-	}
-
 }
 
 func TestConc(t *testing.T) {

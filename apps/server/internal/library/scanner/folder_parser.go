@@ -25,8 +25,8 @@ var (
 	reSeasonFolder = regexp.MustCompile(`(?i)^(?:season|s|temp|temporada|t)\s*0*(\d+)$`)
 	// Matches Specials, Extras, OVA folders which resolve to Season 0
 	reSpecialsFolder = regexp.MustCompile(`(?i)^(?:season\s*0+|s0+|temp\s*0+|temporada\s*0+|specials|extras|ovas?|oads?|nc|sp|cortos)$`)
-	// Matches saga/arc subfolders like "1 - Saga El Gran Viaje", "02 - Saga Baby", "Saga Saiyajin", "Saga Freezer", "Saga Cell", "Saga Buu"
-	reSagaFolder = regexp.MustCompile(`(?i)^(?:(?:\d+\s*[-–]\s*)?(?:saga|arco?|arc|part|parte)\s+|saga\b)`)
+	// Matches saga/arc subfolders like "1 - Saga El Gran Viaje", "02 - Saga Baby", "Saga Saiyajin", "Saga Freezer", "Saga Cell", "Saga Buu", "(2009) Saga de los Saiyajin"
+	reSagaFolder = regexp.MustCompile(`(?i)^(?:(?:[\(\[]?\d{2,4}(?:-\d{2}-\d{2})?[\)\]]?\s*[-–]?\s*)|\d+\s*[-–]\s*)?(?:saga|arco?|arc|part|parte)\s+|saga\b`)
 	// Extracts the leading number from saga folders
 	reSagaNumber = regexp.MustCompile(`^(\d+)\s*[-–]`)
 	// Matches movie filename like "Dragon Ball Z - La batalla (2013).mkv"
@@ -101,10 +101,12 @@ func ParseFolderStructure(filePath string, libraryPaths []string) *FolderInfo {
 
 	// Find the library root to determine the relative structure
 	relParts := parts
+	isDirectlyInLibrary := false
+	matchedLib := ""
 	for _, libPath := range libraryPaths {
 		cleanLib := filepath.Clean(libPath)
 		libParts := splitPath(cleanLib)
-		if len(libParts) > 0 && len(parts) > len(libParts) {
+		if len(libParts) > 0 && len(parts) >= len(libParts) {
 			// Check if the file path starts with this library path
 			match := true
 			for i, lp := range libParts {
@@ -114,10 +116,45 @@ func ParseFolderStructure(filePath string, libraryPaths []string) *FolderInfo {
 				}
 			}
 			if match {
+				matchedLib = cleanLib
 				relParts = parts[len(libParts):]
+				if len(relParts) == 0 {
+					isDirectlyInLibrary = true
+				}
 				break
 			}
 		}
+	}
+
+	isMovieFolder := func(name string) bool {
+		lower := strings.ToLower(strings.TrimSpace(name))
+		return lower == "movies" || lower == "peliculas" || lower == "películas" || lower == "films" ||
+			strings.Contains(lower, "movies") || strings.Contains(lower, "peliculas") || strings.Contains(lower, "películas") ||
+			strings.Contains(lower, "pelis")
+	}
+
+	// Detect movie based on folder name, library path, or filename
+	isInMovieCategory := isMovieFolder(filepath.Base(dir)) || isMovieFolder(matchedLib)
+	if isInMovieCategory {
+		info.IsMovie = true
+	}
+
+	for _, part := range relParts {
+		if isMovieFolder(part) {
+			info.IsMovie = true
+			isInMovieCategory = true
+		}
+	}
+
+	// If file sits directly in the library root or movie folder, extract title from filename
+	if isDirectlyInLibrary {
+		if m := reMovieFilename.FindStringSubmatch(filename); m != nil {
+			info.SeriesName = cleanMovieTitle(m[1])
+			info.Year, _ = strconv.Atoi(m[2])
+		} else if m := reMovieFilenameNoYear.FindStringSubmatch(filename); m != nil {
+			info.SeriesName = cleanMovieTitle(m[1])
+		}
+		return info
 	}
 
 	if len(relParts) == 0 {
@@ -138,18 +175,6 @@ func ParseFolderStructure(filePath string, libraryPaths []string) *FolderInfo {
 				info.ExplicitID = tempMedia.ExplicitID
 				break
 			}
-		}
-	}
-
-	// Detect movie based on folder name
-	isInMovieCategory := false
-	for _, part := range relParts {
-		lower := strings.ToLower(strings.TrimSpace(part))
-		if lower == "movies" || lower == "peliculas" || lower == "películas" || lower == "films" ||
-			strings.Contains(lower, "movies") || strings.Contains(lower, "peliculas") || strings.Contains(lower, "películas") ||
-			strings.Contains(lower, "pelis") {
-			info.IsMovie = true
-			isInMovieCategory = true
 		}
 	}
 
@@ -222,7 +247,7 @@ func ParseFolderStructure(filePath string, libraryPaths []string) *FolderInfo {
 	// Fallback: if no series name was found, use the first non-category component
 	if info.SeriesName == "" && len(relParts) > 0 {
 		for _, name := range relParts {
-			if IsCategoryFolder(name) || IsSeasonFolder(name) {
+			if IsCategoryFolder(name) || IsSeasonFolder(name) || IsSagaFolder(name) {
 				continue
 			}
 			if m := reYearInFolder.FindStringSubmatch(name); m != nil {

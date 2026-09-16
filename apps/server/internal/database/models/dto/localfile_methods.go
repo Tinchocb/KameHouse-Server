@@ -75,23 +75,35 @@ func (f *LocalFile) HasBeenWatched(progress int) bool {
 // GetType returns the metadata type.
 // This requires the LocalFile to be hydrated.
 func (f *LocalFile) GetType() LocalFileType {
+	if f == nil || f.Metadata == nil {
+		return ""
+	}
 	return f.Metadata.Type
 }
 
 // IsMain returns true if the metadata type is LocalFileTypeMain
 func (f *LocalFile) IsMain() bool {
+	if f == nil || f.Metadata == nil {
+		return false
+	}
 	return f.Metadata.Type == LocalFileTypeMain
 }
 
 // GetMetadata returns the file metadata.
 // This requires the LocalFile to be hydrated.
 func (f *LocalFile) GetMetadata() *LocalFileMetadata {
+	if f == nil {
+		return nil
+	}
 	return f.Metadata
 }
 
 // GetAniDBEpisode returns the metadata AniDB episode number.
 // This requires the LocalFile to be hydrated.
 func (f *LocalFile) GetAniDBEpisode() string {
+	if f == nil || f.Metadata == nil {
+		return ""
+	}
 	return f.Metadata.AniDBEpisode
 }
 
@@ -248,7 +260,7 @@ func (f *LocalFile) GetSeriesFolderTitle() string {
 
 var (
 	reSeasonFolderInDTO = regexp.MustCompile(`(?i)^(?:season|s|temp|temporada|t)\s*0*(\d+)$`)
-	reSagaFolderInDTO   = regexp.MustCompile(`(?i)^(?:(?:\d+\s*[-–]\s*)?(?:saga|arco?|arc|part|parte)\s+|saga\b)`)
+	reSagaFolderInDTO   = regexp.MustCompile(`(?i)^(?:(?:[\(\[]?\d{2,4}(?:-\d{2}-\d{2})?[\)\]]?\s*[-–]?\s*)|\d+\s*[-–]\s*)?(?:saga|arco?|arc|part|parte)\s+|saga\b`)
 )
 
 func isSeasonOrSagaFolderNameDTO(name string) bool {

@@ -311,18 +311,29 @@ func (d *Detector) loadEpisodes(ctx context.Context, mediaID int) ([]episodeFile
 		if duration == 0 {
 			duration = 1440.0 // default 24 min si el probe falla
 		}
-		// El layout de tracks cambia entre series (y no se puede asumir dentro de
-		// una), así que se resuelve por archivo.
+		audioIdx := -1
+		if lf.TechnicalInfo != nil && len(lf.TechnicalInfo.AudioStreams) > 0 {
+			for aIdx, as := range lf.TechnicalInfo.AudioStreams {
+				if as != nil && japaneseLangTags[strings.ToLower(strings.TrimSpace(as.Language))] {
+					audioIdx = aIdx
+					break
+				}
+			}
+		} else {
+			audioIdx = preferredAudioIndex(ctx, lf.Path)
+		}
+
 		episodes = append(episodes, episodeFile{
 			Path:          lf.Path,
 			EpisodeNumber: epNum,
 			Duration:      duration,
-			AudioIdx:      preferredAudioIndex(ctx, lf.Path),
+			AudioIdx:      audioIdx,
 		})
 	}
 
 	sort.Slice(episodes, func(i, j int) bool {
 		return episodes[i].EpisodeNumber < episodes[j].EpisodeNumber
+
 	})
 
 	// mediaID es el id externo (derivado de TMDB) con el que se indexan

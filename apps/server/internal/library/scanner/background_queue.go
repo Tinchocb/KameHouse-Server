@@ -48,7 +48,6 @@ func (bq *BackgroundQueue) Start(numWorkers int) {
 
 func (bq *BackgroundQueue) Stop() {
 	bq.cancel()
-	close(bq.jobChan)
 	bq.wg.Wait()
 	bq.logger.Info().Msg("scanner: Background media queue stopped")
 }
@@ -85,18 +84,20 @@ func (bq *BackgroundQueue) worker() {
 
 	prober := NewFileProber(bq.ffprobePath, bq.logger)
 
-	for lf := range bq.jobChan {
+	for {
 		select {
 		case <-bq.ctx.Done():
 			return
-		default:
+		case lf, ok := <-bq.jobChan:
+			if !ok {
+				return
+			}
+			bq.processFile(prober, lf)
+
+			bq.activeJobsMu.Lock()
+			delete(bq.activeJobs, lf.Path)
+			bq.activeJobsMu.Unlock()
 		}
-
-		bq.processFile(prober, lf)
-
-		bq.activeJobsMu.Lock()
-		delete(bq.activeJobs, lf.Path)
-		bq.activeJobsMu.Unlock()
 	}
 }
 

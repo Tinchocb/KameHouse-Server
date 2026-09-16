@@ -18,11 +18,12 @@ const DESKTOP_SERVER_DEFAULT_PORT: u16 = 43211;
 const DESKTOP_SERVER_DEV_PORT: u16 = 43212;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ServerStatus {
-    Stopped,
-    Starting,
-    Running,
-    Crashed,
+    Stopped = 0,
+    Starting = 1,
+    Running = 2,
+    Crashed = 3,
 }
 
 pub struct SidecarManager {
@@ -48,16 +49,6 @@ impl SidecarManager {
 
     pub fn is_shutdown(&self) -> bool {
         self.is_shutdown.load(Ordering::SeqCst)
-    }
-
-    pub fn get_status(&self) -> ServerStatus {
-        match self.status.load(Ordering::SeqCst) {
-            0 => ServerStatus::Stopped,
-            1 => ServerStatus::Starting,
-            2 => ServerStatus::Running,
-            3 => ServerStatus::Crashed,
-            _ => ServerStatus::Stopped,
-        }
     }
 
     pub fn get_port(&self) -> u16 {
@@ -95,10 +86,20 @@ impl SidecarManager {
     fn get_binary_path<R: Runtime>(&self, app_handle: &AppHandle<R>) -> Result<PathBuf, String> {
         let binary_name = self.get_binary_name()?;
         if self.is_dev {
-            // In dev, the binary is in the server directory at the root of the monorepo
+            // In dev, the binary is in the server directory at apps/server
             let current_dir = std::env::current_dir().unwrap_or_default();
-            let server_dir = current_dir.join("..").join("..").join("server");
-            Ok(server_dir.join(binary_name))
+            let candidates = [
+                current_dir.join("apps").join("server").join(&binary_name),
+                current_dir.join("..").join("server").join(&binary_name),
+                current_dir.join("..").join("..").join("apps").join("server").join(&binary_name),
+                current_dir.join("..").join("..").join("server").join(&binary_name),
+            ];
+            for p in &candidates {
+                if p.exists() {
+                    return Ok(p.clone());
+                }
+            }
+            Ok(candidates[0].clone())
         } else {
             // In production, binaries are bundled as externalBin in tauri.conf.json
             let resource_dir = app_handle
@@ -107,16 +108,18 @@ impl SidecarManager {
                 .map_err(|e| format!("Failed to get resource dir: {}", e))?;
 
             // Try to find the binary at the resource root first, then under "binaries" folder,
-            // and try with both ".exe.exe" and ".exe" suffixes for Windows.
+            // with both canonical name and platform-specific fallback names.
             let paths_to_try = if cfg!(target_os = "windows") {
                 vec![
-                    resource_dir.join("kamehouse-server-windows.exe.exe"),
+                    resource_dir.join("kamehouse-server.exe"),
+                    resource_dir.join("binaries").join("kamehouse-server.exe"),
                     resource_dir.join("kamehouse-server-windows.exe"),
-                    resource_dir.join("binaries").join("kamehouse-server-windows.exe.exe"),
                     resource_dir.join("binaries").join("kamehouse-server-windows.exe"),
                 ]
             } else {
                 vec![
+                    resource_dir.join("kamehouse-server"),
+                    resource_dir.join("binaries").join("kamehouse-server"),
                     resource_dir.join(&binary_name),
                     resource_dir.join("binaries").join(&binary_name),
                 ]
@@ -162,12 +165,50 @@ impl SidecarManager {
         };
 
         let pid = match orphan_pid {
-            Some(pid) if pid > 0 => pid,
+            Some(pid) if pid > 0 && pid != u64::from(std::process::id()) => pid,
             _ => return,
         };
 
         warn!("[Sidecar] Found orphan KameHouse sidecar (pid {}) on port {}, terminating", pid, port);
 
+        // P0: graceful first (SIGTERM / taskkill without /F), escalate to force
+        // kill only if the port is still occupied. Never target our own PID.
+        #[cfg(windows)]
+        {
+            let _ = std::process::Command::new("taskkill")
+                .args(["/PID", &pid.to_string()])
+                .output();
+        }
+        #[cfg(unix)]
+        {
+            let _ = std::process::Command::new("kill")
+                .args([&pid.to_string()])
+                .output();
+        }
+
+        // Give the process ~1s to exit gracefully before escalating.
+        for _ in 0..10 {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            match timeout(Duration::from_millis(300), client.get(&url).send()).await {
+                Ok(Ok(_)) => continue, // still responding, keep waiting
+                _ => break,            // port no longer answers -> freed
+            }
+        }
+
+        // Escalate only if the occupant is still answering as a sidecar.
+        let still_orphan = match timeout(Duration::from_millis(300), client.get(&url).send()).await {
+            Ok(Ok(resp)) if resp.status().is_success() => resp
+                .json::<serde_json::Value>()
+                .await
+                .ok()
+                .and_then(|body| body.get("isDesktopSidecar").and_then(|v| v.as_bool()))
+                .unwrap_or(false),
+            _ => false,
+        };
+        if !still_orphan {
+            return;
+        }
+        warn!("[Sidecar] Orphan pid {} still alive, force-killing", pid);
         #[cfg(windows)]
         {
             let _ = std::process::Command::new("taskkill")
@@ -408,17 +449,19 @@ impl SidecarManager {
         let app_handle = app_handle_clone;
 
         tokio::spawn(async move {
-            let mut probe_interval = tokio::time::interval(Duration::from_millis(100));
-            let mut probe_count = 0;
-            const MAX_PROBES: u32 = 300; // 30 seconds max
+            let mut delay_ms = 250;
+            let start_time = std::time::Instant::now();
+            const MAX_DURATION: Duration = Duration::from_secs(30);
 
             // Build the HTTP client once and reuse it across probes (connection pooling)
-            // instead of allocating a fresh client every 500ms.
             let client = reqwest::Client::new();
 
             loop {
-                probe_interval.tick().await;
-                probe_count += 1;
+                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                // Exponential backoff capped at 1000ms
+                if delay_ms < 1000 {
+                    delay_ms = (delay_ms * 2).min(1000);
+                }
 
                 if is_shutdown.load(Ordering::SeqCst) {
                     break;
@@ -441,7 +484,15 @@ impl SidecarManager {
                 drop(process_lock);
 
                 // Check if server is reachable via HTTP
-                let url = format!("http://{}:{}/api/v1/status", DESKTOP_SERVER_HOST, dynamic_port.load(Ordering::SeqCst).max(if cfg!(debug_assertions) { DESKTOP_SERVER_DEV_PORT } else { DESKTOP_SERVER_DEFAULT_PORT }));
+                let dyn_p = dynamic_port.load(Ordering::SeqCst);
+                let port = if dyn_p > 0 {
+                    dyn_p
+                } else if cfg!(debug_assertions) {
+                    DESKTOP_SERVER_DEV_PORT
+                } else {
+                    DESKTOP_SERVER_DEFAULT_PORT
+                };
+                let url = format!("http://{}:{}/api/v1/status", DESKTOP_SERVER_HOST, port);
                 if let Ok(Ok(resp)) = timeout(Duration::from_secs(1), client.get(&url).send()).await {
                     if resp.status().is_success() && !startup_resolved.load(Ordering::SeqCst) {
                         info!("[Sidecar] Server ready via HTTP probe");
@@ -452,7 +503,7 @@ impl SidecarManager {
                     }
                 }
 
-                if probe_count >= MAX_PROBES {
+                if start_time.elapsed() >= MAX_DURATION {
                     if !startup_resolved.load(Ordering::SeqCst) {
                         status.store(3, Ordering::SeqCst); // Crashed
                         error!("[Sidecar] Server startup timeout");
@@ -466,52 +517,29 @@ impl SidecarManager {
         Ok(())
     }
 
-    pub async fn restart<R: Runtime>(
-        &self,
-        app_handle: &AppHandle<R>,
-        settings: DesktopSettings,
-        window_manager: Arc<WindowManager>,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        info!("[Sidecar] Restarting server...");
-
-        // Kill existing process
-        self.kill().await;
-
-        // Reset state
-        self.startup_resolved.store(false, Ordering::SeqCst);
-        self.status.store(0, Ordering::SeqCst);
-        self.dynamic_port.store(0, Ordering::SeqCst);
-
-        // Launch again
-        self.launch(app_handle, settings, window_manager).await
-    }
-
     pub async fn kill(&self) {
-        info!("[Sidecar] Killing server process");
+        info!("[Sidecar] Terminating server process");
 
         let mut process_lock = self.process.lock().await;
         if let Some(mut child) = process_lock.take() {
-            // Try graceful shutdown first
-            #[cfg(unix)]
-            {
-                use std::os::unix::process::CommandExt;
-                let _ = child.kill().await;
-            }
-            #[cfg(windows)]
-            {
-                let _ = child.kill().await;
-            }
+            let port = self.get_port();
+            let client = reqwest::Client::new();
+            let shutdown_url = format!("http://127.0.0.1:{}/api/v1/shutdown", port);
 
-            // Wait for process to exit with timeout
-            match timeout(Duration::from_secs(3), child.wait()).await {
+            // Phase 1: Try graceful shutdown request via HTTP if server is listening
+            let _ = timeout(Duration::from_millis(500), client.post(&shutdown_url).send()).await;
+
+            // Phase 2: Wait for process to exit cleanly
+            match timeout(Duration::from_secs(2), child.wait()).await {
                 Ok(Ok(status)) => {
-                    info!("[Sidecar] Server process exited with status: {:?}", status);
+                    info!("[Sidecar] Server process exited cleanly with status: {:?}", status);
                 }
                 Ok(Err(e)) => {
                     warn!("[Sidecar] Error waiting for server process: {}", e);
                 }
                 Err(_) => {
-                    warn!("[Sidecar] Server process did not exit in time, force killing");
+                    // Phase 3: Force kill if timeout expired
+                    warn!("[Sidecar] Server process did not exit within 2s, force killing");
                     #[cfg(windows)]
                     {
                         if let Some(id) = child.id() {

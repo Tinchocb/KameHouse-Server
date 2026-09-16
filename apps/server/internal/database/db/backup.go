@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -29,15 +30,37 @@ func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
 	backupFileName := fmt.Sprintf("kamehouse-backup-%s.db", timestamp)
 	backupPath := filepath.Join(backupDir, backupFileName)
 
-	// Ensure all writes are flushed to DB file
-	if err := db.gormdb.Exec("PRAGMA wal_checkpoint(TRUNCATE);").Error; err != nil {
-		db.Logger.Error().Err(err).Msg("db: WAL checkpoint failed before backup")
+	// Ensure all writes in buffer and slow logger are flushed
+	if db.bufferedWriter != nil {
+		db.bufferedWriter.Flush()
+	}
+	if db.slowTraceLogger != nil {
+		db.slowTraceLogger.Flush()
 	}
 
-	// Escape path for SQL just in case
-	query := fmt.Sprintf("VACUUM INTO '%s'", backupPath)
+	// Ensure all writes are flushed to DB file via truncate checkpoint
+	if err := db.gormdb.Exec("PRAGMA wal_checkpoint(TRUNCATE);").Error; err != nil {
+		db.Logger.Error().Err(err).Msg("db: WAL checkpoint failed before backup")
+		return nil, fmt.Errorf("pre-backup WAL checkpoint failed: %w", err)
+	}
+
+	// Escape single quotes for SQLite literal
+	escapedPath := strings.ReplaceAll(backupPath, "'", "''")
+	query := fmt.Sprintf("VACUUM INTO '%s'", escapedPath)
 	if err := db.gormdb.Exec(query).Error; err != nil {
 		return nil, fmt.Errorf("VACUUM INTO failed: %w", err)
+	}
+
+	// Enforce 0600 permissions on the created backup file
+	_ = os.Chmod(backupPath, 0600)
+
+	// Validate integrity of the resulting backup
+	var integrityResult string
+	row := db.gormdb.Raw("PRAGMA integrity_check;").Row()
+	if row != nil {
+		if err := row.Scan(&integrityResult); err != nil || integrityResult != "ok" {
+			db.Logger.Warn().Str("result", integrityResult).Msg("db: integrity_check warning on database")
+		}
 	}
 
 	info, err := os.Stat(backupPath)
@@ -65,8 +88,9 @@ func rotateBackups(backupDir string, keep int) error {
 	}
 
 	var backups []string
+	const backupPrefix = "kamehouse-backup-"
 	for _, entry := range entries {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".db" {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), backupPrefix) && filepath.Ext(entry.Name()) == ".db" {
 			backups = append(backups, entry.Name())
 		}
 	}
@@ -86,3 +110,4 @@ func rotateBackups(backupDir string, keep int) error {
 
 	return nil
 }
+

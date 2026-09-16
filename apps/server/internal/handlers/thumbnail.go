@@ -3,18 +3,22 @@ package handlers
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"kamehouse/internal/util"
 	"kamehouse/internal/util/ffmpegutil"
 
 	"github.com/labstack/echo/v4"
+	"golang.org/x/sync/singleflight"
 )
+
+var thumbnailSingleFlight singleflight.Group
 
 // HandleGetVideoThumbnail ...
 //
@@ -25,42 +29,30 @@ import (
 func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 	videoPath := c.QueryParam("path")
 	if videoPath == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "path parameter is required"})
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("path parameter is required"))
 	}
 
 	// Validate the file exists
 	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "video file not found"})
+		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("video file not found"))
 	}
 
 	// Prevent path traversal: ensure the path belongs to one of the configured library paths
 	libraryPaths, err := h.App.Database.GetAllLibraryPathsFromSettings()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to retrieve library paths"})
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, errors.New("failed to retrieve library paths"))
 	}
 
 	isPathAllowed := false
-	absVideoPath, err := filepath.Abs(videoPath)
-	if err == nil {
-		for _, libPath := range libraryPaths {
-			absLibPath, err := filepath.Abs(libPath)
-			if err != nil {
-				continue
-			}
-			// Clean paths to normalize separators and trailing slashes (case-insensitive for Windows)
-			cleanVideo := strings.ToLower(filepath.Clean(absVideoPath))
-			cleanLib := strings.ToLower(filepath.Clean(absLibPath))
-			
-			// Check if cleanVideo starts with cleanLib
-			if strings.HasPrefix(cleanVideo, cleanLib+string(os.PathSeparator)) || cleanVideo == cleanLib {
-				isPathAllowed = true
-				break
-			}
+	for _, libPath := range libraryPaths {
+		if util.IsFileUnderDir(libPath, videoPath) {
+			isPathAllowed = true
+			break
 		}
 	}
 
 	if !isPathAllowed {
-		return c.JSON(http.StatusForbidden, map[string]string{"error": "access denied to the requested file path"})
+		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied to the requested file path"))
 	}
 
 	var customFfmpeg, customFfprobe string
@@ -74,7 +66,7 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 	// Create cache directory for thumbnails
 	cacheDir := filepath.Join(h.App.Config.Cache.Dir, "thumbnails")
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create cache directory"})
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, errors.New("failed to create cache directory"))
 	}
 
 	// Generate cache key
@@ -108,52 +100,73 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		}
 	}
 
-	// 4. Generate thumbnail via FFMpeg (Cold Cache)
-	reqCtx := c.Request().Context()
-	seekTime := getSeekTimestamp(reqCtx, ffprobePath, videoPath)
-	
-	ctx, cancel := context.WithTimeout(reqCtx, 30*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(
-		ctx,
-		ffmpegPath,
-		"-ss", seekTime,
-		"-i", videoPath,
-		"-vframes", "1",
-		"-q:v", "5",
-		"-vf", "scale=480:-2",
-		"-y",
-		cacheFile,
-	)
-
-	if err := cmd.Run(); err != nil {
-		h.App.Logger.Error().Err(err).Str("path", videoPath).Msg("thumbnail: failed to extract frame")
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to extract thumbnail"})
-	}
-
-	// Re-read from disk to serve and place into LRU memory map
-	imgBytes, readErr := os.ReadFile(cacheFile)
-	if readErr == nil {
-		h.App.ThumbnailCache.Set(hash, imgBytes)
-		fileStat, err = os.Stat(cacheFile)
-		if err == nil {
-			eTag := fmt.Sprintf(`"%x-%x"`, fileStat.Size(), fileStat.ModTime().UnixNano())
-			c.Response().Header().Set("ETag", eTag)
+	// 4. Generate thumbnail via FFMpeg (Cold Cache) with singleflight deduplication
+	rawBytes, sfErr, _ := thumbnailSingleFlight.Do(hash, func() (interface{}, error) {
+		// Double check cache inside singleflight callback
+		if imgBytes, found := h.App.ThumbnailCache.Get(hash); found {
+			return imgBytes, nil
 		}
-		return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
+
+		seekTime := getSeekTimestamp(context.Background(), ffprobePath, videoPath)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
+		tmpCacheFile := fmt.Sprintf("%s.%d.tmp", cacheFile, time.Now().UnixNano())
+		cmd := util.NewCmdCtx(
+			ctx,
+			ffmpegPath,
+			"-ss", seekTime,
+			"-i", videoPath,
+			"-vframes", "1",
+			"-q:v", "5",
+			"-vf", "scale=480:-2",
+			"-y",
+			tmpCacheFile,
+		)
+
+		if out, err := cmd.CombinedOutput(); err != nil {
+			_ = os.Remove(tmpCacheFile)
+			h.App.Logger.Error().Err(err).Str("path", videoPath).Str("output", string(out)).Msg("thumbnail: failed to extract frame")
+			return nil, err
+		}
+
+		if err := os.Rename(tmpCacheFile, cacheFile); err != nil {
+			// If rename fails (e.g. concurrent overwrite or permissions), attempt copy or cleanup
+			_ = os.Remove(tmpCacheFile)
+		}
+
+		// Re-read from disk to serve and place into LRU memory map
+		imgBytes, readErr := os.ReadFile(cacheFile)
+		if readErr == nil {
+			h.App.ThumbnailCache.Set(hash, imgBytes)
+			return imgBytes, nil
+		}
+
+		return nil, readErr
+	})
+
+
+	if sfErr != nil || rawBytes == nil {
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, fmt.Errorf("failed to extract thumbnail"))
 	}
 
-	return c.File(cacheFile)
+	imgBytes := rawBytes.([]byte)
+	fileStat, err = os.Stat(cacheFile)
+	if err == nil {
+		eTag := fmt.Sprintf(`"%x-%x"`, fileStat.Size(), fileStat.ModTime().UnixNano())
+		c.Response().Header().Set("ETag", eTag)
+	}
+	return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
 }
 
 // getSeekTimestamp returns the timestamp to seek to for thumbnail extraction.
 // Targets 5 minutes, or 25% of duration if the video is shorter than 5 minutes.
 func getSeekTimestamp(parentCtx context.Context, ffprobePath, videoPath string) string {
-	ctx, cancel := context.WithTimeout(parentCtx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(
+	cmd := util.NewCmdCtx(
 		ctx,
 		ffprobePath,
 		"-v", "error",

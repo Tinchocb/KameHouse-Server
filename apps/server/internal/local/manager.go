@@ -417,6 +417,14 @@ func (m *ManagerImpl) scan(lfs []*dto.LocalFile) error {
 		animeSnapshotMap[snapshot.MediaID] = snapshot
 	}
 
+	// Pre-group local files by MediaID once for O(1) lookup in diff processing.
+	lfByMedia := make(map[int][]*dto.LocalFile, len(m.localFiles))
+	for _, lf := range m.localFiles {
+		if lf.MediaID > 0 {
+			lfByMedia[lf.MediaID] = append(lfByMedia[lf.MediaID], lf)
+		}
+	}
+
 	diff := &Diff{Logger: m.logger}
 	animeDiffs := diff.GetAnimeDiffs(GetAnimeDiffOptions{
 		Collection:      m.animeCollection.MustGet(),
@@ -427,7 +435,7 @@ func (m *ManagerImpl) scan(lfs []*dto.LocalFile) error {
 	})
 
 	for _, d := range animeDiffs {
-		m.processAnimeDiff(d)
+		m.processAnimeDiff(d, lfByMedia)
 	}
 
 	m.loadLocalAnimeCollection()
@@ -435,11 +443,9 @@ func (m *ManagerImpl) scan(lfs []*dto.LocalFile) error {
 	return nil
 }
 
-func (m *ManagerImpl) processAnimeDiff(diff *AnimeDiffResult) {
+func (m *ManagerImpl) processAnimeDiff(diff *AnimeDiffResult, lfByMedia map[int][]*dto.LocalFile) {
 	entry := diff.AnimeEntry
-	lfs := lo.Filter(m.localFiles, func(lf *dto.LocalFile, _ int) bool {
-		return lf.MediaID == entry.Media.ID
-	})
+	lfs := lfByMedia[entry.Media.ID]
 
 	var animeMetadata *metadata.AnimeMetadata
 	var metadataWrapper metadata_provider.AnimeMetadataWrapper
@@ -482,7 +488,7 @@ func (m *ManagerImpl) processAnimeDiff(diff *AnimeDiffResult) {
 			BannerImagePath:   bannerImage,
 			CoverImagePath:    coverImage,
 			EpisodeImagePaths: episodeImagePaths,
-			ReferenceKey:      GetAnimeReferenceKey(entry.Media, m.localFiles),
+			ReferenceKey:      GetAnimeReferenceKey(entry.Media, lfs),
 		}
 
 		// Save the snapshot
@@ -501,7 +507,7 @@ func (m *ManagerImpl) processAnimeDiff(diff *AnimeDiffResult) {
 
 		snapshot := *diff.AnimeSnapshot
 		snapshot.AnimeMetadata = LocalAnimeMetadata(*animeMetadata)
-		snapshot.ReferenceKey = GetAnimeReferenceKey(entry.Media, m.localFiles)
+		snapshot.ReferenceKey = GetAnimeReferenceKey(entry.Media, lfs)
 
 		lfMap := make(map[string]*dto.LocalFile)
 		for _, lf := range lfs {

@@ -183,13 +183,25 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 	// Zero Latency Next: Pre-transcode and cache the first N segments (video and audio) of the next episode in the background.
 	if ret.StreamType == StreamTypeTranscode && p.repository.transcoder.IsPresent() {
 		go func() {
-			tc, _ := p.repository.transcoder.Get()
+			defer func() {
+				if r := recover(); r != nil {
+					p.logger.Warn().Interface("panic", r).Msg("mediastream: panic in zero-latency pre-transcode goroutine")
+				}
+			}()
+			if !p.repository.IsInitialized() {
+				return
+			}
+			tc, ok := p.repository.transcoder.Get()
+			if !ok || tc == nil {
+				return
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 			defer cancel()
 
 			preloadSegments := 3
-			if p.repository.settings.IsPresent() {
-				s := p.repository.settings.MustGet()
+			settingsOpt := p.repository.GetSettings()
+			if settingsOpt.IsPresent() {
+				s := settingsOpt.MustGet()
 				if s != nil && s.TranscodeThreads > 0 {
 					preloadSegments = s.TranscodeThreads
 				}

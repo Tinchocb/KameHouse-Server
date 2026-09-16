@@ -28,6 +28,7 @@ func (h *Handler) RegisterSettingsRoutes(v1 *echo.Group) {
 	v1.GET("/metadata/parent/:id", h.HandleGetMediaMetadataParent)
 	v1.POST("/metadata/parent", h.HandleSaveMediaMetadataParent)
 	v1.DELETE("/metadata/parent", h.HandleDeleteMediaMetadataParent)
+	v1.DELETE("/metadata/cache", h.HandleClearMetadataCache)
 
 	// TMDB
 	v1TMDB := v1.Group("/tmdb")

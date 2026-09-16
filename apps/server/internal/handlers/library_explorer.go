@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"sort"
 	"strconv"
 
 	"kamehouse/internal/database/models/dto"
@@ -40,36 +41,48 @@ func (h *Handler) HandleGetLibraryExplorerFileTree(c echo.Context) error {
 	offsetStr := c.QueryParam("offset")
 
 	// Paginación segura para no saturar al cliente RSC con diccionarios de 10k elementos
-	if limitStr != "" || offsetStr != "" {
-		limit, _ := strconv.Atoi(limitStr)
-		offset, _ := strconv.Atoi(offsetStr)
-
-		if limit <= 0 {
-			limit = 100 // default fallback
+	var limit, offset int
+	if limitStr != "" {
+		l, err := strconv.Atoi(limitStr)
+		if err != nil || l <= 0 {
+			limit = 100
+		} else {
+			limit = l
 		}
-
-		current := 0
-		paginatedFiles := make(map[string]*dto.LocalFile)
-
-		for k, v := range fileTree.LocalFiles {
-			if current >= offset && current < (offset+limit) {
-				paginatedFiles[k] = v
-			}
-			current++
-			if current >= (offset + limit) {
-				break
-			}
+	} else {
+		limit = 100
+	}
+	if offsetStr != "" {
+		o, err := strconv.Atoi(offsetStr)
+		if err != nil || o < 0 {
+			offset = 0
+		} else {
+			offset = o
 		}
-
-		// Crear una copia superficial del response tree para reemplazar el map gigante
-		paginatedTree := *fileTree
-		paginatedTree.LocalFiles = paginatedFiles
-
-		return h.RespondWithData(c, paginatedTree)
+	}
+	if limit > 500 {
+		limit = 500
 	}
 
-	return h.RespondWithData(c, fileTree)
+	keys := make([]string, 0, len(fileTree.LocalFiles))
+	for k := range fileTree.LocalFiles {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	paginatedFiles := make(map[string]*dto.LocalFile)
+	for i := offset; i < len(keys) && i < offset+limit; i++ {
+		k := keys[i]
+		paginatedFiles[k] = fileTree.LocalFiles[k]
+	}
+
+	// Crear una copia superficial del response tree para reemplazar el map gigante
+	paginatedTree := *fileTree
+	paginatedTree.LocalFiles = paginatedFiles
+
+	return h.RespondWithData(c, paginatedTree)
 }
+
 
 // HandleRefreshLibraryExplorerFileTree ...
 //
@@ -95,46 +108,6 @@ func (h *Handler) HandleRefreshLibraryExplorerFileTree(c echo.Context) error {
 
 	// Refresh file tree
 	err = h.App.LibraryExplorer.Refresh()
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	return h.RespondWithData(c, true)
-}
-
-// HandleLoadLibraryExplorerDirectoryChildren ...
-//
-//	@summary loads the children of a specific directory into the file tree.
-//	@desc This endpoint loads directory children into the cached file tree. Frontend should re-fetch the tree afterwards.
-//	@desc The directory path must be within the configured library paths for security.
-//	@route /api/v1/library/explorer/directory-children [POST]
-//	@returns bool
-func (h *Handler) HandleLoadLibraryExplorerDirectoryChildren(c echo.Context) error {
-
-	type body struct {
-		DirectoryPath string `json:"directoryPath"`
-	}
-
-	b := new(body)
-	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if h.App.LibraryExplorer == nil {
-		return h.RespondWithError(c, echo.NewHTTPError(500, "Library explorer is not initialized"))
-	}
-
-	// Get library paths from settings
-	settings, err := h.App.Database.GetSettings()
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	libraryPaths := settings.GetLibrary().GetAllPaths()
-	h.App.LibraryExplorer.SetLibraryPaths(libraryPaths)
-
-	// Load directory children into the tree
-	err = h.App.LibraryExplorer.LoadDirectoryChildren(b.DirectoryPath)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

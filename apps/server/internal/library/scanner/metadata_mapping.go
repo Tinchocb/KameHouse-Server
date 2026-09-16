@@ -69,8 +69,10 @@ func fetchAnimapTMDBID(ctx context.Context, from string, id int) (int, error) {
 	return resp.Mappings.TMDBID, nil
 }
 
+var mappingHttpClient = httputil.NewFastClient()
+
 func getWithRetry(ctx context.Context, url string, headers map[string]string) ([]byte, int, error) {
-	client := httputil.NewFastClient()
+	client := mappingHttpClient
 	delay := time.Second
 	var lastErr error
 

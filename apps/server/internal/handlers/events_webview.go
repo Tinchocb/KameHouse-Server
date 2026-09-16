@@ -24,7 +24,9 @@ func (h *Handler) HandleClientEvents(event *events.WebsocketClientEvent) {
 				heartbeat := PlaybackHeartbeatPayload{
 					EventType: events.PlaybackHeartbeatProgress,
 				}
-				if v, ok := payload["mediaID"].(float64); ok {
+				if v, ok := payload["mediaId"].(float64); ok {
+					heartbeat.MediaID = int(v)
+				} else if v, ok := payload["mediaID"].(float64); ok {
 					heartbeat.MediaID = int(v)
 				}
 				if v, ok := payload["episodeNumber"].(float64); ok {

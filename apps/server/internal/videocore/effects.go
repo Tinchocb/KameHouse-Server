@@ -35,7 +35,7 @@ func (vc *VideoCore) setupSharedEffects() {
 				if !ok {
 					continue
 				}
-				if event.Duration != 0 {
+				if event.Duration != 0 && vc.continuityManager != nil {
 					_ = vc.continuityManager.UpdateWatchHistoryItem(&continuity.UpdateWatchHistoryItemOptions{
 						CurrentTime: event.CurrentTime,
 						Duration:    event.Duration,

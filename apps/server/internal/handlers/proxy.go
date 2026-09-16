@@ -29,7 +29,6 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusForbidden, "SSRF blocked: invalid proxy URL")
 	}
 	headers := c.QueryParam("headers")
-	authToken := c.QueryParam("token")
 
 	r := videoProxyClient2.R()
 
@@ -67,10 +66,8 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 		}
 	}
 
-	// Set CORS headers
-	c.Response().Header().Set("Access-Control-Allow-Origin", "*")
-	c.Response().Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	c.Response().Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+	// Vary: Origin for correct caching with credentials (handled by global middleware).
+	c.Response().Header().Set("Vary", "Origin")
 
 	// For HEAD requests, return only headers
 	if c.Request().Method == http.MethodHead {
@@ -84,8 +81,6 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	}
 
 	// HLS Playlist
-	//log.Debug().Str("url", url).Msg("proxy: Processing HLS playlist")
-
 	const maxPlaylistSize = 5 * 1024 * 1024 // 5 MB limit
 	lr := io.LimitReader(resp.Body, maxPlaylistSize+1)
 	bodyBytes, readErr := io.ReadAll(lr)
@@ -122,19 +117,19 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 		for _, segment := range mediaPl.Segments {
 			if segment != nil {
 				// Rewrite Segment URI
-				if rewriteURI(&segment.URI, baseURL, headerMap, authToken, h.App.Logger) {
+				if rewriteURI(&segment.URI, baseURL, headerMap, h.App.Logger) {
 					needsRewrite = true
 				}
 
 				// Rewrite encryption key URIs
 				for i := range segment.Keys {
-					if rewriteURI(&segment.Keys[i].URI, baseURL, headerMap, authToken, h.App.Logger) {
+					if rewriteURI(&segment.Keys[i].URI, baseURL, headerMap, h.App.Logger) {
 						needsRewrite = true
 					}
 				}
 
 				if segment.Map != nil {
-					if rewriteURI(&segment.Map.URI, baseURL, headerMap, authToken, h.App.Logger) {
+					if rewriteURI(&segment.Map.URI, baseURL, headerMap, h.App.Logger) {
 						needsRewrite = true
 					}
 				}
@@ -144,27 +139,27 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 		for _, segment := range mediaPl.PartialSegments {
 			if segment != nil {
 				// Rewrite Segment URI
-				if rewriteURI(&segment.URI, baseURL, headerMap, authToken, h.App.Logger) {
+				if rewriteURI(&segment.URI, baseURL, headerMap, h.App.Logger) {
 					needsRewrite = true
 				}
 			}
 		}
 
 		if mediaPl.PreloadHints != nil {
-			if rewriteURI(&mediaPl.PreloadHints.URI, baseURL, headerMap, authToken, h.App.Logger) {
+			if rewriteURI(&mediaPl.PreloadHints.URI, baseURL, headerMap, h.App.Logger) {
 				needsRewrite = true
 			}
 		}
 
 		if mediaPl.Map != nil {
-			if rewriteURI(&mediaPl.Map.URI, baseURL, headerMap, authToken, h.App.Logger) {
+			if rewriteURI(&mediaPl.Map.URI, baseURL, headerMap, h.App.Logger) {
 				needsRewrite = true
 			}
 		}
 
 		// Rewrite playlist-level encryption key URIs
 		for i := range mediaPl.Keys {
-			if rewriteURI(&mediaPl.Keys[i].URI, baseURL, headerMap, authToken, h.App.Logger) {
+			if rewriteURI(&mediaPl.Keys[i].URI, baseURL, headerMap, h.App.Logger) {
 				needsRewrite = true
 			}
 		}
@@ -179,13 +174,13 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 
 		for _, variant := range masterPl.Variants {
 			if variant != nil {
-				if rewriteURI(&variant.URI, baseURL, headerMap, authToken, h.App.Logger) {
+				if rewriteURI(&variant.URI, baseURL, headerMap, h.App.Logger) {
 					needsRewrite = true
 				}
 
 				// Handle alternative media groups (audio, subtitles, etc.)
 				for _, alternative := range variant.Alternatives {
-					if alternative != nil && rewriteURI(&alternative.URI, baseURL, headerMap, authToken, h.App.Logger) {
+					if alternative != nil && rewriteURI(&alternative.URI, baseURL, headerMap, h.App.Logger) {
 						needsRewrite = true
 					}
 				}
@@ -194,7 +189,7 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 
 		// Rewrite session key URIs
 		for i := range masterPl.SessionKeys {
-			if rewriteURI(&masterPl.SessionKeys[i].URI, baseURL, headerMap, authToken, h.App.Logger) {
+			if rewriteURI(&masterPl.SessionKeys[i].URI, baseURL, headerMap, h.App.Logger) {
 				needsRewrite = true
 			}
 		}
@@ -222,7 +217,7 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 }
 
 // rewriteURI rewrites a URI pointer if needed, returns true if modified
-func rewriteURI(uri *string, baseURL *url2.URL, headerMap map[string]string, authToken string, logger *zerolog.Logger) bool {
+func rewriteURI(uri *string, baseURL *url2.URL, headerMap map[string]string, logger *zerolog.Logger) bool {
 	if *uri == "" || isAlreadyProxied(*uri) {
 		return false
 	}
@@ -232,7 +227,7 @@ func rewriteURI(uri *string, baseURL *url2.URL, headerMap map[string]string, aut
 		*uri = resolveURL(baseURL, *uri)
 	}
 
-	*uri = toProxyURL(*uri, headerMap, authToken, logger)
+	*uri = toProxyURL(*uri, headerMap, logger)
 	return true
 }
 
@@ -247,18 +242,15 @@ func resolveURL(base *url2.URL, relativeURI string) string {
 	return base.ResolveReference(relativeURL).String()
 }
 
-func toProxyURL(targetMediaURL string, headerMap map[string]string, authToken string, logger *zerolog.Logger) string {
+func toProxyURL(targetMediaURL string, headerMap map[string]string, logger *zerolog.Logger) string {
 	proxyURL := "/api/v1/proxy?url=" + url2.QueryEscape(targetMediaURL)
 	if len(headerMap) > 0 {
 		headersStrB, err := json.Marshal(headerMap)
 		if err != nil {
 			logger.Warn().Err(err).Msg("proxy: failed to marshal headers")
-		} else if len(headersStrB) > 2 { // Check > 2 for "{}" empty map
+		} else if len(headersStrB) > 2 {
 			proxyURL += "&headers=" + url2.QueryEscape(string(headersStrB))
 		}
-	}
-	if authToken != "" {
-		proxyURL += "&token=" + url2.QueryEscape(authToken)
 	}
 	return proxyURL
 }

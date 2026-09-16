@@ -36,13 +36,15 @@ func GetLibraryMediaByTmdbId(d *Database, tmdbID int) (*models.LibraryMedia, err
 }
 
 // GetLibraryMediaByTmdbIdAndType retrieves a LibraryMedia by its TMDB ID and Type.
+// Cloned to prevent caller mutating cached object.
 func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (*models.LibraryMedia, error) {
 	cacheKey := fmt.Sprintf("id_type_%d_%s", tmdbID, mediaType)
 	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
 		if media, _ := v.(*models.LibraryMedia); media == nil {
 			return nil, nil
 		} else {
-			return media, nil
+			copy := *media
+			return &copy, nil
 		}
 	}
 	var media models.LibraryMedia
@@ -55,17 +57,20 @@ func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (
 		return nil, err
 	}
 	d.LibraryMediaCache.Store(cacheKey, &media)
-	return &media, nil
+	copy := media
+	return &copy, nil
 }
 
 // GetLibraryMediaByID retrieves a LibraryMedia by its primary key ID.
+// Cloned to prevent caller mutating cached object.
 func GetLibraryMediaByID(d *Database, id uint) (*models.LibraryMedia, error) {
 	cacheKey := fmt.Sprintf("pk_%d", id)
 	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
 		if media, _ := v.(*models.LibraryMedia); media == nil {
 			return nil, nil
 		} else {
-			return media, nil
+			copy := *media
+			return &copy, nil
 		}
 	}
 	var media models.LibraryMedia
@@ -78,7 +83,8 @@ func GetLibraryMediaByID(d *Database, id uint) (*models.LibraryMedia, error) {
 		return nil, err
 	}
 	d.LibraryMediaCache.Store(cacheKey, &media)
-	return &media, nil
+	copy := media
+	return &copy, nil
 }
 
 // GetMediaEntryListData retrieves the MediaEntryListData for a given LibraryMedia ID.
@@ -163,6 +169,24 @@ func GetLibraryMediaByExternalID(d *Database, externalId string) (*models.Librar
 	return &media, nil
 }
 
+// GetLibraryMediaByProviderExternalID retrieves a LibraryMedia by provider + external_id pair.
+// Uses the composite index idx_provider_external (provider, external_id) on provider_mappings.
+// Returns nil if no matching media is found.
+func GetLibraryMediaByProviderExternalID(d *Database, provider, externalId string) (*models.LibraryMedia, error) {
+	var media models.LibraryMedia
+	err := d.Gorm().
+		Joins("JOIN provider_mappings ON provider_mappings.library_media_id = library_media.id").
+		Where("provider_mappings.provider = ? AND provider_mappings.external_id = ?", provider, externalId).
+		First(&media).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &media, nil
+}
+
 // UpsertLibraryMediaBatch inserts or updates a slice of LibraryMedia atomically in a single transaction.
 // All affected TMDB IDs are evicted from the in-memory cache after the write.
 func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSize int) error {
@@ -170,10 +194,12 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 		return nil
 	}
 
-	err := d.Gorm().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "tmdb_id"}, {Name: "type"}}, // Unique composite constraint
-		UpdateAll: true,
-	}).CreateInBatches(media, batchSize).Error
+	err := d.Gorm().Transaction(func(tx *gorm.DB) error {
+		return tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "tmdb_id"}, {Name: "type"}}, // Unique composite constraint
+			UpdateAll: true,
+		}).CreateInBatches(media, batchSize).Error
+	})
 
 	if err == nil {
 		// Evict stale cache entries for every record that was just written.
@@ -181,6 +207,10 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 			if m.TmdbID != 0 {
 				d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", m.TmdbID))
 				d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", m.TmdbID, m.Type))
+				// Also evict malId mapping if present
+				if m.MyanimelistId != 0 {
+					d.LibraryMediaCache.Delete(fmt.Sprintf("malid_%d", m.MyanimelistId))
+				}
 			}
 			if m.ID != 0 {
 				d.LibraryMediaCache.Delete(fmt.Sprintf("pk_%d", m.ID))
@@ -201,6 +231,12 @@ func UpdateLibraryMediaMappings(d *Database, id uint, anidbId, malId int) error 
 // CleanBrokenLibraryMediaPosters resets broken/hallucinated legacy placeholder image URLs in the DB
 // and updates the core Dragon Ball series with their verified authentic TMDB artwork.
 func CleanBrokenLibraryMediaPosters(d *Database) {
+	const migrationKey = "clean_broken_posters_v1"
+	var done bool
+	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+		return
+	}
+
 	brokenPatterns := []string{
 		"%daima_poster%", "%daima_banner%",
 		"%bardock_poster%", "%bardock_banner%",
@@ -225,14 +261,15 @@ func CleanBrokenLibraryMediaPosters(d *Database) {
 	}
 
 	// Set verified official artwork for canonical TV series if missing or cleared
+	// bannerImage = backdrop 16:9 horizontal (1920×1080 a 3840×2160)
 	verifiedArt := map[int][2]string{
-		12609:  {"https://image.tmdb.org/t/p/w500/30L49n4Dhn7dzuGG50GV3ybMhC3.jpg", "https://image.tmdb.org/t/p/original/onCLyCOgszTIyyVs2XKYSkKPOPG.jpg"},
-		12971:  {"https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg", "https://image.tmdb.org/t/p/original/oQ5CnVj3TRifXl2bIOri6H6rfNe.jpg"},
-		12697:  {"https://image.tmdb.org/t/p/w500/aJOlYXjxb5IvnTsO4I1tmFpC7GH.jpg", "https://image.tmdb.org/t/p/original/rLHhDpv6rrhuzBjNzaMRNv2fng.jpg"},
-		61709:  {"https://image.tmdb.org/t/p/w500/oz5zbMBKCUsb7hsbjdxvK8yagPD.jpg", "https://image.tmdb.org/t/p/original/ojsPI8fNwcecKLhVC4rB4ZZhFMc.jpg"},
-		42705:  {"https://image.tmdb.org/t/p/w500/oz5zbMBKCUsb7hsbjdxvK8yagPD.jpg", "https://image.tmdb.org/t/p/original/ojsPI8fNwcecKLhVC4rB4ZZhFMc.jpg"},
-		62715:  {"https://image.tmdb.org/t/p/w500/qA2UwUQbj05aeBMCuC0mHSQ4loE.jpg", "https://image.tmdb.org/t/p/original/qEUrbXJ2qt4Rg84Btlx4STOhgte.jpg"},
-		236994: {"https://image.tmdb.org/t/p/w500/oUmWLyeko3kYdUr8DBLIsxwcugl.jpg", "https://image.tmdb.org/t/p/original/lMULbSFZNXUC87MqOZQ4SSV9DXI.jpg"},
+		12609:  {"https://image.tmdb.org/t/p/w500/30L49n4Dhn7dzuGG50GV3ybMhC3.jpg", "https://image.tmdb.org/t/p/original/tZuNziXpjmOsDlmiT6adFPmmSKT.jpg"},
+		12971:  {"https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg", "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg"},
+		12697:  {"https://image.tmdb.org/t/p/w500/aJOlYXjxb5IvnTsO4I1tmFpC7GH.jpg", "https://image.tmdb.org/t/p/original/c76HQMfMuspovC1OzBfZEQoEPry.jpg"},
+		61709:  {"https://image.tmdb.org/t/p/w500/oz5zbMBKCUsb7hsbjdxvK8yagPD.jpg", "https://image.tmdb.org/t/p/original/hwENQkheJIPVYyotxaWxPJH3Lb4.jpg"},
+		42705:  {"https://image.tmdb.org/t/p/w500/oz5zbMBKCUsb7hsbjdxvK8yagPD.jpg", "https://image.tmdb.org/t/p/original/hwENQkheJIPVYyotxaWxPJH3Lb4.jpg"},
+		62715:  {"https://image.tmdb.org/t/p/w500/qA2UwUQbj05aeBMCuC0mHSQ4loE.jpg", "https://image.tmdb.org/t/p/original/yJAOi2n0VYBEXdPI1NXv5FiOcBX.jpg"},
+		236994: {"https://image.tmdb.org/t/p/w500/oUmWLyeko3kYdUr8DBLIsxwcugl.jpg", "https://image.tmdb.org/t/p/original/jslk3I4TLDTb9BTKUqjMHpsCsml.jpg"},
 	}
 
 	for tmdbId, art := range verifiedArt {
@@ -242,5 +279,9 @@ func CleanBrokenLibraryMediaPosters(d *Database) {
 		d.Gorm().Model(&models.LibraryMedia{}).
 			Where("tmdb_id = ? AND (banner_image = '' OR banner_image IS NULL)", tmdbId).
 			Update("banner_image", art[1])
+	}
+
+	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
+		d.Logger.Error().Err(err).Msg("db: no se pudo marcar clean_broken_posters_v1 como completado")
 	}
 }

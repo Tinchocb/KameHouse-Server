@@ -21,6 +21,9 @@ var (
 
 	// specialNumRegex matches an explicit special/especial/ova/sp prefix followed by 1–2 digits.
 	specialNumRegex = regexp.MustCompile(`(?i)\b(?:especial(?:es)?|specials?|ovas?|oads?|sps?)\s*[-–#:]*\s*0*(\d{1,2})\b`)
+
+	// reNonAlphaNumeric matches non-alphanumeric characters for title normalization.
+	reNonAlphaNumeric = regexp.MustCompile(`[^a-z0-9\s]+`)
 )
 
 // dragonBallMovies contains all Dragon Ball movies, TV specials, OVAs and shorts
@@ -155,9 +158,9 @@ func ResolveDragonBallID(title string) (int, bool, bool) {
 	isEpisode := epRegex.MatchString(t)
 
 	// ── 2. MOVIE / OVA / SPECIAL DETECTION (data-driven, high priority) ───────
-	if !isEpisode || franchiseHasWord(ct, "movie") || franchiseHasWord(ct, "pelicula") ||
+	if (!isEpisode || franchiseHasWord(ct, "movie") || franchiseHasWord(ct, "pelicula") ||
 		franchiseHasWord(ct, "especial") || franchiseHasWord(ct, "special") || franchiseHasWord(ct, "ova") ||
-		franchiseHasWord(ct, "oad") || franchiseHasWord(ct, "peli") {
+		franchiseHasWord(ct, "oad") || franchiseHasWord(ct, "peli")) && !isDragonBallKaiSagaTitle(ct) && !isDragonBallGTSagaTitle(ct) {
 		resId, isMovie, found = ResolveFranchiseID(ct, dragonBallMovies)
 	}
 
@@ -313,9 +316,9 @@ func ResolveDragonBallID(title string) (int, bool, bool) {
 		switch {
 		case strings.Contains(ct, " daima ") || franchiseHasWord(ct, "daima"):
 			resId, found = 236994, true
-		case strings.Contains(ct, " gt ") || franchiseHasWord(ct, "dbgt"):
+		case strings.Contains(ct, " gt ") || franchiseHasWord(ct, "dbgt") || isDragonBallGTSagaTitle(ct):
 			resId, found = 12697, true
-		case strings.Contains(ct, " kai ") || franchiseHasWord(ct, "dbkai") || franchiseHasWord(ct, "dbzkai"):
+		case strings.Contains(ct, " kai ") || franchiseHasWord(ct, "dbkai") || franchiseHasWord(ct, "dbzkai") || isDragonBallKaiSagaTitle(ct):
 			resId, found = 61709, true
 		case strings.Contains(ct, " dragon ball super ") || franchiseHasWord(ct, "dbs") ||
 			(strings.Contains(ct, " super ") && strings.Contains(ct, "dragon")):
@@ -346,58 +349,58 @@ func CreatePrehydratedDragonBallMedia(id int) *dto.NormalizedMedia {
 	var year, episodes int
 
 	switch tmdbID {
-	case 12609: // Dragon Ball Clásico — poster/banner verificados HTTP 200
+	case 12609: // Dragon Ball Clásico — backdrop 16:9 (3840×2160) verificado HTTP 200
 		titleSpanish = "Dragon Ball"
 		titleEnglish = "Dragon Ball"
 		titleRomaji = "Dragon Ball"
 		description = "Las legendarias aventuras de Son Goku desde su niñez, entrenando con el Maestro Roshi y buscando las siete Esferas del Dragón."
 		posterPath = "https://image.tmdb.org/t/p/w500/30L49n4Dhn7dzuGG50GV3ybMhC3.jpg"
-		bannerPath = "https://image.tmdb.org/t/p/original/onCLyCOgszTIyyVs2XKYSkKPOPG.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/tZuNziXpjmOsDlmiT6adFPmmSKT.jpg"
 		year = 1986
 		episodes = 153
-	case 12971: // Dragon Ball Z — poster/banner verificados HTTP 200
+	case 12971: // Dragon Ball Z — backdrop 2K QHD (2560×1440) verificado HTTP 200 (Guerreros Z con Shenlong)
 		titleSpanish = "Dragon Ball Z"
 		titleEnglish = "Dragon Ball Z"
 		titleRomaji = "Dragon Ball Z"
 		description = "Goku descubre sus orígenes Saiyajin y junto a los Guerreros Z defiende la Tierra contra amenazas cósmicas como Vegeta, Freezer, Cell y Majin Buu."
 		posterPath = "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg"
-		bannerPath = "https://image.tmdb.org/t/p/original/oQ5CnVj3TRifXl2bIOri6H6rfNe.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg"
 		year = 1989
 		episodes = 291
-	case 12697: // Dragon Ball GT — poster/banner verificados HTTP 200
+	case 12697: // Dragon Ball GT — backdrop 16:9 verificado HTTP 200 (Pan, Trunks y Goku en acantilado)
 		titleSpanish = "Dragon Ball GT"
 		titleEnglish = "Dragon Ball GT"
 		titleRomaji = "Dragon Ball GT"
 		description = "Tras convertirse de nuevo en niño debido a las Esferas del Dragón de Estrella Negra, Goku viaja por el cosmos junto a Trunks y Pan."
 		posterPath = "https://image.tmdb.org/t/p/w500/aJOlYXjxb5IvnTsO4I1tmFpC7GH.jpg"
-		bannerPath = "https://image.tmdb.org/t/p/original/rLHhDpv6rrhuzBjNzaMRNv2fng.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/c76HQMfMuspovC1OzBfZEQoEPry.jpg"
 		year = 1996
 		episodes = 64
-	case 61709, 42705: // Dragon Ball Kai — poster/banner verificados HTTP 200
+	case 61709, 42705: // Dragon Ball Kai — backdrop 16:9 (3840×2160) verificado HTTP 200
 		titleSpanish = "Dragon Ball Z Kai"
 		titleEnglish = "Dragon Ball Z Kai"
 		titleRomaji = "Dragon Ball Kai"
 		description = "Versión remasterizada y sin relleno de Dragon Ball Z, fiel al manga original de Akira Toriyama con sonido y animación digital renovada."
 		posterPath = "https://image.tmdb.org/t/p/w500/oz5zbMBKCUsb7hsbjdxvK8yagPD.jpg"
-		bannerPath = "https://image.tmdb.org/t/p/original/ojsPI8fNwcecKLhVC4rB4ZZhFMc.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/hwENQkheJIPVYyotxaWxPJH3Lb4.jpg"
 		year = 2009
 		episodes = 167
-	case 62715: // Dragon Ball Super — poster/banner verificados HTTP 200
+	case 62715: // Dragon Ball Super — backdrop Full HD (1920×1080) verificado HTTP 200 (Goku y Vegeta Blue)
 		titleSpanish = "Dragon Ball Super"
 		titleEnglish = "Dragon Ball Super"
 		titleRomaji = "Dragon Ball Super"
 		description = "Tras la derrota de Majin Buu, Goku y sus amigos despiertan los poderes de los dioses enfrentando a Bills, Goku Black y el Torneo del Poder."
 		posterPath = "https://image.tmdb.org/t/p/w500/qA2UwUQbj05aeBMCuC0mHSQ4loE.jpg"
-		bannerPath = "https://image.tmdb.org/t/p/original/qEUrbXJ2qt4Rg84Btlx4STOhgte.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/yJAOi2n0VYBEXdPI1NXv5FiOcBX.jpg"
 		year = 2015
 		episodes = 131
-	case 236994: // Dragon Ball Daima — poster/banner verificados HTTP 200
+	case 236994: // Dragon Ball Daima — backdrop 16:9 (3840×2160) verificado HTTP 200
 		titleSpanish = "Dragon Ball Daima"
 		titleEnglish = "Dragon Ball Daima"
 		titleRomaji = "Dragon Ball Daima"
 		description = "Debido a una conspiración en el Reino Demonio, Goku y sus amigos se transforman en niños y viajan a un mundo desconocido para revertir el hechizo."
 		posterPath = "https://image.tmdb.org/t/p/w500/oUmWLyeko3kYdUr8DBLIsxwcugl.jpg"
-		bannerPath = "https://image.tmdb.org/t/p/original/lMULbSFZNXUC87MqOZQ4SSV9DXI.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/jslk3I4TLDTb9BTKUqjMHpsCsml.jpg"
 		year = 2024
 		episodes = 20
 	// Specials & Movies — imágenes obtenidas dinámicamente por la API (TMDB) en tiempo de enriquecimiento
@@ -441,6 +444,8 @@ func CreatePrehydratedDragonBallMedia(id int) *dto.NormalizedMedia {
 		titleEnglish = "Dragon Ball Z: Dead Zone"
 		titleRomaji = "Dragon Ball Z: Ora no Gohan o Kaese!!"
 		description = "Garlick Jr. secuestra a Gohan en busca de la inmortalidad. Goku y Piccolo forman una alianza sin precedentes."
+		posterPath = "https://image.tmdb.org/t/p/w500/ywtyEDTM2YO7qod7USNNwhrAfvA.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/6SFrBoiuioqljN42pbTmyRKccTp.jpg"
 		year = 1989
 		episodes = 1
 		isMovie = true
@@ -448,7 +453,9 @@ func CreatePrehydratedDragonBallMedia(id int) *dto.NormalizedMedia {
 		titleSpanish = "Dragon Ball Z: El Hombre Más Fuerte de Este Mundo"
 		titleEnglish = "Dragon Ball Z: The World's Strongest"
 		titleRomaji = "Dragon Ball Z: Kono Yo de Ichiban Tsuyoi Yatsu"
-		description = "El cerebro del Dr. Wheelo busca el cuerpo del hombre más fuerte del mundo para resucitar su poder."
+		description = "El cerebro del Dr. Wheelo busca el cuerpo del hombre más fuerte del mundo para resucitar su poder. Sus secuaces secuestran al Maestro Roshi creyendo que es él, pero pronto descubren que Goku y sus amigos son una amenaza mucho mayor."
+		posterPath = "https://image.tmdb.org/t/p/w500/5elbm3iLgGQ6nA5vqUmi9vIojbF.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/pLuoFuzygOdWBRJhLQWSbKeoZ0s.jpg"
 		year = 1990
 		episodes = 1
 		isMovie = true
@@ -669,6 +676,8 @@ func normalizeDragonBallTitle(s string) string {
 	s = strings.ReplaceAll(s, "]", " ")
 	s = strings.ReplaceAll(s, "(", " ")
 	s = strings.ReplaceAll(s, ")", " ")
+	s = strings.ReplaceAll(s, "{", " ")
+	s = strings.ReplaceAll(s, "}", " ")
 	s = strings.ReplaceAll(s, "¡", " ")
 	s = strings.ReplaceAll(s, "!", " ")
 	s = strings.ReplaceAll(s, "¿", " ")
@@ -690,8 +699,57 @@ func normalizeDragonBallTitle(s string) string {
 	s = strings.ReplaceAll(s, "ü", "u")
 	s = strings.ReplaceAll(s, "ñ", "n")
 	// Remove all non-alphanumeric except spaces
-	reg := regexp.MustCompile(`[^a-z0-9\s]+`)
-	s = reg.ReplaceAllString(s, " ")
+	s = reNonAlphaNumeric.ReplaceAllString(s, " ")
 	return " " + strings.Join(strings.Fields(s), " ") + " "
+}
+
+// isDragonBallKaiSagaTitle returns true if the normalized string matches known Dragon Ball Kai saga releases.
+func isDragonBallKaiSagaTitle(ct string) bool {
+	hasKaiSaga := strings.Contains(ct, " saga de los saiyajin ") ||
+		strings.Contains(ct, " saga saiyajin ") ||
+		strings.Contains(ct, " saga de freezer ") ||
+		strings.Contains(ct, " saga freezer ") ||
+		strings.Contains(ct, " saga de los androides ") ||
+		strings.Contains(ct, " saga de androides ") ||
+		strings.Contains(ct, " saga de cell ") ||
+		strings.Contains(ct, " saga cell ") ||
+		strings.Contains(ct, " saga de majin boo ") ||
+		strings.Contains(ct, " saga de majin buu ") ||
+		strings.Contains(ct, " saga majin boo ") ||
+		strings.Contains(ct, " saga majin buu ")
+
+	if !hasKaiSaga {
+		return false
+	}
+
+	// 1. Explicit Kai markers
+	if strings.Contains(ct, " kai ") || franchiseHasWord(ct, "dbkai") || franchiseHasWord(ct, "dbzkai") {
+		return true
+	}
+
+	// 2. Broadcast years for Kai (2009–2015)
+	if strings.Contains(ct, " 2009 ") || strings.Contains(ct, " 2010 ") ||
+		strings.Contains(ct, " 2011 ") || strings.Contains(ct, " 2012 ") ||
+		strings.Contains(ct, " 2013 ") || strings.Contains(ct, " 2014 ") ||
+		strings.Contains(ct, " 2015 ") {
+		return true
+	}
+
+	// 3. Fallback: if it's one of these iconic sagas and doesn't explicitly belong to GT or DB clásico,
+	// it matches Kai (as this saga release format is overwhelmingly Dragon Ball Kai).
+	return !strings.Contains(ct, " gt ") && !franchiseHasWord(ct, "dbgt") && !strings.Contains(ct, " daima ")
+}
+
+// isDragonBallGTSagaTitle returns true if the normalized string matches known Dragon Ball GT saga releases.
+func isDragonBallGTSagaTitle(ct string) bool {
+	return strings.Contains(ct, " saga de baby ") ||
+		strings.Contains(ct, " saga baby ") ||
+		strings.Contains(ct, " saga de super 17 ") ||
+		strings.Contains(ct, " saga super 17 ") ||
+		strings.Contains(ct, " saga de los dragones ") ||
+		strings.Contains(ct, " saga dragones oscuros ") ||
+		strings.Contains(ct, " saga dragones malignos ") ||
+		strings.Contains(ct, " saga de las esferas de las estrellas negras ") ||
+		strings.Contains(ct, " saga el gran viaje ")
 }
 

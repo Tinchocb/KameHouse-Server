@@ -65,6 +65,14 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 		return changedMap
 	}
 
+	// Group LocalFiles by MediaID once to avoid O(N²) filtering per entry.
+	lfByMedia := make(map[int][]*dto.LocalFile, len(opts.LocalFiles))
+	for _, lf := range opts.LocalFiles {
+		if lf.MediaID > 0 {
+			lfByMedia[lf.MediaID] = append(lfByMedia[lf.MediaID], lf)
+		}
+	}
+
 	for _, _list := range collection.Lists {
 		if _list.Entries == nil {
 			continue
@@ -96,9 +104,8 @@ func (d *Diff) GetAnimeDiffs(opts GetAnimeDiffOptions) map[int]*AnimeDiffResult 
 				continue // Go to the next anime
 			}
 
-			_lfs := lo.Filter(opts.LocalFiles, func(lf *dto.LocalFile, _ int) bool {
-				return lf.MediaID == _entry.Media.ID
-			})
+			// Use pre-grouped local files
+			_lfs := lfByMedia[_entry.Media.ID]
 
 			// Check if the anime has changed
 			_referenceKey := GetAnimeReferenceKey(_entry.Media, _lfs)

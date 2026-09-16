@@ -9,6 +9,7 @@ import (
 	"kamehouse/internal/library/anime"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 // HandleGetHomeCurated returns the intelligent swimlanes for the home page.
@@ -67,47 +68,98 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 		return c.JSON(500, NewErrorResponse(errors.New("database not initialized")))
 	}
 
-	var episodes []models.LibraryEpisode
-	if err := h.App.Database.Gorm().Find(&episodes).Error; err != nil {
+	type epRetagItem struct {
+		ID          uint
+		Title       string
+		Description string
+	}
+	var episodes []epRetagItem
+	if err := h.App.Database.Gorm().Model(&models.LibraryEpisode{}).
+		Select("id, title, description").
+		Find(&episodes).Error; err != nil {
 		return c.JSON(500, NewErrorResponse(err))
 	}
 
 	tagger := metadata_provider.NewIntelligenceTagger()
 	updated := 0
 
-	for i := range episodes {
-		ep := &episodes[i]
-		analysis := tagger.Analyze(
-			fmt.Sprintf("ep_%d", ep.ID),
-			ep.Title,
-			ep.Description,
-			false,
-		)
+	const batchSize = 100
+	for i := 0; i < len(episodes); i += batchSize {
+		end := i + batchSize
+		if end > len(episodes) {
+			end = len(episodes)
+		}
+		chunk := episodes[i:end]
 
-		tagsJSON := analysis.GetTagsAsJSON()
-		if err := h.App.Database.Gorm().
-			Model(ep).
-			Updates(map[string]any{
-				"tags":               tagsJSON,
-				"dominant_vibe":      analysis.DominantVibe,
-				"suggested_swimlane": analysis.SuggestedSwimlane,
-			}).Error; err == nil {
-			updated++
+		_ = h.App.Database.Gorm().Transaction(func(tx *gorm.DB) error {
+			for j := range chunk {
+				ep := &chunk[j]
+				analysis := tagger.Analyze(
+					fmt.Sprintf("ep_%d", ep.ID),
+					ep.Title,
+					ep.Description,
+					false,
+				)
+
+				tagsJSON := analysis.GetTagsAsJSON()
+				if err := tx.Model(&models.LibraryEpisode{}).
+					Where("id = ?", ep.ID).
+					Updates(map[string]any{
+						"tags":               tagsJSON,
+						"dominant_vibe":      analysis.DominantVibe,
+						"suggested_swimlane": analysis.SuggestedSwimlane,
+					}).Error; err == nil {
+					updated++
+				}
+			}
+			return nil
+		})
+	}
+
+	type mediaRetagItem struct {
+		ID            uint
+		Format        string
+		TitleRomaji   string
+		TitleEnglish  string
+		TitleJapanese string
+		Description   string
+	}
+	var allMedia []mediaRetagItem
+	if err := h.App.Database.Gorm().Model(&models.LibraryMedia{}).
+		Select("id, format, title_romaji, title_english, title_japanese, description").
+		Find(&allMedia).Error; err == nil {
+		for i := 0; i < len(allMedia); i += batchSize {
+			end := i + batchSize
+			if end > len(allMedia) {
+				end = len(allMedia)
+			}
+			chunk := allMedia[i:end]
+			_ = h.App.Database.Gorm().Transaction(func(tx *gorm.DB) error {
+				for j := range chunk {
+					m := &chunk[j]
+					isMovie := m.Format == "MOVIE"
+					title := m.TitleEnglish
+					if title == "" {
+						title = m.TitleRomaji
+					}
+					if title == "" {
+						title = m.TitleJapanese
+					}
+					analysis := tagger.Analyze(fmt.Sprintf("media_%d", m.ID), title, m.Description, isMovie)
+					_ = tx.Model(&models.LibraryMedia{}).
+						Where("id = ?", m.ID).
+						Updates(map[string]any{
+							"suggested_swimlane": analysis.SuggestedSwimlane,
+							"dominant_vibe":      analysis.DominantVibe,
+						}).Error
+				}
+				return nil
+			})
 		}
 	}
 
-	// Also retag LibraryMedia (movies & series headers)
-	var allMedia []models.LibraryMedia
-	h.App.Database.Gorm().Find(&allMedia)
-	for i := range allMedia {
-		m := &allMedia[i]
-		isMovie := m.Format == "MOVIE"
-		analysis := tagger.Analyze(fmt.Sprintf("media_%d", m.ID), m.GetPreferredTitle(), m.Description, isMovie)
-		h.App.Database.Gorm().Model(m).Updates(map[string]any{
-			"suggested_swimlane": analysis.SuggestedSwimlane,
-			"dominant_vibe":      analysis.DominantVibe,
-		})
-	}
+
+
 	h.App.Logger.Info().Int("updated", updated).Int("total", len(episodes)).Msg("retag: Complete")
 
 	anime.InvalidateCuratedHomeCache()

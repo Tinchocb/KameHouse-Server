@@ -492,7 +492,14 @@ func (mp *MetadataParser) ExtractSubtitles(ctx context.Context, newReader io.Rea
 			if !errors.Is(err, io.EOF) {
 				mp.logger.Error().Err(err).Msg("mkvparser: Failed to seek to offset for subtitle extraction")
 			}
+			_ = newReader.Close()
 			cancel()
+			// Evitar waiter colgado: startedCh debe cerrarse también en error.
+			select {
+			case <-startedCh:
+			default:
+				close(startedCh)
+			}
 			closeChannels(err)
 			return subtitleCh, errCh, startedCh
 		}
@@ -504,6 +511,7 @@ func (mp *MetadataParser) ExtractSubtitles(ctx context.Context, newReader io.Rea
 		_, err = newReader.Seek(clusterSeekOffset, io.SeekStart)
 		if err != nil {
 			mp.logger.Error().Err(err).Msg("mkvparser: Failed to seek to cluster offset")
+			_ = newReader.Close()
 			cancel()
 			closeChannels(err)
 			return subtitleCh, errCh, startedCh
@@ -517,6 +525,7 @@ func (mp *MetadataParser) ExtractSubtitles(ctx context.Context, newReader io.Rea
 			closeChannels(fmt.Errorf("subtitle extraction goroutine panic"))
 		})
 		defer cancel()
+		defer newReader.Close()
 		defer mp.logger.Trace().Msgf("mkvparser: Subtitle extraction goroutine finished.")
 
 		sampler := lo.ToPtr(mp.logger.Sample(&zerolog.BasicSampler{N: 500}))
@@ -597,15 +606,18 @@ func (mp *MetadataParser) ExtractSubtitles(ctx context.Context, newReader io.Rea
 			// Process subtitle packet
 			subtitleData := packet.Data
 
-			// Decompress if needed
-			if track.contentEncodings != nil {
-				if zr, err := zlib.NewReader(bytes.NewReader(subtitleData)); err == nil {
-					if buf, err := io.ReadAll(zr); err == nil {
+		// Decompress if needed (cap anti zip-bomb)
+		if track.contentEncodings != nil {
+			if zr, err := zlib.NewReader(bytes.NewReader(subtitleData)); err == nil {
+				lr := io.LimitReader(zr, 10*1024*1024)
+				if buf, err := io.ReadAll(lr); err == nil {
+					if len(buf) < 10*1024*1024 {
 						subtitleData = buf
 					}
-					_ = zr.Close()
 				}
+				_ = zr.Close()
 			}
+		}
 
 			milliseconds := float64(packet.StartTime) / 1e6 // Convert nanoseconds to milliseconds
 			duration := float64(packet.EndTime-packet.StartTime) / 1e6
@@ -874,8 +886,13 @@ func findNextClusterOffset(rs io.ReadSeeker, seekOffset, backoffBytes int64) (in
 	searchBuf := make([]byte, (len(matroskaClusterID)-1)+clusterSearchChunkSize)
 
 	lenOverlapCarried := 0
+	var scanned int64
 
 	for {
+		// Cap anti-DoS: no escanear más de 50MB buscando un Cluster.
+		if scanned > 50*1024*1024 {
+			return -1, fmt.Errorf("cluster ID not found within 50MB window")
+		}
 		n, readErr := rs.Read(mainBuf)
 
 		if n == 0 && readErr == io.EOF {
@@ -912,5 +929,6 @@ func findNextClusterOffset(rs io.ReadSeeker, seekOffset, backoffBytes int64) (in
 		}
 
 		absPosOfNextRead += int64(n)
+		scanned += int64(n)
 	}
 }

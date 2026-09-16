@@ -20,8 +20,9 @@ BINARY_NAME    := kamehouse
 WEB_DIR        := ../web
 WEB_OUT_DIR    := $(WEB_DIR)/out
 DEST_WEB_DIR   := web
-DATA_DIR       ?= ./test_data_dir
+DATA_DIR       ?= $(CURDIR)/test_data_dir
 SERVER_PORT    ?= 43211
+
 GO             := go
 NPM            := pnpm
 
@@ -97,26 +98,32 @@ dev-web:
 ## vet: Run go vet on all internal packages (including tests)
 vet:
 	@echo "🔍 Running go vet..."
-	$(GO) vet ./internal/...
+	$(GO) vet ./internal/... ./codegen/...
 	@echo "✅ go vet passed"
 
 ## test: Run Go tests in short mode
 test:
 	@echo "🧪 Running tests..."
-	$(GO) test -short ./internal/...
+	$(GO) test -short ./internal/... ./codegen/...
 	@echo "✅ Tests passed"
 
-## lint: Run golangci-lint
-lint:
-	@echo "🧹 Running linter..."
-	golangci-lint run ./internal/...
-	@echo "✅ Lint passed"
-
-## race: Run selected packages with the race detector (events, core, handlers)
+## race: Run selected packages with the race detector (events, core, handlers, continuity, intelligence, notifier, maintenance)
 race:
 	@echo "🔬 Running race detector tests..."
-	$(GO) test -race -count=1 ./internal/events/... ./internal/core/... ./internal/handlers/...
+	$(GO) test -race -count=1 ./internal/events/... ./internal/core/... ./internal/handlers/... ./internal/continuity/... ./internal/intelligence/... ./internal/notifier/... ./internal/maintenance/...
 	@echo "✅ Race detector tests passed"
+
+## codegen-check: Run codegen and verify no drift in generated files
+codegen-check:
+	@echo "🔨 Running codegen..."
+	cd codegen && $(GO) run main.go
+	@echo "🔍 Checking for drift..."
+	@if ! git diff --quiet --exit-code; then \
+		echo "❌ Codegen drift detected! Generated files changed."; \
+		git diff --stat; \
+		exit 1; \
+	fi
+	@echo "✅ Codegen up to date"
 
 # ======================================================================
 # Maintenance
