@@ -170,7 +170,7 @@ export function DynamicBackdrop() {
         <div
             aria-hidden="true"
             className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[var(--bg-primary)]"
-            style={{ contain: "strict" }}
+            style={{ contain: "paint" }}
         >
             {/* Cinematic Gradient Orbs (Omitted in TV / Eco / Classic Mode) */}
             {showAnimatedOrbs && (
@@ -198,46 +198,44 @@ export function DynamicBackdrop() {
                 </div>
             )}
 
-            {/* Wrapper for backdrop layers with mouse parallax (excluido en Home para evitar duplicación con el hero y su aura) */}
-            {!isHomePage && (
-                <div
-                    ref={backdropWrapperRef}
-                    className="absolute inset-0 transform-gpu"
-                    style={{
-                        transform: "translate3d(0px, 0px, 0px)",
-                    }}
-                >
-                    {/* Blurred layer — low-res image, heavy blur 64px (puramente ambiental y difuso) */}
-                    {displayedUrlLowRes && (
-                        <div
-                            className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
-                            style={{
-                                backgroundImage: `url(${displayedUrlLowRes})`,
-                                opacity: isCrossFading ? 0 : baseOpacity,
-                                transform: "scale(1.18)",
-                                filter: isFlat || isEcoMode
-                                    ? "none"
-                                    : "blur(64px) brightness(0.50) saturate(135%)",
-                                transition: "opacity 800ms cubic-bezier(0.25, 0.8, 0.25, 1)",
-                            }}
-                        />
-                    )}
-                    {nextUrlLowRes && (
-                        <div
-                            className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
-                            style={{
-                                backgroundImage: `url(${nextUrlLowRes})`,
-                                opacity: isCrossFading ? baseOpacity : 0,
-                                transform: "scale(1.18)",
-                                filter: isFlat || isEcoMode
-                                    ? "none"
-                                    : "blur(64px) brightness(0.50) saturate(135%)",
-                                transition: "opacity 800ms cubic-bezier(0.25, 0.8, 0.25, 1)",
-                            }}
-                        />
-                    )}
-                </div>
-            )}
+            {/* Wrapper for backdrop layers with mouse parallax */}
+            <div
+                ref={backdropWrapperRef}
+                className="absolute inset-0 transform-gpu"
+                style={{
+                    transform: "translate3d(0px, 0px, 0px)",
+                }}
+            >
+                {/* Blurred layer — low-res image, heavy blur 64px (puramente ambiental y difuso) */}
+                {displayedUrlLowRes && (
+                    <div
+                        className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
+                        style={{
+                            backgroundImage: `url(${displayedUrlLowRes})`,
+                            opacity: isCrossFading ? 0 : baseOpacity,
+                            transform: "scale(1.18)",
+                            filter: isFlat || isEcoMode
+                                ? "none"
+                                : "blur(64px) brightness(0.50) saturate(135%)",
+                            transition: "opacity 800ms cubic-bezier(0.25, 0.8, 0.25, 1)",
+                        }}
+                    />
+                )}
+                {nextUrlLowRes && (
+                    <div
+                        className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
+                        style={{
+                            backgroundImage: `url(${nextUrlLowRes})`,
+                            opacity: isCrossFading ? baseOpacity : 0,
+                            transform: "scale(1.18)",
+                            filter: isFlat || isEcoMode
+                                ? "none"
+                                : "blur(64px) brightness(0.50) saturate(135%)",
+                            transition: "opacity 800ms cubic-bezier(0.25, 0.8, 0.25, 1)",
+                        }}
+                    />
+                )}
+            </div>
 
             {/* Film Grain Overlay */}
             {!tvMode && !isFlat && <div className="grain-overlay z-10" />}
