@@ -137,7 +137,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={handleBackup}
                             disabled={isBackingUp}
-                            className="shrink-0 px-3 py-1.5 rounded-lg bg-brand-accent text-white text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                            className="shrink-0 px-3 py-1.5 rounded-lg bg-brand-accent text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                         >
                             {isBackingUp ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconStatusArchive className="w-3.5 h-3.5" />}
                             <span>{isBackingUp ? "Creando..." : "Crear Copia"}</span>

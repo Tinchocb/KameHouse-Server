@@ -52,8 +52,31 @@ export const SPAN_TO_MOVIES_MAP: Record<string, string[]> = {
     "dbgt-shadow-dragons": ["sp3"],
 }
 
+// Los ids reales de spans (story_spans.json) evolucionaron respecto a las claves
+// originales de estos mapas. Esta tabla resuelve cada id real a su clave de
+// lore canónica para que los 33 arcos siempre devuelvan edad, crónica y pelis.
+export const SPAN_LORE_ALIASES: Record<string, string> = {
+    "dbz-buu-ssj3-fusion": "dbz-buu-majin-vegeta",
+    "dbz-buu-gotenks-gohan-mistico": "dbz-buu-gotenks-gohan",
+    "dbz-buu-vegetto-kidbuu-final": "dbz-buu-kid-buu",
+    "dbs-batalla-dioses": "dbs-dioses",
+    "dbs-resurreccion-f": "dbs-freezer",
+    "dbs-torneo-u6": "dbs-universo-6",
+    "dbs-goku-black": "dbs-trunks-futuro",
+    "dbs-reclutamiento-u7": "dbs-supervivencia-universal",
+    "dbs-torneo-del-poder": "dbs-supervivencia-universal",
+    "db-daima-conspiracion": "dbdaima-misterio",
+    "db-daima-climax": "dbdaima-travesia",
+    "dbgt-baby-ssj4": "dbgt-baby",
+    "dbgt-dragones-malignos": "dbgt-shadow-dragons",
+}
+
+export function resolveSpanLoreKey(spanId: string): string {
+    return SPAN_LORE_ALIASES[spanId] ?? spanId
+}
+
 export function getMoviesForSpan(span: StorySpan): EnrichedMovieLore[] {
-    const movieIds = SPAN_TO_MOVIES_MAP[span.id] || []
+    const movieIds = SPAN_TO_MOVIES_MAP[span.id] ?? SPAN_TO_MOVIES_MAP[resolveSpanLoreKey(span.id)] ?? []
     const results: EnrichedMovieLore[] = []
 
     for (const mId of movieIds) {
@@ -99,6 +122,7 @@ export const GOKU_AGE_MAP: Record<string, GokuAgeInfo> = {
     "dbs-freezer": { physical: "42 años", notes: "Control del ki divino: Super Saiyajin Blue" },
     "dbs-universo-6": { physical: "42 años", notes: "Combinación de SSJ Blue con Kaio-ken x10" },
     "dbs-trunks-futuro": { physical: "42 – 43 años", notes: "Viaje temporal y fusión en Vegetto Blue" },
+    "dbs-reclutamiento-u7": { physical: "43 años", notes: "Recluta a los 10 guerreros del Universo 7" },
     "dbs-supervivencia-universal": { physical: "43 años", notes: "Doctrina del Juicio: Ultra Instinto Dominado" },
     "dbgt-black-star": { physical: "12 años (niño)", chronological: "52 años", notes: "Deseo accidental de Pilaf con las Esferas de Estrella Negra" },
     "dbgt-baby": { physical: "12 años / Adulto en SSJ4", chronological: "52 años", notes: "Despertar del Gran Mono Dorado y Super Saiyajin 4" },
@@ -107,7 +131,7 @@ export const GOKU_AGE_MAP: Record<string, GokuAgeInfo> = {
 }
 
 export function getGokuAgeForSpan(spanId: string): GokuAgeInfo {
-    return GOKU_AGE_MAP[spanId] || { physical: "Edad Saiyajin", notes: "Cronología de combate" }
+    return GOKU_AGE_MAP[spanId] ?? GOKU_AGE_MAP[resolveSpanLoreKey(spanId)] ?? { physical: "Edad Saiyajin", notes: "Cronología de combate" }
 }
 
 // Rich Universe Lore facts: Debuts, Transformations, Deaths, Wishes
@@ -313,7 +337,7 @@ export const UNIVERSE_LORE_MAP: Record<string, UniverseLoreDetails> = {
 }
 
 export function getUniverseLoreForSpan(spanId: string): UniverseLoreDetails {
-    return UNIVERSE_LORE_MAP[spanId] || {
+    return UNIVERSE_LORE_MAP[spanId] ?? UNIVERSE_LORE_MAP[resolveSpanLoreKey(spanId)] ?? {
         debuts: [],
         transformations: [],
         deaths: [],

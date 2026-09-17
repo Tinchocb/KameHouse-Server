@@ -1,67 +1,54 @@
-import { create, StateCreator } from "zustand"
-import { persist } from "zustand/middleware"
-import { subscribeWithSelector } from "zustand/middleware"
-import { devtools } from "zustand/middleware"
+import { create } from "zustand"
+import { subscribeWithSelector, devtools } from "zustand/middleware"
+import { type ScannerMessage } from "@/lib/server/ws-events"
 
-export interface ScanEvent {
-    type: "start" | "progress" | "complete" | "error"
-    message: string
+export interface ScanEvent extends ScannerMessage {
+    id: string
     timestamp: number
-    progress?: number
-    total?: number
-    filePath?: string
 }
 
 export interface ScannerState {
     isScanning: boolean
     scanProgress: number
-    scanTotal: number
-    scanMessage: string
-    scanEvents: ScanEvent[]
+    currentScanningFile: string
     events: ScanEvent[]
-    lastScanAt: number | null
-    currentScanningFile: string | null
-    setIsScanning: (scanning: boolean) => void
-    setScanProgress: (progress: number, total: number) => void
-    setScanMessage: (message: string) => void
-    addScanEvent: (event: ScanEvent) => void
-    clearScanEvents: () => void
-    setLastScanAt: (timestamp: number) => void
-    setCurrentScanningFile: (file: string | null) => void
+    activeStageIdx: number
+    lastFinish: ScanEvent | null
+    pruneCount: number
+    setScanning: (isScanning: boolean) => void
+    setScanProgress: (progress: number) => void
+    setScanningFile: (file: string) => void
+    setEvents: (events: ScanEvent[] | ((prev: ScanEvent[]) => ScanEvent[])) => void
+    setScannerState: (state: Partial<ScannerState>) => void
+    resetScanner: () => void
 }
 
 export const useScannerStore = create<ScannerState>()(
     devtools(
-        subscribeWithSelector(
-            persist(
-                (set) => ({
-                    isScanning: false,
-                    scanProgress: 0,
-                    scanTotal: 0,
-                    scanMessage: "",
-                    scanEvents: [],
-                    events: [],
-                    lastScanAt: null,
-                    currentScanningFile: null,
-                    setIsScanning: (scanning) => set({ isScanning: scanning }),
-                    setScanProgress: (progress, total) => set({ scanProgress: progress, scanTotal: total }),
-                    setScanMessage: (message) => set({ scanMessage: message }),
-                    addScanEvent: (event) => set((state) => {
-                        const newEvents = [...state.scanEvents.slice(-99), event]
-                        return { scanEvents: newEvents, events: newEvents }
-                    }),
-                    clearScanEvents: () => set({ scanEvents: [], events: [] }),
-                    setLastScanAt: (timestamp) => set({ lastScanAt: timestamp }),
-                    setCurrentScanningFile: (file) => set({ currentScanningFile: file }),
-                }),
-                {
-                    name: "kamehouse-scanner-settings",
-                    partialize: (state) => ({
-                        isScanning: state.isScanning,
-                        lastScanAt: state.lastScanAt,
-                    }),
-                }
-            )
-        )
+        subscribeWithSelector((set) => ({
+            isScanning: false,
+            scanProgress: 0,
+            currentScanningFile: "",
+            events: [],
+            activeStageIdx: -1,
+            lastFinish: null,
+            pruneCount: 0,
+            setScanning: (isScanning) => set({ isScanning }),
+            setScanProgress: (scanProgress) => set({ scanProgress }),
+            setScanningFile: (currentScanningFile) => set({ currentScanningFile }),
+            setEvents: (events) => set((state) => ({
+                events: typeof events === "function" ? events(state.events) : events,
+            })),
+            setScannerState: (state) => set((s) => ({ ...s, ...state })),
+            resetScanner: () => set({
+                isScanning: false,
+                scanProgress: 0,
+                currentScanningFile: "",
+                events: [],
+                activeStageIdx: -1,
+                lastFinish: null,
+                pruneCount: 0,
+            }),
+        }))
     )
 )

@@ -3,5 +3,5 @@ export { useUIStore, type UIState, type BackgroundMusicTrack } from "./stores/ui
 export { usePlayerStore, type PlayerState, type PlaylistItem } from "./stores/player-store"
 export { useQueueStore, type QueueState, type QueueRepeatMode } from "./stores/queue-store"
 export { useSkipTimesStore, type SkipTimesState } from "./stores/skip-times-store"
-export { useScannerStore, type ScanEvent, type ScannerState } from "./scanner-store"
+export { useScannerStore, type ScanEvent, type ScannerState } from "./stores/scanner-store"
 export { useAppStore } from "./stores"

@@ -31,65 +31,68 @@ export const selectIsHeavyEffectsAllowed = (state: PerformanceState): boolean =>
     return tier === "high" || tier === "balanced"
 }
 
-export const usePerformanceStore = create<PerformanceState>()(
-    devtools(
-        subscribeWithSelector(
-            persist(
-                (set, get) => ({
-            performanceProfile: "auto",
-            autoGovernorEnabled: true,
-            autoThrottleActive: false,
-            hardwareSpecs: null,
-            isDetecting: false,
+const isDev = process.env.NODE_ENV !== "production"
 
-            detectHardware: async (forceRefresh = false) => {
-                const currentSpecs = get().hardwareSpecs
-                if (currentSpecs && !forceRefresh) {
-                    return currentSpecs
-                }
-                set({ isDetecting: true })
-                try {
-                    const specs = await detectHardwareSpecs(forceRefresh)
-                    set({ hardwareSpecs: specs, isDetecting: false })
-                    return specs
-                } catch (err) {
-                    set({ isDetecting: false })
-                    throw err
-                }
-            },
+const createPerformanceStore = (set: any, get: any) => ({
+    performanceProfile: "auto" as PerformanceProfile,
+    autoGovernorEnabled: true,
+    autoThrottleActive: false,
+    hardwareSpecs: null as HardwareSpecs | null,
+    isDetecting: false,
 
-            setPerformanceProfile: (performanceProfile) => {
-                set({ performanceProfile })
-            },
-
-            setAutoGovernorEnabled: (autoGovernorEnabled) => {
-                set({ autoGovernorEnabled })
-                if (!autoGovernorEnabled) {
-                    set({ autoThrottleActive: false })
-                }
-            },
-
-            setAutoThrottleActive: (autoThrottleActive) => {
-                set({ autoThrottleActive })
-            },
-
-            getEffectiveTier: (): HardwareTier => {
-                return selectEffectiveTier(get())
-            },
-        }),
-        {
-            name: "kamehouse-performance-settings",
-            partialize: (state) => ({
-                hardwareSpecs: state.hardwareSpecs,
-                performanceProfile: state.performanceProfile,
-                autoGovernorEnabled: state.autoGovernorEnabled,
-            }),
+    detectHardware: async (forceRefresh = false) => {
+        const currentSpecs = get().hardwareSpecs
+        if (currentSpecs && !forceRefresh) {
+            return currentSpecs
         }
-    )
-  )
-))
+        set({ isDetecting: true })
+        try {
+            const specs = await detectHardwareSpecs(forceRefresh)
+            set({ hardwareSpecs: specs, isDetecting: false })
+            return specs
+        } catch (err) {
+            set({ isDetecting: false })
+            throw err
+        }
+    },
 
-// Auto-run detection and display calibration on initial client boot only when not yet cached
+    setPerformanceProfile: (performanceProfile: PerformanceProfile) => {
+        set({ performanceProfile })
+    },
+
+    setAutoGovernorEnabled: (autoGovernorEnabled: boolean) => {
+        set({ autoGovernorEnabled })
+        if (!autoGovernorEnabled) {
+            set({ autoThrottleActive: false })
+        }
+    },
+
+    setAutoThrottleActive: (autoThrottleActive: boolean) => {
+        set({ autoThrottleActive })
+    },
+
+    getEffectiveTier: (): HardwareTier => {
+        return selectEffectiveTier(get())
+    },
+})
+
+export const usePerformanceStore = create<PerformanceState>()(
+    subscribeWithSelector(
+        persist(
+            isDev ? devtools(createPerformanceStore) : createPerformanceStore,
+            {
+                name: "kamehouse-performance-settings",
+                partialize: (state) => ({
+                    hardwareSpecs: state.hardwareSpecs,
+                    performanceProfile: state.performanceProfile,
+                    autoGovernorEnabled: state.autoGovernorEnabled,
+                }),
+            }
+        )
+    )
+)
+
+// Auto-run detection and display calibration on initial client boot
 if (typeof window !== "undefined") {
     const runIdleDetection = () => {
         const store = usePerformanceStore.getState()
@@ -103,4 +106,12 @@ if (typeof window !== "undefined") {
     } else {
         setTimeout(runIdleDetection, 1500)
     }
+
+    // Auto-throttle cuando la pestaña pasa a segundo plano para ahorrar batería/GPU
+    document.addEventListener("visibilitychange", () => {
+        const store = usePerformanceStore.getState()
+        if (store.autoGovernorEnabled) {
+            store.setAutoThrottleActive(document.hidden)
+        }
+    })
 }

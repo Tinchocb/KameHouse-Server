@@ -145,6 +145,7 @@ const config: RsbuildConfig = {
             manualChunks: {
                 "series-detail": /[\\/]src[\\/]routes[\\/]series[\\/]\$seriesId/,
                 "movie-detail": /[\\/]src[\\/]routes[\\/]movies[\\/]\$movieId/,
+                "chronology": /[\\/]src[\\/]routes[\\/]chronology/,
                 "settings": /[\\/]src[\\/]routes[\\/]settings/,
                 "admin": /[\\/]src[\\/]routes[\\/]admin/,
             },

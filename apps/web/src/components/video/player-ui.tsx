@@ -432,7 +432,10 @@ export function PlayerUI(props: PlayerUIProps) {
               <video
                 ref={domElements.videoElement}
                 onPlay={() => actions.setIsPlaying(true)}
-                onPause={() => actions.setIsPlaying(false)}
+                onPause={() => {
+                    actions.setIsPlaying(false)
+                    actions.flushProgressSync()
+                }}
                 onDurationChange={(e) => actions.setDuration(e.currentTarget.duration)}
                 onTimeUpdate={actions.handleTimeUpdate}
                 onWaiting={() => actions.setIsBuffering(true)}
@@ -443,6 +446,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     actions.setIsSeeking(false)
                 }}
                 onEnded={() => {
+                    actions.flushProgressSync()
                     actions.handleTimeUpdate()
                 }}
                 className={cn(

@@ -58,6 +58,14 @@ const heroItemVariants: Variants = {
     }
 }
 
+const heroFadeOnlyVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: { duration: 0.25, ease: "easeOut" }
+    }
+}
+
 export function MoviesHero({
     topFeatured,
     debouncedMovie,
@@ -272,7 +280,9 @@ export function MoviesHero({
                                 <DeferredImage
                                     src={backdropSrc ? (backdropSrc.startsWith("/") ? backdropSrc : getLargeResImage(backdropSrc)) : (posterSrc!.startsWith("/") ? posterSrc! : getLargeResImage(posterSrc!))}
                                     alt={movieTitle}
-                                    priority={true}
+                                    priority={false}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="w-full h-full block"
                                     imgClassName="!w-full !h-full !object-cover !object-center sm:!object-right filter saturate-[125%] contrast-[105%]"
                                 />
@@ -299,13 +309,13 @@ export function MoviesHero({
                                 exit="exit"
                                 className="flex flex-col space-y-2.5 transform-gpu will-change-transform text-left w-full pointer-events-auto max-w-2xl"
                             >
-                                {/* Unified Metadata Capsule */}
+                                {/* Unified Metadata Capsule (Fade-only to avoid Chromium backdrop-filter delay) */}
                                 <MediaMetadataCapsule
                                     format={displayMedia?.format || "PELÍCULA"}
                                     year={displayMedia?.year}
                                     duration={displayMedia?.runtime ? `${displayMedia.runtime} MIN` : null}
                                     rating={displayMedia?.score ? (displayMedia.score / 10) : undefined}
-                                    variants={heroItemVariants}
+                                    variants={heroFadeOnlyVariants}
                                 >
                                     {/* Era Badge Thematic Context (Identidad cinematográfica de la Era) */}
                                     <span

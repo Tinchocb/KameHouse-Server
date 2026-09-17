@@ -146,7 +146,7 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
                                 className={cn(
                                     "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold transition-all duration-200",
                                     isActive
-                                        ? "bg-brand-accent text-white shadow-md shadow-brand-accent/30"
+                                        ? "bg-brand-accent text-on-primary shadow-md shadow-brand-accent/30"
                                         : isCompleted
                                             ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                                             : "bg-surface-container-high text-on-surface-variant"
@@ -313,7 +313,7 @@ function MediaEngineStep() {
                                 disabled={isDownloading}
                                 className={cn(
                                     "px-4 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shrink-0",
-                                    "bg-brand-accent text-white hover:bg-brand-accent/90 shadow-md shadow-brand-accent/20",
+                                    "bg-brand-accent text-on-primary hover:bg-brand-accent/90 shadow-md shadow-brand-accent/20",
                                     isDownloading && "opacity-60 cursor-not-allowed"
                                 )}
                             >
@@ -497,7 +497,7 @@ function PlaybackStep({
                                     <div
                                         className={cn(
                                             "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[10px] transition-colors duration-200",
-                                            isEnabled ? "bg-brand-accent border-brand-accent text-white" : "border-border-subtle"
+                                            isEnabled ? "bg-brand-accent border-brand-accent text-on-primary" : "border-border-subtle"
                                         )}
                                     >
                                         {isEnabled && "✓"}
@@ -612,7 +612,7 @@ function LanguageStep({
                                     <div
                                         className={cn(
                                             "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[10px] ml-2",
-                                            isSelected ? "bg-brand-accent border-brand-accent text-white" : "border-border-subtle"
+                                            isSelected ? "bg-brand-accent border-brand-accent text-on-primary" : "border-border-subtle"
                                         )}
                                     >
                                         {isSelected && "✓"}
@@ -756,15 +756,15 @@ export function GettingStarted({
                 <div className="absolute inset-0 opacity-[0.22] blur-3xl mix-blend-screen">
                     <div 
                         className="absolute top-[10%] left-[10%] w-[40vw] h-[40vw] rounded-full animate-float-blur"
-                        style={{ background: "radial-gradient(circle, var(--era-db-hex, #CF7430) 0%, transparent 70%)" }}
+                        style={{ background: "radial-gradient(circle, var(--era-db-hex, #E87A2D) 0%, transparent 70%)" }}
                     />
                     <div 
                         className="absolute top-[5%] right-[10%] w-[35vw] h-[35vw] rounded-full animate-float-blur-reverse"
-                        style={{ background: "radial-gradient(circle, var(--era-dbz-hex, #C2410C) 0%, transparent 70%)", animationDelay: "-4s" }}
+                        style={{ background: "radial-gradient(circle, var(--era-dbz-hex, #E6B43C) 0%, transparent 70%)", animationDelay: "-4s" }}
                     />
                     <div 
                         className="absolute bottom-[10%] right-[15%] w-[40vw] h-[40vw] rounded-full animate-float-blur"
-                        style={{ background: "radial-gradient(circle, var(--era-dbgt-hex, #0E7C86) 0%, transparent 70%)", animationDelay: "-8s" }}
+                        style={{ background: "radial-gradient(circle, var(--era-dbgt-hex, #D23859) 0%, transparent 70%)", animationDelay: "-8s" }}
                     />
                 </div>
             </div>
@@ -963,7 +963,7 @@ export function GettingStarted({
                                     e.preventDefault()
                                     nextStep()
                                 }}
-                                className="rounded-xl font-bold uppercase tracking-wider px-5 h-10 text-xs sm:text-sm bg-brand-accent text-white hover:bg-brand-accent/90 shadow-md shadow-brand-accent/25 cursor-pointer"
+                                className="rounded-xl font-bold uppercase tracking-wider px-5 h-10 text-xs sm:text-sm bg-brand-accent text-on-primary hover:bg-brand-accent/90 shadow-md shadow-brand-accent/25 cursor-pointer"
                                 rightIcon={<IconNavigationChevronRight className="w-4 h-4" />}
                             >
                                 Siguiente

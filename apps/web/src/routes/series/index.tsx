@@ -8,7 +8,7 @@ import { fetchAnimeEntry } from '@/api/hooks/anime_entries.hooks';
 import { SeriesCard, getVhsColor, type SeriesItem } from './-SeriesCard';
 import { getMediumResImage, getLowResImage } from '@/lib/helpers/images';
 import { DeferredImage } from '@/components/shared/deferred-image';
-import { IconUiCheckCircle2, IconNavigationSearch, IconUiClose } from "@/components/ui/icons";
+import { IconUiCheckCircle2 } from "@/components/ui/icons";
 import { useHeroBackdrop } from '@/hooks/use-hero';
 import { getSeriesIdFromMedia, getSeriesYear, getSeriesEraAccent, DRAGON_BALL_SERIES_ORDER, DRAGON_BALL_SERIES_INFO, DAIMA_VERTICAL_POSTER } from '@/lib/helpers/series';
 import { getSpineConfig } from '@/lib/helpers/goku-panorama';
@@ -154,11 +154,13 @@ const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
         });
     }, [queryClient, item.id]);
 
+    const shouldAnimate = index < 8;
+
     return (
         <motion.article
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(index, 11) * 0.05, duration: 0.35, ease: 'easeOut' }}
+            initial={shouldAnimate ? { opacity: 0, y: 16 } : false}
+            animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
+            transition={shouldAnimate ? { delay: index * 0.04, duration: 0.3, ease: 'easeOut' } : undefined}
             className="group relative select-none"
         >
             <div
@@ -236,9 +238,7 @@ function SeriesFullscreenIndex() {
     // Glows caros (blur 80-100px) solo con GPU capaz y sin reduced-motion.
     const allowGlowFx = isHeavyAllowed && !reduceMotion;
     const [selectedId, setSelectedId] = useState<number | null>(null);
-    const [query, setQuery] = useState('');
     const shelfRef = useRef<HTMLDivElement>(null);
-    const gridSearchRef = useRef<HTMLInputElement>(null);
     // Tablet (768-1023) usa el grid de posters en vez del shelf horizontal
     const { isMobile: isPhone, isTablet } = useResponsive();
     const isMobile = isPhone || isTablet;
@@ -338,9 +338,11 @@ function SeriesFullscreenIndex() {
         return sorted;
     }, [collection]);
 
-    // Pre-cargar portadas visibles iniciales
+    // Pre-cargar portadas visibles iniciales una sola vez por montaje
+    const preloadedRef = useRef(false);
     useEffect(() => {
-        if (!seriesList.length) return;
+        if (preloadedRef.current || !seriesList.length) return;
+        preloadedRef.current = true;
         seriesList.slice(0, 4).forEach(item => {
             const src = item.poster || item.img;
             if (src) { const img = new Image(); img.src = src; }
@@ -348,13 +350,7 @@ function SeriesFullscreenIndex() {
     }, [seriesList]);
 
     // Selección efectiva: cae al primer item si no hay selección explícita
-    const displayedList = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return seriesList;
-        return seriesList.filter(s =>
-            [s.title, s.seriesId, String(s.year)].filter(Boolean).join(' ').toLowerCase().includes(q),
-        );
-    }, [seriesList, query]);
+    const displayedList = seriesList;
 
     const effectiveSelectedId = displayedList.some(s => s.id === selectedId)
         ? selectedId
@@ -389,16 +385,10 @@ function SeriesFullscreenIndex() {
         };
     }, [selectedItem?.seriesId, selectedItem?.id, setActiveSeriesContext]);
 
-    // Atajos: 1-6 saltan a cada serie, / enfoca el buscador de Portadas
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             const t = e.target as HTMLElement | null;
             if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
-            if (e.key === '/') {
-                e.preventDefault();
-                gridSearchRef.current?.focus();
-                return;
-            }
             const n = Number(e.key);
             if (Number.isInteger(n) && n >= 1 && n <= displayedList.length) {
                 const target = displayedList[n - 1];
@@ -420,10 +410,10 @@ function SeriesFullscreenIndex() {
             const shelfRect = shelfRef.current.getBoundingClientRect();
             const cardRect = cardEl.getBoundingClientRect();
             if (cardRect.left < shelfRect.left || cardRect.right > shelfRect.right) {
-                cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                cardEl.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
             }
         }
-    }, [effectiveSelectedId, isMobile, view]);
+    }, [effectiveSelectedId, isMobile, view, reduceMotion]);
 
     return (
         <div className="w-full h-full max-w-content mx-auto flex flex-col bg-transparent text-on-surface font-sans overflow-hidden relative px-4 sm:px-6 md:px-8 lg:px-10 pb-4 md:pb-6 pt-4 md:pt-20 space-y-4">
@@ -554,7 +544,7 @@ function SeriesFullscreenIndex() {
                             )
                         )}
 
-                        {isLoading && displayedList.length === 0 && !query ? (
+                        {isLoading && displayedList.length === 0 ? (
                             <div className="w-full h-full flex items-stretch gap-0 relative z-10 p-2">
                                 {Array.from({ length: 8 }).map((_, i) => (
                                     <div key={i} className="h-full flex flex-col gap-2 p-2 shrink-0" style={{ flex: '1 0 150px' }}>
@@ -564,21 +554,6 @@ function SeriesFullscreenIndex() {
                             </div>
                         ) : displayedList.length === 0 ? (
                             <div className="w-full h-full flex items-center justify-center relative z-10 p-6">
-                                {query ? (
-                                    <EmptyState
-                                        title="Sin resultados"
-                                        message={`Nada coincide con "${query}".`}
-                                        action={
-                                            <button
-                                                type="button"
-                                                onClick={() => setQuery('')}
-                                                className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
-                                            >
-                                                Limpiar búsqueda
-                                            </button>
-                                        }
-                                    />
-                                ) : (
                                 <EmptyState
                                     title="No hay series en tu colección"
                                     message="Agregá series a tu biblioteca para verlas acá."
@@ -586,13 +561,12 @@ function SeriesFullscreenIndex() {
                                         <button
                                             type="button"
                                             onClick={() => navigate({ to: '/settings' })}
-                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-white font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_hsl(var(--brand-accent)/0.4)] cursor-pointer"
+                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_hsl(var(--brand-accent)/0.4)] cursor-pointer"
                                         >
                                             Configurar Biblioteca
                                         </button>
                                     }
                                 />
-                                )}
                             </div>
                         ) : (
                             displayedList.map((item, i) => (
@@ -632,31 +606,7 @@ function SeriesFullscreenIndex() {
                 /* ═══════════════════════ VISTA PORTADAS (grid / mobile) ═══════════════════════ */
                 <div className="flex-1 overflow-y-auto no-scrollbar transform-gpu [contain:paint]">
                     <div className="w-full page-container py-7 pb-32 space-y-6 min-h-full">
-                        {/* Buscador de portadas (atajo /) */}
-                        <div className="relative w-full sm:max-w-64">
-                            <IconNavigationSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50 pointer-events-none" />
-                            <input
-                                ref={gridSearchRef}
-                                type="text"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Escape') { setQuery(''); gridSearchRef.current?.blur(); } }}
-                                placeholder="Buscar serie... (/)"
-                                aria-label="Buscar serie"
-                                className="w-full bg-zinc-950/45 border border-white/20 border-t-white/40 border-b-white/10 rounded-full py-1.5 pl-9 pr-8 text-xs font-medium text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/40 transition-all backdrop-blur-overlay-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.2)]"
-                            />
-                            {query && (
-                                <button
-                                    type="button"
-                                    onClick={() => setQuery('')}
-                                    aria-label="Limpiar búsqueda"
-                                    className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                                >
-                                    <IconUiClose className="w-3.5 h-3.5" />
-                                </button>
-                            )}
-                        </div>
-                        {isLoading && displayedList.length === 0 && !query ? (
+                        {isLoading && displayedList.length === 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 w-full">
                                 {Array.from({ length: 12 }).map((_, i) => (
                                     <div key={i} className="flex flex-col gap-2">
@@ -668,21 +618,6 @@ function SeriesFullscreenIndex() {
                             </div>
                         ) : displayedList.length === 0 ? (
                             <div className="min-h-[50vh] flex items-center justify-center p-6">
-                                {query ? (
-                                    <EmptyState
-                                        title="Sin resultados"
-                                        message={`Nada coincide con "${query}".`}
-                                        action={
-                                            <button
-                                                type="button"
-                                                onClick={() => setQuery('')}
-                                                className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
-                                            >
-                                                Limpiar búsqueda
-                                            </button>
-                                        }
-                                    />
-                                ) : (
                                 <EmptyState
                                     title="No hay series en tu colección"
                                     message="Agregá series a tu biblioteca para verlas acá."
@@ -690,13 +625,12 @@ function SeriesFullscreenIndex() {
                                         <button
                                             type="button"
                                             onClick={() => navigate({ to: '/settings' })}
-                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-white font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_hsl(var(--brand-accent)/0.4)] cursor-pointer"
+                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_hsl(var(--brand-accent)/0.4)] cursor-pointer"
                                         >
                                             Configurar Biblioteca
                                         </button>
                                     }
                                 />
-                                )}
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 w-full">

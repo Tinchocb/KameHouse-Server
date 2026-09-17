@@ -6,13 +6,12 @@ import (
 )
 
 const (
-	Version              = "3.5.0"
-	VersionName          = "Hakumei"
-	GcTime               = time.Minute * 30
-	ConfigFileName       = "config.toml"
+	Version        = "3.5.0"
+	VersionName    = "Hakumei"
+	GcTime         = time.Minute * 30
+	ConfigFileName = "config.toml"
 
-	IsRspackFrontend = true
-	MovieIDOffset    = 1_000_000
+	MovieIDOffset = 1_000_000
 )
 
 var InternalMetadataURL = util.Decode("aHR0cHM6Ly9hbmltZS5jbGFwLmluZw==")

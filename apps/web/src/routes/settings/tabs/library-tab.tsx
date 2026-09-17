@@ -3,7 +3,7 @@ import { type Control, Controller } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
 import { PathList, OsToggle, OsSelect } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
-import { IconStatusFolder, IconNavigationTv, IconNavigationFilm, IconStatusRadar, IconStatusZap, IconUiSpinner } from "@/components/ui/icons";
+import { IconStatusFolder, IconNavigationTv, IconNavigationFilm, IconStatusRadar, IconStatusZap, IconUiSpinner, IconStatusDatabase, IconUiTag } from "@/components/ui/icons";
 
 const DragonBallScannerLive = React.lazy(() =>
     import("../components/-dragonball-scanner-live").then(m => ({ default: m.DragonBallScannerLive }))
@@ -110,11 +110,12 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 />
                 <OsSelect
                     label="Proveedor de Metadatos y Escaneo"
-                    description="Base de datos de metadatos prioritaria para indexar series, películas y episodios."
+                    description="Base de datos prioritaria para indexar series, películas y episodios."
+                    icon={IconStatusDatabase}
                     options={[
-                        { value: "anilist", label: "AniList (Recomendado — Banners HD)" },
-                        { value: "jikan", label: "Jikan (MyAnimeList — Sagas Canónicas)" },
-                        { value: "tmdb", label: "TMDB (The Movie Database)" },
+                        { value: "anilist", label: "AniList", desc: "Banners HD y arte oficial", badge: "RECOMENDADO" },
+                        { value: "jikan", label: "Jikan · MyAnimeList", desc: "Sagas canónicas y ranking", badge: "MAL" },
+                        { value: "tmdb", label: "TMDB", desc: "The Movie Database", badge: "TMDB" },
                     ]}
                     value="anilist"
                     onChange={() => {}}
@@ -122,11 +123,12 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 <OsSelect
                     label="Idioma Predeterminado de Metadatos"
                     description="Idioma para sinopsis, títulos de episodios y afiches oficiales."
+                    icon={IconUiTag}
                     options={[
-                        { value: "es-MX", label: "Español Latino (es-MX)" },
-                        { value: "es-ES", label: "Español España (es-ES)" },
-                        { value: "en-US", label: "Inglés (en-US)" },
-                        { value: "ja-JP", label: "Japonés (ja-JP)" },
+                        { value: "es-MX", label: "Español Latino", desc: "Sinopsis y títulos doblados", badge: "ES-MX" },
+                        { value: "es-ES", label: "Español España", desc: "Castellano peninsular", badge: "ES-ES" },
+                        { value: "en-US", label: "Inglés", desc: "Títulos originales", badge: "EN-US" },
+                        { value: "ja-JP", label: "Japonés", desc: "Kanji + romaji oficial", badge: "JA-JP" },
                     ]}
                     value="es-MX"
                     onChange={() => {}}

@@ -1,10 +1,27 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/components/ui/core/styling";
-import { IconBadgesSparkles, IconStatusImageOff, IconNavigationSearch, IconTimeClock, IconMediaPlay, IconBadgesChevronRight, IconStatusSkull, IconMediaClapperboard, IconNavigationChevronLeft, IconNavigationChevronRight } from "@/components/ui/icons";
+import {
+  IconBadgesSparkles,
+  IconBadgesChevronRight,
+  IconStatusImageOff,
+  IconStatusSkull,
+  IconStatusSparkles,
+  IconStatusZap,
+  IconStatusGem,
+  IconStatusRadar,
+  IconNavigationSearch,
+  IconTimeClock,
+  IconTimeCalendar,
+  IconMediaPlay,
+  IconMediaClapperboard,
+  IconNavigationChevronLeft,
+  IconNavigationChevronRight,
+  IconUiCheckCircle,
+} from "@/components/ui/icons";
 import { WatchProgressBar } from "@/components/ui/watch-progress-bar";
 import { DeferredImage } from "@/components/shared/deferred-image";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -13,18 +30,21 @@ import type { StorySpan } from "@/lib/config/dragonball_story_spans";
 import {
   getMoviesForSpan,
   getGokuAgeForSpan,
+  getUniverseLoreForSpan,
 } from "@/lib/config/dragonball_chronology_enrichment";
 import type { StageCollectionEntry } from "@/lib/config/dragonball_stages";
 import {
   SERIES_LABEL,
   ERA_ORDER,
   ERA_BACKDROP,
+  SPAN_ART,
   getSeriesAccent,
+  getThreatBadge,
 } from "@/lib/chronology/design";
+import type { ThreatLevel } from "@/lib/chronology/types";
 
 export function getSpanDefaultArt(spanId: string, seriesId: string): string {
-  const path = `/sagas/${seriesId}/${spanId}.webp`;
-  return path || ERA_BACKDROP[seriesId] || "/backdrops/dbz.jpg";
+  return SPAN_ART[spanId] ?? ERA_BACKDROP[seriesId] ?? "/backdrops/dbz.webp";
 }
 
 export interface SpanStill {
@@ -55,6 +75,16 @@ export function getSpanProgress(
   return { watched, total, percent, isComplete: watched >= total, isStarted: watched > 0 };
 }
 
+interface TimelineItem {
+  span: StorySpan;
+  entry: StageCollectionEntry | undefined;
+  progress: SpanProgress;
+  art: SpanStill;
+  backdrop: string;
+  globalIdx: number;
+  accent: string;
+}
+
 const EP_MINUTES = 24;
 
 function formatHours(totalMinutes: number): string {
@@ -66,77 +96,37 @@ function formatHours(totalMinutes: number): string {
 }
 
 function SpringTransition(reduceMotion: boolean | null | undefined) {
-  const prefersRedced = reduceMotion ?? false;
-  return prefersRedced ? { duration: 0.2, ease: "easeOut" as const } : { type: "spring" as const, stiffness: 280, damping: 28 };
+  const prefersReduced = reduceMotion ?? false;
+  return prefersReduced ? { duration: 0.2, ease: "easeOut" as const } : { type: "spring" as const, stiffness: 280, damping: 28 };
 }
 
-function CanonLine({ span }: { span: StorySpan }) {
+function shortSagaName(sagaName: string) {
+  return sagaName.replace("Saga del ", "").replace("Saga de ", "").replace("Saga ", "");
+}
+
+function CanonBadge({ span }: { span: StorySpan }) {
   if (span.seriesId === "gt") {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-zinc-800/50 text-zinc-400 border border-zinc-600/50">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-600/50 bg-zinc-800/50 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400">
         <span aria-hidden className="text-sm leading-none">◇</span> Línea alternativa
       </span>
     );
   }
   if (span.hasFiller) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-400">
         <span aria-hidden className="text-[10px] leading-none">◆</span> Relleno · {span.fillerEpisodes.length} EP
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-brand-success/20 text-brand-success border border-brand-success/30">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-success/30 bg-brand-success/20 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-success">
       <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand-success" /> Canon
     </span>
   );
 }
 
-function ThreatBadge({ level }: { level: string }) {
-  const colors: Record<string, string> = {
-    "Bajo / Cómico": "bg-green-500/20 text-green-400 border-green-500/30",
-    "Competitivo / Deportivo": "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    "Aventura Épica / Bélica / Pulp": "bg-orange-500/20 text-orange-400 border-orange-500/30",
-    "Místico / Desafío Mágico": "bg-purple-500/20 text-purple-400 border-purple-500/30",
-    "Deportivo / Ideológico": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-    "Terror / Tragedia / Venganza": "bg-red-500/20 text-red-400 border-red-500/30",
-    "Artes Marciales Divinas / Clímax Épico": "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    "Ciencia Ficción / Giro Cósmico / Entrenamiento Divino": "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
-    "Tragedia Bélica / Clímax Agónico": "bg-red-600/20 text-red-400 border-red-600/30",
-    "Thriller Espacial / Guerra a Tres Bandas": "bg-violet-500/20 text-violet-400 border-violet-500/30",
-    "Acción Frenética / Revelación de Poder": "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    "Clímax Histórico del Anime / Ira Trascendental": "bg-yellow-400/20 text-yellow-300 border-yellow-400/30",
-    "Mágico / Demoníaco": "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30",
-    "Viajes en el Tiempo / Tensión Tecnológica / Desesperación": "bg-purple-600/20 text-purple-400 border-purple-600/30",
-    "Fantasía Oscura / Relleno Toei": "bg-slate-500/20 text-slate-400 border-slate-500/30",
-  };
-  const color = colors[level] ?? "bg-white/5 text-zinc-400 border-white/10";
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider border ${color}`}>
-      {level}
-    </span>
-  );
-}
-
-function DragonBallsStatus({ status }: { status: string }) {
-  return (
-    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-white/5 border border-white/10">
-      <IconBadgesSparkles className="w-3 h-3 text-amber-400" />
-      {status}
-    </div>
-  );
-}
-
-function GokuAge({ age }: { age: string }) {
-  return (
-    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-brand-accent/20 text-brand-accent border border-brand-accent/30">
-      <IconBadgesSparkles className="w-3 h-3" />
-      Goku: {age}
-    </div>
-  );
-}
-
-function SpanThumb({ src, fallbackSrc, alt, priority }: { src: string; fallbackSrc: string; alt: string; priority?: boolean }) {
+function HeroArt({ src, fallbackSrc, alt, priority }: { src: string; fallbackSrc: string; alt: string; priority?: boolean }) {
   const [failed, setFailed] = useState(false);
   const finalSrc = failed ? fallbackSrc : src;
   return (
@@ -150,10 +140,27 @@ function SpanThumb({ src, fallbackSrc, alt, priority }: { src: string; fallbackS
       fallback={
         <div className="flex flex-col items-center justify-center gap-2 text-on-surface-variant">
           <IconStatusImageOff className="h-7 w-7 opacity-60" />
-          <span className="px-2 text-center text-[11px] font-bold uppercase tracking-wider line-clamp-2">{alt}</span>
+          <span className="line-clamp-2 px-2 text-center text-[11px] font-bold uppercase tracking-wider">{alt}</span>
         </div>
       }
     />
+  );
+}
+
+function LoreChips({ items, accent }: { items: string[]; accent: string }) {
+  if (items.length === 0) return <p className="text-[11px] text-zinc-500">Sin registros de este arco.</p>;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((t, i) => (
+        <span
+          key={`${t}-${i}`}
+          className="inline-flex items-center rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium leading-snug text-zinc-200"
+        >
+          <span className="mr-1.5 h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent }} aria-hidden />
+          {t}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -177,13 +184,14 @@ export function CinematicChronologyTimeline({
   className,
 }: CinematicChronologyTimelineProps) {
   const [eraSel, setEraSel] = useState<string>("all");
-  const [selectedIdx, setSelectedIdx] = useState<number>(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
+  const spineRef = useRef<HTMLDivElement>(null);
 
-  const items = useMemo(() => {
+  const items = useMemo<TimelineItem[]>(() => {
     return spans.map((span) => {
       const entry = tmdbMap.get(span.tmdbId);
-      const backdrop = ERA_BACKDROP[span.seriesId] ?? "/backdrops/dbz.jpg";
+      const backdrop = ERA_BACKDROP[span.seriesId] ?? "/backdrops/dbz.webp";
       const still = stills?.get(span.id);
       const art: SpanStill = still ?? {
         src: getSpanDefaultArt(span.id, span.seriesId),
@@ -202,48 +210,127 @@ export function CinematicChronologyTimeline({
     });
   }, [spans, tmdbMap, stills]);
 
-  const currentIdx = useMemo(() => {
-    if (activeId) {
-      const found = items.findIndex((i) => i.span.id === activeId);
-      if (found >= 0) return found;
-    }
-    return items.findIndex((i) => i.progress.isStarted && !i.progress.isComplete) ?? 0;
+  const currentId = useMemo(() => {
+    if (activeId && items.some((i) => i.span.id === activeId)) return activeId;
+    return (
+      items.find((i) => i.progress.isStarted && !i.progress.isComplete)?.span.id ??
+      items.find((i) => !i.progress.isComplete)?.span.id ??
+      items[0]?.span.id ??
+      null
+    );
   }, [activeId, items]);
 
-  const visibleItems = useMemo(() => (eraSel === "all" ? items : items.filter((i) => i.span.seriesId === eraSel)), [items, eraSel]);
-  const presentEras = useMemo(() => {
-    const ids = new Set(visibleItems.map((i) => i.span.seriesId));
+  const eras = useMemo(() => {
+    const ids = new Set(items.map((i) => i.span.seriesId));
     return ERA_ORDER.filter((id) => ids.has(id)).map((id) => ({ id, label: SERIES_LABEL[id] ?? id }));
-  }, [visibleItems]);
+  }, [items]);
 
-  const selectedItem = visibleItems[selectedIdx] ?? visibleItems[0];
-  const selectedMovies = useMemo(() => (selectedItem ? getMoviesForSpan(selectedItem.span) : []), [selectedItem]);
-  const selectedMediaId = selectedItem ? tmdbMap.get(selectedItem.span.tmdbId)?.mediaId : undefined;
+  const visibleItems = useMemo(
+    () => (eraSel === "all" ? items : items.filter((i) => i.span.seriesId === eraSel)),
+    [items, eraSel]
+  );
+
+  const selected: TimelineItem | undefined =
+    (selectedId ? visibleItems.find((i) => i.span.id === selectedId) : undefined) ??
+    (currentId ? visibleItems.find((i) => i.span.id === currentId) : undefined) ??
+    visibleItems[0];
+
+  const selectedIdx = selected ? visibleItems.indexOf(selected) : -1;
+  const selectedMovies = useMemo(() => (selected ? getMoviesForSpan(selected.span) : []), [selected]);
+  const selectedMediaId = selected ? tmdbMap.get(selected.span.tmdbId)?.mediaId : undefined;
+
+  const goTo = useCallback(
+    (delta: number) => {
+      if (visibleItems.length === 0) return;
+      const next = Math.max(0, Math.min(visibleItems.length - 1, selectedIdx + delta));
+      setSelectedId(visibleItems[next].span.id);
+    },
+    [visibleItems, selectedIdx]
+  );
+
+  // La columna vertebral sigue al capítulo seleccionado
+  const selectedSpanId = selected?.span.id;
+  useEffect(() => {
+    const c = spineRef.current;
+    if (!c || !selectedSpanId) return;
+    const el = c.querySelector<HTMLElement>(`[data-node-id="${selectedSpanId}"]`);
+    el?.scrollIntoView({ block: "nearest", behavior: reduceMotion ? "auto" : "smooth" });
+  }, [selectedSpanId, reduceMotion]);
+
+  // Flechas navegan capítulos (sin robar el foco de inputs)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault();
+        goTo(1);
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        goTo(-1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goTo]);
 
   if (items.length === 0) {
     return (
-      <SectionBar variant="minimal" label="Resultados" className="min-h-[40dvh] flex items-center justify-center px-6">
+      <SectionBar variant="minimal" label="Resultados" className="flex min-h-[40dvh] items-center justify-center px-6">
         <EmptyState title="Sin resultados" message={`Nada para “${searchQuery}”. Prueba con “Freezer”, “Torneo” o “Año 762”.`} icon={<IconNavigationSearch className="h-10 w-10 text-brand-accent" />} />
       </SectionBar>
     );
   }
 
-  const goPrev = () => setSelectedIdx((i) => Math.max(0, i - 1));
-  const goNext = () => setSelectedIdx((i) => Math.min(visibleItems.length - 1, i + 1));
+  if (!selected) return null;
+
+  const threat = getThreatBadge((selected.span.worldStateAtStart?.threatLevel ?? selected.span.dominantVibe) as ThreatLevel);
+  const gokuAge = getGokuAgeForSpan(selected.span.id);
+  const lore = getUniverseLoreForSpan(selected.span.id);
+  const villains = selected.span.worldStateAtStart?.activeVillains ?? [];
+  const balls = selected.span.worldStateAtStart?.dragonBallsStatus ?? "—";
+  const charStatus = selected.span.worldStateAtStart?.characterStatus;
+  const targetEp =
+    selected.progress.isStarted && !selected.progress.isComplete
+      ? selected.span.startEpisode + selected.progress.watched
+      : selected.span.recommendedStartEpisode;
+  const ctaLabel = selected.progress.isComplete
+    ? "Rever saga"
+    : selected.progress.isStarted
+      ? `Continuar EP ${targetEp}`
+      : `Comenzar EP ${targetEp}`;
+
+  const groups = (eraSel === "all" ? eras.map((e) => e.id) : [eraSel])
+    .map((seriesId) => {
+      const eraItems = visibleItems.filter((i) => i.span.seriesId === seriesId);
+      if (eraItems.length === 0) return null;
+      const watchedEps = eraItems.reduce((a, i) => a + i.progress.watched, 0);
+      const totalEps = eraItems.reduce((a, i) => a + i.progress.total, 0);
+      return {
+        seriesId,
+        label: SERIES_LABEL[seriesId] ?? seriesId,
+        accent: getSeriesAccent(seriesId),
+        eraItems,
+        watchedEps,
+        totalEps,
+        percent: totalEps > 0 ? Math.round((watchedEps / totalEps) * 100) : 0,
+      };
+    })
+    .filter((g): g is NonNullable<typeof g> => g !== null);
 
   return (
-    <div className={cn("page-container space-y-6 pt-6 pb-16", className)}>
+    <div className={cn("page-container space-y-6 pb-16 pt-6", className)}>
       <SectionBar
-        label="Cronología"
+        label="Eras"
         icon={IconTimeClock}
         variant="minimal"
-        badge={<span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold tabular-nums bg-[var(--glass-bg)] text-on-surface-variant border border-[var(--glass-border-side)]">{items.length} arcos</span>}
+        badge={<span className="rounded-full border border-[var(--glass-border-side)] bg-[var(--glass-bg)] px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums text-on-surface-variant">{items.length} arcos</span>}
       >
-        <div className="sectionbar-minimal flex items-center gap-1 overflow-x-auto no-scrollbar rounded-full border border-white/20 border-t-white/40 border-b-white/10 bg-zinc-950/40 p-1.5" role="tablist" aria-label="Filtrar por era">
-          {[{ id: "all", label: "Todas" }, ...presentEras].map((era) => {
+        <div className="sectionbar-minimal no-scrollbar flex items-center gap-1 overflow-x-auto rounded-full border border-white/20 border-b-white/10 border-t-white/40 bg-zinc-950/40 p-1.5" role="tablist" aria-label="Filtrar por era">
+          {[{ id: "all", label: "Todas" }, ...eras].map((era) => {
             const isSelected = eraSel === era.id;
             return (
-              <button key={era.id} type="button" role="tab" aria-selected={isSelected} onClick={() => { setEraSel(era.id); setSelectedIdx(0); }} className={cn("relative min-h-[44px] shrink-0 cursor-pointer whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition-colors", isSelected ? "text-zinc-950" : "text-zinc-300 hover:bg-white/[0.06] hover:text-white")}>
+              <button key={era.id} type="button" role="tab" aria-selected={isSelected} onClick={() => { setEraSel(era.id); setSelectedId(null); }} className={cn("relative min-h-[44px] shrink-0 cursor-pointer whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition-colors", isSelected ? "text-zinc-950" : "text-zinc-300 hover:bg-white/[0.06] hover:text-white")}>
                 {isSelected && <motion.span layoutId="chrono-era-pill" transition={SpringTransition(reduceMotion)} className="absolute inset-0 rounded-full bg-white/95 shadow-[0_2px_14px_rgba(255,255,255,0.4),inset_0_1px_1px_rgba(255,255,255,1)]" aria-hidden />}
                 <span className="relative z-10">{era.label}</span>
               </button>
@@ -252,145 +339,341 @@ export function CinematicChronologyTimeline({
         </div>
       </SectionBar>
 
-      <div className="space-y-6">
-        <div className="sectionbar-strong overflow-hidden relative">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 scale-110 opacity-25 blur-2xl">
-              <SpanThumb src={selectedItem.art.src} fallbackSrc={selectedItem.backdrop} alt="" />
-            </div>
-            <div className="absolute -top-[20%] left-[10%] h-[70%] w-[50%] rounded-full" style={{ background: `radial-gradient(ellipse, color-mix(in srgb, ${selectedItem.accent} 35%, transparent) 0%, transparent 70%)` }} />
-            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-zinc-950/20" />
+      <div className="grid items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+        {/* Columna vertebral: la línea temporal */}
+        <nav aria-label="Línea temporal por arco" className="sectionbar-strong p-3 lg:sticky lg:top-4">
+          <div ref={spineRef} className="no-scrollbar max-h-[42dvh] space-y-4 overflow-y-auto p-1 lg:max-h-[calc(100dvh-240px)]">
+            {groups.map((g) => (
+              <div key={g.seriesId}>
+                <div className="mb-1.5 flex items-center gap-2 px-2">
+                  <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: g.accent }} />
+                  <p className="font-mono text-[10px] font-black uppercase tracking-[0.2em] text-on-surface">{g.label}</p>
+                  <span className="ml-auto font-mono text-[10px] tabular-nums text-on-surface-variant">{g.watchedEps}/{g.totalEps}</span>
+                </div>
+                <ol className="relative space-y-1 border-l border-white/10 pl-3">
+                  {g.eraItems.map((it) => {
+                    const isSel = selected.span.id === it.span.id;
+                    const isCurrent = currentId === it.span.id;
+                    return (
+                      <li key={it.span.id}>
+                        <button
+                          type="button"
+                          data-node-id={it.span.id}
+                          onClick={() => setSelectedId(it.span.id)}
+                          aria-current={isSel ? "true" : undefined}
+                          aria-label={`Capítulo ${it.globalIdx}: ${it.span.sagaName} · ${it.span.inUniverseYears}`}
+                          className={cn(
+                            "relative flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 rounded-2xl border px-3 py-2 text-left transition-all active:scale-[0.98]",
+                            isSel ? "border-white/50 bg-white/[0.07]" : "border-transparent hover:border-white/15 hover:bg-white/[0.04]"
+                          )}
+                          style={isSel ? { boxShadow: `0 0 20px color-mix(in srgb, ${it.accent} 25%, transparent)` } : undefined}
+                        >
+                          <span aria-hidden className="absolute -left-[19px] top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border border-white/25" style={{ backgroundColor: isSel ? it.accent : it.progress.isComplete ? "hsl(var(--brand-success))" : "rgba(255,255,255,0.18)" }} />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-1.5 font-mono text-[10px] font-black uppercase tabular-nums tracking-wider text-zinc-500">
+                              Cap {String(it.globalIdx).padStart(2, "0")} · {it.span.inUniverseYears.replace("Año ", "")}
+                              {isCurrent && !isSel && <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ backgroundColor: it.accent }} />}
+                            </span>
+                            <span className={cn("mt-0.5 block truncate text-[13px] font-semibold leading-tight", isSel ? "text-white" : "text-zinc-300")}>
+                              {shortSagaName(it.span.sagaName)}
+                            </span>
+                          </span>
+                          {it.progress.isComplete ? (
+                            <IconUiCheckCircle className="h-4 w-4 shrink-0 text-brand-success" />
+                          ) : (
+                            <span className="shrink-0 font-mono text-[10px] tabular-nums text-zinc-500">{it.progress.percent}%</span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            ))}
           </div>
+        </nav>
 
-          <div className="relative grid gap-0 md:grid-cols-[1.15fr_1fr]">
-            <div className="relative aspect-video overflow-hidden md:aspect-auto md:min-h-[340px]">
-              <SpanThumb src={selectedItem.art.src} fallbackSrc={selectedItem.backdrop} alt={selectedItem.span.title} priority />
+        {/* Canvas del relato */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.article
+            key={selected.span.id}
+            initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -14, filter: "blur(8px)" }}
+            transition={SpringTransition(reduceMotion)}
+            aria-label={`Capítulo ${selected.globalIdx}: ${selected.span.title}`}
+            className="sectionbar-strong relative overflow-hidden"
+            style={{ boxShadow: `0 0 32px color-mix(in srgb, ${selected.accent} 14%, transparent)` }}
+          >
+            <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute inset-0 scale-110 opacity-25 blur-2xl">
+                <HeroArt src={selected.art.src} fallbackSrc={selected.backdrop} alt="" />
+              </div>
+              <div className="absolute -top-[20%] left-[10%] h-[70%] w-[50%] rounded-full" style={{ background: `radial-gradient(ellipse, color-mix(in srgb, ${selected.accent} 35%, transparent) 0%, transparent 70%)` }} />
+              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-zinc-950/20" />
+            </div>
+
+            {/* Hero cinematográfico con arte real */}
+            <div className="relative aspect-[16/9] overflow-hidden lg:aspect-[21/9] lg:max-h-[440px] lg:min-h-[320px]">
+              <HeroArt src={selected.art.src} fallbackSrc={selected.backdrop} alt={selected.span.title} priority />
               <div className="scrim-hero-bottom pointer-events-none absolute inset-0" />
+              <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5 sm:left-4 sm:top-4">
+                <span className="badge font-mono font-black uppercase tracking-[0.2em]" style={{ backgroundColor: `color-mix(in srgb, ${selected.accent} 22%, rgba(0,0,0,0.6))`, borderColor: `color-mix(in srgb, ${selected.accent} 50%, transparent)`, color: "#fff" }}>
+                  Cap {String(selected.globalIdx).padStart(2, "0")} · {SERIES_LABEL[selected.span.seriesId]}
+                </span>
+                <CanonBadge span={selected.span} />
+              </div>
+              <div className="absolute right-3 top-3 sm:right-4 sm:top-4">
+                <span className="badge badge-subtle tabular-nums backdrop-blur-overlay-md">
+                  <IconTimeCalendar className="h-3 w-3" /> {selected.span.inUniverseYears}
+                </span>
+              </div>
               {selectedMediaId ? (
-                <Link to="/series/$seriesId" params={{ seriesId: String(selectedMediaId) }} search={{ tab: "episodes", saga: selectedItem.span.sagaId, autoplay: String(selectedItem.span.recommendedStartEpisode) }} onClick={onClose} aria-label={`Ver ${selectedItem.span.title}`} className="absolute inset-0 m-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent text-on-primary shadow-brand-primary transition-transform hover:scale-105 active:scale-95">
+                <Link
+                  to="/series/$seriesId"
+                  params={{ seriesId: String(selectedMediaId) }}
+                  search={{ tab: "episodes", saga: selected.span.sagaId, autoplay: String(targetEp) } as never}
+                  preload="intent"
+                  onClick={onClose}
+                  aria-label={`${ctaLabel}: ${selected.span.title}`}
+                  className="absolute inset-0 m-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent text-on-primary shadow-brand-primary transition-transform hover:scale-105 active:scale-95"
+                >
                   <IconMediaPlay className="ml-0.5 h-6 w-6 fill-current" />
                 </Link>
               ) : null}
-              <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-2">
-                <span className="badge badge-muted backdrop-blur-overlay-md tabular-nums">EP {selectedItem.span.startEpisode}–{selectedItem.span.endEpisode}</span>
-                {selectedItem.span.id === items[currentIdx]?.span.id && <span className="badge backdrop-blur-overlay-md" style={{ backgroundColor: `color-mix(in srgb, ${selectedItem.accent} 15%, transparent)`, borderColor: `color-mix(in srgb, ${selectedItem.accent} 45%, transparent)`, color: selectedItem.accent }}>Arco actual</span>}
-              </div>
-            </div>
-
-            <div className="flex min-w-0 flex-col justify-center space-y-3 p-5 sm:p-7">
-              <div>
-                <p className="font-mono text-[11px] font-black uppercase tracking-[0.25em] text-on-surface-variant">{selectedItem.span.sagaName} · {selectedItem.span.inUniverseYears}</p>
-                <h2 className="text-edge-glow mt-1.5 font-display text-2xl font-black uppercase leading-tight tracking-wide text-white text-balance sm:text-3xl">{selectedItem.span.title}</h2>
-              </div>
-              <p className="font-mono text-[11px] uppercase tabular-nums tracking-widest text-on-surface-variant">{selectedItem.progress.total} episodios · {formatHours(selectedItem.progress.total * EP_MINUTES)}</p>
-              <CanonLine span={selectedItem.span} />
-              <div className="flex items-center gap-2.5">
-                <WatchProgressBar percent={selectedItem.progress.percent} variant="compact" color={selectedItem.accent} className="flex-1" />
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-on-surface-variant">{selectedItem.progress.watched}/{selectedItem.progress.total} · {selectedItem.progress.percent}%</span>
-              </div>
-              {selectedMediaId ? (
-                <Link to="/series/$seriesId" params={{ seriesId: String(selectedMediaId) }} search={{ tab: "episodes", saga: selectedItem.span.sagaId, autoplay: String(selectedItem.span.recommendedStartEpisode) }} onClick={onClose} className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-accent text-on-primary text-xs font-black uppercase tracking-wider cursor-pointer transition-transform hover:scale-105 active:scale-95">
-                  <IconMediaPlay className="h-3.5 w-3.5 fill-current" />
-                  <span>{selectedItem.progress.isComplete ? "Rever" : selectedItem.progress.isStarted ? `Continuar EP ${selectedItem.span.startEpisode + selectedItem.progress.watched}` : `Comenzar EP ${selectedItem.span.recommendedStartEpisode}`}</span>
-                </Link>
-              ) : (
-                <span className="badge badge-muted min-h-[44px] !py-2"><IconMediaPlay className="h-3 w-3" /> No en biblioteca</span>
-              )}
-            </div>
-          </div>
-
-          <div className="relative border-t border-white/10 p-4 sm:p-6 space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {selectedItem.span.quickCatchUpKeys.slice(0, 3).map((key, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium bg-white/[0.04] border border-white/10 text-on-surface-variant">
-                  <IconBadgesChevronRight className="w-3 h-3 text-brand-accent/80" />
-                  {key}
+              <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 sm:inset-x-4 sm:bottom-4">
+                <span className="badge badge-muted tabular-nums backdrop-blur-overlay-md">
+                  EP {selected.span.startEpisode}–{selected.span.endEpisode} · {selected.progress.total} EP · {formatHours(selected.progress.total * EP_MINUTES)}
                 </span>
-              ))}
-            </div>
-
-            <div className="prose prose-invert max-w-none text-sm leading-relaxed text-on-surface-variant">
-              <p>{selectedItem.span.previouslyOn}</p>
-              <p className="font-medium text-on-surface-variant/90">{selectedItem.span.detailedPlot}</p>
-            </div>
-
-            <div className="sectionbar-minimal rounded-xl border border-white/10 bg-black/30 p-4 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <ThreatBadge level={selectedItem.span.dominantVibe} />
-                <GokuAge age={getGokuAgeForSpan(selectedItem.span.id).physical} />
-                <DragonBallsStatus status={selectedItem.span.worldStateAtStart?.dragonBallsStatus ?? "Desconocido"} />
+                {currentId === selected.span.id && (
+                  <span className="badge backdrop-blur-overlay-md" style={{ backgroundColor: `color-mix(in srgb, ${selected.accent} 15%, transparent)`, borderColor: `color-mix(in srgb, ${selected.accent} 45%, transparent)`, color: selected.accent }}>
+                    Tu arco actual
+                  </span>
+                )}
               </div>
-              {selectedItem.span.worldStateAtStart?.activeVillains?.[0] && (
-                <div className="flex flex-wrap gap-2">
-                  {selectedItem.span.worldStateAtStart.activeVillains.slice(0, 4).map((v, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30">
-                      <IconStatusSkull className="h-3 w-3" />
-                      {v}
-                    </span>
+            </div>
+
+            <div className="relative space-y-5 p-5 sm:p-7">
+              {/* Cabecera narrativa */}
+              <div className="space-y-2.5">
+                <p className="font-mono text-[11px] font-black uppercase tracking-[0.25em] text-on-surface-variant">
+                  {selected.span.sagaName} · {selected.span.inUniverseYears}
+                </p>
+                <h2 className="text-edge-glow font-display text-2xl font-black uppercase leading-tight tracking-wide text-white text-balance sm:text-3xl">
+                  {selected.span.title}
+                </h2>
+                <p className="text-xs italic text-on-surface-variant">{selected.span.dominantVibe} · Goku: {gokuAge.physical}</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider ${threat.color}`}>
+                    {threat.label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <WatchProgressBar percent={selected.progress.percent} variant="compact" color={selected.accent} className="flex-1" />
+                  <span className="shrink-0 font-mono text-[11px] tabular-nums text-on-surface-variant">{selected.progress.watched}/{selected.progress.total} · {selected.progress.percent}%</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {selectedMediaId ? (
+                    <Link
+                      to="/series/$seriesId"
+                      params={{ seriesId: String(selectedMediaId) }}
+                      search={{ tab: "episodes", saga: selected.span.sagaId, autoplay: String(targetEp) } as never}
+                      preload="intent"
+                      onClick={onClose}
+                      className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full bg-brand-accent px-6 py-3 text-xs font-black uppercase tracking-wider text-on-primary transition-transform hover:scale-[1.02] active:scale-95"
+                    >
+                      <IconMediaPlay className="h-4 w-4 fill-current" />
+                      {ctaLabel}
+                    </Link>
+                  ) : (
+                    <span className="badge badge-muted min-h-[44px] !py-2"><IconMediaPlay className="h-3 w-3" /> No en biblioteca</span>
+                  )}
+                  {selected.art.isEpisode && selected.art.episodeLabel && (
+                    <span className="badge badge-subtle tabular-nums">{selected.art.episodeLabel}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Voz del narrador */}
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                <p className="flex items-center gap-1.5 font-mono text-[10px] font-black uppercase tracking-[0.25em] text-brand-accent">
+                  <IconStatusSparkles className="h-3 w-3" /> La voz del narrador
+                </p>
+                <p className="border-l-2 pl-3 text-[13px] italic leading-relaxed text-zinc-400" style={{ borderColor: selected.accent }}>
+                  Anteriormente… {selected.span.previouslyOn}
+                </p>
+                <p className="text-sm leading-relaxed text-zinc-200">{selected.span.detailedPlot}</p>
+              </div>
+
+              {/* Catch-up */}
+              <div className="space-y-2">
+                <p className="font-mono text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant">Entiéndelo en 10 segundos</p>
+                <ul className="space-y-1.5">
+                  {selected.span.quickCatchUpKeys.slice(0, 3).map((k, i) => (
+                    <li key={i} className="flex items-start gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2 text-[13px] font-medium leading-snug text-zinc-200">
+                      <IconBadgesChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-accent" />
+                      {k}
+                    </li>
                   ))}
+                </ul>
+              </div>
+
+              {/* Scouter del mundo */}
+              <div className="space-y-2">
+                <p className="flex items-center gap-1.5 font-mono text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant">
+                  <IconStatusRadar className="h-3 w-3 text-brand-accent" /> Scouter del mundo
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3">
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Goku · {gokuAge.physical}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-zinc-200">{gokuAge.notes ?? charStatus?.goku ?? "—"}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3">
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Esferas del dragón</p>
+                    <p className="mt-1 text-xs leading-relaxed text-zinc-200">{balls}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 sm:col-span-2">
+                    <p className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                      <IconStatusSkull className="h-3 w-3 text-red-400" /> Villanos activos
+                    </p>
+                    <p className="mt-1 text-xs font-bold leading-relaxed text-red-300">{villains.length > 0 ? villains.join(" · ") : "—"}</p>
+                  </div>
+                </div>
+                {charStatus && (
+                  <div className="space-y-1.5 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                    {[
+                      ["Goku", charStatus.goku],
+                      ["Vegeta", charStatus.vegeta],
+                      ["Gohan", charStatus.gohan],
+                      ["Piccolo", charStatus.piccolo],
+                      ["Aliados", charStatus.allies],
+                    ]
+                      .filter(([, v]) => !!v)
+                      .map(([k, v]) => (
+                        <p key={k} className="text-[12px] leading-relaxed text-zinc-300">
+                          <span className="mr-1.5 font-mono text-[10px] font-black uppercase tracking-wider text-zinc-500">{k}</span>
+                          {v}
+                        </p>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Crónica del universo */}
+              <div className="space-y-2">
+                <p className="font-mono text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant">Crónica del universo</p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                    <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      <IconBadgesSparkles className="h-3 w-3 text-emerald-300" /> Debuts ({lore.debuts.length})
+                    </p>
+                    <LoreChips items={lore.debuts} accent={selected.accent} />
+                  </div>
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                    <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      <IconStatusZap className="h-3 w-3 text-amber-300" /> Transformaciones ({lore.transformations.length})
+                    </p>
+                    <LoreChips items={lore.transformations} accent={selected.accent} />
+                  </div>
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                    <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      <IconStatusSkull className="h-3 w-3 text-red-300" /> Muertes ({lore.deaths.length})
+                    </p>
+                    <LoreChips items={lore.deaths} accent={selected.accent} />
+                  </div>
+                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                    <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      <IconStatusGem className="h-3 w-3 text-cyan-300" /> Deseos ({lore.wishes.length})
+                    </p>
+                    <LoreChips items={lore.wishes} accent={selected.accent} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Hitos con salto al player */}
+              {selected.span.milestones.length > 0 && (
+                <div className="space-y-2">
+                  <p className="font-mono text-[10px] font-black uppercase tracking-[0.25em] text-on-surface-variant">
+                    Momentos cumbre · {selected.span.milestones.length}
+                  </p>
+                  <ol className="relative space-y-0 border-l border-white/10">
+                    {selected.span.milestones.map((ms, i) => (
+                      <li key={`${ms.episode}-${i}`} className="relative flex gap-3 py-2 pl-5">
+                        <span aria-hidden className="absolute -left-[5px] top-4 h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: selected.accent }} />
+                        <div className="min-w-0 flex-1">
+                          <p className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-white/15 bg-zinc-950 px-2 py-0.5 font-mono text-[10px] font-black tabular-nums text-brand-accent">
+                              EP {ms.episode}
+                            </span>
+                            <span className="text-[13px] font-bold text-white">{ms.title}</span>
+                          </p>
+                          <p className="mt-1 text-xs leading-relaxed text-zinc-400">{ms.description}</p>
+                        </div>
+                        {selectedMediaId ? (
+                          <Link
+                            to="/series/$seriesId"
+                            params={{ seriesId: String(selectedMediaId) }}
+                            search={{ tab: "episodes", saga: selected.span.sagaId, autoplay: String(ms.episode) } as never}
+                            preload="intent"
+                            onClick={onClose}
+                            aria-label={`Ver episodio ${ms.episode}: ${ms.title}`}
+                            className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full border border-white/15 bg-white/[0.06] text-white transition-colors hover:bg-white/[0.12] active:scale-95"
+                          >
+                            <IconMediaPlay className="ml-0.5 h-4 w-4 fill-current" />
+                          </Link>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* Películas de la época */}
+              {selectedMovies.length > 0 && (
+                <div className="space-y-2">
+                  <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                    <IconMediaClapperboard className="h-3 w-3" /> Películas de esta época ({selectedMovies.length})
+                  </p>
+                  <div className="space-y-2">
+                    {selectedMovies.map((m) => {
+                      const movieMediaId = m.tmdbId ? tmdbMap.get(m.tmdbId)?.mediaId : undefined;
+                      return (
+                        <div key={m.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `color-mix(in srgb, ${selected.accent} 14%, transparent)`, border: `1px solid color-mix(in srgb, ${selected.accent} 30%, transparent)`, color: selected.accent }}>
+                            <IconMediaClapperboard className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-semibold text-on-surface">{m.title}</p>
+                            <p className="truncate text-[11px] text-on-surface-variant">{movieMediaId ? "Disponible en KameHouse" : "No disponible"} · {m.canonStatus}</p>
+                          </div>
+                          {movieMediaId ? (
+                            <Link to="/series/$seriesId" params={{ seriesId: String(movieMediaId) }} preload="intent" onClick={onClose} aria-label={`Ver ${m.title}`} className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-on-surface transition-colors hover:bg-white/[0.12] active:scale-95">
+                              <IconMediaPlay className="ml-0.5 h-4 w-4 fill-current" />
+                            </Link>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
+          </motion.article>
+        </AnimatePresence>
+      </div>
 
-            {selectedItem.span.milestones.length > 0 && (
-              <div className="sectionbar-minimal rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Hitos clave</p>
-                <ul className="space-y-1.5 text-[11px] text-zinc-400">
-                  {selectedItem.span.milestones.slice(0, 3).map((ms, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="w-6 text-right font-mono text-brand-accent/60 shrink-0">Ep {ms.episode}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-zinc-200 truncate">{ms.title}</p>
-                        <p className="text-zinc-500 truncate">{ms.description}</p>
-                      </div>
-                    </li>
-                  ))}
-                  {selectedItem.span.milestones.length > 3 && <li className="text-center text-zinc-500 py-1">+{selectedItem.span.milestones.length - 3} más...</li>}
-                </ul>
-              </div>
-            )}
-          </div>
+      <div className="flex items-center justify-between gap-4">
+        <button type="button" onClick={() => goTo(-1)} disabled={selectedIdx <= 0} className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+          <IconNavigationChevronLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">Anterior</span>
+        </button>
+        <div className="flex-1 text-center font-mono text-xs text-zinc-500">
+          {selectedIdx + 1} / {visibleItems.length} · {selected.span.sagaName}
         </div>
-
-        {selectedMovies.length > 0 && (
-          <SectionBar label="Películas de este arco" icon={IconMediaClapperboard} variant="minimal" badge={<span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[var(--glass-bg)] text-on-surface-variant border border-[var(--glass-border-side)]">{selectedMovies.length}</span>}>
-            <div className="space-y-2">
-              {selectedMovies.map((m) => {
-                const movieMediaId = m.tmdbId ? tmdbMap.get(m.tmdbId)?.mediaId : undefined;
-                return (
-                  <div key={m.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `color-mix(in srgb, ${selectedItem.accent} 14%, transparent)`, border: `1px solid color-mix(in srgb, ${selectedItem.accent} 30%, transparent)`, color: selectedItem.accent }}>
-                      <IconMediaClapperboard className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-on-surface">{m.title}</p>
-                      <p className="truncate text-[11px] text-on-surface-variant">{movieMediaId ? "Disponible en KameHouse" : "No disponible"} · {m.canonStatus}</p>
-                    </div>
-                    {movieMediaId ? (
-                      <Link to="/series/$seriesId" params={{ seriesId: String(movieMediaId) }} onClick={onClose} aria-label={`Ver ${m.title}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-on-surface transition-colors hover:bg-white/[0.12] active:scale-95">
-                        <IconMediaPlay className="ml-0.5 h-4 w-4 fill-current" />
-                      </Link>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </SectionBar>
-        )}
-
-        <div className="flex items-center justify-between gap-4">
-          <button type="button" onClick={goPrev} disabled={selectedIdx === 0} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-            <IconNavigationChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Anterior</span>
-          </button>
-          <div className="flex-1 text-center text-xs font-mono text-zinc-500">
-            {selectedIdx + 1} / {visibleItems.length} · {visibleItems[selectedIdx]?.span.sagaName ?? ""}
-          </div>
-          <button type="button" onClick={goNext} disabled={selectedIdx >= visibleItems.length - 1} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-            <span className="hidden sm:inline">Siguiente</span>
-            <IconNavigationChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+        <button type="button" onClick={() => goTo(1)} disabled={selectedIdx >= visibleItems.length - 1} className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+          <span className="hidden sm:inline">Siguiente</span>
+          <IconNavigationChevronRight className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

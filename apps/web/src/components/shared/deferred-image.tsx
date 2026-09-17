@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/components/ui/core/styling';
 import { Skeleton } from '@/components/ui/skeleton';
 import { IconStatusImageOff } from "@/components/ui/icons";
+import { usePerformanceStore, selectIsHeavyEffectsAllowed } from '@/lib/hardware/performance-store';
 
 interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "onDrag"> {
     src: string;
@@ -60,127 +61,81 @@ function getObserver(rootMargin: string, threshold: string): IntersectionObserve
 }
 
 export function DeferredImage(props: DeferredImageProps) {
+    const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed);
+    const defaultRootMargin = isHeavyAllowed ? '400px' : '100px';
+
     const {
         src,
         alt,
         lowResSrc,
         className,
         placeholderColor = 'rgba(24, 24, 27, 0.6)',
-        rootMargin = '400px',
+        rootMargin = defaultRootMargin,
         threshold = 0,
         priority = false,
         showSkeleton = true,
         fallback,
         imgClassName,
-        timeoutMs = 7000,
-        sizes,
-        srcSet,
-        onError,
-        onLoad,
+        timeoutMs = 10000,
         ...restProps
     } = props;
-
-    const computedSrcSet = srcSet || getTmdbSrcSet(src);
-    const computedSizes = sizes || (computedSrcSet ? "(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px" : undefined);
 
     const [isIntersecting, setIsIntersecting] = useState(priority);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLowResLoaded, setIsLowResLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
-    // Only show separate LQIP if explicitly requested via lowResSrc to avoid double-fetching TMDB CDN
-    const [showLqip, setShowLqip] = useState(!priority && Boolean(lowResSrc));
+    const [showLqip, setShowLqip] = useState(false);
+
     const containerRef = useRef<HTMLDivElement>(null);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const thresholdStr = Array.isArray(threshold) ? threshold.join(',') : String(threshold);
+
+    const lqipSrc = lowResSrc;
+    const computedSrcSet = getTmdbSrcSet(src);
+    const computedSizes = computedSrcSet ? '(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px' : undefined;
 
     useEffect(() => {
+        setIsIntersecting(priority);
         setIsLoaded(false);
         setIsLowResLoaded(false);
         setHasError(false);
-        setIsIntersecting(priority);
-        setShowLqip(!priority && Boolean(lowResSrc));
-        if (timerRef.current) {
-            clearTimeout(timerRef.current);
-            timerRef.current = null;
-        }
-        if (watchdogTimerRef.current) {
-            clearTimeout(watchdogTimerRef.current);
-            watchdogTimerRef.current = null;
-        }
-    }, [src, priority, lowResSrc]);
+        setShowLqip(false);
+    }, [src, priority]);
 
-    const lqipSrc = lowResSrc;
-
-    const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-        setIsLoaded(true);
-        if (watchdogTimerRef.current) {
-            clearTimeout(watchdogTimerRef.current);
-            watchdogTimerRef.current = null;
-        }
-        onLoad?.(e);
-        
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-            setShowLqip(false);
-        }, 600);
-    }, [onLoad]);
-
-    const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-        setHasError(true);
-        if (watchdogTimerRef.current) {
-            clearTimeout(watchdogTimerRef.current);
-            watchdogTimerRef.current = null;
-        }
-        onError?.(e);
-    }, [onError]);
-    const thresholdStr = Array.isArray(threshold) ? threshold.join(',') : String(threshold);
-
-    // Watchdog: si la imagen está en viewport pero ni carga ni falla tras timeoutMs, abortar y disparar fallback
+    // Timer fallback: reveal LQIP placeholder only if high-res takes longer than 250ms
     useEffect(() => {
-        if (isIntersecting && !isLoaded && !hasError && src && timeoutMs > 0) {
-            watchdogTimerRef.current = setTimeout(() => {
+        if (!isIntersecting || !lqipSrc || isLoaded) return;
+        const timer = setTimeout(() => {
+            setShowLqip(true);
+        }, 250);
+        return () => clearTimeout(timer);
+    }, [isIntersecting, lqipSrc, isLoaded]);
+
+    // Hard timeout failsafe: if an image request hangs forever, trigger error state gracefully
+    useEffect(() => {
+        if (!isIntersecting || isLoaded || hasError || !src) return;
+        const timer = setTimeout(() => {
+            if (!isLoaded) {
                 setHasError(true);
-                onError?.({
-                    currentTarget: {} as HTMLImageElement,
-                    target: {} as HTMLImageElement,
-                } as unknown as React.SyntheticEvent<HTMLImageElement>);
-            }, timeoutMs);
-        }
-        return () => {
-            if (watchdogTimerRef.current) {
-                clearTimeout(watchdogTimerRef.current);
-                watchdogTimerRef.current = null;
             }
-        };
-    }, [isIntersecting, isLoaded, hasError, src, timeoutMs, onError]);
+        }, timeoutMs);
+        return () => clearTimeout(timer);
+    }, [isIntersecting, isLoaded, hasError, src, timeoutMs]);
 
-    useEffect(() => {
-        return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-            if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
-        };
+    const handleLoad = useCallback(() => {
+        setIsLoaded(true);
+    }, []);
+
+    const handleError = useCallback(() => {
+        setHasError(true);
     }, []);
 
     useEffect(() => {
-        if (!src) {
-            setHasError(true);
-            setIsLoaded(true);
-            setIsIntersecting(true);
-            return;
-        }
-
-        if (priority) {
-            if (!isIntersecting) {
-                setIsIntersecting(true);
-            }
-            return;
-        }
+        if (priority || isIntersecting) return;
 
         const currentElement = containerRef.current;
         if (!currentElement) return;
 
         const observer = getObserver(rootMargin, thresholdStr);
-
         observerCallbacks.set(currentElement, () => {
             setIsIntersecting(true);
         });
@@ -192,7 +147,7 @@ export function DeferredImage(props: DeferredImageProps) {
                 observer.unobserve(currentElement);
             }
         };
-    }, [src, rootMargin, thresholdStr, priority]);
+    }, [src, rootMargin, thresholdStr, priority, isIntersecting]);
 
     return (
         <div
@@ -200,11 +155,10 @@ export function DeferredImage(props: DeferredImageProps) {
             style={{ backgroundColor: isLoaded ? 'transparent' : placeholderColor }}
             className={cn("relative overflow-hidden bg-zinc-950/70", className)}
         >
-            {/* Pulse Skeleton: shown while high-res image is NOT loaded */}
+            {/* Single Pulse Skeleton Layer */}
             {!isLoaded && !hasError && isIntersecting && showSkeleton && (
                 <div className="absolute inset-0 z-10 overflow-hidden">
-                    <div className="absolute inset-0 animate-pulse bg-zinc-900/80 border border-white/5" />
-                    <Skeleton className="h-full w-full rounded-none bg-transparent opacity-40" />
+                    <div className="h-full w-full animate-pulse bg-zinc-900/80 border border-white/5" />
                 </div>
             )}
 
@@ -231,13 +185,14 @@ export function DeferredImage(props: DeferredImageProps) {
                     srcSet={computedSrcSet}
                     sizes={computedSizes}
                     alt={alt}
-                    loading={priority ? "eager" : "lazy"}
-                    decoding="async"
+                    loading={props.loading ?? (priority ? "eager" : "lazy")}
+                    decoding={props.decoding ?? "async"}
+                    fetchPriority={priority ? "high" : "low"}
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
                         "relative h-full w-full object-cover transition-opacity duration-slow ease-out",
-                        !isLoaded && "will-change-[opacity]",  // Only hint GPU during the fade-in
+                        !isLoaded && "will-change-[opacity]",
                         isLoaded ? "opacity-100" : "opacity-0",
                         imgClassName
                     )}

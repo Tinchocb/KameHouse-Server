@@ -172,5 +172,6 @@ export interface PlayerCore {
         skipToNextChapter: () => void
         skipToPrevChapter: () => void
         retryStream: () => void
+        flushProgressSync: () => void
     }
 }

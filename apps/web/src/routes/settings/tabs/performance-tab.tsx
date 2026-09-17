@@ -5,7 +5,7 @@ import { type SettingsFormValues } from "../index"
 import { usePerformanceStore, type PerformanceProfile } from "@/lib/hardware/performance-store"
 import { useShallow } from "zustand/react/shallow"
 import { useGetFFmpegStatus, useInstallFFmpeg } from "@/api/hooks/mediastream.hooks"
-import { IconStatusSparkles, IconStatusZap, IconStatusActivity, IconUiShield, IconUiRefresh, IconMediaPlay, IconStatusServer, IconUiSpinner, IconUiDownload } from "@/components/ui/icons";
+import { IconStatusSparkles, IconStatusZap, IconStatusActivity, IconUiShield, IconUiRefresh, IconMediaPlay, IconStatusServer, IconUiSpinner, IconUiDownload, IconMediaGauge } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { toast } from "sonner"
 import { RadioCardGroup } from "@/components/settings/radio-card-group"
@@ -33,10 +33,10 @@ const HW_ACCEL_OPTIONS = [
 ]
 
 const PRESET_OPTIONS = [
-    { value: "ultrafast", label: "Ultra Rápido (Mínimo consumo de CPU)" },
-    { value: "fast", label: "Rápido (Recomendado - Balance Óptimo)" },
-    { value: "medium", label: "Medio (Calidad Estándar)" },
-    { value: "slow", label: "Lento (Máxima Compresión)" },
+    { value: "ultrafast", label: "Ultra Rápido", desc: "Mínimo consumo de CPU", badge: "CPU-" },
+    { value: "fast", label: "Rápido", desc: "Balance óptimo calidad / rendimiento", badge: "RECOMENDADO" },
+    { value: "medium", label: "Medio", desc: "Calidad estándar", badge: "HQ" },
+    { value: "slow", label: "Lento", desc: "Máxima compresión", badge: "MAX" },
 ]
 
 type PlaybackPolicy = "auto" | "direct-only" | "transcode-strict"
@@ -248,7 +248,8 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                     onChange={field.onChange}
                                     options={PRESET_OPTIONS}
                                     label="Preset de Transcodificación"
-                                    description="Rápido ofrece balance óptimo; lento produce mayor compresión."
+                                    description="Velocidad de codificación FFmpeg: rápido = balance óptimo."
+                                    icon={IconMediaGauge}
                                 />
                             )}
                         />
@@ -408,7 +409,7 @@ function FFmpegStatusSection() {
                     type="button"
                     onClick={handleInstall}
                     disabled={isInstalling}
-                    className="shrink-0 px-3.5 py-2 rounded-lg bg-brand-accent text-white font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                    className="shrink-0 px-3.5 py-2 rounded-lg bg-brand-accent text-on-primary font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
                 >
                     {isInstalling ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconUiDownload className="w-3.5 h-3.5" />}
                     <span>{isInstalling ? "Instalando..." : "Descargar e Instalar FFmpeg"}</span>

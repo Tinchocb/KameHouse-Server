@@ -4,8 +4,11 @@ import { cn } from "@/components/ui/core/styling"
 
 export const variantTrackColors = {
     default: {
-        checked: "bg-brand-accent border-brand-accent/50 shadow-[0_0_16px_hsl(var(--brand-accent)/0.4)]",
-        thumb: "bg-white text-brand-accent shadow-[0_2px_5px_rgba(0,0,0,0.35)]",
+        checked: "bg-brand-accent border-white/40 shadow-[0_0_12px_var(--brand-glow)]",
+        // Thumb en on-primary: blanco en Por Era (track de color), negro #09090B
+        // en Clásico (track blanco) — sin esto el toggle ON en Clásico era
+        // gris-sobre-blanco lavado e ilegible.
+        thumb: "bg-on-primary text-brand-accent shadow-[0_2px_5px_rgba(0,0,0,0.45)]",
         dot: "bg-brand-accent opacity-90",
     },
     success: {
@@ -108,7 +111,7 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
                 isSm ? "w-9 h-5 p-0.5" : "w-[46px] h-6.5 p-[3px]",
                 checked
                     ? variantConfig.checked
-                    : "bg-white/[0.08] hover:bg-white/[0.12] border-white/15 shadow-[inset_0_1px_2.5px_rgba(0,0,0,0.5)]",
+                    : "bg-[var(--switch-track-off,#1B1B20)] hover:bg-[var(--classic-hover,#24242A)] border-white/10 shadow-[inset_0_1px_2.5px_rgba(0,0,0,0.6)]",
                 disabled && "opacity-40 cursor-not-allowed pointer-events-none",
                 className
             )}
@@ -140,7 +143,7 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
                     isSm ? "w-4 h-4" : "w-5 h-5",
                     checked
                         ? variantConfig.thumb
-                        : "bg-zinc-200 hover:bg-white shadow-[0_1px_3px_rgba(0,0,0,0.5)]"
+                        : "bg-[var(--switch-thumb-off,#8B8B93)] hover:bg-[var(--classic-text-secondary,#A5A5AD)] shadow-[0_1px_3px_rgba(0,0,0,0.5)]"
                 )}
             >
                 {/* Micro-dot relief inside thumb */}
@@ -150,7 +153,7 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
                         isSm ? "w-1 h-1" : "w-1.5 h-1.5",
                         checked
                             ? variantConfig.dot
-                            : "bg-zinc-400/50 opacity-40 scale-75"
+                            : "bg-[var(--classic-text-muted,#6E6E76)] opacity-40 scale-75"
                     )}
                 />
             </motion.span>

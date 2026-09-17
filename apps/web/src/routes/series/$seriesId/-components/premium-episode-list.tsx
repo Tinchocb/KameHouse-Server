@@ -86,7 +86,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
           <button
             type="button"
             onClick={() => navigate({ to: "/settings" })}
-            className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-white font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[var(--shadow-brand-primary)] cursor-pointer"
+            className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[var(--shadow-brand-primary)] cursor-pointer"
           >
             Configurar biblioteca
           </button>
@@ -239,78 +239,6 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
 
 PremiumEpisodeList.displayName = "PremiumEpisodeList"
 
-function EpisodeVirtualList({
-    filteredEpisodes, activeSubSagaStart, activeSubSagaEnd, ts, onPlay, onMouseEnter, onMouseLeave, scrollElement
-}: {
-    filteredEpisodes: PremiumEpisode[]
-    activeSubSagaStart?: number
-    activeSubSagaEnd?: number
-    ts: ReturnType<typeof useThemeSettings>
-    onPlay?: (episodeNumber: number) => void
-    onMouseEnter: (id: string) => void
-    onMouseLeave: (id: string) => void
-    scrollElement?: Element | null
-}) {
-    const listRef = React.useRef<HTMLDivElement>(null)
-    const [scrollMargin, setScrollMargin] = React.useState(() => {
-        if (typeof window === "undefined") return 0
-        return window.innerWidth < 768 ? 550 : 700
-    })
-
-    const getScrollElement = React.useCallback(() => {
-        return scrollElement ?? null
-    }, [scrollElement])
-
-    React.useLayoutEffect(() => {
-        const el = listRef.current
-        if (!el || !scrollElement) return
-
-        // Distancia entre el tope de la lista y el tope del contenido scrolleable (sin forzar reflow).
-        const updateOffset = () => {
-            if (!listRef.current || !scrollElement) return
-            let top = 0
-            let node: HTMLElement | null = listRef.current
-            while (node && node !== scrollElement && node !== document.body) {
-                top += node.offsetTop
-                node = node.offsetParent as HTMLElement | null
-            }
-            if (top > 0) {
-                setScrollMargin(prev => (Math.abs(prev - top) <= 1 ? prev : top))
-            }
-        }
-        updateOffset()
-
-        window.addEventListener("resize", updateOffset, { passive: true })
-        return () => {
-            window.removeEventListener("resize", updateOffset)
-        }
-    }, [scrollElement])
-
-    const estimateSize = React.useCallback(() => {
-        if (ts.themeUseLegacyEpisodeCard) return 96 + ROW_GAP_PX
-        if (typeof window !== "undefined") {
-            if (window.innerWidth < 640) return 90 + ROW_GAP_PX
-            if (window.innerWidth < 768) return 134 + ROW_GAP_PX
-            return 164 + ROW_GAP_PX
-        }
-        return 164 + ROW_GAP_PX
-    }, [ts.themeUseLegacyEpisodeCard])
-
-    const virtualizer = useVirtualizer({
-        count: filteredEpisodes.length,
-        getScrollElement,
-        estimateSize,
-        initialRect: {
-            width: typeof window !== "undefined" ? window.innerWidth : 1280,
-            height: typeof window !== "undefined" ? window.innerHeight : 800,
-        },
-        overscan: 6,
-        scrollMargin,
-        useFlushSync: false,
-    })
-
-
-
 interface EpisodeVirtualRowProps {
     ep: PremiumEpisode
     isHighlighted: boolean
@@ -390,8 +318,6 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                     className={cn(
-                        // Sin elevación animada en hover: el cambio de shadow
-                        // repinta la fila completa; con fondo/borde alcanza.
                         "h-full group flex gap-2.5 sm:gap-4 rounded-xl cursor-pointer transition-[background-color,border-color,color,transform] duration-200 ease-out active:scale-95",
                         themeUseLegacyEpisodeCard ? "p-2 items-center" : "p-2.5 sm:p-3",
                         "border",
@@ -409,6 +335,8 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                 src={currentThumbnail}
                                 alt={ep.title}
                                 priority={priority}
+                                loading={priority ? "eager" : "lazy"}
+                                decoding="async"
                                 className="w-full h-full"
                                 imgClassName="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
                                 showSkeleton={true}
@@ -468,7 +396,6 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                     {ep.videoCodec}
                                 </span>
                             )}
-
                         </div>
                         <h3 className="font-bold text-sm sm:text-base text-on-surface group-hover:text-brand-accent transition-colors truncate">
                             {ep.title}
@@ -491,6 +418,101 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
         </div>
     )
 })
+
+interface EpisodeVirtualListProps {
+    filteredEpisodes: PremiumEpisode[]
+    activeSubSagaStart?: number
+    activeSubSagaEnd?: number
+    ts: ReturnType<typeof useThemeSettings>
+    onPlay?: (episodeNumber: number) => void
+    onMouseEnter: (id: string) => void
+    onMouseLeave: (id: string) => void
+    scrollElement?: Element | null
+}
+
+function EpisodeVirtualList({
+    filteredEpisodes,
+    activeSubSagaStart,
+    activeSubSagaEnd,
+    ts,
+    onPlay,
+    onMouseEnter,
+    onMouseLeave,
+    scrollElement,
+}: EpisodeVirtualListProps) {
+    const listRef = React.useRef<HTMLDivElement>(null)
+    const [scrollMargin, setScrollMargin] = React.useState(() => {
+        if (typeof window === "undefined") return 0
+        return window.innerWidth < 768 ? 550 : 700
+    })
+
+    const getScrollElement = React.useCallback(() => {
+        return (
+            (scrollElement as HTMLElement | null) ??
+            listRef.current?.closest("main") ??
+            listRef.current?.parentElement ??
+            (typeof document !== "undefined" ? document.documentElement : null)
+        )
+    }, [scrollElement])
+
+    React.useLayoutEffect(() => {
+        const el = listRef.current
+        const scrollEl = (scrollElement as HTMLElement | null) ?? el?.closest("main") ?? el?.parentElement
+        if (!el || !scrollEl) return
+
+        const updateOffset = () => {
+            if (!listRef.current || !scrollEl) return
+            let top = 0
+            let node: HTMLElement | null = listRef.current
+            while (node && node !== scrollEl && node !== document.body) {
+                top += node.offsetTop
+                node = node.offsetParent as HTMLElement | null
+            }
+            if (top > 0) {
+                setScrollMargin(prev => (Math.abs(prev - top) <= 1 ? prev : top))
+            }
+        }
+        updateOffset()
+
+        window.addEventListener("resize", updateOffset, { passive: true })
+        return () => {
+            window.removeEventListener("resize", updateOffset)
+        }
+    }, [scrollElement])
+
+    const estimateSize = React.useCallback(() => {
+        if (ts.themeUseLegacyEpisodeCard) return 96 + ROW_GAP_PX
+        if (typeof window !== "undefined") {
+            if (window.innerWidth < 640) return 90 + ROW_GAP_PX
+            if (window.innerWidth < 768) return 134 + ROW_GAP_PX
+            return 164 + ROW_GAP_PX
+        }
+        return 164 + ROW_GAP_PX
+    }, [ts.themeUseLegacyEpisodeCard])
+
+    const virtualizer = useVirtualizer({
+        count: filteredEpisodes.length,
+        getScrollElement,
+        estimateSize,
+        initialRect: {
+            width: typeof window !== "undefined" ? window.innerWidth : 1280,
+            height: typeof window !== "undefined" ? window.innerHeight : 800,
+        },
+        overscan: 5,
+        scrollMargin,
+        useFlushSync: false,
+    })
+
+    const prevActiveSubSagaStart = React.useRef<number | undefined>(undefined)
+    React.useEffect(() => {
+        if (activeSubSagaStart != null && activeSubSagaStart !== prevActiveSubSagaStart.current) {
+            prevActiveSubSagaStart.current = activeSubSagaStart
+            const targetIndex = filteredEpisodes.findIndex(e => e.number === activeSubSagaStart)
+            if (targetIndex >= 0) {
+                virtualizer.scrollToIndex(targetIndex, { align: "start", behavior: "smooth" })
+            }
+        }
+    }, [activeSubSagaStart, filteredEpisodes, virtualizer])
 
     return (
         <div ref={listRef} className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>

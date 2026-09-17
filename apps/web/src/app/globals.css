@@ -244,8 +244,8 @@ media-time-range {
     border-top-color: var(--sectionbar-border-top);
     border-bottom-color: var(--sectionbar-border-bottom);
     background-color: var(--sectionbar-bg);
-    -webkit-backdrop-filter: saturate(var(--sectionbar-saturate)) var(--sectionbar-blur);
-    backdrop-filter: saturate(var(--sectionbar-saturate)) var(--sectionbar-blur);
+    -webkit-backdrop-filter: saturate(var(--sectionbar-saturate)) blur(var(--sectionbar-blur));
+    backdrop-filter: saturate(var(--sectionbar-saturate)) blur(var(--sectionbar-blur));
     box-shadow: var(--sectionbar-shadow);
     @apply transition-all duration-base;
   }
@@ -266,7 +266,7 @@ media-time-range {
   }
 
   .sectionbar-divide > * + * {
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   .sectionbar-header {

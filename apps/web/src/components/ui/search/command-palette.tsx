@@ -119,7 +119,7 @@ heading={isSearchActive ? "RESULTADOS ENCONTRADOS" : "TENDENCIAS GLOBALES"}
                                                         : { to: "/series/$seriesId" as const, params: { seriesId: String(sem.mediaId) } }
 
                                                     return (
-                                                        <Link {...linkProps} className="flex w-full items-center gap-5 p-3" onClick={() => setOpen(false)}>
+                                                        <Link {...linkProps} preload="intent" className="flex w-full items-center gap-5 p-3" onClick={() => setOpen(false)}>
                                                             <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-brand-accent/30 group-hover:scale-105 transition-transform duration-base bg-brand-accent/10 flex items-center justify-center overflow-hidden relative">
                                                                 <div className="absolute inset-0 bg-gradient-to-tr from-brand-accent/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                                                 <IconStatusSparkles className="h-7 w-7 text-brand-accent group-hover:scale-110 transition-transform duration-base z-10" />
@@ -149,7 +149,7 @@ heading={isSearchActive ? "RESULTADOS ENCONTRADOS" : "TENDENCIAS GLOBALES"}
                                                             : { to: "/series/$seriesId" as const, params: { seriesId: result?.mediaId?.toString() || "0" } }
 
                                                         return (
-                                                            <Link {...linkProps} className="flex w-full items-center gap-5 p-3" onClick={() => setOpen(false)}>
+                                                            <Link {...linkProps} preload="intent" className="flex w-full items-center gap-5 p-3" onClick={() => setOpen(false)}>
                                                                 <div
                                                                     className="h-20 w-14 flex-shrink-0 rounded-lg bg-cover bg-center shadow-elevation-1 border border-outline-variant/50 group-hover:scale-105 transition-transform duration-base bg-surface-variant flex items-center justify-center overflow-hidden relative"
                                                                     style={media?.posterImage ? { backgroundImage: `url(${media.posterImage})` } : {}}

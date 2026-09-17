@@ -52,12 +52,16 @@ const MoviesMovieIdRoute = MoviesMovieIdRouteImport.update({
   id: '/movies/$movieId',
   path: '/movies/$movieId',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/movies/$movieId.lazy').then((d) => d.Route),
+)
 const SeriesSeriesIdIndexRoute = SeriesSeriesIdIndexRouteImport.update({
   id: '/series/$seriesId/',
   path: '/series/$seriesId/',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/series/$seriesId/index.lazy').then((d) => d.Route),
+)
 
 export interface FileRoutesByFullPath {
   '/movies/$movieId': typeof MoviesMovieIdRoute

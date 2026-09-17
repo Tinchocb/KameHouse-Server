@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { WebSocketMessage, WSEvents, ScannerMessage } from "@/lib/server/ws-events"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
-import { useScannerStore, type ScanEvent, type ScannerState } from "@/lib/scanner-store"
+import { useScannerStore, type ScanEvent, type ScannerState } from "@/lib/stores/scanner-store"
 import React, { useCallback, useEffect, useRef } from "react"
 import useWebSocket from "react-use-websocket"
 

@@ -76,8 +76,8 @@ El "Section Bar" es el contenedor visual base que une **SettingsSection (collaps
   border-top-color: var(--sectionbar-border-top);
   border-bottom-color: var(--sectionbar-border-bottom);
   background-color: var(--sectionbar-bg);
-  -webkit-backdrop-filter: saturate(var(--sectionbar-saturate)) var(--sectionbar-blur);
-  backdrop-filter: saturate(var(--sectionbar-saturate)) var(--sectionbar-blur);
+  -webkit-backdrop-filter: saturate(var(--sectionbar-saturate)) blur(var(--sectionbar-blur));
+  backdrop-filter: saturate(var(--sectionbar-saturate)) blur(var(--sectionbar-blur));
   box-shadow: var(--sectionbar-shadow);
   @apply transition-all duration-base;
 }

@@ -20,12 +20,12 @@ export interface WatchProgressBarProps {
 }
 
 const ERA_COLOR_MAP: Record<string, string> = {
-    "era-db": "var(--era-db-hex, #CF7430)",
-    "era-dbz": "var(--era-dbz-hex, #C2410C)",
-    "era-dbgt": "var(--era-dbgt-hex, #0E7C86)",
-    "era-dbkai": "var(--era-dbkai-hex, #0284C7)",
-    "era-dbs": "var(--era-dbs-hex, #DB2777)",
-    "era-daima": "var(--era-daima-hex, #E11D48)",
+    "era-db": "var(--era-db-hex, #E87A2D)",
+    "era-dbz": "var(--era-dbz-hex, #E6B43C)",
+    "era-dbgt": "var(--era-dbgt-hex, #D23859)",
+    "era-dbkai": "var(--era-dbkai-hex, #278DC5)",
+    "era-dbs": "var(--era-dbs-hex, #2C9FC7)",
+    "era-daima": "var(--era-daima-hex, #9564C8)",
 };
 
 export function WatchProgressBar({

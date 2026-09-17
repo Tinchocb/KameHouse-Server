@@ -55,15 +55,29 @@ export const MediaMetadataCapsule = React.memo(function MediaMetadataCapsule({
     const Wrapper = variants ? motion.div : "div"
 
     return (
+        // El wrapper solo posiciona y —cuando el padre pasa `variants`— anima
+        // (opacity/y). El vidrio (bg + backdrop-filter) vive en el div interno
+        // ESTÁTICO: con el blur en el mismo nodo que anima transform, Chromium
+        // retrasa el backdrop-filter y el blur "llega tarde" (salta al terminar
+        // la entrada). Además el transform inline de framer-motion pisaría el
+        // [transform:translateZ(0)] de la clase y la capa GPU parpadearía.
         <Wrapper
             variants={variants}
             className={cn(
+                "inline-flex w-fit select-none",
+                className
+            )}
+        >
+        <div
+            className={cn(
                 "inline-flex flex-wrap items-center gap-1.5 p-1 rounded-2xl",
                 "bg-zinc-950/45 border border-white/20 border-t-white/40 border-b-white/10",
-                "backdrop-blur-overlay-md backdrop-saturate-[150%]",
+                // overlay-sm (16px): en una pastilla de ~34px de alto 24px es
+                // overkill y cuesta un frame extra de rasterizado; 16px se ve
+                // idéntico y pinta en el primer frame.
+                "backdrop-blur-overlay-sm will-change-[backdrop-filter]",
                 "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_12px_36px_-6px_rgba(0,0,0,0.85)]",
-                "w-fit select-none [transform:translateZ(0)] [isolation:isolate]",
-                className
+                "[transform:translateZ(0)] [isolation:isolate]"
             )}
         >
             {/* Format Chip (Serie TV, Película, etc.) */}
@@ -133,6 +147,7 @@ export const MediaMetadataCapsule = React.memo(function MediaMetadataCapsule({
 
             {/* Additional Custom Badges / Chips */}
             {children}
+        </div>
         </Wrapper>
     )
 })

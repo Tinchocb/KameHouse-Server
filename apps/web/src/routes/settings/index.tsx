@@ -189,7 +189,11 @@ function SettingsPage() {
     // Pre-warm all lazy settings tabs sequentially in background during idle time (eliminates chunk stall without network contention)
     useEffect(() => {
         let isCancelled = false
-        const loaders = Object.values(tabLoaders)
+        // Excluir el tab activo inicial para no competir con el montaje actual
+        const loaderKeys = (Object.keys(tabLoaders) as (keyof typeof tabLoaders)[])
+            .filter(tab => tab !== activeTab)
+        const loaders = loaderKeys.map(tab => tabLoaders[tab])
+
         let currentIndex = 0
         let idleHandle: number | undefined
         let timeoutHandle: ReturnType<typeof setTimeout> | undefined
@@ -246,7 +250,7 @@ function SettingsPage() {
 
     useEffect(() => {
         if (serverSettings && !isDirty) {
-            reset(serverSettings as unknown as SettingsFormValues)
+            reset(serverSettings as unknown as SettingsFormValues, { keepDirtyValues: true })
         }
     }, [serverSettings, reset, isDirty])
 
@@ -288,6 +292,7 @@ function SettingsPage() {
     const mobileTabSpring = useSpringPreset("tabIndicator");
     const desktopPillarSpring = useSpringPreset("entrance");
     const desktopIndicatorSpring = useSpringPreset("tabIndicator");
+    const tabContentSpring = useSpringPreset("tabContent");
     const saveBarSpring = useSpringPreset("entrance");
 
     if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
@@ -428,13 +433,13 @@ function SettingsPage() {
                             className="w-full max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 py-7 pb-32 space-y-9 min-h-full"
                         >
                             <Suspense fallback={<div className="flex items-center justify-center w-full h-64"><div className="w-8 h-8 rounded-full border-2 border-brand-accent border-t-transparent animate-spin" /></div>}>
-                                <AnimatePresence mode="popLayout" initial={false}>
+                                <AnimatePresence mode="wait" initial={false}>
                                     <motion.div
                                         key={activeTab}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -20 }}
-                                        transition={{ duration: 0.2, ease: "easeOut" }}
+                                        initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+                                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                                        exit={{ opacity: 0, y: -14, filter: "blur(8px)" }}
+                                        transition={tabContentSpring}
                                     >
                                         {activeTab === "appearance"  && <AppearanceTab control={control} />}
                                         {activeTab === "playback"    && <PlaybackTab control={control} />}

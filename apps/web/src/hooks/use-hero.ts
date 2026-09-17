@@ -9,16 +9,28 @@ import { getLargeResImage } from "@/lib/helpers/images"
 export function useHeroBackdrop(imageSrc: string | null | undefined, options?: { optimizeResolution?: boolean }) {
     const setBackdropUrl = useIntelligenceStore((state) => state.setBackdropUrl)
     const optimizeResolution = options?.optimizeResolution ?? true
+    const deferredSrc = React.useDeferredValue(imageSrc)
+    const currentUrlRef = React.useRef<string | null>(null)
 
     React.useEffect(() => {
-        if (!imageSrc) {
-            setBackdropUrl(null)
+        if (!deferredSrc) {
+            if (currentUrlRef.current !== null) {
+                currentUrlRef.current = null
+                setBackdropUrl(null)
+            }
             return
         }
 
-        const finalUrl = optimizeResolution ? getLargeResImage(imageSrc) : imageSrc
-        setBackdropUrl(finalUrl)
-    }, [imageSrc, setBackdropUrl, optimizeResolution])
+        const finalUrl = optimizeResolution ? getLargeResImage(deferredSrc) : deferredSrc
+        if (currentUrlRef.current === finalUrl) return
+
+        const timer = setTimeout(() => {
+            currentUrlRef.current = finalUrl
+            setBackdropUrl(finalUrl)
+        }, 150)
+
+        return () => clearTimeout(timer)
+    }, [deferredSrc, setBackdropUrl, optimizeResolution])
 }
 
 /**

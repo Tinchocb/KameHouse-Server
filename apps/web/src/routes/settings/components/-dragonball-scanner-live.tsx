@@ -220,7 +220,7 @@ export function DragonBallScannerLive() {
                                 "flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm",
                                 isScanning
                                     ? "bg-brand-accent/20 text-brand-accent/60 cursor-not-allowed border border-brand-accent/20"
-                                    : "bg-brand-accent hover:brightness-110 text-white active:scale-95"
+                                    : "bg-brand-accent hover:brightness-110 text-on-primary active:scale-95"
                             )}
                         >
                             <Zap className={cn("w-3.5 h-3.5", isScanning && "animate-spin")} />

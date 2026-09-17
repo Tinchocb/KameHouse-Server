@@ -23,6 +23,8 @@ apps/server/test_data_dir/cache/
 apps/server/test_data_dir/assets/
 apps/server/test_data_dir/logs/
 apps/server/test_data_dir/offline/
+apps/server/internal/util/data/user_agents.jsonl
+*.cache
 
 # Environment and secrets
 .env

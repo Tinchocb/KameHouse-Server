@@ -78,7 +78,7 @@ function LibrarySkipScanRow() {
                         "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all",
                         running
                             ? "bg-brand-accent/10 border border-brand-accent/20 text-brand-accent cursor-not-allowed"
-                            : "bg-brand-accent hover:brightness-110 text-white shadow-sm active:scale-95"
+                            : "bg-brand-accent hover:brightness-110 text-on-primary shadow-sm active:scale-95"
                     )}
                 >
                     {running ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconMediaWand className="w-3.5 h-3.5" />}
@@ -418,7 +418,7 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                                         type="button"
                                         onClick={handleScanMusic}
                                         disabled={isScanningMusic}
-                                        className="bg-brand-accent text-white shrink-0 font-bold text-xs"
+                                        className="bg-brand-accent text-on-primary shrink-0 font-bold text-xs"
                                     >
                                         {isScanningMusic ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconMediaVolume2 className="w-3.5 h-3.5" />}
                                         <span>{isScanningMusic ? "Escaneando..." : "Escanear Pistas"}</span>

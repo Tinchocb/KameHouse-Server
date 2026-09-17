@@ -75,7 +75,11 @@ export function ChronologyModal({ isOpen, onClose }: ChronologyModalProps) {
                 span.title.toLowerCase().includes(q) ||
                 span.sagaName.toLowerCase().includes(q) ||
                 span.previouslyOn.toLowerCase().includes(q) ||
-                span.inUniverseYears.toLowerCase().includes(q)
+                span.detailedPlot.toLowerCase().includes(q) ||
+                span.inUniverseYears.toLowerCase().includes(q) ||
+                span.dominantVibe.toLowerCase().includes(q) ||
+                span.worldStateAtStart?.activeVillains?.some((v) => v.toLowerCase().includes(q)) ||
+                span.milestones?.some((m) => m.title.toLowerCase().includes(q))
             )
         })
     }, [hideFiller, searchQuery])
@@ -96,10 +100,10 @@ export function ChronologyModal({ isOpen, onClose }: ChronologyModalProps) {
         return () => window.removeEventListener("keydown", handleKeyDown)
     }, [isOpen, onClose])
 
-    // Reset scroll al cambiar filtro
+    // Reset scroll al cambiar filtro o búsqueda
     useEffect(() => {
         scrollRef.current?.scrollTo({ top: 0 })
-    }, [hideFiller])
+    }, [hideFiller, searchQuery])
 
     return (
         <AnimatePresence>
@@ -128,7 +132,7 @@ export function ChronologyModal({ isOpen, onClose }: ChronologyModalProps) {
                                         </h2>
                                         <div className="mt-1 h-[2px] w-12 rounded-full bg-gradient-to-r from-white via-white/60 to-transparent" />
                                         <p className="mt-1 tabular-nums text-xs text-on-surface-variant">
-                                            {DRAGON_BALL_STORY_SPANS.length} arcos · 5 eras · canon + películas
+                                            {filteredSpans.length} capítulos · 5 eras · canon + películas · ↑↓ navega
                                         </p>
                                     </div>
                                 </div>
@@ -154,7 +158,7 @@ export function ChronologyModal({ isOpen, onClose }: ChronologyModalProps) {
                                             ref={searchRef}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            placeholder="Buscar saga... (/)"
+                                            placeholder="Buscar saga, villano, hito... (/)"
                                             aria-label="Buscar saga"
                                             className="w-full rounded-full border border-outline-variant bg-surface-container-low py-2 pl-9 pr-8 text-sm text-on-surface shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.2)] backdrop-blur-overlay-md transition-colors placeholder:text-on-surface-variant hover:border-outline focus:border-brand-accent focus:outline-none"
                                         />

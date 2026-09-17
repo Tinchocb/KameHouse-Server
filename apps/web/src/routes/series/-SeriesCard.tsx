@@ -176,8 +176,10 @@ export const SeriesCard = memo(function SeriesCard({
                 )
             )}
             {/* ─── VHS TAPE BODY (poster + info, flush como lomo real) ─── */}
+            {/* transition-colors (no transition-all): transition-all invalida el
+                backdrop-filter de la cápsula en cada frame y el blur "llega tarde". */}
             <div
-                className="flex-1 min-h-0 relative overflow-hidden transition-all duration-700"
+                className="flex-1 min-h-0 relative overflow-hidden transition-colors duration-700"
                 style={{
                     background: !isSelected ? bgGradient : 'var(--bg-primary)',
                 }}
@@ -209,24 +211,28 @@ export const SeriesCard = memo(function SeriesCard({
                         isSelected ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                     )}
                 >
+                    {/* Cápsula metadata (paridad Home/Movies) — FUERA del bloque con
+                        slide de abajo: cualquier transform animado en un ancestro
+                        obliga a Chromium a re-rasterizar el backdrop-filter en cada
+                        frame y el blur "llega tarde" (plano y luego salta). Por encima
+                        solo quedan fades de opacity (panel + este), así el blur pinta
+                        en el primer frame. Capa GPU con translateZ(0) inline. */}
+                    <div className={cn(
+                        'flex items-center gap-2 mb-2 transition-opacity [transition-duration:300ms] ease-out',
+                        isSelected ? 'opacity-100 delay-[50ms]' : 'opacity-0 delay-0'
+                    )}
+                    style={{ transform: 'translateZ(0)' }}
+                    >
+                        <MediaMetadataCapsule format="SERIE" year={item.year} episodes={item.eps}>
+                            {!!unwatchedCount && (
+                                <span className="badge badge-success">{unwatchedCount} sin ver</span>
+                            )}
+                        </MediaMetadataCapsule>
+                    </div>
                     <div className={cn(
                         'transition-[opacity,transform] [transition-duration:600ms] ease-out delay-150 will-change-transform',
                         isSelected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
                     )}>
-                        {/* Cápsula metadata (paridad Home/Movies) — aislada del scale para que backdrop-blur pinte en frame 1 (Chrome retrasa backdrop-filter dentro de padres con scale) */}
-                        <div className={cn(
-                            'flex items-center gap-2 mb-2 transition-[opacity,transform] [transition-duration:400ms] ease-out will-change-transform',
-                            isSelected ? 'opacity-100 translate-y-0 delay-[50ms]' : 'opacity-0 translate-y-3 delay-0'
-                        )}
-                        style={{ transform: 'translateZ(0)' }}
-                        >
-                            <MediaMetadataCapsule format="SERIE" year={item.year} episodes={item.eps}>
-                                {!!unwatchedCount && (
-                                    <span className="badge badge-success">{unwatchedCount} sin ver</span>
-                                )}
-                            </MediaMetadataCapsule>
-                        </div>
-
                         {/* Título */}
                         <h3 className={cn(
                             'text-lg md:text-xl font-black text-white mb-2 leading-tight tracking-tight line-clamp-2 transition-all [transition-duration:600ms] ease-out',

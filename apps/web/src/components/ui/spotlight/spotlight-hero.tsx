@@ -66,6 +66,14 @@ const heroItemVariants: Variants = {
     }
 }
 
+const heroFadeOnlyVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: { duration: 0.25, ease: "easeOut" }
+    }
+}
+
 export interface SpotlightHeroProps {
     activeEraId: EraId
     displayTitle: string
@@ -159,6 +167,8 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                     src={effectiveBackdropSrc.startsWith("/") ? effectiveBackdropSrc : getLargeResImage(effectiveBackdropSrc)}
                                     alt={displayTitle}
                                     priority={true}
+                                    loading="eager"
+                                    decoding="async"
                                     className="w-full h-full block"
                                     imgClassName="!w-full !h-full !object-cover !object-center sm:!object-right filter saturate-[125%] contrast-[105%]"
                                 />
@@ -223,12 +233,12 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                     {displayTitle}
                                 </motion.h3>
 
-                                {/* Metadata Row with Unified Capsule */}
+                                {/* Metadata Row with Unified Capsule (Fade-only to avoid Chromium backdrop-filter delay) */}
                                 <MediaMetadataCapsule
                                     format="SERIE TV"
                                     year={activeSeries?.year}
                                     rating={activeSeries?.rating}
-                                    variants={heroItemVariants}
+                                    variants={heroFadeOnlyVariants}
                                 >
                                     {isSeriesComplete ? (
                                         <span className="bg-[var(--warning-bg)] text-[var(--status-warning)] text-[10px] font-mono font-black tracking-wider px-2.5 py-1 rounded-lg border border-[var(--warning-border)] uppercase shadow-elevation-1 flex items-center gap-1.5">

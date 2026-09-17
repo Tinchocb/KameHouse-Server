@@ -68,8 +68,11 @@ function HomeClient() {
         [handleNavigate],
     )
 
-    const spotlightItems = React.useMemo(() => {
-        if (!allEntries.length) return []
+    const noop = React.useCallback(() => {}, [])
+
+    // Un solo useMemo para deduplicar allEntries y derivar spotlightItems y moviesItems
+    const { spotlightItems, moviesItems } = React.useMemo(() => {
+        if (!allEntries.length) return { spotlightItems: [], moviesItems: [] }
 
         const seen = new Set<number>()
         const uniqueEntries = allEntries.filter(entry => {
@@ -80,25 +83,15 @@ function HomeClient() {
             return true
         })
 
-        return uniqueEntries.map(entry => mapLibraryEntryToMediaCard(entry, handleNavigate))
-    }, [allEntries, handleNavigate])
-
-    // Extract movies (format MOVIE, SPECIAL, OVA) for catalog grid
-    const moviesItems = React.useMemo(() => {
-        if (!allEntries.length) return []
-        const seen = new Set<number>()
-        return allEntries
+        const spotlight = uniqueEntries.map(entry => mapLibraryEntryToMediaCard(entry, handleNavigate))
+        const movies = uniqueEntries
             .filter(entry => {
-                if (!entry || !entry.media) return false
-                const format = entry.media.format
-                const isMovie = format === "MOVIE" || format === "SPECIAL" || format === "OVA"
-                if (!isMovie) return false
-                const resolvedId = entry.mediaId || entry.media.tmdbId || entry.media.id
-                if (!resolvedId || seen.has(resolvedId)) return false
-                seen.add(resolvedId)
-                return true
+                const format = entry.media?.format
+                return format === "MOVIE" || format === "SPECIAL" || format === "OVA"
             })
             .map(entry => mapLibraryEntryToMediaCard(entry, handleNavigate))
+
+        return { spotlightItems: spotlight, moviesItems: movies }
     }, [allEntries, handleNavigate])
 
     if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
@@ -131,7 +124,7 @@ function HomeClient() {
                         <MoviesGrid
                             items={moviesItems}
                             onNavigate={handleSpotlightNavigate}
-                            onHover={() => {}}
+                            onHover={noop}
                         />
                     </SectionBar>
                 </div>

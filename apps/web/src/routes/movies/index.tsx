@@ -26,6 +26,9 @@ const LIBRARY_BG_BLUR_PX: Record<string, number> = { none: 0, sm: 8, md: 16, lg:
 
 export type MovieEntry = Anime_LibraryCollectionEntry & { era: EraTab; eraId: EraId; startedAtTimestamp: number }
 
+// Collator para orden alfabético en español cacheado a nivel de módulo
+const SPANISH_COLLATOR = new Intl.Collator("es", { sensitivity: "base", numeric: true })
+
 export const Route = createFileRoute("/movies/")({
     loader: async ({ context }) => {
         const qc = context.queryClient
@@ -90,6 +93,20 @@ function MoviesPage() {
         })
     }, [collection])
 
+    // Pre-computar índice de búsqueda plano para no recalcular toLowerCase() ni getMovieLore en cada pulsación
+    const searchIndex = useMemo(() => {
+        return allMovies.map(movie => {
+            const media = movie.media
+            const titleSpanish = (media?.titleSpanish || "").toLowerCase()
+            const titleEnglish = (media?.titleEnglish || "").toLowerCase()
+            const titleRomaji = (media?.titleRomaji || "").toLowerCase()
+            const titleOriginal = (media?.titleOriginal || "").toLowerCase()
+            const loreTitle = (getMovieLore(movie)?.title || "").toLowerCase()
+            const hay = `${titleSpanish} ${loreTitle} ${titleEnglish} ${titleRomaji} ${titleOriginal}`
+            return { movie, hay }
+        })
+    }, [allMovies])
+
     // Datos categorizados para SpotlightEraNav (paridad total con Home):
     // series=null (Movies no tiene serie principal), movies por EraId canónica.
     const categorizedData = useMemo(() => {
@@ -128,34 +145,29 @@ function MoviesPage() {
     }, [playSound])
 
     const filteredSorted = useMemo(() => {
-        let result = activeEra === "all" ? allMovies : allMovies.filter(e => e.eraId === activeEra)
+        const query = debouncedSearchQuery.toLowerCase().trim()
 
-        if (debouncedSearchQuery.trim()) {
-            const query = debouncedSearchQuery.toLowerCase().trim()
-            result = result.filter(e => {
-                const media = e.media
-                if (!media) return false
-                const titleSpanish = (media.titleSpanish || "").toLowerCase()
-                const titleEnglish = (media.titleEnglish || "").toLowerCase()
-                const titleRomaji = (media.titleRomaji || "").toLowerCase()
-                const titleOriginal = (media.titleOriginal || "").toLowerCase()
-                const loreTitle = (getMovieLore(e)?.title || "").toLowerCase()
-                return titleSpanish.includes(query) || loreTitle.includes(query) || titleEnglish.includes(query) || titleRomaji.includes(query) || titleOriginal.includes(query)
-            })
-        }
+        // 1. Filtrado rápido usando el índice memoizado
+        const matchingEntries = searchIndex.filter(({ movie, hay }) => {
+            if (activeEra !== "all" && movie.eraId !== activeEra) return false
 
-        if (statusFilter === "completed") {
-            result = result.filter(e => {
-                const media = e.media
-                return media?.watched || (e.listData?.progress || 0) >= (media?.totalEpisodes || 1)
-            })
-        } else if (statusFilter === "unwatched") {
-            result = result.filter(e => {
-                const media = e.media
-                return !media?.watched && (e.listData?.progress || 0) < (media?.totalEpisodes || 1)
-            })
-        }
+            if (query && !hay.includes(query)) return false
 
+            if (statusFilter === "completed") {
+                const media = movie.media
+                return media?.watched || (movie.listData?.progress || 0) >= (media?.totalEpisodes || 1)
+            }
+            if (statusFilter === "unwatched") {
+                const media = movie.media
+                return !media?.watched && (movie.listData?.progress || 0) < (media?.totalEpisodes || 1)
+            }
+
+            return true
+        })
+
+        const result = matchingEntries.map(e => e.movie)
+
+        // 2. Si el ordenamiento es default (ya ordenado por release date en allMovies), evitamos el .sort()
         switch (sortBy) {
             case "year_asc":
                 return [...result].sort((a, b) => {
@@ -172,15 +184,15 @@ function MoviesPage() {
                     return (b.media?.year || 0) - (a.media?.year || 0)
                 })
             case "alpha_asc":
-                return [...result].sort((a, b) => getEntryTitle(a).localeCompare(getEntryTitle(b)))
+                return [...result].sort((a, b) => SPANISH_COLLATOR.compare(getEntryTitle(a), getEntryTitle(b)))
             case "alpha_desc":
-                return [...result].sort((a, b) => getEntryTitle(b).localeCompare(getEntryTitle(a)))
+                return [...result].sort((a, b) => SPANISH_COLLATOR.compare(getEntryTitle(b), getEntryTitle(a)))
             case "rating_desc":
                 return [...result].sort((a, b) => getEntryRating(b) - getEntryRating(a))
             default:
                 return result
         }
-    }, [allMovies, activeEra, statusFilter, sortBy, debouncedSearchQuery])
+    }, [searchIndex, activeEra, statusFilter, sortBy, debouncedSearchQuery])
 
     // Limpiar hover al cambiar de era (useEffect, no durante render)
     useEffect(() => {

@@ -165,7 +165,7 @@ export const MoviesGrid = memo(function MoviesGrid({
                                 }}
                             >
                                 {rowItems.map((entry) => (
-                                    <div key={entry.mediaId} className="h-full">
+                                    <div key={entry.mediaId} className="h-full [content-visibility:auto] [contain-intrinsic-size:280px]">
                                         <MovieCard
                                             entry={entry}
                                             era={entry.era}

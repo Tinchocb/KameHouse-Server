@@ -20,8 +20,10 @@ export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000,        // 5 min fresh
-            gcTime: 30 * 60 * 1000,           // 30 min in-cache (prevents flicker on rapid nav)
+            refetchOnReconnect: false,
+            structuralSharing: true,
+            staleTime: 24 * 60 * 60 * 1000,   // 24 hours (library content is static)
+            gcTime: 7 * 24 * 60 * 60 * 1000,  // 7 days
             // Smart retry: 1 attempt for transient errors, 0 for definitive failures.
             retry: (failureCount, error) => {
                 if (error instanceof ApiError && NO_RETRY_STATUSES.has(error.status)) {

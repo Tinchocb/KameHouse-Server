@@ -49,6 +49,16 @@ export function DynamicBackdrop() {
     const isFlat = !ts.themeEnableBlurringEffects || tvMode || isEcoMode
     
     const isHeroPage = isHomePage || isListingPage
+
+    // Las páginas con hero cinematográfico (Home / Movies / Series) ya pintan
+    // su propia aura ambiental con la MISMA imagen (blur + máscara radial +
+    // opacidad). Si el backdrop global también pintara la imagen con blur(64px),
+    // se apilarían dos capas de blur sobre el mismo arte: wash duplicado y
+    // doble coste GPU. En ese caso el global aporta solo orbes/scrims/grano;
+    // la imagen con blur la pone el hero local (una sola capa).
+    // (Detalle MediaHero no entra acá: su blur local de 12-14px es relleno
+    // letterbox bajo la imagen nítida, no un duplicado del blur ambiental.)
+    const hasLocalHeroAura = isHeroPage && !!activeBackdropUrl
     
     const baseOpacity = (isListingPage
         ? 0.35
@@ -212,8 +222,10 @@ export function DynamicBackdrop() {
                     transform: "translate3d(0px, 0px, 0px)",
                 }}
             >
-                {/* Blurred layer — low-res image, heavy blur 64px (puramente ambiental y difuso) */}
-                {displayedUrlLowRes && (
+                {/* Blurred layer — low-res image, heavy blur 64px (puramente ambiental y difuso).
+                    Se omite cuando el hero local ya pinta la misma imagen con su
+                    propio blur (hasLocalHeroAura): evita la doble capa de blur. */}
+                {!hasLocalHeroAura && displayedUrlLowRes && (
                     <div
                         className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
                         style={{
@@ -227,7 +239,7 @@ export function DynamicBackdrop() {
                         }}
                     />
                 )}
-                {nextUrlLowRes && (
+                {!hasLocalHeroAura && nextUrlLowRes && (
                     <div
                         className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
                         style={{

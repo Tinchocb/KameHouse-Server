@@ -14,28 +14,27 @@ export const Route = createFileRoute("/admin/")({
 })
 
 function AdminPage() {
-    const reducedMotion = useReducedMotion()
-    const motionProps = reducedMotion
-        ? { initial: false, animate: { opacity: 1 }, transition: { duration: 0 } }
-        : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.4 } }
+    const { data: trStats } = useGetTranscodeStats()
 
     return (
         <motion.div
-            {...motionProps}
-            className="min-h-screen text-on-surface"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="min-h-screen text-on-surface bg-surface-dim font-sans antialiased selection:bg-brand-accent/30 selection:text-white"
         >
-            <div className="page-container py-8 md:py-12 lg:py-16">
+            <div className="max-w-content mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
                 <AdminHeader />
 
                 <main className="mt-8 md:mt-12 space-y-8 md:space-y-10">
-                    <AdminStatsGrid />
+                    <AdminStatsGrid trStats={trStats} />
 
                     <AdminSection title="Gestión de Biblioteca" subtitle="Escaneo y sincronización">
                         <AdminActionsGrid />
                     </AdminSection>
 
                     <AdminSection title="Transcodificación" subtitle="Motor de streaming, CPU, RAM y GPU en tiempo real">
-                        <AdminTranscodePanel />
+                        <AdminTranscodePanel trStats={trStats} />
                     </AdminSection>
 
                     <AdminSection title="Servicios Externos" subtitle="TMDB, AniList, Trakt, etc.">
@@ -91,29 +90,28 @@ function AdminHeader() {
     )
 }
 
-function AdminStatsGrid() {
+function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTranscodeStats>["data"] }) {
     const { data: libStats } = useGetLibraryStats()
-    const { data: trStats } = useGetTranscodeStats()
 
-    const cpuPercent = trStats?.system.cpuPercent?.toFixed(1) || "0.0"
-    const memoryTotal = trStats?.system.memoryTotal ? (trStats.system.memoryTotal / 1024 / 1024 / 1024).toFixed(1) : "0.0"
-    const memoryUsed = trStats?.system.memoryUsed ? (trStats.system.memoryUsed / 1024 / 1024 / 1024).toFixed(1) : "0.0"
+    const cpuPercent = trStats?.system?.cpuPercent?.toFixed(1) || "0.0"
+    const memoryTotal = trStats?.system?.memoryTotal ? (trStats.system.memoryTotal / 1024 / 1024 / 1024).toFixed(1) : "0.0"
+    const memoryUsed = trStats?.system?.memoryUsed ? (trStats.system.memoryUsed / 1024 / 1024 / 1024).toFixed(1) : "0.0"
 
-    const stats = [
+    const stats = React.useMemo(() => [
         { label: "Medios", value: libStats?.totalMedia?.toString() || "0", change: "Series y Películas", trend: "neutral", icon: IconNavigationTv, color: "var(--brand-primary)" },
         { label: "Archivos", value: libStats?.totalLocalFiles?.toString() || "0", change: "Ficheros indexados", trend: "neutral", icon: IconNavigationFilm, color: "var(--brand-secondary)" },
         { label: "CPU", value: `${cpuPercent}%`, change: "Uso del sistema", trend: "neutral", icon: IconStatusActivity, color: "var(--brand-success)" },
         { label: "Memoria", value: `${memoryUsed} GB`, change: `De ${memoryTotal} GB totales`, trend: "neutral", icon: IconStatusHdd, color: "var(--brand-magic)" },
         { label: "Transcoder NVENC", value: trStats?.transcoderInitialized && trStats.governor ? `${trStats.governor.activeNvenc} / ${trStats.governor.nvencCap}` : "Inactivo", change: "Sesiones GPU activas", trend: "neutral", icon: IconNavigationTv, color: "var(--md-sys-color-on-surface-variant)" },
         { label: "Pre-Transcode", value: trStats?.preTranscodeQueue?.toString() || "0", change: "En cola", trend: "neutral", icon: IconStatusPulse, color: "var(--brand-success)" },
-    ]
+    ], [libStats, trStats, cpuPercent, memoryUsed, memoryTotal])
 
     return (
         <section aria-labelledby="stats-title" className="mb-4">
             <h2 id="stats-title" className="sr-only">Estadísticas Generales</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                {stats.map((stat, i) => (
-                    <div key={i} className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant relative overflow-hidden group">
+                {stats.map((stat) => (
+                    <div key={stat.label} className="bg-surface-container shadow-elevation-3 rounded-container p-6 backdrop-blur-overlay-md border border-outline-variant relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-on-surface/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex items-start justify-between">
                             <stat.icon size={28} className="text-on-surface-variant group-hover:text-on-surface transition-colors" style={{ color: stat.color }} />
@@ -126,7 +124,7 @@ function AdminStatsGrid() {
                             <span className="text-on-surface-variant">{stat.label}</span>
                             <span className="text-on-surface-variant/70 ml-2">{stat.change}</span>
                         </div>
-                        </div>
+                    </div>
                 ))}
             </div>
         </section>
@@ -315,8 +313,8 @@ function formatGb(bytes: number | undefined): string {
     return ((bytes || 0) / 1024 / 1024 / 1024).toFixed(1)
 }
 
-function AdminTranscodePanel() {
-    const { data: stats, isLoading } = useGetTranscodeStats()
+function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTranscodeStats>["data"] }) {
+    const stats = trStats
 
     const governor = stats?.governor
     const system = stats?.system
@@ -360,7 +358,7 @@ function AdminTranscodePanel() {
                     </>
                 ) : (
                     <p className="text-body-sm text-on-surface-variant/70 my-auto">
-                        {isLoading ? "Cargando…" : "El transcoder está dormido. Se despierta al reproducir un stream que lo necesite."}
+                        El transcoder está dormido. Se despierta al reproducir un stream que lo necesite.
                     </p>
                 )}
                 <div className="flex items-center justify-between text-body-sm text-on-surface-variant/70">
@@ -404,7 +402,7 @@ function AdminTranscodePanel() {
                     </>
                 ) : (
                     <p className="text-body-sm text-on-surface-variant/70 my-auto">
-                        {isLoading ? "Cargando…" : "No se detectó nvidia-smi en el servidor."}
+                        No se detectó nvidia-smi en el servidor.
                     </p>
                 )}
             </div>
@@ -443,16 +441,17 @@ function AdminSystemGrid() {
     )
 }
 
+const ADMIN_STATIC_ACTIVITIES = [
+    { time: "Hace 5 min", type: "scan", message: "Escaneo completado: 12 series, 3 películas nuevas", icon: IconUiCheckCircle, color: "var(--brand-success)" },
+    { time: "Hace 15 min", type: "match", message: "Match manual: Dragon Ball GT vinculado correctamente", icon: IconUiLink, color: "var(--brand-primary)" },
+    { time: "Hace 1 hora", type: "sync", message: "Sincronización TMDB completada: 247 items actualizados", icon: IconStatusCloud, color: "var(--brand-secondary)" },
+    { time: "Hace 3 horas", type: "error", message: "Error en Trakt API: Rate limit exceeded", icon: IconUiAlertCircle, color: "var(--brand-destructive)" },
+    { time: "Hace 6 horas", type: "backup", message: "Backup automático completado: 2.1 GB", icon: IconStatusHdd, color: "var(--brand-magic)" },
+    { time: "Ayer", type: "scan", message: "Escaneo programado: 0 nuevos items", icon: IconNavigationSearch, color: "var(--muted-foreground)" },
+]
+
 function AdminRecentActivity() {
     const navigate = useNavigate()
-    const activities = [
-        { time: "Hace 5 min", type: "scan", message: "Escaneo completado: 12 series, 3 películas nuevas", icon: IconUiCheckCircle, color: "var(--brand-success)" },
-        { time: "Hace 15 min", type: "match", message: "Match manual: Dragon Ball GT vinculado correctamente", icon: IconUiLink, color: "var(--brand-primary)" },
-        { time: "Hace 1 hora", type: "sync", message: "Sincronización TMDB completada: 247 items actualizados", icon: IconStatusCloud, color: "var(--brand-secondary)" },
-        { time: "Hace 3 horas", type: "error", message: "Error en Trakt API: Rate limit exceeded", icon: IconUiAlertCircle, color: "var(--brand-destructive)" },
-        { time: "Hace 6 horas", type: "backup", message: "Backup automático completado: 2.1 GB", icon: IconStatusHdd, color: "var(--brand-magic)" },
-        { time: "Ayer", type: "scan", message: "Escaneo programado: 0 nuevos items", icon: IconNavigationSearch, color: "var(--muted-foreground)" },
-    ]
 
     return (
         <section aria-labelledby="activity-title" className="mb-4">
@@ -470,7 +469,7 @@ function AdminRecentActivity() {
                     </button>
                 </div>
                 <div className="space-y-4">
-                    {activities.map((activity, i) => (
+                    {ADMIN_STATIC_ACTIVITIES.map((activity, i) => (
                         <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-surface-container border border-outline-variant hover:border-surface-container-high transition-colors">
                             <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${activity.color} 12%, transparent)`, color: activity.color }}>
                                 <activity.icon size={20} strokeWidth={2.5} />

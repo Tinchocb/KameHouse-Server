@@ -1,4 +1,6 @@
 import { memo, useState, useCallback } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { IconUiStar, IconUiMoreHorizontal, IconMediaPlay, IconUiListPlus } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
@@ -51,6 +53,7 @@ export const MovieCard = memo(function MovieCard({
     onHoverCard: (entry: (Anime_LibraryCollectionEntry & { era: EraTab; eraId: EraId; startedAtTimestamp: number }) | null) => void
 }) {
     const { isMobile } = useResponsive()
+    const queryClient = useQueryClient()
     const { data: serverSettings } = useGetSettings()
     const hideAudienceScore = !!serverSettings?.platform?.hideAudienceScore
     const [drawerOpen, setDrawerOpen] = useState(false)
@@ -59,6 +62,25 @@ export const MovieCard = memo(function MovieCard({
     const posterImage = movie?.posterImage
     const idMal = movie?.idMal
     const format = movie?.format
+
+    const handlePrefetch = useCallback(() => {
+        if (!mediaId) return
+        const mId = String(mediaId)
+        queryClient.prefetchQuery({
+            queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, mId],
+            queryFn: () => fetchAnimeEntry(mId),
+            staleTime: 60000,
+        })
+    }, [queryClient, mediaId])
+
+    const handleMouseEnter = useCallback(() => {
+        handlePrefetch()
+        onHoverCard(entry as (Anime_LibraryCollectionEntry & { era: EraTab; eraId: EraId; startedAtTimestamp: number }))
+    }, [handlePrefetch, onHoverCard, entry])
+
+    const handleMouseLeave = useCallback(() => {
+        onHoverCard(null)
+    }, [onHoverCard])
 
     // Lore information for canonical titles and badges
     const lore = getMovieLore(entry)
@@ -127,8 +149,9 @@ export const MovieCard = memo(function MovieCard({
             <div
                 className="group relative cursor-pointer flex flex-col transition-all duration-300 transform-gpu"
                 onClick={handleCardClick}
-                onMouseEnter={() => onHoverCard(entry as (Anime_LibraryCollectionEntry & { era: EraTab; eraId: EraId; startedAtTimestamp: number }))}
-                onMouseLeave={() => onHoverCard(null)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                onFocus={handlePrefetch}
             >
                 {/* Poster Wrap with Ki glow on hover */}
                 <div 

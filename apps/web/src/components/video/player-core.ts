@@ -466,6 +466,31 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         enabled: !!(mediaId && episodeNumber),
     })
 
+    const lastBackendSyncTimeRef = useRef(0)
+
+    const flushBackendSync = useCallback((force = false) => {
+        const video = videoRef.current
+        if (!video) return
+        const curr = video.currentTime
+        const rawDur = video.duration
+        const total = Number.isFinite(rawDur) && rawDur > 0 ? rawDur : duration
+        const now = Date.now()
+
+        if (force || now - lastBackendSyncTimeRef.current >= 5000) {
+            lastBackendSyncTimeRef.current = now
+            lastSentHeartbeatRef.current = now
+            sendHeartbeat(curr, total)
+            onSyncProgress(curr, total)
+            onTrackingProgress(curr, total)
+        }
+    }, [duration, sendHeartbeat, onSyncProgress, onTrackingProgress])
+
+    useEffect(() => {
+        return () => {
+            flushBackendSync(true)
+        }
+    }, [flushBackendSync])
+
     const { data: historyData } = useGetContinuityWatchHistoryItem(mediaId || 0)
     const [showResume, setShowResume] = useState(false)
     const [resumeTime, setResumeTime] = useState(0)
@@ -877,11 +902,12 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 .catch((e) => console.error("Playback failed:", e))
         } else {
             video.pause()
+            flushBackendSync(true)
             setIsPlaying(false)
             setFlash("pause")
             flashTimeoutRef.current = setTimeout(() => setFlash(null), 400)
         }
-    }, [status])
+    }, [status, flushBackendSync])
 
     const performSeek = useCallback((time: number) => {
         const video = videoRef.current
@@ -1242,13 +1268,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             lastReportedTimeRef.current = curr
         }
 
-        onTrackingProgress(curr, total)
-        onSyncProgress(curr, total)
-
         const now = Date.now()
-        if (now - lastSentHeartbeatRef.current >= 5000) {
-            sendHeartbeat(curr, total)
-            lastSentHeartbeatRef.current = now
+        if (now - lastBackendSyncTimeRef.current >= 5000) {
+            flushBackendSync(false)
         }
 
         processTimeUpdates(curr, total)
@@ -1266,7 +1288,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 source: playableUrl.substring(0, 50) + "...",
             })
         }
-    }, [showStats, lastStatsUpdateRef, processTimeUpdates, onProgress, onTrackingProgress, onSyncProgress, playableUrl, sendHeartbeat, formatTime, duration])
+    }, [showStats, lastStatsUpdateRef, processTimeUpdates, onProgress, flushBackendSync, playableUrl, formatTime, duration])
 
     // Apply playback rate instantly
     useEffect(() => {
@@ -1364,7 +1386,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         skipToNextChapter,
         skipToPrevChapter,
         retryStream,
-    }), [setDuration, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, takeScreenshot, togglePip, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, handleSetHlsLevel, handleSetTvMode, handleSetMarathonMode, handleResume, skipToNextChapter, skipToPrevChapter, retryStream])
+        flushProgressSync: () => flushBackendSync(true),
+    }), [setDuration, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, takeScreenshot, togglePip, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, handleSetHlsLevel, handleSetTvMode, handleSetMarathonMode, handleResume, skipToNextChapter, skipToPrevChapter, retryStream, flushBackendSync])
 
     return { domElements, state, actions }
 }

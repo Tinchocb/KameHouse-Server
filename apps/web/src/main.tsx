@@ -15,6 +15,8 @@ const router = createRouter({
     routeTree,
     defaultPreload: "intent",
     defaultPreloadDelay: 50,
+    defaultPendingMs: 200,
+    defaultPendingMinMs: 300,
     context: {
         queryClient,
     },

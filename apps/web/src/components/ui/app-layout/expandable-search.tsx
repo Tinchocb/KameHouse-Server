@@ -237,6 +237,7 @@ export function ExpandableSearch() {
                                         <Link
                                             key={String(result.mediaId)}
                                             {...linkProps}
+                                            preload="intent"
                                             onClick={handleCollapse}
                                             className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 active:bg-white/15 transition-all duration-150 cursor-pointer"
                                         >

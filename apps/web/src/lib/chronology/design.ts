@@ -48,11 +48,11 @@ export const THREAT_LEVEL_BADGES: Record<ThreatLevel, { label: string; color: st
 };
 
 export const ERA_BACKDROP: Record<string, string> = {
-  classic: "/backdrops/db.jpg",
-  z: "/backdrops/dbz.jpg",
-  super: "/backdrops/dbs.jpg",
-  daima: "/backdrops/dbdaima.jpg",
-  gt: "/backdrops/dbgt.jpg",
+  classic: "/backdrops/db.webp",
+  z: "/backdrops/dbz.webp",
+  super: "/backdrops/dbs.webp",
+  daima: "/backdrops/dbdaima.webp",
+  gt: "/backdrops/dbgt.webp",
 };
 
 export const SPAN_ART: Record<string, string> = {

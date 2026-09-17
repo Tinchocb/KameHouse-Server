@@ -199,11 +199,17 @@ export function MediaHero({
                         <DeferredImage
                             src={backdropUrl}
                             alt="Backdrop"
-                            priority={true}
+                            priority={false}
+                            loading="lazy"
+                            decoding="async"
                             sizes="100vw"
                             className="w-full h-full"
                             imgClassName={cn(
-                                "w-full h-full transition-all duration-700 object-cover object-[center_18%] scale-[1.01]",
+                                // Solo opacity: transition-all animaría también el
+                                // filter (blur 1px) y mantendría vivo el repaint
+                                // del fondo, retrasando el backdrop-filter de la
+                                // cápsula de metadatos que está encima.
+                                "w-full h-full transition-opacity duration-700 object-cover object-[center_18%] scale-[1.01]",
                                 backdropTreatment === "dim" ? "opacity-40" : ambientOn ? "opacity-90" : "opacity-95",
                                 // Difuminado mínimo: apenas 1px para suavizar sin tapar detalle.
                                 backdropTreatment === "blur"
@@ -258,13 +264,16 @@ export function MediaHero({
                     isBoxedInfo && "pointer-events-auto bg-glass-bg backdrop-blur-overlay-xl border border-border-subtle rounded-container p-6 md:p-8"
                 )}>
                     {topBadge && (
-                        <div className="animate-slide-up delay-50 pointer-events-auto">
+                        // fade-only (sin transform): animar translateY en el
+                        // ancestro directo de un backdrop-filter obliga a
+                        // re-rasterizar el blur en cada frame y "llega tarde".
+                        <div className="animate-fade-in delay-50 pointer-events-auto">
                             {topBadge}
                         </div>
                     )}
 
                     {metadataRow && (
-                        <div className="animate-slide-up delay-100 pointer-events-auto">
+                        <div className="animate-fade-in delay-100 pointer-events-auto">
                             {metadataRow}
                         </div>
                     )}

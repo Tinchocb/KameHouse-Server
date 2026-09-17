@@ -34,6 +34,7 @@
       ]
     },
     "clipboard-manager:allow-write-text",
+    "dialog:allow-open",
     "opener:allow-open-url",
     "log:allow-log"
   ]

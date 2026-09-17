@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { type SettingsFormValues } from "../index"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
-import { IconStatusMonitor, IconStatusSparkles, IconUiPalette, IconNavigationFilm } from "@/components/ui/icons";
+import { IconStatusMonitor, IconStatusSparkles, IconUiPalette, IconNavigationFilm, IconArrowDownUp } from "@/components/ui/icons";
 import { resolveThemeMode, type ThemeMode } from "@/lib/theme/theme-hooks"
 import { OsSelect, OsToggle } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
@@ -34,13 +34,13 @@ const UI_MODES = [
 
 // ── Presets por Era ────────────────────────────────────────────────────────────
 const THEME_PRESETS = [
-    { id: "era-universe", themeEra: "era-universe", name: "Universo DB", subtitle: "Modo Adaptativo", desc: "Adapta la paleta a cada saga; nebulosa cósmica en Home", accent: "#7C52D6", bg: "from-purple-950/40 via-pink-950/25 to-teal-950/20" },
-    { id: "era-db", themeEra: "era-db", name: "Dragon Ball", subtitle: "1986 Original", desc: "Naranja terracota cálido y verde Shenron", accent: "#E67322", bg: "from-amber-950/40 to-orange-950/20" },
-    { id: "era-dbz", themeEra: "era-dbz", name: "Dragon Ball Z", subtitle: "1989 Era Dorada", desc: "Dorado Super Saiyan brillante y azul cobalto", accent: "#F59E0B", bg: "from-amber-950/40 via-yellow-950/25 to-blue-950/20" },
-    { id: "era-dbgt", themeEra: "era-dbgt", name: "Dragon Ball GT", subtitle: "1996 Grand Tour", desc: "Rojo escarlata SSJ4 y violeta cósmico", accent: "#E11D48", bg: "from-rose-950/40 to-purple-950/20" },
-    { id: "era-dbkai", themeEra: "era-dbkai", name: "Dragon Ball Kai", subtitle: "2009 HD Manga", desc: "Azul eléctrico de alta definición y cyan", accent: "#0284C7", bg: "from-sky-950/40 to-blue-950/20" },
-    { id: "era-dbs", themeEra: "era-dbs", name: "Dragon Ball Super", subtitle: "2015 Divino", desc: "Cian divino SSGSS y púrpura destructor", accent: "#0EA5E9", bg: "from-cyan-950/40 to-purple-950/20" },
-    { id: "era-daima", themeEra: "era-daima", name: "Dragon Ball Daima", subtitle: "2024 Demoníaco", desc: "Verde esmeralda místico del Reino Demoníaco", accent: "#10B981", bg: "from-emerald-950/40 to-violet-950/20" },
+    { id: "era-universe", themeEra: "era-universe", name: "Universo DB", subtitle: "Modo Adaptativo", desc: "Adapta la paleta a cada saga; nebulosa cósmica en Home", accent: "#805AC2", bg: "from-violet-950/40 via-purple-950/25 to-teal-950/20" },
+    { id: "era-db", themeEra: "era-db", name: "Dragon Ball", subtitle: "1986 Original", desc: "Naranja terracota cálido y verde Shenron", accent: "#E87A2D", bg: "from-amber-950/40 to-orange-950/20" },
+    { id: "era-dbz", themeEra: "era-dbz", name: "Dragon Ball Z", subtitle: "1989 Era Dorada", desc: "Oro Super Saiyan brillante y azul cobalto", accent: "#E6B43C", bg: "from-amber-950/40 via-yellow-950/25 to-blue-950/20" },
+    { id: "era-dbgt", themeEra: "era-dbgt", name: "Dragon Ball GT", subtitle: "1996 Grand Tour", desc: "Rojo escarlata SSJ4 y violeta cósmico", accent: "#D23859", bg: "from-rose-950/40 to-purple-950/20" },
+    { id: "era-dbkai", themeEra: "era-dbkai", name: "Dragon Ball Kai", subtitle: "2009 HD Manga", desc: "Azul eléctrico de alta definición y cyan", accent: "#278DC5", bg: "from-sky-950/40 to-blue-950/20" },
+    { id: "era-dbs", themeEra: "era-dbs", name: "Dragon Ball Super", subtitle: "2015 Divino", desc: "Cian divino SSGSS y púrpura destructor", accent: "#2C9FC7", bg: "from-cyan-950/40 to-purple-950/20" },
+    { id: "era-daima", themeEra: "era-daima", name: "Dragon Ball Daima", subtitle: "2024 Demoníaco", desc: "Púrpura Demon Realm con verde detalle", accent: "#9564C8", bg: "from-violet-950/40 to-violet-950/20" },
 ]
 
 export const AppearanceTab = React.memo(function AppearanceTab({ control }: AppearanceTabProps) {
@@ -266,14 +266,16 @@ return (
                         <OsSelect
                             label="Criterio de Ordenación Inicial"
                             description="Cómo se ordenan los títulos al ingresar a la colección."
+                            icon={IconArrowDownUp}
                             options={[
-                                { value: "TITLE_ASC", label: "Alfabético (A - Z)" },
-                                { value: "TITLE_DESC", label: "Alfabético (Z - A)" },
-                                { value: "YEAR_DESC", label: "Año de Emisión (Más recientes)" },
-                                { value: "YEAR_ASC", label: "Año de Emisión (Más antiguos)" },
-                                { value: "RATING_DESC", label: "Mejor Valorados" },
+                                { value: "TITLE_ASC", label: "Alfabético A – Z", desc: "De Dragon Ball a Z", badge: "A-Z" },
+                                { value: "TITLE_DESC", label: "Alfabético Z – A", desc: "Orden inverso", badge: "Z-A" },
+                                { value: "YEAR_DESC", label: "Más recientes", desc: "Por año de emisión", badge: "AÑO ↓" },
+                                { value: "YEAR_ASC", label: "Más antiguos", desc: "Clásicos primero", badge: "AÑO ↑" },
+                                { value: "RATING_DESC", label: "Mejor valorados", desc: "Por puntuación", badge: "TOP" },
                             ]}
                             value={field.value || "TITLE_ASC"}
+                            onChange={field.onChange}
                         />
                     )}
                     />
