@@ -29,6 +29,7 @@ type ClientTracker struct {
 	cassette      *Cassette
 	deletedStream chan string
 	removeChan    chan string
+	preloadDone   chan string
 	logger        *zerolog.Logger
 	killCh        chan struct{}
 }
@@ -44,6 +45,7 @@ func NewClientTracker(c *Cassette) *ClientTracker {
 		cassette:      c,
 		deletedStream: make(chan string, 256),
 		removeChan:    make(chan string, 256),
+		preloadDone:   make(chan string, 16),
 		logger:        c.logger,
 		killCh:        make(chan struct{}),
 	}
@@ -66,6 +68,41 @@ func (t *ClientTracker) RemoveClient(client string) {
 	case t.removeChan <- client:
 	default:
 		t.logger.Warn().Str("client", client).Msg("cassette: client removal channel full")
+	}
+}
+
+// PreloadDone signals that a background preload client finished warming a
+// session. See handlePreloadDone.
+func (t *ClientTracker) PreloadDone(client string) {
+	select {
+	case t.preloadDone <- client:
+	default:
+		t.logger.Warn().Str("client", client).Msg("cassette: preload done channel full")
+	}
+}
+
+// handlePreloadDone stops the encoders a preload left running. runHead encodes
+// up to 100 segments per head, so without this a preload that only wanted the
+// first few segments keeps ffmpeg busy (and a governor slot taken) on an episode
+// that may never be played. If a real client is already on the same file, the
+// heads are theirs too: just drop the preload client and let normal reaping
+// apply. Otherwise only the heads are killed — the pipelines and their segment
+// tables are kept, and the preload client stays registered so the warmed
+// segments survive until the real client arrives (or purgeInactive reclaims it).
+func (t *ClientTracker) handlePreloadDone(client string) {
+	info, ok := t.clients[client]
+	if !ok {
+		return
+	}
+	for other, c := range t.clients {
+		if other != client && c.Path == info.Path {
+			delete(t.clients, client)
+			delete(t.visitDate, client)
+			return
+		}
+	}
+	if s := t.cassette.getSessionByPath(info.Path); s != nil {
+		s.KillAllPipelineHeads()
 	}
 }
 
@@ -118,6 +155,9 @@ func (t *ClientTracker) run() {
 
 		case client := <-t.removeChan:
 			t.handleRemoveClient(client)
+
+		case client := <-t.preloadDone:
+			t.handlePreloadDone(client)
 		}
 	}
 }

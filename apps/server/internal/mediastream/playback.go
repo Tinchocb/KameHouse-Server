@@ -19,6 +19,9 @@ import (
 
 var attachmentSemaphore = make(chan struct{}, 2)
 
+// preloadClientID is the tracker client used by the zero-latency preload.
+const preloadClientID = "preload-client"
+
 const (
 	StreamTypeTranscode StreamType = "transcode" // On-the-fly transcoding
 	StreamTypeOptimized StreamType = "optimized" // Pre-transcoded
@@ -181,7 +184,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 	}
 
 	// Zero Latency Next: Pre-transcode and cache the first N segments (video and audio) of the next episode in the background.
-	if ret.StreamType == StreamTypeTranscode && p.repository.transcoder.IsPresent() {
+	if _, hasTranscoder := p.repository.getTranscoder(); ret.StreamType == StreamTypeTranscode && hasTranscoder {
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
@@ -191,12 +194,15 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 			if !p.repository.IsInitialized() {
 				return
 			}
-			tc, ok := p.repository.transcoder.Get()
+			tc, ok := p.repository.getTranscoder()
 			if !ok || tc == nil {
 				return
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 			defer cancel()
+			// Stop the heads the preload spawned once it is done (each head
+			// otherwise keeps encoding up to 100 segments of this episode).
+			defer tc.PreloadDone(preloadClientID)
 
 			preloadSegments := 3
 			settingsOpt := p.repository.GetSettings()
@@ -209,7 +215,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 			p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Pre-transcoding video segments for zero-latency start")
 			for i := 0; i < preloadSegments; i++ {
-				_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", int32(i), "preload-client")
+				_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", int32(i), preloadClientID)
 			}
 
 			if len(ret.MediaInfo.Audios) > 0 {
@@ -271,7 +277,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 				p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Int32("audioIndex", defaultAudioIdx).Msg("mediastream: Pre-transcoding audio segments for zero-latency start")
 				for i := 0; i < preloadSegments; i++ {
-					_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, int32(i), "preload-client")
+					_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, int32(i), preloadClientID)
 				}
 			}
 			p.logger.Info().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Finished proactive pre-transcoding of segments")

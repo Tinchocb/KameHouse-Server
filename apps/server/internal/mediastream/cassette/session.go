@@ -99,25 +99,11 @@ func (s *Session) GetVideoIndex(q Quality, token string) (string, error) {
 
 // GetVideoSegment returns the path to a video segment, blocking until ready
 func (s *Session) GetVideoSegment(ctx context.Context, q Quality, seg int32) (string, error) {
-	// The timeout is bounded by the pipeline constraints, but the request controls early cancellation.
-	type result struct {
-		path string
-		err  error
-	}
-	ch := make(chan result, 1)
-
-	go func() {
-		p := s.getVideoPipeline(q)
-		path, err := p.GetSegment(ctx, seg)
-		ch <- result{path, err}
-	}()
-
-	select {
-	case r := <-ch:
-		return r.path, r.err
-	case <-ctx.Done():
-		return "", fmt.Errorf("cassette: context canceled waiting for video segment %d (%s)", seg, q)
-	}
+	// Pipeline.GetSegment already honours ctx (WaitFor + killAllHeads on
+	// disconnect), so call it directly instead of leaving a detached goroutine
+	// running the encode after the client has gone away.
+	p := s.getVideoPipeline(q)
+	return p.GetSegment(ctx, seg)
 }
 
 // GetAudioIndex returns the hls variant playlist for an audio track
@@ -351,22 +337,29 @@ func (s *Session) Kill() {
 	s.killAllPipelines()
 }
 
-// killAllPipelines snapshots the pipelines under their locks, then runs the
+// killAllPipelines detaches the pipelines under their locks, then runs the
 // blocking Pipeline.Kill (which waits for ffmpeg to exit) OUTSIDE the locks.
 // Holding videosMu/audiosMu across that wait is what lets a single slow ffmpeg
 // teardown stall every other pipeline access for the file.
+//
+// The pipelines are removed from the maps (as killQualityIfDead/killAudioIfDead
+// do) because a killed Pipeline has a cancelled ctx and can never run a head
+// again: a session reaped by the tracker stays in Cassette.sessions for a
+// cooldown, and a client coming back during it must get fresh pipelines.
 func (s *Session) killAllPipelines() {
 	s.videosMu.Lock()
 	videos := make([]*Pipeline, 0, len(s.videos))
-	for _, p := range s.videos {
+	for q, p := range s.videos {
 		videos = append(videos, p)
+		delete(s.videos, q)
 	}
 	s.videosMu.Unlock()
 
 	s.audiosMu.Lock()
 	audios := make([]*Pipeline, 0, len(s.audios))
-	for _, p := range s.audios {
+	for idx, p := range s.audios {
 		audios = append(audios, p)
+		delete(s.audios, idx)
 	}
 	s.audiosMu.Unlock()
 

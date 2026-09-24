@@ -34,7 +34,9 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 		return errors.New("module not initialized")
 	}
 
-	if !r.TranscoderIsInitialized() {
+	// Grab the engine once: it can be swapped by a settings change mid-request.
+	tc, ok := r.getTranscoder()
+	if !ok {
 		r.wsEventManager.SendEvent(events.MediastreamShutdownStream, "Transcoder not initialized")
 		return errors.New("transcoder not initialized")
 	}
@@ -50,7 +52,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 	}
 
 	if path == "master.m3u8" {
-		ret, err := r.transcoder.MustGet().GetMaster(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientID, "")
+		ret, err := tc.GetMaster(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientID, "")
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Msg("mediastream: GetMaster failed")
 			return err
@@ -73,7 +75,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetVideoIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, clientID, "")
+		ret, err := tc.GetVideoIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, clientID, "")
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Str("quality", split[0]).Msg("mediastream: GetVideoIndex failed")
 			return err
@@ -96,7 +98,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetAudioIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientID, "")
+		ret, err := tc.GetAudioIndex(mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientID, "")
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Str("audio", split[1]).Msg("mediastream: GetAudioIndex failed")
 			return err
@@ -124,7 +126,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetVideoSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, segment, clientID)
+		ret, err := tc.GetVideoSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, segment, clientID)
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Str("quality", split[0]).Int32("segment", segment).Msg("mediastream: GetVideoSegment failed")
 			return segmentHTTPError(err)
@@ -153,7 +155,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		ret, err := r.transcoder.MustGet().GetAudioSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), segment, clientID)
+		ret, err := tc.GetAudioSegment(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), segment, clientID)
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Str("audio", split[1]).Int32("segment", segment).Msg("mediastream: GetAudioSegment failed")
 			return segmentHTTPError(err)
@@ -220,14 +222,15 @@ func (r *Repository) ShutdownTranscodeStream(clientID string) {
 		return
 	}
 
-	if !r.TranscoderIsInitialized() {
+	tc, ok := r.getTranscoder()
+	if !ok {
 		return
 	}
 
 	r.logger.Warn().Str("client_id", clientID).Msg("mediastream: Received shutdown transcode stream request")
 
 	r.playbackManager.clientMediaContainers.Delete(clientID)
-	r.transcoder.MustGet().RemoveClient(clientID)
+	tc.RemoveClient(clientID)
 
 	// Send event only to the requesting client
 	if clientID != "" {

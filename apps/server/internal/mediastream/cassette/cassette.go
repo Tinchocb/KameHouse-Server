@@ -312,3 +312,9 @@ func (c *Cassette) GetAudioSegment(
 func (c *Cassette) RemoveClient(client string) {
 	c.tracker.RemoveClient(client)
 }
+
+// PreloadDone stops the encoders left running by a background preload client
+// once it has fetched the segments it wanted.
+func (c *Cassette) PreloadDone(client string) {
+	c.tracker.PreloadDone(client)
+}

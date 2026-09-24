@@ -38,6 +38,10 @@ type (
 		database           *db.Database
 		warmingActive      atomic.Bool // guards WarmMediaInfo against overlapping runs
 		settingsMu         sync.RWMutex
+		// modulesMu guards transcoder and preTranscoder. They are read by every
+		// HLS request while initializeTranscoder/initializePreTranscoder swap
+		// them, so they must never be touched directly — use the accessors.
+		modulesMu sync.RWMutex
 	}
 
 	NewRepositoryOptions struct {
@@ -76,12 +80,37 @@ func (r *Repository) GetSettings() mo.Option[*models.MediastreamSettings] {
 	return r.settings
 }
 
+// getTranscoder returns the real-time transcoder, if it is running.
+func (r *Repository) getTranscoder() (*cassette.Cassette, bool) {
+	r.modulesMu.RLock()
+	defer r.modulesMu.RUnlock()
+	return r.transcoder.Get()
+}
+
+// swapTranscoder installs next and returns the previous transcoder, if any.
+func (r *Repository) swapTranscoder(next mo.Option[*cassette.Cassette]) mo.Option[*cassette.Cassette] {
+	r.modulesMu.Lock()
+	defer r.modulesMu.Unlock()
+	prev := r.transcoder
+	r.transcoder = next
+	return prev
+}
+
+// swapPreTranscoder installs next and returns the previous manager, if any.
+func (r *Repository) swapPreTranscoder(next mo.Option[*pretranscode.Manager]) mo.Option[*pretranscode.Manager] {
+	r.modulesMu.Lock()
+	defer r.modulesMu.Unlock()
+	prev := r.preTranscoder
+	r.preTranscoder = next
+	return prev
+}
+
 func (r *Repository) OnCleanup() {
-	if r.transcoder.IsPresent() {
-		r.transcoder.MustGet().Destroy()
+	if tc, ok := r.swapTranscoder(mo.None[*cassette.Cassette]()).Get(); ok {
+		tc.Destroy()
 	}
-	if r.preTranscoder.IsPresent() {
-		r.preTranscoder.MustGet().Stop()
+	if m, ok := r.swapPreTranscoder(mo.None[*pretranscode.Manager]()).Get(); ok {
+		m.Stop()
 	}
 }
 
@@ -137,9 +166,8 @@ func (r *Repository) PreTranscodeDir() string {
 // previous manager is stopped first so a settings change doesn't leave orphan
 // ffmpeg processes writing to the old directory.
 func (r *Repository) initializePreTranscoder(settings *models.MediastreamSettings) {
-	if r.preTranscoder.IsPresent() {
-		r.preTranscoder.MustGet().Stop()
-		r.preTranscoder = mo.None[*pretranscode.Manager]()
+	if prev, ok := r.swapPreTranscoder(mo.None[*pretranscode.Manager]()).Get(); ok {
+		prev.Stop()
 	}
 
 	if !settings.PreTranscodeEnabled {
@@ -170,20 +198,22 @@ func (r *Repository) initializePreTranscoder(settings *models.MediastreamSetting
 	})
 	m.Start()
 
-	r.preTranscoder = mo.Some(m)
+	r.swapPreTranscoder(mo.Some(m))
 }
 
 // PreTranscoder returns the pre-transcode manager, present only while the
 // feature is enabled in settings.
 func (r *Repository) PreTranscoder() (*pretranscode.Manager, bool) {
+	r.modulesMu.RLock()
+	defer r.modulesMu.RUnlock()
 	return r.preTranscoder.Get()
 }
 
 // TranscoderStats returns the metrics from the real-time transcoder engine,
 // or false if the engine is dormant/disabled.
 func (r *Repository) TranscoderStats() (cassette.GovernorStats, bool) {
-	if r.transcoder.IsPresent() {
-		return r.transcoder.MustGet().GovernorStats(), true
+	if tc, ok := r.getTranscoder(); ok {
+		return tc.GovernorStats(), true
 	}
 	return cassette.GovernorStats{}, false
 }
@@ -321,7 +351,8 @@ func (r *Repository) ActiveVideoFileHashes() map[string]struct{} {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (r *Repository) TranscoderIsInitialized() bool {
-	return r.IsInitialized() && r.transcoder.IsPresent()
+	_, ok := r.getTranscoder()
+	return r.IsInitialized() && ok
 }
 
 // RequestTranscodeStream builds a transcode media container. When force is true the
@@ -344,9 +375,9 @@ func (r *Repository) RequestTranscodeStream(filepath string, clientID string, fo
 	// whole request. The expensive newMediaContainer runs lock-free (deduped by
 	// singleflight), so concurrent playback requests no longer serialize behind a
 	// global mutex or each other's ffprobe.
-	if !r.transcoder.IsPresent() {
+	if _, ok := r.getTranscoder(); !ok {
 		r.reqMu.Lock()
-		if !r.transcoder.IsPresent() { // double-check under the lock
+		if _, ok := r.getTranscoder(); !ok { // double-check under the lock
 			settings := r.GetSettings()
 			if ok := r.initializeTranscoder(settings, force); !ok {
 				r.reqMu.Unlock()
@@ -377,9 +408,9 @@ func (r *Repository) RequestPreloadTranscodeStream(filepath string, preferredAud
 		return errors.New("module not initialized")
 	}
 
-	if r.transcoder.IsAbsent() {
+	if _, ok := r.getTranscoder(); !ok {
 		r.reqMu.Lock()
-		if !r.transcoder.IsPresent() { // double-check under the lock
+		if _, ok := r.getTranscoder(); !ok { // double-check under the lock
 			settings := r.GetSettings()
 			if ok := r.initializeTranscoder(settings, false); !ok {
 				r.reqMu.Unlock()
@@ -417,9 +448,9 @@ func (r *Repository) RequestDirectPlay(filepath string, clientID string, caps *C
 	// transcoder engine may be dormant when TranscodeEnabled=false — serving that
 	// playlist with a dead transcoder would guarantee a black screen. Initialize it
 	// on-demand with force=true: the server, not the user, decided direct is impossible.
-	if ret != nil && ret.StreamType == StreamTypeTranscode && !r.transcoder.IsPresent() {
+	if _, ok := r.getTranscoder(); ret != nil && ret.StreamType == StreamTypeTranscode && !ok {
 		r.reqMu.Lock()
-		if !r.transcoder.IsPresent() { // double-check under the lock
+		if _, ok := r.getTranscoder(); !ok { // double-check under the lock
 			settings := r.GetSettings()
 			if ok := r.initializeTranscoder(settings, true); !ok {
 				r.logger.Error().Str("filepath", filepath).Msg("mediastream: Direct→transcode fallback could not initialize the transcoder on-demand")
@@ -480,13 +511,10 @@ func (r *Repository) RequestPreloadOptimizedStream(filepath string) (err error) 
 // the setting, as long as ffmpeg and the temp dir are available. Constructing the engine is
 // cheap — no ffmpeg process runs until a segment is actually requested.
 func (r *Repository) initializeTranscoder(settings mo.Option[*models.MediastreamSettings], force bool) bool {
-	// Destroy the old transcoder if it exists
-	if r.transcoder.IsPresent() {
-		tc, _ := r.transcoder.Get()
-		tc.Destroy()
+	// Unpublish and destroy the old transcoder if it exists
+	if prev, ok := r.swapTranscoder(mo.None[*cassette.Cassette]()).Get(); ok {
+		prev.Destroy()
 	}
-
-	r.transcoder = mo.None[*cassette.Cassette]()
 
 	// If the transcoder is not enabled and this isn't an explicit (forced) request,
 	// don't initialize the transcoder.
@@ -495,8 +523,12 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 		return false
 	}
 
+	r.settingsMu.RLock()
+	transcodeDir := r.transcodeDir
+	r.settingsMu.RUnlock()
+
 	// If the temp directory is not set, don't initialize the transcoder
-	if r.transcodeDir == "" {
+	if transcodeDir == "" {
 		r.logger.Error().Msg("mediastream: Transcode directory not set, could not initialize transcoder")
 		return false
 	}
@@ -508,7 +540,7 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 		FfmpegPath:            settings.MustGet().FfmpegPath,
 		FfprobePath:           settings.MustGet().FfprobePath,
 		HwAccelCustomSettings: settings.MustGet().TranscodeHwAccelCustomSettings,
-		TempOutDir:            r.transcodeDir,
+		TempOutDir:            transcodeDir,
 		MaxConcurrency:        settings.MustGet().TranscodeThreads,
 	}
 
@@ -521,7 +553,11 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 	r.playbackManager.mediaContainers.Clear()
 
 	r.logger.Info().Msg("mediastream: Transcoder module initialized")
-	r.transcoder = mo.Some(tc)
+	// initializeTranscoder is not always called under reqMu (InitializeModules),
+	// so a concurrent init may have published its own engine meanwhile.
+	if prev, ok := r.swapTranscoder(mo.Some(tc)).Get(); ok && prev != tc {
+		prev.Destroy()
+	}
 
 	return true
 }

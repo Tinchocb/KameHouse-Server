@@ -779,6 +779,7 @@ func (p *Pipeline) readSegments(
 				_, _ = stdin.Write([]byte("q\n"))
 				_ = stdin.Close()
 				_, _ = io.Copy(io.Discard, stdout)
+				_ = stdout.Close()
 			}()
 		}
 
@@ -803,7 +804,13 @@ func (p *Pipeline) readSegments(
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
+	// cmd.Wait (reapProcess) also closes the pipe; closing it here makes the
+	// ownership explicit and is a no-op if Wait got there first.
+	_ = stdout.Close()
+
+	// os.ErrClosed is expected when reapProcess' cmd.Wait closes the pipe
+	// under us after ffmpeg is killed; don't report it as an error.
+	if err := scanner.Err(); err != nil && !errors.Is(err, os.ErrClosed) {
 		p.logger.Error().Err(err).Msg("cassette: scanner error during segment read")
 	}
 }
