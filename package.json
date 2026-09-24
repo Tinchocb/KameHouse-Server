@@ -8,6 +8,7 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
+    "prepare": "node -e \"try{require('child_process').execSync('git config core.hooksPath .githooks',{stdio:'ignore'})}catch{}\"",
     "dev:web": "pnpm --filter kamehouse-web dev",
     "dev:desktop": "concurrently -k -n web,app -c cyan,green \"pnpm dev:web\" \"pnpm --filter kamehouse-desktop dev\"",
     "build:server:dev": "node scripts/build-server.mjs --dev",
@@ -18,9 +19,10 @@
     "build:desktop:dev": "pnpm build:server:dev && pnpm --filter kamehouse-desktop build",
     "build:all": "pnpm build:web && pnpm build:desktop",
     "codegen": "node scripts/run-codegen.mjs",
-    "codegen:check": "node scripts/run-codegen.mjs && git diff --exit-code",
+    "codegen:check": "node scripts/verify.mjs codegen",
     "clean": "node -e \"const {rimrafSync}=require('rimraf');rimrafSync('node_modules');rimrafSync('apps/*/node_modules');\"",
-    "clean:all": "node -e \"const {rimrafSync}=require('rimraf');rimrafSync('node_modules');rimrafSync('apps/*/node_modules');rimrafSync('apps/*/dist');rimrafSync('apps/*/out');rimrafSync('apps/desktop/src-tauri/target');rimrafSync('apps/desktop/src-tauri/binaries');rimrafSync('apps/server/kamehouse.exe');\""
+    "clean:all": "node -e \"const {rimrafSync}=require('rimraf');rimrafSync('node_modules');rimrafSync('apps/*/node_modules');rimrafSync('apps/*/dist');rimrafSync('apps/*/out');rimrafSync('apps/desktop/src-tauri/target');rimrafSync('apps/desktop/src-tauri/binaries');rimrafSync('apps/server/kamehouse.exe');\"",
+    "verify": "node scripts/verify.mjs all"
   },
   "devDependencies": {
     "concurrently": "^10.0.3",

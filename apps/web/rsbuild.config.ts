@@ -164,12 +164,8 @@ const config: RsbuildConfig = {
                 chunkIds: !!process.env.RSDOCTOR ? "named" : undefined,
             },
             plugins: [
-                TanStackRouterRspack({
-                    routesDirectory: "./src/routes",
-                    generatedRouteTree: "./src/routeTree.gen.ts",
-                    autoCodeSplitting: true,
-                    routeFileIgnorePattern: "((^|\\.)(components|hooks|helpers|mappers|types|utils|tabs?)|.*-tab)\\.(ts|tsx)$",
-                }),
+                // Opciones en tsr.config.json (compartidas con scripts/verify.mjs).
+                TanStackRouterRspack(),
                 process.env.NODE_ENV === 'production' && getPwaPlugin(),
                 process.env.RSDOCTOR && new RsdoctorRspackPlugin({}),
             ].filter(Boolean),

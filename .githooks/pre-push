@@ -1,0 +1,3 @@
+#!/bin/sh
+# Instalado por `pnpm install` (script prepare → core.hooksPath=.githooks).
+exec node scripts/verify.mjs pre-push
