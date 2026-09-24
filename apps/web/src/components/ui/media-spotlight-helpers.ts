@@ -246,7 +246,7 @@ export function resolveRangeDynamicThumbnail({
     startEp: number
     endEp: number
     iconicEp?: number
-    episodes?: import("@/api/generated/types").Anime_Episode[]
+    episodes?: import("@/api/generated/types").Anime_Episode[] | null
     serverBase?: string
     fallbackUrl?: string
 }): string | null {
@@ -305,7 +305,7 @@ export function resolveSagaDynamicThumbnail({
     fallbackUrl,
 }: {
     saga: import("@/lib/config/dragonball_sagas").SagaDefinition
-    episodes?: import("@/api/generated/types").Anime_Episode[]
+    episodes?: import("@/api/generated/types").Anime_Episode[] | null
     serverBase?: string
     fallbackUrl?: string
 }): string | null {

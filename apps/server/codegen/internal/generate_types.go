@@ -184,7 +184,7 @@ func GenerateTypescriptFile(docsFilePath string, publicStructsFilePath string, o
 		// Write the shared structs first
 		for _, goStruct := range structs {
 
-			writeTypescriptType(file, goStruct, writtenTypes)
+			writeTypescriptType(file, goStruct, writtenTypes, goStructsMap)
 
 		}
 
@@ -250,9 +250,9 @@ func getReferencedStructs(goStruct *GoStruct, referencedStructs map[string]*GoSt
 	}
 }
 
-func writeTypescriptType(f *os.File, goStruct *GoStruct, writtenTypes map[string]*GoStruct) {
+func writeTypescriptType(f *os.File, goStruct *GoStruct, writtenTypes map[string]*GoStruct, goStructsMap map[string]*GoStruct) {
 	f.WriteString("/**\n")
-	f.WriteString(fmt.Sprintf(" * - Filepath: %s\n", strings.TrimPrefix(goStruct.Filepath, "../")))
+	f.WriteString(fmt.Sprintf(" * - Filepath: %s\n", strings.TrimPrefix(filepath.ToSlash(goStruct.Filepath), "../")))
 	f.WriteString(fmt.Sprintf(" * - Filename: %s\n", goStruct.Filename))
 	f.WriteString(fmt.Sprintf(" * - Package: %s\n", goStruct.Package))
 	if len(goStruct.Comments) > 0 {
@@ -277,8 +277,9 @@ func writeTypescriptType(f *os.File, goStruct *GoStruct, writtenTypes map[string
 				if field.JsonName == "" || !field.Public {
 					continue
 				}
+				optional, nullable := tsFieldModifiers(field, goStructsMap)
 				fieldNameSuffix := ""
-				if !field.Required {
+				if optional {
 					fieldNameSuffix = "?"
 				}
 
@@ -292,6 +293,9 @@ func writeTypescriptType(f *os.File, goStruct *GoStruct, writtenTypes map[string
 
 				typeText := field.TypescriptType
 				typeText = strings.ReplaceAll(typeText, "RawMessage", "Record<string, any>")
+				if nullable {
+					typeText += " | null"
+				}
 
 				f.WriteString(fmt.Sprintf("    %s%s: %s\n", field.JsonName, fieldNameSuffix, typeText))
 			}
@@ -319,6 +323,33 @@ func writeTypescriptType(f *os.File, goStruct *GoStruct, writtenTypes map[string
 
 	// Add the struct to the written types
 	writtenTypes[goStruct.Package+"."+goStruct.Name] = goStruct
+}
+
+// tsFieldModifiers traduce la semántica de encoding/json a TypeScript:
+//   - omitempty/omitzero                      → `campo?: T` (la clave puede faltar)
+//   - puntero/slice/map/RawMessage sin omitempty → `campo: T | null` (nil se emite como null)
+//   - alias local de slice/map sin omitempty  → `campo: T | null`
+//   - struct o primitivo conocido             → `campo: T`
+//   - tipo externo desconocido (sql.Null*, …) → `campo?: T` (conservador, como antes)
+func tsFieldModifiers(field *GoStructField, goStructsMap map[string]*GoStruct) (optional bool, nullable bool) {
+	if field.OmitEmpty {
+		return true, false
+	}
+	if field.Nilable {
+		return false, true
+	}
+	if field.GoType == "time.Time" || field.GoType == "time.Duration" {
+		return false, false
+	}
+	if field.UsedStructType != "" {
+		if used, ok := goStructsMap[field.UsedStructType]; ok {
+			if used.AliasOf != nil && (strings.HasPrefix(used.AliasOf.GoType, "[]") || strings.HasPrefix(used.AliasOf.GoType, "map[")) {
+				return false, true
+			}
+			return false, false
+		}
+	}
+	return !field.Required, false
 }
 
 func getUnformattedGoType(goType string) string {

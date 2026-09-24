@@ -42,8 +42,8 @@ export type GlobalSearchResultItem =
               posterImage?: string
               description?: string
               score?: number
-          }
-          vibes?: string[]
+          } | null
+          vibes?: string[] | null
           [key: string]: unknown
       }
     | {

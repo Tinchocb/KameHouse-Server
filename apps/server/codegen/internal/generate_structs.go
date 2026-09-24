@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -46,7 +47,12 @@ type GoStructField struct {
 	// e.g. GoType = map[string]models.User => TypescriptType = User => UsedStructType = models.User
 	UsedStructType string `json:"usedStructName,omitempty"`
 	// If no 'omitempty' and not a pointer
-	Required bool     `json:"required"`
+	Required bool `json:"required"`
+	// Tag json con omitempty/omitzero: la clave puede no venir.
+	OmitEmpty bool `json:"omitEmpty,omitempty"`
+	// Puntero, slice, map o json.RawMessage: encoding/json lo serializa como
+	// null cuando es nil (salvo que OmitEmpty lo omita).
+	Nilable  bool     `json:"nilable,omitempty"`
 	Public   bool     `json:"public"`
 	Comments []string `json:"comments"`
 }
@@ -254,7 +260,7 @@ func getGoStructsFromFile(path string, info os.FileInfo) (structs []*GoStruct, e
 			mapType, ok := typeSpec.Type.(*ast.MapType)
 			if ok {
 				goStruct := &GoStruct{
-					Filepath:      path,
+					Filepath:      filepath.ToSlash(path),
 					Filename:      info.Name(),
 					Name:          typeSpec.Name.Name,
 					FormattedName: getTypePrefix(packageName) + typeSpec.Name.Name,
@@ -277,7 +283,7 @@ func getGoStructsFromFile(path string, info os.FileInfo) (structs []*GoStruct, e
 			sliceType, ok := typeSpec.Type.(*ast.ArrayType)
 			if ok {
 				goStruct := &GoStruct{
-					Filepath:      path,
+					Filepath:      filepath.ToSlash(path),
 					Filename:      info.Name(),
 					Name:          typeSpec.Name.Name,
 					FormattedName: getTypePrefix(packageName) + typeSpec.Name.Name,
@@ -350,17 +356,8 @@ func goStructFromStruct(path string, info os.FileInfo, genDecl *ast.GenDecl, nam
 			}
 		}
 
-		required := true
-		if field.Tag != nil {
-			tag := reflect.StructTag(field.Tag.Value[1 : len(field.Tag.Value)-1])
-			jsonTag := tag.Get("json")
-			if jsonTag != "" {
-				jsonParts := strings.Split(jsonTag, ",")
-				if len(jsonParts) > 1 && jsonParts[1] == "omitempty" {
-					required = false
-				}
-			}
-		}
+		omitEmpty := jsonFieldOmitEmpty(field)
+		required := !omitEmpty
 		switch field.Type.(type) {
 		case *ast.StarExpr, *ast.ArrayType, *ast.MapType, *ast.SelectorExpr:
 			required = false
@@ -378,6 +375,8 @@ func goStructFromStruct(path string, info os.FileInfo, genDecl *ast.GenDecl, nam
 			TypescriptType:     tsType,
 			UsedTypescriptType: fieldTypeToUsedTypescriptType(tsType),
 			Required:           required,
+			OmitEmpty:          omitEmpty,
+			Nilable:            isNilableFieldType(field.Type),
 			Public:             field.Names[0].IsExported(),
 			UsedStructType:     usedStructType,
 			Comments:           comments,
@@ -705,8 +704,22 @@ func jsonFieldOmitEmpty(field *ast.Field) bool {
 		jsonTag := tag.Get("json")
 		if jsonTag != "" {
 			jsonParts := strings.Split(jsonTag, ",")
-			return len(jsonParts) > 1 && jsonParts[1] == "omitempty"
+			return slices.Contains(jsonParts[1:], "omitempty") || slices.Contains(jsonParts[1:], "omitzero")
 		}
+	}
+	return false
+}
+
+// isNilableFieldType indica si encoding/json puede emitir `null` para el campo:
+// punteros, slices (incluido []byte), maps y json.RawMessage con valor nil.
+func isNilableFieldType(expr ast.Expr) bool {
+	switch t := expr.(type) {
+	case *ast.StarExpr, *ast.ArrayType, *ast.MapType:
+		return true
+	case *ast.SelectorExpr:
+		return t.Sel.Name == "RawMessage"
+	case *ast.Ident:
+		return t.Name == "RawMessage"
 	}
 	return false
 }

@@ -26,9 +26,9 @@ interface LoreWikiCharacter {
 
 interface CharacterEdge {
     node?: {
-        name?: { full?: string }
-        image?: { large?: string }
-    }
+        name?: { full?: string } | null
+        image?: { large?: string } | null
+    } | null
 }
 
 /** Forma del JSON servido por /api/v1/lore/dragonball (solo la parte que consume la UI). */
@@ -38,7 +38,7 @@ export interface DragonBallLoreData {
 
 interface CharacterDetailModalProps {
     characterName: string | null
-    entry: { media?: { characters?: { edges?: CharacterEdge[] } } } | null | undefined
+    entry: { media?: { characters?: { edges?: CharacterEdge[] | null } | null } | null } | null | undefined
     loreData: DragonBallLoreData | null | undefined
     onClose: () => void
 }

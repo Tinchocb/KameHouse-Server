@@ -137,7 +137,7 @@ export interface PlayerCore {
         chapters: { startTime: number; endTime: number; name: string; type?: string }[]
         activeChapter: string | null
         absoluteLanUrl?: string
-        serverIPs?: string[]
+        serverIPs?: string[] | null
         serverPort?: number
     }
     actions: {

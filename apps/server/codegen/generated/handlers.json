@@ -1401,6 +1401,28 @@
     }
   },
   {
+    "name": "serveDriveThumbnail",
+    "trimmedName": "serveDriveThumbnail",
+    "comments": [
+      "serveDriveThumbnail serves Drive's own preview frame for an indexed gdrive:// file,",
+      "caching it on disk and in memory like locally extracted thumbnails.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_thumbnail.go",
+    "filename": "drive_thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleOpenInExplorer",
     "trimmedName": "OpenInExplorer",
     "comments": [
@@ -2243,6 +2265,51 @@
       "methods": [
         "POST"
       ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "localDiskDisconnected",
+    "trimmedName": "localDiskDisconnected",
+    "comments": [
+      "localDiskDisconnected indica si el usuario desconectó el disco local",
+      "(library.disableLocalScanning): la biblioteca pasa a ser solo Google Drive.",
+      ""
+    ],
+    "filepath": "internal/handlers/local_disk.go",
+    "filename": "local_disk.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "visibleLocalFiles",
+    "trimmedName": "visibleLocalFiles",
+    "comments": [
+      "visibleLocalFiles oculta los archivos del disco local cuando está desconectado.",
+      "Solo filtra la vista: las filas siguen en la base y vuelven al reconectar. No usar",
+      "el resultado para escribir con InsertLocalFiles, que borra lo que no recibe.",
+      ""
+    ],
+    "filepath": "internal/handlers/local_disk.go",
+    "filename": "local_disk.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",

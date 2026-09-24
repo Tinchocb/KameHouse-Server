@@ -118,9 +118,11 @@ codegen-check:
 	@echo "🔨 Running codegen..."
 	cd codegen && $(GO) run main.go
 	@echo "🔍 Checking for drift..."
-	@if ! git diff --quiet --exit-code; then \
+	@# git status (no git diff) para detectar también archivos nuevos sin trackear,
+	@# p.ej. splits en ../web/src/api/generated/types/ (types.ts es el único canónico).
+	@if [ -n "$$(git status --porcelain -- codegen/generated ../web/src/api/generated)" ]; then \
 		echo "❌ Codegen drift detected! Generated files changed."; \
-		git diff --stat; \
+		git status --short -- codegen/generated ../web/src/api/generated; \
 		exit 1; \
 	fi
 	@echo "✅ Codegen up to date"

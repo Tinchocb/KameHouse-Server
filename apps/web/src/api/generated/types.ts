@@ -31,13 +31,13 @@ export type Anime_ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL"
  */
 export type Anime_Entry = {
     mediaId: number
-    media?: Models_LibraryMedia
-    listData?: Anime_EntryListData
-    libraryData?: Anime_EntryLibraryData
+    media: Models_LibraryMedia | null
+    listData: Anime_EntryListData | null
+    libraryData: Anime_EntryLibraryData | null
     downloadInfo?: Anime_EntryDownloadInfo
-    episodes?: Array<Anime_Episode>
-    nextEpisode?: Anime_Episode
-    localFiles?: Array<Anime_LocalFile>
+    episodes: Array<Anime_Episode> | null
+    nextEpisode: Anime_Episode | null
+    localFiles: Array<Anime_LocalFile> | null
     anidbId: number
     malId: number
     currentEpisodeCount: number
@@ -53,7 +53,7 @@ export type Anime_Entry = {
 export type Anime_EntryDownloadEpisode = {
     episodeNumber: number
     aniDBEpisode: string
-    episode?: Anime_Episode
+    episode: Anime_Episode | null
 }
 
 /**
@@ -62,7 +62,7 @@ export type Anime_EntryDownloadEpisode = {
  * - Package: anime
  */
 export type Anime_EntryDownloadInfo = {
-    episodesToDownload?: Array<Anime_EntryDownloadEpisode>
+    episodesToDownload: Array<Anime_EntryDownloadEpisode> | null
     canBatch: boolean
     batchAll: boolean
     hasInaccurateSchedule: boolean
@@ -122,7 +122,7 @@ export type Anime_Episode = {
      * Usually the same as EpisodeNumber, unless there is a discrepancy between platform and metadata provider
      */
     progressNumber: number
-    localFile?: Anime_LocalFile
+    localFile: Anime_LocalFile | null
     /**
      * Multiple versions of the same episode
      */
@@ -134,11 +134,11 @@ export type Anime_Episode = {
     /**
      * (image, airDate, length, summary, overview)
      */
-    episodeMetadata?: Anime_EpisodeMetadata
+    episodeMetadata: Anime_EpisodeMetadata | null
     /**
      * (episode, aniDBEpisode, type...)
      */
-    fileMetadata?: Anime_LocalFileMetadata
+    fileMetadata: Anime_LocalFileMetadata | null
     /**
      * No AniDB data
      */
@@ -162,8 +162,8 @@ export type Anime_Episode = {
  */
 export type Anime_EpisodeCollection = {
     hasMappingError: boolean
-    episodes?: Array<Anime_Episode>
-    metadata?: Metadata_AnimeMetadata
+    episodes: Array<Anime_Episode> | null
+    metadata: Metadata_AnimeMetadata | null
 }
 
 /**
@@ -187,7 +187,7 @@ export type Anime_EpisodeIntelligence = {
     /**
      * Emotional or thematic tags (e.g., "EPIC", "CHILL", "TEARS")
      */
-    vibes?: Array<string>
+    vibes: Array<string> | null
 }
 
 /**
@@ -216,13 +216,13 @@ export type Anime_EpisodeMetadata = {
  * - Package: anime
  */
 export type Anime_LibraryCollection = {
-    continueWatchingList?: Array<Anime_Episode>
-    lists?: Array<Anime_LibraryCollectionList>
-    unmatchedLocalFiles?: Array<Anime_LocalFile>
-    unmatchedGroups?: Array<Anime_UnmatchedGroup>
-    ignoredLocalFiles?: Array<Anime_LocalFile>
-    unknownGroups?: Array<Anime_UnknownGroup>
-    stats?: Anime_LibraryCollectionStats
+    continueWatchingList: Array<Anime_Episode> | null
+    lists: Array<Anime_LibraryCollectionList> | null
+    unmatchedLocalFiles: Array<Anime_LocalFile> | null
+    unmatchedGroups: Array<Anime_UnmatchedGroup> | null
+    ignoredLocalFiles: Array<Anime_LocalFile> | null
+    unknownGroups: Array<Anime_UnknownGroup> | null
+    stats: Anime_LibraryCollectionStats | null
     /**
      * Hydrated by the route handler
      */
@@ -235,7 +235,7 @@ export type Anime_LibraryCollection = {
  * - Package: anime
  */
 export type Anime_LibraryCollectionEntry = {
-    media?: Models_LibraryMedia
+    media: Models_LibraryMedia | null
     mediaId: number
     /**
      * For episode-specific swimlanes
@@ -248,19 +248,19 @@ export type Anime_LibraryCollectionEntry = {
     /**
      * Library data
      */
-    libraryData?: Anime_EntryLibraryData
+    libraryData: Anime_EntryLibraryData | null
     /**
      * Local list data
      */
-    listData?: Anime_EntryListData
+    listData: Anime_EntryListData | null
     /**
      * Emotional or thematic tags
      */
-    vibes?: Array<string>
+    vibes: Array<string> | null
     /**
      * AI-derived intelligence tags
      */
-    tags?: Array<string>
+    tags: Array<string> | null
     /**
      * Primary AI-derived vibe
      */
@@ -275,7 +275,7 @@ export type Anime_LibraryCollectionEntry = {
 export type Anime_LibraryCollectionList = {
     type: string
     status: string
-    entries?: Array<Anime_LibraryCollectionEntry>
+    entries: Array<Anime_LibraryCollectionEntry> | null
 }
 
 /**
@@ -298,8 +298,8 @@ export type Anime_LibraryCollectionStats = {
  * - Package: anime
  */
 export type Anime_MissingEpisodes = {
-    episodes?: Array<Anime_Episode>
-    silencedEpisodes?: Array<Anime_Episode>
+    episodes: Array<Anime_Episode> | null
+    silencedEpisodes: Array<Anime_Episode> | null
 }
 
 /**
@@ -311,7 +311,7 @@ export type Anime_ScheduleItem = {
     mediaId: number
     title: string
     time: string
-    dateTime?: string
+    dateTime: string
     image: string
     episodeNumber: number
     isMovie: boolean
@@ -324,9 +324,9 @@ export type Anime_ScheduleItem = {
  * - Package: anime
  */
 export type Anime_StreamCollection = {
-    continueWatchingList?: Array<Anime_Episode>
-    anime?: Array<Models_LibraryMedia>
-    listData?: Record<number, Anime_EntryListData>
+    continueWatchingList: Array<Anime_Episode> | null
+    anime: Array<Models_LibraryMedia> | null
+    listData: Record<number, Anime_EntryListData> | null
 }
 
 /**
@@ -336,7 +336,7 @@ export type Anime_StreamCollection = {
  */
 export type Anime_UnknownGroup = {
     mediaId: number
-    localFiles?: Array<Anime_LocalFile>
+    localFiles: Array<Anime_LocalFile> | null
 }
 
 /**
@@ -346,8 +346,8 @@ export type Anime_UnknownGroup = {
  */
 export type Anime_UnmatchedGroup = {
     dir: string
-    localFiles?: Array<Anime_LocalFile>
-    suggestions?: Array<Models_LibraryMedia>
+    localFiles: Array<Anime_LocalFile> | null
+    suggestions: Array<Models_LibraryMedia> | null
 }
 
 /**
@@ -360,7 +360,7 @@ export type Anime_UpcomingEpisode = {
     episodeNumber: number
     airingAt: number
     timeUntilAiring: number
-    baseAnime?: UnifiedMedia
+    baseAnime: UnifiedMedia | null
     episodeMetadata?: Anime_EpisodeMetadata
 }
 
@@ -370,7 +370,7 @@ export type Anime_UpcomingEpisode = {
  * - Package: anime
  */
 export type Anime_UpcomingEpisodes = {
-    episodes?: Array<Anime_UpcomingEpisode>
+    episodes: Array<Anime_UpcomingEpisode> | null
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -391,7 +391,7 @@ export type GovernorStats = {
     nvencCap: number
     totalLaunched: number
     totalCompleted: number
-    totalWaitTime?: number
+    totalWaitTime: number
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -421,7 +421,7 @@ export type Continuity_UpdateWatchHistoryItemOptions = {
 }
 
 /**
- * - Filepath: ..\internal\continuity\history.go
+ * - Filepath: internal/continuity/history.go
  * - Filename: history.go
  * - Package: continuity
  */
@@ -439,8 +439,8 @@ export type Continuity_WatchHistoryItem = {
     episodeNumber: number
     currentTime: number
     duration: number
-    timeAdded?: string
-    timeUpdated?: string
+    timeAdded: string
+    timeUpdated: string
 }
 
 /**
@@ -449,7 +449,7 @@ export type Continuity_WatchHistoryItem = {
  * - Package: continuity
  */
 export type Continuity_WatchHistoryItemResponse = {
-    item?: Continuity_WatchHistoryItem
+    item: Continuity_WatchHistoryItem | null
     found: boolean
 }
 
@@ -494,7 +494,7 @@ export type INTERNAL_FeatureKey = "ManageOfflineMode" |
 export type DB_BackupResult = {
     path: string
     sizeBytes: number
-    createdAt?: string
+    createdAt: string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -656,10 +656,10 @@ export type LocalFile = {
     fileHash?: string
     fileSize?: number
     fileModTime?: number
-    parsedInfo?: LocalFileParsedData
-    parsedFolderInfo?: Array<LocalFileParsedData>
+    parsedInfo: LocalFileParsedData | null
+    parsedFolderInfo: Array<LocalFileParsedData> | null
     embeddedMetadata?: LocalFileEmbeddedMetadata
-    metadata?: LocalFileMetadata
+    metadata: LocalFileMetadata | null
     technicalInfo?: FileTechnicalInfo
     locked: boolean
     /**
@@ -750,10 +750,10 @@ export type SagaDTO = {
      */
     isFiller: boolean
     canonStatus: string
-    antagonists?: Array<string>
-    keyEvents?: Array<string>
-    newCharacters?: Array<string>
-    keyCharacters?: Array<CharacterDTO>
+    antagonists: Array<string> | null
+    keyEvents: Array<string> | null
+    newCharacters: Array<string> | null
+    keyCharacters: Array<CharacterDTO> | null
     subSagas?: Array<SubSagaDTO>
 }
 
@@ -764,8 +764,8 @@ export type SagaDTO = {
  */
 export type ScanSummary = {
     id: string
-    groups?: Array<ScanSummaryGroup>
-    unmatchedFiles?: Array<ScanSummaryFile>
+    groups: Array<ScanSummaryGroup> | null
+    unmatchedFiles: Array<ScanSummaryFile> | null
 }
 
 /**
@@ -775,8 +775,8 @@ export type ScanSummary = {
  */
 export type ScanSummaryFile = {
     id: string
-    localFile?: LocalFile
-    logs?: Array<ScanSummaryLog>
+    localFile: LocalFile | null
+    logs: Array<ScanSummaryLog> | null
 }
 
 /**
@@ -786,7 +786,7 @@ export type ScanSummaryFile = {
  */
 export type ScanSummaryGroup = {
     id: string
-    files?: Array<ScanSummaryFile>
+    files: Array<ScanSummaryFile> | null
     mediaId: number
     mediaTitle: string
     mediaImage: string
@@ -802,8 +802,8 @@ export type ScanSummaryGroup = {
  * - Package: dto
  */
 export type ScanSummaryItem = {
-    createdAt?: string
-    scanSummary?: ScanSummary
+    createdAt: string
+    scanSummary: ScanSummary | null
 }
 
 /**
@@ -927,10 +927,10 @@ export type AdminLibraryStatsResponse = {
  */
 export type AdminTranscodeStatsResponse = {
     transcoderInitialized: boolean
-    governor?: GovernorStats
+    governor: GovernorStats
     preTranscodeQueue: number
     system: SystemStats
-    gpu?: GPUStats
+    gpu: GPUStats | null
 }
 
 /**
@@ -940,7 +940,7 @@ export type AdminTranscodeStatsResponse = {
  */
 export type BackgroundMusicScanResponse = {
     dir: string
-    tracks?: Array<BackgroundMusicTrack>
+    tracks: Array<BackgroundMusicTrack> | null
 }
 
 /**
@@ -1055,8 +1055,8 @@ export type DirectorySelectorResponse = {
     fullPath: string
     exists: boolean
     basePath: string
-    suggestions?: Array<DirectoryInfo>
-    Directories?: Array<DirectoryInfo>
+    suggestions: Array<DirectoryInfo> | null
+    Directories: Array<DirectoryInfo> | null
 }
 
 /**
@@ -1098,7 +1098,7 @@ export type MemoryStatsResponse = {
  *  NotificationList is the payload returned by the notifications endpoint.
  */
 export type NotificationList = {
-    notifications?: Array<Models_Notification>
+    notifications: Array<Models_Notification> | null
     unreadCount: number
 }
 
@@ -1116,13 +1116,13 @@ export type Status = {
     clientPlatform: string
     clientUserAgent: string
     dataDir: string
-    user?: User
-    settings?: Models_Settings
+    user: User | null
+    settings: Models_Settings | null
     version: string
     versionName: string
-    themeSettings?: Models_Theme
+    themeSettings: Models_Theme | null
     isOffline: boolean
-    mediastreamSettings?: Models_MediastreamSettings
+    mediastreamSettings: Models_MediastreamSettings | null
     /**
      * If true, a new screen will be displayed
      */
@@ -1131,12 +1131,12 @@ export type Status = {
      * The server is running as a desktop sidecar
      */
     isDesktopSidecar: boolean
-    featureFlags?: INTERNAL_FeatureFlags
-    disabledFeatures?: Array<INTERNAL_FeatureKey>
+    featureFlags: INTERNAL_FeatureFlags
+    disabledFeatures: Array<INTERNAL_FeatureKey> | null
     serverReady: boolean
     serverHasPassword: boolean
     showChangelogTour: string
-    serverIPs?: Array<string>
+    serverIPs: Array<string> | null
     serverPort: number
     /**
      * OS process id of the server; used by the desktop sidecar to reap orphans
@@ -1193,7 +1193,7 @@ export type ChronologyResponse = {
     completedMilestones: number
     progressPercentage: number
     nextMilestone?: TimelineMilestone
-    milestones?: Array<TimelineMilestone>
+    milestones: Array<TimelineMilestone> | null
 }
 
 /**
@@ -1220,7 +1220,7 @@ export type MediaCandidate = {
     /**
      * ["spa", "eng"]
      */
-    audioLangs?: Array<string>
+    audioLangs: Array<string> | null
     /**
      * "aac", "flac", "dts"
      */
@@ -1241,8 +1241,8 @@ export type MediaCandidate = {
  *  SelectionResult resultado de la selección inteligente.
  */
 export type SelectionResult = {
-    winner?: MediaCandidate
-    allCandidates?: Array<MediaCandidate>
+    winner: MediaCandidate | null
+    allCandidates: Array<MediaCandidate> | null
     totalScore: number
     reason: string
 }
@@ -1258,7 +1258,7 @@ export type SemanticEntity = {
     id: string
     name: string
     type: SemanticEntityType
-    keywords?: Array<string>
+    keywords: Array<string> | null
     mediaId: number
     tmdbId: number
     /**
@@ -1291,7 +1291,7 @@ export type SemanticEntityType = "CHARACTER" | "TRANSFORMATION" | "SAGA" | "MOVI
  *  SemanticSearchResult is the returned item matching user query.
  */
 export type SemanticSearchResult = {
-    entity?: SemanticEntity
+    entity: SemanticEntity | null
     score: number
     matchLabel: string
 }
@@ -1360,8 +1360,8 @@ export type TimelineMilestone = {
  * - Package: library_explorer
  */
 export type LibraryExplorer_FileTreeJSON = {
-    root?: LibraryExplorer_FileTreeNodeJSON
-    localFiles?: Record<string, LocalFile>
+    root: LibraryExplorer_FileTreeNodeJSON | null
+    localFiles: Record<string, LocalFile> | null
 }
 
 /**
@@ -1374,7 +1374,7 @@ export type LibraryExplorer_FileTreeNodeJSON = {
     path: string
     normalizedPath: string
     kind: LibraryExplorer_NodeKind
-    children?: Array<LibraryExplorer_FileTreeNodeJSON>
+    children: Array<LibraryExplorer_FileTreeNodeJSON> | null
     size?: number
     localFile?: LocalFile
     mediaIds?: Array<number>
@@ -1460,7 +1460,7 @@ export type Mediastream_MediaContainer = {
      * The relative endpoint to stream the media.
      */
     streamUrl: string
-    mediaInfo?: MediaInfo
+    mediaInfo: MediaInfo | null
 }
 
 /**
@@ -1500,12 +1500,12 @@ export type Metadata_AnimeMappings = {
  * - Package: metadata
  */
 export type Metadata_AnimeMetadata = {
-    titles?: Record<string, string>
+    titles: Record<string, string> | null
     description: string
-    episodes?: Record<string, Metadata_EpisodeMetadata>
+    episodes: Record<string, Metadata_EpisodeMetadata> | null
     episodeCount: number
     specialCount: number
-    mappings?: Metadata_AnimeMappings
+    mappings: Metadata_AnimeMappings | null
     status?: string
     rating?: string
     score?: number
@@ -1647,12 +1647,12 @@ export type MKVParser_Metadata = {
     timecodeScale: number
     muxingApp?: string
     writingApp?: string
-    tracks?: Array<MKVParser_TrackInfo>
-    videoTracks?: Array<MKVParser_TrackInfo>
-    audioTracks?: Array<MKVParser_TrackInfo>
-    subtitleTracks?: Array<MKVParser_TrackInfo>
-    chapters?: Array<MKVParser_ChapterInfo>
-    attachments?: Array<MKVParser_AttachmentInfo>
+    tracks: Array<MKVParser_TrackInfo> | null
+    videoTracks: Array<MKVParser_TrackInfo> | null
+    audioTracks: Array<MKVParser_TrackInfo> | null
+    subtitleTracks: Array<MKVParser_TrackInfo> | null
+    chapters: Array<MKVParser_ChapterInfo> | null
+    attachments: Array<MKVParser_AttachmentInfo> | null
     tags?: Record<string, Array<string>>
     /**
      * RFC 6381 codec string
@@ -1765,7 +1765,7 @@ export type Models_BgMusicTrack = {
 }
 
 /**
- * - Filepath: ..\internal\database\models\models.go
+ * - Filepath: internal/database/models/models.go
  * - Filename: models.go
  * - Package: models
  */
@@ -1786,8 +1786,8 @@ export type Models_EpisodeSkipTime = {
     source: string
     confidence: number
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
@@ -1804,8 +1804,8 @@ export type Models_GhostAssociatedMedia = {
     originalTitle: string
     confidence: number
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
@@ -1844,24 +1844,24 @@ export type Models_LibraryEpisode = {
      * Thumbnail path/URL
      */
     image: string
-    airDate?: string
+    airDate: string
     runtimeMinutes: number
     sagaName: string
     sagaId: string
-    tags?: Record<string, any>
+    tags: Record<string, any> | null
     dominantVibe: string
     suggestedSwimlane: string
     /**
      * JSON array of strings
      */
-    audioTracks?: Record<string, any>
+    audioTracks: Record<string, any> | null
     /**
      * JSON array of strings
      */
-    subtitleTracks?: Record<string, any>
+    subtitleTracks: Record<string, any> | null
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
@@ -1893,7 +1893,7 @@ export type Models_LibraryMedia = {
     /**
      * JSON array of strings
      */
-    synonyms?: Record<string, any>
+    synonyms: Record<string, any> | null
     description: string
     /**
      * Path or URL
@@ -1907,8 +1907,8 @@ export type Models_LibraryMedia = {
     anidbId: number
     myanimelistId: number
     seasonNumber: number
-    startDate?: string
-    endDate?: string
+    startDate: string
+    endDate: string
     year: number
     score: number
     rating: number
@@ -1916,11 +1916,11 @@ export type Models_LibraryMedia = {
     /**
      * JSON array of strings
      */
-    genres?: Record<string, any>
+    genres: Record<string, any> | null
     /**
      * JSON array of strings or objects
      */
-    tags?: Record<string, any>
+    tags: Record<string, any> | null
     dominantVibe: string
     suggestedSwimlane: string
     totalEpisodes: number
@@ -1928,11 +1928,11 @@ export type Models_LibraryMedia = {
     /**
      * JSON array of strings
      */
-    audioTracks?: Record<string, any>
+    audioTracks: Record<string, any> | null
     /**
      * JSON array of strings
      */
-    subtitleTracks?: Record<string, any>
+    subtitleTracks: Record<string, any> | null
     logoImage: string
     thumbImage: string
     clearArtImage: string
@@ -1941,8 +1941,8 @@ export type Models_LibraryMedia = {
     characters?: Models_LibraryMediaCharacterConnection
     watched?: boolean
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
@@ -1951,8 +1951,8 @@ export type Models_LibraryMedia = {
  * - Package: models
  */
 export type Models_LibraryMediaCharacter = {
-    name?: Models_LibraryMediaCharacterName
-    image?: Models_LibraryMediaCharacterImage
+    name: Models_LibraryMediaCharacterName | null
+    image: Models_LibraryMediaCharacterImage | null
 }
 
 /**
@@ -1961,7 +1961,7 @@ export type Models_LibraryMediaCharacter = {
  * - Package: models
  */
 export type Models_LibraryMediaCharacterConnection = {
-    edges?: Array<Models_LibraryMediaCharacterEdge>
+    edges: Array<Models_LibraryMediaCharacterEdge> | null
 }
 
 /**
@@ -1971,7 +1971,7 @@ export type Models_LibraryMediaCharacterConnection = {
  */
 export type Models_LibraryMediaCharacterEdge = {
     role: string
-    node?: Models_LibraryMediaCharacter
+    node: Models_LibraryMediaCharacter | null
 }
 
 /**
@@ -1993,7 +1993,7 @@ export type Models_LibraryMediaCharacterName = {
 }
 
 /**
- * - Filepath: ..\internal\database\models\models.go
+ * - Filepath: internal/database/models/models.go
  * - Filename: models.go
  * - Package: models
  */
@@ -2016,8 +2016,8 @@ export type Models_LibrarySeason = {
      */
     image: string
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
@@ -2026,8 +2026,8 @@ export type Models_LibrarySeason = {
  * - Package: models
  */
 export type Models_LibrarySettings = {
-    seriesPaths: Models_LibraryPaths
-    moviePaths: Models_LibraryPaths
+    seriesPaths: Models_LibraryPaths | null
+    moviePaths: Models_LibraryPaths | null
     refreshLibraryOnStart: boolean
     autoPlayNextEpisode: boolean
     autoDetectSkipTimes: boolean
@@ -2040,7 +2040,7 @@ export type Models_LibrarySettings = {
     scannerProvider: string
     disableLocalScanning: boolean
     scannerUseLegacyMatching: boolean
-    lastScanAt?: string
+    lastScanAt: string
     autoScan: boolean
     unifiedScan: boolean
     preferredAudioProfile: string
@@ -2062,8 +2062,8 @@ export type Models_MediaMetadataParent = {
     parentId: number
     specialOffset: number
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
@@ -2093,8 +2093,8 @@ export type Models_MediastreamSettings = {
     performanceProfile: string
     autoGovernorEnabled: boolean
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
@@ -2115,8 +2115,8 @@ export type Models_Notification = {
     message: string
     read: boolean
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
@@ -2149,16 +2149,16 @@ export type Models_Settings = {
     notifications: Models_NotificationSettings
     platform: Models_PlatformSettings
     googleDrive: Models_GoogleDriveSettings
-    mediastream?: Models_MediastreamSettings
-    theme?: Models_Theme
+    mediastream: Models_MediastreamSettings | null
+    theme: Models_Theme | null
     updated: boolean
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 /**
- * - Filepath: ..\internal\database\models\models.go
+ * - Filepath: internal/database/models/models.go
  * - Filename: models.go
  * - Package: models
  */
@@ -2205,17 +2205,17 @@ export type Models_Theme = {
     themeAnimeLibraryCollectionDefaultSorting: string
     themeCustomCSS: string
     themeMobileCustomCSS: string
-    themeUnpinnedMenuItems: Models_StringSlice
+    themeUnpinnedMenuItems: Models_StringSlice | null
     bgMusicEnabled: boolean
     bgMusicVolume: number
     bgMusicDir: string
-    bgMusicTracks: Models_BgMusicTrackSlice
+    bgMusicTracks: Models_BgMusicTrackSlice | null
     seriesSoundtrackMode: boolean
     uiSoundsEnabled: boolean
     uiSoundsVolume: number
     id: number
-    createdAt?: string
-    updatedAt?: string
+    createdAt: string
+    updatedAt: string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2368,7 +2368,7 @@ export type UnifiedCharacter = {
  */
 export type UnifiedCollectionEntry = {
     id: number
-    media?: UnifiedMedia
+    media: UnifiedMedia | null
     status: MediaListStatus
     score?: number
     progress?: number
@@ -2425,7 +2425,7 @@ export type UnifiedMedia = {
 export type UnifiedMediaRelation = {
     id: number
     relationType: MediaRelationType
-    media?: UnifiedMedia
+    media: UnifiedMedia | null
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2455,7 +2455,7 @@ export type PreTranscodeJob = {
      */
     progress: number
     error?: string
-    queuedAt?: string
+    queuedAt: string
     endedAt?: string
 }
 
@@ -2469,7 +2469,7 @@ export type PreTranscodeJob = {
  * - Package: user
  */
 export type User = {
-    viewer?: PlatformUser
+    viewer: PlatformUser | null
     token: string
     isSimulated: boolean
 }
@@ -2525,7 +2525,7 @@ export type VideoCore_InsightNode = {
 export type VideoCore_PlaybackState = {
     clientID: string
     playerType: VideoCore_PlayerType
-    playbackInfo?: VideoCore_VideoPlaybackInfo
+    playbackInfo: VideoCore_VideoPlaybackInfo | null
 }
 
 /**
@@ -2597,10 +2597,10 @@ export type VideoCore_VideoPlaybackInfo = {
     /**
      * NativePlayer only
      */
-    mkvMetadata?: MKVParser_Metadata
-    localFile?: LocalFile
+    mkvMetadata: MKVParser_Metadata | null
+    localFile: LocalFile | null
     media: any
-    episode?: Anime_Episode
+    episode: Anime_Episode | null
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2614,10 +2614,10 @@ export type VideoCore_VideoPlaybackInfo = {
  */
 export type Audio = {
     index: number
-    title?: string
-    language?: string
+    title: string | null
+    language: string | null
     codec: string
-    mimeCodec?: string
+    mimeCodec: string | null
     isDefault: boolean
     isForced: boolean
     channels: number
@@ -2644,16 +2644,16 @@ export type MediaInfo = {
     sha: string
     path: string
     extension: string
-    mimeCodec?: string
+    mimeCodec: string | null
     size: number
     duration: number
-    container?: string
-    video?: Video
-    videos?: Array<Video>
-    audios?: Array<Audio>
-    subtitles?: Array<Subtitle>
-    fonts?: Array<string>
-    chapters?: Array<Chapter>
+    container: string | null
+    video: Video | null
+    videos: Array<Video> | null
+    audios: Array<Audio> | null
+    subtitles: Array<Subtitle> | null
+    fonts: Array<string> | null
+    chapters: Array<Chapter> | null
 }
 
 /**
@@ -2678,14 +2678,14 @@ export type Quality = "240p" |
  */
 export type Subtitle = {
     index: number
-    title?: string
-    language?: string
+    title: string | null
+    language: string | null
     codec: string
-    extension?: string
+    extension: string | null
     isDefault: boolean
     isForced: boolean
     isExternal: boolean
-    link?: string
+    link: string | null
     isImageBased: boolean
 }
 
@@ -2696,8 +2696,8 @@ export type Subtitle = {
  */
 export type Video = {
     codec: string
-    mimeCodec?: string
-    language?: string
+    mimeCodec: string | null
+    language: string | null
     quality: Quality
     width: number
     height: number

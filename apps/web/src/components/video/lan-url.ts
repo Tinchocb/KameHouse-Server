@@ -3,7 +3,7 @@
 // igual que antes para no cambiar comportamiento.
 import { __DEV_SERVER_PORT } from "@/lib/server/config"
 
-export function resolveLanUrl(playableUrl: string, serverIPs?: string[], serverPort?: number): string {
+export function resolveLanUrl(playableUrl: string, serverIPs?: string[] | null, serverPort?: number | null): string {
     if (!playableUrl) return ""
     if (typeof window !== "undefined" && (window.location.protocol === "https:" || !window.location.hostname.match(/^(192\.168\.|10\.|172\.|localhost|127\.0\.0\.1)/))) {
         return playableUrl.startsWith("/") ? `${window.location.origin}${playableUrl}` : playableUrl;
