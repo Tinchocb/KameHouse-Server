@@ -5,6 +5,7 @@ import {
 } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Mediastream_MediaContainer } from "@/api/generated/types"
+import { parseMediaContainer } from "@/api/client/schemas"
 import { logger } from "@/lib/helpers/debug"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -19,6 +20,8 @@ export function useRequestMediastreamMediaContainer(variables: Partial<RequestMe
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
         staleTime: Infinity,
+        // Valida streamUrl/streamType antes de que el reproductor los use.
+        select: parseMediaContainer,
         // El reproductor muestra el error en su overlay (ver streamRequestError);
         // un toast genérico encima sería redundante.
         muteError: true,

@@ -19,7 +19,9 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	e.HidePort = true
 	e.Debug = false
 	e.JSONSerializer = &CustomJSONSerializer{}
-	e.StdLogger = log.Default()
+	// Errores internos de net/http (TLS, conexiones rotas…) al log de la app,
+	// para que lleguen a los archivos de log y al informe de diagnóstico.
+	e.StdLogger = log.New(app.Logger.With().Str("module", "http").Logger(), "", 0)
 
 	// Set Cache-Control headers: immutable for fingerprinted assets, no-cache for entrypoints (index.html, sw.js)
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {

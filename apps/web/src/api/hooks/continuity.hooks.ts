@@ -5,6 +5,7 @@ import { ApiError, isTransientStatus, useServerMutation, useServerQuery } from "
 import { UpdateContinuityWatchHistoryItem_Variables } from "@/api/generated/endpoint.types"
 import { Continuity_WatchHistory, Continuity_WatchHistoryItemResponse } from "@/api/generated/types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { parseContinuityItemResponse } from "@/api/client/schemas"
 import {
     clearPendingContinuity,
     flushPendingContinuity,
@@ -86,6 +87,7 @@ export function useGetContinuityWatchHistoryItem(id: number | string) {
         enabled: Number.isFinite(numericId) && numericId > 0,
         staleTime: 30_000, // 30s: reduce refetch storms, still fresh enough for watch history
         refetchOnReconnect: true, // el global está en false; aquí sí importa revalidar al volver la red
+        select: parseContinuityItemResponse,
     })
     // El espejo local (progreso aún no confirmado por el servidor) gana si es
     // más reciente, y cubre el hueco mientras la query todavía no respondió.

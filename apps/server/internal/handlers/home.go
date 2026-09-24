@@ -67,6 +67,9 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 	if h.App.Database == nil {
 		return c.JSON(500, NewErrorResponse(errors.New("database not initialized")))
 	}
+	// Si el cliente se va, el chunk en curso se revierte; los ya confirmados
+	// quedan (el retag es idempotente, se puede relanzar).
+	gdb := h.App.Database.Gorm().WithContext(c.Request().Context())
 
 	type epRetagItem struct {
 		ID          uint
@@ -74,7 +77,7 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 		Description string
 	}
 	var episodes []epRetagItem
-	if err := h.App.Database.Gorm().Model(&models.LibraryEpisode{}).
+	if err := gdb.Model(&models.LibraryEpisode{}).
 		Select("id, title, description").
 		Find(&episodes).Error; err != nil {
 		return c.JSON(500, NewErrorResponse(err))
@@ -93,7 +96,7 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 
 		// Transacción por chunk: un fallo revierte el chunk entero en vez de
 		// dejar filas a medias en silencio.
-		if err := h.App.Database.Gorm().Transaction(func(tx *gorm.DB) error {
+		if err := gdb.Transaction(func(tx *gorm.DB) error {
 			for j := range chunk {
 				ep := &chunk[j]
 				analysis := tagger.Analyze(
@@ -129,7 +132,7 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 		Description   string
 	}
 	var allMedia []mediaRetagItem
-	if err := h.App.Database.Gorm().Model(&models.LibraryMedia{}).
+	if err := gdb.Model(&models.LibraryMedia{}).
 		Select("id, format, title_romaji, title_english, description").
 		Find(&allMedia).Error; err != nil {
 		return c.JSON(500, NewErrorResponse(err))
@@ -141,7 +144,7 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 			end = len(allMedia)
 		}
 		chunk := allMedia[i:end]
-		if err := h.App.Database.Gorm().Transaction(func(tx *gorm.DB) error {
+		if err := gdb.Transaction(func(tx *gorm.DB) error {
 			for j := range chunk {
 				m := &chunk[j]
 				isMovie := m.Format == "MOVIE"

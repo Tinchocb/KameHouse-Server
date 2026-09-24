@@ -361,9 +361,9 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 		}
 		msg := strings.TrimSpace(stderr.String())
 		if cassette.DetectHwAccelFailure(msg) {
-			return fmt.Errorf("hardware encoder rejected this file (check Settings → Streaming): %s", lastLine(msg))
+			return fmt.Errorf("hardware encoder rejected this file (check Settings → Streaming): %s: %w", lastLine(msg), err)
 		}
-		return fmt.Errorf("ffmpeg failed: %s", lastLine(msg))
+		return fmt.Errorf("ffmpeg failed: %s: %w", lastLine(msg), err)
 	}
 
 	if err := os.RemoveAll(outDir); err != nil {

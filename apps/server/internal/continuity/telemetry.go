@@ -161,7 +161,10 @@ func (tm *TelemetryManager) flush() {
 	}
 
 	if len(completedProgress) > 0 {
-		// Bulk Upsert in batches to avoid locking SQLite
+		// Bulk Upsert in batches to avoid locking SQLite.
+		// Sin transacción a propósito (SkipDefaultTransaction=true): cada fila es
+		// un upsert independiente e idempotente y el flush no reintenta, así que
+		// un todo-o-nada convertiría un fallo parcial en pérdida total.
 		err := tm.repository.DB.Clauses(clause.OnConflict{
 			Columns: []clause.Column{
 				{Name: "anon_user_id"},

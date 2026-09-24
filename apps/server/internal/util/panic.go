@@ -19,9 +19,9 @@ func printRuntimeError(r any, module string) string {
 		log.Error().Msgf("go: Runtime error in \"%s\"", module)
 	}
 	log.Error().Msgf("go: A runtime error occurred, please send the logs to the developer\n")
-	log.Printf("go: ========================================= Stack Trace =========================================\n")
+	log.Error().Msg("go: ========================================= Stack Trace =========================================")
 	logger.Error().Msgf("%+v\n\n%+v", r, debugStr)
-	log.Printf("go: ===================================== End of Stack Trace ======================================\n")
+	log.Error().Msg("go: ===================================== End of Stack Trace ======================================")
 	printLock.Unlock()
 	return debugStr
 }

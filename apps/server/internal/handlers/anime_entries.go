@@ -589,9 +589,13 @@ func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
 		cmd = exec.Command("xdg-open", filepath.Dir(targetPath))
 	}
 
+	// Sin contexto a propósito: el de la petición muere al responder y un
+	// timeout mataría el gestor de archivos (xdg-open puede convertirse en él).
 	if err := cmd.Start(); err != nil {
 		return h.RespondWithError(c, fmt.Errorf("failed to open file explorer: %w", err))
 	}
+	// Recoger el proceso al terminar para no dejar zombis en Linux/macOS.
+	go func() { _ = cmd.Wait() }()
 
 	return h.RespondWithData(c, true)
 }
