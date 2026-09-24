@@ -3,6 +3,7 @@ package videocore
 import (
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/rs/zerolog"
 )
 
@@ -31,13 +32,21 @@ type InsightNode struct {
 	Intensity float64 `json:"intensity"`
 }
 
-var insightsCache sync.Map
+var (
+	insightsCacheMu sync.Mutex
+	insightsCache, _ = lru.New[string, []InsightNode](500)
+)
 
 // GenerateVideoInsights generates a deterministic pseudo-random array of intensities based on a string seed (like filepath or episodeId).
 func GenerateVideoInsights(seedString string, duration float64) ([]InsightNode, error) {
-	if cached, ok := insightsCache.Load(seedString); ok {
-		return cached.([]InsightNode), nil
+	insightsCacheMu.Lock()
+	if insightsCache != nil {
+		if cached, ok := insightsCache.Get(seedString); ok {
+			insightsCacheMu.Unlock()
+			return cached, nil
+		}
 	}
+	insightsCacheMu.Unlock()
 
 	insights := make([]InsightNode, 0)
 
@@ -58,15 +67,15 @@ func GenerateVideoInsights(seedString string, duration float64) ([]InsightNode, 
 		seed = (seed*9301 + 49297) % 233280
 		rnd := float64(seed) / 233280.0
 
-		// smooth transition
-		currentVal = currentVal*0.7 + rnd*0.3
+		// smooth step towards random target
+		delta := (rnd - currentVal) * 0.4
+		currentVal += delta
 
-		// Map some peaks (spikes) randomly if random threshold is met
-		if rnd > 0.9 {
-			currentVal = 0.9 + (rnd * 0.1) // 0.9-1.0 spike!
-		}
-
+		// ensure bounded
 		intensity := currentVal
+		if intensity < 0.0 {
+			intensity = 0.0
+		}
 		if intensity > 1.0 {
 			intensity = 1.0
 		}
@@ -77,6 +86,12 @@ func GenerateVideoInsights(seedString string, duration float64) ([]InsightNode, 
 		})
 	}
 
-	insightsCache.Store(seedString, insights)
+	insightsCacheMu.Lock()
+	if insightsCache == nil {
+		insightsCache, _ = lru.New[string, []InsightNode](500)
+	}
+	insightsCache.Add(seedString, insights)
+	insightsCacheMu.Unlock()
+
 	return insights, nil
 }

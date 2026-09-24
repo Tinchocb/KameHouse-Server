@@ -51,29 +51,43 @@ func (l *LibraryExplorer) SetLibraryPaths(paths []string) {
 
 // GetFileTree returns the file tree of the library (built from DB or disk)
 func (l *LibraryExplorer) GetFileTree() (*FileTreeJSON, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	tree, err := l.getFileTree()
+	tree, err := l.getOrBuildFileTree()
 	if err != nil {
 		return nil, err
 	}
 
-	// Always get the latest local file map for the response
+	// Always get the latest local file map for the response (fuera del lock para no bloquear lectores)
 	localFiles, _, err := db.GetLocalFiles(l.database)
 	if err != nil {
 		l.logger.Warn().Err(err).Msg("library explorer: Failed to get local files for tree response")
 	}
 
-	localFileMap := make(map[string]*dto.LocalFile)
+	localFileMap := make(map[string]*dto.LocalFile, len(localFiles))
 	for _, lf := range localFiles {
 		localFileMap[util.NormalizePath(lf.Path)] = lf
 	}
+
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 
 	return &FileTreeJSON{
 		Root:       tree.Root.toJSON(l),
 		LocalFiles: localFileMap,
 	}, nil
+}
+
+func (l *LibraryExplorer) getOrBuildFileTree() (*FileTree, error) {
+	l.mu.RLock()
+	if l.fileTree != nil {
+		tree := l.fileTree
+		l.mu.RUnlock()
+		return tree, nil
+	}
+	l.mu.RUnlock()
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.getFileTree()
 }
 
 func (l *LibraryExplorer) getFileTree() (*FileTree, error) {

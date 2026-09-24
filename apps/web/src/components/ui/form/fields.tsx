@@ -203,7 +203,7 @@ const MultiDirectorySelectorFieldInner = forwardRef<HTMLInputElement, FieldCompo
 
         return <div className="space-y-2">
             <div>
-                {label && <label className="block text-md font-bold text-on-surface uppercase tracking-wider">{label}</label>}
+                {label && <label className="block text-base font-bold text-on-surface uppercase tracking-wider">{label}</label>}
                 {help && <p className="text-sm text-on-surface-variant">{help}</p>}
             </div>
             {paths.map((v, i) => (

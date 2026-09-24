@@ -47,6 +47,7 @@ type Settings struct {
 	MediaPlayer   MediaPlayerSettings  `json:"mediaPlayer" gorm:"embedded;embeddedPrefix:media_player_"`
 	Notifications NotificationSettings `json:"notifications" gorm:"embedded;embeddedPrefix:notifications_"`
 	Platform      PlatformSettings     `json:"platform" gorm:"embedded;embeddedPrefix:platform_"`
+	GoogleDrive   GoogleDriveSettings  `json:"googleDrive" gorm:"embedded;embeddedPrefix:gdrive_"`
 	// Separate tables
 	Mediastream *MediastreamSettings `json:"mediastream" gorm:"-"`
 	Theme       *Theme               `json:"theme" gorm:"-"`
@@ -73,17 +74,26 @@ type LibrarySettings struct {
 	ScannerUseLegacyMatching bool      `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
 	LastScanAt               time.Time `gorm:"column:last_scan_at" json:"lastScanAt"`
 	AutoScan                 bool      `gorm:"column:auto_scan" json:"autoScan"`
+	UnifiedScan              bool      `gorm:"column:unified_scan" json:"unifiedScan"`
+	// Preferencias de reproducción (antes solo-localStorage, ahora persistidas).
+	PreferredAudioProfile            string `gorm:"column:preferred_audio_profile;default:latino" json:"preferredAudioProfile"`
+	AutoSkipIntro                    bool   `gorm:"column:auto_skip_intro" json:"autoSkipIntro"`
+	AutoSkipOutro                    bool   `gorm:"column:auto_skip_outro" json:"autoSkipOutro"`
+	AutoSkipFiller                   bool   `gorm:"column:auto_skip_filler" json:"autoSkipFiller"`
+	AutoDisableSubtitlesWhenDubbed   bool   `gorm:"column:auto_disable_subtitles_when_dubbed;default:true" json:"autoDisableSubtitlesWhenDubbed"`
+	MarathonMode                     bool   `gorm:"column:marathon_mode" json:"marathonMode"`
+	TvMode                           bool   `gorm:"column:tv_mode" json:"tvMode"`
 }
 
 func (s *LibrarySettings) GetAllPaths() []string {
 	var paths []string
 	for _, p := range s.SeriesPaths {
-		if p != "" {
+		if p != "" && p != "." {
 			paths = append(paths, p)
 		}
 	}
 	for _, p := range s.MoviePaths {
-		if p != "" {
+		if p != "" && p != "." {
 			paths = append(paths, p)
 		}
 	}
@@ -316,6 +326,9 @@ type MediastreamSettings struct {
 	// DisableAutoSwitchToDirectPlay apaga la optimización que evita transcodificar
 	// un archivo que el cliente ya puede decodificar nativamente.
 	DisableAutoSwitchToDirectPlay bool `gorm:"column:disable_auto_switch_to_direct_play" json:"disableAutoSwitchToDirectPlay"`
+	// Perfil de rendimiento UI (antes solo-localStorage, ahora persistido).
+	PerformanceProfile  string `gorm:"column:performance_profile;default:auto" json:"performanceProfile"`
+	AutoGovernorEnabled bool   `gorm:"column:auto_governor_enabled;default:true" json:"autoGovernorEnabled"`
 }
 
 type GhostAssociatedMedia struct {
@@ -381,3 +394,13 @@ type EpisodeSkipTime struct {
 	Source     string  `gorm:"column:source;default:legacy" json:"source"`
 	Confidence float64 `gorm:"column:confidence;default:0" json:"confidence"`
 }
+
+type GoogleDriveSettings struct {
+	Enabled      bool   `gorm:"column:enabled;default:false" json:"enabled"`
+	ClientID     string `gorm:"column:client_id" json:"clientId"`
+	ClientSecret string `gorm:"column:client_secret" json:"clientSecret"`
+	RefreshToken string `gorm:"column:refresh_token" json:"refreshToken"`
+	FolderID     string `gorm:"column:folder_id" json:"folderId"`
+	FolderName   string `gorm:"column:folder_name" json:"folderName"`
+}
+

@@ -668,6 +668,7 @@ export type LocalFile = {
     ignored: boolean
     libraryMediaId: number
     mediaId: number
+    driveFileId?: string
 }
 
 /**
@@ -953,31 +954,86 @@ export type BackgroundMusicTrack = {
 }
 
 /**
- * - Filepath: internal/handlers/cast.go
- * - Filename: cast.go
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
  * - Package: handlers
+ * @description
+ *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
  */
-export type CastDevice = {
-    id: string
-    name: string
+export type CacheStatsResponse = {
+    thumbnails: CacheStatsResponse_Thumbnails
+    videofiles: CacheStatsResponse_Videofiles
+    keyframes: CacheStatsResponse_Keyframes
+    fingerprints: CacheStatsResponse_Fingerprints
+    images: CacheStatsResponse_Images
+    totalDiskSizeBytes: number
+    isWarming: boolean
+    warmingProgress: WarmingProgress
 }
 
 /**
- * - Filepath: internal/handlers/cast.go
- * - Filename: cast.go
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
  * - Package: handlers
+ * @description
+ *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
  */
-export type CastDevicesResponse = {
-    devices?: Array<CastDevice>
+export type CacheStatsResponse_Fingerprints = {
+    diskSizeBytes: number
+    diskItemCount: number
 }
 
 /**
- * - Filepath: internal/handlers/cast.go
- * - Filename: cast.go
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
  * - Package: handlers
+ * @description
+ *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
  */
-export type CastPlayResponse = {
-    sentTo?: Array<string>
+export type CacheStatsResponse_Images = {
+    diskSizeBytes: number
+    diskItemCount: number
+}
+
+/**
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
+ * - Package: handlers
+ * @description
+ *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
+ */
+export type CacheStatsResponse_Keyframes = {
+    diskSizeBytes: number
+    diskItemCount: number
+}
+
+/**
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
+ * - Package: handlers
+ * @description
+ *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
+ */
+export type CacheStatsResponse_Thumbnails = {
+    memoryHits: number
+    memoryMisses: number
+    memoryCount: number
+    memoryMaxItems: number
+    memoryBytes: number
+    diskSizeBytes: number
+    diskItemCount: number
+    diskMaxSizeMB: number
+}
+
+/**
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
+ * - Package: handlers
+ * @description
+ *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
+ */
+export type CacheStatsResponse_Videofiles = {
+    diskSizeBytes: number
 }
 
 /**
@@ -1086,6 +1142,14 @@ export type Status = {
      * OS process id of the server; used by the desktop sidecar to reap orphans
      */
     pid: number
+    /**
+     * True when no usable TMDB token is configured (placeholder/missing)
+     */
+    tmdbDegraded: boolean
+    /**
+     * "", "missing" or "placeholder"
+     */
+    tmdbDegradedReason: string
 }
 
 /**
@@ -1097,6 +1161,20 @@ export type SystemStats = {
     cpuPercent: number
     memoryUsed: number
     memoryTotal: number
+}
+
+/**
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
+ * - Package: handlers
+ * @description
+ *  WarmingProgress tracks active thumbnail generation progress.
+ */
+export type WarmingProgress = {
+    total: number
+    processed: number
+    generated: number
+    skipped: number
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1731,6 +1809,20 @@ export type Models_GhostAssociatedMedia = {
 }
 
 /**
+ * - Filepath: internal/database/models/models.go
+ * - Filename: models.go
+ * - Package: models
+ */
+export type Models_GoogleDriveSettings = {
+    enabled: boolean
+    clientId: string
+    clientSecret: string
+    refreshToken: string
+    folderId: string
+    folderName: string
+}
+
+/**
  * - Filepath: internal/database/models/library.go
  * - Filename: library.go
  * - Package: models
@@ -1950,6 +2042,14 @@ export type Models_LibrarySettings = {
     scannerUseLegacyMatching: boolean
     lastScanAt?: string
     autoScan: boolean
+    unifiedScan: boolean
+    preferredAudioProfile: string
+    autoSkipIntro: boolean
+    autoSkipOutro: boolean
+    autoSkipFiller: boolean
+    autoDisableSubtitlesWhenDubbed: boolean
+    marathonMode: boolean
+    tvMode: boolean
 }
 
 /**
@@ -1990,6 +2090,8 @@ export type Models_MediastreamSettings = {
     transcodeThreads: number
     directPlayOnly: boolean
     disableAutoSwitchToDirectPlay: boolean
+    performanceProfile: string
+    autoGovernorEnabled: boolean
     id: number
     createdAt?: string
     updatedAt?: string
@@ -2046,6 +2148,7 @@ export type Models_Settings = {
     mediaPlayer: Models_MediaPlayerSettings
     notifications: Models_NotificationSettings
     platform: Models_PlatformSettings
+    googleDrive: Models_GoogleDriveSettings
     mediastream?: Models_MediastreamSettings
     theme?: Models_Theme
     updated: boolean
@@ -2432,7 +2535,7 @@ export type VideoCore_PlaybackState = {
  * @description
  *  PlaybackType is the playback method.
  */
-export type VideoCore_PlaybackType = "localfile" | "torrent" | "debrid" | "onlinestream"
+export type VideoCore_PlaybackType = "localfile" | "onlinestream"
 
 /**
  * - Filepath: internal/videocore/types.go

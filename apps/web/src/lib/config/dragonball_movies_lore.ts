@@ -445,6 +445,108 @@ export const DRAGON_BALL_MOVIES_LORE: Record<string, MovieLoreDefinition> = {
         ],
         newCharacters: ["Goku Jr.", "Puck", "Lord Yao"],
         specialTrivia: "El báculo sagrado y la esfera de cuatro estrellas en la cabaña del Monte Paozu representan las reliquias más queridas de la infancia de Goku."
+    },
+    sp4: {
+        id: "sp4",
+        title: "El Cuerpo de Bomberos de Goku",
+        era: "Dragon Ball",
+        canonStatus: "No canónico (Cortometraje educativo)",
+        startEpContext: 110,
+        endEpContext: 110,
+        seriesContext: "original",
+        chronologyNotes: "Cortometraje educativo de seguridad contra incendios lanzado en 1988 con Goku niño, Krilin y el Maestro Roshi.",
+        antagonists: ["Incendios domésticos"],
+        keyEvents: [
+            "Goku y sus amigos como bomberos voluntarios",
+            "Rescate y lecciones de prevención de incendios para niños"
+        ],
+        newCharacters: ["Niños rescatados"],
+        specialTrivia: "Producido como corto de servicio público educativo en Japón y reeditado como extra en las Dragon Box."
+    },
+    sp5: {
+        id: "sp5",
+        title: "Seguridad Vial de Goku",
+        era: "Dragon Ball",
+        canonStatus: "No canónico (Cortometraje educativo)",
+        startEpContext: 110,
+        endEpContext: 110,
+        seriesContext: "original",
+        chronologyNotes: "Cortometraje educativo lanzado en 1988 donde Goku viaja a la Capital del Oeste para el cumpleaños de Bulma.",
+        antagonists: ["Accidentes de tránsito"],
+        keyEvents: [
+            "Viaje de Goku a la Capital del Oeste",
+            "Aprender a cruzar la calle por la senda peatonal y respetar las luces del semáforo"
+        ],
+        newCharacters: [],
+        specialTrivia: "Lanzado junto con El Cuerpo de Bomberos de Goku para promover la seguridad peatonal infantil en Japón."
+    },
+    sp6: {
+        id: "sp6",
+        title: "¡Todos Reunidos! El Mundo de Goku",
+        era: "Dragon Ball Z",
+        canonStatus: "No canónico (Especial interactivo Terebikko)",
+        startEpContext: 145,
+        endEpContext: 145,
+        seriesContext: "z",
+        chronologyNotes: "Lanzado en septiembre de 1992 durante la Saga de los Androides y Cell como cinta interactiva VHS para el sistema de juego Bandai Terebikko.",
+        antagonists: ["Cell (Forma imperfecta)"],
+        keyEvents: [
+            "Viaje en la máquina del tiempo de Trunks repasando batallas anteriores",
+            "Goku, Gohan, Trunks y Krilin respondiendo preguntas por teléfono interactivo"
+        ],
+        newCharacters: [],
+        specialTrivia: "Es la única entrega interactiva telefónica de la era Z donde los actores de voz originales interactuaban con los niños mediante el periférico Terebikko."
+    },
+    sp7: {
+        id: "sp7",
+        title: "¡Te lo Mostramos Todo! Olvida el Año con Dragon Ball Z",
+        era: "Dragon Ball Z",
+        canonStatus: "Especial de TV (Resumen de fin de año)",
+        startEpContext: 210,
+        endEpContext: 210,
+        seriesContext: "z",
+        chronologyNotes: "Especial televisivo emitido el 31 de diciembre de 1993 tras la conclusión de los Juegos de Cell.",
+        antagonists: ["Vegeta", "Freezer", "Cell"],
+        keyEvents: [
+            "Goku y Gohan con traje de etiqueta formal repasando las grandes sagas de Dragon Ball Z",
+            "Mensaje de felicitación de fin de año para los televidentes"
+        ],
+        newCharacters: [],
+        specialTrivia: "Muestra a Goku y Gohan vestidos con esmoquin blanco y corbata de moño en una escenografía de plató de televisión."
+    },
+    sp8: {
+        id: "sp8",
+        title: "Los Aventureros de la Esfera del Pánico Regresan",
+        era: "Dragon Ball Z",
+        canonStatus: "No canónico (Crossover Fuji TV)",
+        startEpContext: 280,
+        endEpContext: 280,
+        seriesContext: "z",
+        chronologyNotes: "Atracción especial en CGI y animación proyectada en la sede esférica de Fuji TV en Odaiba en 2004.",
+        antagonists: ["Enemigo interdimensional"],
+        keyEvents: [
+            "Alianza entre los Guerreros Z y la tripulación del Sombrero de Paja",
+            "Defensa del icónico mirador esférico de Fuji TV"
+        ],
+        newCharacters: [],
+        specialTrivia: "Secuela directa del especial de 2003 'Kyūtai Panic Adventure!' que unía a Dragon Ball Z, One Piece y Astro Boy."
+    },
+    sp9: {
+        id: "sp9",
+        title: "Dream 9: Toriko x One Piece x Dragon Ball Z Super Colaboración",
+        era: "Dragon Ball Z",
+        canonStatus: "Especial de TV (Crossover oficial)",
+        startEpContext: 291,
+        endEpContext: 291,
+        seriesContext: "z",
+        chronologyNotes: "Especial cruzado de dos episodios emitido el 7 de abril de 2013 (Toriko ep. 99 y One Piece ep. 590).",
+        antagonists: ["Akami"],
+        keyEvents: [
+            "Torneo de la Carrera de la Organización Gourmet Internacional",
+            "Batalla triple de Goku, Luffy y Toriko contra Akami combinando Kamehameha, Elephant Gun y Kugi Punch"
+        ],
+        newCharacters: ["Akami"],
+        specialTrivia: "Conmemoró el tercer aniversario de emisión de Toriko en televisión japonesa con un choque legendario entre los 3 grandes héroes de la Shonen Jump."
     }
 }
 
@@ -487,5 +589,11 @@ export const TMDB_TO_LORE_MOVIE_MAP: Record<number, string> = {
     39324: "sp2",
     18095: "sp3",
     39149: "sp3",
+    39321: "sp4",
+    39322: "sp5",
+    39325: "sp6",
+    39326: "sp7",
+    105973: "sp8",
+    444390: "sp9",
 }
 

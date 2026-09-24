@@ -5,9 +5,9 @@ import { PlayerUI } from "./player-ui"
 import { useMpvPlayer } from "./use-mpv-player"
 import { MpvOverlay } from "./mpv-overlay"
 import { getClientCapabilities } from "./client-capabilities"
+import { STREAM_FILE_MISSING_MSG } from "./player-overlays"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import type { Mediastream_StreamType, Audio, Subtitle } from "@/api/generated/types"
-import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { VideoPlayerProps } from "./player"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { useAppStore } from "@/lib/store"
@@ -44,15 +44,13 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
 
     const currentStreamKey = `${props.streamUrl}_${props.episodeNumber}_${props.streamType}`
     const [prevStreamKey, setPrevStreamKey] = useState(currentStreamKey)
-    useEffect(() => {
-        if (currentStreamKey !== prevStreamKey) {
-            setPrevStreamKey(currentStreamKey)
-            setForceTranscode(false)
-            setStreamType(props.streamType || "direct")
-        }
-    }, [currentStreamKey, prevStreamKey, props.streamType])
+    if (currentStreamKey !== prevStreamKey) {
+        setPrevStreamKey(currentStreamKey)
+        setForceTranscode(false)
+        setStreamType(props.streamType || "direct")
+    }
 
-    const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && streamType !== "online"
+    const isLocal = Boolean(props.streamUrl) && streamType !== "online"
 
     // Let the backend decide the stream type based on codec compatibility.
     // The backend evaluates video/audio codec support and decides whether to transcode
@@ -63,13 +61,28 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
     // between Chromium, Firefox and hardware).
     const clientCapabilities = useMemo(() => getClientCapabilities(), [])
 
-    const { data } = useRequestMediastreamMediaContainer({
+    const { data, error: streamRequestFailure } = useRequestMediastreamMediaContainer({
         path: props.streamUrl,
         streamType: streamType as Mediastream_StreamType,
         clientID: clientId,
         force: forceTranscode,
         clientCapabilities,
     }, isLocal)
+
+    // Traduce el rechazo del servidor a un mensaje claro para el overlay de error.
+    const streamRequestError = useMemo(() => {
+        if (!streamRequestFailure) return null
+        switch (streamRequestFailure.status) {
+            case 404:
+                return STREAM_FILE_MISSING_MSG
+            case 403:
+                return "Este archivo está fuera de las carpetas de tu biblioteca."
+            case 503:
+                return "La biblioteca no está disponible en este momento. Probá de nuevo en unos segundos."
+            default:
+                return "No pudimos preparar la reproducción de este episodio. Probá de nuevo en unos segundos."
+        }
+    }, [streamRequestFailure])
 
     const playableUrl = useMemo(() => {
         if (!isLocal) return props.playableUrl || props.streamUrl
@@ -142,7 +155,6 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
 
     const handleDirectPlayFailed = useCallback(() => {
         if (transcodeEnabled) {
-            console.info("[orchestrator] Direct play failed — falling back to transcode")
             requestStreamType("transcode")
             return true
         } else {
@@ -150,6 +162,17 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             return false
         }
     }, [transcodeEnabled, requestStreamType])
+
+    const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = useState(false)
+    const [isQueueSidebarOpen, setIsQueueSidebarOpen] = useState(false)
+    const handleToggleEpisodesSidebar = useCallback(() => {
+        setIsEpisodesSidebarOpen(prev => !prev)
+    }, [])
+    const handleToggleQueueSidebar = useCallback(() => {
+        setIsQueueSidebarOpen(prev => !prev)
+    }, [])
+
+    const handleEscapeRef = React.useRef<() => void>(() => {})
 
     const core = usePlayerCore({
         ...props,
@@ -160,7 +183,29 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         mediaFormat: props.mediaFormat,
         onRequestStreamTypeChange: requestStreamType,
         onDirectPlayFailed: handleDirectPlayFailed,
+        streamRequestError,
         metadataDuration: data?.mediaInfo?.duration,
+        onToggleEpisodesSidebar: handleToggleEpisodesSidebar,
+        onToggleQueueSidebar: handleToggleQueueSidebar,
+        onEscape: () => handleEscapeRef.current?.(),
+    })
+
+    useEffect(() => {
+        handleEscapeRef.current = () => {
+            if (isEpisodesSidebarOpen) {
+                setIsEpisodesSidebarOpen(false)
+            } else if (isQueueSidebarOpen) {
+                setIsQueueSidebarOpen(false)
+            } else if (core.state.isSettingsOpen) {
+                core.actions.setIsSettingsOpen(false)
+            } else if (core.state.showShortcuts) {
+                core.actions.setShowShortcuts(false)
+            } else if (core.state.isFullscreen) {
+                core.actions.toggleFullscreen()
+            } else {
+                props.onClose()
+            }
+        }
     })
 
     // External mpv playback (desktop app only): hands the local file off to an
@@ -177,7 +222,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         try {
             const current = core.state.currentTime > 5
                 ? core.state.currentTime
-                : (core.state.resumeTime || props.initialProgressSeconds || 0)
+                : (props.initialProgressSeconds || 0)
             core.domElements.videoElement.current?.pause()
             const success = await mpv.play(current)
             if (!success) {
@@ -191,30 +236,49 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
 
     const canUseMpv = mpv.isDesktop && mpv.isAvailable && isLocal
 
-    const episodeSources = useMemo<EpisodeSource[]>(() => [
-        {
-            title: "Direct Play",
-            quality: "Original",
-            url: props.streamUrl,
-            type: "direct",
-            path: props.streamUrl,
-            priority: 1,
-        },
-        {
-            title: "Transcodificado",
-            quality: "Auto HLS",
-            url: props.streamUrl,
-            type: "transcode",
-            path: props.streamUrl,
-            priority: 2,
-        }
-    ], [props.streamUrl])
+    const isDrive = useMemo(() => {
+        return Boolean(props.streamUrl?.includes("/api/v1/drive/play"))
+    }, [props.streamUrl])
 
+    const episodeSources = useMemo<EpisodeSource[]>(() => {
+        if (isDrive) {
+            return [
+                {
+                    title: "Google Drive (Cloud)",
+                    quality: "Original",
+                    url: props.streamUrl,
+                    type: "direct",
+                    path: props.streamUrl,
+                    priority: 1,
+                }
+            ]
+        }
+        return [
+            {
+                title: "Direct Play",
+                quality: "Original",
+                url: props.streamUrl,
+                type: "direct",
+                path: props.streamUrl,
+                priority: 1,
+            },
+            {
+                title: "Transcodificado",
+                quality: "Auto HLS",
+                url: props.streamUrl,
+                type: "transcode",
+                path: props.streamUrl,
+                priority: 2,
+            }
+        ]
+    }, [props.streamUrl, isDrive])
+
+    const switchSource = core.actions.switchSource
     const handleSourceSwitch = useCallback((source: EpisodeSource) => {
         if (source.type) {
-            requestStreamType(source.type)
+            switchSource(source.type)
         }
-    }, [requestStreamType])
+    }, [switchSource])
 
     const handleMpvStop = useCallback(() => mpv.stop(), [mpv])
 
@@ -247,6 +311,12 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             nextEpisodeTitle={props.nextEpisodeTitle}
             nextEpisodeNumber={props.nextEpisodeNumber}
             nextEpisodeImage={props.nextEpisodeImage}
+            isEpisodesSidebarOpen={isEpisodesSidebarOpen}
+            onToggleEpisodesSidebar={handleToggleEpisodesSidebar}
+            setIsEpisodesSidebarOpen={setIsEpisodesSidebarOpen}
+            isQueueSidebarOpen={isQueueSidebarOpen}
+            onToggleQueueSidebar={handleToggleQueueSidebar}
+            setIsQueueSidebarOpen={setIsQueueSidebarOpen}
         />
         </>
     )

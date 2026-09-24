@@ -166,6 +166,14 @@ func (d *Detector) MarkAttemptedOnce(mediaID int) bool {
 	return true
 }
 
+// ResetAttempted limpia la marca de intento para permitir que un trigger posterior
+// vuelva a probar (por ejemplo, si el scan anterior falló o fue cancelado).
+func (d *Detector) ResetAttempted(mediaID int) {
+	d.attemptedMu.Lock()
+	defer d.attemptedMu.Unlock()
+	delete(d.attempted, mediaID)
+}
+
 func (d *Detector) emit(mediaID int, status, message string, percent int) {
 	payload := map[string]any{
 		"mediaId": mediaID,
@@ -210,7 +218,15 @@ func (d *Detector) ScanSeries(ctx context.Context, mediaID int) error {
 
 	// Episodios que necesitan detección: sin fila o con fuente de baja confianza.
 	// Las filas "aniskip" van en un set aparte: solo el Método A puede mejorarlas.
-	existing := d.existingSkipTimes(mediaID)
+	// Si la lectura falla, se aborta (fail closed): con `existing` vacío el
+	// detector creería que todo necesita medición y el upsert pisaría marcas
+	// protegidas (manual/animethemes) con resultados parciales.
+	existing, err := d.existingSkipTimes(mediaID)
+	if err != nil {
+		d.logger.Error().Err(err).Int("mediaId", mediaID).Msg("skipdetect: no se pudieron leer marcas existentes, se aborta el escaneo")
+		d.emit(mediaID, "error", "Error al leer las marcas existentes en la base de datos.", -1)
+		return err
+	}
 	need := make(map[int]bool)
 	aniskipOnly := make(map[int]bool)
 	for _, ep := range episodes {
@@ -366,14 +382,16 @@ func (d *Detector) loadEpisodes(ctx context.Context, mediaID int) ([]episodeFile
 	return episodes, malID, nil
 }
 
-func (d *Detector) existingSkipTimes(mediaID int) map[int]models.EpisodeSkipTime {
+func (d *Detector) existingSkipTimes(mediaID int) (map[int]models.EpisodeSkipTime, error) {
 	var rows []models.EpisodeSkipTime
-	_ = d.db.Gorm().Where("media_id = ?", mediaID).Find(&rows).Error
+	if err := d.db.Gorm().Where("media_id = ?", mediaID).Find(&rows).Error; err != nil {
+		return nil, err
+	}
 	out := make(map[int]models.EpisodeSkipTime, len(rows))
 	for _, r := range rows {
 		out[r.EpisodeNumber] = r
 	}
-	return out
+	return out, nil
 }
 
 // buildRows convierte los resultados en filas EpisodeSkipTime, descartando (belt

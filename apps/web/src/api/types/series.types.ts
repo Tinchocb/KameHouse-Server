@@ -47,6 +47,7 @@ export interface PremiumEpisode {
   audioCodec?: string
   localFilePath?: string
   duration?: number
+  progressPercent?: number
   sagaId?: string
   sagaName?: string
   tags?: string[]

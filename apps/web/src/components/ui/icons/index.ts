@@ -223,6 +223,7 @@ export const IconUiRotate = RotateCw;
 export const IconUiSettings = Settings;
 export const IconUiSliders = SlidersHorizontal;
 export const IconUiFilter = Filter;
+export const IconUiAdmin = Server;
 export const IconUiMoreHorizontal = MoreHorizontal;
 export const IconUiMoreVertical = MoreVertical;
 export const IconUiShare = Share2;

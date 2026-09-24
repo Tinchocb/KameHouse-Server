@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
+	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/constants"
 	"kamehouse/internal/core"
 	"kamehouse/internal/database/models"
@@ -56,6 +58,8 @@ type Status struct {
 	ServerIPs             []string                      `json:"serverIPs"`
 	ServerPort            int                           `json:"serverPort"`
 	Pid                   int                           `json:"pid"` // OS process id of the server; used by the desktop sidecar to reap orphans
+	TMDBDegraded          bool                          `json:"tmdbDegraded"`       // True when no usable TMDB token is configured (placeholder/missing)
+	TMDBDegradedReason    string                        `json:"tmdbDegradedReason"` // "", "missing" or "placeholder"
 }
 
 var clientInfoCache = result.NewMap[string, util.ClientInfo]()
@@ -119,6 +123,11 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		ServerIPs:             util.GetLocalIPv4Addresses(),
 		ServerPort:            h.App.Config.Server.Port,
 		Pid:                   os.Getpid(),
+	}
+
+	if tmdbDegraded, tmdbReason := tmdb.DegradedState(settings.Library.TmdbApiKey, h.App.Config.Metadata.TMDBApiKey); tmdbDegraded {
+		status.TMDBDegraded = true
+		status.TMDBDegradedReason = tmdbReason
 	}
 
 	isAuthenticated := h.isAuthorized(c)
@@ -246,7 +255,7 @@ func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 		for _, filename := range b.Filenames {
 			if util.NormalizePath(filepath.Base(path)) == util.NormalizePath(filename) {
 				if actualNewest != "" && util.NormalizePath(actualNewest) == util.NormalizePath(filename) {
-					return fmt.Errorf("cannot delete the newest log file")
+					return fmt.Errorf("invalid request: cannot delete the newest log file")
 				}
 				if err := os.Remove(path); err != nil {
 					return err
@@ -308,7 +317,7 @@ func (h *Handler) HandleGetLatestLogContent(c echo.Context) error {
 }
 
 func (h *Handler) HandleGetAnnouncements(c echo.Context) error {
-	return h.RespondWithData(c, nil)
+	return h.RespondWithCodeError(c, 501, errors.New("announcements not implemented"))
 }
 
 type MemoryStatsResponse struct {
@@ -440,6 +449,9 @@ func (h *Handler) HandleGetGoRoutineProfile(c echo.Context) error {
 //	@summary generates and returns a CPU profile.
 //	@desc This generates a CPU profile for the specified duration (default 30 seconds).
 //	@desc Query parameter: duration=30 for duration in seconds.
+//	@desc Concurrency policy: a single profile runs at a time (mutex + 409 on
+//	@desc overlap), duration is capped at 60s, and client disconnect aborts early,
+//	@desc so load is bounded to one worker plus cheap 409s under hammering.
 //	@route /api/v1/memory/cpu [GET]
 //	@returns nil
 func (h *Handler) HandleGetCPUProfile(c echo.Context) error {
@@ -457,11 +469,12 @@ func (h *Handler) HandleGetCPUProfile(c echo.Context) error {
 		cpuProfileMu.Unlock()
 	}()
 
-	// Parse duration from query parameter (default to 30 seconds)
+	// Parse duration from query parameter (default to 30 seconds, max 60 to
+	// avoid holding an HTTP worker for minutes).
 	durationStr := c.QueryParam("duration")
 	duration := 30 * time.Second
 	if durationStr != "" {
-		if d, err := strconv.Atoi(durationStr); err == nil && d > 0 && d <= 300 { // Max 5 minutes
+		if d, err := strconv.Atoi(durationStr); err == nil && d > 0 && d <= 60 {
 			duration = time.Duration(d) * time.Second
 		}
 	}
@@ -478,9 +491,20 @@ func (h *Handler) HandleGetCPUProfile(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// Profile for the specified duration
+	// Profile for the specified duration, aborting early if the client
+	// disconnects instead of blocking the worker until the end.
 	h.App.Logger.Info().Msgf("handlers: Starting CPU profile for %v", duration)
-	time.Sleep(duration)
+	deadline := time.Now().Add(duration)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for time.Now().Before(deadline) {
+		select {
+		case <-c.Request().Context().Done():
+			pprof.StopCPUProfile()
+			return nil
+		case <-ticker.C:
+		}
+	}
 
 	// Stop CPU profiling
 	pprof.StopCPUProfile()
@@ -521,7 +545,7 @@ func (h *Handler) HandleForceGC(c echo.Context) error {
 //	@route /api/v1/status/home-items [GET]
 //	@returns []string
 func (h *Handler) HandleGetHomeItems(c echo.Context) error {
-	return h.RespondWithData(c, []string{})
+	return h.RespondWithCodeError(c, 501, errors.New("home items not implemented"))
 }
 
 // HandleUpdateHomeItems ...
@@ -530,7 +554,7 @@ func (h *Handler) HandleGetHomeItems(c echo.Context) error {
 //	@route /api/v1/status/home-items [POST]
 //	@returns nil
 func (h *Handler) HandleUpdateHomeItems(c echo.Context) error {
-	return h.RespondWithData(c, true)
+	return h.RespondWithCodeError(c, 501, errors.New("home items not implemented"))
 }
 
 // HandleShutdown handles graceful shutdown requests from local clients (e.g. desktop sidecar).

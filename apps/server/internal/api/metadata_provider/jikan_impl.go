@@ -2,6 +2,7 @@ package metadata_provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -23,8 +24,19 @@ type JikanProviderImpl struct {
 	logger     *zerolog.Logger
 	tmdbClient *tmdb.Client
 
+	// Fallback TMDB compartido: crear uno por llamada descartaba su caché en
+	// memoria y obligaba a repetir la descarga de temporadas.
+	tmdbFallbackOnce sync.Once
+	tmdbFallback     *TMDBProviderImpl
+
 	mu    sync.Mutex
 	cache map[int]*jikanCachedEntry
+	// failedUntil recuerda IDs cuya consulta falló hace poco, para no repetir
+	// los reintentos con backoff (~10 s) en cada apertura mientras Jikan esté caído.
+	failedUntil map[int]time.Time
+	// unavailableUntil corta todas las consultas cuando Jikan entero está
+	// caído: así tampoco espera la primera apertura de las demás series.
+	unavailableUntil time.Time
 }
 
 type jikanCachedEntry struct {
@@ -34,17 +46,45 @@ type jikanCachedEntry struct {
 
 const jikanMetadataTTL = 6 * time.Hour
 
+// jikanFailureTTL es cuánto se evita reintentar un ID cuya consulta falló.
+const jikanFailureTTL = 5 * time.Minute
+
 func NewJikanProviderImpl(client *jikan.Client, database *db.Database, logger *zerolog.Logger, tmdbClient *tmdb.Client) *JikanProviderImpl {
 	return &JikanProviderImpl{
-		client:     client,
-		db:         database,
-		logger:     logger,
-		tmdbClient: tmdbClient,
-		cache:      make(map[int]*jikanCachedEntry),
+		client:      client,
+		db:          database,
+		logger:      logger,
+		tmdbClient:  tmdbClient,
+		cache:       make(map[int]*jikanCachedEntry),
+		failedUntil: make(map[int]time.Time),
 	}
 }
 
 func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata, error) {
+	p.mu.Lock()
+	if time.Now().Before(p.unavailableUntil) {
+		p.mu.Unlock()
+		return nil, fmt.Errorf("jikan_provider: servicio caído, se reintenta más tarde: %w", jikan.ErrUnavailable)
+	}
+	if until, ok := p.failedUntil[id]; ok && time.Now().Before(until) {
+		p.mu.Unlock()
+		return nil, fmt.Errorf("jikan_provider: consulta para ID %d falló recientemente, se reintenta más tarde", id)
+	}
+	p.mu.Unlock()
+
+	result, err := p.getAnimeMetadata(id)
+	if err != nil {
+		p.mu.Lock()
+		p.failedUntil[id] = time.Now().Add(jikanFailureTTL)
+		if errors.Is(err, jikan.ErrUnavailable) {
+			p.unavailableUntil = time.Now().Add(jikanFailureTTL)
+		}
+		p.mu.Unlock()
+	}
+	return result, err
+}
+
+func (p *JikanProviderImpl) getAnimeMetadata(id int) (*apiMetadata.AnimeMetadata, error) {
 	// 1. Check in-memory cache
 	p.mu.Lock()
 	if entry, ok := p.cache[id]; ok && time.Now().Before(entry.expiresAt) {
@@ -196,7 +236,7 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 		if err == nil && episodesRes != nil {
 			for _, ep := range episodesRes.Data {
 				epStr := strconv.Itoa(ep.Episode)
-				
+
 				// Parse air date
 				var airDate string
 				if ep.Aired != "" {
@@ -257,8 +297,7 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 
 	// Fallback to TMDB for Images and Synopsis
 	if p.tmdbClient != nil && len(result.Episodes) > 0 {
-		tmdbProvider := NewTMDBProviderImpl(p.tmdbClient, p.db, p.logger)
-		if tmdbMeta, err := tmdbProvider.GetAnimeMetadata(id); err == nil && tmdbMeta != nil {
+		if tmdbMeta, err := p.tmdbFallbackProvider().GetAnimeMetadata(id); err == nil && tmdbMeta != nil {
 			for epNum, ep := range result.Episodes {
 				if tmdbEp, ok := tmdbMeta.Episodes[epNum]; ok {
 					if tmdbEp.Image != "" {
@@ -299,6 +338,16 @@ func (p *JikanProviderImpl) ClearCache() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.cache = make(map[int]*jikanCachedEntry)
+	p.failedUntil = make(map[int]time.Time)
+	p.unavailableUntil = time.Time{}
 }
 
 func (p *JikanProviderImpl) Close() error { return nil }
+
+// tmdbFallbackProvider devuelve la instancia TMDB compartida (creada una sola vez).
+func (p *JikanProviderImpl) tmdbFallbackProvider() *TMDBProviderImpl {
+	p.tmdbFallbackOnce.Do(func() {
+		p.tmdbFallback = NewTMDBProviderImpl(p.tmdbClient, p.db, p.logger)
+	})
+	return p.tmdbFallback
+}

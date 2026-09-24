@@ -21,9 +21,9 @@ export const ModalAnatomy = defineStyleAnatomy({
     content: cva([
         "UI-Modal__content",
         "z-modal grid relative w-full max-w-lg gap-4 p-6 duration-base rounded-2xl",
-        "bg-zinc-950/70 border border-white/20 border-t-white/40 border-b-white/10",
+        "bg-surface/70 border border-white/20 border-t-white/40 border-b-white/10",
         "backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
-        "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_24px_48px_-12px_rgba(0,0,0,0.9)]",
+        "shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_-12px_rgba(0,0,0,0.9)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

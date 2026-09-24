@@ -3,45 +3,31 @@ import { useDirectorySelector } from "@/api/hooks/directory_selector.hooks"
 import { Button, IconButton } from "@/components/ui/button"
 import { cn } from "@/components/ui/core/styling"
 import { Modal } from "@/components/ui/modal"
-import { Popover } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select } from "@/components/ui/select"
 import { TextInput, TextInputProps } from "@/components/ui/text-input"
 import { useBoolean } from "@/hooks/use-disclosure"
 import { upath } from "@/lib/helpers/upath"
 import { __isDesktop__ } from "@/types/constants"
 import React from "react"
-import { IconUiChevronsUpDown, IconStatusFolder, IconUiSpinner, IconUiCheck, IconUiClose, IconStatusFolderOpen, IconNavigationChevronLeft, IconNavigationChevronRight } from "@/components/ui/icons";
+import { IconStatusFolder, IconUiSpinner, IconUiCheck, IconUiClose, IconStatusFolderOpen, IconNavigationChevronLeft, IconNavigationChevronRight } from "@/components/ui/icons";
 import { useDebounce } from "use-debounce"
 
 export type DirectorySelectorProps = {
-    defaultValue?: string
     onSelect: (path: string) => void
     shouldExist?: boolean
     value: string
-    libraryPathSelectionProps?: {
-        showLibrarySelector?: boolean
-        selectedLibrary?: string
-        libraryOptions?: { label: string; value: string }[]
-        handleLibraryPathSelect: (path: string) => void
-    }
     /** Acción extra al final de la barra (ej. botón "Agregar" de PathList). */
     trailingAction?: React.ReactNode
-    /** Override del contenedor pill de la barra. */
-    containerClassName?: string
 } & Omit<TextInputProps, "onSelect" | "value">
 
 export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, DirectorySelectorProps>(function DirectorySelector(props, ref) {
 
     const {
-        defaultValue,
         onSelect,
         value,
         shouldExist,
-        libraryPathSelectionProps: libraryProps,
         label,
         trailingAction,
-        containerClassName,
         ...rest
     } = props
 
@@ -50,7 +36,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         return upath.normalizeSafe(path.replace(/[<>"]/g, ""))
     }, [])
 
-    const [input, setInputRaw] = React.useState(defaultValue ? sanitizePath(defaultValue) : "")
+    const [input, setInputRaw] = React.useState("")
     const [debouncedInput] = useDebounce(input, 300)
     const selectorState = useBoolean(false)
     const [isNativeOpening, setIsNativeOpening] = React.useState(false)
@@ -122,45 +108,20 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
     const canGoBack = !!data?.basePath?.length && data.basePath.length > 1
     const isValid = !!data?.exists
 
-    const [librarySelectionOpen, setLibrarySelectionOpen] = React.useState(false)
-
     return (
         <>
             <div className="space-y-1.5">
                 {label && (
                     <div className="flex items-center justify-between gap-1 text-xs font-semibold text-zinc-300">
                         <span>{label}</span>
-                        {libraryProps?.showLibrarySelector && (
-                            <Popover
-                                open={librarySelectionOpen}
-                                onOpenChange={setLibrarySelectionOpen}
-                                className="w-[min(400px,calc(100vw-2rem))] p-2 sm:ml-[30px]"
-                                sideOffset={-4}
-                                trigger={
-                                    <Button size="sm" intent="gray-link" leftIcon={<IconUiChevronsUpDown />} className="!text-[--muted] text-xs">
-                                        Cambiar biblioteca
-                                    </Button>
-                                }
-                            >
-                                <Select
-                                    value={libraryProps.selectedLibrary}
-                                    options={libraryProps.libraryOptions}
-                                    onValueChange={(v: string) => {
-                                        libraryProps.handleLibraryPathSelect(v)
-                                        setLibrarySelectionOpen(false)
-                                    }}
-                                />
-                            </Popover>
-                        )}
                     </div>
                 )}
 
                 <div className={cn(
                     "group flex items-center gap-1.5 rounded-full bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10",
-                    "pl-4 pr-1.5 py-1.5 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.12)]",
+                    "pl-4 pr-1.5 py-1.5 shadow-glass-highlight-sm",
                     "transition-all duration-200 hover:border-white/30 hover:bg-white/[0.04]",
-                    "focus-within:border-white/35 focus-within:bg-white/[0.06] focus-within:shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.2),0_0_16px_rgba(255,255,255,0.1)]",
-                    containerClassName
+                    "focus-within:border-white/35 focus-within:bg-white/[0.06] focus-within:shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.1)]"
                 )}>
                     <IconStatusFolder className="w-4 h-4 shrink-0 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" />
                     <div className="flex-1 min-w-0">
@@ -264,7 +225,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
 
                 {(!data?.exists && data?.suggestions && data.suggestions.length > 0) && (
                     <div className="w-full flex flex-none flex-nowrap overflow-x-auto no-scrollbar gap-2 items-center">
-                        <span className="flex-none text-[11px] font-semibold text-on-surface-variant/70">Sugerencias:</span>
+                        <span className="flex-none text-2xs font-semibold text-on-surface-variant/70">Sugerencias:</span>
                         {data.suggestions.map(folder => (
                             <button
                                 key={folder.Path}
@@ -297,7 +258,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                                 <IconStatusFolder className="w-4 h-4 text-brand-accent shrink-0" />
                                 <span className="flex-1 min-w-0">
                                     <span className="block truncate text-xs font-semibold text-on-surface">{folder.Name}</span>
-                                    <span className="block truncate text-[10px] font-mono text-on-surface-variant/50">{folder.Path}</span>
+                                    <span className="block truncate text-3xs font-mono text-on-surface-variant/50">{folder.Path}</span>
                                 </span>
                                 <IconNavigationChevronRight className="w-3.5 h-3.5 text-on-surface-variant/40 shrink-0" />
                             </button>
@@ -305,7 +266,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                     </ScrollArea>
                 ) : debouncedInput.length > 0 ? (
                     <div className="p-4 rounded-2xl border border-dashed border-white/10 text-center">
-                        <p className="text-[11px] text-on-surface-variant/60 font-medium">
+                        <p className="text-2xs text-on-surface-variant/60 font-medium">
                             {data?.exists
                                 ? "Carpeta vacía: no contiene subcarpetas."
                                 : "Sin resultados: revisa la ruta o sube un nivel."}
@@ -313,14 +274,14 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                     </div>
                 ) : (
                     <div className="p-4 rounded-2xl border border-dashed border-white/10 text-center">
-                        <p className="text-[11px] text-on-surface-variant/60 font-medium">
+                        <p className="text-2xs text-on-surface-variant/60 font-medium">
                             Escribe una ruta del servidor para empezar a explorar.
                         </p>
                     </div>
                 )}
 
                 {input.length > 0 && (
-                    <p className={`text-[11px] font-mono truncate px-1 ${isValid ? "text-emerald-400/90" : "text-red-400/90"}`}>
+                    <p className={`text-2xs font-mono truncate px-1 ${isValid ? "text-emerald-400/90" : "text-red-400/90"}`}>
                         {isValid ? `✓ ${input}` : `✗ La ruta no existe en el servidor`}
                     </p>
                 )}

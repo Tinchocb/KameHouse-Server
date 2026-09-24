@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useRef } from "react"
-import { IconUiSpinner, IconUiAlert, IconMediaPlay } from "@/components/ui/icons";
+import { m, AnimatePresence } from "framer-motion"
+import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { IconUiSpinner, IconUiAlert, IconMediaPlay } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
+import { ElasticCounter } from "@/components/ui/kinetics/elastic-counter"
+import { PLAYER_EYEBROW, PLAYER_GLASS, PLAYER_PRIMARY_BTN, PLAYER_SECONDARY_BTN } from "./player-theme"
+
+/** Mensaje del 404 de mediastream: el overlay lo titula "Archivo no disponible". */
+export const STREAM_FILE_MISSING_MSG =
+    "No encontramos el archivo de este episodio. Revisá que el disco o la carpeta de tu biblioteca estén conectados."
+
+const STREAM_SWITCH_COPY = {
+    audio: { title: "Cambiando pista de audio", detail: "Iniciando transcodificación…" },
+    source: { title: "Cambiando de fuente", detail: "Retomando en el mismo punto…" },
+    fallback: { title: "Preparando el video", detail: "Pasando a transcodificación…" },
+} as const
 
 export function LoadingErrorOverlay({
     status,
@@ -9,6 +23,7 @@ export function LoadingErrorOverlay({
     isBuffering,
     isSeeking,
     isStreamSwitching,
+    streamSwitchReason = "audio",
     onClose,
     onRetry,
 }: {
@@ -17,9 +32,9 @@ export function LoadingErrorOverlay({
     streamType: string
     isBuffering: boolean
     isSeeking?: boolean
-    /** true cuando el loading es un cambio de stream mid-playback (ej. switch de pista de audio).
-     *  En ese caso se muestra fondo semitransparente en vez de negro sólido. */
+    /** true cuando el loading es un cambio de stream mid-playback (ej. switch de pista de audio). */
     isStreamSwitching?: boolean
+    streamSwitchReason?: "audio" | "source" | "fallback"
     onClose: () => void
     onRetry?: () => void
 }) {
@@ -44,75 +59,59 @@ export function LoadingErrorOverlay({
     const showBuffering = isBuffering && (!isSeeking || isSeekBufferingDelayed)
 
     if (status === "loading") {
-        // Cambio de stream mid-playback (ej. cambio de pista de audio direct→transcode):
-        // el video sigue renderizado detrás del overlay, así que usamos fondo semitransparente
-        // con blur para que la imagen congelada sea visible y la transición sea fluida.
         if (isStreamSwitching) {
+            const { title, detail } = STREAM_SWITCH_COPY[streamSwitchReason]
             return (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-player-overlay text-white"
-                    style={{ backdropFilter: "blur(var(--blur-overlay-sm))", background: "color-mix(in srgb, black 55%, transparent)" }}>
-                    <div className="flex flex-col items-center gap-5 px-8 py-6 rounded-container border border-white/10"
-                        style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent)" }}>
-                        <IconUiSpinner className="w-10 h-10 text-white animate-spin" />
-                        <div className="flex flex-col items-center gap-1">
-                            <span className="text-label-md font-black uppercase tracking-cinema-md text-white/90">
-                                Cambiando pista de audio
-                            </span>
-                            <span className="text-label-sm font-medium uppercase tracking-ultra text-white/40">
-                                Iniciando transcodificación…
-                            </span>
-                        </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-player-overlay text-white bg-black/60">
+                    <IconUiSpinner className="w-8 h-8 text-brand-accent animate-spin" aria-label={`${title}…`} />
+                    <div className="flex flex-col items-center text-center">
+                        <span className="text-xs font-semibold tracking-wide">{title}</span>
+                        <span className="text-xs text-on-surface-variant">{detail}</span>
                     </div>
                 </div>
             )
         }
-        // Carga inicial del player: fondo negro sólido.
+        // Carga inicial del player: fondo negro sólido justificado
         return (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-player-overlay text-white bg-black">
-                <IconUiSpinner className="w-16 h-16 text-white animate-spin" />
+                <IconUiSpinner className="w-8 h-8 text-white/80 animate-spin" />
             </div>
         )
     }
 
     if (showBuffering && status === "ready") {
         return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-player-overlay text-white pointer-events-none" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 20%, transparent)" }}>
-                <IconUiSpinner className="w-16 h-16 text-white animate-spin" />
-                {isSeeking && (
-                    <p className="mt-4 font-black tracking-cinema-lg uppercase text-label-sm opacity-50">
-                        Buscando...
-                    </p>
-                )}
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-player-overlay text-white pointer-events-none">
+                <IconUiSpinner className="w-8 h-8 text-white/80 animate-spin" aria-label={isSeeking ? "Buscando posición…" : "Cargando…"} />
             </div>
         )
     }
 
     if (status === "error") {
         return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-player-overlay px-8 text-center text-white backdrop-blur-overlay-lg [&>*:not(:first-child)]:mt-6" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 85%, transparent)" }}>
-                <IconUiAlert className="w-16 h-16 text-brand-accent animate-pulse" />
-                <h3 className="font-display text-3xl tracking-ultra uppercase">TRANSMISIÓN CAÍDA</h3>
-                <p className="text-on-surface-variant max-w-md text-sm font-medium uppercase tracking-wide leading-relaxed">{errorMsg}</p>
-                <div className="flex items-center gap-4 mt-6">
-                    {onRetry && (
-                        <button
-                            onClick={onRetry}
-                            className="px-8 py-3.5 bg-brand-accent hover:brightness-110 text-on-primary font-black text-label-md uppercase tracking-cinema-md transition-all rounded-xl active:scale-95 shadow-[0_0_20px_hsl(var(--brand-accent)/0.3)]"
-                        >
-                            REINTENTAR
-                        </button>
-                    )}
-                    <button
-                        onClick={onClose}
-                        className={cn(
-                            "px-8 py-3.5 font-black text-label-md uppercase tracking-cinema-md transition-all rounded-xl active:scale-95",
-                            onRetry
-                                ? "bg-white/10 hover:bg-white/20 text-white border border-white/10"
-                                : "bg-brand-accent hover:brightness-110 text-on-primary"
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-player-overlay px-8 text-center text-white bg-black/80">
+                <div className="flex flex-col items-center max-w-sm gap-2">
+                    <IconUiAlert className="w-8 h-8 text-brand-accent mb-1" />
+                    <h3 className="font-display text-xl font-medium tracking-tight">
+                        {errorMsg === STREAM_FILE_MISSING_MSG ? "Archivo no disponible" : "No se pudo reproducir"}
+                    </h3>
+                    <p className="text-sm text-on-surface-variant leading-relaxed">{errorMsg}</p>
+                    <div className="flex items-center gap-2 mt-4">
+                        {onRetry && (
+                            <button
+                                onClick={onRetry}
+                                className={PLAYER_PRIMARY_BTN}
+                            >
+                                Reintentar
+                            </button>
                         )}
-                    >
-                        REGRESAR
-                    </button>
+                        <button
+                            onClick={onClose}
+                            className={onRetry ? PLAYER_SECONDARY_BTN : PLAYER_PRIMARY_BTN}
+                        >
+                            Regresar
+                        </button>
+                    </div>
                 </div>
             </div>
         )
@@ -121,64 +120,29 @@ export function LoadingErrorOverlay({
     return null
 }
 
-export function ResumeOverlay({ show, time, onResume, onClose }: { show: boolean, time: number, onResume: () => void, onClose: () => void }) {
-    if (!show) return null
-
-    const formatTime = (secs: number) => {
-        const m = Math.floor(secs / 60)
-        const s = Math.floor(secs % 60)
-        return `${m}:${s.toString().padStart(2, '0')}`
-    }
-
-    return (
-        <div className="absolute bottom-20 left-4 sm:bottom-32 sm:left-10 z-player-overlay pointer-events-auto animate-in slide-in-from-left-4 duration-slow">
-            <div className="bg-[var(--bg-secondary)] border border-[var(--glass-strong)] rounded-modal shadow-[var(--shadow-modal)] p-5 flex flex-col min-w-[240px] sm:min-w-[280px] [&>*:not(:first-child)]:mt-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex flex-col [&>*:not(:first-child)]:mt-0.5">
-                        <span className="text-label-sm font-black text-on-surface-variant uppercase tracking-ultra">Continuar viendo</span>
-                        <span className="text-white font-bold text-sm">Desde {formatTime(time)}</span>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        aria-label="Cerrar aviso de reanudación"
-                        className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 rounded-full transition-colors text-on-surface-variant hover:text-on-surface"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-                <div className="flex [&>*:not(:first-child)]:ml-2">
-                    <button
-                        tabIndex={0}
-                        onClick={onResume}
-                        className="flex-1 py-3 bg-brand-accent hover:brightness-110 text-on-primary font-black text-label-sm uppercase tracking-widest transition-all rounded-xl active:scale-95 flex items-center justify-center [&>*:not(:first-child)]:ml-2 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-accent"
-                    >
-                        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                        REANUDAR
-                    </button>
-                    <button
-                        tabIndex={0}
-                        onClick={onClose}
-                        className="flex-1 py-3 bg-surface-container border border-white/5 text-zinc-300 font-black text-label-sm uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all rounded-xl active:scale-95 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-                    >
-                        IGNORAR
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
-
 export function CenterPlayFlash({ flash }: { flash: "play" | "pause" | null }) {
-    if (!flash) return null
+    const reduceMotion = useReducedMotion()
+
     return (
-        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-            <div className="flex items-center justify-center w-24 h-24 bg-white/10 border border-white/20 animate-[ping_0.4s_ease-out_forwards]">
-                {flash === "play"
-                    ? <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-white ml-1"><path d="M8 5v14l11-7z" /></svg>
-                    : <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10 text-white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
-                }
-            </div>
-        </div>
+        <AnimatePresence mode="wait">
+            {flash && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                    <m.div
+                        key={flash}
+                        initial={{ scale: reduceMotion ? 1 : 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: reduceMotion ? 1 : 1.35, opacity: 0 }}
+                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                        className={cn("flex items-center justify-center w-20 h-20 rounded-full", PLAYER_GLASS)}
+                    >
+                        {flash === "play"
+                            ? <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-white ml-1"><path d="M8 5v14l11-7z" /></svg>
+                            : <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                        }
+                    </m.div>
+                </div>
+            )}
+        </AnimatePresence>
     )
 }
 
@@ -189,27 +153,31 @@ export function SkipIntroOverlay({
     remainingSeconds,
     segmentProgress = 0,
     shortcutKey = "S",
+    controlsVisible = true,
 }: {
     show: boolean
     onSkip: () => void
-    /** "intro" for opening, "outro" for ending — controls label and accent color */
     skipMode?: "intro" | "outro"
     remainingSeconds?: number
-    /** 0-100: how much of the current skip segment has elapsed (drives the fill bar) */
     segmentProgress?: number
     shortcutKey?: string
+    /** Con la barra de controles visible, el botón sube para no pisarla. */
+    controlsVisible?: boolean
 }) {
     const isOutro = skipMode === "outro"
-    const label = isOutro ? "SALTAR OUTRO" : "SALTAR INTRO"
-    // Progress left = how much is remaining (inverted from elapsed)
+    const label = isOutro ? "Saltar outro" : "Saltar intro"
     const fillProgress = 100 - segmentProgress
 
     return (
         <div
             aria-hidden={!show}
             className={cn(
-                "absolute bottom-20 left-4 sm:bottom-24 sm:left-10 md:left-12 z-player-overlay transition-all duration-base pointer-events-auto",
-                show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+                // Esquina inferior derecha (convención Netflix/Crunchyroll): el lado
+                // izquierdo lo ocupan play/volumen y sus tooltips.
+                "absolute right-3 sm:right-6 z-player-overlay pointer-events-auto",
+                "transition-[opacity,transform,bottom] duration-300 ease-out",
+                controlsVisible ? "bottom-24" : "bottom-8",
+                show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3 pointer-events-none"
             )}>
             <button
                 id="skip-intro-btn"
@@ -220,54 +188,43 @@ export function SkipIntroOverlay({
                     onSkip()
                 }}
                 className={cn(
-                    "relative flex items-center px-4 py-2 overflow-hidden text-white backdrop-blur-overlay-lg",
-                    "bg-scrim/60 border border-outline-variant rounded-modal shadow-[var(--shadow-modal)]",
-                    isOutro
-                        ? "border-brand-secondary/30 hover:border-brand-secondary/60 hover:bg-brand-secondary/15"
-                        : "border-outline-variant hover:border-brand-accent/40 hover:bg-brand-accent/15",
-                    "text-label-sm font-black uppercase tracking-cinema-md",
-                    "transition-all duration-base",
-                    "active:scale-95",
-                    "group",
-                    "[&>*:not(:first-child)]:ml-2",
-                    "focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]"
+                    "relative isolate flex items-center gap-2.5 h-11 pl-4 pr-1.5 overflow-hidden rounded-full",
+                    PLAYER_GLASS,
+                    "text-white text-xs font-semibold tracking-wide",
+                    "hover:bg-white/95 hover:text-black",
+                    "transition-colors duration-200 active:scale-[0.97] cursor-pointer group",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 )}
             >
-                {/* Animated segment countdown fill — shrinks from full to empty */}
+                {/* Cuenta regresiva del segmento: se vacía de izquierda a derecha */}
                 <div
+                    aria-hidden
                     className={cn(
-                        "absolute bottom-0 left-0 h-[2px] transition-all duration-slow ease-linear",
-                        isOutro ? "bg-brand-secondary" : "bg-brand-accent"
+                        "absolute inset-y-0 left-0 -z-10 transition-[width] duration-slow ease-linear group-hover:opacity-0",
+                        isOutro ? "bg-brand-secondary/30" : "bg-brand-accent/30"
                     )}
                     style={{ width: `${fillProgress}%` }}
                 />
 
-                {/* Skip icon */}
-                <svg viewBox="0 0 24 24" fill="currentColor" className={cn(
-                    "w-3.5 h-3.5 transition-colors shrink-0",
-                    isOutro ? "text-brand-secondary group-hover:brightness-110" : "text-brand-accent group-hover:brightness-110"
-                )}>
-                    <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 shrink-0">
+                    <path d="M5 5.5v13a1 1 0 0 0 1.53.85L15.5 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.53 4.65A1 1 0 0 0 5 5.5z" />
                 </svg>
 
-                <span className="text-white">{label}</span>
+                <span className="whitespace-nowrap">{label}</span>
 
-                {/* Remaining seconds badge */}
                 {remainingSeconds !== undefined && remainingSeconds > 0 && (
-                    <span className={cn(
-                        "text-label-sm font-mono tabular-nums tracking-widest",
-                        "px-2 py-0.5 rounded",
-                        isOutro
-                            ? "bg-brand-secondary/20 text-brand-secondary group-hover:bg-white/20 group-hover:text-white"
-                            : "bg-white/10 group-hover:bg-white/20 group-hover:text-white text-on-surface"
-                    )}>
-                        {remainingSeconds}s
+                    <span className="tabular-nums text-on-surface-variant group-hover:text-black/50">
+                        <ElasticCounter value={remainingSeconds} />s
                     </span>
                 )}
 
-                <span className="text-white/30 text-label-sm font-black ml-1 hidden sm:inline group-hover:text-white/40">
-                    [{shortcutKey}]
-                </span>
+                <kbd className={cn(
+                    "hidden sm:inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full",
+                    "text-[11px] font-mono font-semibold",
+                    "bg-white/10 text-on-surface-variant group-hover:bg-black/10 group-hover:text-black/60"
+                )}>
+                    {shortcutKey}
+                </kbd>
             </button>
         </div>
     )
@@ -275,47 +232,63 @@ export function SkipIntroOverlay({
 
 export function AutoSkipToastOverlay({
     showType,
-    onUndo
+    onUndo,
+    controlsVisible = true,
 }: {
-    showType: "intro" | "outro" | "pause" | null
+    showType: "intro" | "outro" | "segment" | "filler" | null
     onUndo: () => void
+    controlsVisible?: boolean
 }) {
+    const entranceSpring = useSpringPreset("entrance")
+    const reduceMotion = useReducedMotion()
+
     const label = showType === "outro"
         ? "Outro saltado"
-        : showType === "pause"
-            ? "Reproducción pausada"
-            : "Intro saltada"
+        : showType === "segment"
+            ? "Segmento saltado"
+            : showType === "filler"
+                ? "Relleno saltado"
+                : "Intro saltada"
+    // Al saltar relleno el reproductor ya pasa al siguiente episodio: no hay nada que deshacer.
+    const canUndo = showType !== "filler"
 
     return (
-        <div className={cn(
-            "absolute bottom-20 left-4 sm:bottom-24 sm:left-10 md:left-12 z-player-overlay transition-all duration-base pointer-events-auto",
-            showType ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
-        )}>
-            <div className={cn(
-                "flex items-center px-5 py-3 text-white backdrop-blur-overlay-lg",
-                "bg-scrim/60 border border-outline-variant rounded-modal shadow-[var(--shadow-modal)]",
-                "text-label-sm font-black uppercase tracking-cinema-md",
-                "[&>*:not(:first-child)]:ml-3"
-            )}>
-                <span className="text-white">{label}</span>
-
-                <button
-                    tabIndex={showType ? 0 : -1}
-                    aria-label="Deshacer salto"
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        onUndo()
-                    }}
+        <AnimatePresence>
+            {showType && (
+                <m.div
+                    key="auto-skip-toast"
+                    initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
+                    transition={reduceMotion ? { duration: 0.15 } : entranceSpring}
                     className={cn(
-                        "text-brand-accent hover:brightness-125 transition-all duration-base active:scale-95",
-                        "text-label-sm font-black uppercase tracking-cinema-md",
-                        "focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded"
+                        "absolute right-3 sm:right-6 z-player-overlay pointer-events-auto transition-[bottom] duration-300 ease-out",
+                        controlsVisible ? "bottom-24" : "bottom-8"
                     )}
                 >
-                    Deshacer
-                </button>
-            </div>
-        </div>
+                    <div className={cn(
+                        "flex items-center h-11 pl-4 pr-1.5 text-white rounded-full",
+                        PLAYER_GLASS,
+                        "text-xs font-semibold tracking-wide",
+                        "[&>*:not(:first-child)]:ml-2"
+                    )}>
+                        <span className="whitespace-nowrap">{label}</span>
+
+                        {canUndo && <button
+                            tabIndex={0}
+                            aria-label="Deshacer salto"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                onUndo()
+                            }}
+                            className={cn(PLAYER_SECONDARY_BTN, "h-8 px-3.5")}
+                        >
+                            Deshacer
+                        </button>}
+                    </div>
+                </m.div>
+            )}
+        </AnimatePresence>
     )
 }
 
@@ -342,91 +315,88 @@ export function NextEpisodeOverlay({
     nextEpisodeNumber?: number
     onNext: () => void
     duration: number
-    remainingProgress: number // 0 to 100
+    remainingProgress: number
 }) {
+    const entranceSpring = useSpringPreset("entrance")
+    const reduceMotion = useReducedMotion()
+
     return (
-        <div
-            aria-hidden={!show}
-            className={cn(
-                "absolute bottom-20 right-4 sm:bottom-32 sm:right-8 md:right-12 z-player-overlay transition-all duration-base pointer-events-auto",
-                show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8 pointer-events-none"
-            )}>
-            <div className={cn(
-                "flex flex-col w-64 sm:w-72 bg-[var(--glass-panel-bg-strong)] backdrop-blur-overlay-md border border-white/[0.08]",
-                "shadow-player overflow-hidden rounded-container",
-                "[&>*:not(:first-child)]:mt-4"
-            )}>
-                {/* Thumbnail */}
-                {nextEpisodeImage && (
-                    <div className="relative w-full aspect-video bg-surface-container overflow-hidden">
-                        <img
-                            src={nextEpisodeImage}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        {showCountdown && (
-                            <div className="absolute top-3 right-3 bg-scrim/70 text-label-sm font-black uppercase tracking-widest text-white px-2 py-1 rounded-md">
-                                AUTO: {countdownSeconds}S
+        <AnimatePresence>
+            {show && (
+                <m.div
+                    key="next-episode-overlay"
+                    initial={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
+                    transition={reduceMotion ? { duration: 0.15 } : entranceSpring}
+                    className="absolute bottom-24 right-3 sm:right-6 z-player-overlay pointer-events-auto"
+                >
+                    <div className={cn(
+                        "flex flex-col w-64 sm:w-72 overflow-hidden rounded-2xl",
+                        PLAYER_GLASS,
+                        "[&>*:not(:first-child)]:mt-3"
+                    )}>
+                        {/* Thumbnail */}
+                        {nextEpisodeImage && (
+                            <div className="relative w-full aspect-video bg-surface-container overflow-hidden">
+                                <img
+                                    src={nextEpisodeImage}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                                {showCountdown && (
+                                    <div className={cn("absolute top-2 right-2 text-2xs font-semibold text-white px-2.5 py-1 rounded-full flex items-center tabular-nums", PLAYER_GLASS)}>
+                                        <ElasticCounter value={countdownSeconds} />s
+                                    </div>
+                                )}
                             </div>
                         )}
-                        {/* Play icon overlay hint */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <IconMediaPlay className="w-10 h-10 text-white/80 fill-white/80" />
+
+                        <div className="flex flex-col px-4 pb-4 pt-1 [&>*:not(:first-child)]:mt-2.5">
+                            <div className="flex items-center justify-between">
+                                <span className={PLAYER_EYEBROW}>
+                                    {nextEpisodeNumber ? `Siguiente · Ep. ${nextEpisodeNumber}` : "Siguiente"}
+                                </span>
+                                {!nextEpisodeImage && showCountdown && (
+                                    <span className="text-on-surface-variant text-xs tabular-nums flex items-center">
+                                        <ElasticCounter value={countdownSeconds} />s
+                                    </span>
+                                )}
+                            </div>
+
+                            {nextEpisodeTitle && (
+                                <p className="font-display text-white text-base font-medium tracking-tight leading-snug line-clamp-2">
+                                    {nextEpisodeTitle}
+                                </p>
+                            )}
+
+                            {showCountdown && (
+                                <div className="w-full h-0.5 bg-white/15 overflow-hidden rounded-full">
+                                    <div
+                                        className="h-full bg-brand-accent transition-[width] duration-slow ease-linear"
+                                        style={{ width: `${remainingProgress}%` }}
+                                    />
+                                </div>
+                            )}
+
+                            <button
+                                tabIndex={0}
+                                aria-label={nextEpisodeTitle ? `Ver siguiente episodio: ${nextEpisodeTitle}` : "Ver siguiente episodio"}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onNext()
+                                }}
+                                className={cn(PLAYER_PRIMARY_BTN, "w-full")}
+                            >
+                                <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
+                                Reproducir ahora
+                            </button>
                         </div>
                     </div>
-                )}
-
-                <div className="flex flex-col px-5 pb-5 pt-2 [&>*:not(:first-child)]:mt-3">
-                    {/* Label */}
-                    <div className="flex items-center justify-between">
-                        <span className="text-on-surface-variant text-label-sm font-black uppercase tracking-cinema-md">
-                            {nextEpisodeNumber ? `EPISODIO ${nextEpisodeNumber}` : "SIGUIENTE"}
-                        </span>
-                        {!nextEpisodeImage && showCountdown && (
-                            <span className="text-white text-label-sm font-black tabular-nums tracking-widest">
-                                AUTO: {countdownSeconds}S
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Title */}
-                    {nextEpisodeTitle && (
-                        <p className="text-white text-sm font-black leading-tight uppercase tracking-tight line-clamp-2">
-                            {nextEpisodeTitle}
-                        </p>
-                    )}
-
-                    {/* Auto transition progress bar */}
-                    {showCountdown && (
-                        <div className="w-full h-1 bg-surface-container overflow-hidden rounded-full">
-                            <div
-                                className="h-full bg-brand-accent transition-all duration-slow ease-linear"
-                                style={{ width: `${remainingProgress}%` }}
-                            />
-                        </div>
-                    )}
-
-                    {/* Button */}
-                    <button
-                        tabIndex={show ? 0 : -1}
-                        aria-label={nextEpisodeTitle ? `Ver siguiente episodio: ${nextEpisodeTitle}` : "Ver siguiente episodio"}
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onNext()
-                        }}
-                        className={cn(
-                            "w-full py-3 text-label-sm font-black uppercase tracking-cinema-md rounded-xl",
-                            "bg-brand-accent text-on-primary hover:brightness-110",
-                            "transition-all duration-base active:scale-95",
-                            "focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-accent"
-                        )}
-                    >
-                        SIGUIENTE →
-                    </button>
-                </div>
-            </div>
-        </div>
+                </m.div>
+            )}
+        </AnimatePresence>
     )
 }

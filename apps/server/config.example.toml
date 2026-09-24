@@ -21,6 +21,7 @@ offline = false           # Inicia en modo desconectado de internet
 useBinaryPath = true      # Usa la ruta del ejecutable como directorio de trabajo (útil en macOS)
 password = ""             # Contraseña para proteger el servidor web (opcional)
 # dohUrl = ""             # URL para DNS over HTTPS (opcional)
+# authTokenTTL = "24h"    # Tiempo de vida del token HMAC (mínimo 5m, ej: "1h", "30m", "24h")
 
 [server.tls]
 enabled = false           # Activa HTTPS
@@ -47,6 +48,12 @@ dir = "$KAMEHOUSE_DATA_DIR/logs"
 [cache]
 dir = "$KAMEHOUSE_DATA_DIR/cache"
 transcodeDir = "$KAMEHOUSE_DATA_DIR/cache/transcode"
+
+[cache.thumbnails]
+memoryMaxItems = 1000     # Máximo de miniaturas en RAM (LRU en memoria)
+diskMaxSizeMB = 5120      # Límite de almacenamiento en disco en MB (5 GB)
+diskTTLHours = 720        # Tiempo de vida de miniaturas sin acceder (30 días)
+cleanupInterval = "12h"   # Frecuencia del ciclo de limpieza de disco
 
 [offline]
 dir = "$KAMEHOUSE_DATA_DIR/offline"

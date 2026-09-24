@@ -399,9 +399,7 @@ if (typeof window !== 'undefined') {
 
   if (isTauri()) {
     window.__isTauriDesktop__ = true;
-    console.log('[Desktop Bridge] Tauri bridge initialized');
   } else {
     window.__isTauriDesktop__ = false;
-    console.log('[Desktop Bridge] Running in browser (mock bridge)');
   }
 }

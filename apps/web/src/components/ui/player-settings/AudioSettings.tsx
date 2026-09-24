@@ -19,6 +19,11 @@ export function AudioSettings({
 
     return (
         <div className="flex flex-col">
+            {audioTracks.length === 0 && (
+                <p className="px-3 py-3 text-xs text-on-surface-variant">
+                    No se detectaron otras pistas de audio.
+                </p>
+            )}
             {audioTracks.map((track) => {
                 const isActive = track.index === activeAudioIndex
                 return (
@@ -26,17 +31,17 @@ export function AudioSettings({
                         key={track.index}
                         onClick={() => onSelectAudio(track)}
                         className={cn(
-                            "w-full flex items-center justify-between px-4 py-3 transition-all duration-base ease-out group text-left relative overflow-hidden",
-                            isActive ? "bg-white/[0.04] text-on-surface" : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
+                            "w-full flex items-center justify-between min-h-10 py-2 px-3 rounded-full transition-colors duration-200 group text-left relative overflow-hidden",
+                            isActive ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
                         )}
                     >
                         {/* Hover/Active left-edge accent indicator */}
                         <span className={cn(
-                            "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] transition-all duration-base ease-out rounded-r-md",
+                            "hidden",
                             isActive ? "h-1/2 bg-brand-accent" : "h-0 bg-outline-variant group-hover:h-1/3"
                         )} />
 
-                        <div className="flex flex-col group-hover:translate-x-1.5 transition-transform duration-base ease-out">
+                        <div className="flex flex-col  transition-transform duration-base ease-out">
                             <span className={cn(
                                 "text-xs font-bold leading-none transition-colors duration-base",
                                 isActive ? "text-brand-accent" : "text-on-surface group-hover:text-on-surface"
@@ -44,7 +49,7 @@ export function AudioSettings({
                                 {track.title || getFriendlyLanguage(track.language)}
                             </span>
                             <span className={cn(
-                                "text-label-sm font-bold mt-1.5 uppercase transition-colors duration-base",
+                                "text-xs mt-0.5 transition-colors duration-base",
                                 isActive ? "text-on-surface/60" : "text-on-surface-variant group-hover:text-on-surface"
                             )}>
                                 {[track.codec, track.channels ? `${track.channels}ch` : undefined].filter(Boolean).join(" // ")}

@@ -31,13 +31,13 @@ export function QualitySettings({
                         key={idx}
                         onClick={() => onSourceChange(source)}
                         className={cn(
-                            "w-full flex items-center justify-between px-4 py-3 transition-all duration-base ease-out group text-left relative overflow-hidden",
-                            isActive ? "bg-white/[0.04] text-on-surface" : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface"
+                            "w-full flex items-center justify-between min-h-10 py-2 px-3 rounded-full transition-colors duration-200 group text-left relative overflow-hidden",
+                            isActive ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
                         )}
                     >
                         {/* Hover/Active left-edge accent indicator */}
                         <span className={cn(
-                            "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] transition-all duration-base ease-out rounded-r-md",
+                            "hidden",
                             isActive ? "h-1/2 bg-brand-accent shadow-brand-focus" : "h-0 bg-outline-variant group-hover:h-1/3"
                         )} />
 

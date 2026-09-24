@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -143,6 +144,7 @@ func TestResolveDragonBallID(t *testing.T) {
 
 		// Películas Clásicas
 		{name: "La Leyenda de Shenlong", title: "Dragon Ball La Leyenda de Shenlong", wantID: 39144, wantMovie: true, wantFound: true},
+		{name: "La Leyenda de Shen Long (spaced)", title: "Dragon Ball - La leyenda de Shen Long", wantID: 39144, wantMovie: true, wantFound: true},
 		{name: "Curse of the Blood Rubies", title: "Dragon Ball Curse of the Blood Rubies", wantID: 39144, wantMovie: true, wantFound: true},
 		{name: "DB Pelicula 01", title: "Dragon Ball Pelicula 01", wantID: 39144, wantMovie: true, wantFound: true},
 		{name: "La Princesa Durmiente", title: "Dragon Ball La Princesa Durmiente en el Castillo del Mal", wantID: 39145, wantMovie: true, wantFound: true},
@@ -254,3 +256,53 @@ func TestGetDragonBallSagaInfo(t *testing.T) {
 		t.Errorf("expected to find Saiyajin saga in info")
 	}
 }
+
+func TestCreatePrehydratedDragonBallMedia(t *testing.T) {
+	specialIDs := []struct {
+		id          int
+		wantTitle   string
+		wantYear    int
+		checkMovie  bool
+	}{
+		{id: 39321, wantTitle: "El Cuerpo de Bomberos de Goku", wantYear: 1988},
+		{id: 1039321, wantTitle: "El Cuerpo de Bomberos de Goku", wantYear: 1988, checkMovie: true},
+		{id: 39322, wantTitle: "Seguridad Vial de Goku", wantYear: 1988},
+		{id: 1039322, wantTitle: "Seguridad Vial de Goku", wantYear: 1988, checkMovie: true},
+		{id: 39325, wantTitle: "¡Todos Reunidos! El Mundo de Goku", wantYear: 1992},
+		{id: 1039325, wantTitle: "¡Todos Reunidos! El Mundo de Goku", wantYear: 1992, checkMovie: true},
+		{id: 39326, wantTitle: "¡Te lo Mostramos Todo! Olvida el Año", wantYear: 1993},
+		{id: 1039326, wantTitle: "¡Te lo Mostramos Todo! Olvida el Año", wantYear: 1993, checkMovie: true},
+		{id: 105973, wantTitle: "Los Aventureros de la Esfera del Pánico", wantYear: 2004},
+		{id: 1105973, wantTitle: "Los Aventureros de la Esfera del Pánico", wantYear: 2004, checkMovie: true},
+		{id: 444390, wantTitle: "Toriko x One Piece x Dragon Ball Z Super Colaboración", wantYear: 2013},
+		{id: 1444390, wantTitle: "Toriko x One Piece x Dragon Ball Z Super Colaboración", wantYear: 2013, checkMovie: true},
+	}
+
+	for _, tc := range specialIDs {
+		m := CreatePrehydratedDragonBallMedia(tc.id)
+		if m == nil {
+			t.Fatalf("CreatePrehydratedDragonBallMedia(%d) returned nil, expected valid media", tc.id)
+		}
+		if m.Title == nil || m.Title.Spanish == nil || !strings.Contains(*m.Title.Spanish, tc.wantTitle) {
+			t.Errorf("ID %d: expected Spanish title containing %q, got %v", tc.id, tc.wantTitle, m.Title)
+		}
+		if m.Year == nil || *m.Year != tc.wantYear {
+			t.Errorf("ID %d: expected year %d, got %v", tc.id, tc.wantYear, m.Year)
+		}
+		if m.CoverImage == nil || m.CoverImage.Large == nil || *m.CoverImage.Large == "" {
+			t.Errorf("ID %d: expected non-empty CoverImage poster", tc.id)
+		}
+		if tc.checkMovie {
+			if m.Format == nil || *m.Format != "MOVIE" {
+				t.Errorf("ID %d: expected format MOVIE, got %v", tc.id, m.Format)
+			}
+		}
+	}
+
+	// Unknown IDs must return nil (never fallback to generic "Dragon Ball Serie" without poster)
+	unknown := CreatePrehydratedDragonBallMedia(9999999)
+	if unknown != nil {
+		t.Errorf("expected unknown ID 9999999 to return nil, got %+v", unknown)
+	}
+}
+

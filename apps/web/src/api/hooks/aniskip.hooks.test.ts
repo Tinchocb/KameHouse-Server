@@ -1,4 +1,4 @@
-import { normalizeInterval, aniskipQueryKeys } from "./aniskip.hooks"
+import { normalizeInterval, aniskipQueryKeys, aniSkipResponseSchema } from "./aniskip.hooks"
 
 describe("aniskipQueryKeys", () => {
     it("should generate base key correctly", () => {
@@ -62,5 +62,35 @@ describe("normalizeInterval", () => {
         const interval = { startTime: 1300, endTime: 1390 }
         expect(normalizeInterval(interval, 0, 1400, "end")).toEqual(interval)
         expect(normalizeInterval(interval, 1400, 0, "end")).toEqual(interval)
+    })
+})
+
+describe("aniSkipResponseSchema", () => {
+    it("should accept a valid response", () => {
+        const res = {
+            found: true,
+            results: [{ interval: { startTime: 0, endTime: 85 }, skipType: "op", episodeLength: 1400, votes: 5 }],
+            statusCode: 200,
+        }
+        expect(aniSkipResponseSchema.safeParse(res).success).toBe(true)
+    })
+
+    it("should tolerate unknown skip types (filtered later)", () => {
+        const res = {
+            found: true,
+            results: [{ interval: { startTime: 0, endTime: 30 }, skipType: "preview", episodeLength: 1400 }],
+            statusCode: 200,
+        }
+        expect(aniSkipResponseSchema.safeParse(res).success).toBe(true)
+    })
+
+    it("should reject malformed payloads", () => {
+        expect(aniSkipResponseSchema.safeParse(null).success).toBe(false)
+        expect(aniSkipResponseSchema.safeParse({ found: "yes", statusCode: 200 }).success).toBe(false)
+        expect(aniSkipResponseSchema.safeParse({
+            found: true,
+            results: [{ interval: { startTime: "0", endTime: 85 }, skipType: "op", episodeLength: 1400 }],
+            statusCode: 200,
+        }).success).toBe(false)
     })
 })

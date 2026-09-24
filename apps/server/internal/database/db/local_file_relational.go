@@ -17,7 +17,7 @@ import (
 // rewrite the original creation timestamp (UpdateAll:true used to clobber it).
 var localFileUpsertColumns = []string{
 	"name", "file_hash", "file_size", "file_mod_time", "locked", "ignored",
-	"library_media_id", "media_id", "parsed_data", "parsed_folder_data",
+	"library_media_id", "media_id", "drive_file_id", "parsed_data", "parsed_folder_data",
 	"embedded_metadata", "metadata", "technical_info", "tags", "updated_at",
 }
 
@@ -171,9 +171,9 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 			return err
 		}
 
-		// 2. Delete files that are no longer present
+		// 2. Delete files that are no longer present (excluding remote cloud paths like gdrive://)
 		if len(paths) < 950 {
-			return tx.Where("path NOT IN ?", paths).Delete(&models.LocalFile{}).Error
+			return tx.Where("path NOT IN ? AND path NOT LIKE 'gdrive://%'", paths).Delete(&models.LocalFile{}).Error
 		}
 
 		// For larger libraries, use a temporary table to avoid SQLite's variable limit (SQLITE_MAX_VARIABLE_NUMBER)
@@ -211,7 +211,7 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 		// table name "local_file" (mapped from models.LocalFile via default GORM
 		// convention). If a custom NamingStrategy is ever applied, the migration
 		// paths must be updated accordingly.
-		if err := tx.Exec("DELETE FROM local_file WHERE path NOT IN (SELECT path FROM sync_paths)").Error; err != nil {
+		if err := tx.Exec("DELETE FROM local_file WHERE path NOT IN (SELECT path FROM sync_paths) AND path NOT LIKE 'gdrive://%'").Error; err != nil {
 			return err
 		}
 
@@ -351,6 +351,7 @@ func LocalFileDtoToModel(f *dto.LocalFile) (*models.LocalFile, error) {
 		MediaID:        f.MediaID,
 		FileSize:       f.FileSize,
 		FileModTime:    f.FileModTime,
+		DriveFileID:    f.DriveFileID,
 	}
 
 	if f.ParsedData != nil {
@@ -403,6 +404,7 @@ func LocalFileModelToDto(m *models.LocalFile) (*dto.LocalFile, error) {
 		MediaID:        m.MediaID,
 		FileSize:       m.FileSize,
 		FileModTime:    m.FileModTime,
+		DriveFileID:    m.DriveFileID,
 	}
 
 	if len(m.ParsedData) > 0 {

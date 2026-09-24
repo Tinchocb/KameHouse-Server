@@ -3,7 +3,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use log::{debug, info, warn};
 use tauri::{
-    AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+    webview::PageLoadEvent, AppHandle, Emitter, Manager, Runtime, WebviewUrl,
+    WebviewWindowBuilder, WindowEvent,
 };
 
 use crate::settings::{DesktopSettings, SettingsManager, WindowBounds};
@@ -20,6 +21,9 @@ pub struct WindowManager {
     renderer_ready: Arc<AtomicBool>,
     splash_closed: Arc<AtomicBool>,
     open_in_background: Arc<AtomicBool>,
+    /// La ventana principal se crea recién cuando el splash terminó de pintar,
+    /// para que las dos WebView2 no compitan durante el primer frame.
+    main_created: Arc<AtomicBool>,
 }
 
 impl WindowManager {
@@ -31,6 +35,7 @@ impl WindowManager {
             renderer_ready: Arc::new(AtomicBool::new(false)),
             splash_closed: Arc::new(AtomicBool::new(false)),
             open_in_background: Arc::new(AtomicBool::new(false)),
+            main_created: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -45,25 +50,56 @@ impl WindowManager {
         self.server_ready.store(false, Ordering::SeqCst);
         self.renderer_ready.store(false, Ordering::SeqCst);
         self.splash_closed.store(false, Ordering::SeqCst);
+        self.main_created.store(false, Ordering::SeqCst);
         self.open_in_background.store(settings.open_in_background, Ordering::SeqCst);
 
-        // Splash primero: es HTML local, pinta al instante mientras el sidecar
-        // arranca y el WebView principal carga el bundle React.
+        // Splash primero: es HTML estático (public/splash.html), pinta al instante.
+        // La ventana principal se crea recién cuando el splash terminó de cargar
+        // (o tras un timeout de seguridad), y carga React oculta en segundo plano.
         if !settings.open_in_background {
-            self.create_splash_window(app_handle, is_dev)?;
+            self.create_splash_window(app_handle, is_dev, settings.clone())?;
+
+            let app = app_handle.clone();
+            let main_created = self.main_created.clone();
+            let splash_closed = self.splash_closed.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(1500)).await;
+                Self::ensure_main_window(&app, is_dev, &settings, &main_created, &splash_closed, "timeout");
+            });
         } else {
             // Arranque en segundo plano: sin splash, la app vive en el tray.
             self.splash_closed.store(true, Ordering::SeqCst);
+            self.main_created.store(true, Ordering::SeqCst);
+            Self::create_main_window(app_handle, is_dev, &settings)?;
         }
-
-        // Create main window (siempre oculta al inicio; se revela en try_reveal_main)
-        self.create_main_window(app_handle, is_dev, &settings)?;
 
         Ok(())
     }
 
+    /// Crea la ventana principal una única vez (la dispara el splash al terminar
+    /// de cargar, o el timeout de seguridad, lo que ocurra primero).
+    fn ensure_main_window<R: Runtime>(
+        app_handle: &AppHandle<R>,
+        is_dev: bool,
+        settings: &DesktopSettings,
+        main_created: &AtomicBool,
+        splash_closed: &AtomicBool,
+        source: &str,
+    ) {
+        // splash_closed antes de crear main => hubo crash: no tiene sentido crearla.
+        if splash_closed.load(Ordering::SeqCst) {
+            return;
+        }
+        if main_created.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        info!("[WindowManager] Creating main window (trigger: {})", source);
+        if let Err(e) = Self::create_main_window(app_handle, is_dev, settings) {
+            warn!("[WindowManager] Failed to create main window: {}", e);
+        }
+    }
+
     fn create_main_window<R: Runtime>(
-        &self,
         app_handle: &AppHandle<R>,
         is_dev: bool,
         settings: &DesktopSettings,
@@ -97,7 +133,7 @@ impl WindowManager {
             // backend (sidecar) y el renderer (React) están listos. Mientras
             // tanto el usuario ve la ventana splash.
             .visible(false)
-            .background_color(tauri::window::Color(0, 0, 0, 255))
+            .background_color(tauri::window::Color(9, 9, 11, 255))
             .decorations(true)
             .transparent(false);
 
@@ -175,6 +211,7 @@ impl WindowManager {
         &self,
         app_handle: &AppHandle<R>,
         is_dev: bool,
+        settings: DesktopSettings,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("[WindowManager] Creating splash window");
 
@@ -184,7 +221,24 @@ impl WindowManager {
             WebviewUrl::App("splash.html".into())
         };
 
+        let main_created = self.main_created.clone();
+        let splash_closed = self.splash_closed.clone();
+
         WebviewWindowBuilder::new(app_handle, "splash", url)
+            .on_page_load(move |window, payload| {
+                if payload.event() != PageLoadEvent::Finished {
+                    return;
+                }
+                // No crear ventanas dentro del handler (deadlock en Windows):
+                // se delega a una tarea async.
+                let app = window.app_handle().clone();
+                let settings = settings.clone();
+                let main_created = main_created.clone();
+                let splash_closed = splash_closed.clone();
+                tauri::async_runtime::spawn(async move {
+                    Self::ensure_main_window(&app, is_dev, &settings, &main_created, &splash_closed, "splash loaded");
+                });
+            })
             .title("KameHouse")
             .inner_size(460.0, 380.0)
             .min_inner_size(380.0, 320.0)
@@ -232,9 +286,27 @@ impl WindowManager {
 
     pub fn finalize_startup<R: Runtime>(&self, app_handle: &AppHandle<R>, source: &str) {
         info!("[WindowManager] Finalizing startup from: {}", source);
-        self.server_ready.store(true, Ordering::SeqCst);
+        let already_ready = self.server_ready.swap(true, Ordering::SeqCst);
+        self.set_splash_status(app_handle, "Cargando interfaz...");
         self.emit_to_main(app_handle, "server-status", "ready");
         self.try_reveal_main(app_handle);
+
+        // Red de seguridad: si React nunca avisa `renderer_ready` (error de
+        // runtime, página cargada mientras Rsbuild compilaba, etc.) el splash
+        // quedaba para siempre con la principal oculta. Tras el timeout se
+        // revela igual; en dev con devtools abiertas para ver el error.
+        if !already_ready {
+            let app = app_handle.clone();
+            let timeout_secs = if cfg!(debug_assertions) { 30 } else { 15 };
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(timeout_secs)).await;
+                let wm = app.state::<Arc<WindowManager>>();
+                if !wm.renderer_ready.load(Ordering::SeqCst) {
+                    warn!("[WindowManager] Renderer did not report ready after {}s, revealing main window anyway", timeout_secs);
+                    wm.on_renderer_ready(&app);
+                }
+            });
+        }
     }
 
     /// El renderer (React) avisa cuando terminó de pintar la interfaz
@@ -290,7 +362,22 @@ impl WindowManager {
         Ok(())
     }
 
+    /// Actualiza el texto de estado del splash (ver `window.setStatus` en splash.html).
+    pub fn set_splash_status<R: Runtime>(&self, app_handle: &AppHandle<R>, text: &str) {
+        if let Some(splash) = app_handle.get_webview_window("splash") {
+            let _ = splash.eval(format!("window.setStatus && window.setStatus({:?})", text));
+        }
+    }
+
     pub fn show_main_window<R: Runtime>(&self, app_handle: &AppHandle<R>) {
+        // Si la principal todavía no existe (arranque muy temprano), el splash
+        // sigue siendo lo único que mostrar.
+        if app_handle.get_webview_window("main").is_none() {
+            if let Some(splash) = app_handle.get_webview_window("splash") {
+                let _ = splash.set_focus();
+            }
+            return;
+        }
         // Si el usuario fuerza la ventana (tray / segunda instancia) durante el
         // arranque, el splash ya cumplió: se cierra y se muestra la principal
         // aunque el handshake aún no terminó (React muestra su propio loader).

@@ -1,33 +1,29 @@
 import React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { IconStatusGhost } from "@/components/ui/icons";
+import { GradientRevealText } from "@/components/ui/text/gradient-reveal-text"
 
 interface EmptyStateProps {
     title?: string
     message?: string
     icon?: React.ReactNode
-    illustration?: React.ReactNode
     action?: React.ReactNode
-    className?: string
 }
 
 /**
  * Global friendly empty state with a premium glassmorphic feel.
  */
 export function EmptyState({
-    title = "No results found",
-    message = "Try adjusting your filters or reloading the library.",
+    title = "Sin resultados",
+    message = "Prueba ajustando los filtros o recargando la biblioteca.",
     icon,
-    illustration,
     action,
-    className,
 }: EmptyStateProps) {
     return (
         <div className={cn(
             "relative flex flex-col items-center justify-center text-center",
             "glass-card px-12 py-16 md:py-24",
             "max-w-2xl mx-auto overflow-hidden shadow-2xl",
-            className,
         )}>
             {/* Diffused series colors inside the empty state card */}
             <div className="absolute inset-0 -z-10 overflow-hidden opacity-30 pointer-events-none">
@@ -35,15 +31,13 @@ export function EmptyState({
                 <div className="absolute bottom-[-30%] right-[-30%] w-[80%] h-[80%] rounded-full bg-brand-secondary/20 blur-3xl" />
             </div>
 
-            {illustration ? (
-                <div className="mb-8 opacity-90">{illustration}</div>
-            ) : (
-                <div className="mb-8 flex h-20 w-20 items-center justify-center border border-white/5 text-white rounded-container" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 50%, transparent)" }}>
-                    {icon ?? <IconStatusGhost className="h-10 w-10 text-brand-accent animate-pulse-slow" />}
-                </div>
-            )}
+            <div className="mb-8 flex h-20 w-20 items-center justify-center border border-white/5 text-white rounded-container" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 50%, transparent)" }}>
+                {icon ?? <IconStatusGhost className="h-10 w-10 text-brand-accent animate-pulse-slow" />}
+            </div>
             
-            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">{title}</h3>
+            <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                <GradientRevealText>{title}</GradientRevealText>
+            </h3>
             <p className="mt-4 max-w-md text-sm md:text-base text-on-surface-variant leading-relaxed mx-auto tracking-wide font-medium">
                 {message}
             </p>

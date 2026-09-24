@@ -47,8 +47,6 @@ type (
 		MpvSocket            string `mapstructure:"mpv_socket"`
 		IinaPath             string `mapstructure:"iina_path"`
 		IinaSocket           string `mapstructure:"iina_socket"`
-		TorBoxApiKey         string `mapstructure:"torbox_api_key"`
-		RealDebridApiKey     string `mapstructure:"realdebrid_api_key"`
 	}
 	PathConfig struct {
 		DataDir string `mapstructure:"dataDir"`

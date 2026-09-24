@@ -8,6 +8,7 @@
   --font-sans:      "Outfit Variable", "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display:   "Outfit Variable", "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono:      "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-serif:     "Cormorant Garamond", Georgia, Cambria, "Times New Roman", serif;
   --font-numeric:   "Outfit Variable", "Tabular Numbers", var(--font-mono);
 
   /* ─── Escala Tipográfica (clamp para responsive fluido) ─────────────── */
@@ -99,37 +100,23 @@
   --numeric-lg: var(--text-xl)   / var(--leading-none) var(--font-numeric) var(--weight-bold) var(--tracking-tight);
 }
 
-/* ─── Clases utilitarias ──────────────────────────────────────────────── */
-.text-display-xl { font: var(--display-xl); }
-.text-display-lg { font: var(--display-lg); }
-.text-display-md { font: var(--display-md); }
-.text-display-sm { font: var(--display-sm); }
-.text-display-xs { font: var(--display-xs); }
-
-.text-h1 { font: var(--h1); }
+/* ─── Clases utilitarias (solo las usadas en tsx; las variables --* se conservan) ─── */
 .text-h2 { font: var(--h2); }
 .text-h3 { font: var(--h3); }
-.text-h4 { font: var(--h4); }
 .text-h5 { font: var(--h5); }
 .text-h6 { font: var(--h6); }
 
-.text-body-lg { font: var(--body-lg); }
 .text-body-md { font: var(--body-md); }
 .text-body-sm { font: var(--body-sm); }
-.text-body-xs { font: var(--body-xs); }
 
-.text-button-lg { font: var(--button-lg); }
 .text-button-md { font: var(--button-md); }
 .text-button-sm { font: var(--button-sm); }
-.text-button-xs { font: var(--button-xs); }
 
-.text-label-lg { font: var(--label-lg); }
 .text-label-md { font: var(--label-md); }
 .text-label-sm { font: var(--label-sm); }
 
 .text-badge { font: var(--badge); }
 .text-caption { font: var(--caption); }
-.text-overline { font: var(--overline); }
 
 .text-numeric { font: var(--numeric); }
 .text-numeric-lg { font: var(--numeric-lg); }
@@ -137,4 +124,3 @@
 .font-sans      { font-family: var(--font-sans); }
 .font-display   { font-family: var(--font-display); }
 .font-mono      { font-family: var(--font-mono); }
-.font-numeric   { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; }

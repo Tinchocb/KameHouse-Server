@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence } from "framer-motion"
 import { IconStatusActivity, IconUiTrash, IconUiClose, IconStatusZap, IconStatusCpu, IconUiAlert, IconUiCheckCircle } from "@/components/ui/icons";
 import { useRouterState } from "@tanstack/react-router"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
@@ -81,7 +81,6 @@ export function PerformanceMonitor() {
         if (!autoGovernorEnabled) return
 
         let rafId: number | null = null
-        let lastFrameTime = performance.now()
         const monitorStartTime = performance.now()
         const fpsTicksGov: number[] = []
         let lowFpsStreak = 0
@@ -115,7 +114,6 @@ export function PerformanceMonitor() {
                 }
             }
 
-            lastFrameTime = now
             rafId = requestAnimationFrame(loop)
         }
 
@@ -335,7 +333,7 @@ export function PerformanceMonitor() {
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
+                <m.div
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -477,7 +475,7 @@ export function PerformanceMonitor() {
                         <span>ATAJO: CTRL + SHIFT + F</span>
                         <span>KAMEHOUSE ENGINE</span>
                     </div>
-                </motion.div>
+                </m.div>
             )}
         </AnimatePresence>
     )

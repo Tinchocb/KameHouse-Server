@@ -19,7 +19,7 @@ const (
 	subEdZoneSec       = 480.0 // últimos 8 min: zona del ED
 	subClusterMergeGap = 20.0  // eventos de karaoke a <=20s se funden (tolera pausas instrumentales)
 	subMinDialogueGap  = 60.0  // hueco de diálogo >=60s = probable OP
-	subMaxOnDemand     = 2     // máx. episodios a extraer subs on-demand por scan (control de costo)
+	subMaxOnDemand     = 8     // máx. episodios a extraer subs on-demand por scan (control de costo)
 	subOverlapBoost    = 0.10  // +confianza cuando un hint corrobora una ventana A/B
 	subStandaloneConf  = 0.60  // confianza de una fila derivada solo de subtítulos
 )

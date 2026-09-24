@@ -119,6 +119,11 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 		}
 	}
 
+	// Contrato: siempre array (nunca null) para no romper clientes que iteran.
+	if combined == nil {
+		combined = []map[string]interface{}{}
+	}
+
 	return h.RespondWithData(c, combined)
 }
 
@@ -322,8 +327,86 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 
 	// 5. Refresh collection
 	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
+	ClearLibraryCollectionCache()
 
 	return h.RespondWithData(c, true)
+}
+
+// HandleTMDBEpisodeStill fetches the real still for a TV episode by absolute number.
+//
+//	@summary get TMDB episode still by absolute episode number
+//	@desc Maps absolute->season/episode server-side and returns still_path for chronology thumbnails.
+//	@route /api/v1/tmdb/episode/:tvId/:absolute [GET]
+func (h *Handler) HandleTMDBEpisodeStill(c echo.Context) error {
+	tvID, err := strconv.Atoi(c.Param("tvId"))
+	if err != nil || tvID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive tvId is required"))
+	}
+	absolute, err := strconv.Atoi(c.Param("absolute"))
+	if err != nil || absolute <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive absolute episode is required"))
+	}
+
+	client := h.App.Metadata.TMDBClient
+	if client == nil || !client.HasApiKey() {
+		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("tmdb client not configured"))
+	}
+
+	ep, err := client.GetTVEpisode(c.Request().Context(), tvID, absolute)
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	stillURL := ""
+	if ep.StillPath != "" {
+		stillURL = "https://image.tmdb.org/t/p/w780" + ep.StillPath
+	}
+
+	return h.RespondWithData(c, map[string]interface{}{
+		"tvId":            tvID,
+		"season":          ep.SeasonNumber,
+		"episode":         ep.EpisodeNumber,
+		"absoluteEpisode": absolute,
+		"name":            ep.Name,
+		"overview":        ep.Overview,
+		"stillPath":       ep.StillPath,
+		"stillUrl":        stillURL,
+		"airDate":         ep.AirDate,
+	})
+}
+
+// HandleTMDBImages fetches all backdrops, posters, and logos for a TV show or movie from TMDb.
+//
+//	@summary get TMDB images (backdrops, posters, logos)
+//	@desc Fetches backdrops, posters, and logos from TMDb with caching.
+//	@route /api/v1/tmdb/images/:type/:id [GET]
+func (h *Handler) HandleTMDBImages(c echo.Context) error {
+	mediaType := c.Param("type") // "tv" or "movie"
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive id is required"))
+	}
+
+	client := h.App.Metadata.TMDBClient
+	if client == nil || !client.HasApiKey() {
+		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("tmdb client not configured"))
+	}
+
+	var resp *tmdb.ImagesResponse
+	if mediaType == "movie" {
+		resp, err = client.GetMovieImages(c.Request().Context(), id)
+	} else if mediaType == "tv" {
+		resp, err = client.GetTVImages(c.Request().Context(), id)
+	} else {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid type, expected 'tv' or 'movie'"))
+	}
+
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	return h.RespondWithData(c, resp)
 }
 
 

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/imroc/req/v3"
 	"github.com/labstack/echo/v4"
@@ -58,8 +59,16 @@ func (ip *ImageProxy) GetImage(url string, headers map[string]string) ([]byte, s
 		return nil, "", fmt.Errorf("ssrf proxy: image exceeds maximum allowed size of 25MB")
 	}
 
-	// Persist to disk cache
-	_ = os.WriteFile(cachePath, body, 0644)
+	// Persist to disk cache atomically (tmp+rename) to avoid corrupt .cache on crash.
+	// Unique tmp suffix: concurrent fetches of the same uncached URL must not share the tmp file.
+	tmpPath := fmt.Sprintf("%s.tmp.%d", cachePath, time.Now().UnixNano())
+	if err := os.WriteFile(tmpPath, body, 0644); err != nil {
+		return nil, "", err
+	}
+	if err := os.Rename(tmpPath, cachePath); err != nil {
+		_ = os.Remove(tmpPath)
+		return nil, "", err
+	}
 
 	contentType := resp.Header.Get("Content-Type")
 	if contentType == "" {

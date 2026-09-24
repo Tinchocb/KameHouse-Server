@@ -1,8 +1,10 @@
-import { createLazyFileRoute } from "@tanstack/react-router"
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import React, { useState, useEffect, useRef } from "react"
+import { m } from "framer-motion"
+import { Compass } from "lucide-react"
 import { toast } from "sonner"
-import { useAppStore } from "@/lib/store"
+import { useQueueStore, useUIStore } from "@/lib/store"
 import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import { useGetAnimeEntry, useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
@@ -14,7 +16,7 @@ import { PlayCta } from "@/components/ui/play-cta"
 import { GlassIconButton } from "@/components/ui/glass-icon-button"
 import { PlayerFallback } from "@/components/video/player-fallback"
 import { WatchProgressBar } from "@/components/ui/watch-progress-bar"
-import { Skeleton } from "@/components/ui/skeleton/skeleton"
+import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
 import { startViewTransition } from "@/lib/helpers/transitions"
@@ -25,12 +27,13 @@ import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
 import { IconUiListPlus, IconUiCheck, IconUiPlus, IconUiHeart } from "@/components/ui/icons"
 import { cleanMovieTitle } from "./-MovieCard"
-import { getEntryEraId, getMovieLore } from "./-components/movies-utils"
+import { getEntryEraId, getEntryTitle, getMovieLore } from "./-components/movies-utils"
 import { ERAS, ERA_COLOR_MAP } from "@/lib/config/eras"
 
 import { getSeriesEraTheme } from "@/lib/config/dragonball.config"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { useThemeSettings } from "@/lib/theme/theme-hooks"
+import { useThemeSettings, useHideAudienceScore } from "@/lib/theme/theme-hooks"
+import { getMovieHeroArt, heroArtFromUrl, DEFAULT_MOVIE_FOCAL } from "@/lib/config/hero-art"
 
 export const Route = createLazyFileRoute("/movies/$movieId")({
     component: MovieDetailPage,
@@ -54,15 +57,27 @@ function MovieDetailPage() {
 }
 
 function MovieDetailClient({ movieId }: { movieId: string }) {
+    const navigate = useNavigate()
     const { playSound } = useSound()
     const queryClient = useQueryClient()
     const { data: entry, isLoading } = useGetAnimeEntry(movieId)
-    const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(Number(movieId))
+    const numericMovieId = Number(movieId)
+    const validNumericMovieId = Number.isFinite(numericMovieId) ? numericMovieId : null
+    const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(validNumericMovieId ?? 0)
     const containerRef = useRef<HTMLDivElement>(null)
-    const addToQueue = useAppStore(state => state.addToQueue)
+    const addToQueue = useQueueStore(state => state.addToQueue)
     const ts = useThemeSettings()
+    const hideAudienceScore = useHideAudienceScore()
 
-    const [isFavorite, setIsFavorite] = useState(false)
+    const [isFavorite, setIsFavorite] = useState<boolean>(() => {
+        // Sin endpoint de favoritos en el backend: persistencia local por
+        // película para que no se pierda al navegar/recargar.
+        try {
+            return localStorage.getItem(`kamehouse-favorite-movie-${movieId}`) === "1"
+        } catch {
+            return false
+        }
+    })
     const [playTarget, setPlayTarget] = useState<{
         path: string
         streamType: Mediastream_StreamType
@@ -79,11 +94,18 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const isWatched = userWatchedOverride ?? serverWatched
 
     // Resetear override de usuario al cambiar de película
-    useEffect(() => {
+    const [prevMovieId, setPrevMovieId] = useState(movieId)
+    if (movieId !== prevMovieId) {
+        setPrevMovieId(movieId)
         setUserWatchedOverride(null)
-    }, [movieId])
+        try {
+            setIsFavorite(localStorage.getItem(`kamehouse-favorite-movie-${movieId}`) === "1")
+        } catch {
+            setIsFavorite(false)
+        }
+    }
 
-    const { mutate: updateProgress } = useUpdateAnimeEntryProgress(Number(movieId), 1, false)
+    const { mutate: updateProgress } = useUpdateAnimeEntryProgress(validNumericMovieId ?? 0, 1, false)
     const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
 
     // Warm the media container ahead of the click (page load + hover intent).
@@ -95,21 +117,21 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         preloadStream({ path: defaultTargetPath, streamType: "direct", audioStreamIndex: 0, preferredAudioLang: "" })
     }, [defaultTargetPath, preloadStream])
 
-    const setActiveSeriesContext = useAppStore(s => s.setActiveSeriesContext)
+    const setActiveSeriesContext = useUIStore(s => s.setActiveSeriesContext)
     const movieContextWrittenRef = React.useRef<string | null>(null)
     useEffect(() => {
-        const tmdbId = entry?.media?.tmdbId || Number(movieId)
+        const tmdbId = entry?.media?.tmdbId || validNumericMovieId
         if (tmdbId) {
             const key = String(tmdbId)
             movieContextWrittenRef.current = key
             setActiveSeriesContext(key)
         }
         return () => {
-            if (useAppStore.getState().activeSeriesContext === movieContextWrittenRef.current) {
+            if (useUIStore.getState().activeSeriesContext === movieContextWrittenRef.current) {
                 setActiveSeriesContext(null)
             }
         }
-    }, [entry?.media?.tmdbId, movieId, setActiveSeriesContext])
+    }, [entry?.media?.tmdbId, movieId, validNumericMovieId, setActiveSeriesContext])
 
     useEffect(() => {
         if (entry?.media?.id) playSound("detail", 0.4)
@@ -123,26 +145,13 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         return () => setBackdropUrl(null)
     }, [backdropForStore, setBackdropUrl])
 
-    const eraId = entry ? getEntryEraId(entry) : "dbz"
+    const eraId = entry?.media ? getEntryEraId(entry) : "dbz"
     const eraAccent = ERA_COLOR_MAP[eraId].accent
     const eraLabel = ERAS.find(e => e.id === eraId)?.title ?? "Dragon Ball"
 
     if (!entry || !entry.media) {
         if (isLoading) {
-            return (
-                <div className="h-full w-full pb-16 p-6 md:p-12 flex flex-col justify-end min-h-screen gap-6">
-                    <div className="flex flex-col lg:flex-row items-center lg:items-end gap-10 max-w-content w-full mx-auto">
-                        <Skeleton className="w-56 md:w-64 shrink-0 aspect-[2/3] h-auto rounded-container" />
-                        <div className="flex-1 w-full flex flex-col gap-4">
-                            <Skeleton className="h-6 w-32 rounded-lg" />
-                            <Skeleton className="h-14 w-2/3 rounded-lg" />
-                            <Skeleton className="h-4 w-full rounded-lg" />
-                            <Skeleton className="h-4 w-3/4 rounded-lg" />
-                            <Skeleton className="h-14 w-48 rounded-full mt-2" />
-                        </div>
-                    </div>
-                </div>
-            )
+            return <BentoDetailsSkeleton />
         }
         return (
             <div className="min-h-screen text-on-surface flex items-center justify-center">
@@ -153,11 +162,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
     const media = entry.media
     const lore = getMovieLore(entry)
-    const isGenericOrEmptySpanish = !media.titleSpanish ||
-        media.titleSpanish.trim().toLowerCase() === "dragon ball serie" ||
-        media.titleSpanish.trim().toLowerCase() === "dragon ball series"
-    const title = (!isGenericOrEmptySpanish ? media.titleSpanish : null)
-        || lore?.title
+    // Misma regla que el hero y las tarjetas de Películas (getEntryTitle): así una
+    // película no cambia de nombre al abrir su detalle.
+    const title = getEntryTitle(entry)
         || media.titleEnglish
         || media.titleRomaji
         || "Título Desconocido"
@@ -172,10 +179,16 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         || loreSynopsis
         || "Sin descripción disponible."
     )
-    const backdropSrc = media.bannerImage ?? media.posterImage ?? null
+    const heroArt = getMovieHeroArt({
+        mediaId: entry.mediaId,
+        tmdbId: media.tmdbId,
+        bannerImage: media.bannerImage,
+        posterImage: media.posterImage,
+    }) ?? (media.bannerImage ? heroArtFromUrl(media.bannerImage, { focal: DEFAULT_MOVIE_FOCAL }) : null)
+    const backdropSrc = heroArt?.src ?? null
     const backdropUrl = getHighResImage(backdropSrc || "")
     const posterUrl = getHighResImage(media.posterImage || "")
-    const hasBannerImage = !!media.bannerImage
+    const hasBannerImage = !!backdropSrc
 
     const durationMins = entry.episodes?.[0]?.episodeMetadata?.length || (continuityData?.item?.duration ? Math.round(continuityData.item.duration / 60) : null)
     const formattedDuration = durationMins ? (durationMins >= 60 ? `${Math.floor(durationMins / 60)}h ${durationMins % 60}m` : `${durationMins}m`) : null
@@ -194,13 +207,19 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     } : null
 
     const progressPercent = continuityData?.item?.duration ? (continuityData.item.currentTime / continuityData.item.duration) * 100 : 0
+    // "Reanudar" arranca el reproductor en el punto guardado (misma regla que la
+    // ficha de series: más de 10 s y menos del 95 %).
+    const resumeSeconds = continuityData?.item?.currentTime && continuityData.item.currentTime > 10 && progressPercent < 95
+        ? continuityData.item.currentTime
+        : undefined
 
     const handleToggleWatched = (e: React.MouseEvent) => {
         e.stopPropagation()
+        if (validNumericMovieId == null) return
         const nextState = !isWatched
         setUserWatchedOverride(nextState)
         updateProgress({
-            mediaId: Number(movieId),
+            mediaId: validNumericMovieId,
             progress: nextState ? 1 : 0,
         })
         toast.success(nextState ? "Marcada como vista" : "Quitada de vistas")
@@ -208,8 +227,16 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
     const handleToggleFavorite = (e: React.MouseEvent) => {
         e.stopPropagation()
-        setIsFavorite(prev => !prev)
-        toast.success(!isFavorite ? "Añadida a favoritos" : "Quitada de favoritos")
+        const next = !isFavorite
+        setIsFavorite(next)
+        try {
+            if (next) {
+                localStorage.setItem(`kamehouse-favorite-movie-${movieId}`, "1")
+            } else {
+                localStorage.removeItem(`kamehouse-favorite-movie-${movieId}`)
+            }
+        } catch {}
+        toast.success(next ? "Añadida a favoritos" : "Quitada de favoritos")
     }
 
     const handlePlayLocalFile = (localFile: Anime_LocalFile) => {
@@ -243,14 +270,15 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
     const handleAddToQueue = (e: React.MouseEvent) => {
         e.stopPropagation()
+        if (validNumericMovieId == null) return
         if (entry.localFiles && entry.localFiles.length > 0) {
             const localFile = entry.localFiles[0]
             addToQueue({
-                id: Number(movieId),
+                id: validNumericMovieId,
                 title: title,
                 playableUrl: localFile.path || "",
                 thumbnail: getMediumResImage(media.posterImage || ""),
-                mediaId: Number(movieId),
+                mediaId: validNumericMovieId,
                 episodeNumber: 1,
                 malId: media.idMal ?? null,
                 mediaFormat: media.format ?? "MOVIE"
@@ -284,19 +312,19 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             duration={formattedDuration}
             ageRating={media.isNsfw ? "18+" : "PG-13"}
             quality={technicalData?.is4K ? "4K UHD" : technicalData?.resolutionTag || undefined}
-            rating={media.score ? media.score / 10 : undefined}
+            rating={hideAudienceScore ? undefined : (media.score ? media.score / 10 : undefined)}
         >
             {technicalData?.isHDR && (
-                <span className="bg-amber-950/60 text-amber-300 text-[10px] font-mono font-black tracking-widest px-2.5 py-1 rounded-lg border border-amber-500/30 uppercase shadow-sm">
+                <span className="bg-status-warning/20 text-status-warning text-3xs font-mono font-black tracking-widest px-2.5 py-1 rounded-lg border border-status-warning/30 uppercase shadow-sm">
                     HDR10
                 </span>
             )}
             {technicalData?.videoCodec && (
-                <span className="bg-white/10 text-zinc-200 text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+                <span className="bg-white/10 text-on-surface-variant text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
                     {technicalData.videoCodec}
                 </span>
             )}
-            <span className="bg-white/10 text-zinc-200 text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+            <span className="bg-white/10 text-on-surface-variant text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
                 CC
             </span>
         </MediaMetadataCapsule>
@@ -328,7 +356,17 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     onClick={handleToggleWatched}
                     isActive={isWatched}
                     activeTone="success"
-                    icon={isWatched ? <IconUiCheck className="w-5 h-5 stroke-[3px]" /> : <IconUiPlus className="w-5 h-5 stroke-[2.5px]" />}
+                    icon={
+                        <m.span
+                            key={isWatched ? "watched" : "unwatched"}
+                            initial={{ scale: 0.7, opacity: 0, rotate: -25 }}
+                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                            transition={{ type: "spring", stiffness: 480, damping: 28 }}
+                            className="inline-flex"
+                        >
+                            {isWatched ? <IconUiCheck className="w-5 h-5 stroke-[3px]" /> : <IconUiPlus className="w-5 h-5 stroke-[2.5px]" />}
+                        </m.span>
+                    }
                     title={isWatched ? "Marcar como no vista" : "Marcar como vista"}
                     className="flex-1 md:flex-initial"
                 />
@@ -337,8 +375,25 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     onClick={handleToggleFavorite}
                     isActive={isFavorite}
                     activeTone="destructive"
-                    icon={<IconUiHeart className={cn("w-5 h-5", isFavorite && "fill-current")} />}
+                    icon={
+                        <m.span
+                            key={isFavorite ? "fav" : "unfav"}
+                            initial={{ scale: 0.7, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 480, damping: 28 }}
+                            className="inline-flex"
+                        >
+                            <IconUiHeart className={cn("w-5 h-5", isFavorite && "fill-current")} />
+                        </m.span>
+                    }
                     title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+                    className="flex-1 md:flex-initial"
+                />
+
+                <GlassIconButton
+                    onClick={() => navigate({ to: "/chronology", search: { era: eraId } })}
+                    icon={<Compass className="w-5 h-5 text-brand-accent" />}
+                    title="Ver en la Cronología"
                     className="flex-1 md:flex-initial"
                 />
             </div>
@@ -352,6 +407,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 <MediaHero
                     scrollContainerRef={containerRef}
                     backdropUrl={backdropUrl}
+                    backdropArt={heroArt}
                     posterUrl={posterUrl}
                     hasBannerImage={hasBannerImage}
                     title={titleNode}
@@ -366,7 +422,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
             {/* Progress bar (overlay al final del hero) */}
             {continuityData?.item?.currentTime && continuityData.item.duration && (
-                <div className="w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10 -mt-16 mb-6 relative z-20">
+                <div className="w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 -mt-16 mb-6 relative z-20">
                     <WatchProgressBar percent={progressPercent} size="hero" animateOnMount />
                 </div>
             )}
@@ -380,7 +436,8 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         title={title}
                         episodeLabel={playTarget.episodeLabel}
                         episodeNumber={playTarget.episodeNumber}
-                        mediaId={Number(movieId)}
+                        initialProgressSeconds={resumeSeconds}
+                        mediaId={validNumericMovieId ?? 0}
                         malId={playTarget.malId}
                         mediaFormat={media.format ?? "MOVIE"}
                         onNextEpisode={() => {}}

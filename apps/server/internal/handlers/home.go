@@ -91,7 +91,9 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 		}
 		chunk := episodes[i:end]
 
-		_ = h.App.Database.Gorm().Transaction(func(tx *gorm.DB) error {
+		// Transacción por chunk: un fallo revierte el chunk entero en vez de
+		// dejar filas a medias en silencio.
+		if err := h.App.Database.Gorm().Transaction(func(tx *gorm.DB) error {
 			for j := range chunk {
 				ep := &chunk[j]
 				analysis := tagger.Analyze(
@@ -108,12 +110,15 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 						"tags":               tagsJSON,
 						"dominant_vibe":      analysis.DominantVibe,
 						"suggested_swimlane": analysis.SuggestedSwimlane,
-					}).Error; err == nil {
-					updated++
+					}).Error; err != nil {
+					return fmt.Errorf("retag episode id %d: %w", ep.ID, err)
 				}
+				updated++
 			}
 			return nil
-		})
+		}); err != nil {
+			return c.JSON(500, NewErrorResponse(err))
+		}
 	}
 
 	type mediaRetagItem struct {
@@ -121,40 +126,43 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 		Format        string
 		TitleRomaji   string
 		TitleEnglish  string
-		TitleJapanese string
 		Description   string
 	}
 	var allMedia []mediaRetagItem
 	if err := h.App.Database.Gorm().Model(&models.LibraryMedia{}).
-		Select("id, format, title_romaji, title_english, title_japanese, description").
-		Find(&allMedia).Error; err == nil {
-		for i := 0; i < len(allMedia); i += batchSize {
-			end := i + batchSize
-			if end > len(allMedia) {
-				end = len(allMedia)
-			}
-			chunk := allMedia[i:end]
-			_ = h.App.Database.Gorm().Transaction(func(tx *gorm.DB) error {
-				for j := range chunk {
-					m := &chunk[j]
-					isMovie := m.Format == "MOVIE"
-					title := m.TitleEnglish
-					if title == "" {
-						title = m.TitleRomaji
-					}
-					if title == "" {
-						title = m.TitleJapanese
-					}
-					analysis := tagger.Analyze(fmt.Sprintf("media_%d", m.ID), title, m.Description, isMovie)
-					_ = tx.Model(&models.LibraryMedia{}).
-						Where("id = ?", m.ID).
-						Updates(map[string]any{
-							"suggested_swimlane": analysis.SuggestedSwimlane,
-							"dominant_vibe":      analysis.DominantVibe,
-						}).Error
+		Select("id, format, title_romaji, title_english, description").
+		Find(&allMedia).Error; err != nil {
+		return c.JSON(500, NewErrorResponse(err))
+	}
+	mediaUpdated := 0
+	for i := 0; i < len(allMedia); i += batchSize {
+		end := i + batchSize
+		if end > len(allMedia) {
+			end = len(allMedia)
+		}
+		chunk := allMedia[i:end]
+		if err := h.App.Database.Gorm().Transaction(func(tx *gorm.DB) error {
+			for j := range chunk {
+				m := &chunk[j]
+				isMovie := m.Format == "MOVIE"
+				title := m.TitleEnglish
+				if title == "" {
+					title = m.TitleRomaji
 				}
-				return nil
-			})
+				analysis := tagger.Analyze(fmt.Sprintf("media_%d", m.ID), title, m.Description, isMovie)
+				if err := tx.Model(&models.LibraryMedia{}).
+					Where("id = ?", m.ID).
+					Updates(map[string]any{
+						"suggested_swimlane": analysis.SuggestedSwimlane,
+						"dominant_vibe":      analysis.DominantVibe,
+					}).Error; err != nil {
+					return fmt.Errorf("retag media id %d: %w", m.ID, err)
+				}
+				mediaUpdated++
+			}
+			return nil
+		}); err != nil {
+			return c.JSON(500, NewErrorResponse(err))
 		}
 	}
 
@@ -167,6 +175,6 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 	return c.JSON(200, NewDataResponse(map[string]any{
 		"episodes_retagged": updated,
 		"total_episodes":    len(episodes),
-		"media_retagged":    len(allMedia),
+		"media_retagged":    mediaUpdated,
 	}))
 }

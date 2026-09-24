@@ -7,13 +7,17 @@ import (
 	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
+	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream"
+	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/ffmpegutil"
+	"kamehouse/internal/util/result"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +26,11 @@ import (
 	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+)
+
+var (
+	skipTimesCache    = result.NewBoundedCache[int, []models.EpisodeSkipTime](1000)
+	skipTimesCacheTTL = 5 * time.Minute
 )
 
 
@@ -128,6 +137,60 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	if strings.HasPrefix(b.Path, "http://") || strings.HasPrefix(b.Path, "https://") {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("remote URLs are not allowed for local playback"))
 	}
+
+	if strings.HasPrefix(b.Path, "gdrive://") {
+		clean := strings.TrimPrefix(b.Path, "gdrive://")
+		parts := strings.Split(clean, "/")
+		fileID := ""
+		fileName := "stream.mkv"
+		if len(parts) > 0 {
+			fileID = parts[0]
+		}
+		if len(parts) > 1 {
+			fileName = parts[len(parts)-1]
+		}
+		if fileID == "" {
+			return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid gdrive path"))
+		}
+
+		var dbFile models.LocalFile
+		var techInfo *dto.FileTechnicalInfo
+		if err := h.App.Database.Gorm().Where("path = ?", b.Path).First(&dbFile).Error; err == nil {
+			if len(dbFile.TechnicalInfo) > 0 {
+				_ = json.Unmarshal(dbFile.TechnicalInfo, &techInfo)
+			}
+		}
+
+		streamURL := fmt.Sprintf("/api/v1/drive/play?fileId=%s", fileID)
+		ext := filepath.Ext(fileName)
+		if ext == "" {
+			ext = ".mkv"
+		}
+
+		mediaInfo := &videofile.MediaInfo{
+			Path:      b.Path,
+			Extension: strings.TrimPrefix(ext, "."),
+		}
+		if techInfo != nil && techInfo.VideoStream != nil {
+			mediaInfo.Video = &videofile.Video{
+				Width:  uint32(techInfo.VideoStream.Width),
+				Height: uint32(techInfo.VideoStream.Height),
+				Codec:  techInfo.VideoStream.Codec,
+			}
+		}
+
+		mediaContainer := &mediastream.MediaContainer{
+			Filepath:   b.Path,
+			Hash:       util.CreateMD5(b.Path),
+			StreamType: mediastream.StreamTypeDirect,
+			StreamURL:  streamURL,
+			MediaInfo:  mediaInfo,
+		}
+
+		h.signStreamURL(mediaContainer)
+		return h.RespondWithData(c, mediaContainer)
+	}
+
 	if _, err := os.Stat(b.Path); os.IsNotExist(err) {
 		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media file not found"))
 	}
@@ -166,17 +229,26 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	h.signStreamURL(mediaContainer)
+	return h.RespondWithData(c, mediaContainer)
+}
+
+func (h *Handler) signStreamURL(mediaContainer *mediastream.MediaContainer) {
 	if mediaContainer != nil && h.App.Config != nil && h.App.Config.Server.Password != "" {
-		if token, tokenErr := h.App.GetServerPasswordHMACAuth().GenerateToken("*"); tokenErr == nil {
+		// Generate short-lived token (5 minutes) for HLS/DirectPlay to avoid long-lived tokens in URLs/logs
+		hmacAuth := h.App.GetServerPasswordHMACAuth()
+		// Temporarily reduce TTL for token (5 minutes)
+		originalTTL := hmacAuth.TTL()
+		hmacAuth.SetTTL(5 * time.Minute)
+		if token, tokenErr := hmacAuth.GenerateToken("*"); tokenErr == nil {
 			sep := "?"
 			if strings.Contains(mediaContainer.StreamURL, "?") {
 				sep = "&"
 			}
 			mediaContainer.StreamURL += sep + "token=" + token
 		}
+		hmacAuth.SetTTL(originalTTL)
 	}
-
-	return h.RespondWithData(c, mediaContainer)
 }
 
 // HandlePreloadMediastreamMediaContainer preloads a media stream for playback.
@@ -204,6 +276,9 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 	}
 	if strings.HasPrefix(b.Path, "http://") || strings.HasPrefix(b.Path, "https://") {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("remote URLs are not allowed for local playback"))
+	}
+	if strings.HasPrefix(b.Path, "gdrive://") {
+		return h.RespondWithData(c, true)
 	}
 	if _, err := os.Stat(b.Path); os.IsNotExist(err) {
 		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media file not found"))
@@ -371,89 +446,142 @@ func (h *Handler) HandleGetEpisodeSkipTimes(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid mediaId/malId or episodeNumber"))
 	}
 
-	var skipTime models.EpisodeSkipTime
-	err := h.App.Database.Gorm().
-		Where("media_id = ? AND episode_number = ?", mediaId, episodeNum).
-		First(&skipTime).Error
+	siblings := h.getOrLoadSkipTimes(mediaId)
 
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Trigger oportunista: si no hay marcas para este episodio, lanzamos
-			// un scan de detección en segundo plano (una sola vez por serie por run
-			// del servidor). El request actual sigue respondiendo con la heurística
-			// fill-forward de abajo; cuando el scan termina emite invalidate-queries
-			// y el cliente refetchea.
-			//
-			// Gates (en orden, para no "gastar" el intento único si decidimos no
-			// escanear): (1) el detector existe, (2) el setting está habilitado,
-			// (3) no hay ya un scan en curso, (4) no hay un transcode activo — el
-			// fingerprinting compite por CPU/IO con el transcode en tiempo real, así
-			// que si el usuario está transcodeando, diferimos (se reintenta en el
-			// próximo episodio sin marcas). Solo entonces marcamos attempted.
-			if d := h.App.SkipDetector; d != nil && h.autoDetectSkipTimesEnabled() && !d.IsScanning(mediaId) && !h.transcodeActive() && d.MarkAttemptedOnce(mediaId) {
-				go func(id int) {
-					defer func() {
-						if r := recover(); r != nil {
-							h.App.Logger.Error().Interface("panic", r).Int("mediaId", id).Msg("mediastream: panic in opportunistic skip-time scan")
-						}
-					}()
-					ctx, cancel := context.WithTimeout(h.App.ShutdownCtx(), 30*time.Minute)
-					defer cancel()
-					if err := d.ScanSeries(ctx, id); err != nil {
-						h.App.Logger.Debug().Err(err).Int("mediaId", id).Msg("mediastream: scan oportunista de skip times falló")
-					}
-				}(mediaId)
-			}
-
-			// Phase 5: Fill-forward heuristic
-			var siblings []models.EpisodeSkipTime
-			if err := h.App.Database.Gorm().Where("media_id = ?", mediaId).Find(&siblings).Error; err == nil && len(siblings) >= 2 {
-				var closest *models.EpisodeSkipTime
-				minDiff := 9999
-				validSiblings := 0
-				for i := range siblings {
-					if siblings[i].OpEnd > 0 {
-						validSiblings++
-						diff := siblings[i].EpisodeNumber - episodeNum
-						if diff < 0 {
-							diff = -diff
-						}
-						if diff < minDiff {
-							minDiff = diff
-							closest = &siblings[i]
-						}
-					}
-				}
-				if validSiblings >= 2 && closest != nil {
-					consistentCount := 0
-					for i := range siblings {
-						if siblings[i].OpEnd > 0 && siblings[i].OpStart >= closest.OpStart-2 && siblings[i].OpStart <= closest.OpStart+2 {
-							consistentCount++
-						}
-					}
-					if consistentCount >= 2 {
-						return h.RespondWithData(c, models.EpisodeSkipTime{
-							MediaID:       mediaId,
-							EpisodeNumber: episodeNum,
-							OpStart:       closest.OpStart,
-							OpEnd:         closest.OpEnd,
-							// D3/D4: No copiamos ciegamente el ED porque el ED está anclado al
-							// final del video. Si el episodio destino tiene distinta duración,
-							// el offset absoluto quedará desfasado. Dejamos que actúe la
-							// heurística del reproductor o AniSkip para el ED.
-							EdOffset: 0,
-							EdEnd:    0,
-							Source:   "heuristic",
-						})
-					}
-				}
-			}
-			return h.RespondWithData(c, nil)
-		}
-		return h.RespondWithError(c, err)
+	skipTime, found := findSkipTimeForEpisode(siblings, episodeNum)
+	if found {
+		return h.RespondWithData(c, skipTime)
 	}
 
-	return h.RespondWithData(c, skipTime)
+	// Trigger oportunista: si no hay marcas para este episodio, lanzamos
+	// un scan de detección en segundo plano (una sola vez por serie por run
+	// del servidor). El request actual sigue respondiendo con la heurística
+	// fill-forward de abajo; cuando el scan termina emite invalidate-queries
+	// y el cliente refetchea.
+	//
+	// Gates (en orden, para no "gastar" el intento único si decidimos no
+	// escanear): (1) el detector existe, (2) el setting está habilitado,
+	// (3) no hay ya un scan en curso, (4) no hay un transcode activo — el
+	// fingerprinting compite por CPU/IO con el transcode en tiempo real, así
+	// que si el usuario está transcodeando, diferimos (se reintenta en el
+	// próximo episodio sin marcas). Solo entonces marcamos attempted.
+	if d := h.App.SkipDetector; d != nil && h.autoDetectSkipTimesEnabled() && !d.IsScanning(mediaId) && !h.transcodeActive() && d.MarkAttemptedOnce(mediaId) {
+		go func(id int) {
+			defer func() {
+				if r := recover(); r != nil {
+					h.App.Logger.Error().Interface("panic", r).Int("mediaId", id).Msg("mediastream: panic in opportunistic skip-time scan")
+				}
+			}()
+			ctx, cancel := context.WithTimeout(h.App.ShutdownCtx(), 30*time.Minute)
+			defer cancel()
+			if err := d.ScanSeries(ctx, id); err != nil {
+				h.App.Logger.Debug().Err(err).Int("mediaId", id).Msg("mediastream: scan oportunista de skip times falló")
+				d.ResetAttempted(id)
+			}
+		}(mediaId)
+	}
+
+	// Phase 5: Fill-forward heuristic (look back up to 3 episodes)
+	heuristic := fillForwardHeuristic(siblings, episodeNum)
+	if heuristic != nil {
+		return h.RespondWithData(c, heuristic)
+	}
+
+	return h.RespondWithData(c, nil)
+}
+
+func (h *Handler) getOrLoadSkipTimes(mediaId int) []models.EpisodeSkipTime {
+	if cached, ok := skipTimesCache.Get(mediaId); ok {
+		return cached
+	}
+
+	var siblings []models.EpisodeSkipTime
+	if err := h.App.Database.Gorm().Where("media_id = ?", mediaId).Find(&siblings).Error; err != nil {
+		return nil
+	}
+
+	skipTimesCache.SetT(mediaId, siblings, skipTimesCacheTTL)
+	return siblings
+}
+
+func findSkipTimeForEpisode(siblings []models.EpisodeSkipTime, episodeNum int) (*models.EpisodeSkipTime, bool) {
+	for i := range siblings {
+		if siblings[i].EpisodeNumber == episodeNum {
+			return &siblings[i], true
+		}
+	}
+	return nil, false
+}
+
+func fillForwardHeuristic(siblings []models.EpisodeSkipTime, episodeNum int) *models.EpisodeSkipTime {
+	if len(siblings) < 2 {
+		return nil
+	}
+
+	var matchedOp *models.EpisodeSkipTime
+	var matchedEd *models.EpisodeSkipTime
+
+	for offset := 1; offset <= 3; offset++ {
+		targetEp := episodeNum - offset
+		if targetEp <= 0 {
+			continue
+		}
+
+		for i := range siblings {
+			if siblings[i].EpisodeNumber == targetEp {
+				if matchedOp == nil && siblings[i].OpEnd > 0 {
+					validCount := 0
+					for j := range siblings {
+						if siblings[j].OpEnd > 0 && siblings[j].OpStart >= siblings[i].OpStart-2 && siblings[j].OpStart <= siblings[i].OpStart+2 {
+							validCount++
+						}
+					}
+					if validCount >= 2 {
+						ref := siblings[i]
+						matchedOp = &ref
+					}
+				}
+
+				if matchedEd == nil && siblings[i].EdOffset != 0 {
+					validEdCount := 0
+					for j := range siblings {
+						if siblings[j].EdOffset != 0 && siblings[j].EdOffset >= siblings[i].EdOffset-3 && siblings[j].EdOffset <= siblings[i].EdOffset+3 {
+							validEdCount++
+						}
+					}
+					if validEdCount >= 2 {
+						ref := siblings[i]
+						matchedEd = &ref
+					}
+				}
+			}
+		}
+		if matchedOp != nil && matchedEd != nil {
+			break
+		}
+	}
+
+	if matchedOp != nil || matchedEd != nil {
+		res := &models.EpisodeSkipTime{
+			MediaID:       siblings[0].MediaID,
+			EpisodeNumber: episodeNum,
+			Source:        "heuristic",
+		}
+		if matchedOp != nil {
+			res.OpStart = matchedOp.OpStart
+			res.OpEnd = matchedOp.OpEnd
+		}
+		if matchedEd != nil {
+			res.EdOffset = matchedEd.EdOffset
+			res.EdEnd = matchedEd.EdEnd
+		}
+		return res
+	}
+	return nil
+}
+
+func invalidateSkipTimesCache(mediaId int) {
+	skipTimesCache.Delete(mediaId)
 }
 
 // HandleSaveEpisodeSkipTimes saves the skip times for an episode.
@@ -495,17 +623,17 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 
 	// D7: Validación de rangos (integridad)
 	if b.OpStart < 0 || b.OpEnd < 0 || b.EdOffset < 0 || b.EdEnd < 0 {
-		return h.RespondWithError(c, fmt.Errorf("skip times cannot be negative"))
+		return h.RespondWithCodeError(c, 400, fmt.Errorf("invalid skip times: cannot be negative"))
 	}
 	if b.OpEnd > 0 && b.OpStart >= b.OpEnd {
-		return h.RespondWithError(c, fmt.Errorf("op start must be before op end"))
+		return h.RespondWithCodeError(c, 400, fmt.Errorf("invalid skip times: op start must be before op end"))
 	}
 	if b.EdEnd > 0 && b.EdOffset >= b.EdEnd {
-		return h.RespondWithError(c, fmt.Errorf("ed start must be before ed end"))
+		return h.RespondWithCodeError(c, 400, fmt.Errorf("invalid skip times: ed start must be before ed end"))
 	}
 	// Tiempos absurdos (> 10 horas)
 	if b.OpEnd > 36000 || b.EdEnd > 36000 {
-		return h.RespondWithError(c, fmt.Errorf("skip times unreasonably large"))
+		return h.RespondWithCodeError(c, 400, fmt.Errorf("invalid skip times: unreasonably large"))
 	}
 
 	// Save or update the single episode skip times
@@ -527,6 +655,8 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+
+	invalidateSkipTimesCache(mediaID)
 
 	// Propagate if requested
 	episodesUpdated := 0
@@ -618,7 +748,7 @@ func (h *Handler) HandleScanEpisodeSkipTimes(c echo.Context) error {
 		return h.RespondWithError(c, fmt.Errorf("skip detector is not initialized yet"))
 	}
 	if detector.IsScanning(b.MediaID) {
-		return h.RespondWithError(c, fmt.Errorf("a scan is already in progress for this series"))
+		return h.RespondWithCodeError(c, 409, fmt.Errorf("a scan is already in progress for this series"))
 	}
 
 	// Async para no bloquear el request HTTP: un scan puede tardar minutos.

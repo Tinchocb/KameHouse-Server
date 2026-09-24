@@ -192,7 +192,7 @@ func (r *Repository) TranscoderStats() (cassette.GovernorStats, bool) {
 
 // WarmMediaInfo pre-extracts and caches media info (ffprobe) for the given files
 // using a small worker pool, so the first play of any file skips the cold-start
-// ffprobe. GetInfo is cache-aware (52-week disk TTL keyed by path hash), so
+// ffprobe. GetInfo is cache-aware (30-day disk TTL keyed by path hash), so
 // already-warmed files are near-free. Best-effort: failures are logged at debug
 // and never block. Safe to call from a goroutine; overlapping calls are skipped.
 func (r *Repository) WarmMediaInfo(paths []string) {

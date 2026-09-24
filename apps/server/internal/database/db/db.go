@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -22,17 +24,24 @@ import (
 )
 
 type Database struct {
-	gormdb                   *gorm.DB
-	Logger                   *zerolog.Logger
-	mediaFillerMu            sync.RWMutex
-	CurrMediaFillers         mo.Option[map[int]*MediaFillerItem]
-	cleanupManager           *CleanupManager
-	bufferedWriter           *BufferedWriter
-	OnError           func(error)
-	LibraryMediaCache sync.Map // L1 read cache scoped to the database instance
-	slowTraceLogger   *SlowTraceLogger
-	sqlitePath        string
-	cancelWal         context.CancelFunc
+	gormdb                  *gorm.DB
+	Logger                  *zerolog.Logger
+	mediaFillerMu           sync.RWMutex
+	CurrMediaFillers        mo.Option[map[int]*MediaFillerItem]
+	cleanupManager          *CleanupManager
+	bufferedWriter          *BufferedWriter
+	OnError                 func(error)
+	LibraryMediaCache       sync.Map // L1 read cache scoped to the database instance
+	slowTraceLogger         *SlowTraceLogger
+	sqlitePath              string
+	cancelWal               context.CancelFunc
+	currSettings            atomic.Pointer[models.Settings]
+	currMediastreamSettings atomic.Pointer[models.MediastreamSettings]
+
+	// Migration status tracking
+	migrationMu       sync.RWMutex
+	migrationComplete bool
+	migrationError    error
 }
 
 func (db *Database) SetOnError(f func(error)) {
@@ -102,20 +111,23 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 		return nil, fmt.Errorf("failed to obtain underlying sql.DB: %w", err)
 	}
 
-	sqlDB.SetMaxOpenConns(4)
-	sqlDB.SetMaxIdleConns(4)
+	maxOpenConns := runtime.NumCPU()
+	if maxOpenConns < 4 {
+		maxOpenConns = 4
+	}
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetMaxIdleConns(maxOpenConns)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	if err := sqlDB.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("database ping fail or connection timeout: %w", err)
 	}
 
-	// DDL síncrono: esquema e índices
+	// DDL: migración de esquema e índices (síncrona - requerida para funcionamiento)
 	if err := migrateSchema(ctx, db, logger); err != nil {
 		logger.Fatal().Err(err).Msg("db: Failed to perform auto migration. Schema out of date.")
 		return nil, err
 	}
-
 
 	logger.Info().Str("name", fmt.Sprintf("%s.db", dbName)).Msg("db: Database instantiated and migrated")
 
@@ -137,11 +149,14 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	slowTraceLogger.RegisterCallbacks(db)
 	database.slowTraceLogger = slowTraceLogger
 
-	// DML síncrono: migración de datos legacy antes de aceptar peticiones
-	database.runDataMigrations()
+	// Iniciar migraciones de datos (DML) en background
+	// El servidor puede responder peticiones mientras se completan
+	database.startDataMigrations(ctx)
 
-	// Start background WAL checkpointing ticker (every 5 minutes)
-	walCtx, walCancel := context.WithCancel(ctx)
+	// Start background WAL checkpointing ticker (every 5 minutes).
+	// Nota: se desacopla del ctx de init (timeout 30s) con WithoutCancel para
+	// que el ticker no muera al arrancar; se detiene vía cancelWal en Close().
+	walCtx, walCancel := context.WithCancel(context.WithoutCancel(ctx))
 	database.cancelWal = walCancel
 	go func() {
 		defer func() {
@@ -208,29 +223,55 @@ func (db *Database) Close() error {
 	return sqlDB.Close()
 }
 
-// runDataMigrations ejecuta migraciones de datos (DML) en segundo plano
-// una vez que el pool WAL está activo y el servidor web responde peticiones.
-func (db *Database) runDataMigrations() {
-	defer func() {
-		if r := recover(); r != nil {
-			db.Logger.Error().Interface("panic", r).Msg("db: panic en runDataMigrations")
+// startDataMigrations inicia las migraciones de datos (DML) en un goroutine background.
+// El servidor puede responder peticiones mientras se completan; /api/health
+// reporta "degraded" hasta que MigrationStatus() sea complete.
+func (db *Database) startDataMigrations(ctx context.Context) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				db.Logger.Error().Interface("panic", r).Msg("db: panic en runDataMigrations")
+			}
+		}()
+
+		db.Logger.Info().Msg("db: iniciando migraciones de datos en background")
+		err := db.runDataMigrationsInternal()
+		db.migrationMu.Lock()
+		db.migrationComplete = true
+		db.migrationError = err
+		db.migrationMu.Unlock()
+		if err != nil {
+			db.Logger.Error().Err(err).Msg("db: fallo en migraciones de datos background")
+		} else {
+			db.Logger.Info().Msg("db: migraciones de datos background completadas")
 		}
 	}()
+}
 
-	db.Logger.Info().Msg("db: iniciando migraciones de datos")
+// runDataMigrationsInternal contiene la lógica real de migraciones (extraída de runDataMigrations)
+func (db *Database) runDataMigrationsInternal() error {
 	if err := migrateLegacyLocalFiles(db.gormdb); err != nil {
 		db.Logger.Error().Err(err).Msg("db: fallo en migración de datos legacy LocalFiles -> LocalFile")
-		return
+		return err
 	}
 	migrateDefaultSettings(db, db.Logger)
 	migrateSkipTimesSemantics(db.gormdb, db.Logger)
 	seedDragonBallMalIds(db.gormdb, db.Logger)
 	healDragonBallKai(db, db.Logger)
+	healDragonBallMoviesAndSpecials(db, db.Logger)
+	healDragonBallShortsArt(db, db.Logger)
 	purgeStaleSkipTimes(db, db.Logger)
 	purgeEdlessAnimeThemesSkipTimes(db, db.Logger)
 	defaultAutoDetectSkipTimes(db, db.Logger)
-	db.Logger.Info().Msg("db: migraciones de datos completadas")
+	migratePlaybackAndPerformanceDefaults(db, db.Logger)
+	return nil
+}
 
+// MigrationStatus returns the current migration status
+func (db *Database) MigrationStatus() (complete bool, err error) {
+	db.migrationMu.RLock()
+	defer db.migrationMu.RUnlock()
+	return db.migrationComplete, db.migrationError
 }
 
 // migrateSchema ejecuta exclusivamente operaciones DDL (AutoMigrate + índices)
@@ -292,7 +333,16 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 		logger.Warn().Err(err).Msg("db: notice while deduplicating watch_histories")
 	}
 
-	// 2. Asegurar que el índice único compuesto exista para evitar errores de ON CONFLICT
+	// 2. Asegurar que el índice único compuesto exista para evitar errores de ON CONFLICT.
+	// Bases antiguas tienen un idx_media_episode sobre (account_id, library_media_id,
+	// episode_number): con el mismo nombre, el IF NOT EXISTS de abajo no lo reemplaza
+	// y cada upsert del historial falla. Si las columnas no coinciden, se recrea
+	// (borrar un índice no toca filas).
+	if !indexHasColumns(db, "idx_media_episode", "account_id", "media_id", "episode_number") {
+		if err := db.Exec("DROP INDEX IF EXISTS idx_media_episode").Error; err != nil {
+			logger.Error().Err(err).Msg("db: failed to drop legacy idx_media_episode")
+		}
+	}
 	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_media_episode ON watch_histories (account_id, media_id, episode_number)").Error; err != nil {
 		logger.Error().Err(err).Msg("db: failed to create unique index on watch_histories")
 	}
@@ -341,9 +391,29 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 	return nil
 }
 
-
 // migrateLegacyLocalFiles convierte el blob legacy LocalFiles al modelo relacional
 // LocalFile. Se ejecuta en segundo plano una vez que el pool WAL está activo.
+// indexHasColumns informa si el índice existe y cubre exactamente esas columnas,
+// en ese orden (SQLite: PRAGMA index_info).
+func indexHasColumns(db *gorm.DB, index string, columns ...string) bool {
+	var info []struct {
+		Seqno int
+		Name  string
+	}
+	if err := db.Raw("SELECT seqno, name FROM pragma_index_info(?) ORDER BY seqno", index).Scan(&info).Error; err != nil {
+		return false
+	}
+	if len(info) != len(columns) {
+		return false
+	}
+	for i, col := range columns {
+		if info[i].Name != col {
+			return false
+		}
+	}
+	return true
+}
+
 func migrateLegacyLocalFiles(gormDB *gorm.DB) error {
 	if !gormDB.Migrator().HasTable("local_files") {
 		return nil
@@ -404,13 +474,26 @@ func migrateLegacyLocalFiles(gormDB *gorm.DB) error {
 	return nil
 }
 
+// migrationDone devuelve true si la migración one-shot ya se aplicó.
+// Ante error de lectura del gate devuelve true (fail closed): la migración se
+// omite este arranque en vez de re-ejecutarse a ciegas, lo que podría
+// re-purgar filas o pisar elecciones del usuario. Se reintenta al próximo arranque.
+func migrationDone(d *Database, logger *zerolog.Logger, migrationKey string) bool {
+	var done bool
+	ok, err := GetMetadataCache(d, "migrations", migrationKey, &done)
+	if err != nil {
+		logger.Warn().Err(err).Str("migration", migrationKey).Msg("db: no se pudo leer el gate de migración, se omite este arranque")
+		return true
+	}
+	return ok && done
+}
+
 // migrateDefaultSettings aplica valores por defecto a columnas booleanas que se
 // almacenaron históricamente como false pero cuyo default correcto es true.
 // Se ejecuta una sola vez usando metadata_cache como gate para no pisar cambios del usuario.
 func migrateDefaultSettings(d *Database, logger *zerolog.Logger) {
 	const migrationKey = "default_auto_play_next_episode_v1"
-	var done bool
-	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+	if migrationDone(d, logger, migrationKey) {
 		return
 	}
 	result := d.gormdb.Exec("UPDATE settings SET library_auto_play_next_episode = 1 WHERE library_auto_play_next_episode = 0")
@@ -426,14 +509,12 @@ func migrateDefaultSettings(d *Database, logger *zerolog.Logger) {
 	}
 }
 
-
 // defaultAutoDetectSkipTimes habilita, UNA SOLA VEZ, el scan oportunista de
 // skip times en la configuración existente. Se gatea con metadata_cache para no
 // re-encender el flag en cada arranque si el usuario lo apagó a propósito.
 func defaultAutoDetectSkipTimes(d *Database, logger *zerolog.Logger) {
 	const migrationKey = "default_auto_detect_skip_times_v1"
-	var done bool
-	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+	if migrationDone(d, logger, migrationKey) {
 		return
 	}
 	result := d.gormdb.Exec("UPDATE settings SET library_auto_detect_skip_times = 1 WHERE library_auto_detect_skip_times = 0")
@@ -446,6 +527,32 @@ func defaultAutoDetectSkipTimes(d *Database, logger *zerolog.Logger) {
 	}
 	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
 		logger.Error().Err(err).Msg("db: no se pudo marcar default_auto_detect_skip_times como completado")
+	}
+}
+
+// migratePlaybackAndPerformanceDefaults aplica defaults a las columnas nuevas
+// (preferencias de reproducción y perfil de rendimiento, antes solo-localStorage).
+// Se ejecuta una sola vez con gate en metadata_cache para no pisar cambios del usuario.
+func migratePlaybackAndPerformanceDefaults(d *Database, logger *zerolog.Logger) {
+	const migrationKey = "playback_performance_defaults_v1"
+	if migrationDone(d, logger, migrationKey) {
+		return
+	}
+	stmts := []string{
+		"UPDATE settings SET library_preferred_audio_profile = 'latino' WHERE library_preferred_audio_profile = '' OR library_preferred_audio_profile IS NULL",
+		"UPDATE settings SET library_auto_disable_subtitles_when_dubbed = 1 WHERE library_auto_disable_subtitles_when_dubbed = 0",
+		"UPDATE mediastream_settings SET performance_profile = 'auto' WHERE performance_profile = '' OR performance_profile IS NULL",
+		"UPDATE mediastream_settings SET auto_governor_enabled = 1 WHERE auto_governor_enabled = 0",
+	}
+	for _, s := range stmts {
+		if result := d.gormdb.Exec(s); result.Error != nil {
+			logger.Warn().Err(result.Error).Str("stmt", s).Msg("db: notice en migración playback/performance (tabla o columna aún no existe)")
+		} else if result.RowsAffected > 0 {
+			logger.Info().Int64("rows", result.RowsAffected).Str("stmt", s).Msg("db: defaults playback/performance aplicados (one-shot)")
+		}
+	}
+	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
+		logger.Error().Err(err).Msg("db: no se pudo marcar playback_performance_defaults como completado")
 	}
 }
 
@@ -557,8 +664,7 @@ func seedDragonBallMalIds(gormDB *gorm.DB, logger *zerolog.Logger) {
 // cualquier archivo de Kai que hubiera sido erróneamente clasificado como 'special'.
 func healDragonBallKai(d *Database, logger *zerolog.Logger) {
 	const migrationKey = "heal_dragonball_kai_v1"
-	var done bool
-	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+	if migrationDone(d, logger, migrationKey) {
 		return
 	}
 
@@ -638,6 +744,165 @@ func healDragonBallKai(d *Database, logger *zerolog.Logger) {
 	}
 }
 
+// healDragonBallMoviesAndSpecials repara colisiones de TMDB (como TMDB 39322 Dark Nature)
+// y registros huérfanos/incompletos de Dragon Ball Serie sin póster para los 6 especiales educativos y de colaboración.
+func healDragonBallMoviesAndSpecials(d *Database, logger *zerolog.Logger) {
+	const migrationKey = "heal_dragonball_movies_and_specials_v2"
+	if migrationDone(d, logger, migrationKey) {
+		return
+	}
+
+	// 1. Corregir colisión Dark Nature -> Dragon Ball: Seguridad Vial de Goku
+	resDarkNature := d.gormdb.Exec(`
+		UPDATE library_media
+		SET title_spanish = ?, title_english = ?, title_romaji = ?, description = ?,
+		    poster_image = ?, banner_image = ?, year = 1988, genres = NULL, tags = NULL,
+		    format = 'MOVIE', type = 'MOVIE'
+		WHERE tmdb_id = 39322 OR id = 1039322 OR LOWER(title_spanish) LIKE '%dark nature%' OR LOWER(title_english) LIKE '%dark nature%'
+	`,
+		"Dragon Ball: Seguridad Vial de Goku",
+		"Dragon Ball: Goku's Traffic Safety",
+		"Dragon Ball: Gokū no Kōtsū Anzen",
+		"Cortometraje educativo donde Goku viaja a la Capital del Oeste para celebrar el cumpleaños de Bulma, aprendiendo las normas de tráfico y seguridad vial peatonal.",
+		"https://image.tmdb.org/t/p/w500/iM7Rn5oziVlPEhQ7eyCHcYEy5vu.jpg",
+		"https://image.tmdb.org/t/p/original/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg",
+	)
+	if resDarkNature.Error != nil {
+		logger.Warn().Err(resDarkNature.Error).Msg("db: error corrigiendo colisión Dark Nature")
+	} else if resDarkNature.RowsAffected > 0 {
+		logger.Info().Int64("rows", resDarkNature.RowsAffected).Msg("db: colisión Dark Nature reparada a Dragon Ball: Seguridad Vial")
+	}
+
+	// 2. Eliminar entradas huérfanas de Dragon Ball Serie sin póster que no tengan archivos locales asociados
+	d.gormdb.Exec(`
+		DELETE FROM library_media
+		WHERE (title_spanish = 'Dragon Ball Serie' OR title_spanish = 'Dragon Ball Series')
+		  AND (poster_image IS NULL OR poster_image = '')
+		  AND id NOT IN (SELECT DISTINCT library_media_id FROM local_file WHERE library_media_id IS NOT NULL AND library_media_id != 0)
+	`)
+
+	// 3. Para las que sí tengan archivos locales o coincidan con los IDs de los 6 especiales, hidratar correctamente
+	type specUpdate struct {
+		tmdbId  int
+		spanish string
+		english string
+		romaji  string
+		desc    string
+		poster  string
+		banner  string
+		year    int
+	}
+	specials := []specUpdate{
+		{
+			tmdbId:  39321,
+			spanish: "Dragon Ball: El Cuerpo de Bomberos de Goku",
+			english: "Dragon Ball: Goku's Fire Brigade",
+			romaji:  "Dragon Ball: Gokū no Shōbōtai",
+			desc:    "Cortometraje educativo en el que Goku, Krilin, Yamcha y el Maestro Roshi enseñan lecciones vitales de prevención y seguridad contra incendios ante situaciones de emergencia.",
+			poster:  "https://image.tmdb.org/t/p/w500/k0QRU1UpJCvoConl1CSlz1RF54s.jpg",
+			banner:  "https://image.tmdb.org/t/p/original/tZuNziXpjmOsDlmiT6adFPmmSKT.jpg",
+			year:    1988,
+		},
+		{
+			tmdbId:  39322,
+			spanish: "Dragon Ball: Seguridad Vial de Goku",
+			english: "Dragon Ball: Goku's Traffic Safety",
+			romaji:  "Dragon Ball: Gokū no Kōtsū Anzen",
+			desc:    "Cortometraje educativo donde Goku viaja a la Capital del Oeste para celebrar el cumpleaños de Bulma, aprendiendo las normas de tráfico y seguridad vial peatonal.",
+			poster:  "https://image.tmdb.org/t/p/w500/iM7Rn5oziVlPEhQ7eyCHcYEy5vu.jpg",
+			banner:  "https://image.tmdb.org/t/p/original/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg",
+			year:    1988,
+		},
+		{
+			tmdbId:  39325,
+			spanish: "Dragon Ball Z: ¡Todos Reunidos! El Mundo de Goku",
+			english: "Dragon Ball Z: Gather Together! Goku's World",
+			romaji:  "Dragon Ball Z: Atsumare! Gokū Wārudo",
+			desc:    "Especial interactivo para Terebikko donde Goku, Gohan, Krilin y Trunks viajan en la máquina del tiempo repasando batallas pasadas mientras enfrentan a Cell.",
+			poster:  "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg",
+			banner:  "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg",
+			year:    1992,
+		},
+		{
+			tmdbId:  39326,
+			spanish: "Dragon Ball Z: ¡Te lo Mostramos Todo! Olvida el Año con Dragon Ball Z",
+			english: "Dragon Ball Z: Looking Back at it All: The Year-End Show",
+			romaji:  "Dragon Ball Z: Nenmatsu Tokuban Kessaku Renpatsu Dai Hōsō",
+			desc:    "Especial televisivo de fin de año donde Goku y Gohan con atuendo formal repasan los momentos y batallas cumbre de la saga de los Saiyajin, Freezer y Cell.",
+			poster:  "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg",
+			banner:  "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg",
+			year:    1993,
+		},
+		{
+			tmdbId:  105973,
+			spanish: "Dragon Ball Z: Los Aventureros de la Esfera del Pánico Regresan",
+			english: "Dragon Ball Z: Kyutai Panic Adventure Returns!",
+			romaji:  "Dragon Ball Z: Kyūtai Panikku Adobenchā Ritānzu!",
+			desc:    "Especial de animación exclusivo de Fuji TV donde Goku y los Guerreros Z unen fuerzas con Luffy y los piratas de Sombrero de Paja para defender la sede esférica.",
+			poster:  "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg",
+			banner:  "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg",
+			year:    2004,
+		},
+		{
+			tmdbId:  444390,
+			spanish: "Dream 9: Toriko x One Piece x Dragon Ball Z Super Colaboración",
+			english: "Dream 9: Toriko & One Piece & Dragon Ball Z Super Collaboration Special!!",
+			romaji:  "Dream 9: Toriko & One Piece & Dragon Ball Z Chō Collaboration Special!!",
+			desc:    "Histórico crossover donde Goku, Toriko y Luffy compiten en la Carrera de la Organización Gourmet Internacional y enfrentan juntos a una voraz criatura marina.",
+			poster:  "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg",
+			banner:  "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg",
+			year:    2013,
+		},
+	}
+
+	for _, sp := range specials {
+		d.gormdb.Exec(`
+			UPDATE library_media
+			SET title_spanish = ?, title_english = ?, title_romaji = ?, description = ?, poster_image = ?, banner_image = ?, year = ?, format = 'MOVIE', type = 'MOVIE'
+			WHERE (tmdb_id = ? OR id = ? OR id = ?) AND (poster_image IS NULL OR poster_image = '' OR title_spanish = 'Dragon Ball Serie' OR title_spanish = 'Dragon Ball Series')
+		`, sp.spanish, sp.english, sp.romaji, sp.desc, sp.poster, sp.banner, sp.year, sp.tmdbId, sp.tmdbId, sp.tmdbId+1000000)
+	}
+
+	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
+		logger.Error().Err(err).Msg("db: no se pudo marcar heal_dragonball_movies_and_specials_v2 como completado")
+	}
+}
+
+// healDragonBallShortsArt corrige, UNA SOLA VEZ, el arte de los dos cortos
+// educativos de 1988. heal_dragonball_movies_and_specials_v2 les puso el
+// backdrop horizontal de la serie como póster (se veía recortado en las cards
+// 2:3); en TMDB viven como 1305965 (Bomberos) y 1259215 (Seguridad Vial).
+// Solo pisa filas que todavía tienen ese póster heredado.
+func healDragonBallShortsArt(d *Database, logger *zerolog.Logger) {
+	const migrationKey = "heal_dragonball_shorts_art_v1"
+	if migrationDone(d, logger, migrationKey) {
+		return
+	}
+
+	const legacyPoster = "https://image.tmdb.org/t/p/w500/30L49n4Dhn7dzuGG50GV3ybMhC3.jpg"
+	shorts := []struct {
+		tmdbID         int
+		poster, banner string
+	}{
+		{39321, "https://image.tmdb.org/t/p/w500/k0QRU1UpJCvoConl1CSlz1RF54s.jpg", "https://image.tmdb.org/t/p/original/tZuNziXpjmOsDlmiT6adFPmmSKT.jpg"},
+		{39322, "https://image.tmdb.org/t/p/w500/iM7Rn5oziVlPEhQ7eyCHcYEy5vu.jpg", "https://image.tmdb.org/t/p/original/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg"},
+	}
+	for _, sh := range shorts {
+		res := d.gormdb.Exec(`
+			UPDATE library_media SET poster_image = ?, banner_image = ?
+			WHERE (tmdb_id = ? OR id = ?) AND poster_image = ?
+		`, sh.poster, sh.banner, sh.tmdbID, sh.tmdbID+1000000, legacyPoster)
+		if res.Error != nil {
+			logger.Warn().Err(res.Error).Int("tmdbId", sh.tmdbID).Msg("db: error corrigiendo arte de corto de Dragon Ball")
+			return
+		}
+	}
+
+	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
+		logger.Error().Err(err).Msg("db: no se pudo marcar heal_dragonball_shorts_art_v1 como completado")
+	}
+}
+
 // purgeStaleSkipTimes borra, UNA SOLA VEZ, las marcas de skip corruptas
 // generadas por el detector de fingerprint acústico legacy (source
 // 'fingerprint') y las manuales heredadas de esa época. Antes corría en cada
@@ -648,8 +913,7 @@ func healDragonBallKai(d *Database, logger *zerolog.Logger) {
 // están en la lista, así que nunca son purgadas.
 func purgeStaleSkipTimes(d *Database, logger *zerolog.Logger) {
 	const migrationKey = "purge_stale_skip_times_v1"
-	var done bool
-	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+	if migrationDone(d, logger, migrationKey) {
 		return
 	}
 
@@ -680,8 +944,7 @@ func purgeStaleSkipTimes(d *Database, logger *zerolog.Logger) {
 // con ed_offset = 0 y, al ser one-shot, ya no se vuelven a purgar.
 func purgeEdlessAnimeThemesSkipTimes(d *Database, logger *zerolog.Logger) {
 	const migrationKey = "purge_edless_animethemes_skip_times_v1"
-	var done bool
-	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+	if migrationDone(d, logger, migrationKey) {
 		return
 	}
 
@@ -712,7 +975,7 @@ func (db *Database) ResetLocalFilesMediaIds() error {
 	err := db.gormdb.Transaction(func(tx *gorm.DB) error {
 		// Single bulk UPDATE sets both FKs to 0
 		if err := tx.Model(&models.LocalFile{}).Updates(map[string]interface{}{
-			"media_id": 0,
+			"media_id":         0,
 			"library_media_id": 0,
 		}).Error; err != nil {
 			return err

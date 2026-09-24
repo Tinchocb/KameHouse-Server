@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"kamehouse/internal/util/cache"
 
 	httputil "kamehouse/internal/util/http"
 
@@ -26,21 +27,25 @@ type Cache interface {
 type Client struct {
 	bearerToken     string
 	language        string
-	cache           sync.Map // simple in-memory cache for search results
-	persistentCache Cache    // persistent SQL-backed cache
+	cache           *cache.Cache[any] // TTL in-memory cache for search results
+	persistentCache Cache             // persistent SQL-backed cache
 	limiter         *rate.Limiter
 	httpClient      *http.Client
 }
 
 // language is a BCP 47 language tag (e.g. "es-MX", "en-US"). If empty, defaults to "es-MX".
+// The bearer token is sanitized: empty and placeholder values (e.g.
+// "your_tmdb_bearer_token_here") are stored as "" so HasApiKey() reports
+// false and no invalid auth header is ever emitted.
 func NewClient(bearerToken string, language ...string) *Client {
 	lang := "es-MX"
 	if len(language) > 0 && language[0] != "" {
 		lang = language[0]
 	}
 	return &Client{
-		bearerToken: bearerToken,
+		bearerToken: SanitizeToken(bearerToken),
 		language:    lang,
+		cache:       cache.NewCache[any](time.Hour, 2000), // 1 hour TTL, capped at 2000 entries
 		limiter:     rate.NewLimiter(rate.Limit(30), 10), // 30 req/sec, burst of 10
 		httpClient:  httputil.NewFastClient(),
 	}
@@ -49,6 +54,13 @@ func NewClient(bearerToken string, language ...string) *Client {
 // SetPersistentCache assigns a persistent cache backend to the client.
 func (c *Client) SetPersistentCache(pc Cache) {
 	c.persistentCache = pc
+}
+
+// ClearCache flushes the in-memory cache of TMDB API responses.
+func (c *Client) ClearCache() {
+	if c != nil && c.cache != nil {
+		c.cache.Clear()
+	}
 }
 
 // GetCached attempts to retrieve a value from the persistent cache first, falling back to the in-memory cache.
@@ -60,9 +72,11 @@ func GetCached[T any](c *Client, key string) (T, bool) {
 			return val, true
 		}
 	}
-	if cached, ok := c.cache.Load(key); ok {
-		if val, assertOk := cached.(T); assertOk {
-			return val, true
+	if c.cache != nil {
+		if val, ok := c.cache.Get(key); ok {
+			if valTyped, ok := val.(T); ok {
+				return valTyped, true
+			}
 		}
 	}
 	return zero, false
@@ -73,7 +87,9 @@ func SetCached[T any](c *Client, key string, value T, ttl time.Duration) {
 	if c.persistentCache != nil {
 		_ = c.persistentCache.Set(key, value, ttl)
 	}
-	c.cache.Store(key, value)
+	if c.cache != nil {
+		c.cache.Set(key, value)
+	}
 }
 
 // HasApiKey returns true if a non-empty TMDB API key or bearer token is configured.

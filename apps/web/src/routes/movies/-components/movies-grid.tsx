@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from "react"
-import { motion } from "framer-motion"
+import { m } from "framer-motion"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Continuity_WatchHistory } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -20,18 +20,24 @@ interface MoviesGridProps {
     onResetFilters?: () => void
 }
 
-const CARD_WIDTH = 180
-const CARD_GAP = 24
-
 /**
- * Columns for a given container width. Two posters is the floor: on a ~384px
- * phone three columns leave ~104px posters, and anything narrower is unreadable.
+ * Grid canónico compartido con Home (SpotlightLowerHub):
+ * grid-cols-2 sm:3 md:4 lg:5 xl:6. Misma densidad => mismo ancho de tarjeta.
  */
 function columnsForWidth(width: number): number {
-    if (width < 480) return 2
+    if (width < 640) return 2
     if (width < 768) return 3
-    return Math.max(1, Math.floor((width + CARD_GAP) / (CARD_WIDTH + CARD_GAP)))
+    if (width < 1024) return 4
+    if (width < 1280) return 5
+    return 6
 }
+
+// gap-3.5 canónico en px para el cálculo de la fila virtualizada.
+const CARD_GAP = 14
+// pb-6 de cada fila virtualizada.
+const ROW_BOTTOM_PADDING = 24
+// Bloque bajo el póster: gap-2.5 + título (máx. 2 líneas de 15px leading-snug) + meta.
+const CAPTION_HEIGHT = 74
 
 export const MoviesGrid = memo(function MoviesGrid({
     filteredSorted,
@@ -108,11 +114,11 @@ export const MoviesGrid = memo(function MoviesGrid({
     }, [filteredSorted, columns])
 
     const rowHeight = useMemo(() => {
-        const gapSize = gridWidth < 768 ? 12 : 24
-        const cardWidth = Math.max(80, (gridWidth - (columns - 1) * gapSize) / columns)
+        const cardWidth = Math.max(80, (gridWidth - (columns - 1) * CARD_GAP) / columns)
         const posterHeight = cardWidth * 1.5
-        // 80px para el bloque título/info (mt-3.5 + h-10 + línea metadata + espacio extra para wrap)
-        return Math.ceil(posterHeight + 80 + 40)
+        // Póster (aspect 2/3) + título/meta debajo, reservando siempre 2 líneas
+        // de título para que todas las filas midan igual.
+        return Math.ceil(posterHeight + CAPTION_HEIGHT + ROW_BOTTOM_PADDING)
     }, [gridWidth, columns])
 
     const virtualizer = useVirtualizer({
@@ -128,7 +134,7 @@ export const MoviesGrid = memo(function MoviesGrid({
             {isLoading && allMoviesLength === 0 ? (
                 <PosterGridSkeleton count={18} />
             ) : filteredSorted.length === 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-32">
+                <m.div initial={false} animate={{ opacity: 1 }} className="py-32">
                     <EmptyState
                         title="Sin películas"
                         message="No hay películas que coincidan con este filtro."
@@ -144,7 +150,7 @@ export const MoviesGrid = memo(function MoviesGrid({
                             ) : undefined
                         }
                     />
-                </motion.div>
+                </m.div>
             ) : (
                 <div
                     ref={attachGrid}
@@ -157,20 +163,20 @@ export const MoviesGrid = memo(function MoviesGrid({
                         return (
                             <div
                                 key={virtualRow.index}
-                                className="absolute left-0 top-0 w-full grid gap-x-3 md:gap-x-6 pb-10"
+                                className="absolute left-0 top-0 w-full grid gap-x-3.5 pb-6 items-start"
                                 style={{
                                     gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                                     height: `${virtualRow.size}px`,
                                     transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
                                 }}
                             >
-                                {rowItems.map((entry) => (
-                                    <div key={entry.mediaId} className="h-full [content-visibility:auto] [contain-intrinsic-size:280px]">
+                                {rowItems.filter(e => e != null).map((entry, idx) => (
+                                    <div key={entry?.mediaId ?? `idx-${idx}`} className="h-full [content-visibility:auto] [contain-intrinsic-size:280px]">
                                         <MovieCard
                                             entry={entry}
                                             era={entry.era}
                                             eraId={entry.eraId}
-                                            watchHistoryItem={watchHistory?.[entry.mediaId!]}
+                                            watchHistoryItem={entry.mediaId == null ? undefined : watchHistory?.[entry.mediaId]}
                                             onClick={handleMovieClick}
                                             onHoverCard={handleHoverCard}
                                         />

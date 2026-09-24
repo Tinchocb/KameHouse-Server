@@ -7,8 +7,9 @@ const cacheMap = new Map<string, string>()
 const MAX_CACHE_SIZE = 500
 
 const getCachedOrResolve = (key: string, resolver: () => string): string => {
-    if (cacheMap.has(key)) {
-        return cacheMap.get(key)!
+    const cached = cacheMap.get(key)
+    if (cached !== undefined) {
+        return cached
     }
     const resolved = resolver()
     if (cacheMap.size >= MAX_CACHE_SIZE) {
@@ -46,11 +47,6 @@ export const getMediumResImage = (url: string | null | undefined): string => {
     })
 }
 
-/**
- * Optimización para tarjetas y posters de catálogo (alias de getMediumResImage).
- */
-export const getCardPosterImage = getMediumResImage
-
 export const getLowResImage = (url: string | null | undefined): string => {
     if (!url) return ""
 
@@ -58,23 +54,6 @@ export const getLowResImage = (url: string | null | undefined): string => {
         // TMDB low-res replacement (w185 is perfect for blurred background glows / placeholders)
         if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
             return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w185")
-        }
-        return url
-    })
-}
-
-export const getTinyResImage = (url: string | null | undefined): string => {
-    if (!url) return ""
-
-    return getCachedOrResolve(`tiny:${url}`, () => {
-        // TMDB tiny-res replacement (w92 is perfect for instant LQIP blur placeholders)
-        if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
-            return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w92")
-        }
-        // Local image proxy thumbnail if supported
-        if (url.startsWith("/api/v1/image") && !url.includes("thumbnail=")) {
-            const separator = url.includes("?") ? "&" : "?"
-            return `${url}${separator}thumbnail=true&w=92`
         }
         return url
     })
@@ -92,8 +71,53 @@ export const getLargeResImage = (url: string | null | undefined): string => {
     })
 }
 
+/**
+ * URL apta para leer píxeles en un canvas (paletas, colores dominantes).
+ *
+ * TMDB solo responde `Access-Control-Allow-Origin` cuando la petición trae
+ * `Origin`, y no envía `Vary: Origin`. Si un `<img>` ya cacheó la imagen sin
+ * CORS, la petición `crossOrigin="anonymous"` reutiliza esa respuesta y el
+ * navegador la bloquea. Un parámetro propio separa la entrada de caché, y
+ * w300 alcanza para promediar colores sin descargar de nuevo el backdrop.
+ */
+export const getPixelSampleImage = (url: string | null | undefined): string => {
+    if (!url) return ""
+
+    return getCachedOrResolve(`sample:${url}`, () => {
+        if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
+            const resized = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w300")
+            return `${resized}${resized.includes("?") ? "&" : "?"}kh-cors=1`
+        }
+        return url
+    })
+}
+
 const MAX_PREWARMED_URLS = 200
 const prewarmedUrls = new Set<string>()
+
+export const isImagePrewarmed = (url: string | null | undefined): boolean => {
+    if (!url) return false
+    return prewarmedUrls.has(url)
+}
+
+// URLs cuya descarga ya terminó (onLoad real): sirven para no flashear
+// el skeleton al rotar a una era cuya imagen ya vimos o ya se prewarmeó.
+const loadedUrls = new Set<string>()
+const MAX_LOADED_URLS = 200
+
+export const markImageLoaded = (url: string | null | undefined): void => {
+    if (!url) return
+    if (loadedUrls.size >= MAX_LOADED_URLS) {
+        const first = loadedUrls.values().next().value
+        if (first) loadedUrls.delete(first)
+    }
+    loadedUrls.add(url)
+}
+
+export const isImageLoaded = (url: string | null | undefined): boolean => {
+    if (!url) return false
+    return loadedUrls.has(url)
+}
 
 /**
  * Precarga imágenes predictivamente en segundo plano en idle time
@@ -112,8 +136,14 @@ export const prewarmImages = (urls: (string | null | undefined)[]) => {
             }
             prewarmedUrls.add(url)
             const img = new Image()
+            img.decoding = 'async'
+            if ('fetchPriority' in img) {
+                (img as { fetchPriority: string }).fetchPriority = 'low'
+            }
+            img.onload = () => markImageLoaded(url)
             img.src = url
         })
     }, { timeout: 2000 })
 }
+
 

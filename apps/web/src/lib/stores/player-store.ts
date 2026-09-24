@@ -1,7 +1,9 @@
-import { create, StateCreator } from "zustand"
+import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
+import { useShallow } from "zustand/react/shallow"
+import { persistLibraryPatch } from "@/lib/server/persist-settings"
 
 export interface PlaylistItem {
     id: string | number
@@ -114,7 +116,11 @@ export const usePlayerStore = create<PlayerState>()(
                     setMarathonMode: (marathonMode) => set({ marathonMode }),
                     tvMode: false,
                     tvModePrevPrefs: null,
-                    setTvMode: (tvMode) => set((state) => {
+                    setTvMode: (tvMode) => {
+                        // Persistir al servidor: si no, Ajustes resetea el store
+                        // al visitarlo y el modo TV "se pierde" solo.
+                        persistLibraryPatch({ tvMode })
+                        return set((state) => {
                         if (tvMode) {
                             return {
                                 tvMode: true,
@@ -136,7 +142,8 @@ export const usePlayerStore = create<PlayerState>()(
                             autoSkipOutro: prev.autoSkipOutro,
                             marathonMode: prev.marathonMode,
                         }
-                    }),
+                        })
+                    },
                     ambientModeEnabled: true,
                     setAmbientModeEnabled: (ambientModeEnabled) => set({ ambientModeEnabled }),
                 }),
@@ -170,3 +177,64 @@ export const usePlayerStore = create<PlayerState>()(
         )
     )
 )
+
+// Shallow selectors for object/array state to prevent unnecessary re-renders
+export const usePlayerAudioState = () => usePlayerStore(useShallow((state) => ({
+    playerVolume: state.playerVolume,
+    playbackRate: state.playbackRate,
+    setPlayerVolume: state.setPlayerVolume,
+    setPlaybackRate: state.setPlaybackRate,
+    preferredAudioProfile: state.preferredAudioProfile,
+    setPreferredAudioProfile: state.setPreferredAudioProfile,
+    preferredAudioLang: state.preferredAudioLang,
+    setPreferredAudioLang: state.setPreferredAudioLang,
+    preferredAudioTrackIndex: state.preferredAudioTrackIndex,
+    setPreferredAudioTrackIndex: state.setPreferredAudioTrackIndex,
+    preferredSubtitleLang: state.preferredSubtitleLang,
+    setPreferredSubtitleLang: state.setPreferredSubtitleLang,
+    subtitlesEnabled: state.subtitlesEnabled,
+    setSubtitlesEnabled: state.setSubtitlesEnabled,
+    autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
+    setAutoDisableSubtitlesWhenDubbed: state.setAutoDisableSubtitlesWhenDubbed,
+})))
+
+export const usePlayerSkipState = () => usePlayerStore(useShallow((state) => ({
+    autoSkipIntro: state.autoSkipIntro,
+    autoSkipOutro: state.autoSkipOutro,
+    autoSkipFiller: state.autoSkipFiller,
+    filterFillers: state.filterFillers,
+    setAutoSkipIntro: state.setAutoSkipIntro,
+    setAutoSkipOutro: state.setAutoSkipOutro,
+    setAutoSkipFiller: state.setAutoSkipFiller,
+    setFilterFillers: state.setFilterFillers,
+})))
+
+export const usePlayerDisplayState = () => usePlayerStore(useShallow((state) => ({
+    isFullscreen: state.isFullscreen,
+    showHeatmap: state.showHeatmap,
+    aspectRatio: state.aspectRatio,
+    aspectRatioBySeries: state.aspectRatioBySeries,
+    subtitleSize: state.subtitleSize,
+    loopEnabled: state.loopEnabled,
+    ambientModeEnabled: state.ambientModeEnabled,
+    setFullscreen: state.setFullscreen,
+    setShowHeatmap: state.setShowHeatmap,
+    setAspectRatio: state.setAspectRatio,
+    setAspectRatioForSeries: state.setAspectRatioForSeries,
+    setSubtitleSize: state.setSubtitleSize,
+    setLoopEnabled: state.setLoopEnabled,
+    setAmbientModeEnabled: state.setAmbientModeEnabled,
+})))
+
+export const usePlayerModeState = () => usePlayerStore(useShallow((state) => ({
+    marathonMode: state.marathonMode,
+    tvMode: state.tvMode,
+    tvModePrevPrefs: state.tvModePrevPrefs,
+    setMarathonMode: state.setMarathonMode,
+    setTvMode: state.setTvMode,
+})))
+
+export const usePlayerStepState = () => usePlayerStore(useShallow((state) => ({
+    skipStepSeconds: state.skipStepSeconds,
+    setSkipStepSeconds: state.setSkipStepSeconds,
+})))

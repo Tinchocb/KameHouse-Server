@@ -1,4 +1,4 @@
-﻿package metadata_provider
+package metadata_provider
 
 import (
 	"sync/atomic"
@@ -7,28 +7,36 @@ import (
 	"kamehouse/internal/platforms/platform"
 )
 
+type providerWrapper struct {
+	Provider Provider
+}
+
 // DynamicProvider implementa Provider y redirige atómicamente entre un
 // proveedor online y uno offline según el estado de la red.
 // Reemplaza el uso de *util.Ref[Provider].
 type DynamicProvider struct {
-	current atomic.Value // Provider
+	current atomic.Value // providerWrapper
 }
 
 // NewDynamicProvider crea un DynamicProvider con el proveedor inicial dado.
 func NewDynamicProvider(initial Provider) *DynamicProvider {
 	p := &DynamicProvider{}
-	p.current.Store(initial)
+	p.current.Store(providerWrapper{Provider: initial})
 	return p
 }
 
 // SetProvider intercambia atómicamente el proveedor activo.
 func (p *DynamicProvider) SetProvider(provider Provider) {
-	p.current.Store(provider)
+	p.current.Store(providerWrapper{Provider: provider})
 }
 
 // GetProvider devuelve el proveedor activo.
 func (p *DynamicProvider) GetProvider() Provider {
-	return p.current.Load().(Provider)
+	val := p.current.Load()
+	if val == nil {
+		return nil
+	}
+	return val.(providerWrapper).Provider
 }
 
 func (p *DynamicProvider) GetAnimeMetadata(id int) (*metadata.AnimeMetadata, error) {

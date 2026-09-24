@@ -1,8 +1,8 @@
 import React, { useState } from "react"
-import { type Control, Controller } from "react-hook-form"
-import { motion } from "framer-motion"
+import { type Control, Controller, useFormContext } from "react-hook-form"
+import { m } from "framer-motion"
 import { type SettingsFormValues } from "../index"
-import { useAppStore, type BackgroundMusicTrack } from "@/lib/store"
+import { usePlayerStore, useUIStore, type BackgroundMusicTrack } from "@/lib/store"
 import { buildSeaQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { getApiWebSocketUrl } from "@/api/client/server-url"
@@ -13,10 +13,11 @@ import { DirectorySelector } from "@/components/shared/directory-selector"
 import { Button } from "@/components/ui/button"
 import { IconUiSpinner, IconMediaWand, IconStatusHeadphones, IconMediaSkipNext, IconMediaQueue, IconStatusMusic, IconMediaVolume2, IconStatusTv } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
-import { OsToggle } from "../components"
+import { OsToggle, DirtyOsToggle } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { useShallow } from "zustand/react/shallow"
+import { persistThemePatch } from "@/lib/server/persist-settings"
 
 interface PlaybackTabProps {
     control: Control<SettingsFormValues>
@@ -64,7 +65,7 @@ function LibrarySkipScanRow() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-0.5 max-w-lg">
                     <p className="text-xs font-bold text-on-surface">Escanear marcas de Skip en toda la biblioteca</p>
-                    <p className={cn("text-[11px] leading-tight", status === "error" ? "text-red-400" : "text-on-surface-variant/70")}>
+                    <p className={cn("text-2xs leading-tight", status === "error" ? "text-red-400" : "text-on-surface-variant/70")}>
                         {status === "idle"
                             ? "Analiza todas las series locales para detectar marcas de Openings y Endings automáticamente."
                             : (message || "Detectando marcas de skip...")}
@@ -117,6 +118,29 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
         setAutoSkipFiller,
         autoDisableSubtitlesWhenDubbed,
         setAutoDisableSubtitlesWhenDubbed,
+        marathonMode,
+        setMarathonMode,
+        tvMode,
+        setTvMode,
+    } = usePlayerStore(
+        useShallow(s => ({
+            preferredAudioProfile: s.preferredAudioProfile,
+            setPreferredAudioProfile: s.setPreferredAudioProfile,
+            autoSkipIntro: s.autoSkipIntro,
+            setAutoSkipIntro: s.setAutoSkipIntro,
+            autoSkipOutro: s.autoSkipOutro,
+            setAutoSkipOutro: s.setAutoSkipOutro,
+            autoSkipFiller: s.autoSkipFiller,
+            setAutoSkipFiller: s.setAutoSkipFiller,
+            autoDisableSubtitlesWhenDubbed: s.autoDisableSubtitlesWhenDubbed,
+            setAutoDisableSubtitlesWhenDubbed: s.setAutoDisableSubtitlesWhenDubbed,
+            marathonMode: s.marathonMode,
+            setMarathonMode: s.setMarathonMode,
+            tvMode: s.tvMode,
+            setTvMode: s.setTvMode,
+        }))
+    )
+    const {
         bgMusicEnabled,
         setBgMusicEnabled,
         bgMusicVolume,
@@ -130,22 +154,8 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
         setUiSoundsEnabled,
         uiSoundsVolume,
         setUiSoundsVolume,
-        marathonMode,
-        setMarathonMode,
-        tvMode,
-        setTvMode,
-    } = useAppStore(
+    } = useUIStore(
         useShallow(s => ({
-            preferredAudioProfile: s.preferredAudioProfile,
-            setPreferredAudioProfile: s.setPreferredAudioProfile,
-            autoSkipIntro: s.autoSkipIntro,
-            setAutoSkipIntro: s.setAutoSkipIntro,
-            autoSkipOutro: s.autoSkipOutro,
-            setAutoSkipOutro: s.setAutoSkipOutro,
-            autoSkipFiller: s.autoSkipFiller,
-            setAutoSkipFiller: s.setAutoSkipFiller,
-            autoDisableSubtitlesWhenDubbed: s.autoDisableSubtitlesWhenDubbed,
-            setAutoDisableSubtitlesWhenDubbed: s.setAutoDisableSubtitlesWhenDubbed,
             bgMusicEnabled: s.bgMusicEnabled,
             setBgMusicEnabled: s.setBgMusicEnabled,
             bgMusicVolume: s.bgMusicVolume,
@@ -159,13 +169,10 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
             setUiSoundsEnabled: s.setUiSoundsEnabled,
             uiSoundsVolume: s.uiSoundsVolume,
             setUiSoundsVolume: s.setUiSoundsVolume,
-            marathonMode: s.marathonMode,
-            setMarathonMode: s.setMarathonMode,
-            tvMode: s.tvMode,
-            setTvMode: s.setTvMode,
         }))
     )
 
+    const { setValue } = useFormContext<SettingsFormValues>()
     const [musicDirInput, setMusicDirInput] = useState(bgMusicDir)
     const [isScanningMusic, setIsScanningMusic] = useState(false)
 
@@ -188,10 +195,14 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                 toast.error("No se encontraron archivos de audio en esa carpeta")
                 setBgMusicTracks([])
                 setBgMusicDir(dir)
+                setValue("theme.bgMusicDir", dir, { shouldDirty: true })
+                setValue("theme.bgMusicTracks", [], { shouldDirty: true })
                 return
             }
             setBgMusicDir(dir)
             setBgMusicTracks(tracks)
+            setValue("theme.bgMusicDir", dir, { shouldDirty: true })
+            setValue("theme.bgMusicTracks", tracks, { shouldDirty: true })
             toast.success(`${tracks.length} pista(s) de música encontradas`)
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Error al escanear la carpeta de música")
@@ -214,43 +225,64 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                 collapsible
                 defaultOpen={true}
             >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                    {AUDIO_PROFILES.map((p) => {
-                        const isSelected = preferredAudioProfile === p.id
+                <Controller
+                    control={control}
+                    name="library.preferredAudioProfile"
+                    render={({ field }) => {
+                        const currentProfile = field.value || preferredAudioProfile || "latino"
                         return (
-                            <motion.button
-                                key={p.id}
-                                type="button"
-                                whileHover={{ scale: 1.025, y: -2 }}
-                                whileTap={{ scale: 0.97 }}
-                                transition={cardSpring}
-                                onClick={() => setPreferredAudioProfile(p.id)}
-                                className={cn(
-                                    "flex flex-col p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer",
-                                    isSelected
-                                        ? "bg-zinc-950/70 border-white/30 border-t-white/50 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_8px_20px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
-                                        : "bg-zinc-950/40 border-white/10 border-t-white/20 hover:border-white/25 hover:bg-white/[0.04] shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.1)]"
-                                )}
-                            >
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-xl select-none">{p.flag}</span>
-                                    {isSelected && <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />}
-                                </div>
-                                <span className={cn("text-xs font-bold truncate", isSelected ? "text-white font-black" : "text-zinc-200")}>
-                                    {p.title}
-                                </span>
-                                <span className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{p.desc}</span>
-                            </motion.button>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                {AUDIO_PROFILES.map((p) => {
+                                    const isSelected = currentProfile === p.id
+                                    return (
+                                        <m.button
+                                            key={p.id}
+                                            type="button"
+                                            whileHover={{ scale: 1.025, y: -2 }}
+                                            whileTap={{ scale: 0.97 }}
+                                            transition={cardSpring}
+                                            onClick={() => {
+                                                field.onChange(p.id)
+                                                setPreferredAudioProfile(p.id)
+                                            }}
+                                            className={cn(
+                                                "flex flex-col p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer",
+                                                isSelected
+                                                    ? "bg-surface-container-high/80 border-white/30 border-t-white/50 shadow-[shadow:var(--glass-highlight-lg),0_8px_20px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
+                                                    : "bg-surface-container-lowest/60 border-white/10 border-t-white/20 hover:border-white/25 hover:bg-white/[0.04] shadow-glass-highlight-sm"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-xl select-none">{p.flag}</span>
+                                                {isSelected && <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />}
+                                            </div>
+                                            <span className={cn("text-xs font-bold truncate", isSelected ? "text-white font-black" : "text-on-surface")}>
+                                                {p.title}
+                                            </span>
+                                            <span className="text-3xs text-on-surface-variant line-clamp-1 mt-0.5">{p.desc}</span>
+                                        </m.button>
+                                    )
+                                })}
+                            </div>
                         )
-                    })}
-                </div>
+                    }}
+                />
 
                 <div className="pt-2 border-t border-white/[0.05]">
-                    <OsToggle
-                        label="Ocultar subtítulos si el audio está doblado"
-                        description="Desactiva subtítulos automáticamente al reproducir en Español Latino o Castellano."
-                        checked={autoDisableSubtitlesWhenDubbed}
-                        onChange={setAutoDisableSubtitlesWhenDubbed}
+                    <Controller
+                        control={control}
+                        name="library.autoDisableSubtitlesWhenDubbed"
+                        render={({ field }) => (
+                            <OsToggle
+                                label="Ocultar subtítulos si el audio está doblado"
+                                description="Desactiva subtítulos automáticamente al reproducir en Español Latino o Castellano."
+                                checked={field.value !== undefined ? !!field.value : autoDisableSubtitlesWhenDubbed}
+                                onChange={(v) => {
+                                    field.onChange(v)
+                                    setAutoDisableSubtitlesWhenDubbed(v)
+                                }}
+                            />
+                        )}
                     />
                 </div>
             </SectionBar>
@@ -261,39 +293,68 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
             <SectionBar
                 id="smart-skip"
                 label="Salto Inteligente (Smart Skip)"
-                description="Omisión de openings, endings, episodios de relleno y detección acústica en segundo plano."
+                description="Omisión de openings, endings, relleno y detección acústica en segundo plano."
                 icon={IconMediaSkipNext}
                 badge={
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent border border-brand-accent/25">
+                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent border border-brand-accent/25">
                         {[autoSkipIntro, autoSkipOutro, autoSkipFiller].filter(Boolean).length} activos
                     </span>
                 }
                 collapsible
                 defaultOpen={true}
             >
-                <OsToggle
-                    label="Saltar Opening (Intro) automáticamente"
-                    description="Omite canciones iniciales (Cha-La Head-Cha-La, Dan Dan, etc.) sin presionar botones."
-                    checked={autoSkipIntro}
-                    onChange={setAutoSkipIntro}
+                <Controller
+                    control={control}
+                    name="library.autoSkipIntro"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Saltar Opening (Intro) automáticamente"
+                            description="Omite canciones iniciales (Cha-La Head-Cha-La, Dan Dan, etc.) sin presionar botones."
+                            checked={field.value !== undefined ? !!field.value : autoSkipIntro}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setAutoSkipIntro(v)
+                            }}
+                        />
+                    )}
                 />
-                <OsToggle
-                    label="Saltar Ending (Créditos) automáticamente"
-                    description="Pasa directamente al siguiente episodio al iniciar los créditos finales."
-                    checked={autoSkipOutro}
-                    onChange={setAutoSkipOutro}
+                <Controller
+                    control={control}
+                    name="library.autoSkipOutro"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Saltar Ending (Créditos) automáticamente"
+                            description="Pasa directamente al siguiente episodio al iniciar los créditos finales."
+                            checked={field.value !== undefined ? !!field.value : autoSkipOutro}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setAutoSkipOutro(v)
+                            }}
+                        />
+                    )}
                 />
-                <OsToggle
-                    label="Saltar episodios de relleno automáticamente"
-                    description="Omite arcos no canónicos (Garlic Jr., Namek falso) para una experiencia fiel al manga."
-                    checked={autoSkipFiller}
-                    onChange={setAutoSkipFiller}
+                <Controller
+                    control={control}
+                    name="library.autoSkipFiller"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Saltar Relleno (Filler) automáticamente"
+                            description="Avanza al siguiente episodio cuando el actual es de relleno según las marcas disponibles."
+                            checked={field.value !== undefined ? !!field.value : autoSkipFiller}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setAutoSkipFiller(v)
+                            }}
+                        />
+                    )}
                 />
                 <Controller
                     control={control}
                     name="library.autoDetectSkipTimes"
                     render={({ field }) => (
-                        <OsToggle
+                        <DirtyOsToggle
+                            control={control}
+                            name="library.autoDetectSkipTimes"
                             label="Detectar marcas Skip en segundo plano"
                             description="Analiza huellas acústicas y subtítulos para ubicar intros y otros automáticamente."
                             checked={!!field.value}
@@ -321,7 +382,9 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                     control={control}
                     name="library.autoPlayNextEpisode"
                     render={({ field }) => (
-                        <OsToggle
+                        <DirtyOsToggle
+                            control={control}
+                            name="library.autoPlayNextEpisode"
                             label="Reproducción Continua (Autoplay)"
                             description="Inicia automáticamente el siguiente capítulo al concluir el actual."
                             checked={!!field.value}
@@ -333,7 +396,9 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                     control={control}
                     name="library.enableWatchContinuity"
                     render={({ field }) => (
-                        <OsToggle
+                        <DirtyOsToggle
+                            control={control}
+                            name="library.enableWatchContinuity"
                             label="Guardar Progreso en la Nube / Base de Datos"
                             description="Recuerda el segundo exacto para continuar donde lo dejaste en cualquier dispositivo."
                             checked={!!field.value}
@@ -352,66 +417,130 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                 description="Efectos de sonido de menú y banda sonora de fondo mientras exploras."
                 icon={IconStatusMusic}
                 badge={
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-accent/10 text-brand-accent border border-brand-accent/20">
+                    <span className="text-3xs font-mono px-2 py-0.5 rounded bg-brand-accent/10 text-brand-accent border border-brand-accent/20">
                         Local
                     </span>
                 }
                 collapsible
                 defaultOpen={true}
             >
-                <OsToggle
-                    label="Efectos de Sonido en la Interfaz"
-                    description="Sonidos sutiles retro al hacer clics, abrir menús o seleccionar opciones."
-                    checked={uiSoundsEnabled}
-                    onChange={setUiSoundsEnabled}
+                <Controller
+                    control={control}
+                    name="theme.uiSoundsEnabled"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Efectos de Sonido en la Interfaz"
+                            description="Sonidos sutiles retro al hacer clics, abrir menús o seleccionar opciones."
+                            checked={field.value !== undefined ? !!field.value : uiSoundsEnabled}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setUiSoundsEnabled(v)
+                                persistThemePatch({ uiSoundsEnabled: v })
+                            }}
+                        />
+                    )}
                 />
                 {uiSoundsEnabled && (
                     <div className="p-5 bg-white/[0.01]">
-                        <RangeSlider
-                            label="Volumen de Efectos"
-                            min={0}
-                            max={1}
-                            step={0.05}
-                            value={uiSoundsVolume}
-                            onChange={setUiSoundsVolume}
-                            formatValue={(v) => `${Math.round(v * 100)}%`}
+                        <Controller
+                            control={control}
+                            name="theme.uiSoundsVolume"
+                            render={({ field }) => (
+                                <RangeSlider
+                                    label="Volumen de Efectos"
+                                    min={0}
+                                    max={1}
+                                    step={0.05}
+                                    value={field.value !== undefined ? field.value : uiSoundsVolume}
+                                    onChange={(v) => {
+                                        field.onChange(v)
+                                        setUiSoundsVolume(v)
+                                        persistThemePatch({ uiSoundsVolume: v })
+                                    }}
+                                    formatValue={(v) => `${Math.round(v * 100)}%`}
+                                />
+                            )}
                         />
                     </div>
                 )}
 
-                <OsToggle
-                    label="Música Ambiental de Fondo"
-                    description="Reproduce pistas de audio ambiental mientras navegas por la plataforma."
-                    checked={bgMusicEnabled}
-                    onChange={setBgMusicEnabled}
+                <Controller
+                    control={control}
+                    name="theme.bgMusicEnabled"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Música Ambiental de Fondo"
+                            description="Reproduce pistas de audio ambiental mientras navegas por la plataforma."
+                            checked={field.value !== undefined ? !!field.value : bgMusicEnabled}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setBgMusicEnabled(v)
+                                persistThemePatch({ bgMusicEnabled: v })
+                            }}
+                        />
+                    )}
                 />
                 {bgMusicEnabled && (
                     <>
-                        <OsToggle
-                            label="Soundtrack Contextual por Serie"
-                            description="Reproduce automáticamente los temas oficiales de cada serie (DB, DBZ, GT, Super, Daima) al explorar su catálogo."
-                            checked={seriesSoundtrackMode}
-                            onChange={setSeriesSoundtrackMode}
+                        <Controller
+                            control={control}
+                            name="theme.seriesSoundtrackMode"
+                            render={({ field }) => (
+                                <OsToggle
+                                    label="Soundtrack Contextual por Serie"
+                                    description="Reproduce automáticamente los temas oficiales de cada serie (DB, DBZ, GT, Super, Daima) al explorar su catálogo."
+                                    checked={field.value !== undefined ? !!field.value : seriesSoundtrackMode}
+                                    onChange={(v) => {
+                                        field.onChange(v)
+                                        setSeriesSoundtrackMode(v)
+                                        persistThemePatch({ seriesSoundtrackMode: v })
+                                    }}
+                                />
+                            )}
                         />
                         <div className="p-5 space-y-4 bg-white/[0.01]">
-                            <RangeSlider
-                                label="Volumen de Música Ambiental"
-                                min={0}
-                                max={1}
-                                step={0.05}
-                                value={bgMusicVolume}
-                                onChange={setBgMusicVolume}
-                                formatValue={(v) => `${Math.round(v * 100)}%`}
+                            <Controller
+                                control={control}
+                                name="theme.bgMusicVolume"
+                                render={({ field }) => (
+                                    <RangeSlider
+                                        label="Volumen de Música Ambiental"
+                                        min={0}
+                                        max={1}
+                                        step={0.05}
+                                        value={field.value !== undefined ? field.value : bgMusicVolume}
+                                        onChange={(v) => {
+                                            field.onChange(v)
+                                            setBgMusicVolume(v)
+                                            persistThemePatch({ bgMusicVolume: v })
+                                        }}
+                                        formatValue={(v) => `${Math.round(v * 100)}%`}
+                                    />
+                                )}
                             />
                             <div className="p-4 bg-white/[0.02] rounded-xl border border-white/10 space-y-2.5">
                                 <p className="text-xs font-bold text-on-surface uppercase tracking-wider">Carpeta de Música Local</p>
                                 <div className="flex flex-col sm:flex-row items-stretch gap-2">
                                     <div className="flex-1">
-                                        <DirectorySelector
-                                            value={musicDirInput}
-                                            onSelect={setMusicDirInput}
-                                            onChange={(e) => setMusicDirInput(e.target.value)}
-                                            placeholder="Ruta con archivos MP3 / FLAC / OGG"
+                                        <Controller
+                                            control={control}
+                                            name="theme.bgMusicDir"
+                                            render={({ field }) => (
+                                                <DirectorySelector
+                                                    value={field.value !== undefined ? field.value : musicDirInput}
+                                                    onSelect={(path) => {
+                                                        field.onChange(path)
+                                                        setMusicDirInput(path)
+                                                        setBgMusicDir(path)
+                                                    }}
+                                                    onChange={(e) => {
+                                                        field.onChange(e.target.value)
+                                                        setMusicDirInput(e.target.value)
+                                                        setBgMusicDir(e.target.value)
+                                                    }}
+                                                    placeholder="Ruta con archivos MP3 / FLAC / OGG"
+                                                />
+                                            )}
                                         />
                                     </div>
                                     <Button
@@ -441,21 +570,56 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                 collapsible
                 defaultOpen={true}
             >
-                <OsToggle
-                    label="Modo Maratón"
-                    description="Encadena episodios sin pantallas de confirmación intermedias ni pausas."
-                    checked={marathonMode}
-                    onChange={setMarathonMode}
+                <Controller
+                    control={control}
+                    name="library.marathonMode"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Modo Maratón"
+                            description="Encadena episodios sin pantallas de confirmación intermedias ni pausas."
+                            checked={field.value !== undefined ? !!field.value : marathonMode}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setMarathonMode(v)
+                            }}
+                        />
+                    )}
                 />
-                <OsToggle
-                    label="Modo TV (Interfaz Leanback)"
-                    description="Aumenta los tamaños táctiles y optimiza para control remoto o teclado a distancia."
-                    checked={tvMode}
-                    onChange={setTvMode}
+                <Controller
+                    control={control}
+                    name="library.tvMode"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Modo TV (Interfaz Leanback)"
+                            description="Aumenta los tamaños táctiles y optimiza para control remoto o teclado a distancia. Al activarlo también habilita auto-skip y maratón."
+                            checked={field.value !== undefined ? !!field.value : tvMode}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setTvMode(v)
+                                if (v) {
+                                    setValue("library.autoSkipIntro", true, { shouldDirty: true })
+                                    setValue("library.autoSkipOutro", true, { shouldDirty: true })
+                                    setValue("library.marathonMode", true, { shouldDirty: true })
+                                    setAutoSkipIntro(true)
+                                    setAutoSkipOutro(true)
+                                    setMarathonMode(true)
+                                } else {
+                                    // Al desactivar TV se revierten los flags que
+                                    // el modo forzó, para no dejarlos pegados.
+                                    setValue("library.autoSkipIntro", false, { shouldDirty: true })
+                                    setValue("library.autoSkipOutro", false, { shouldDirty: true })
+                                    setValue("library.marathonMode", false, { shouldDirty: true })
+                                    setAutoSkipIntro(false)
+                                    setAutoSkipOutro(false)
+                                    setMarathonMode(false)
+                                }
+                            }}
+                        />
+                    )}
                 />
             </SectionBar>
 
-</div>
-)
+        </div>
+    )
 }
 

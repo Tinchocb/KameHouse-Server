@@ -62,9 +62,9 @@ const config: RsbuildConfig = {
         },
     },
     dev: {
-        // Compilación perezosa en dev: el server arranca en segundos y cada
-        // ruta se compila al visitarla (ideal con el code-splitting por ruta).
-        lazyCompilation: true,
+        // Desactivado: compilar todo al inicio evita el parpadeo/congelamiento
+        // por compilación bajo demanda al navegar a cada sección por primera vez.
+        lazyCompilation: false,
     },
     server: { // dev server
         port: Number(process.env.PORT) || 43210,
@@ -111,7 +111,13 @@ const config: RsbuildConfig = {
         polyfill: "off",
         dataUriLimit: 1024,
         cleanDistPath: true,
-        sourceMap: process.env.NODE_ENV === "production" ? "hidden" : !!process.env.RSDOCTOR,
+        // Formato de Rsbuild 1.x ({ js, css }). El valor anterior ("hidden"/"inline")
+        // no es válido y se ignoraba: producción nunca generó source maps y se
+        // mantiene así; el análisis con RSDOCTOR sí recupera sus maps en línea.
+        sourceMap: {
+            js: process.env.RSDOCTOR ? "inline-source-map" : false,
+            css: false,
+        },
         distPath: {
             root: "out",
         },
@@ -127,7 +133,7 @@ const config: RsbuildConfig = {
         preload: process.env.NODE_ENV === "production" ? {
             type: "initial",
             include: [/(?:outfit|space-mono).*\.woff2$/],
-        } : false,
+        } : undefined,
         chunkSplit: process.env.NODE_ENV === "production" ? {
             forceSplitting: {
                 "react-core": /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
@@ -141,14 +147,9 @@ const config: RsbuildConfig = {
                 "fontsource": /[\\/]node_modules[\\/]@fontsource/,
                 "zod": /[\\/]node_modules[\\/]zod[\\/]/,
             },
-            // Route-level code splitting for heavy pages
-            manualChunks: {
-                "series-detail": /[\\/]src[\\/]routes[\\/]series[\\/]\$seriesId/,
-                "movie-detail": /[\\/]src[\\/]routes[\\/]movies[\\/]\$movieId/,
-                "chronology": /[\\/]src[\\/]routes[\\/]chronology/,
-                "settings": /[\\/]src[\\/]routes[\\/]settings/,
-                "admin": /[\\/]src[\\/]routes[\\/]admin/,
-            },
+            // La división por ruta la hace autoCodeSplitting de TanStack Router (más abajo).
+            // Acá había un `manualChunks` que Rsbuild no soporta en chunkSplit: se
+            // ignoraba en silencio y rompía el typecheck de tsconfig.node.json.
         } : {
             strategy: "all-in-one",
         },

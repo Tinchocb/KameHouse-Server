@@ -25,7 +25,6 @@ const (
 
 	LibraryWatcherFileAdded         = "library-watcher-file-added"         // A new file has been added to the library
 	LibraryWatcherFileRemoved       = "library-watcher-file-removed"       // A file has been removed from the library
-	AutoDownloaderItemAdded         = "auto-downloader-item-added"         // An item has been added to the auto downloader queue
 
 	AutoScanStarted   = "auto-scan-started"   // The auto scan has started
 	AutoScanCompleted = "auto-scan-completed" // The auto scan has stopped
@@ -67,9 +66,6 @@ const (
 	SyncLocalQueueState = "sync-local-queue-state"
 	SyncLocalFinished   = "sync-local-finished"
 	SyncPlatformFinished = "sync-platform-finished"
-
-	DebridDownloadProgress = "debrid-download-progress"
-	DebridStreamState      = "debrid-stream-state"
 
 	InvalidateQueries = "invalidate-queries"
 	ConsoleLog        = "console-log"

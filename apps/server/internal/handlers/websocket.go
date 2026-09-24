@@ -5,6 +5,7 @@ import (
 	"kamehouse/internal/events"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -16,7 +17,10 @@ import (
 // webSocketEventHandler creates a new websocket handler for real-time event communication.
 // The route is registered BEFORE the auth middleware group so the HTTP→WS upgrade
 // is never blocked by a missing Authorization header (browsers can't send one during WS connect).
-// Clients that need auth send their token via ?token=<value> as a query parameter instead.
+// Clients can authenticate via:
+//   - ?token=<value> query parameter (legacy)
+//   - Authorization: Bearer <token> header (preferred)
+//   - Sec-WebSocket-Protocol header with token (preferred for browsers)
 func (h *Handler) webSocketEventHandler(c echo.Context) error {
 	// Client identity — passed as query parameters since WS browsers can't set custom headers.
 	id := c.QueryParam("id")
@@ -24,8 +28,9 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 		id = uuid.New().String()
 	}
 
-	// Optional bearer token via ?token=<value> (browser WS API cannot set Authorization headers).
-	token := c.QueryParam("token")
+	// Extract token from multiple sources (priority: header > query param)
+	token := extractWSToken(c.Request())
+
 	if h.App.Config.Server.Password != "" {
 		isAuthed := h.isCorrectPasswordToken(token)
 		if !isAuthed && token != "" {
@@ -158,4 +163,30 @@ func UnmarshalWebsocketClientEvent(msg []byte) (*events.WebsocketClientEvent, er
 		return nil, err
 	}
 	return &event, nil
+}
+
+// extractWSToken extracts the authentication token from a WebSocket request.
+// Priority: Authorization header > Sec-WebSocket-Protocol > query parameter.
+func extractWSToken(r *http.Request) string {
+	// 1. Authorization: Bearer <token>
+	if auth := r.Header.Get("Authorization"); auth != "" {
+		if strings.HasPrefix(auth, "Bearer ") {
+			return strings.TrimPrefix(auth, "Bearer ")
+		}
+	}
+
+	// 2. Sec-WebSocket-Protocol header (for browsers that can't set Authorization on WS upgrade)
+	if proto := r.Header.Get("Sec-WebSocket-Protocol"); proto != "" {
+		// Format: "kamehouse.token.<token>" or just "<token>"
+		if strings.HasPrefix(proto, "kamehouse.token.") {
+			return strings.TrimPrefix(proto, "kamehouse.token.")
+		}
+		// If it looks like a token (long enough), use it
+		if len(proto) > 20 {
+			return proto
+		}
+	}
+
+	// 3. Query parameter (legacy fallback)
+	return r.URL.Query().Get("token")
 }

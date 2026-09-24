@@ -1,20 +1,19 @@
-import { ApiError } from "@/api/client/requests"
+import { ApiError, isTransientStatus } from "@/api/client/requests"
 import { WebsocketProvider } from "@/app/websocket-provider"
 import { PwaRegistry } from "@/components/pwa-registry"
 import { Toaster } from "@/components/ui/toaster"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { MotionConfig } from "framer-motion"
+import { QueryClient } from "@tanstack/react-query"
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
+import { queryPersistOptions } from "@/lib/query-persister"
+import { LazyMotion, MotionConfig, domMax } from "framer-motion"
 
 import React, { useEffect } from "react"
 import { CookiesProvider } from "react-cookie"
-import { useAppStore } from "@/lib/store"
+import { usePlayerStore } from "@/lib/store"
 
 interface ClientProvidersProps {
     children?: React.ReactNode
 }
-
-/** Status codes that should NEVER be retried — they indicate a definitive client error. */
-const NO_RETRY_STATUSES = new Set([400, 401, 403, 404, 422])
 
 export const queryClient = new QueryClient({
     defaultOptions: {
@@ -22,15 +21,19 @@ export const queryClient = new QueryClient({
             refetchOnWindowFocus: false,
             refetchOnReconnect: false,
             structuralSharing: true,
-            staleTime: 24 * 60 * 60 * 1000,   // 24 hours (library content is static)
-            gcTime: 7 * 24 * 60 * 60 * 1000,  // 7 days
-            // Smart retry: 1 attempt for transient errors, 0 for definitive failures.
+            staleTime: 60 * 60 * 1000,         // 1 hour (reducido de 24h para mantener datos frescos)
+            gcTime: 24 * 60 * 60 * 1000,       // 24 hours en memoria, persistido en IndexedDB
+            // Smart retry: requests.ts ya absorbe los reintentos idempotentes (GET) a nivel transporte.
+            // Para ApiError no duplicar tormenta; para fallos de red inesperados permitir 1 reintento.
+            // Excepción: 502/503/504 significa backend arrancando (sidecar) o gateway caído;
+            // es transitorio, así que se reintenta con backoff (~30s en total).
             retry: (failureCount, error) => {
-                if (error instanceof ApiError && NO_RETRY_STATUSES.has(error.status)) {
-                    return false
+                if (error instanceof ApiError) {
+                    return isTransientStatus(error.status) && failureCount < 15
                 }
                 return failureCount < 1
             },
+            retryDelay: (attemptIndex) => Math.min(500 * 2 ** attemptIndex, 3000),
         },
     },
 })
@@ -40,7 +43,7 @@ export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) =>
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);
             if (params.get("tvMode") === "true") {
-                useAppStore.getState().setTvMode(true);
+                usePlayerStore.getState().setTvMode(true);
                 // Remove parameter from URL history so navigation remains clean
                 window.history.replaceState({}, "", window.location.pathname);
             }
@@ -49,18 +52,20 @@ export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) =>
 
     return (
         <MotionConfig reducedMotion="user">
-            <CookiesProvider>
-                <QueryClientProvider client={queryClient}>
-                    <WebsocketProvider>
-                        {children}
-                        <Toaster />
-                        <PwaRegistry />
-                    </WebsocketProvider>
-                    {/*    <ReactQueryDevtools />*/}
-                    {/*</React.Suspense>}*/}
-                </QueryClientProvider>
-            </CookiesProvider>
+            <LazyMotion features={domMax} strict>
+                <CookiesProvider>
+                    <PersistQueryClientProvider
+                        client={queryClient}
+                        persistOptions={queryPersistOptions}
+                    >
+                        <WebsocketProvider>
+                            {children}
+                            <Toaster />
+                            <PwaRegistry />
+                        </WebsocketProvider>
+                    </PersistQueryClientProvider>
+                </CookiesProvider>
+            </LazyMotion>
         </MotionConfig>
     )
-
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
@@ -26,6 +27,7 @@ type Config struct {
 		DoHUrl        string `mapstructure:"dohUrl"`
 		Password      string `mapstructure:"password"`
 		CorsOrigins   []string `mapstructure:"corsOrigins"`
+		AuthTokenTTL  string `mapstructure:"authTokenTTL"` // e.g. "24h", "1h", "30m" (min 5m)
 		TLS           struct {
 			Enabled  bool   `mapstructure:"enabled"`
 			CertPath string `mapstructure:"certPath"`
@@ -44,6 +46,13 @@ type Config struct {
 	Cache struct {
 		Dir          string `mapstructure:"dir"`
 		TranscodeDir string `mapstructure:"transcodeDir"`
+		Thumbnails   struct {
+			MemoryMaxItems   int    `mapstructure:"memoryMaxItems"`
+			MemoryMaxBytesMB int64  `mapstructure:"memoryMaxBytesMB"`
+			DiskMaxSizeMB    int64  `mapstructure:"diskMaxSizeMB"`
+			DiskTTLHours     int    `mapstructure:"diskTTLHours"`
+			CleanupInterval  string `mapstructure:"cleanupInterval"`
+		} `mapstructure:"thumbnails"`
 	} `mapstructure:"cache"`
 	Offline struct {
 		Dir      string `mapstructure:"dir"`
@@ -61,6 +70,9 @@ type Config struct {
 		TMDBApiKey   string `mapstructure:"tmdbApiKey"`
 		TMDBLanguage string `mapstructure:"tmdbLanguage"`
 	} `mapstructure:"metadata"`
+
+	// Internal: viper instance for config hot-reload
+	v *viper.Viper `mapstructure:"-"`
 }
 
 type ConfigOptions struct {
@@ -72,14 +84,15 @@ type ConfigOptions struct {
 // ProvideConfig acts as a Dependency Injection (e.g. Wire) provider.
 // Enforces a fail-fast pattern by panicking synchronously upon failure.
 func ProvideConfig(opts *ConfigOptions, logger *zerolog.Logger) *Config {
-	cfg, err := NewConfig(opts, logger)
+	cfg, _, err := NewConfig(opts, logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Configuration validation failed during startup sequence")
 	}
 	return cfg
 }
 
-func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) {
+// NewConfig initializes the configuration and returns the config and the viper instance for hot-reload support.
+func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, *viper.Viper, error) {
 	flags := options.Flags
 	logger.Debug().Msg("app: Initializing robust config")
 
@@ -93,7 +106,7 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) 
 
 	dataDir, configPath, err := initAppDataDir(dataDir, logger)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	_ = os.Setenv("KAMEHOUSE_DATA_DIR", dataDir)
 	_ = os.MkdirAll(filepath.Join(dataDir, "assets"), 0700)
@@ -109,11 +122,11 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) 
 	setDefaults(v)
 
 	if err := createConfigFile(configPath); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := v.ReadInConfig(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Dynamic override propagation
@@ -131,8 +144,11 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) 
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	// Store viper instance for hot-reload
+	cfg.v = v
 
 	expandEnvironmentValues(&cfg)
 	resolveCorsOrigins(&cfg)
@@ -140,7 +156,7 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) 
 
 	wd, err := getWorkingDir(cfg.Server.UseBinaryPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	cfg.Data.WorkingDir = filepath.FromSlash(wd)
 	_ = os.Setenv("KAMEHOUSE_WORKING_DIR", cfg.Data.WorkingDir)
@@ -151,7 +167,7 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) 
 	}
 
 	if err := validateConfig(&cfg); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if cfg.Version != constants.Version {
@@ -167,7 +183,7 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, error) 
 
 	// Since Config is deeply populated once and immediately returned via points,
 	// subsequent reads are strictly immutable requiring zero locks.
-	return &cfg, nil
+	return &cfg, v, nil
 }
 
 func setDefaults(v *viper.Viper) {
@@ -180,6 +196,11 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("web.assetDir", "$KAMEHOUSE_DATA_DIR/assets")
 	v.SetDefault("cache.dir", "$KAMEHOUSE_DATA_DIR/cache")
 	v.SetDefault("cache.transcodeDir", "$KAMEHOUSE_DATA_DIR/cache/transcode")
+	v.SetDefault("cache.thumbnails.memoryMaxItems", 1000)
+	v.SetDefault("cache.thumbnails.memoryMaxBytesMB", 256) // 256MB
+	v.SetDefault("cache.thumbnails.diskMaxSizeMB", 5120) // 5GB
+	v.SetDefault("cache.thumbnails.diskTTLHours", 720)   // 30 days
+	v.SetDefault("cache.thumbnails.cleanupInterval", "12h")
 	v.SetDefault("logs.dir", "$KAMEHOUSE_DATA_DIR/logs")
 	v.SetDefault("offline.dir", "$KAMEHOUSE_DATA_DIR/offline")
 	v.SetDefault("offline.assetDir", "$KAMEHOUSE_DATA_DIR/offline/assets")
@@ -187,6 +208,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("metadata.provider", "jikan")
 	v.SetDefault("metadata.tmdbApiKey", "")
 	v.SetDefault("metadata.tmdbLanguage", "es-MX")
+	v.SetDefault("server.authTokenTTL", "24h")
 
 }
 
@@ -240,6 +262,31 @@ func validateConfig(cfg *Config) error {
 		}
 		if cfg.Server.TLS.KeyPath == "" || !filepath.IsAbs(cfg.Server.TLS.KeyPath) {
 			return errors.New("server.tls.keyPath must be an absolute path when TLS is enabled")
+		}
+	}
+
+	if cfg.Server.AuthTokenTTL != "" {
+		if d, err := time.ParseDuration(cfg.Server.AuthTokenTTL); err != nil {
+			return fmt.Errorf("config validation failed: server.authTokenTTL must be a valid duration (e.g. 24h, 1h, 30m): %w", err)
+		} else if d < 5*time.Minute {
+			return errors.New("config validation failed: server.authTokenTTL must be at least 5m")
+		}
+	}
+
+	if cfg.Cache.Thumbnails.MemoryMaxItems < 0 {
+		return errors.New("config validation failed: cache.thumbnails.memoryMaxItems must be >= 0")
+	}
+	if cfg.Cache.Thumbnails.DiskMaxSizeMB < 0 {
+		return errors.New("config validation failed: cache.thumbnails.diskMaxSizeMB must be >= 0")
+	}
+	if cfg.Cache.Thumbnails.DiskTTLHours < 0 {
+		return errors.New("config validation failed: cache.thumbnails.diskTTLHours must be >= 0")
+	}
+	if cfg.Cache.Thumbnails.CleanupInterval != "" {
+		if d, err := time.ParseDuration(cfg.Cache.Thumbnails.CleanupInterval); err != nil {
+			return fmt.Errorf("config validation failed: cache.thumbnails.cleanupInterval must be a valid duration (e.g. 12h, 1h, 30m): %w", err)
+		} else if d < 1*time.Minute {
+			return errors.New("config validation failed: cache.thumbnails.cleanupInterval must be at least 1m")
 		}
 	}
 

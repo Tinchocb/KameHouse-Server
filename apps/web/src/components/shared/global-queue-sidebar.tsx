@@ -1,8 +1,8 @@
 import React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence } from "framer-motion"
 import { useNavigate } from "@tanstack/react-router"
 import { IconMediaQueue, IconUiClose, IconMediaPlay, IconNavigationChevronUp, IconNavigationChevronDown, IconUiTrash, IconMediaSkipPrevious, IconMediaShuffle, IconMediaRepeat } from "@/components/ui/icons";
-import { useAppStore } from "@/lib/store"
+import { useQueueStore, useUIStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
@@ -18,8 +18,6 @@ export const GlobalQueueSidebar = () => {
     const {
         playlistQueue,
         currentQueueIndex,
-        globalQueueOpen,
-        setGlobalQueueOpen,
         removeFromQueue,
         clearQueue,
         setCurrentQueueIndex,
@@ -28,11 +26,9 @@ export const GlobalQueueSidebar = () => {
         queueRepeatMode,
         setQueueRepeatMode,
         moveQueueItem,
-    } = useAppStore(useShallow(state => ({
+    } = useQueueStore(useShallow(state => ({
         playlistQueue: state.playlistQueue,
         currentQueueIndex: state.currentQueueIndex,
-        globalQueueOpen: state.globalQueueOpen,
-        setGlobalQueueOpen: state.setGlobalQueueOpen,
         removeFromQueue: state.removeFromQueue,
         clearQueue: state.clearQueue,
         setCurrentQueueIndex: state.setCurrentQueueIndex,
@@ -41,6 +37,13 @@ export const GlobalQueueSidebar = () => {
         queueRepeatMode: state.queueRepeatMode,
         setQueueRepeatMode: state.setQueueRepeatMode,
         moveQueueItem: state.moveQueueItem,
+    })))
+    const {
+        globalQueueOpen,
+        setGlobalQueueOpen,
+    } = useUIStore(useShallow(state => ({
+        globalQueueOpen: state.globalQueueOpen,
+        setGlobalQueueOpen: state.setGlobalQueueOpen,
     })))
 
     // Cerrar con Escape
@@ -62,7 +65,7 @@ export const GlobalQueueSidebar = () => {
             {globalQueueOpen && (
                 <>
                     {/* Backdrop (z-overlay: 1000) — scrim único, sin blur extra */}
-                    <motion.div
+                    <m.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -71,7 +74,7 @@ export const GlobalQueueSidebar = () => {
                     />
 
                     {/* Panel lateral — shell estructurado + tokens SectionBar strong (una sola capa de blur) */}
-                    <motion.div
+                    <m.div
                         initial={{ x: "100%" }}
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
@@ -100,7 +103,7 @@ export const GlobalQueueSidebar = () => {
                                                 Mi Lista / Cola
                                             </h3>
                                             <span className="sectionbar-header-badge">
-                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 text-on-surface-variant border border-white/10 shrink-0">
+                                                <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-white/5 text-on-surface-variant border border-white/10 shrink-0">
                                                     {playlistQueue.length}
                                                 </span>
                                             </span>
@@ -129,10 +132,10 @@ export const GlobalQueueSidebar = () => {
                                         const isHistory = idx < currentQueueIndex
 
                                         return (
-                                            <motion.div
+                                            <m.div
                                                 key={`${String(item.id)}_${String(item.episodeNumber ?? '')}_${String(item.mediaId)}_${item.playableUrl}`}
-                                                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, filter: "blur(8px)" }}
-                                                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" }}
+                                                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                                                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
                                                 transition={{ ...tabContentSpring, delay: Math.min(idx, 8) * 0.06 }}
                                                 whileHover={prefersReducedMotion ? undefined : { scale: 1.012 }}
                                                 className={cn(
@@ -167,7 +170,7 @@ export const GlobalQueueSidebar = () => {
                                                                 showSkeleton={false}
                                                             />
                                                         ) : (
-                                                            <span className="text-[10px] font-mono font-black uppercase tracking-widest text-on-surface-variant/50">Sin imagen</span>
+                                                            <span className="text-3xs font-mono font-black uppercase tracking-widest text-on-surface-variant/50">Sin imagen</span>
                                                         )}
 
                                                         {/* Play overlay */}
@@ -193,7 +196,7 @@ export const GlobalQueueSidebar = () => {
                                                     <span className="flex-1 min-w-0 flex flex-col justify-center">
                                                         {item.subtitle && (
                                                             <span className={cn(
-                                                                "text-[10px] sm:text-xs font-black tracking-widest mb-0.5 truncate",
+                                                                "text-3xs sm:text-xs font-black tracking-widest mb-0.5 truncate",
                                                                 isCurrent ? "text-brand-accent" : "text-on-surface-variant"
                                                             )}>
                                                                 {item.subtitle.toUpperCase()}
@@ -247,13 +250,13 @@ export const GlobalQueueSidebar = () => {
                                                 >
                                                     <IconUiTrash className="w-4 h-4" />
                                                 </button>
-                                            </motion.div>
+                                            </m.div>
                                         )
                                     })}
                                 </div>
                             ) : (
                                 /* Empty — patrón oro Home (glass-card rounded-3xl + CTA brand-accent pill) */
-                                <motion.div
+                                <m.div
                                     initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 20 }}
                                     animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
                                     transition={emptySpring}
@@ -276,11 +279,11 @@ export const GlobalQueueSidebar = () => {
                                             setGlobalQueueOpen(false)
                                             navigate({ to: "/home" })
                                         }}
-                                        className="px-8 py-3 rounded-full bg-brand-accent text-on-primary font-display tracking-widest text-xs uppercase active:scale-95 hover:brightness-110 transition-all shadow-[var(--shadow-brand-primary)] min-h-[44px] cursor-pointer"
+                                        className="px-8 py-3 rounded-full bg-brand-accent text-on-primary font-display tracking-widest text-xs uppercase active:scale-95 hover:brightness-110 transition-all shadow-brand-primary min-h-[44px] cursor-pointer"
                                     >
                                         Explorar catálogo
                                     </button>
-                                </motion.div>
+                                </m.div>
                             )}
                         </div>
 
@@ -291,7 +294,7 @@ export const GlobalQueueSidebar = () => {
                                     <button
                                         onClick={() => playPrevious()}
                                         disabled={currentQueueIndex <= 0 && queueRepeatMode !== "all"}
-                                        className="relative flex-1 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed"
                                         aria-label="Anterior"
                                         title="Anterior"
                                     >
@@ -300,7 +303,7 @@ export const GlobalQueueSidebar = () => {
                                     </button>
                                     <button
                                         onClick={() => shuffleQueue()}
-                                        className="relative flex-1 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface"
+                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface"
                                         aria-label="Aleatorio"
                                         title="Mezclar cola"
                                     >
@@ -316,15 +319,15 @@ export const GlobalQueueSidebar = () => {
                                         aria-label="Repetir"
                                         title={`Repetir: ${queueRepeatMode}`}
                                         className={cn(
-                                            "relative flex-1 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px]",
+                                            "relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px]",
                                             isRepeating ? "text-zinc-950 font-bold" : "text-on-surface-variant hover:text-on-surface"
                                         )}
                                     >
                                         {isRepeating && (
-                                            <motion.span
+                                            <m.span
                                                 layoutId="queue-repeat-indicator"
                                                 transition={tabIndicatorSpring}
-                                                className="absolute inset-0 bg-white/95 rounded-full shadow-[0_2px_14px_rgba(255,255,255,0.4),inset_0_1px_1px_rgba(255,255,255,1)]"
+                                                className="absolute inset-0 bg-white/95 rounded-full"
                                             />
                                         )}
                                         <span className="relative z-10 flex items-center gap-1">
@@ -344,7 +347,7 @@ export const GlobalQueueSidebar = () => {
                                 </button>
                             </div>
                         )}
-                    </motion.div>
+                    </m.div>
                 </>
             )}
         </AnimatePresence>

@@ -105,6 +105,7 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+	lfs = h.visibleLocalFiles(lfs)
 
 	entry, err := h.getAnimeEntry(c, lfs, mID)
 	if err != nil {
@@ -132,6 +133,7 @@ func (h *Handler) HandleGetAnimeEntryLocalFiles(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+	lfs = h.visibleLocalFiles(lfs)
 
 	return h.RespondWithData(c, lfs)
 }
@@ -278,6 +280,13 @@ func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	if b.MediaID <= 0 {
+		return h.RespondWithCodeError(c, 400, errors.New("invalid mediaId"))
+	}
+	if b.Progress < 0 {
+		return h.RespondWithCodeError(c, 400, errors.New("invalid progress: must be >= 0"))
+	}
+
 	err := h.App.Metadata.Platform.UpdateEntryProgress(c.Request().Context(), b.MediaID, b.Progress, nil)
 	if err != nil {
 		return h.RespondWithError(c, err)
@@ -307,6 +316,13 @@ func (h *Handler) HandleUpdateAnimeEntryRepeat(c echo.Context) error {
 	b := new(body)
 	if err := c.Bind(b); err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	if b.MediaID <= 0 {
+		return h.RespondWithCodeError(c, 400, errors.New("invalid mediaId"))
+	}
+	if b.Repeat < 0 {
+		return h.RespondWithCodeError(c, 400, errors.New("invalid repeat: must be >= 0"))
 	}
 
 	err := h.App.Metadata.Platform.UpdateEntryRepeat(c.Request().Context(), b.MediaID, b.Repeat)
@@ -427,6 +443,8 @@ func (h *Handler) HandleAnimeEntryUnmatch(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	// Refresh the collection (mirror manual-match so unlinked lists update)
+	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
 
 
@@ -449,6 +467,7 @@ func (h *Handler) HandleGetMissingEpisodes(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+	lfs = h.visibleLocalFiles(lfs)
 
 	missing := anime.NewMissingEpisodes(&anime.NewMissingEpisodesOptions{
 		Database:            h.App.Database,

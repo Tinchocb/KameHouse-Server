@@ -4,6 +4,7 @@ import { useServerQuery } from "@/api/client/requests"
 import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
 import { IntelligentEntry } from "@/api/types/intelligence.types"
 import { useState, useMemo, useEffect } from "react"
+import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 
 interface SemanticSearchResult {
     entity: {
@@ -98,6 +99,8 @@ export function useGlobalSearch(enabled = true) {
     }, [query])
 
     const isSearchActive = debouncedQuery.length >= 2
+    // La paleta usa prefijo ">" para comandos: no disparar búsqueda semántica.
+    const isSemanticEnabled = isSearchActive && !debouncedQuery.startsWith(">")
 
     // Semantic intelligence search query
     const { data: semanticResults, isLoading: isLoadingSemantic } = useServerQuery<SemanticSearchResult[], { q: string }>({
@@ -106,15 +109,14 @@ export function useGlobalSearch(enabled = true) {
         params: { q: debouncedQuery },
         queryKey: [EXTRA_ENDPOINTS.INTELLIGENCE.Search.key, debouncedQuery],
         staleTime: 60000,
-        enabled: isSearchActive,
+        enabled: isSemanticEnabled,
         muteError: true,
     })
 
-    const isLoading = isLoadingCol || isLoadingUnlinked || (isSearchActive && isLoadingSemantic)
+    const isLoading = isLoadingCol || isLoadingUnlinked || (isSemanticEnabled && isLoadingSemantic)
 
     const allEntries = useMemo(() => {
-        if (!collection?.lists) return []
-        return collection.lists.flatMap(list => list.entries || [])
+        return getSafeCollectionEntries(collection)
     }, [collection])
 
     const syntheticUnlinked = useMemo(() => {
@@ -124,6 +126,7 @@ export function useGlobalSearch(enabled = true) {
             return {
                 mediaId: `unlinked-${file.id}`,
                 isUnlinked: true as const,
+                unlinkedId: file.id,
                 path: file.path,
                 media: {
                     titleRomaji: filename,
@@ -165,8 +168,9 @@ export function useGlobalSearch(enabled = true) {
         })
 
         const filteredEntries = allEntries.filter(entry => {
+            if (!entry) return false
             const e = entry as IntelligentEntry
-            const media = e.media
+            const media = e?.media
             const vibes = e.vibes?.join(" ") || ""
             const title = media 
                 ? `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""} ${media.titleSpanish || ""} ${vibes}`.toLowerCase()

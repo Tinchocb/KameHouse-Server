@@ -9,6 +9,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query"
+import { z } from "zod"
 import { buildSeaQuery } from "@/api/client/requests"
 import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
 
@@ -36,6 +37,24 @@ interface AniSkipResponse {
     error?: string
 }
 
+// Validación del borde externo (API comunitaria): skipType como string para
+// tolerar tipos nuevos; lo desconocido se filtra al consumir, no al validar.
+export const aniSkipResponseSchema = z.object({
+    found: z.boolean(),
+    results: z.array(z.object({
+        interval: z.object({
+            startTime: z.number(),
+            endTime: z.number(),
+        }).passthrough(),
+        skipType: z.string(),
+        episodeLength: z.number(),
+        votes: z.number().optional(),
+    }).passthrough()).optional(),
+    statusCode: z.number(),
+    message: z.string().optional(),
+    error: z.string().optional(),
+}).passthrough()
+
 // ─── Fetcher ──────────────────────────────────────────────────────────────────
 
 async function fetchAniSkipTimes(
@@ -51,7 +70,7 @@ async function fetchAniSkipTimes(
         url += `&episodeLength=${Math.round(episodeDuration)}`
     }
 
-    const res = await fetch(url)
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
 
     if (!res.ok) {
         // AniSkip returns 404 when no skip times found, and 400 for invalid
@@ -63,7 +82,12 @@ async function fetchAniSkipTimes(
         throw new Error(`AniSkip API error: ${res.status}`)
     }
 
-    return res.json() as Promise<AniSkipResponse>
+    const json: unknown = await res.json()
+    const parsed = aniSkipResponseSchema.safeParse(json)
+    if (!parsed.success) {
+        return { found: false, statusCode: res.status }
+    }
+    return parsed.data as AniSkipResponse
 }
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
@@ -286,10 +310,9 @@ export async function getAniSkipTimes({
             if (res?.malId) {
                 activeMalId = res.malId
             }
-        } catch (e) {
+        } catch {
             // Expected for media without a MAL mapping (e.g. pure TMDB/library entries);
-            // skip-times gracefully fall back to heuristics. Kept at debug to avoid noise.
-            console.debug("No MAL mapping for TMDB/Media ID:", e)
+            // skip-times gracefully fall back to heuristics.
         }
     }
 
@@ -360,12 +383,15 @@ export function useAniSkipTimes({
         // and re-triggers loading. The duration is passed to the fetcher as a
         // hint but the API response is independent of it.
         queryKey: aniskipQueryKeys.times(malId, mediaId, episodeNumber),
-        queryFn: () => getAniSkipTimes({
-            malId,
-            mediaId,
-            episodeNumber: episodeNumber!,
-            episodeDuration,
-        }),
+        queryFn: () => {
+            if (episodeNumber == null) throw new Error("episodeNumber requerido para AniSkip")
+            return getAniSkipTimes({
+                malId,
+                mediaId,
+                episodeNumber,
+                episodeDuration,
+            })
+        },
         enabled: enabled && !!(malId || mediaId) && !!episodeNumber,
         staleTime: 1000 * 60 * 60 * 24, // Cache for 24h
         retry: 1,

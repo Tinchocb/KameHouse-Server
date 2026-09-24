@@ -599,7 +599,7 @@ const _format = (pathObject: FormatInputPathObject): string => {
 const upath_internal = {
     // Define VERSION (assuming VERSION is a global or module-scoped variable injected elsewhere)
     // If VERSION is not injected, this will default to 'NO-VERSION'
-    VERSION: typeof (globalThis as {VERSION?: string}).VERSION !== "undefined" ? (globalThis as {VERSION?: string}).VERSION! : "NO-VERSION",
+    VERSION: (globalThis as { VERSION?: string }).VERSION ?? "NO-VERSION",
     sep: "/", // Explicitly set to Unix style
     delimiter: ":", // Standard Posix delimiter
 } as UPath

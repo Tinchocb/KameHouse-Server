@@ -5,6 +5,7 @@ export const DRAGON_BALL_SERIES = {
     Z: 12971,
     GT: 12697,
     KAI: 61709,
+    KAI_FINAL_CHAPTERS: 42705,
     SUPER: 62715,
     DAIMA: 236994,
 };
@@ -293,8 +294,8 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
     [DRAGON_BALL_SERIES.SUPER]: [
         {
             id: "batalla-dioses",
-            title: "Saga La Batalla de los Dioses",
-            description: "Saga La Batalla de los Dioses saga",
+            title: "Saga de la Batalla de los Dioses",
+            description: "Saga de la Batalla de los Dioses saga",
             startEp: 1,
             endEp: 14,
             subSagas: [
@@ -304,8 +305,8 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
         },
         {
             id: "resurreccion-f",
-            title: "Saga La Resurrección de 'F'",
-            description: "Saga La Resurrección de 'F' saga",
+            title: "Saga de la Resurrección de 'F'",
+            description: "Saga de la Resurrección de 'F' saga",
             startEp: 15,
             endEp: 27,
             subSagas: [
@@ -394,3 +395,5 @@ export const DRAGON_BALL_SAGAS: Record<number, SagaDefinition[]> = {
         },
     ],
 };
+
+DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.KAI_FINAL_CHAPTERS] = DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.KAI];

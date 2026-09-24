@@ -46,3 +46,19 @@ export function getSeriesName(fullTitle?: string): string {
     return fullTitle
 }
 
+// Formatos de la plataforma (MOVIE, TV, OVA...) en el idioma de la UI.
+const FORMAT_LABELS: Record<string, string> = {
+    MOVIE: "Película",
+    TV: "Serie",
+    TV_SHORT: "Serie corta",
+    OVA: "OVA",
+    ONA: "ONA",
+    SPECIAL: "Especial",
+    MUSIC: "Musical",
+}
+
+/** Etiqueta en español para un formato; formatos desconocidos se muestran tal cual. */
+export function getFormatLabel(format: string | null | undefined, fallback = "Serie"): string {
+    if (!format) return fallback
+    return FORMAT_LABELS[format.toUpperCase()] ?? format
+}

@@ -1,8 +1,8 @@
-import { create, StateCreator } from "zustand"
+import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
-import { useUIStore } from "./ui-store"
+import { useShallow } from "zustand/react/shallow"
 
 export interface PlaylistItem {
     id: string | number
@@ -23,6 +23,12 @@ export interface QueueState {
     currentQueueIndex: number
     activeQueuePlayItem: PlaylistItem | null
     queueRepeatMode: QueueRepeatMode
+    /**
+     * Señal transitoria (no persistida): se incrementa en cada `addToQueue`
+     * para que la capa UI abra el sidebar. Evita que el store de dominio
+     * importe el UI store (inversión de dependencia vía suscripción).
+     */
+    queueOpenSignal: number
     addToQueue: (item: PlaylistItem) => void
     removeFromQueue: (index: number) => void
     clearQueue: () => void
@@ -44,13 +50,13 @@ export const useQueueStore = create<QueueState>()(
                     currentQueueIndex: -1,
                     activeQueuePlayItem: null,
                     queueRepeatMode: "off" as QueueRepeatMode,
+                    queueOpenSignal: 0,
                     addToQueue: (item) => {
-                        useUIStore.getState().setGlobalQueueOpen(true)
                         set((state) => {
                             const exists = state.playlistQueue.some(i => i.id === item.id && i.episodeNumber === item.episodeNumber);
-                            if (exists) return {};
                             return {
-                                playlistQueue: [...state.playlistQueue, item],
+                                queueOpenSignal: state.queueOpenSignal + 1,
+                                playlistQueue: exists ? state.playlistQueue : [...state.playlistQueue, item],
                             };
                         })
                     },
@@ -163,3 +169,24 @@ export const useQueueStore = create<QueueState>()(
         )
     )
 )
+
+// Shallow selectors for object/array state to prevent unnecessary re-renders
+export const useQueueListState = () => useQueueStore(useShallow((state) => ({
+    playlistQueue: state.playlistQueue,
+    currentQueueIndex: state.currentQueueIndex,
+    activeQueuePlayItem: state.activeQueuePlayItem,
+    setCurrentQueueIndex: state.setCurrentQueueIndex,
+    setActiveQueuePlayItem: state.setActiveQueuePlayItem,
+    addToQueue: state.addToQueue,
+    removeFromQueue: state.removeFromQueue,
+    clearQueue: state.clearQueue,
+    playNext: state.playNext,
+    shuffleQueue: state.shuffleQueue,
+    playPrevious: state.playPrevious,
+    moveQueueItem: state.moveQueueItem,
+})))
+
+export const useQueueModeState = () => useQueueStore(useShallow((state) => ({
+    queueRepeatMode: state.queueRepeatMode,
+    setQueueRepeatMode: state.setQueueRepeatMode,
+})))

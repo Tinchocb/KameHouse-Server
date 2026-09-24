@@ -6,6 +6,27 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// validPlaybackBeat es fail-soft para telemetría fire-and-forget (heartbeat 5s):
+// los beats sin identidad o fuera de rango se descartan en silencio en vez de
+// ensuciar el historial o devolver 400 en el hot path.
+func validPlaybackBeat(mediaID, episodeNumber int, currentTime, duration float64) bool {
+	if mediaID <= 0 || episodeNumber < 0 {
+		return false
+	}
+	if currentTime < 0 || duration < 0 {
+		return false
+	}
+	if duration > 0 && currentTime > duration {
+		return false
+	}
+	// Beat vacío (reproductor abierto sin video cargado, p. ej. archivo
+	// inexistente): no aporta nada y el upsert pisaría el progreso real con 0.
+	if currentTime == 0 && duration == 0 {
+		return false
+	}
+	return true
+}
+
 // HandlePlaybackSync ...
 //
 //	@summary receives playback telemetry from the frontend.
@@ -17,6 +38,10 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 	var b PlaybackHeartbeatPayload
 	if err := c.Bind(&b); err != nil {
 		return h.RespondWithError(c, err)
+	}
+
+	if !validPlaybackBeat(b.MediaID, b.EpisodeNumber, b.CurrentTime, b.Duration) {
+		return h.RespondWithData(c, true)
 	}
 
 	if h.App.ContinuityManager != nil && h.App.ContinuityManager.TelemetryManager != nil {
@@ -66,6 +91,10 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 				}
 				heartbeat, ok := event.Payload.(PlaybackHeartbeatPayload)
 				if !ok {
+					continue
+				}
+
+				if !validPlaybackBeat(heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration) {
 					continue
 				}
 

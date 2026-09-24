@@ -1,10 +1,12 @@
 import React from "react"
-import { IconMediaPause, IconMediaPlay, IconMediaSkipPrevious, IconMediaVolumeX, IconMediaVolume2, IconNavigationList, IconMediaQueue, IconMediaSkipNext, IconNavigationRocket, IconMediaMinimize, IconMediaMaximize } from "@/components/ui/icons";
+import { IconMediaPause, IconMediaPlay, IconMediaSkipPrevious, IconMediaVolumeX, IconMediaVolume2, IconNavigationList, IconMediaQueue, IconMediaSkipNext, IconMediaMinimize, IconMediaMaximize } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 
-import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
+import type { InsightNode } from "@/components/ui/timeline-heatmap"
+import { AnimatedTooltip } from "@/components/ui/kinetics/animated-tooltip"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
-import { PlayerSeekPreview } from "./player-seek-preview"
+import { SeekBar } from "./seek-bar"
+import { PLAYER_GLASS, PLAYER_ICON_BTN, PLAYER_ICON_BTN_ACTIVE, PLAYER_PLAY_BTN } from "./player-theme"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { PlayerPreviewManager } from "./player-preview"
 import type { EpisodeSource } from "@/api/types/unified.types"
@@ -66,14 +68,14 @@ export interface PlayerBottomBarProps {
     onToggleSettings?: (open?: boolean) => void
 
     // Seanime features
-    onTakeScreenshot?: () => void
-    onTogglePip?: () => void
     playbackRate?: number
     onPlaybackRateChange?: (rate: number) => void
     autoSkipIntro?: boolean
     onAutoSkipIntroChange?: (enabled: boolean) => void
     autoSkipOutro?: boolean
     onAutoSkipOutroChange?: (enabled: boolean) => void
+    autoSkipFiller?: boolean
+    onAutoSkipFillerChange?: (enabled: boolean) => void
     skipStepSeconds?: number
     onSkipStepSecondsChange?: (seconds: number) => void
 
@@ -135,12 +137,8 @@ export interface PlayerBottomBarProps {
 
 
 
-const SkipNextChapterIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className="fill-current">
-        <polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/>
-        <line x1="19" y1="5" x2="19" y2="19" />
-    </svg>
-)
+const CONTROL_BTN = PLAYER_ICON_BTN
+const CONTROL_BTN_ACTIVE = PLAYER_ICON_BTN_ACTIVE
 
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     title: _title, episodeNumber, episodeLabel: _episodeLabel, mediaFormat,
@@ -153,10 +151,10 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     isJassubLoading, episodeSources, activeStreamUrl, currentSourceType, handleSourceSwitch,
     isFullscreen, toggleFullscreen,
     settingsOpen, onToggleSettings,
-    onTakeScreenshot: _onTakeScreenshot, onTogglePip: _onTogglePip,
     playbackRate = 1, onPlaybackRateChange,
     autoSkipIntro = false, onAutoSkipIntroChange,
     autoSkipOutro = false, onAutoSkipOutroChange,
+    autoSkipFiller = false, onAutoSkipFillerChange,
     skipStepSeconds = 85, onSkipStepSecondsChange,
     onNextEpisode,
     hasNextEpisode,
@@ -191,293 +189,186 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
         return formatUpper === "MOVIE" || formatUpper === "SPECIAL" || formatUpper === "OVA"
     }, [mediaFormat])
 
-    const [hoverTime, setHoverTime] = React.useState<number | null>(null)
-    const [hoverPosPercent, setHoverPosPercent] = React.useState<number>(0)
-    
-    const handleMouseMove = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width))
-        const percent = x / rect.width
-        setHoverTime(percent * duration)
-        setHoverPosPercent(percent * 100)
-    }, [duration])
+    const [isVolumeOpen, setIsVolumeOpen] = React.useState(false)
 
-    const handleMouseLeave = React.useCallback(() => {
-        setHoverTime(null)
-    }, [])
+    const volumeExpanded = isVolumeOpen || tvMode
+    // Ancla del panel de ajustes: vive fuera de las cápsulas de vidrio (ver PlayerSettingsMenuProps.panelContainer)
+    const [settingsPanelHost, setSettingsPanelHost] = React.useState<HTMLDivElement | null>(null)
 
     return (
-        <div className={cn(
-            // NOTE: no CSS transform here — a transformed ancestor isolates the backdrop
-            // and disables the frosted-glass backdrop-filter below. Center via inset-x-4 instead.
-            "absolute bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:bottom-6 inset-x-2 sm:inset-x-4 flex flex-col pointer-events-auto select-none",
-            "px-3.5 sm:px-5 py-2 sm:py-2.5 z-player-ui",
-        )}>
-            {/* Background Layer to prevent backdrop-filter stacking context bugs with children */}
-            <div className="absolute inset-0 -z-10 pointer-events-none bg-zinc-950/70 backdrop-blur-overlay-2xl backdrop-saturate-[190%] [transform:translateZ(0)] border border-white/20 border-t-white/40 border-b-white/10 rounded-full shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_16px_40px_-6px_rgba(0,0,0,0.9)]" />
+        <div className="absolute inset-x-0 bottom-0 z-player-ui pointer-events-auto select-none pb-[max(0.25rem,env(safe-area-inset-bottom,0px))]">
+            {/* Scrim: gradiente plano, sin vidrio ni bordes */}
+            <div aria-hidden className="absolute inset-x-0 bottom-0 h-44 -z-10 pointer-events-none bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
 
-            {/* Foreground content wrapper — GSAP animates y/scale on this element only,
-                so the background blur div above never has a transformed ancestor and
-                backdrop-filter keeps working throughout the slide-in animation. */}
-            <div className="player-bar-fg relative flex flex-col w-full">
+            <div ref={setSettingsPanelHost} className="absolute right-3 sm:right-6 bottom-full mb-1" />
 
-            <PlayerSeekPreview 
-                previewManager={previewManager || null} 
-                hoverTime={hoverTime} 
-                hoverPosPercent={hoverPosPercent} 
+            <div className="player-bar-fg relative flex flex-col w-full px-3 sm:px-6 pb-2 sm:pb-3">
+
+            <SeekBar
+                duration={duration}
+                progressBarRef={progressBarRef}
+                thumbRef={thumbRef}
+                progressInputRef={progressInputRef}
+                handleSeek={handleSeek}
+                handleSeekStart={handleSeekStart}
+                handleSeekEnd={handleSeekEnd}
+                showHeatmap={showHeatmap}
+                insights={insights}
+                skipTimesOp={skipTimesOp}
+                skipTimesEd={skipTimesEd}
+                chapters={chapters}
+                isMovie={isMovie}
+                previewManager={previewManager}
             />
 
-            {/* Progress Timeline */}
-            <div 
-                className="relative flex items-center h-3 md:h-3 cursor-pointer w-full mb-2 py-2.5 md:py-0 -my-2.5 md:my-0"
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-            >
-                {showHeatmap && (
-                    <TimelineHeatmap
-                        duration={duration}
-                        insights={insights}
-                        className="absolute bottom-0 inset-x-0 w-full h-3 opacity-15 pointer-events-none transition-all duration-base"
-                    />
-                )}
-                {/* Track background */}
-                <div className="w-full h-[4px] bg-outline-variant/50 rounded-full relative flex items-center">
-
-                    {/* Skip segment markers — rendered behind the playback bar */}
-                    {duration > 0 && skipTimesOp && (
-                        <div
-                            className={cn("absolute top-0 bottom-0 bg-brand-accent/25 pointer-events-none rounded-sm", skipTimesOp.source === "heuristic" && "opacity-30")}
-                            title={`Intro: ${Math.round(skipTimesOp.startTime)}s – ${Math.round(skipTimesOp.endTime)}s`}
-                            style={{
-                                left: `${(skipTimesOp.startTime / duration) * 100}%`,
-                                width: `${((skipTimesOp.endTime - skipTimesOp.startTime) / duration) * 100}%`,
-                            }}
-                        />
-                    )}
-                    {duration > 0 && skipTimesEd && (
-                        <div
-                            className={cn("absolute top-0 bottom-0 bg-brand-secondary/25 pointer-events-none rounded-sm", skipTimesEd.source === "heuristic" && "opacity-30")}
-                            title={`Outro: ${Math.round(skipTimesEd.startTime)}s – ${Math.round(skipTimesEd.endTime)}s`}
-                            style={{
-                                left: `${(skipTimesEd.startTime / duration) * 100}%`,
-                                width: `${((skipTimesEd.endTime - skipTimesEd.startTime) / duration) * 100}%`,
-                            }}
-                        />
-                    )}
-
-                    {/* Chapter tick markers */}
-                    {duration > 0 && !isMovie && Array.isArray(chapters) && chapters.map((chapter, idx) => {
-                        if (typeof chapter.startTime !== "number" || chapter.startTime <= 0 || chapter.startTime >= duration) return null;
-                        return (
-                            <div
-                                key={idx}
-                                className="absolute top-0 bottom-0 w-[2px] bg-surface pointer-events-none z-20"
-                                style={{
-                                    left: `${(chapter.startTime / duration) * 100}%`,
-                                }}
-                                title={chapter.name}
-                            />
-                        )
-                    })}
-
-                    <div 
-                        ref={progressBarRef}
-                        className="w-full h-full bg-brand-accent rounded-full relative"
-                        style={{ transform: 'scaleX(0)', transformOrigin: 'left', transition: 'transform 100ms linear' }}
-                    />
-                    {/* Thumb indicator - always visible but subtle */}
-                    <div
-                        ref={thumbRef}
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-brand-accent border-2 border-white opacity-60 scale-90 transition-all duration-base shadow-md ring-2 ring-[var(--bg-primary)]/40 pointer-events-none"
-                        style={{ left: '0%', transition: 'left 100ms linear' }}
-                    />
-                </div>
-                <input
-                    ref={progressInputRef}
-                    type="range"
-                    min={0}
-                    max={duration || 0}
-                    step="any"
-                    aria-label="Línea de tiempo"
-                    aria-valuetext={duration ? `Posición actual de ${formatTime(duration)}` : "0:00"}
-                    onChange={handleSeek}
-                    onMouseDown={handleSeekStart}
-                    onTouchStart={handleSeekStart}
-                    onKeyDown={handleSeekStart}
-                    onMouseUp={handleSeekEnd}
-                    onTouchEnd={handleSeekEnd}
-                    onKeyUp={handleSeekEnd}
-                    className="absolute inset-0 w-full h-full cursor-pointer opacity-0 z-10 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-brand-accent"
-                />
-            </div>
-
             {/* Bottom Controls Row */}
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center justify-between gap-2 sm:gap-3 w-full mt-1.5">
 
-                {/* Left Wing */}
-                <div className="flex items-center ml-2.5 [&>*:not(:first-child)]:ml-2.5">
+                {/* Left Wing — cápsula de vidrio como la navbar de la plataforma */}
+                <div className={cn("flex items-center min-w-0 gap-1 p-1 rounded-full", PLAYER_GLASS)}>
 
-                    {/* Play/Pause */}
-                    <button
-                        tabIndex={0}
-                        onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                        aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                        className="text-white hover:text-brand-accent transition-all duration-base flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-full bg-surface-variant hover:bg-surface-container active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
-                        {isPlaying
-                            ? <IconMediaPause className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current" />
-                            : <IconMediaPlay className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current ml-0.5" />
-                        }
-                    </button>
+                    <AnimatedTooltip side="top" content={isPlaying ? "Pausar [K]" : "Reproducir [K]"}>
+                        <button
+                            tabIndex={0}
+                            onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                            aria-label={isPlaying ? "Pausar" : "Reproducir"}
+                            className={PLAYER_PLAY_BTN}>
+                            {isPlaying
+                                ? <IconMediaPause className="fill-current" />
+                                : <IconMediaPlay className="fill-current ml-0.5" />}
+                        </button>
+                    </AnimatedTooltip>
 
-
-
-                    {/* Chapter Prev/Next navigation */}
                     {!isMovie && chapters && chapters.length > 0 && (
-                        <div className="hidden md:flex items-center border-l border-outline-variant pl-2 ml-1 [&>*:not(:first-child)]:ml-0.5">
-                            <button
-                                tabIndex={0}
-                                onClick={(e) => { e.stopPropagation(); skipToPrevChapter?.(); }}
-                                aria-label="Capítulo anterior"
-                                title="Capítulo anterior [[ ]"
-                                className="text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-full hover:bg-surface-container active:scale-[0.95] duration-base focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
-                                <IconMediaSkipPrevious className="w-4 h-4 md:w-3.5 md:h-3.5 fill-current" />
-                            </button>
-                            <button
-                                tabIndex={0}
-                                onClick={(e) => { e.stopPropagation(); skipToNextChapter?.(); }}
-                                aria-label="Siguiente capítulo"
-                                title="Siguiente capítulo [ ] ]"
-                                className="text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-full hover:bg-surface-container active:scale-[0.95] duration-base focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
-                                <SkipNextChapterIcon />
-                            </button>
-                        </div>
+                        <>
+                            <AnimatedTooltip side="top" content="Capítulo anterior [[ ]">
+                                <button
+                                    tabIndex={0}
+                                    onClick={(e) => { e.stopPropagation(); skipToPrevChapter?.(); }}
+                                    aria-label="Capítulo anterior"
+                                    className={cn(CONTROL_BTN, "hidden md:flex")}>
+                                    <IconMediaSkipPrevious className="w-4 h-4 fill-current" />
+                                </button>
+                            </AnimatedTooltip>
+                            <AnimatedTooltip side="top" content="Siguiente capítulo [ ] ]">
+                                <button
+                                    tabIndex={0}
+                                    onClick={(e) => { e.stopPropagation(); skipToNextChapter?.(); }}
+                                    aria-label="Siguiente capítulo"
+                                    className={cn(CONTROL_BTN, "hidden md:flex")}>
+                                    <IconMediaSkipNext className="w-4 h-4 fill-current" />
+                                </button>
+                            </AnimatedTooltip>
+                        </>
                     )}
 
-                    {/* Volume Control */}
-                    <div className="hidden md:flex items-center ml-1 group/volume [&>*:not(:first-child)]:ml-1">
+                    {/* Volumen: slider inline que se despliega al hover/foco, nada flota encima */}
+                    <div
+                        role="group"
+                        aria-label="Control de volumen"
+                        className="hidden md:flex items-center"
+                        onMouseEnter={() => setIsVolumeOpen(true)}
+                        onMouseLeave={() => setIsVolumeOpen(false)}
+                        onFocus={() => setIsVolumeOpen(true)}
+                        onBlur={(e) => {
+                            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                                setIsVolumeOpen(false)
+                            }
+                        }}
+                    >
                         <button
                             tabIndex={0}
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-                            aria-label={isMuted || volume === 0 ? "Activar sonido" : "Silenciar"}
-                            className="text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-container active:scale-[0.95] duration-base focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface">
-                            {isMuted || volume === 0 ? <IconMediaVolumeX className="w-3.5 h-3.5" /> : <IconMediaVolume2 className="w-3.5 h-3.5" />}
+                            aria-label={isMuted || volume === 0 ? "Activar sonido [M]" : "Silenciar [M]"}
+                            title={isMuted || volume === 0 ? "Activar sonido [M]" : "Silenciar [M]"}
+                            aria-expanded={volumeExpanded}
+                            className={CONTROL_BTN}
+                        >
+                            {isMuted || volume === 0 ? <IconMediaVolumeX className="w-4 h-4" /> : <IconMediaVolume2 className="w-4 h-4" />}
                         </button>
-                        <div className={cn(
-                            "w-0 overflow-hidden transition-all duration-base flex items-center h-5 pl-1",
-                            "focus-within:w-16 focus-within:overflow-visible",
-                            tvMode ? "w-16" : "group-hover/volume:w-16"
-                        )}>
-                            <div className="w-full h-[3px] bg-outline-variant/50 relative rounded-full flex items-center">
-                                <div
-                                    className="absolute left-0 h-full bg-brand-accent rounded-full transition-all"
-                                    style={{ width: `${isMuted ? 0 : volume * 100}%` }}
-                                />
-                                <input
-                                    type="range"
-                                    min={0} max={1} step={0.02}
-                                    value={isMuted ? 0 : volume}
-                                    aria-label="Volumen"
-                                    aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`}
-                                    onChange={(e) => { e.stopPropagation(); handleVolume(e); }}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer touch-none"
-                                />
-                            </div>
+
+                        <div
+                            className={cn(
+                                "h-10 flex items-center overflow-hidden transition-[width,opacity] duration-200 ease-out",
+                                volumeExpanded ? "w-[92px] opacity-100" : "w-0 opacity-0"
+                            )}
+                        >
+                            {/* Range nativo visible: el drag funciona sin trucos de inputs invisibles */}
+                            <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.02}
+                                value={isMuted ? 0 : volume}
+                                tabIndex={volumeExpanded ? 0 : -1}
+                                aria-label="Volumen"
+                                aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => { e.stopPropagation(); handleVolume(e); }}
+                                className="shrink-0 w-[80px] mx-1.5 h-1 cursor-pointer accent-[hsl(var(--brand-accent))]"
+                            />
                         </div>
                     </div>
 
-                    {/* Time indicator */}
-                    <div className="flex items-center ml-1.5 text-xs font-medium tracking-wide tabular-nums text-on-surface-variant font-sans [&>*:not(:first-child)]:ml-1.5">
-                        <span ref={timeTextRef} className="text-on-surface">00:00</span>
-                        <span className="text-on-surface-variant/50">/</span>
-                        <span className="text-on-surface-variant">{formatTime(duration)}</span>
+                    {/* Tiempo */}
+                    <div className="flex items-center min-w-0 overflow-hidden pl-1.5 pr-3 text-xs font-semibold tracking-wide tabular-nums text-white/55 whitespace-nowrap">
+                        <span ref={timeTextRef} className="text-white">00:00</span>
+                        <span className="mx-1 opacity-50">/</span>
+                        <span>{formatTime(duration)}</span>
                         {!isMovie && activeChapter && (
-                            <>
-                                <span className="text-on-surface-variant/50 ml-1">•</span>
-                                <span className="text-brand-accent font-bold uppercase tracking-wider text-label-sm ml-1 truncate max-w-[150px] md:max-w-[240px]" title={activeChapter}>
-                                    {activeChapter}
-                                </span>
-                            </>
+                            <span className="hidden sm:inline ml-2.5 pl-2.5 border-l border-white/15 text-brand-accent truncate max-w-[150px] md:max-w-[240px]" title={activeChapter}>
+                                {activeChapter}
+                            </span>
                         )}
                     </div>
                 </div>
 
-
-
                 {/* Right Wing */}
-                <div className="flex items-center ml-0.5 [&>*:not(:first-child)]:ml-0.5">
+                <div className={cn("flex items-center shrink-0 gap-0.5 p-1 rounded-full", PLAYER_GLASS)}>
 
-                    {/* Episodes List Button */}
                     {hasEpisodes && (
-                        <button
-                            tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); onToggleEpisodesSidebar?.(); }}
-                            aria-label="Lista de episodios [E]"
-                            aria-expanded={isEpisodesSidebarOpen}
-                            title="Lista de episodios [E]"
-                            className={cn(
-                                "transition-all duration-base flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-lg active:scale-90 focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]",
-                                isEpisodesSidebarOpen
-                                    ? "text-brand-accent bg-brand-accent/10 shadow-[0_0_12px_hsl(var(--brand-accent)/0.4)]"
-                                    : "text-on-surface-variant hover:text-on-surface hover:bg-white/5"
-                            )}
-                        >
-                            <IconNavigationList className="w-4 h-4 md:w-3.5 md:h-3.5" />
-                        </button>
+                        <AnimatedTooltip side="top" content="Lista de episodios [E]">
+                            <button
+                                tabIndex={0}
+                                onClick={(e) => { e.stopPropagation(); onToggleEpisodesSidebar?.(); }}
+                                aria-label="Lista de episodios [E]"
+                                aria-expanded={isEpisodesSidebarOpen}
+                                className={cn(CONTROL_BTN, isEpisodesSidebarOpen && CONTROL_BTN_ACTIVE)}
+                            >
+                                <IconNavigationList className="w-4 h-4" />
+                            </button>
+                        </AnimatedTooltip>
                     )}
 
-                    {/* Queue Button */}
                     {hasQueue && (
-                        <button
-                            tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); onToggleQueueSidebar?.(); }}
-                            aria-label="Ver cola de reproducción"
-                            aria-expanded={isQueueSidebarOpen}
-                            title="Ver cola de reproducción"
-                            className={cn(
-                                "transition-all duration-base flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-full active:scale-90 focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]",
-                                isQueueSidebarOpen
-                                    ? "text-brand-accent bg-brand-accent/10 shadow-[0_0_12px_hsl(var(--brand-accent)/0.4)] animate-pulse"
-                                    : "text-on-surface-variant hover:text-on-surface hover:bg-white/5"
-                            )}
-                        >
-                            <IconMediaQueue className="w-4 h-4 md:w-3.5 md:h-3.5" />
-                        </button>
+                        <AnimatedTooltip side="top" content="Ver cola de reproducción [Q]">
+                            <button
+                                tabIndex={0}
+                                onClick={(e) => { e.stopPropagation(); onToggleQueueSidebar?.(); }}
+                                aria-label="Ver cola de reproducción [Q]"
+                                aria-expanded={isQueueSidebarOpen}
+                                className={cn(CONTROL_BTN, isQueueSidebarOpen && CONTROL_BTN_ACTIVE)}
+                            >
+                                <IconMediaQueue className="w-4 h-4" />
+                            </button>
+                        </AnimatedTooltip>
                     )}
 
-                    {/* Next episode */}
                     {onNextEpisode && hasNextEpisode && (
-                        <button
-                            tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); onNextEpisode(); }}
-                            aria-label="Siguiente episodio [N]"
-                            title="Siguiente episodio [N]"
-                            className="text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-base focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]">
-                            <IconMediaSkipNext className="w-4 h-4 md:w-3.5 md:h-3.5" />
-                        </button>
+                        <AnimatedTooltip side="top" content="Siguiente episodio [N]">
+                            <button
+                                tabIndex={0}
+                                onClick={(e) => { e.stopPropagation(); onNextEpisode(); }}
+                                aria-label="Siguiente episodio [N]"
+                                className={CONTROL_BTN}>
+                                <IconMediaSkipNext className="w-4 h-4" />
+                            </button>
+                        </AnimatedTooltip>
                     )}
 
-                    {/* Marathon Mode Toggle — oculto en móvil (accesible desde el menú de ajustes) para aligerar la fila */}
-                    {!isMovie && <button
-                        tabIndex={0}
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onMarathonModeChange?.(!marathonMode)
-                        }}
-                        aria-label={marathonMode ? "Desactivar Modo Maratón" : "Activar Modo Maratón"}
-                        title={marathonMode ? "Desactivar Modo Maratón" : "Activar Modo Maratón"}
-                        className={cn(
-                            "transition-all duration-base hidden md:flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-lg active:scale-90 focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]",
-                            marathonMode
-                                ? "text-brand-accent bg-brand-accent/10 hover:bg-brand-accent/20"
-                                : "text-on-surface-variant hover:text-on-surface hover:bg-white/5"
-                        )}
-                    >
-                        <IconNavigationRocket className="w-4 h-4 md:w-3.5 md:h-3.5" />
-                    </button>}
-                    
-
-                    {/* Settings gear */}
+                    {/* Modo Maratón vive en Ajustes → Reproducción */}
                     <PlayerSettingsMenu
+                        panelContainer={settingsPanelHost}
                         audioTracks={audioTracks}
                         activeAudioIndex={activeAudioIndex}
                         onSelectAudio={onSelectAudio}
@@ -497,6 +388,8 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onAutoSkipIntroChange={onAutoSkipIntroChange}
                         autoSkipOutro={autoSkipOutro}
                         onAutoSkipOutroChange={onAutoSkipOutroChange}
+                        autoSkipFiller={autoSkipFiller}
+                        onAutoSkipFillerChange={onAutoSkipFillerChange}
                         skipStepSeconds={skipStepSeconds}
                         onSkipStepSecondsChange={onSkipStepSecondsChange}
                         hlsLevels={hlsLevels}
@@ -526,15 +419,15 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         mediaFormat={mediaFormat}
                     />
 
-                    {/* Fullscreen */}
-                    <button
-                        tabIndex={0}
-                        onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-                        aria-label={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
-                        title={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
-                        className="text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded-lg hover:bg-white/5 active:scale-90 duration-base focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]">
-                        {isFullscreen ? <IconMediaMinimize className="w-4 h-4 md:w-3.5 md:h-3.5" /> : <IconMediaMaximize className="w-4 h-4 md:w-3.5 md:h-3.5" />}
-                    </button>
+                    <AnimatedTooltip side="top" content={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}>
+                        <button
+                            tabIndex={0}
+                            onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                            aria-label={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
+                            className={CONTROL_BTN}>
+                            {isFullscreen ? <IconMediaMinimize className="w-4 h-4" /> : <IconMediaMaximize className="w-4 h-4" />}
+                        </button>
+                    </AnimatedTooltip>
                 </div>
             </div>{/* end Bottom Controls Row */}
             </div>{/* end player-bar-fg */}

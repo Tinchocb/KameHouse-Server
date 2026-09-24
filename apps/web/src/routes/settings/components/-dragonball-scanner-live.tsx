@@ -1,37 +1,83 @@
 import React, { useState, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import {
-    RefreshCw,
-    CheckCircle2,
-    FolderSearch,
-    Zap,
-    X,
-} from "lucide-react"
-import { useScannerStore } from "@/lib/store"
+import { m, AnimatePresence } from "framer-motion"
+import { createPortal } from "react-dom"
+import { Check, CheckCircle2, Film, X } from "lucide-react"
+import { useFormContext } from "react-hook-form"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
+import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
+import { useDriveScanView, useLocalScanView, type ScanLiveView } from "@/components/scan-live/views"
+import { ScanStatusCard } from "@/components/scan-live/scan-status-card"
+import { ScanFileList } from "@/components/scan-live/scan-file-list"
+import { useDriveStatus, useTriggerDriveScan } from "@/lib/drive-status"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { cn } from "@/components/ui/core/styling"
+import type { SettingsFormValues } from "../index"
 
 import {
     DRAGON_BALL_SCANNER_SERIES as DRAGON_BALL_SERIES,
+    DRAGON_BALL_SCANNER_MOVIES,
     type DBFranchiseSeries,
 } from "@/lib/config/dragonball_scanner_series"
 
+const OFFICIAL_SERIES_COUNT = DRAGON_BALL_SERIES.filter(s => s.type === "SERIES").length
+
+/**
+ * Escáner de biblioteca unificado: dispara escaneos de disco local y de Google
+ * Drive, muestra la actividad en vivo de ambos y la cobertura del catálogo.
+ */
 export function DragonBallScannerLive() {
     const { mutate: scanLibrary, isPending } = useScanLocalFiles()
     const { data: collection } = useGetLibraryCollection()
     const [selectedSeries, setSelectedSeries] = useState<DBFranchiseSeries | null>(null)
     const [modalTab, setModalTab] = useState<"sagas" | "movies">("sagas")
-    const [showLiveLog, setShowLiveLog] = useState(false)
+    const { data: driveStatus } = useDriveStatus()
+    const { mutate: scanDrive, isPending: isDrivePending } = useTriggerDriveScan()
 
-    // Store state (desacoplado de useAppStore)
-    const isScanningStore = useScannerStore((state) => state.isScanning)
-    const scanProgressStore = useScannerStore((state) => state.scanProgress)
-    const currentFileStore = useScannerStore((state) => state.currentScanningFile)
-    const scanEvents = useScannerStore((state) => state.events)
+    // El disco local solo se puede escanear si está conectado y hay carpetas cargadas.
+    const { watch } = useFormContext<SettingsFormValues>()
+    const localDisconnected = Boolean(watch("library.disableLocalScanning"))
+    const localPathCount = (watch("library.seriesPaths")?.length ?? 0) + (watch("library.moviePaths")?.length ?? 0)
+    const canScanLocal = !localDisconnected && localPathCount > 0
+    const canScanDrive = Boolean(driveStatus?.connected)
+    const unmatchedCount = collection?.unmatchedLocalFiles?.length ?? 0
 
-    const isScanning = isScanningStore || isPending
-    const scanProgress = isScanning ? Math.round(scanProgressStore || 5) : 100
+    // Episodios reales de la serie abierta en el detalle: el estado de cada saga
+    // sale de los números presentes, no del total de archivos.
+    const { data: selectedEntry, isLoading: isEntryLoading } = useGetAnimeEntry(
+        selectedSeries?.type === "SERIES" ? selectedSeries.tmdbId : null
+    )
+    const presentEpisodes = useMemo(() => {
+        const set = new Set<number>()
+        for (const lf of selectedEntry?.localFiles ?? []) {
+            const eps = lf.metadata?.episodes?.length ? lf.metadata.episodes : [lf.metadata?.episode ?? 0]
+            for (const ep of eps) if (ep > 0) set.add(ep)
+        }
+        return set
+    }, [selectedEntry])
+
+    // Un solo botón escanea todas las fuentes disponibles (Drive y/o disco local).
+    const localView = useLocalScanView()
+    const driveView = useDriveScanView()
+    const isLocalScanning = localView?.state === "running" || isPending
+    const isDriveScanning = driveView?.state === "running" || isDrivePending
+    const isScanning = isLocalScanning || isDriveScanning
+    const canScan = canScanDrive || canScanLocal
+    const sourcesLabel = canScanDrive && canScanLocal ? "Google Drive y disco local"
+        : canScanDrive ? "Google Drive"
+        : canScanLocal ? "Disco local"
+        : null
+
+    // Escaneos de esta sesión: el que corre primero, después el más reciente.
+    const scanViews = [localView, driveView]
+        .filter((v): v is ScanLiveView => v !== null)
+        .sort((a, b) =>
+            Number(b.state === "running") - Number(a.state === "running") ||
+            (b.finishedAt ?? 0) - (a.finishedAt ?? 0))
+
+    const scanAll = () => {
+        if (canScanDrive && !isDriveScanning) scanDrive()
+        if (canScanLocal && !isLocalScanning) scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false })
+    }
 
     // Map collection entries by TMDB ID and track movies
     const { collectionMap, movieDetailsMap, detectedMovieIds, totalMoviesDetected } = useMemo(() => {
@@ -52,7 +98,8 @@ export function DragonBallScannerLive() {
                 const banner = entry.media?.bannerImage
                 const title = entry.media?.titleSpanish || entry.media?.titleEnglish || entry.media?.titleRomaji || "Sin título"
                 const format = entry.media?.format
-                const isMovie = format === "MOVIE" || format === "SPECIAL" || format === "OVA" || entry.media?.type === "MOVIE" || (rawId && rawId >= 1000000)
+                // El offset TMDB (+1M) NO indica película: las series también lo usan.
+                const isMovie = format === "MOVIE" || format === "SPECIAL" || format === "OVA" || entry.media?.type === "MOVIE"
 
                 const normalizedTmdbId = rawId ? (rawId >= 1000000 ? rawId - 1000000 : rawId) : 0
 
@@ -109,261 +156,80 @@ export function DragonBallScannerLive() {
 
         const matchRatio = totalOfficialEps > 0 ? Math.min(100, Math.round((totalDetectedEps / totalOfficialEps) * 100)) : 0
 
+        const catalogMoviesDetected = DRAGON_BALL_SCANNER_MOVIES.filter(m => detectedMovieIds.has(m.tmdbId)).length
+
         return {
             totalDetectedEps,
             totalOfficialEps,
             seriesFoundCount,
             totalMoviesDetected,
+            catalogMoviesDetected,
             matchRatio,
         }
-    }, [collectionMap, totalMoviesDetected])
+    }, [collectionMap, detectedMovieIds, totalMoviesDetected])
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-300">
-            {/* ── 1. HERO RADAR DE ESCANEO ─────────────────────────────────────── */}
-            <div className="relative overflow-hidden rounded-2xl bg-white/[0.02] border border-white/10 p-5 sm:p-6 shadow-elevation-1 backdrop-blur-overlay-2xl backdrop-saturate-[190%]">
-                {/* Background Ki Aura Ambient Light (single blur layer on parent panel) */}
-                <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-brand-accent/10 ring-2 ring-white/20 ring-offset-2 ring-offset-white/[0.02]" />
-                <div className="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-amber-500/10 ring-2 ring-white/20 ring-offset-2 ring-offset-white/[0.02]" />
+        <div className="space-y-5 animate-in fade-in duration-300">
+            {/* ── 1. ESTADO + ACCIÓN ÚNICA + COBERTURA ────────────────────────────── */}
+            <ScanStatusCard
+                view={scanViews[0] ?? null}
+                isScanning={isScanning}
+                canScan={canScan}
+                onScan={scanAll}
+                sourcesLabel={sourcesLabel}
+                stats={[
+                    { label: "Episodios", value: metrics.totalDetectedEps, total: metrics.totalOfficialEps },
+                    { label: "Películas", value: metrics.catalogMoviesDetected, total: DRAGON_BALL_SCANNER_MOVIES.length },
+                    { label: "Series", value: metrics.seriesFoundCount, total: OFFICIAL_SERIES_COUNT },
+                    unmatchedCount > 0
+                        ? { label: "Sin vincular", value: unmatchedCount, tone: "warn" }
+                        : { label: "Sin vincular", value: "Ninguno", tone: "ok" },
+                ]}
+                secondaryAction={canScanLocal ? {
+                    label: "Escaneo profundo del disco",
+                    title: "Vuelve a analizar todo el disco local ignorando la caché",
+                    onClick: () => scanLibrary({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false }),
+                    disabled: isLocalScanning,
+                } : undefined}
+            />
 
-                <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-6">
-                    {/* Left: Orb + Status */}
-                    <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full lg:w-auto">
-                        {/* Radial Progress Orb */}
-                        <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
-                            {/* Outer spinning ring */}
-                            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                <circle
-                                    cx="50"
-                                    cy="50"
-                                    r="40"
-                                    className="stroke-white/10"
-                                    strokeWidth="7"
-                                    fill="none"
-                                />
-                                <motion.circle
-                                    cx="50"
-                                    cy="50"
-                                    r="40"
-                                    className="stroke-brand-accent"
-                                    strokeWidth="7"
-                                    strokeDasharray="251"
-                                    initial={{ strokeDashoffset: 251 }}
-                                    animate={{
-                                        strokeDashoffset: 251 - (251 * (isScanning ? scanProgress : metrics.matchRatio)) / 100,
-                                    }}
-                                    transition={{ duration: 0.8, ease: "easeOut" }}
-                                    strokeLinecap="round"
-                                    fill="none"
-                                />
-                            </svg>
+            {/* ── 2. ARCHIVOS ESCANEADOS EN VIVO ──────────────────────────────────── */}
+            <ScanFileList views={scanViews} />
 
-                            {/* Inner Orb Content */}
-                            <div className="absolute inset-1.5 rounded-full bg-zinc-950/80 border border-white/10 flex flex-col items-center justify-center shadow-inner">
-                                <span className="text-lg font-black tracking-tight text-white font-mono">
-                                    {isScanning ? `${scanProgress}%` : `${metrics.matchRatio}%`}
-                                </span>
-                                <span className="text-[8px] font-bold uppercase tracking-widest text-on-surface-variant/70">
-                                    {isScanning ? "Escaneo" : "Series"}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Status Text & Current File */}
-                        <div className="space-y-1.5 max-w-md">
-                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                                <span
-                                    className={cn(
-                                        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                                        isScanning
-                                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse"
-                                            : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                                    )}
-                                >
-                                    {isScanning ? (
-                                        <>
-                                            <RefreshCw className="w-3 h-3 animate-spin" />
-                                            Escaneando en Vivo
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle2 className="w-3 h-3" />
-                                            Radar Listo
-                                        </>
-                                    )}
-                                </span>
-
-                                <span className="text-[11px] font-mono text-on-surface-variant/70">
-                                    Motor Dragon Ball
-                                </span>
-                            </div>
-
-                            <h3 className="text-base sm:text-lg font-bold text-on-surface tracking-tight">
-                                {isScanning ? "Indexando archivos locales..." : "Biblioteca Dragon Ball"}
-                            </h3>
-
-                            <p className="text-[11px] text-on-surface-variant/70 truncate font-mono">
-                                {isScanning && currentFileStore
-                                    ? currentFileStore
-                                    : `${metrics.totalDetectedEps} episodios • ${metrics.totalMoviesDetected} películas y especiales`}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Right: Quick Action Buttons */}
-                    <div className="flex items-center gap-2.5 w-full sm:w-auto justify-center sm:justify-end shrink-0">
-                        <button
-                            type="button"
-                            onClick={() => scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false })}
-                            disabled={isScanning}
-                            className={cn(
-                                "flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm",
-                                isScanning
-                                    ? "bg-brand-accent/20 text-brand-accent/60 cursor-not-allowed border border-brand-accent/20"
-                                    : "bg-brand-accent hover:brightness-110 text-on-primary active:scale-95"
-                            )}
-                        >
-                            <Zap className={cn("w-3.5 h-3.5", isScanning && "animate-spin")} />
-                            <span>{isScanning ? "Escaneando..." : "Escanear Ahora"}</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => scanLibrary({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false })}
-                            disabled={isScanning}
-                            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs text-on-surface bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 transition-all active:scale-95"
-                            title="Re-analizar toda la biblioteca ignorando la caché"
-                        >
-                            <RefreshCw className="w-3.5 h-3.5 text-on-surface-variant" />
-                            <span>Re-Scan</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setShowLiveLog(!showLiveLog)}
-                            className={cn(
-                                "flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl font-bold text-xs border transition-all active:scale-95",
-                                showLiveLog
-                                    ? "bg-brand-accent/20 text-brand-accent border-brand-accent/40"
-                                    : "bg-white/[0.04] text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] border-white/10"
-                            )}
-                        >
-                            <FolderSearch className="w-3.5 h-3.5" />
-                            <span>Logs</span>
-                        </button>
-                    </div>
+            {/* ── 3. COLECCIÓN: COBERTURA POR SERIE ───────────────────────────────── */}
+            <div className="space-y-3">
+                <div className="flex items-baseline justify-between gap-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface">Colección</h4>
+                    <p className="text-3xs text-on-surface-variant/60">Tocá una portada para ver sagas y películas</p>
                 </div>
 
-                {/* Metrics Ticker Bar */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5 pt-5 border-t border-white/[0.06]">
-                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-0.5">
-                        <span className="text-[10px] font-mono text-on-surface-variant/70 uppercase tracking-wider block">Episodios Series</span>
-                        <div className="text-sm font-bold text-white font-mono flex items-baseline gap-1">
-                            {metrics.totalDetectedEps}
-                            <span className="text-[11px] font-normal text-on-surface-variant/60">/ {metrics.totalOfficialEps}</span>
-                        </div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-0.5">
-                        <span className="text-[10px] font-mono text-on-surface-variant/70 uppercase tracking-wider block">Películas & OVAs</span>
-                        <div className="text-sm font-bold text-amber-400 font-mono flex items-baseline gap-1">
-                            {metrics.totalMoviesDetected}
-                            <span className="text-[11px] font-normal text-on-surface-variant/60">/ 27 títulos</span>
-                        </div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-0.5">
-                        <span className="text-[10px] font-mono text-on-surface-variant/70 uppercase tracking-wider block">Series DB</span>
-                        <div className="text-sm font-bold text-cyan-400 font-mono flex items-baseline gap-1">
-                            {metrics.seriesFoundCount}
-                            <span className="text-[11px] font-normal text-on-surface-variant/60">/ 6 oficiales</span>
-                        </div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-0.5">
-                        <span className="text-[10px] font-mono text-on-surface-variant/70 uppercase tracking-wider block">Detección Total</span>
-                        <div className="text-sm font-bold text-emerald-400 font-mono">
-                            100% Preciso
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── 2. FEED HOLOGRÁFICO EN VIVO (LOGS DE ACTIVIDAD) ───────────────── */}
-            <AnimatePresence>
-                {showLiveLog && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden rounded-2xl bg-surface-container-lowest border border-amber-500/20 font-mono text-xs shadow-xl"
-                    >
-                        <div className="flex items-center justify-between px-4 py-3 bg-surface-container-high/60 border-b border-outline-variant/30">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                                <span className="font-bold text-on-surface text-xs uppercase tracking-wider">
-                                    Terminal de Escaneo en Vivo
-                                </span>
-                            </div>
-                            <span className="text-[11px] text-on-surface-variant">
-                                {scanEvents.length} eventos registrados
-                            </span>
-                        </div>
-
-                        <div className="p-4 max-h-60 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-amber-500/20">
-                            {scanEvents.length === 0 ? (
-                                <p className="text-on-surface-variant italic py-4 text-center">
-                                    Inicia un escaneo para observar la detección de archivos y matches en tiempo real...
-                                </p>
-                            ) : (
-                                scanEvents.slice(0, 30).map((evt, idx) => (
-                                    <div key={evt.id || idx} className="flex items-start gap-2 text-on-surface-variant">
-                                        <span className="text-amber-400 font-bold shrink-0">
-                                            [{new Date(evt.timestamp).toLocaleTimeString()}]
-                                        </span>
-                                        <span className="text-emerald-400 font-semibold shrink-0">
-                                            {evt.status}:
-                                        </span>
-                                        <span className="text-on-surface line-clamp-1 break-all">
-                                            {evt.file || "Procesando..."}
-                                        </span>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* ── 3. CUADRÍCULA DE PORTADAS OFICIALES EN TIEMPO REAL ────────────────── */}
-            <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface">
-                            Colección Dragon Ball & Universo Cinematográfico
-                        </h4>
-                        <p className="text-[11px] text-on-surface-variant/70">
-                            Toca cualquier portada para ver el desglose en vivo de episodios y películas detectadas
-                        </p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
                     {DRAGON_BALL_SERIES.map((series) => {
                         const colData = collectionMap.get(series.tmdbId)
-                        const count = colData?.count || 0
+                        const seriesMovies = series.movies || []
+                        const detectedMoviesInSeries = seriesMovies.filter(m => detectedMovieIds.has(m.tmdbId)).length
+                        const count = series.type === "MOVIES" ? detectedMoviesInSeries : colData?.count || 0
                         const poster = colData?.poster || series.officialPoster
                         const isComplete = count >= series.totalEpisodes
                         const isPartial = count > 0 && !isComplete
                         const percentage = Math.min(100, Math.round((count / series.totalEpisodes) * 100))
 
-                        const seriesMovies = series.movies || []
-                        const detectedMoviesInSeries = seriesMovies.filter(m => detectedMovieIds.has(m.tmdbId)).length
-
                         return (
-                            <motion.div
+                            <m.div
                                 key={series.id}
-                                whileHover={{ scale: 1.03, y: -2 }}
-                                whileTap={{ scale: 0.97 }}
+                                whileHover={{ y: -3 }}
+                                whileTap={{ scale: 0.98 }}
                                 transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Ver detalle de ${series.title}`}
                                 onClick={() => {
+                                    setSelectedSeries(series)
+                                    setModalTab(series.type === "MOVIES" ? "movies" : "sagas")
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return
+                                    e.preventDefault()
                                     setSelectedSeries(series)
                                     setModalTab(series.type === "MOVIES" ? "movies" : "sagas")
                                 }}
@@ -375,7 +241,7 @@ export function DragonBallScannerLive() {
                                 )}
                             >
                                 {/* Poster Image Container (2:3 Aspect Ratio) */}
-                                <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-950">
+                                <div className="relative aspect-[2/3] w-full overflow-hidden bg-surface-container-lowest">
                                     <img
                                         src={poster}
                                         alt={series.title}
@@ -392,54 +258,53 @@ export function DragonBallScannerLive() {
                                     />
 
                                     {/* Gradient overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/20 to-transparent" />
 
-                                    {/* Top Right Status Pill */}
-                                    <div className="absolute top-1.5 right-1.5 z-10 flex flex-col items-end gap-1">
-                                        {isComplete && (
-                                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider bg-emerald-500/90 text-white shadow-sm backdrop-blur-sm">
-                                                <CheckCircle2 className="w-2.5 h-2.5" /> 100%
-                                            </span>
-                                        )}
-                                        {isPartial && (
-                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider bg-amber-500/90 text-black shadow-sm backdrop-blur-sm">
-                                                {percentage}%
-                                            </span>
-                                        )}
-                                        {seriesMovies.length > 0 && (
-                                            <span className={cn(
-                                                "inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-bold font-mono uppercase tracking-wider backdrop-blur-sm shadow-sm",
-                                                detectedMoviesInSeries === seriesMovies.length
-                                                    ? "bg-emerald-950/90 text-emerald-300 border border-emerald-500/40"
-                                                    : detectedMoviesInSeries > 0
-                                                    ? "bg-amber-950/90 text-amber-300 border border-amber-500/40"
-                                                    : "bg-black/70 text-zinc-400 border border-white/10"
-                                            )}>
-                                                🎬 {detectedMoviesInSeries}/{seriesMovies.length}
-                                            </span>
-                                        )}
-                                    </div>
+                                    {/* Estado: completa o porcentaje */}
+                                    {(isComplete || isPartial) && (
+                                        <span
+                                            className={cn(
+                                                "absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full font-bold font-mono shadow-sm",
+                                                isComplete
+                                                    ? "size-5 bg-emerald-500 text-black"
+                                                    : "px-1.5 py-0.5 text-4xs bg-black/70 text-amber-300 border border-amber-400/40 backdrop-blur-sm",
+                                            )}
+                                            aria-label={isComplete ? "Completa" : `${percentage}% detectado`}
+                                        >
+                                            {isComplete ? <Check className="size-3" strokeWidth={3} /> : `${percentage}%`}
+                                        </span>
+                                    )}
 
                                     {/* Bottom Info on Poster */}
                                     <div className="absolute bottom-2 left-2 right-2 z-10">
-                                        <h4 className="text-[11px] font-bold text-white leading-tight line-clamp-1 group-hover:text-brand-accent transition-colors">
+                                        <h4 className="text-2xs font-bold text-white leading-tight line-clamp-1 group-hover:text-brand-accent transition-colors">
                                             {series.title}
                                         </h4>
-                                        <p className="text-[9px] font-mono text-on-surface-variant/80 mt-0.5 truncate">
+                                        <p className="text-4xs font-mono text-on-surface-variant/80 mt-0.5 truncate">
                                             {series.subtitle}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Progress Bar & Episode Count Footer */}
-                                <div className="p-2 bg-white/[0.02] border-t border-white/5 space-y-1">
-                                    <div className="flex items-center justify-between text-[10px] font-mono">
-                                        <span className="text-on-surface-variant/60 truncate">
-                                            {series.type === "MOVIES" ? "Películas" : "Episodios"}
+                                {/* Conteo + barra (+ películas de la serie) */}
+                                <div className="px-2.5 py-2 border-t border-white/5 space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2 text-3xs font-mono">
+                                        <span className={cn("font-bold tabular-nums whitespace-nowrap", count > 0 ? "text-on-surface" : "text-on-surface-variant/50")}
+                                            title={series.type === "MOVIES" ? "Películas detectadas" : "Episodios detectados"}>
+                                            {count}<span className="text-on-surface-variant/45 font-normal">/{series.totalEpisodes}</span>
                                         </span>
-                                        <span className={cn("font-bold shrink-0", count > 0 ? "text-white" : "text-on-surface-variant/50")}>
-                                            {count}<span className="text-on-surface-variant/40 font-normal">/{series.totalEpisodes}</span>
-                                        </span>
+                                        {seriesMovies.length > 0 && series.type !== "MOVIES" && (
+                                            <span
+                                                className={cn(
+                                                    "inline-flex items-center gap-0.5 tabular-nums shrink-0",
+                                                    detectedMoviesInSeries === seriesMovies.length ? "text-emerald-300/90" : "text-on-surface-variant/60",
+                                                )}
+                                                title={`${detectedMoviesInSeries} de ${seriesMovies.length} películas`}
+                                            >
+                                                <Film className="size-3" />
+                                                {detectedMoviesInSeries}/{seriesMovies.length}
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* Progress Bar */}
@@ -453,25 +318,27 @@ export function DragonBallScannerLive() {
                                                     ? "bg-brand-accent"
                                                     : "bg-transparent"
                                             )}
-                                            style={{ width: `${Math.max(count > 0 ? 5 : 0, percentage)}%` }}
+                                            style={{ width: `${Math.max(count > 0 ? 4 : 0, percentage)}%` }}
                                         />
                                     </div>
                                 </div>
-                            </motion.div>
+                            </m.div>
                         )
                     })}
                 </div>
             </div>
 
             {/* ── 4. MODAL / DRAWER VISUAL DE SAGAS Y PELÍCULAS ──────────────────── */}
+            {/* Portal a body: el scroller de Ajustes usa transform y rompe position: fixed. */}
+            {typeof document !== "undefined" && createPortal(
             <AnimatePresence>
                 {selectedSeries && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-                        <motion.div
+                    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+                        <m.div
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="relative w-full max-w-xl max-h-[85vh] flex flex-col rounded-2xl bg-zinc-950 border border-white/15 shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-xl max-h-[85vh] flex flex-col rounded-2xl bg-surface-container border border-white/15 shadow-elevation-5 overflow-hidden"
                         >
                             {/* Header with Official Poster Banner */}
                             <div className="relative p-5 bg-white/[0.02] border-b border-white/10 flex items-start justify-between gap-4">
@@ -482,7 +349,7 @@ export function DragonBallScannerLive() {
                                         className="w-14 h-20 object-cover rounded-xl shadow-md border border-white/10 shrink-0"
                                     />
                                     <div>
-                                        <span className="text-[10px] font-mono font-bold text-brand-accent uppercase tracking-wider block">
+                                        <span className="text-3xs font-mono font-bold text-brand-accent uppercase tracking-wider block">
                                             Inspector de Escaneo
                                         </span>
                                         <h3 className="text-lg font-bold text-white tracking-tight">
@@ -490,7 +357,7 @@ export function DragonBallScannerLive() {
                                         </h3>
                                         <p className="text-xs text-on-surface-variant/80 font-mono mt-0.5">
                                             {selectedSeries.subtitle} • {selectedSeries.totalEpisodes} {selectedSeries.type === "MOVIES" ? "películas" : "episodios"}
-                                            {selectedSeries.movies && selectedSeries.movies.length > 0 && (
+                                            {selectedSeries.type === "SERIES" && selectedSeries.movies && selectedSeries.movies.length > 0 && (
                                                 <span> • {selectedSeries.movies.length} películas asociadas</span>
                                             )}
                                         </p>
@@ -500,35 +367,35 @@ export function DragonBallScannerLive() {
                                 <button
                                     type="button"
                                     onClick={() => setSelectedSeries(null)}
-                                    className="p-1.5 rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-white transition-colors"
+                                    className="p-1.5 rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-white transition-colors cursor-pointer"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
                             {/* Tab Switcher (Sagas vs Movies) if series has both */}
-                            {selectedSeries.sagas && selectedSeries.sagas.length > 0 && selectedSeries.movies && selectedSeries.movies.length > 0 && (
-                                <div className="flex items-center gap-2 px-5 pt-3 pb-1 border-b border-white/5 bg-zinc-900/50">
+                            {selectedSeries.type === "SERIES" && selectedSeries.sagas.length > 0 && selectedSeries.movies && selectedSeries.movies.length > 0 && (
+                                <div className="flex items-center gap-2 px-5 pt-3 pb-1 border-b border-white/5 bg-surface-container-low">
                                     <button
                                         type="button"
                                         onClick={() => setModalTab("sagas")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all",
+                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all cursor-pointer",
                                             modalTab === "sagas"
                                                 ? "bg-white/15 text-white shadow-sm"
-                                                : "text-zinc-400 hover:text-zinc-200"
+                                                : "text-on-surface-variant hover:text-white"
                                         )}
                                     >
-                                        Sagas & Episodios ({collectionMap.get(selectedSeries.tmdbId)?.count || 0}/{selectedSeries.totalEpisodes})
+                                        Sagas & Episodios ({presentEpisodes.size}/{selectedSeries.totalEpisodes})
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setModalTab("movies")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all",
+                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all cursor-pointer",
                                             modalTab === "movies"
                                                 ? "bg-white/15 text-white shadow-sm"
-                                                : "text-zinc-400 hover:text-zinc-200"
+                                                : "text-on-surface-variant hover:text-white"
                                         )}
                                     >
                                         Películas ({selectedSeries.movies.filter(m => detectedMovieIds.has(m.tmdbId)).length}/{selectedSeries.movies.length})
@@ -538,11 +405,18 @@ export function DragonBallScannerLive() {
 
                             {/* Content List: Sagas or Movies */}
                             <div className="p-5 overflow-y-auto space-y-2.5 max-h-[60vh]">
-                                {modalTab === "sagas" && selectedSeries.sagas && selectedSeries.sagas.length > 0 ? (
+                                {modalTab === "sagas" && selectedSeries.type === "SERIES" && isEntryLoading ? (
+                                    <p className="text-center text-on-surface-variant/60 py-8 text-xs font-mono">
+                                        Cargando episodios detectados…
+                                    </p>
+                                ) : modalTab === "sagas" && selectedSeries.type === "SERIES" && selectedSeries.sagas.length > 0 ? (
                                     selectedSeries.sagas.map((saga) => {
                                         const sagaTotal = saga.endEp - saga.startEp + 1
-                                        const colCount = collectionMap.get(selectedSeries.tmdbId)?.count || 0
-                                        const sagaCompleted = colCount >= saga.endEp
+                                        let sagaFound = 0
+                                        for (let ep = saga.startEp; ep <= saga.endEp; ep++) {
+                                            if (presentEpisodes.has(ep)) sagaFound++
+                                        }
+                                        const sagaCompleted = sagaFound >= sagaTotal
 
                                         return (
                                             <div
@@ -551,7 +425,7 @@ export function DragonBallScannerLive() {
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     {/* Saga Artwork Thumbnail */}
-                                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-black/40 border border-white/10 shrink-0">
+                                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-lowest border border-white/10 shrink-0">
                                                         <img
                                                             src={saga.image}
                                                             alt={saga.name}
@@ -566,23 +440,23 @@ export function DragonBallScannerLive() {
                                                         <h5 className="text-xs font-bold text-white truncate">
                                                             {saga.name}
                                                         </h5>
-                                                        <span className="text-[11px] font-mono text-on-surface-variant/70">
-                                                            Eps {saga.startEp} - {saga.endEp} ({sagaTotal} caps)
+                                                        <span className="text-2xs font-mono text-on-surface-variant/70">
+                                                            Eps {saga.startEp} - {saga.endEp} ({sagaFound}/{sagaTotal} caps)
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 <span
                                                     className={cn(
-                                                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono tracking-wider shrink-0",
+                                                        "px-2.5 py-0.5 rounded-full text-3xs font-bold font-mono tracking-wider shrink-0",
                                                         sagaCompleted
                                                             ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                                                            : colCount >= saga.startEp
+                                                            : sagaFound > 0
                                                             ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
                                                             : "bg-white/5 text-on-surface-variant/60"
                                                     )}
                                                 >
-                                                    {sagaCompleted ? "COMPLETA" : colCount >= saga.startEp ? "EN PROGRESO" : "PENDIENTE"}
+                                                    {sagaCompleted ? "COMPLETA" : sagaFound > 0 ? "INCOMPLETA" : "PENDIENTE"}
                                                 </span>
                                             </div>
                                         )
@@ -603,7 +477,7 @@ export function DragonBallScannerLive() {
                                                 )}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="w-10 h-14 rounded-lg overflow-hidden bg-black/50 border border-white/10 shrink-0">
+                                                    <div className="w-10 h-14 rounded-lg overflow-hidden bg-surface-container-lowest border border-white/10 shrink-0">
                                                         <img
                                                             src={movieDetails?.poster || selectedSeries.officialPoster}
                                                             alt={movie.title}
@@ -612,10 +486,10 @@ export function DragonBallScannerLive() {
                                                     </div>
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-white/10 text-zinc-300 uppercase">
+                                                            <span className="text-4xs font-mono font-bold px-1.5 py-px rounded bg-white/10 text-on-surface-variant uppercase">
                                                                 {movie.type}
                                                             </span>
-                                                            <span className="text-[10px] font-mono text-zinc-400">
+                                                            <span className="text-3xs font-mono text-on-surface-variant/70">
                                                                 {movie.year}
                                                             </span>
                                                         </div>
@@ -627,10 +501,10 @@ export function DragonBallScannerLive() {
 
                                                 <span
                                                     className={cn(
-                                                        "px-2.5 py-1 rounded-full text-[10px] font-bold font-mono tracking-wider shrink-0 flex items-center gap-1",
+                                                        "px-2.5 py-1 rounded-full text-3xs font-bold font-mono tracking-wider shrink-0 flex items-center gap-1",
                                                         isDetected
                                                             ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                                                            : "bg-zinc-900 text-zinc-500 border border-white/5"
+                                                            : "bg-surface-container-lowest text-on-surface-variant/60 border border-white/5"
                                                     )}
                                                 >
                                                     {isDetected ? (
@@ -662,10 +536,12 @@ export function DragonBallScannerLive() {
                                     Cerrar
                                 </button>
                             </div>
-                        </motion.div>
+                        </m.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>,
+            document.body
+            )}
         </div>
     )
 }

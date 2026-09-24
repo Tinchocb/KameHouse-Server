@@ -17,6 +17,7 @@ type LocalFile struct {
 	Ignored        bool   `gorm:"column:ignored" json:"ignored"`
 	LibraryMediaId uint   `gorm:"column:library_media_id;index" json:"libraryMediaId"`
 	MediaID        int    `gorm:"column:media_id;index" json:"mediaId"`
+	DriveFileID    string `gorm:"column:drive_file_id;index" json:"driveFileId,omitempty"`
 
 	// Metadata and technical info stored as JSON blocks for flexibility
 	ParsedData       json.RawMessage `gorm:"column:parsed_data;type:text" json:"parsedInfo"`

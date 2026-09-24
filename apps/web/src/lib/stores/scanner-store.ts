@@ -1,8 +1,11 @@
 import { create } from "zustand"
 import { subscribeWithSelector, devtools } from "zustand/middleware"
 import { type ScannerMessage } from "@/lib/server/ws-events"
+import { useShallow } from "zustand/react/shallow"
 
 export interface ScanEvent extends ScannerMessage {
+    /** file: archivo analizado · status: cambio de etapa · detail: mensaje técnico. */
+    kind?: "file" | "status" | "detail"
     id: string
     timestamp: number
 }
@@ -15,6 +18,15 @@ export interface ScannerState {
     activeStageIdx: number
     lastFinish: ScanEvent | null
     pruneCount: number
+    /** Epoch ms del START del escaneo local en curso (o del último). */
+    startedAt: number | null
+    finishedAt: number | null
+    /** Archivo actual / total durante la fase de análisis (eventos PROCESSING). */
+    filesCurrent: number
+    filesTotal: number
+    /** Último SCAN_STATUS del servidor, ya traducido. */
+    statusMessage: string
+    error: string | null
     setScanning: (isScanning: boolean) => void
     setScanProgress: (progress: number) => void
     setScanningFile: (file: string) => void
@@ -33,6 +45,12 @@ export const useScannerStore = create<ScannerState>()(
             activeStageIdx: -1,
             lastFinish: null,
             pruneCount: 0,
+            startedAt: null,
+            finishedAt: null,
+            filesCurrent: 0,
+            filesTotal: 0,
+            statusMessage: "",
+            error: null,
             setScanning: (isScanning) => set({ isScanning }),
             setScanProgress: (scanProgress) => set({ scanProgress }),
             setScanningFile: (currentScanningFile) => set({ currentScanningFile }),
@@ -48,7 +66,44 @@ export const useScannerStore = create<ScannerState>()(
                 activeStageIdx: -1,
                 lastFinish: null,
                 pruneCount: 0,
+                startedAt: null,
+                finishedAt: null,
+                filesCurrent: 0,
+                filesTotal: 0,
+                statusMessage: "",
+                error: null,
             }),
         }))
     )
 )
+
+// Shallow selectors for object/array state to prevent unnecessary re-renders
+export const useScannerState = () => useScannerStore(useShallow((state) => ({
+    isScanning: state.isScanning,
+    scanProgress: state.scanProgress,
+    currentScanningFile: state.currentScanningFile,
+    events: state.events,
+    activeStageIdx: state.activeStageIdx,
+    lastFinish: state.lastFinish,
+    pruneCount: state.pruneCount,
+    setScanning: state.setScanning,
+    setScanProgress: state.setScanProgress,
+    setScanningFile: state.setScanningFile,
+    setEvents: state.setEvents,
+    setScannerState: state.setScannerState,
+    resetScanner: state.resetScanner,
+})))
+
+export const useScannerProgress = () => useScannerStore(useShallow((state) => ({
+    isScanning: state.isScanning,
+    scanProgress: state.scanProgress,
+    currentScanningFile: state.currentScanningFile,
+    activeStageIdx: state.activeStageIdx,
+})))
+
+export const useScannerEvents = () => useScannerStore(useShallow((state) => ({
+    events: state.events,
+    lastFinish: state.lastFinish,
+    pruneCount: state.pruneCount,
+    setEvents: state.setEvents,
+})))

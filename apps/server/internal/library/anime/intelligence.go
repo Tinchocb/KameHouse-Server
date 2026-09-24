@@ -112,9 +112,12 @@ var dragonBallArcs = map[int][]arcRange{
 	62715: {
 		{1, 14, "Saga de la Batalla de los Dioses"},
 		{15, 27, "Saga de la Resurrección de F"},
-		{28, 46, "Saga del Universo 6"},
+		{28, 41, "Saga del Torneo del Universo 6"},
+		{42, 46, "Saga del Agua Sobrenatural (Vegeta Copia)"},
 		{47, 76, "Saga de Goku Black"},
-		{77, 131, "Saga de Supervivencia Universal"},
+		{77, 81, "Saga de Exhibición Zen"},
+		{82, 96, "Saga de Reclutamiento"},
+		{97, 131, "Saga del Torneo del Poder"},
 	},
 	// ─── Dragon Ball Daima (236994) ───────────────────────────────────
 	236994: {

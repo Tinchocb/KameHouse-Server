@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -74,8 +73,9 @@ func getActiveProvider(settings *models.Settings, dbInstance *db.Database, logge
 		tmdbLanguage = settings.Library.TmdbLanguage
 	}
 	if tmdbToken == "" {
-		tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
+		tmdbToken, _ = tmdb.ResolveTokenFromEnv()
 	}
+	tmdbToken = tmdb.SanitizeToken(tmdbToken)
 
 	if useTMDB && tmdbToken != "" {
 		if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
@@ -383,35 +383,38 @@ func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry, s
 
 	isMovie := entry.Media.Format == string(platform.MediaFormatMovie) || entry.Media.Type == "MOVIE"
 
+	isDarkNatureCollision := (entry.Media.TmdbID == 39322 || entry.Media.ID == 1039322) &&
+		(strings.Contains(strings.ToLower(entry.Media.TitleSpanish), "dark nature") || strings.Contains(strings.ToLower(entry.Media.TitleEnglish), "dark nature"))
+
 	// Attempt local prehydrated metadata first for Dragon Ball media
-	if entry.Media.TmdbID > 0 && (isGenericSpanish || isEnglishDescription || isBrokenImageURL(entry.Media.PosterImage)) {
+	if entry.Media.TmdbID > 0 && (isGenericSpanish || isEnglishDescription || isBrokenImageURL(entry.Media.PosterImage) || isDarkNatureCollision) {
 		lookupID := entry.Media.TmdbID
 		if isMovie && lookupID < 1_000_000 {
 			lookupID += 1_000_000
 		}
 		if pre := scanner.CreatePrehydratedDragonBallMedia(lookupID); pre != nil {
 			preHydratedUpdated := false
-			if (isGenericSpanish || entry.Media.TitleSpanish == "") && pre.Title != nil && pre.Title.Spanish != nil && *pre.Title.Spanish != "" {
+			if (isGenericSpanish || isDarkNatureCollision || entry.Media.TitleSpanish == "") && pre.Title != nil && pre.Title.Spanish != nil && *pre.Title.Spanish != "" {
 				entry.Media.TitleSpanish = *pre.Title.Spanish
 				preHydratedUpdated = true
 			}
-			if entry.Media.TitleEnglish == "" && pre.Title != nil && pre.Title.English != nil && *pre.Title.English != "" {
+			if (isDarkNatureCollision || entry.Media.TitleEnglish == "") && pre.Title != nil && pre.Title.English != nil && *pre.Title.English != "" {
 				entry.Media.TitleEnglish = *pre.Title.English
 				preHydratedUpdated = true
 			}
-			if entry.Media.TitleRomaji == "" && pre.Title != nil && pre.Title.Romaji != nil && *pre.Title.Romaji != "" {
+			if (isDarkNatureCollision || entry.Media.TitleRomaji == "") && pre.Title != nil && pre.Title.Romaji != nil && *pre.Title.Romaji != "" {
 				entry.Media.TitleRomaji = *pre.Title.Romaji
 				preHydratedUpdated = true
 			}
-			if (isBrokenImageURL(entry.Media.PosterImage) || entry.Media.PosterImage == "") && pre.CoverImage != nil && pre.CoverImage.Large != nil && *pre.CoverImage.Large != "" {
+			if (isDarkNatureCollision || isBrokenImageURL(entry.Media.PosterImage) || entry.Media.PosterImage == "") && pre.CoverImage != nil && pre.CoverImage.Large != nil && *pre.CoverImage.Large != "" {
 				entry.Media.PosterImage = *pre.CoverImage.Large
 				preHydratedUpdated = true
 			}
-			if (isBrokenImageURL(entry.Media.BannerImage) || entry.Media.BannerImage == "") && pre.BannerImage != nil && *pre.BannerImage != "" {
+			if (isDarkNatureCollision || isBrokenImageURL(entry.Media.BannerImage) || entry.Media.BannerImage == "") && pre.BannerImage != nil && *pre.BannerImage != "" {
 				entry.Media.BannerImage = *pre.BannerImage
 				preHydratedUpdated = true
 			}
-			if (isEnglishDescription || entry.Media.Description == "" || entry.Media.Description == "Sin descripción") && pre.Description != nil && *pre.Description != "" {
+			if (isDarkNatureCollision || isEnglishDescription || entry.Media.Description == "" || entry.Media.Description == "Sin descripción") && pre.Description != nil && *pre.Description != "" {
 				entry.Media.Description = *pre.Description
 				preHydratedUpdated = true
 			}

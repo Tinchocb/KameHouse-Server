@@ -2,7 +2,7 @@ package handlers
 
 import "github.com/labstack/echo/v4"
 
-// RegisterSettingsRoutes registers settings, auth, auto-downloader, updates, and system routes.
+// RegisterSettingsRoutes registers settings, auth, and system routes.
 func (h *Handler) RegisterSettingsRoutes(v1 *echo.Group) {
 	// Auth
 	v1.POST("/auth/login", h.HandleLogin)
@@ -34,6 +34,12 @@ func (h *Handler) RegisterSettingsRoutes(v1 *echo.Group) {
 	v1TMDB := v1.Group("/tmdb")
 	v1TMDB.POST("/search", h.HandleTMDBSearch)
 	v1TMDB.POST("/details", h.HandleTMDBGetDetails)
+	v1TMDB.GET("/images/:type/:id", h.HandleTMDBImages)
+	v1TMDB.GET("/episode/:tvId/:absolute", h.HandleTMDBEpisodeStill)
+
+	// AniList (sin API key; red de seguridad para miniaturas de episodios)
+	v1AniList := v1.Group("/anilist")
+	v1AniList.GET("/episode/:anilistId/:absolute", h.HandleAniListEpisodeThumbnail)
 
 	// File Cache
 	v1FileCache := v1.Group("/filecache")
@@ -44,5 +50,6 @@ func (h *Handler) RegisterSettingsRoutes(v1 *echo.Group) {
 	// System
 	v1System := v1.Group("/db")
 	v1System.POST("/backup", h.HandleBackupDatabase)
+	v1System.GET("/backup/download", h.HandleDownloadDatabaseBackup)
 	v1.GET("/report", h.HandleGetDiagnosticsReport)
 }

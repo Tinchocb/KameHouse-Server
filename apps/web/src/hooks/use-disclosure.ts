@@ -21,13 +21,5 @@ export function useBoolean(
         }
     }
 
-    const toggle = () => {
-        if (opened) {
-            close()
-        } else {
-            open()
-        }
-    }
-
-    return { active: opened, on: open, off: close, toggle, set: setOpened } as const
+    return { active: opened, on: open, off: close, set: setOpened } as const
 }

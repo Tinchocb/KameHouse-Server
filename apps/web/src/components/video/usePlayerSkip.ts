@@ -4,38 +4,48 @@ import { useAniSkipTimes, getAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { useQueryClient } from "@tanstack/react-query"
-import { useAppStore, useSkipTimesStore } from "@/lib/store"
+import { usePlayerStore, useSkipTimesStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { Mediastream_StreamType } from "@/api/generated/types"
+import {
+    findIntroChapter,
+    findOutroChapter,
+    isIntroChapter,
+    isOutroChapter,
+    resolveActiveEd,
+    resolveActiveOp,
+    shouldAutoSkip,
+    shouldAutoSkipOutro,
+} from "./skip-windows"
+import type { Chapter, SkipWindow } from "./skip-windows"
+import {
+    findActiveChapter,
+    findSkippableChapter,
+    getChapterSkipKey,
+    getNextChapterTarget,
+    getPrevChapterTarget,
+} from "./chapter-navigation"
+import {
+    getSegmentStatus,
+    isNearEnd,
+    shouldAutoAdvanceMarathon,
+    shouldShowNextEpisode,
+} from "./next-episode-policy"
+
+/** "segment": capítulo intermedio (recap, eyecatch, avance…); "filler": episodio de relleno. */
+export type AutoSkipToastType = "intro" | "outro" | "segment" | "filler"
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const COUNTDOWN_START = 5
 const SEEK_COOLDOWN_MS = 800
 
-const INTRO_REGEX = /^(op\d*|opening\d*|intro\d*)\b/i
-const INTRO_WORD_REGEX = /\b(op\d*|opening\d*|intro\d*)\b/i
-const OUTRO_REGEX = /^(ed\d*|ending\d*|credits|créditos|outro\d*)\b/i
-const OUTRO_WORD_REGEX = /\b(ed\d*|ending\d*|credits|créditos|outro\d*)\b/i
 
 function setVideoCurrentTime(video: HTMLVideoElement, time: number) {
     video.currentTime = time
 }
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-
-interface SkipWindow {
-    startTime: number
-    endTime: number
-    source: string
-}
-
-interface Chapter {
-    startTime: number
-    endTime: number
-    name: string
-    type?: string
-}
 
 interface UsePlayerSkipProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
@@ -48,6 +58,8 @@ interface UsePlayerSkipProps {
     mediaFormat?: string | null
     autoSkipIntroPref: boolean
     autoSkipOutroPref: boolean
+    autoSkipFillerPref: boolean
+    isFillerEpisode: boolean
     skipStepSecondsPref: number
     hasNextEpisode: boolean
     onNextEpisode?: () => void
@@ -64,87 +76,6 @@ interface UsePlayerSkipProps {
     setTvMode: (val: boolean) => void
 }
 
-// ─── Pure Helpers (no hooks) ────────────────────────────────────────────────────
-
-function resolveActiveOp(skipTimesOp: SkipWindow | undefined, total: number, mediaFormat?: string | null): SkipWindow | undefined {
-    if (skipTimesOp) return skipTimesOp
-    if (mediaFormat?.toUpperCase() === "MOVIE") return undefined
-    // D8: Anime TV OPs usually last exactly 85-90s. The old 12% calculation
-    // was crude. We apply this heuristic only if the video is >10 mins (600s).
-    if (total > 600) return { startTime: 0, endTime: 85, source: "heuristic" }
-    return undefined
-}
-
-/** Returns the effective ED/outro window: explicit AniSkip data → chapter → heuristic.
- * A real end mark that lands before the end of the file is trusted as-is: capping
- * it at `total - 5` made every skip land up to 5s short and the user watched the
- * tail of the outro. The 5s buffer only applies to placeholder/malformed ends
- * ("runs to the end of the file"), where we can't tell the outro's real end and
- * skipping to `total` would end the video. */
-function resolveActiveEd(skipTimesEd: SkipWindow | undefined, total: number, mediaFormat?: string | null): SkipWindow | undefined {
-    const getHeuristicEd = (): SkipWindow | undefined => {
-        if (mediaFormat?.toUpperCase() === "MOVIE") return undefined
-        if (total > 300) {
-            const edDuration = Math.min(95, total * 0.08)
-            return { startTime: total - edDuration, endTime: total - 5, source: "heuristic" }
-        }
-        return undefined
-    }
-
-    if (skipTimesEd) {
-        const start = skipTimesEd.startTime
-        // Outro starting at/after the end of the video is unusable — fallback to heuristic.
-        if (total > 0 && start >= total) return getHeuristicEd()
-
-        let parsedEndTime = skipTimesEd.endTime
-        // Many AniSkip entries have malformed ed.endTime (e.g., equal to startTime or just 1s later)
-        if (parsedEndTime <= start + 10) {
-            parsedEndTime = total - 5
-        }
-
-        // Placeholder end (>= total - 0.5): the mark says "until the end of the
-        // file", which is indistinguishable from "unknown". Keep the 5s buffer so
-        // the skip doesn't end the video. A measured end below that is exact —
-        // land on it, clamped to the file duration.
-        const cap = parsedEndTime >= total - 0.5 ? Math.max(start + 1, total - 5) : total
-        const endTime = Math.min(Math.max(parsedEndTime, start + 1), cap)
-        return { startTime: start, endTime, source: skipTimesEd.source }
-    }
-    return getHeuristicEd()
-}
-
-function shouldAutoSkip(source: string): boolean {
-    return ["manual", "fingerprint", "aniskip", "chapters", "propagated", "heuristic", "animethemes", "fpcross", "subtitle"].includes(source)
-}
-
-/** Outro auto-skip is also permissive for the heuristic window.
- * Both intro and outro accept heuristic since the user explicitly enabled auto-skip. */
-function shouldAutoSkipOutro(source: string): boolean {
-    return shouldAutoSkip(source)
-}
-
-/** Returns true if the chapter name/type matches an intro/opening pattern */
-function isIntroChapter(c: Chapter): boolean {
-    const n = c.name.toLowerCase()
-    return c.type === "opening" || INTRO_REGEX.test(n) || INTRO_WORD_REGEX.test(n)
-}
-
-/** Returns true if the chapter name/type matches an outro/ending pattern */
-function isOutroChapter(c: Chapter): boolean {
-    const n = c.name.toLowerCase()
-    return c.type === "ending" || OUTRO_REGEX.test(n) || OUTRO_WORD_REGEX.test(n)
-}
-
-/** Finds the first chapter from the list that matches intro patterns */
-function findIntroChapter(chapters: Chapter[]): Chapter | undefined {
-    return chapters.find(isIntroChapter)
-}
-
-/** Finds the first chapter from the list that matches outro patterns */
-function findOutroChapter(chapters: Chapter[]): Chapter | undefined {
-    return chapters.find(isOutroChapter)
-}
-
 // ─── Main Hook ─────────────────────────────────────────────────────────────────
 
 export function usePlayerSkip({
@@ -158,6 +89,8 @@ export function usePlayerSkip({
     mediaFormat,
     autoSkipIntroPref,
     autoSkipOutroPref,
+    autoSkipFillerPref,
+    isFillerEpisode,
     skipStepSecondsPref,
     hasNextEpisode,
     onNextEpisode,
@@ -177,7 +110,7 @@ export function usePlayerSkip({
     const queryClient = useQueryClient()
     const autoPlayNextEpisode = settings?.library?.autoPlayNextEpisode ?? true
 
-    const { marathonMode } = useAppStore(
+    const { marathonMode } = usePlayerStore(
         useShallow(state => ({
             marathonMode: state.marathonMode,
         }))
@@ -193,6 +126,7 @@ export function usePlayerSkip({
     // ── Refs ────────────────────────────────────────────────────────────────────
     const hasAutoSkippedIntroRef = useRef(false)
     const hasAutoSkippedOutroRef = useRef(false)
+    const hasAutoSkippedFillerRef = useRef(false)
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
     const nextEpisodeTimerRef = useRef<NodeJS.Timeout | null>(null)
     const hasTriggeredNextEpisodeRef = useRef<boolean>(false)
@@ -207,6 +141,8 @@ export function usePlayerSkip({
         skipTimesEd: undefined as SkipWindow | undefined,
         autoSkipIntroPref: false,
         autoSkipOutroPref: false,
+        autoSkipFillerPref: false,
+        isFillerEpisode: false,
         skipStepSecondsPref: 85,
         chapters: [] as Chapter[],
         mediaFormat: undefined as string | undefined | null,
@@ -275,7 +211,7 @@ export function usePlayerSkip({
         setShowNextEpisodeState(val)
     }, [])
 
-    const [showAutoSkipToast, setShowAutoSkipToast] = useState<"intro" | "outro" | "pause" | null>(null)
+    const [showAutoSkipToast, setShowAutoSkipToast] = useState<AutoSkipToastType | null>(null)
 
     const [activeChapter, setActiveChapterState] = useState<string | null>(null)
     const activeChapterRef = useRef<string | null>(null)
@@ -309,6 +245,7 @@ export function usePlayerSkip({
         setVideoEnded(false)
         hasAutoSkippedIntroRef.current = false
         hasAutoSkippedOutroRef.current = false
+        hasAutoSkippedFillerRef.current = false
         hasTriggeredNextEpisodeRef.current = false
         hasPreloadedRef.current = false
         skippedChaptersRef.current.clear()
@@ -398,13 +335,13 @@ export function usePlayerSkip({
 
         if (typeof opStart === "number" && typeof opEnd === "number" && typeof edOffset === "number") {
             if (cached?.opStart !== opStart || cached?.opEnd !== opEnd || cached?.edOffset !== edOffset || cached?.edEnd !== edEnd) {
-                saveSeriesSkipTimes(storeKey!, opStart, opEnd, edOffset, edEnd)
+                saveSeriesSkipTimes(storeKey, opStart, opEnd, edOffset, edEnd)
             }
         }
     }, [storeKey, duration, skipTimesOp, skipTimesEd, seriesSkipTimes, saveSeriesSkipTimes])
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
-    const triggerToast = useCallback((type: "intro" | "outro" | "pause") => {
+    const triggerToast = useCallback((type: AutoSkipToastType) => {
         setShowAutoSkipToast(type)
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
         toastTimerRef.current = setTimeout(() => setShowAutoSkipToast(null), 3000)
@@ -477,10 +414,10 @@ export function usePlayerSkip({
         const video = videoRef.current
         if (!video || chapters.length === 0) return
         const curr = video.currentTime
-        const next = chapters.find(c => c.startTime > curr + 0.5)
-        if (next) {
-            checkManualSkipOverrides(next.startTime)
-            setVideoCurrentTime(video, next.startTime)
+        const target = getNextChapterTarget(chapters, curr)
+        if (target != null) {
+            checkManualSkipOverrides(target)
+            setVideoCurrentTime(video, target)
             lastManualSeekTimestampRef.current = Date.now()
             video.play().catch(() => {})
             triggerControlsVisibility()
@@ -491,8 +428,7 @@ export function usePlayerSkip({
         const video = videoRef.current
         if (!video || chapters.length === 0) return
         const curr = video.currentTime
-        const prevs = chapters.filter(c => c.startTime < curr - 1.5)
-        const target = prevs.length > 0 ? prevs[prevs.length - 1].startTime : 0
+        const target = getPrevChapterTarget(chapters, curr)
         checkManualSkipOverrides(target)
         setVideoCurrentTime(video, target)
         lastManualSeekTimestampRef.current = Date.now()
@@ -537,7 +473,7 @@ export function usePlayerSkip({
     }, [setTvMode])
 
     const handleSetMarathonMode = useCallback((val: boolean) => {
-        useAppStore.setState({ marathonMode: val })
+        usePlayerStore.setState({ marathonMode: val })
         
         const video = videoRef.current
         if (!video || !val) return
@@ -614,6 +550,8 @@ export function usePlayerSkip({
             skipTimesEd,
             autoSkipIntroPref: autoSkipIntroPref || marathonMode,
             autoSkipOutroPref: autoSkipOutroPref || marathonMode,
+            autoSkipFillerPref: autoSkipFillerPref || marathonMode,
+            isFillerEpisode,
             skipStepSecondsPref,
             chapters,
             mediaFormat,
@@ -647,7 +585,7 @@ export function usePlayerSkip({
         const inCooldown = Date.now() - lastManualSeekTimestampRef.current < SEEK_COOLDOWN_MS
         if (inCooldown) {
             if (cfg.chapters.length > 0) {
-                const chap = cfg.chapters.find(c => curr >= c.startTime && curr < c.endTime)
+                const chap = findActiveChapter(cfg.chapters, curr)
                 const name = chap ? chap.name : null
                 if (activeChapterRef.current !== name) setActiveChapter(name)
             }
@@ -656,39 +594,25 @@ export function usePlayerSkip({
 
         // ── 2. Active chapter detection ────────────────────────────────────────
         if (cfg.chapters.length > 0) {
-            const chap = cfg.chapters.find(c => curr >= c.startTime && curr < c.endTime)
+            const chap = findActiveChapter(cfg.chapters, curr)
             const name = chap ? chap.name : null
             if (activeChapterRef.current !== name) setActiveChapter(name)
         }
 
         // ── 3. Chapter-based intermediate auto-skip ────────────────────────────
         if (cfg.chapters.length > 0) {
-            const skippable = cfg.chapters.find(c => {
-                if (!(curr >= c.startTime && curr < c.endTime - 0.5)) return false
-                const key = `${c.name}_${c.startTime}`
-                if (skippedChaptersRef.current.has(key)) return false
-                if (isIntroChapter(c)) return cfg.autoSkipIntroPref
-                if (isOutroChapter(c)) return cfg.autoSkipOutroPref
-                const n = c.name.toLowerCase()
-                return (
-                    cfg.autoSkipIntroPref &&
-                    (n.includes("eyecatch") || n.includes("eye-catch") ||
-                        n.includes("commercial") || n.includes("sponsor") || n.includes("sponsors") ||
-                        n.includes("recap") || n.includes("resumen") ||
-                        n.includes("preview") || n.includes("avance") || n.includes("adelanto") ||
-                        n.includes("title card") || n.includes("titlecard") || n.includes("title") || n.includes("título") ||
-                        n.includes("publicidad") || n.includes("patrocinio") ||
-                        n.includes("intermedio") || n.includes("prologue") || n.includes("prólogo") ||
-                        c.type === "sponsor" || c.type === "recap" || c.type === "preview")
-                )
+            const skippable = findSkippableChapter(cfg.chapters, curr, skippedChaptersRef.current, {
+                autoSkipIntroPref: cfg.autoSkipIntroPref,
+                autoSkipOutroPref: cfg.autoSkipOutroPref,
             })
             if (skippable) {
-                const key = `${skippable.name}_${skippable.startTime}`
-                skippedChaptersRef.current.add(key)
+                skippedChaptersRef.current.add(getChapterSkipKey(skippable))
+                // Guardar la posición para que "Deshacer" vuelva al inicio del capítulo.
+                preSkipPositionRef.current = curr
                 setVideoCurrentTime(video, skippable.endTime)
                 lastManualSeekTimestampRef.current = Date.now()
                 video.play().catch(() => {})
-                triggerToast("pause")
+                triggerToast(isIntroChapter(skippable) ? "intro" : isOutroChapter(skippable) ? "outro" : "segment")
                 return
             }
         }
@@ -716,8 +640,7 @@ export function usePlayerSkip({
                 return
             }
             if (inWindow && curr >= startTime + 1) {
-                const remaining = Math.ceil(endTime - curr)
-                const progress = Math.round(((curr - startTime) / Math.max(1, endTime - startTime)) * 100)
+                const { remaining, progress } = getSegmentStatus(curr, startTime, endTime)
                 if (skipModeRef.current !== "intro") setSkipMode("intro")
                 if (skipRemainingSecondsRef.current !== remaining) {
                     setSkipRemainingSeconds(remaining)
@@ -757,8 +680,7 @@ export function usePlayerSkip({
             }
             
             if (inWindow && curr >= startTime + 1) {
-                const remaining = Math.ceil(endTime - curr)
-                const progress = Math.round(((curr - startTime) / Math.max(1, endTime - startTime)) * 100)
+                const { remaining, progress } = getSegmentStatus(curr, startTime, endTime)
                 if (skipModeRef.current !== "outro") setSkipMode("outro")
                 if (skipRemainingSecondsRef.current !== remaining) {
                     setSkipRemainingSeconds(remaining)
@@ -769,8 +691,25 @@ export function usePlayerSkip({
             }
         }
 
+        // ── 6.5. Filler episode auto-advance ───────────────────────────────────
+        // Filler is a whole-episode editorial mark (not an intra-video window),
+        // so the "skip" is an auto-next, reusing the marathon guard.
+        if (
+            cfg.isFillerEpisode &&
+            cfg.autoSkipFillerPref &&
+            !hasAutoSkippedFillerRef.current &&
+            cfg.hasNextEpisode &&
+            cfg.onNextEpisode &&
+            cfg.mediaFormat?.toUpperCase() !== "MOVIE"
+        ) {
+            hasAutoSkippedFillerRef.current = true
+            triggerToast("filler")
+            tryAdvance()
+            return
+        }
+
         // ── 7. Next-episode preload ────────────────────────────────────────────
-        const nearEnd = total > 0 && (total - curr <= 180 || (activeEd && curr >= activeEd.startTime))
+        const nearEnd = isNearEnd(total, curr, activeEd?.startTime)
         if (cfg.nextStreamUrl && !hasPreloadedRef.current && nearEnd) {
             hasPreloadedRef.current = true
 
@@ -785,7 +724,7 @@ export function usePlayerSkip({
 
             if ((cfg.malId || cfg.mediaId) && cfg.episodeNumber) {
                 const nextEp = cfg.episodeNumber + 1
-                cfg.queryClient!.prefetchQuery({
+                cfg.queryClient?.prefetchQuery({
                     queryKey: ["aniskip", cfg.malId ?? null, cfg.mediaId ?? null, nextEp],
                     queryFn: () => getAniSkipTimes({ malId: cfg.malId ?? null, mediaId: cfg.mediaId ?? null, episodeNumber: nextEp, episodeDuration: 0 })
                 })
@@ -793,14 +732,16 @@ export function usePlayerSkip({
         }
 
         // ── 8. "Up next" panel + countdown visibility ─────────────────────────
-        const isPureMarathon = cfg.marathonMode && !cfg.tvMode
         const inEdWindow = activeEd ? curr >= activeEd.startTime && curr < activeEd.endTime : false
-        const nextThreshold = cfg.tvMode ? 3 : 15
-        const shouldShowNext =
-            cfg.mediaFormat?.toUpperCase() !== "MOVIE" && !isPureMarathon && cfg.hasNextEpisode && (
-                (total > 0 && total - curr <= nextThreshold) ||
-                (!cfg.tvMode && inEdWindow)
-            )
+        const shouldShowNext = shouldShowNextEpisode({
+            mediaFormat: cfg.mediaFormat,
+            marathonMode: cfg.marathonMode,
+            tvMode: cfg.tvMode,
+            hasNextEpisode: cfg.hasNextEpisode,
+            total,
+            curr,
+            inEdWindow,
+        })
 
         if (shouldShowNext) {
             if (!showNextEpisodeRef.current) {
@@ -817,11 +758,15 @@ export function usePlayerSkip({
         }
 
         // ── 9. Marathon mode auto-advance ────────────────────────────────
-        if (
-            cfg.marathonMode && cfg.hasNextEpisode && cfg.onNextEpisode &&
-            cfg.mediaFormat?.toUpperCase() !== "MOVIE" &&
-            (video.ended || (total > 0 && total - curr <= 3))
-        ) {
+        if (shouldAutoAdvanceMarathon({
+            marathonMode: cfg.marathonMode,
+            hasNextEpisode: cfg.hasNextEpisode,
+            hasOnNext: cfg.onNextEpisode != null,
+            mediaFormat: cfg.mediaFormat,
+            ended: video.ended,
+            total,
+            curr,
+        })) {
             tryAdvance()
         }
     }, [setActiveChapter, setSegmentProgress, setShowNextEpisode, setSkipMode, setSkipRemainingSeconds, triggerToast, videoRef, tryAdvance])
@@ -844,6 +789,7 @@ export function usePlayerSkip({
         if (marathonMode) {
             hasAutoSkippedIntroRef.current = false
             hasAutoSkippedOutroRef.current = false
+            hasAutoSkippedFillerRef.current = false
         }
     }, [marathonMode])
 

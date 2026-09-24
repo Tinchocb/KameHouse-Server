@@ -14,10 +14,10 @@ export const ToasterAnatomy = defineStyleAnatomy({
         "select-none cursor-default",
         "group-[.toaster]:py-4 group-[.toaster]:px-5 group-[.toaster]:gap-3",
         "group-[.toaster]:text-sm group-[.toaster]:font-medium",
-        "group-[.toaster]:rounded-corner-lg group-[.toaster]:border group-[.toaster]:shadow-elevation-3",
-        "group-[.toaster]:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_90%,transparent)] group-[.toaster]:backdrop-blur-overlay-sm group-[.toaster]:border-outline-variant",
+        "group-[.toaster]:rounded-2xl group-[.toaster]:border group-[.toaster]:border-t group-[.toaster]:shadow-elevation-4",
+        "group-[.toaster]:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_90%,transparent)] group-[.toaster]:backdrop-blur-overlay-xl group-[.toaster]:border-white/15 group-[.toaster]:border-t-white/35",
         "group-[.toaster]:text-on-surface",
-        "group-[.toaster]:transition-all group-[.toaster]:duration-base",
+        "group-[.toaster]:transition-colors group-[.toaster]:duration-base",
         // Success
         "group-[.toaster]:data-[type=success]:bg-success-bg group-[.toaster]:data-[type=success]:border-success-border group-[.toaster]:data-[type=success]:text-success-bg",
         // Warning
@@ -34,17 +34,17 @@ export const ToasterAnatomy = defineStyleAnatomy({
         "cursor-default",
     ]),
     actionButton: cva([
-        "group/toast:bg-surface-variant group/toast:text-on-surface-variant",
-        "group/toast:rounded-full group/toast:px-3 group/toast:py-1.5",
-        "group/toast:text-xs group/toast:font-medium",
-        "group/toast:transition-colors group/toast:hover:bg-surface-container-high",
-        "group/toast:border group/toast:border-outline-variant",
+        "group/toast:bg-white group/toast:text-black",
+        "group/toast:rounded-full group/toast:px-3.5 group/toast:py-1.5",
+        "group/toast:text-xs group/toast:font-bold",
+        "group/toast:transition-all group/toast:hover:bg-zinc-200 group/toast:active:scale-95",
+        "group/toast:shadow-elevation-1",
     ]),
     cancelButton: cva([
         "group/toast:bg-transparent group/toast:text-on-surface-variant",
-        "group/toast:rounded-full group/toast:px-3 group/toast:py-1.5",
+        "group/toast:rounded-full group/toast:px-3.5 group/toast:py-1.5",
         "group/toast:text-xs group/toast:font-medium",
-        "group/toast:transition-colors group/toast:hover:bg-surface-variant",
+        "group/toast:transition-all group/toast:hover:bg-white/10 group/toast:active:scale-95",
     ]),
 })
 

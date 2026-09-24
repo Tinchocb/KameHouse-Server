@@ -27,4 +27,5 @@ export interface SwimlaneItem {
     localFilesCount?: number
     totalEpisodesCount?: number
     isSeriesComplete?: boolean
+    missingCount?: number
 }

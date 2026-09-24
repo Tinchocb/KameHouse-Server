@@ -25,14 +25,13 @@ export function useGetSettings() {
         muteError: true,
         staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
-        // El servidor serializa `platform` en minúsculas (json tag de Go) pero el
-        // codegen tipa `Platform` en mayúscula. Normalizar aquí para que todos los
-        // consumidores (formulario, MovieCard, etc.) vean siempre `Platform`.
+        // El servidor serializa `platform` en minúsculas (json tag de Go).
+        // Normalizar aquí para compat con payloads legacy que traían `Platform`.
         select: (data) => {
             if (!data) return data
             const raw = data as unknown as Record<string, unknown>
             const normalized = (raw.platform ?? raw.Platform ?? { hideAudienceScore: false }) as Models_Settings["platform"]
-            return { ...data, platform: normalized, Platform: normalized } as Models_Settings & { Platform?: Models_Settings["platform"] }
+            return { ...data, platform: normalized } as Models_Settings
         },
     })
 }

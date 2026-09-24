@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -34,12 +35,11 @@ func (b *Bucket) Name() string {
 	return b.name
 }
 
-
 // Cacher represents a single-process, file-based, key/value cache.
 type Cacher struct {
 	dir    string
 	stores map[string]*CacheStore
-	mu     sync.Mutex
+	mu     sync.RWMutex
 }
 
 type cacheItem struct {
@@ -83,24 +83,52 @@ func (c *Cacher) Clear() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.stores = make(map[string]*CacheStore)
+
+	entries, err := os.ReadDir(c.dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".cache") {
+			_ = os.Remove(filepath.Join(c.dir, e.Name()))
+		}
+	}
 	return nil
 }
 
 // getStore returns a cache store for the given bucket name and TTL.
 func (c *Cacher) getStore(name string) (*CacheStore, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+	c.mu.RLock()
 	store, ok := c.stores[name]
-	if !ok {
-		store = &CacheStore{
-			filePath: filepath.Join(c.dir, name+".cache"),
-			data:     make(map[string]*cacheItem),
-		}
-		if err := store.loadFromFile(); err != nil {
-			return nil, err
-		}
-		c.stores[name] = store
+	c.mu.RUnlock()
+	if ok {
+		return store, nil
+	}
+
+	c.mu.Lock()
+	// Double-checked locking
+	store, ok = c.stores[name]
+	if ok {
+		c.mu.Unlock()
+		return store, nil
+	}
+
+	store = &CacheStore{
+		filePath: filepath.Join(c.dir, name+".cache"),
+		data:     make(map[string]*cacheItem),
+	}
+	c.stores[name] = store
+	c.mu.Unlock()
+
+	// Carga desde disco fuera del mutex global de Cacher para no bloquear otros buckets
+	if err := store.loadFromFile(); err != nil {
+		c.mu.Lock()
+		delete(c.stores, name)
+		c.mu.Unlock()
+		return nil, err
 	}
 	return store, nil
 }
@@ -265,7 +293,6 @@ func (c *Cacher) Remove(bucketName string) error {
 	return nil
 }
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (cs *CacheStore) loadFromFile() error {
@@ -302,14 +329,32 @@ func (cs *CacheStore) saveToFile() error {
 	}
 	cs.mu.RUnlock()
 
-	file, err := os.Create(cs.filePath)
+	tmpPath := fmt.Sprintf("%s.tmp.%d", cs.filePath, time.Now().UnixNano())
+	file, err := os.Create(tmpPath)
 	if err != nil {
-		return fmt.Errorf("filecache: failed to create cache file: %w", err)
+		return fmt.Errorf("filecache: failed to create temp cache file: %w", err)
 	}
-	defer file.Close()
 
-	if err := json.NewEncoder(file).Encode(snapshot); err != nil {
-		return fmt.Errorf("filecache: failed to encode cache data: %w", err)
+	encErr := json.NewEncoder(file).Encode(snapshot)
+	syncErr := file.Sync()
+	closeErr := file.Close()
+
+	if encErr != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("filecache: failed to encode cache data: %w", encErr)
+	}
+	if syncErr != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("filecache: failed to sync cache file: %w", syncErr)
+	}
+	if closeErr != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("filecache: failed to close temp cache file: %w", closeErr)
+	}
+
+	if err := os.Rename(tmpPath, cs.filePath); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("filecache: failed to replace cache file: %w", err)
 	}
 	return nil
 }
@@ -318,14 +363,12 @@ func (cs *CacheStore) saveToFile() error {
 
 // RemoveAllBy removes all files in the cache directory that match the given filter.
 func (c *Cacher) RemoveAllBy(filter func(filename string) bool) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	entries, err := os.ReadDir(c.dir)
 	if err != nil {
 		return err
 	}
 
+	var toDelete []string
 	for _, e := range entries {
 		if !e.IsDir() {
 			if !strings.HasSuffix(e.Name(), ".cache") {
@@ -333,86 +376,82 @@ func (c *Cacher) RemoveAllBy(filter func(filename string) bool) error {
 			}
 			if filter(e.Name()) {
 				_ = os.Remove(filepath.Join(c.dir, e.Name()))
+				toDelete = append(toDelete, strings.TrimSuffix(e.Name(), ".cache"))
 			}
 		}
+	}
+
+	if len(toDelete) > 0 {
+		c.mu.Lock()
+		for _, bucketName := range toDelete {
+			delete(c.stores, bucketName)
+		}
+		c.mu.Unlock()
 	}
 	return nil
 }
 
-//func (c *Cacher) RemoveAllBy(filter func(filename string) bool) error {
-//	c.mu.Lock()
-//	defer c.mu.Unlock()
-//
-//	err := filepath.WalkDir(c.dir, func(_ string, e os.DirEntry, err error) error {
-//		if err != nil {
-//			return err
-//		}
-//		if !e.IsDir() {
-//			if !strings.HasSuffix(e.Name(), ".cache") {
-//				return nil
-//			}
-//			if filter(e.Name()) {
-//				_ = os.Remove(filepath.Join(c.dir, e.Name()))
-//			}
-//		}
-//		return nil
-//	})
-//
-//	c.stores = make(map[string]*CacheStore)
-//	return err
-//}
-
 // ClearMediastreamVideoFiles clears all mediastream video file caches.
 func (c *Cacher) ClearMediastreamVideoFiles() error {
-	c.mu.Lock()
-
-	// Remove the contents of the directory
-	files, err := os.ReadDir(filepath.Join(c.dir, "videofiles"))
-	if err != nil {
-		c.mu.Unlock()
-		return nil
-	}
-	for _, file := range files {
-		_ = os.RemoveAll(filepath.Join(c.dir, "videofiles", file.Name()))
-	}
-	c.mu.Unlock()
-
-	err = c.RemoveAllBy(func(filename string) bool {
-		return strings.HasPrefix(filename, "mediastream")
-	})
-
-	c.mu.Lock()
-	c.stores = make(map[string]*CacheStore)
-	c.mu.Unlock()
-	return err
-}
-
-// TrimMediastreamVideoFiles clears all mediastream video file caches if the number of files exceeds the given limit.
-func (c *Cacher) TrimMediastreamVideoFiles() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Remove the contents of the "videofiles" cache directory
-	files, err := os.ReadDir(filepath.Join(c.dir, "videofiles"))
-	if err != nil {
-		return nil
-	}
-
-	// If the number of files exceeds 10, remove all files
-	if len(files) > 10 {
+	// IO de disco fuera del lock global: c.dir es inmutable.
+	videoFilesDir := filepath.Join(c.dir, "videofiles")
+	if files, err := os.ReadDir(videoFilesDir); err == nil {
 		for _, file := range files {
-			_ = os.RemoveAll(filepath.Join(c.dir, "videofiles", file.Name()))
+			_ = os.RemoveAll(filepath.Join(videoFilesDir, file.Name()))
 		}
 	}
 
-	c.stores = make(map[string]*CacheStore)
+	err := c.RemoveAllBy(func(filename string) bool {
+		return strings.HasPrefix(filename, "mediastream")
+	})
+
+	// Second sweep covers "videofiles*" stores, which have no .cache file and are
+	// therefore not removed by RemoveAllBy (it only handles mediastream*.cache).
+	c.mu.Lock()
+	for name := range c.stores {
+		if strings.HasPrefix(name, "mediastream") || strings.HasPrefix(name, "videofiles") {
+			delete(c.stores, name)
+		}
+	}
+	c.mu.Unlock()
 	return err
 }
 
-func (c *Cacher) GetMediastreamVideoFilesTotalSize() (int64, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+// TrimMediastreamVideoFiles evicts oldest videofiles dirs keeping newest 10 (LRU by ModTime).
+func (c *Cacher) TrimMediastreamVideoFiles() error {
+	videoFilesDir := filepath.Join(c.dir, "videofiles")
+	files, err := os.ReadDir(videoFilesDir)
+	if err != nil {
+		return nil
+	}
 
+	// If the number of files exceeds 10, evict oldest first until 10 remain
+	if len(files) > 10 {
+		type entry struct {
+			name    string
+			modTime time.Time
+		}
+		infos := make([]entry, 0, len(files))
+		for _, file := range files {
+			full := filepath.Join(videoFilesDir, file.Name())
+			mod := time.Time{}
+			if info, err := file.Info(); err == nil {
+				mod = info.ModTime()
+			}
+			infos = append(infos, entry{name: full, modTime: mod})
+		}
+		sort.Slice(infos, func(i, j int) bool {
+			return infos[i].modTime.Before(infos[j].modTime)
+		})
+		for _, e := range infos[:len(infos)-10] {
+			_ = os.RemoveAll(e.name)
+		}
+	}
+
+	return nil
+}
+
+func (c *Cacher) GetMediastreamVideoFilesTotalSize() (int64, error) {
 	_, err := os.Stat(filepath.Join(c.dir, "videofiles"))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -441,9 +480,6 @@ func (c *Cacher) GetMediastreamVideoFilesTotalSize() (int64, error) {
 // GetTotalSize returns the total size of all files in the cache directory that match the given filter.
 // The size is in bytes.
 func (c *Cacher) GetTotalSize() (int64, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	var totalSize int64
 	err := filepath.Walk(c.dir, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {

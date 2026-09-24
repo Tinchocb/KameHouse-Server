@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 
 	"kamehouse/internal/api/metadata_provider"
@@ -20,6 +21,7 @@ import (
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
+	"kamehouse/internal/drive"
 	"kamehouse/internal/events"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/autoscanner"
@@ -62,6 +64,7 @@ type (
 		MediastreamRepository *mediastream.Repository
 		VideoCore             *videocore.VideoCore
 		SkipDetector          *skipdetect.Detector
+		DriveService          *drive.Service
 	}
 
 	LibraryServices struct {
@@ -117,6 +120,8 @@ type (
 		shutdownCtx    context.Context
 		shutdownCancel context.CancelFunc
 
+		configWatcher *ConfigWatcher
+
 		ShowTour string
 	}
 
@@ -145,7 +150,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		previousVersion = oldVersion
 	})
 
-	cfg := initConfig(configOpts, logger)
+	cfg, v := initConfig(configOpts, logger)
 	serverPasswordHash, serverPasswordSHA256, err := initServerPassword(cfg)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("app: Failed to generate server password hash")
@@ -160,8 +165,12 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	database := initDatabase(cfg, logger)
 	initAppDatabaseEntries(database, logger)
 
-	tmdbClient := initTMDBClient(cfg, database)
-	_, wsEventManager := initEventSystem(logger, database)
+	tmdbClient := initTMDBClient(cfg, database, logger)
+
+	// Create shutdown context early so it can be passed to WSEventManager
+	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
+
+	_, wsEventManager := initEventSystem(logger, database, shutdownCtx)
 	notifier.Global().Init(database, wsEventManager, logger)
 	fileCacher := initFileCacher(cfg, logger)
 	metadataProvider := initMetadataProvider(cfg, logger, fileCacher, database, tmdbClient)
@@ -183,9 +192,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	continuityManager := initContinuityManager(fileCacher, logger, database)
 
 	videoCore := initVideoCore(wsEventManager, logger, dynamicProvider, continuityManager, dynamicPlatform, isOffline)
-	thumbnailCache := initThumbnailCache(logger)
-
-	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
+	thumbnailCache := initThumbnailCache(cfg, logger)
 
 	app := &KameHouse{
 		CoreServices: CoreServices{
@@ -200,6 +207,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		StreamingServices: StreamingServices{
 			VideoCore:             videoCore,
 			MediastreamRepository: nil,
+			DriveService:          drive.NewService(logger),
 		},
 		LibraryServices: LibraryServices{
 			FillerManager:   nil,
@@ -233,9 +241,22 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		shutdownCancel:                    shutdownCancel,
 	}
 
+	// Start config watcher for hot-reload
+	configWatcher := NewConfigWatcher(v, cfg.v.ConfigFileUsed(), logger)
+	if err := configWatcher.Start(app.shutdownCtx); err != nil {
+		logger.Error().Err(err).Msg("failed to start config watcher")
+	}
+	// Register callbacks for hot-reloadable settings
+	configWatcher.OnChange(func(newCfg *Config) {
+		app.handleConfigChange(newCfg)
+	})
+	app.configWatcher = configWatcher
+
 	app.initModulesOnce()
 	app.runMigrations()
 	app.InitOrRefreshModules()
+	// Las migraciones DML corren en background; /api/health reporta degraded
+	// hasta completarlas. No bloquear el arranque aquí.
 	app.ServerReady = true
 	app.InitOrRefreshMediastreamSettings()
 	app.performActionsOnce()
@@ -250,6 +271,49 @@ func (a *KameHouse) ShutdownCtx() context.Context {
 	return context.Background()
 }
 
+// handleConfigChange aplica cambios de configuración hot-reloadable
+func (a *KameHouse) handleConfigChange(newCfg *Config) {
+	a.moduleMu.Lock()
+	defer a.moduleMu.Unlock()
+
+	// Actualizar CorsOrigins
+	if len(newCfg.Server.CorsOrigins) > 0 {
+		a.Config.Server.CorsOrigins = newCfg.Server.CorsOrigins
+		a.Logger.Info().Interface("origins", newCfg.Server.CorsOrigins).Msg("config: CorsOrigins actualizados via hot-reload")
+	}
+
+	// Actualizar AuthTokenTTL
+	if newCfg.Server.AuthTokenTTL != "" {
+		a.Config.Server.AuthTokenTTL = newCfg.Server.AuthTokenTTL
+		a.Logger.Info().Str("ttl", newCfg.Server.AuthTokenTTL).Msg("config: AuthTokenTTL actualizado via hot-reload")
+	}
+
+	// Actualizar LogLevel (a través de Logs.Dir no se puede cambiar en caliente, pero se puede cambiar el nivel de log)
+	// Nota: LogLevel no está en el config struct directamente, se maneja vía logger
+
+	// Actualizar TMDB API Key
+	if newCfg.Metadata.TMDBApiKey != "" {
+		a.Config.Metadata.TMDBApiKey = newCfg.Metadata.TMDBApiKey
+		a.Logger.Info().Msg("config: TMDB API key actualizada via hot-reload")
+		// Recrear TMDB client con nueva key
+		if a.Metadata.TMDBClient != nil {
+			a.Metadata.TMDBClient = tmdb.NewClient(newCfg.Metadata.TMDBApiKey)
+			if a.Database != nil {
+				a.Metadata.TMDBClient.SetPersistentCache(&TMDbCacheAdapter{db: a.Database})
+			}
+		}
+	}
+
+	// Actualizar FeatureFlags basado en Library settings (desde Settings en DB)
+	// Nota: Library settings se guardan en DB, no en config file
+	if a.FeatureManager != nil && a.Settings != nil {
+		a.FeatureManager.UpdateFromSettings(&a.Settings.Library)
+		a.Logger.Info().Msg("config: FeatureFlags actualizados via hot-reload")
+	}
+
+	a.Logger.Info().Msg("config: Hot-reload aplicado correctamente")
+}
+
 func initLogger() *zerolog.Logger {
 	return util.NewLogger()
 }
@@ -261,8 +325,8 @@ func initSystemInfo(logger *zerolog.Logger) {
 	logger.Info().Msgf("app: Processor count: %d", runtime.NumCPU())
 }
 
-func initConfig(configOpts *ConfigOptions, logger *zerolog.Logger) *Config {
-	cfg, err := NewConfig(configOpts, logger)
+func initConfig(configOpts *ConfigOptions, logger *zerolog.Logger) (*Config, *viper.Viper) {
+	cfg, v, err := NewConfig(configOpts, logger)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("app: Failed to initialize config")
 	}
@@ -271,7 +335,7 @@ func initConfig(configOpts *ConfigOptions, logger *zerolog.Logger) *Config {
 	if configOpts.Flags.IsDesktopSidecar {
 		logger.Info().Msg("app: Desktop sidecar mode enabled")
 	}
-	return cfg
+	return cfg, v
 }
 
 func initServerPassword(cfg *Config) (string, string, error) {
@@ -321,8 +385,15 @@ func initAppDatabaseEntries(database *db.Database, logger *zerolog.Logger) {
 	_, _ = database.GetAllLibraryPathsFromSettings()
 }
 
-func initTMDBClient(cfg *Config, database *db.Database) *tmdb.Client {
-	tmdbToken := cfg.Metadata.TMDBApiKey
+func initTMDBClient(cfg *Config, database *db.Database, logger *zerolog.Logger) *tmdb.Client {
+	tmdbToken, reason := tmdb.ResolveToken(os.Getenv("KAMEHOUSE_TMDB_TOKEN"), os.Getenv("KAMEHOUSE_TMDB_API_KEY"), cfg.Metadata.TMDBApiKey)
+	if tmdbToken == "" {
+		if reason == "placeholder" {
+			logger.Warn().Msg("app: TMDB token looks like an unreplaced placeholder (e.g. your_tmdb_bearer_token_here) - ignoring it, TMDB features will be degraded")
+		} else {
+			logger.Warn().Msg("app: No TMDB API key configured - TMDB features will be degraded, using default provider")
+		}
+	}
 	tmdbClient := tmdb.NewClient(tmdbToken)
 	if database != nil {
 		tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: database})
@@ -330,9 +401,9 @@ func initTMDBClient(cfg *Config, database *db.Database) *tmdb.Client {
 	return tmdbClient
 }
 
-func initEventSystem(logger *zerolog.Logger, database *db.Database) (events.Dispatcher, *events.WSEventManager) {
+func initEventSystem(logger *zerolog.Logger, database *db.Database, shutdownCtx context.Context) (events.Dispatcher, *events.WSEventManager) {
 	dispatcher := events.NewDispatcher()
-	wsEventManager := events.NewWSEventManager(logger, dispatcher)
+	wsEventManager := events.NewWSEventManager(logger, dispatcher, shutdownCtx)
 	database.SetOnError(func(err error) {
 		if wsEventManager != nil {
 			wsEventManager.SendEvent(events.ErrorToast, "DB Error: "+err.Error())
@@ -423,8 +494,17 @@ func initVideoCore(wsEventManager *events.WSEventManager, logger *zerolog.Logger
 	})
 }
 
-func initThumbnailCache(logger *zerolog.Logger) *cache.ThumbnailCache {
-	thumbnailCache, err := cache.NewThumbnailCache(1000)
+func initThumbnailCache(cfg *Config, logger *zerolog.Logger) *cache.ThumbnailCache {
+	maxItems := cfg.Cache.Thumbnails.MemoryMaxItems
+	if maxItems <= 0 {
+		maxItems = 1000
+	}
+	maxBytesMB := cfg.Cache.Thumbnails.MemoryMaxBytesMB
+	if maxBytesMB <= 0 {
+		maxBytesMB = 256
+	}
+	maxBytes := maxBytesMB * 1024 * 1024
+	thumbnailCache, err := cache.NewThumbnailCache(maxItems, maxBytes)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("app: Failed to initialize thumbnail cache")
 	}
@@ -441,6 +521,12 @@ func (a *KameHouse) AddCleanupFunction(f func()) {
 
 func (a *KameHouse) Cleanup(ctx context.Context) {
 	a.shutdownCancel()
+
+	// Stop config watcher
+	if a.configWatcher != nil {
+		a.configWatcher.Stop()
+		a.Logger.Info().Msg("app: Config watcher stopped")
+	}
 
 	done := make(chan struct{})
 	go func() {

@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react"
-import { useAppStore } from "@/lib/store"
 
 interface UsePlayerShortcutsProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
@@ -14,9 +13,7 @@ interface UsePlayerShortcutsProps {
     onClose: () => void
     skipOpening: () => void
     skipTime: (seconds: number) => void
-    takeScreenshot: () => void
     toggleMute: () => void
-    togglePip: () => void
     togglePlay: () => void
     toggleFullscreen: () => void
     setVolume: (v: number) => void
@@ -27,15 +24,11 @@ interface UsePlayerShortcutsProps {
     skipToPrevChapter?: () => void
     onToggleSubtitle?: () => void
     onToggleEpisodesSidebar?: () => void
+    onToggleQueueSidebar?: () => void
     duration?: number
-}
-
-function setVideoVolume(video: HTMLVideoElement, vol: number) {
-    video.volume = vol
-}
-
-function setVideoMuted(video: HTMLVideoElement, muted: boolean) {
-    video.muted = muted
+    handleVolume: (e: React.ChangeEvent<HTMLInputElement> | number) => void
+    onToggleShortcuts?: () => void
+    onEscape?: () => void
 }
 
 export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
@@ -49,7 +42,6 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
         const handleKeyDown = (e: KeyboardEvent) => {
             const {
                 videoRef,
-                isMuted,
                 isFullscreen,
                 skipMode,
                 showNextEpisode,
@@ -58,23 +50,26 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
                 onClose,
                 skipOpening,
                 skipTime,
-                takeScreenshot,
                 toggleMute,
-                togglePip,
                 togglePlay,
                 toggleFullscreen,
-                setVolume,
-                setIsMuted,
                 setIsSettingsOpen,
                 setShowStats,
                 skipToNextChapter,
                 skipToPrevChapter,
                 onToggleSubtitle,
                 onToggleEpisodesSidebar,
+                onToggleQueueSidebar,
+                onEscape,
                 duration,
+                handleVolume,
             } = refs.current
             const activeEl = document.activeElement as HTMLElement | null
-            const isInteractiveElement = activeEl && (
+            // Un range (barra de progreso, volumen) solo necesita las flechas,
+            // Inicio/Fin y RePág/AvPág; el resto de los atajos debe seguir andando.
+            const isRangeInput = activeEl?.tagName === "INPUT" && (activeEl as HTMLInputElement).type === "range"
+            const rangeOwnsKey = isRangeInput && ["arrowleft", "arrowright", "arrowup", "arrowdown", "home", "end", "pageup", "pagedown"].includes(e.key.toLowerCase())
+            const isInteractiveElement = activeEl && !(isRangeInput && !rangeOwnsKey) && (
                 activeEl.tagName === "INPUT" ||
                 activeEl.tagName === "TEXTAREA" ||
                 activeEl.tagName === "SELECT" ||
@@ -120,6 +115,12 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
                         onToggleEpisodesSidebar()
                     }
                     break
+                case "q":
+                    if (onToggleQueueSidebar) {
+                        e.preventDefault()
+                        onToggleQueueSidebar()
+                    }
+                    break
                 case "c":
                     if (onToggleSubtitle) {
                         e.preventDefault()
@@ -161,8 +162,15 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
                     e.preventDefault()
                     togglePlay()
                     break
-                case "arrowleft":
                 case "j":
+                    e.preventDefault()
+                    skipTime(-10)
+                    break
+                case "l":
+                    e.preventDefault()
+                    skipTime(10)
+                    break
+                case "arrowleft":
                     e.preventDefault()
                     if (e.shiftKey) {
                         skipTime(-10)
@@ -171,7 +179,6 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
                     }
                     break
                 case "arrowright":
-                case "l":
                     e.preventDefault()
                     if (e.shiftKey) {
                         skipOpening()
@@ -181,26 +188,14 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
                     break
                 case "arrowup":
                     e.preventDefault()
-                    const videoUp = videoRef.current
-                    if (videoUp) {
-                        const newVol = Math.min(videoUp.volume + 0.1, 1)
-                        setVideoVolume(videoUp, newVol)
-                        setVolume(newVol)
-                        setIsMuted(false)
-                        setVideoMuted(videoUp, false)
-                        useAppStore.getState().setPlayerVolume(newVol)
+                    if (videoRef.current) {
+                        handleVolume(Math.min(videoRef.current.volume + 0.1, 1))
                     }
                     break
                 case "arrowdown":
                     e.preventDefault()
-                    const videoDown = videoRef.current
-                    if (videoDown) {
-                        const newVol = Math.max(videoDown.volume - 0.1, 0)
-                        setVideoVolume(videoDown, newVol)
-                        setVolume(newVol)
-                        setIsMuted(newVol === 0)
-                        setVideoMuted(videoDown, newVol === 0)
-                        useAppStore.getState().setPlayerVolume(newVol)
+                    if (videoRef.current) {
+                        handleVolume(Math.max(videoRef.current.volume - 0.1, 0))
                     }
                     break
                 case "m":
@@ -229,23 +224,26 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
                     e.preventDefault()
                     setIsSettingsOpen((prev) => !prev)
                     break
-                case "i":
-                    e.preventDefault()
-                    togglePip()
-                    break
-                case "g":
-                    e.preventDefault()
-                    takeScreenshot()
-                    break
                 case "v":
                     e.preventDefault()
                     setShowStats((prev) => !prev)
                     break
+                case "?":
+                    e.preventDefault()
+                    refs.current.onToggleShortcuts?.()
+                    break
+                case "/":
+                    if (e.shiftKey) {
+                        e.preventDefault()
+                        refs.current.onToggleShortcuts?.()
+                    }
+                    break
                 case "escape":
                 case "browserback":
-                case "backspace":
                     e.preventDefault()
-                    if (isFullscreen) {
+                    if (onEscape) {
+                        onEscape()
+                    } else if (isFullscreen) {
                         toggleFullscreen()
                     } else {
                         onClose()

@@ -31,57 +31,64 @@ export const selectIsHeavyEffectsAllowed = (state: PerformanceState): boolean =>
     return tier === "high" || tier === "balanced"
 }
 
-const isDev = process.env.NODE_ENV !== "production"
-
-const createPerformanceStore = (set: any, get: any) => ({
-    performanceProfile: "auto" as PerformanceProfile,
-    autoGovernorEnabled: true,
-    autoThrottleActive: false,
-    hardwareSpecs: null as HardwareSpecs | null,
-    isDetecting: false,
-
-    detectHardware: async (forceRefresh = false) => {
-        const currentSpecs = get().hardwareSpecs
-        if (currentSpecs && !forceRefresh) {
-            return currentSpecs
-        }
-        set({ isDetecting: true })
-        try {
-            const specs = await detectHardwareSpecs(forceRefresh)
-            set({ hardwareSpecs: specs, isDetecting: false })
-            return specs
-        } catch (err) {
-            set({ isDetecting: false })
-            throw err
-        }
-    },
-
-    setPerformanceProfile: (performanceProfile: PerformanceProfile) => {
-        set({ performanceProfile })
-    },
-
-    setAutoGovernorEnabled: (autoGovernorEnabled: boolean) => {
-        set({ autoGovernorEnabled })
-        if (!autoGovernorEnabled) {
-            set({ autoThrottleActive: false })
-        }
-    },
-
-    setAutoThrottleActive: (autoThrottleActive: boolean) => {
-        set({ autoThrottleActive })
-    },
-
-    getEffectiveTier: (): HardwareTier => {
-        return selectEffectiveTier(get())
-    },
-})
-
 export const usePerformanceStore = create<PerformanceState>()(
     subscribeWithSelector(
         persist(
-            isDev ? devtools(createPerformanceStore) : createPerformanceStore,
+            devtools(
+                (set, get) => ({
+                    performanceProfile: "auto" as PerformanceProfile,
+                    autoGovernorEnabled: true,
+                    autoThrottleActive: false,
+                    hardwareSpecs: null as HardwareSpecs | null,
+                    isDetecting: false,
+
+                    detectHardware: async (forceRefresh = false) => {
+                        const currentSpecs = get().hardwareSpecs
+                        if (currentSpecs && !forceRefresh) {
+                            return currentSpecs
+                        }
+                        set({ isDetecting: true })
+                        try {
+                            const specs = await detectHardwareSpecs(forceRefresh)
+                            set({ hardwareSpecs: specs, isDetecting: false })
+                            return specs
+                        } catch (err) {
+                            set({ isDetecting: false })
+                            throw err
+                        }
+                    },
+
+                    setPerformanceProfile: (performanceProfile: PerformanceProfile) => {
+                        set({ performanceProfile })
+                    },
+
+                    setAutoGovernorEnabled: (autoGovernorEnabled: boolean) => {
+                        set({ autoGovernorEnabled })
+                        if (!autoGovernorEnabled) {
+                            set({ autoThrottleActive: false })
+                        }
+                    },
+
+                    setAutoThrottleActive: (autoThrottleActive: boolean) => {
+                        set({ autoThrottleActive })
+                    },
+
+                    getEffectiveTier: (): HardwareTier => {
+                        return selectEffectiveTier(get())
+                    },
+                })
+            ),
             {
                 name: "kamehouse-performance-settings",
+                version: 1,
+                migrate: (persisted, version) => {
+                    const p = (persisted ?? {}) as Partial<PerformanceState>
+                    if (version < 1) {
+                        // v0 persistía hardwareSpecs pesado/obsoleto: descartar y re-detectar
+                        return { ...p, hardwareSpecs: null } as PerformanceState
+                    }
+                    return p as PerformanceState
+                },
                 partialize: (state) => ({
                     hardwareSpecs: state.hardwareSpecs,
                     performanceProfile: state.performanceProfile,

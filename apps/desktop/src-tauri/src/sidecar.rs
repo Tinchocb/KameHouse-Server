@@ -257,6 +257,7 @@ impl SidecarManager {
         let binary_path = self.get_binary_path(app_handle)
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
         info!("[Sidecar] Using binary: {:?}", binary_path);
+        window_manager.set_splash_status(app_handle, "Iniciando servidor...");
 
         // In dev mode, wait for the server binary to be built if it doesn't exist yet
         if self.is_dev && !binary_path.exists() {

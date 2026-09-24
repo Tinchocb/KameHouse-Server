@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { AnimatePresence, m } from "framer-motion"
 import React, { useEffect, useState } from "react"
 import { IconUiRefresh, IconNavigationSettings } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
@@ -91,70 +92,83 @@ export function LoadingOverlayWithLogo({
     const showFailure = timedOut || (isError && timedOut)
 
     return (
-        <div
-            className={cn(
-                "UI-LoadingOverlay__overlay fixed inset-0 z-50 bg-[var(--bg-primary)] flex flex-col justify-center items-center overflow-hidden select-none",
-                className
-            )}
-        >
-            {/* Título & Branding */}
-            <div className="flex flex-col items-center gap-7 z-[1] text-center">
-                <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-cinema-md uppercase leading-none text-white drop-shadow-[0_0_28px_rgba(245,158,11,0.25)] pl-[0.3em]">
-                    {title ?? "KAMEHOUSE"}
-                </h1>
-
-                {/* 3 Pelotas de Dragon Ball cargando */}
-                {!showFailure && (
-                    <div className="flex flex-col items-center gap-3.5 animate-in fade-in duration-300">
-                        <div className="flex items-center gap-3 h-8">
-                            <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.32s]" />
-                            <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.16s]" />
-                            <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce" />
-                        </div>
-                        <p className="text-caption font-mono tracking-ultra text-on-surface-variant uppercase transition-all duration-300">
-                            {statusMessage}
-                        </p>
-                    </div>
+        <AnimatePresence mode="sync" initial={false}>
+            <m.div
+                key="loading-overlay"
+                initial={false}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                className={cn(
+                    "UI-LoadingOverlay__overlay fixed inset-0 z-50 bg-bg-primary flex flex-col justify-center items-center overflow-hidden select-none",
+                    className
                 )}
-            </div>
+            >
+                {/* Título & Branding */}
+                <div className="flex flex-col items-center gap-7 z-[1] text-center">
+                    <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-cinema-md uppercase leading-none text-white drop-shadow-[0_0_28px_rgba(245,158,11,0.25)] pl-[0.3em]">
+                        {title ?? "KAMEHOUSE"}
+                    </h1>
 
-            {/* Estado de error / Desconexión solo tras timeout real */}
-            {showFailure ? (
-                <div className="flex flex-col items-center gap-3 mt-6 z-[1] animate-in fade-in zoom-in-95 duration-300 max-w-sm px-6 py-5 rounded-2xl bg-surface-container-high/80 border border-outline-variant/40 backdrop-blur-overlay-md shadow-2xl shadow-black/80 text-center mx-4">
-                    <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-brand-destructive/10 border border-brand-destructive/20">
-                        <span className="w-2 h-2 rounded-full bg-brand-destructive animate-pulse" />
-                        <span className="text-caption font-medium uppercase tracking-wider text-brand-destructive font-mono">
-                            Error de conexión
-                        </span>
-                    </div>
-                    <p className="text-on-surface-variant text-xs font-normal leading-relaxed">
-                        El servidor no responde. Comprueba que el backend de KameHouse esté en ejecución.
-                    </p>
-                    <div className="flex items-center gap-3 mt-2 w-full">
-                        <Button
-                            onClick={() => {
-                                if (refetch) refetch()
-                                else window.location.reload()
-                            }}
-                            intent="primary-glass"
-                            size="sm"
-                            className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold hover:bg-white/15"
-                            leftIcon={<IconUiRefresh className="w-3.5 h-3.5" />}
-                        >
-                            Reintentar
-                        </Button>
-                        <Button
-                            onClick={() => { window.location.href = "/settings" }}
-                            intent="gray-glass"
-                            size="sm"
-                            className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold"
-                            leftIcon={<IconNavigationSettings className="w-3.5 h-3.5" />}
-                        >
-                            Ajustes
-                        </Button>
-                    </div>
+                    {/* 3 Pelotas de Dragon Ball cargando */}
+                    {!showFailure && (
+                        <div className="flex flex-col items-center gap-3.5 animate-in fade-in duration-300">
+                            <div className="flex items-center gap-3 h-8">
+                                <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.32s]" />
+                                <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.16s]" />
+                                <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce" />
+                            </div>
+                            <p className="text-caption font-mono tracking-ultra text-on-surface-variant uppercase transition-all duration-300">
+                                {statusMessage}
+                            </p>
+                        </div>
+                    )}
                 </div>
-            ) : null}
-        </div>
+
+                {/* Estado de error / Desconexión solo tras timeout real */}
+                {showFailure ? (
+                    <m.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                        className="flex flex-col items-center gap-3 mt-6 z-[1] max-w-sm px-6 py-5 rounded-2xl bg-surface-container-high/80 border border-outline-variant/40 backdrop-blur-overlay-md shadow-2xl shadow-black/80 text-center mx-4"
+                    >
+                        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-brand-destructive/10 border border-brand-destructive/20">
+                            <span className="w-2 h-2 rounded-full bg-brand-destructive animate-pulse" />
+                            <span className="text-caption font-medium uppercase tracking-wider text-brand-destructive font-mono">
+                                Error de conexión
+                            </span>
+                        </div>
+                        <p className="text-on-surface-variant text-xs font-normal leading-relaxed">
+                            El servidor no responde. Comprueba que el backend de KameHouse esté en ejecución.
+                        </p>
+                        <div className="flex items-center gap-3 mt-2 w-full">
+                            <Button
+                                onClick={() => {
+                                    if (refetch) refetch()
+                                    else window.location.reload()
+                                }}
+                                intent="primary-glass"
+                                size="sm"
+                                className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold hover:bg-white/15"
+                                leftIcon={<IconUiRefresh className="w-3.5 h-3.5" />}
+                            >
+                                Reintentar
+                            </Button>
+                            <Button
+                                onClick={() => { window.location.href = "/settings" }}
+                                intent="gray-glass"
+                                size="sm"
+                                className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold"
+                                leftIcon={<IconNavigationSettings className="w-3.5 h-3.5" />}
+                            >
+                                Ajustes
+                            </Button>
+                        </div>
+                    </m.div>
+                ) : null}
+            </m.div>
+        </AnimatePresence>
     )
 }

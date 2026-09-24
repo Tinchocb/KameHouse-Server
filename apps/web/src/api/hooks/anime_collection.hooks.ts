@@ -18,6 +18,7 @@ export function useGetLibraryCollection({ enabled }: { enabled?: boolean } = { e
         enabled: enabled,
         refetchOnWindowFocus: false,
         staleTime: 5 * 60 * 1000,
+        placeholderData: (previousData) => previousData,
     })
 }
 

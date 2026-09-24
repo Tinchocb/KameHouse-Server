@@ -1,5 +1,6 @@
 import React from "react"
 import { IconStatusMonitorPlay, IconMediaStop } from "@/components/ui/icons";
+import { PLAYER_PRIMARY_BTN } from "./player-theme"
 
 interface MpvOverlayProps {
     title?: string
@@ -14,23 +15,23 @@ interface MpvOverlayProps {
  */
 export function MpvOverlay({ title, episodeLabel, onStop }: MpvOverlayProps) {
     return (
-        <div className="fixed inset-0 z-player-overlay bg-black/80 backdrop-blur-overlay-lg flex items-center justify-center">
-            <div className="bg-surface-container-high/80 backdrop-blur-overlay-xl border border-outline-variant/30 rounded-container p-8 max-w-md w-full mx-6 flex flex-col items-center gap-6 text-center">
-                <IconStatusMonitorPlay className="w-12 h-12 text-brand-accent" />
+        <div className="fixed inset-0 z-player-overlay bg-black/90 flex items-center justify-center">
+            <div className="max-w-md w-full mx-6 flex flex-col items-center gap-5 text-center">
+                <IconStatusMonitorPlay className="w-10 h-10 text-brand-accent" />
                 <div className="flex flex-col gap-1">
-                    <span className="text-on-surface-variant text-label-sm font-black uppercase tracking-widest font-mono">
+                    <span className="text-2xs font-semibold uppercase tracking-widest text-brand-accent">
                         Reproduciendo en mpv
                     </span>
-                    <h2 className="text-on-surface text-h3 font-bold tracking-tight truncate max-w-full">
+                    <h2 className="font-display text-white text-2xl font-medium tracking-tight truncate max-w-full">
                         {episodeLabel || title || "Reproducción externa"}
                     </h2>
-                    <p className="text-on-surface-variant text-body-md">
+                    <p className="text-on-surface-variant text-sm">
                         El progreso se sigue guardando automáticamente.
                     </p>
                 </div>
                 <button
                     onClick={onStop}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-button border border-white/10 bg-white/5 hover:bg-surface-variant text-on-surface font-black uppercase tracking-widest text-label-sm transition-all duration-base active:scale-[0.95] focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+                    className={PLAYER_PRIMARY_BTN}
                 >
                     <IconMediaStop className="w-4 h-4" />
                     Detener

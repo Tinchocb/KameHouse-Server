@@ -40,6 +40,9 @@
   --on-secondary-rgb: 255, 255, 255;
   /* for Tailwind opacity modifiers */
   --md-sys-color-surface-container: color-mix(in srgb, var(--brand-accent-hex) 5%, rgba(25, 25, 30, 0.45));
+  /* Opaco a propósito: es la base de los paneles de vidrio (nav, buscadores,
+     cápsulas); la opacidad la define cada uso con bg-surface-container-lowest/NN. */
+  --md-sys-color-surface-container-lowest: color-mix(in srgb, var(--brand-accent-hex) 2%, var(--bg-primary));
   --md-sys-color-surface-container-low: color-mix(in srgb, var(--brand-accent-hex) 3%, rgba(15, 15, 20, 0.35));
   --md-sys-color-surface-container-high: color-mix(in srgb, var(--brand-accent-hex) 8%, rgba(40, 40, 45, 0.6));
   --md-sys-color-surface-container-highest: color-mix(in srgb, var(--brand-accent-hex) 12%, rgba(50, 50, 55, 0.7));
@@ -238,6 +241,7 @@
   --brand-primary: var(--brand-accent);
   --brand-destructive: 0 84% 60%;
   --brand-success: 142 72% 52%;
+  --brand-warning: 38 92% 50%;  /* usado por brand-warning y .badge-warning; antes no existía */
   --brand-magic: 265 75% 52%;
 
   --glow-primary: var(--brand-glow);
@@ -793,43 +797,7 @@
   --sidebar-accent-gradient: linear-gradient(180deg, color-mix(in srgb, #7C52D6 40%, transparent) 0%, color-mix(in srgb, #C94A8A 30%, transparent) 40%, transparent 60%, color-mix(in srgb, #269389 30%, transparent) 100%);
 }
 
-/* ─── Utilidades de color por Era (para uso directo en componentes) ─────── */
-.era-db {
-  --era-color: var(--era-db-hex);
-  --era-glow: var(--glow-db);
-}
-
-.era-dbz {
-  --era-color: var(--era-dbz-hex);
-  --era-glow: var(--glow-dbz);
-}
-
-.era-dbgt {
-  --era-color: var(--era-dbgt-hex);
-  --era-glow: var(--glow-dbgt);
-}
-
-.era-dbkai {
-  --era-color: var(--era-dbkai-hex);
-  --era-glow: var(--glow-dbkai);
-}
-
-.era-dbs {
-  --era-color: var(--era-dbs-hex);
-  --era-glow: var(--glow-dbs);
-}
-
-.era-daima {
-  --era-color: var(--era-daima-hex);
-  --era-glow: var(--glow-daima);
-}
-
-/* ─── Estado activo de Liquid Glass ─── */
-.glass-active {
-  border-top-color: var(--glass-rim-accent);
-  box-shadow: var(--shadow-glass-liquid),
-    inset 0 1px 0 color-mix(in srgb, var(--brand-accent-hex) 20%, transparent);
-}
+/* ─── Estado activo de Liquid Glass (clase sin uso retirada; vars intactas) ─── */
 
 /* ════════════════════════════════════════════════════════════════════════════
    Flat Mode — superficies sólidas, sin glass ni blur

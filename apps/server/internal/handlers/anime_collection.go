@@ -52,6 +52,7 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+	lfs = h.visibleLocalFiles(lfs)
 
 	libraryCollection, err := anime.NewLibraryCollection(c.Request().Context(), &anime.NewLibraryCollectionOptions{
 		Database:            h.App.Database,
@@ -68,6 +69,26 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 	// Hydrate total library size
 	if libraryCollection != nil && libraryCollection.Stats != nil {
 		libraryCollection.Stats.TotalSize = util.Bytes(h.App.TotalLibrarySize)
+	}
+
+	// Defensa: nunca serializar entries nulos (Go nil -> JSON null revienta
+	// `entry.media` en el cliente con "Cannot read properties of null").
+	if libraryCollection != nil {
+		for _, list := range libraryCollection.Lists {
+			if list == nil {
+				continue
+			}
+			filtered := list.Entries[:0]
+			for _, e := range list.Entries {
+				if e != nil {
+					filtered = append(filtered, e)
+				}
+			}
+			for i := len(filtered); i < len(list.Entries); i++ {
+				list.Entries[i] = nil
+			}
+			list.Entries = filtered
+		}
 	}
 
 	libraryCollectionCache.SetT("main", libraryCollection, 5*time.Minute)

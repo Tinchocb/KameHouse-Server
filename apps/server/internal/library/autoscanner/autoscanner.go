@@ -215,6 +215,11 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		ffprobePath = mSettings.FfprobePath
 	}
 
+	if as.settings.UnifiedScan {
+		as.logger.Info().Msg("autoscanner: Unified scan active, overriding targets to full library walk")
+		targets = nil
+	}
+
 	libraryPaths := as.settings.GetAllPaths()
 	var libraryPath string
 	var additionalPaths []string
@@ -245,6 +250,7 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		TargetPaths:         targets,
 		FFprobePath:         ffprobePath,
 		BackgroundQueue:     as.backgroundQueue,
+		UnifiedScan:         as.settings.UnifiedScan,
 	})
 
 	allLfs, err := scn.Scan(as.shutdownCtx)
@@ -281,6 +287,12 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		notifier.Global().Notify(notifier.TypeScanner, "Escaneo completado", fmt.Sprintf("Biblioteca actualizada (%d archivos).", len(allLfs)))
 	}
 
+	// Avisar por WS para que el frontend invalide la biblioteca sin depender
+	// solo del watcher o de la notificación.
+	if as.wsEventManager != nil {
+		as.wsEventManager.SendEvent("auto-scan-completed", nil)
+	}
+
 	// Refresh the collection
 	if as.onRefreshCollection != nil {
 		as.onRefreshCollection()
@@ -304,6 +316,12 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 
 func (as *AutoScanner) SetEnabled(enabled bool) {
 	as.enabled = enabled
+}
+
+func (as *AutoScanner) SetSettings(settings models.LibrarySettings) {
+	as.mu.Lock()
+	defer as.mu.Unlock()
+	as.settings = settings
 }
 
 func (as *AutoScanner) GetScannedCh() chan struct{} {

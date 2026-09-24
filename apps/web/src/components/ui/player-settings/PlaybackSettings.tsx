@@ -14,6 +14,8 @@ interface PlaybackSettingsProps {
     onAutoSkipIntroChange: (enabled: boolean) => void
     autoSkipOutro: boolean
     onAutoSkipOutroChange: (enabled: boolean) => void
+    autoSkipFiller?: boolean
+    onAutoSkipFillerChange?: (enabled: boolean) => void
     skipStepSeconds: number
     onSkipStepSecondsChange: (seconds: number) => void
     showHeatmap: boolean
@@ -89,12 +91,12 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
     }
 
     return (
-        <div className="px-6 py-2.5 flex items-center justify-between text-left group">
+        <div className="px-3 py-2 flex items-center justify-between text-left group">
             <div className="flex flex-col">
-                <span className="text-label-sm font-black uppercase tracking-widest text-white/90">
+                <span className="text-xs font-semibold tracking-wide text-white">
                     Detectar intros y outros
                 </span>
-                <span className="text-label-sm text-zinc-500 font-medium lowercase first-letter:uppercase mt-0.5">
+                <span className="text-2xs text-on-surface-variant mt-0.5">
                     {message || "Detección inteligente con AnimeThemes"}
                 </span>
             </div>
@@ -102,11 +104,11 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
                 onClick={handleScan}
                 disabled={status === "running"}
                 className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-base",
+                    "h-8 px-3.5 rounded-full text-xs font-semibold tracking-wide transition-colors duration-200",
                     status === "running" && "bg-brand-accent/20 text-brand-accent animate-pulse",
                     status === "done" && "bg-emerald-500/20 text-emerald-400",
                     status === "error" && "bg-rose-500/20 text-rose-400",
-                    status === "idle" && "bg-white/10 text-white hover:bg-white/20 active:scale-95"
+                    status === "idle" && "bg-white/95 text-black hover:bg-white active:scale-95"
                 )}
             >
                 {status === "running" ? `${percent}%` : status === "done" ? "¡Listo!" : status === "error" ? "Error" : "Escanear"}
@@ -146,18 +148,15 @@ function ToggleRow({
             aria-checked={enabled}
             aria-label={label}
             className={cn(
-                "flex items-center justify-between w-full px-6 py-3 transition-all duration-base ease-out group text-left relative overflow-hidden outline-none focus-visible:bg-white/5",
-                !disabled && "active:scale-[0.98]",
-                enabled ? "text-white" : "text-zinc-500 hover:text-zinc-300",
+                "flex items-center justify-between w-full min-h-10 py-2 px-3 rounded-full transition-colors duration-200 group text-left relative overflow-hidden outline-none hover:bg-white/10 focus-visible:bg-white/10",
+                enabled ? "text-white" : "text-on-surface-variant",
                 disabled && "opacity-60 cursor-default hover:text-white"
             )}
         >
-            {/* Hover visual accent indicator on the left edge */}
-            {!disabled && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-0 bg-brand-accent group-hover:h-1/2 transition-all duration-base ease-out rounded-r-md" />}
-
+            
             <div className="flex flex-col">
-                <span className={cn("text-label-sm font-black uppercase tracking-widest text-left transition-transform duration-base ease-out", !disabled && "group-hover:translate-x-1.5")}>{label}</span>
-                {subtext && <span className="text-label-sm text-zinc-500 font-medium lowercase first-letter:uppercase mt-0.5">{subtext}</span>}
+                <span className="text-xs font-semibold tracking-wide text-white text-left">{label}</span>
+                {subtext && <span className="text-2xs text-on-surface-variant mt-0.5">{subtext}</span>}
             </div>
             
             <SpringSwitch
@@ -181,6 +180,8 @@ export function PlaybackSettings({
     onAutoSkipIntroChange,
     autoSkipOutro,
     onAutoSkipOutroChange,
+    autoSkipFiller = false,
+    onAutoSkipFillerChange,
     skipStepSeconds,
     onSkipStepSecondsChange,
     showHeatmap,
@@ -206,8 +207,8 @@ export function PlaybackSettings({
             {showSeparator && <div className="mx-6 h-px bg-white/10 mb-4" />}
 
             {/* Velocidad de reproducción */}
-            <div className="px-6 py-3">
-                <div className="text-label-sm font-black text-zinc-500 uppercase tracking-widest mb-3">Velocidad</div>
+            <div className="px-3 py-2">
+                <div className="text-2xs font-semibold uppercase tracking-widest text-on-surface-variant mb-3">Velocidad</div>
                 <div className="flex flex-wrap gap-1.5">
                     {PLAYBACK_RATES.map((rate) => {
                         const isActive = Math.abs(playbackRate - rate) < 0.001
@@ -216,10 +217,10 @@ export function PlaybackSettings({
                                 key={rate}
                                 onClick={() => onPlaybackRateChange(rate)}
                                 className={cn(
-                                    "px-2.5 py-1.5 rounded-full text-label-sm font-black tabular-nums tracking-widest transition-all duration-base active:scale-95",
+                                    "px-2.5 py-1.5 rounded-full text-xs font-medium tabular-nums transition-all duration-base active:scale-95",
                                     "focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
                                     isActive
-                                        ? "bg-brand-accent text-on-primary shadow-[0_0_12px_hsl(var(--brand-accent)/0.45)]"
+                                        ? "bg-white/95 text-black"
                                         : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
                                 )}
                             >
@@ -251,17 +252,26 @@ export function PlaybackSettings({
             )}
             {!isMovie && <ToggleRow label="Omitir Intro (automático)" enabled={marathonMode ? true : autoSkipIntro} onChange={onAutoSkipIntroChange} disabled={marathonMode} subtext={marathonMode ? "(controlado por Maratón)" : undefined} />}
             {!isMovie && <ToggleRow label="Saltar Final (automático)" enabled={marathonMode ? true : autoSkipOutro} onChange={onAutoSkipOutroChange} disabled={marathonMode} subtext={marathonMode ? "(controlado por Maratón)" : undefined} />}
+            {!isMovie && onAutoSkipFillerChange && (
+                <ToggleRow
+                    label="Saltar Relleno (automático)"
+                    enabled={marathonMode ? true : autoSkipFiller}
+                    onChange={onAutoSkipFillerChange}
+                    disabled={marathonMode}
+                    subtext={marathonMode ? "(controlado por Maratón)" : "Avanza al siguiente episodio canon"}
+                />
+            )}
             {!isMovie && typeof mediaId === "number" && mediaId > 0 && <AutoDetectRow mediaId={mediaId} />}
 
             {/* Skip step seconds control */}
             {!isMovie && (
-                <div className="px-6 py-3 border-t border-white/5 my-1">
-                    <div className="text-label-sm font-black text-zinc-500 uppercase tracking-widest mb-3">Tiempo de salto manual (S)</div>
+                <div className="px-3 py-2 border-t border-white/10 my-1">
+                    <div className="text-2xs font-semibold uppercase tracking-widest text-on-surface-variant mb-3">Tiempo de salto manual (S)</div>
                     <div className="flex items-center justify-between gap-3">
                         <button
                             onClick={() => onSkipStepSecondsChange(Math.max(5, skipStepSeconds - 5))}
                             disabled={skipStepSeconds <= 5}
-                            className="flex items-center justify-center w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 transition-all"
+                            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
                         >
                             <IconUiMinus className="w-3 h-3" />
                         </button>
@@ -283,7 +293,7 @@ export function PlaybackSettings({
                         <button
                             onClick={() => onSkipStepSecondsChange(Math.min(180, skipStepSeconds + 5))}
                             disabled={skipStepSeconds >= 180}
-                            className="flex items-center justify-center w-7 h-7 rounded bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 transition-all"
+                            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
                         >
                             <IconUiPlus className="w-3 h-3" />
                         </button>

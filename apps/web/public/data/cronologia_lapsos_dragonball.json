@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "KameHouse Dragon Ball Story Spans & Catch-Up Chronology",
   "version": "1.0.0",
-  "updatedAt": "2026-09-05T12:40:00Z",
-  "totalSpans": 33,
+  "updatedAt": "2026-09-18T12:40:00Z",
+  "totalSpans": 35,
   "seriesSummary": [
     {
       "id": "classic",
@@ -26,7 +26,7 @@
       "tmdbId": 62715,
       "title": "Dragon Ball Super",
       "totalEpisodes": 131,
-      "spansCount": 6,
+      "spansCount": 8,
       "canon": true
     },
     {
@@ -1954,12 +1954,80 @@
       "recommendedStartEpisode": 28
     },
     {
-      "id": "dbs-goku-black",
+      "id": "dbs-copy-vegeta",
       "seriesId": "super",
       "seriesTitle": "Dragon Ball Super",
       "tmdbId": 62715,
       "order": 25,
       "seriesOrder": 4,
+      "sagaId": "copy-vegeta",
+      "sagaName": "Saga del Agua Sobrenatural (Vegeta Copia)",
+      "title": "La Amenaza de Commeson: El Clon de Vegeta y el Tiempo Límite",
+      "startEpisode": 42,
+      "endEpisode": 46,
+      "inUniverseYears": "Año 779",
+      "dominantVibe": "Aventura Ligera / Carrera Contra el Tiempo",
+      "previouslyOn": "Tras el torneo contra el Universo 6 y la celebración con Monaka, Goten y Trunks terminan accidentalmente en el Planeta Pot-au-feu.",
+      "detailedPlot": "Goten y Trunks quedan atrapados en la nave de Monaka y viajan al planeta Pot-au-feu, donde descubren el Agua Sobrenatural ('Commeson'). Un grupo de invasores libera el agua, que absorbe los poderes y la personalidad de Vegeta, creando una copia perfecta ('Vegeta Copia'). El Vegeta original pierde su fuerza y su cuerpo comienza a desvanecerse gradualmente. Goku llega al rescate y entabla un combate parejo contra la copia de Vegeta en Super Saiyajin Blue. Antes de que Vegeta desaparezca por completo, Trunks y Monaka logran pisar el núcleo de Commeson, debilitando a la copia para que Goku la destruya con un Kamehameha.",
+      "worldStateAtStart": {
+        "threatLevel": "Amenaza Local / Pérdida del Príncipe Saiyajin",
+        "activeVillains": [
+          "Vegeta Copia",
+          "Commeson"
+        ],
+        "dragonBallsStatus": "Inactivas temporalmente.",
+        "characterStatus": {
+          "goku": "Entrena en el planeta de Kaio-sama antes de acudir al rescate.",
+          "vegeta": "Cuerpo transparentándose por la pérdida de energía vital.",
+          "goten": "Acompaña a Trunks en Pot-au-feu.",
+          "trunks": "Protege a su padre debilitado.",
+          "allies": "Monaka, Jaco."
+        }
+      },
+      "quickCatchUpKeys": [
+        "El Agua Sobrenatural absorbe el poder y la identidad de Vegeta.",
+        "Goku combate contra Vegeta Copia en Super Saiyajin Blue.",
+        "Monaka destruye accidentalmente el núcleo del monstruo salvando a Vegeta."
+      ],
+      "milestones": [
+        {
+          "episode": 42,
+          "title": "La Celebración y Monaka",
+          "description": "Fiesta de victoria tras el Torneo U6; Monaka es celebrado como el héroe secreto."
+        },
+        {
+          "episode": 44,
+          "title": "El Secreto del Planeta Pot-au-feu",
+          "description": "Commeson es liberado y absorbe las habilidades de Vegeta."
+        },
+        {
+          "episode": 45,
+          "title": "Goku vs. Vegeta Copia",
+          "description": "Duelo entre Goku SSJ Blue y el clon perfecto de Vegeta."
+        },
+        {
+          "episode": 46,
+          "title": "La Destrucción de Commeson",
+          "description": "Vegeta recupera su existencia tras destruir el núcleo del agua milagrosa."
+        }
+      ],
+      "hasFiller": true,
+      "fillerEpisodes": [
+        42,
+        43,
+        44,
+        45,
+        46
+      ],
+      "recommendedStartEpisode": 44
+    },
+    {
+      "id": "dbs-goku-black",
+      "seriesId": "super",
+      "seriesTitle": "Dragon Ball Super",
+      "tmdbId": 62715,
+      "order": 26,
+      "seriesOrder": 5,
       "sagaId": "trunks-futuro",
       "sagaName": "Saga de Trunks del Futuro",
       "title": "La Pesadilla en el Futuro: Goku Black, Zamasu y el Juicio de los Mortales",
@@ -2052,21 +2120,81 @@
       "recommendedStartEpisode": 47
     },
     {
+      "id": "dbs-exhibicion-zen",
+      "seriesId": "super",
+      "seriesTitle": "Dragon Ball Super",
+      "tmdbId": 62715,
+      "order": 27,
+      "seriesOrder": 6,
+      "sagaId": "exhibicion-zen",
+      "sagaName": "Saga de Exhibición Zen",
+      "title": "El Torneo de Exhibición Todo y la Sentencia del Borrado Multiversal",
+      "startEpisode": 77,
+      "endEpisode": 81,
+      "inUniverseYears": "Año 780",
+      "dominantVibe": "Tensión Cósmica / Juicio de los Dioses",
+      "previouslyOn": "Goku visita a Zeno-sama recordando el torneo prometido, sin anticipar que el Gran Sacerdote anunciaría la aniquilación de los universos perdedores.",
+      "detailedPlot": "Zeno-sama del Presente y del Futuro organizan un Torneo de Exhibición previo para conocer el potencial de los mortales. El Universo 7 se mide contra el Trío del Peligro del Universo 9. Majin Buu vence a Basil con astucia y resistencia. Gohan combate a ciegas contra Lavenda recuperando gradualmente sus instintos marciales. Goku se enfrenta a Bergamo y al dios de la destrucción Toppo del Universo 11, quien advierte que la verdadera amenaza de su universo es Jiren el Gris. El Gran Sacerdote confirma que todo universo derrotado en el Torneo del Poder será borrado de inmediato.",
+      "worldStateAtStart": {
+        "threatLevel": "Borrado de la Existencia Universal",
+        "activeVillains": [
+          "Ninguno directo; sentencia judicial del Gran Sacerdote y Zeno-sama."
+        ],
+        "dragonBallsStatus": "Activas en la Tierra.",
+        "characterStatus": {
+          "goku": "Tildado de villano cósmico por los demás universos al provocar el torneo.",
+          "gohan": "Redescubre su sentido del deber como padre y guerrero.",
+          "buu": "Entusiasmado por pelear y jugar.",
+          "allies": "Beerus, Whis, Shin, Gran Sacerdote, Zeno-samas."
+        }
+      },
+      "quickCatchUpKeys": [
+        "El Torneo de Exhibición Todo enfrenta al Universo 7 contra el Universo 9.",
+        "Se confirma que los universos eliminados serán destruidos sin excepción.",
+        "Toppo del Universo 11 revela la existencia y supremacía de Jiren."
+      ],
+      "milestones": [
+        {
+          "episode": 77,
+          "title": "La Petición de Goku a Zeno-sama",
+          "description": "Inicio de los preparativos para el Torneo entre los 12 Universos."
+        },
+        {
+          "episode": 78,
+          "title": "Majin Buu vs. Basil",
+          "description": "Buu gana el primer combate de exhibición divirtiéndose con su rival."
+        },
+        {
+          "episode": 80,
+          "title": "Gohan vs. Lavenda",
+          "description": "Gohan lucha envenenado y recupera su agudeza de combate sin depender de la vista."
+        },
+        {
+          "episode": 81,
+          "title": "Goku vs. Bergamo y la Aparición de Toppo",
+          "description": "Goku derrota a Bergamo y Toppo desafía a Goku advirtiéndole sobre Jiren."
+        }
+      ],
+      "hasFiller": false,
+      "fillerEpisodes": [],
+      "recommendedStartEpisode": 77
+    },
+    {
       "id": "dbs-reclutamiento-u7",
       "seriesId": "super",
       "seriesTitle": "Dragon Ball Super",
       "tmdbId": 62715,
-      "order": 26,
-      "seriesOrder": 5,
+      "order": 28,
+      "seriesOrder": 7,
       "sagaId": "reclutamiento-u7",
       "sagaName": "Saga de la Supervivencia Universal",
-      "title": "El Decreto de Zeno-sama y el Reclutamiento del Universo 7",
-      "startEpisode": 77,
+      "title": "El Reclutamiento del Universo 7 y el Despertar del Equipo Mortal",
+      "startEpisode": 82,
       "endEpisode": 96,
       "inUniverseYears": "Año 780",
       "dominantVibe": "Tensión Previa / Reagrupación de Leyendas",
-      "previouslyOn": "Goku, aburrido de la paz, le recuerda a los dos Zeno-sama su promesa del torneo multiversal. Los Reyes de Todo acceden, pero con una condición escalofriante.",
-      "detailedPlot": "El Gran Sacerdote (Daishinkan) anuncia las reglas: será un Battle Royale de 80 luchadores de 8 universos en el Reino de la Nada; los universos derrotados serán borrados de la existencia por Zeno-sama. Tras el Torneo de Exhibición Zen contra el Universo 9, Goku debe reclutar a 10 guerreros: Vegeta, Gohan (recuperando su instinto marcial como capitán), Piccolo, Krilin, Tenshinhan, Roshi, Androide 18 y Androide 17 (ahora guardabosques con un poder descomunal). Cuando Majin Buu cae en un sueño profundo, Goku toma una decisión extrema y desesperada: reclutar a Freezer desde el infierno por 24 horas mediante Uranai Baba a cambio de prometerle revivirlo.",
+      "previouslyOn": "Tras finalizar el Torneo de Exhibición Zen, Daishinkan otorga pocas horas a los universos para reunir a sus 10 mejores representantes.",
+      "detailedPlot": "Goku y Gohan recorren la Tierra reclutando a los guerreros más poderosos y experimentados: Vegeta, Piccolo, Krilin, Tenshinhan, Roshi y los Androides 18 y 17. Ante el inesperado coma de Majin Buu, Goku viaja al Otro Mundo para contratar temporalmente al tirano Freezer desde el infierno.",
       "worldStateAtStart": {
         "threatLevel": "Borrado de la Existencia Universal",
         "activeVillains": [
@@ -2087,16 +2215,6 @@
         "Goku recluta a Freezer desde el infierno con un pacto de resurrección."
       ],
       "milestones": [
-        {
-          "episode": 77,
-          "title": "La Petición de Goku",
-          "description": "Zeno-sama anuncia el Torneo del Poder con borrado universal."
-        },
-        {
-          "episode": 78,
-          "title": "Torneo de Exhibición Zen vs U9",
-          "description": "Bergamo vs Buu; Zeno-sama confirma la regla del borrado universal."
-        },
         {
           "episode": 82,
           "title": "Gohan recupera su instinto marcial",
@@ -2125,15 +2243,15 @@
       ],
       "hasFiller": false,
       "fillerEpisodes": [],
-      "recommendedStartEpisode": 77
+      "recommendedStartEpisode": 82
     },
     {
       "id": "dbs-torneo-del-poder",
       "seriesId": "super",
       "seriesTitle": "Dragon Ball Super",
       "tmdbId": 62715,
-      "order": 27,
-      "seriesOrder": 6,
+      "order": 29,
+      "seriesOrder": 8,
       "sagaId": "torneo-poder",
       "sagaName": "Saga del Torneo del Poder",
       "title": "La Batalla Real en el Reino de la Nada y el Ultra Instinto",
@@ -2225,7 +2343,7 @@
       "seriesId": "daima",
       "seriesTitle": "Dragon Ball Daima",
       "tmdbId": 236994,
-      "order": 28,
+      "order": 30,
       "seriesOrder": 1,
       "sagaId": "daima-misterio",
       "sagaName": "Saga del Misterio del Reino Demoníaco",
@@ -2303,7 +2421,7 @@
       "seriesId": "daima",
       "seriesTitle": "Dragon Ball Daima",
       "tmdbId": 236994,
-      "order": 29,
+      "order": 31,
       "seriesOrder": 2,
       "sagaId": "daima-travesia",
       "sagaName": "Saga de la Gran Batalla Demoníaca",
@@ -2380,7 +2498,7 @@
       "seriesId": "gt",
       "seriesTitle": "Dragon Ball GT",
       "tmdbId": 12697,
-      "order": 30,
+      "order": 32,
       "seriesOrder": 1,
       "sagaId": "black-star",
       "sagaName": "Saga de las Esferas de Estrella Negra",
@@ -2458,7 +2576,7 @@
       "seriesId": "gt",
       "seriesTitle": "Dragon Ball GT",
       "tmdbId": 12697,
-      "order": 31,
+      "order": 33,
       "seriesOrder": 2,
       "sagaId": "baby",
       "sagaName": "Saga de Baby",
@@ -2545,7 +2663,7 @@
       "seriesId": "gt",
       "seriesTitle": "Dragon Ball GT",
       "tmdbId": 12697,
-      "order": 32,
+      "order": 34,
       "seriesOrder": 3,
       "sagaId": "super-17",
       "sagaName": "Saga de Super 17",
@@ -2620,7 +2738,7 @@
       "seriesId": "gt",
       "seriesTitle": "Dragon Ball GT",
       "tmdbId": 12697,
-      "order": 33,
+      "order": 35,
       "seriesOrder": 4,
       "sagaId": "shadow-dragons",
       "sagaName": "Saga de los Dragones Malignos",

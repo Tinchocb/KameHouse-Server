@@ -1,6 +1,6 @@
 'use no memo'
 import { useEffect, useRef } from "react"
-import JASSUB from "jassub"
+import type JASSUB from "jassub"
 import { SubtitleTrack } from "@/components/ui/track-types"
 import { convertToAss } from "./subtitle-convert"
 
@@ -37,7 +37,6 @@ export function usePlayerJassub({
         : null
     const trackUrl = activeTrack?.url
     const trackCodec = activeTrack?.codec
-    const fontUrlsKey = fontUrls ? fontUrls.join(",") : ""
 
     useEffect(() => {
         const video = videoRef.current
@@ -98,7 +97,20 @@ export function usePlayerJassub({
                         for (let i = 0; i < 20; i++) {
                             if (isCancelled || aborter.signal.aborted) throw new Error("cancelled")
                             const res = await fetch(trackUrl, { signal: aborter.signal })
-                            if (res.ok) return await res.text()
+                            if (res.ok) {
+                                const text = await res.text()
+                                if (text.length > 2000000) throw new Error("subtitle file too large")
+                                if (!text.trim()) throw new Error("subtitle file empty")
+                                return text
+                            }
+                            // 4xx definitivos (404 incluido): reintentar no sirve
+                            if (res.status === 429) {
+                                await new Promise((r) => setTimeout(r, 2000))
+                                continue
+                            }
+                            if (res.status >= 400 && res.status < 500) {
+                                throw new Error(`subtitle not available (HTTP ${res.status})`)
+                            }
                             await new Promise((r, rej) => {
                                 const t = setTimeout(r, Math.min(2000 * (i + 1), 6000))
                                 aborter.signal.addEventListener("abort", () => {
@@ -132,7 +144,7 @@ export function usePlayerJassub({
                 // throws "Cannot transfer control from a canvas for more than one time"
                 // and cascades into worker "reading 'apply' of undefined" errors.
                 // defaultFont already falls back to the bundled "liberation sans".
-                const jassub = new JASSUB({
+                const jassub = new (await import("jassub")).default({
                     video,
                     subContent: assContent,
                     workerUrl: "/jassub/jassub-worker.js",
@@ -173,7 +185,7 @@ export function usePlayerJassub({
                 setIsJassubActive(false)
             }
         }
-    }, [activeSubtitleIndex, trackUrl, trackCodec, subtitleSizePref, fontUrlsKey, videoRef, jassubRef, setIsJassubLoading, setIsJassubActive])
+    }, [activeSubtitleIndex, trackUrl, trackCodec, subtitleSizePref, fontUrls, videoRef, jassubRef, setIsJassubLoading, setIsJassubActive])
     // Note: JASSUB owns canvas sizing via its internal ResizeObserver. Because the
     // canvas control is transferred to the offscreen worker (useOffscreen + app-supplied
     // canvas), writing canvas.width/height on the main thread throws InvalidStateError

@@ -24,6 +24,29 @@ func TestCanonicalTimeline(t *testing.T) {
 			t.Errorf("milestone %q has 0 MediaID", m.ID)
 		}
 	}
+
+	// Locks the Super/GT lapso splits (1:1 with the 35 story spans).
+	wantIDs := []string{
+		"m_dbs_u6",
+		"m_dbs_copy_vegeta",
+		"m_dbs_black",
+		"m_dbs_exhibicion",
+		"m_dbs_reclutamiento",
+		"m_dbs_top",
+		"m_db_gt_black_star",
+		"m_db_gt_baby",
+		"m_db_gt_super17",
+		"m_db_gt_dragons",
+	}
+	byID := make(map[string]bool)
+	for _, m := range CanonicalTimeline {
+		byID[m.ID] = true
+	}
+	for _, id := range wantIDs {
+		if !byID[id] {
+			t.Errorf("expected split milestone %q in CanonicalTimeline", id)
+		}
+	}
 }
 
 func TestSearchSemanticEntities(t *testing.T) {

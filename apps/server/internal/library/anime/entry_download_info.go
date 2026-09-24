@@ -41,7 +41,7 @@ type (
 	}
 )
 
-// NewEntryDownloadInfo returns a list of episodes to download or episodes for the torrent/debrid streaming views
+// NewEntryDownloadInfo returns a list of episodes to download or episodes for download info views
 // based on the options provided.
 func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo, error) {
 

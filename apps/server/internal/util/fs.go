@@ -82,16 +82,24 @@ func IsSubdirectoryOfAny(dirs []string, child string) bool {
 }
 
 func IsSameDir(dir1, dir2 string) bool {
+	realDir1, err := filepath.EvalSymlinks(dir1)
+	if err != nil {
+		realDir1 = dir1
+	}
+	realDir2, err := filepath.EvalSymlinks(dir2)
+	if err != nil {
+		realDir2 = dir2
+	}
 	if runtime.GOOS == "windows" {
-		dir1 = strings.ToLower(dir1)
-		dir2 = strings.ToLower(dir2)
+		realDir1 = strings.ToLower(realDir1)
+		realDir2 = strings.ToLower(realDir2)
 	}
 
-	absDir1, err := filepath.Abs(dir1)
+	absDir1, err := filepath.Abs(realDir1)
 	if err != nil {
 		return false
 	}
-	absDir2, err := filepath.Abs(dir2)
+	absDir2, err := filepath.Abs(realDir2)
 	if err != nil {
 		return false
 	}

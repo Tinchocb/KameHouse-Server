@@ -1,12 +1,18 @@
 import { useLayoutEffect, useRef } from 'react'
 import useReactUseWebSocket from 'react-use-websocket'
 
-import { WebSocketMessage } from '@/lib/server/ws-events'
+import { WebSocketMessage, WSEvents } from '@/lib/server/ws-events'
+
+const KNOWN_WS_TYPES = new Set<string>(Object.values(WSEvents))
+
+function isWebSocketMessage(value: unknown): value is WebSocketMessage {
+    if (typeof value !== "object" || value === null) return false
+    const v = value as Record<string, unknown>
+    return typeof v.type === "string" && KNOWN_WS_TYPES.has(v.type) && "payload" in v
+}
 
 interface UseWebSocketReturn {
     sendJsonMessage: (message: WebSocketMessage | { type: string; payload: unknown }) => void
-    lastMessage: WebSocketEventMap['message'] | null
-    readyState: number
 }
 
 export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) => void): UseWebSocketReturn {
@@ -16,7 +22,7 @@ export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) =
         onMessageRef.current = onMessage
     }, [onMessage])
 
-    const { sendJsonMessage, lastMessage, readyState } = useReactUseWebSocket(url, {
+    const { sendJsonMessage } = useReactUseWebSocket(url, {
         share: true,
         shouldReconnect: () => true,
         retryOnError: true,
@@ -24,7 +30,8 @@ export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) =
         reconnectInterval: 3000,
         onMessage: (event) => {
             try {
-                const parsed = JSON.parse(event.data) as WebSocketMessage
+                const parsed: unknown = JSON.parse(event.data)
+                if (!isWebSocketMessage(parsed)) return
                 onMessageRef.current?.(parsed)
             } catch {
                 // Ignore parsing errors
@@ -32,5 +39,5 @@ export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) =
         },
     })
 
-    return { sendJsonMessage, lastMessage, readyState }
+    return { sendJsonMessage }
 }

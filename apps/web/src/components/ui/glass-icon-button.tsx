@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "./core/styling";
+import { AnimatedTooltip } from "./kinetics";
 
 interface GlassIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     icon: React.ReactNode;
@@ -7,6 +8,7 @@ interface GlassIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElem
     isActive?: boolean;
     activeTone?: "success" | "destructive" | "primary" | "secondary";
     className?: string;
+    tooltipSide?: "top" | "bottom";
 }
 
 export function GlassIconButton({
@@ -15,6 +17,7 @@ export function GlassIconButton({
     isActive = false,
     activeTone = "success",
     className,
+    tooltipSide = "top",
     ...props
 }: GlassIconButtonProps) {
     const toneMap = {
@@ -25,22 +28,24 @@ export function GlassIconButton({
     };
 
     return (
-        <button
-            title={title}
-            className={cn(
-                "group flex items-center justify-center p-4 rounded-xl",
-                "bg-zinc-950/60 border border-white/20 border-t-white/40 border-b-white/10",
-                "backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
-                "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25),0_8px_24px_rgba(0,0,0,0.6)]",
-                "transition-all duration-base hover:scale-[1.03] active:scale-95 min-h-[44px] cursor-pointer",
-                isActive ? toneMap[activeTone] : "text-zinc-300 hover:text-white hover:bg-zinc-900/80",
-                className
-            )}
-            {...props}
-        >
-            <div className={cn("transition-transform group-hover:-translate-y-0.5", isActive && "scale-110")}>
-                {icon}
-            </div>
-        </button>
+        <AnimatedTooltip content={title} side={tooltipSide}>
+            <button
+                aria-label={title}
+                className={cn(
+                    "group flex items-center justify-center p-3.5 sm:p-4 rounded-xl",
+                    "bg-surface/60 border border-white/20 border-t-white/40 border-b-white/10",
+                    "backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
+                    "shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_rgba(0,0,0,0.6)]",
+                    "transition-[transform,background-color,border-color,color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-95 min-h-[44px] min-w-[44px] cursor-pointer",
+                    isActive ? toneMap[activeTone] : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container/80",
+                    className
+                )}
+                {...props}
+            >
+                <div className={cn("transition-transform duration-base ease-smooth-out group-hover:-translate-y-0.5", isActive && "scale-110")}>
+                    {icon}
+                </div>
+            </button>
+        </AnimatedTooltip>
     );
 }

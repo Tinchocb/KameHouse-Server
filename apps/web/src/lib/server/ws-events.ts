@@ -18,6 +18,16 @@ export const WSEvents = {
 
     LIBRARY_SCAN: "library.scan",
     SKIP_SCAN_STATUS: "SKIP_SCAN_STATUS",
+    SCAN_ERROR: "SCAN_ERROR",
+    INVALIDATE_QUERIES: "invalidate-queries",
+    SETTINGS: "settings",
+    ERROR_TOAST: "error-toast",
+    SUCCESS_TOAST: "success-toast",
+    VIDEOCORE: "videocore",
+    MEDIASHUTDOWN: "mediastream-shutdown-stream",
+    DRIVE_SCAN_PROGRESS: "drive_scan_progress",
+    DRIVE_SCAN_COMPLETED: "drive_scan_completed",
+    LIBRARY_UPDATED: "library_updated",
 } as const
 export type WSEvents = (typeof WSEvents)[keyof typeof WSEvents]
 
@@ -43,6 +53,35 @@ export interface ScannerMessage {
     duration_seconds?: number
 }
 
+/** Espejo de drive.ScanProgress (apps/server/internal/drive/types.go). */
+export type DriveScanPhase = "listing" | "indexing" | "saving" | "pruning" | "done" | "error"
+
+export interface DriveScanItem {
+    name: string
+    folder: string
+    series: string
+    episode?: number
+    isMovie?: boolean
+}
+
+export interface DriveScanProgress {
+    phase: DriveScanPhase
+    startedAt: string
+    finishedAt?: string
+    currentFolder: string
+    foldersScanned: number
+    foldersPending: number
+    filesFound: number
+    indexed: number
+    total: number
+    pruned: number
+    // Go puede serializar slices nil como null.
+    series: { title: string; count: number }[] | null
+    /** Todo lo detectado en el escaneo, en orden de detección. */
+    items: DriveScanItem[] | null
+    error?: string
+}
+
 export interface SkipScanStatusPayload {
     mediaId: number
     status: "idle" | "initializing" | "fingerprinting" | "matching" | "done" | "error"
@@ -64,9 +103,19 @@ export type WebSocketMessage =
     | { type: typeof WSEvents.SCAN_PROGRESS; payload: number }
     | { type: typeof WSEvents.SCAN_PROGRESS_DETAILED; payload: ScanProgressDetailedPayload }
     | { type: typeof WSEvents.SCAN_STATUS; payload: string }
+    | { type: typeof WSEvents.SCAN_ERROR; payload: string }
+    | { type: typeof WSEvents.INVALIDATE_QUERIES; payload: { queryKeys?: string[] } | null }
+    | { type: typeof WSEvents.SETTINGS; payload: unknown }
+    | { type: typeof WSEvents.ERROR_TOAST; payload: string }
+    | { type: typeof WSEvents.SUCCESS_TOAST; payload: string }
+    | { type: typeof WSEvents.VIDEOCORE; payload: { type: string; payload?: unknown; clientID?: string } }
+    | { type: typeof WSEvents.MEDIASHUTDOWN; payload: string | null }
     | { type: typeof WSEvents.LIBRARY_WATCHER_FILE_ADDED; payload: string }
     | { type: typeof WSEvents.LIBRARY_WATCHER_FILE_REMOVED; payload: string }
     | { type: typeof WSEvents.AUTO_SCAN_COMPLETED; payload: null }
     | { type: typeof WSEvents.LIBRARY_SCAN; payload: ScannerMessage }
     | { type: typeof WSEvents.REFRESHED_ANIME_COLLECTION; payload: null }
     | { type: typeof WSEvents.SKIP_SCAN_STATUS; payload: SkipScanStatusPayload }
+    | { type: typeof WSEvents.DRIVE_SCAN_PROGRESS; payload: DriveScanProgress }
+    | { type: typeof WSEvents.DRIVE_SCAN_COMPLETED; payload?: { count?: number; pruned?: number; error?: string } }
+    | { type: typeof WSEvents.LIBRARY_UPDATED; payload?: { source?: string; count?: number } }

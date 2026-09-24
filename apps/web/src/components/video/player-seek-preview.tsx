@@ -1,5 +1,9 @@
-import React, { useEffect, useState, useRef } from "react"
+import React, { useEffect, useState } from "react"
+import { m, AnimatePresence } from "framer-motion"
 import { PlayerPreviewManager } from "./player-preview"
+import { cn } from "@/components/ui/core/styling"
+import { PLAYER_GLASS } from "./player-theme"
+import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
 
 interface PlayerSeekPreviewProps {
     previewManager: PlayerPreviewManager | null
@@ -18,14 +22,17 @@ const formatTime = (secs: number) => {
 
 export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }: PlayerSeekPreviewProps) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-    const lastRenderedSegmentRef = useRef<number>(-1)
+    const [rendered, setRendered] = useState<{ segment: number; url: string } | null>(null)
+    const spring = useSpringPreset("entrance")
+    const prefersReducedMotion = useReducedMotion()
 
-    // Al cambiar de episodio/manager el cleanup revoca blobs: resetear para no
-    // servir una URL revocada cacheada por el guard de segmento.
-    useEffect(() => {
+    // Al cambiar de episodio/manager el cleanup revoca blobs: resetear durante render
+    const [prevPreviewManager, setPrevPreviewManager] = useState(previewManager)
+    if (previewManager !== prevPreviewManager) {
+        setPrevPreviewManager(previewManager)
         setPreviewUrl(null)
-        lastRenderedSegmentRef.current = -1
-    }, [previewManager])
+        setRendered(null)
+    }
 
     useEffect(() => {
         if (!previewManager || hoverTime === null) return
@@ -33,7 +40,7 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }
         let isActive = true
         const segment = previewManager.calculateSegmentIndex(hoverTime)
 
-        if (lastRenderedSegmentRef.current === segment && previewUrl) {
+        if (rendered?.segment === segment && rendered?.url) {
             return
         }
 
@@ -41,8 +48,8 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }
             try {
                 const url = await previewManager.retrievePreviewForSegment(segment, true)
                 if (isActive && url) {
+                    setRendered({ segment, url })
                     setPreviewUrl(url)
-                    lastRenderedSegmentRef.current = segment
                 }
             } catch {
                 // Ignore errors
@@ -54,41 +61,42 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }
         return () => {
             isActive = false
         }
-    }, [hoverTime, previewManager])
+    }, [hoverTime, previewManager, rendered])
 
-    if (hoverTime === null) return null
-
-    // Clamp the position so the preview doesn't go off-screen
-    // The bar width is ~100%, preview is 160px wide (half is 80px).
-    // It will be positioned using left: hoverPosPercent
+    const isVisible = hoverTime !== null
     const safeLeftPercent = Math.max(0, Math.min(100, hoverPosPercent))
 
     return (
-        <div 
-            className="absolute bottom-[calc(100%+16px)] pointer-events-none z-player-ui transform -translate-x-1/2 flex flex-col items-center"
-            style={{ left: `${safeLeftPercent}%` }}
-        >
-            <div className="relative overflow-hidden rounded-md border border-outline-variant/30 shadow-elevation-4 bg-surface-container-high w-[160px] aspect-video">
-                {previewUrl ? (
-                    <img 
-                        src={previewUrl} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover animate-in fade-in duration-base"
-                    />
-                ) : (
-                    <div className="w-full h-full bg-surface-container flex items-center justify-center">
-                        <div className="w-4 h-4 border-2 border-brand-accent border-t-transparent rounded-full animate-spin" />
+        <AnimatePresence>
+            {isVisible && (
+                <m.div 
+                    key="player-seek-preview"
+                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
+                    transition={spring}
+                    className="absolute bottom-[calc(100%+16px)] pointer-events-none z-player-ui -translate-x-1/2 flex flex-col items-center"
+                    style={{ left: `clamp(90px, ${safeLeftPercent}%, calc(100% - 90px))` }}
+                >
+                    <div className="relative overflow-hidden rounded-md bg-black w-[168px] aspect-video border border-white/20">
+                        {previewUrl ? (
+                            <img 
+                                src={previewUrl} 
+                                alt="Previsualización de reproducción" 
+                                className="w-full h-full object-cover animate-in fade-in duration-base"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-white/5" />
+                        )}
                     </div>
-                )}
-            </div>
-            
-            {/* Time badge */}
-            <div className="mt-2 bg-surface-container-high/90 backdrop-blur-overlay-sm px-2.5 py-0.5 rounded-md border border-outline-variant/30 text-xs font-mono font-medium text-white shadow-elevation-2">
-                {formatTime(hoverTime)}
-            </div>
-            
-            {/* Arrow */}
-            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-surface-container-high/90 mt-1 shadow-elevation-2" />
-        </div>
+                    
+                    {/* Time badge */}
+                    <div className={cn("mt-1.5 px-2.5 py-1 rounded-full text-2xs font-semibold tracking-wide tabular-nums text-white", PLAYER_GLASS)}>
+                        {formatTime(hoverTime)}
+                    </div>
+                    
+                </m.div>
+            )}
+        </AnimatePresence>
     )
 }

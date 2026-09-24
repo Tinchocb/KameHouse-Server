@@ -7,6 +7,7 @@ import { startViewTransition } from "@/lib/helpers/transitions"
 import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 import { resolveLocalFileForEpisode } from "./use-series-data"
 import { queryKeys } from "@/lib/query-keys"
+import { useGetSettings } from "@/api/hooks/settings.hooks"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,10 +17,19 @@ interface PlayTarget {
     episodeLabel: string
     episodeNumber: number
     malId?: number | null
+    isFiller?: boolean
+    /** Segundo guardado en continuity: el reproductor arranca desde ahí. */
+    startTime?: number
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NavigateFn = (opts: any) => void
+/** Subconjunto de opciones de TanStack Router que usa este hook. */
+interface SeriesNavigateOptions {
+    to: string
+    params?: Record<string, string>
+    search?: Record<string, string | number | boolean>
+    replace?: boolean
+}
+type NavigateFn = (opts: SeriesNavigateOptions) => void
 
 interface UseSeriesPlaybackInput {
     entry: Anime_Entry | undefined | null
@@ -49,6 +59,26 @@ export function useSeriesPlayback({
     const queryClient = useQueryClient()
 
     const [playTarget, setPlayTarget] = useState<PlayTarget | null>(null)
+
+    // El toggle de Ajustes manda: con continuidad OFF no se resume nada.
+    const { data: serverSettings } = useGetSettings()
+    const continuityItem =
+        (serverSettings?.library?.enableWatchContinuity ?? true)
+            ? continuityData?.item
+            : undefined
+
+    // Misma regla que la tarjeta "Continuar viendo" (use-series-data): más de 10 s
+    // vistos y menos del 95 %. Fuera de eso el episodio arranca desde el principio.
+    const getResumeTime = useCallback(
+        (episodeNumber: number): number | undefined => {
+            const item = continuityItem
+            if (!item || item.episodeNumber !== episodeNumber) return undefined
+            if (!item.currentTime || !item.duration || item.currentTime <= 10) return undefined
+            if ((item.currentTime / item.duration) * 100 >= 95) return undefined
+            return item.currentTime
+        },
+        [continuityItem]
+    )
 
     // ── Preload ───────────────────────────────────────────────────────────────
     const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
@@ -94,10 +124,12 @@ export function useSeriesPlayback({
                     episodeLabel: resolvedTitle,
                     episodeNumber: epNum,
                     malId: entry?.media?.idMal ?? null,
+                    isFiller: episode.episodeMetadata?.isFiller ?? false,
+                    startTime: getResumeTime(epNum),
                 })
             })
         },
-        [entry?.media?.idMal, entry?.media?.tmdbId]
+        [entry?.media?.idMal, entry?.media?.tmdbId, getResumeTime]
     )
 
     const handlePlayLocalFile = useCallback(
@@ -129,20 +161,22 @@ export function useSeriesPlayback({
                     episodeLabel: localFile.name,
                     episodeNumber: resolvedEpNum,
                     malId: entry?.media?.idMal ?? null,
+                    isFiller: matchedEp?.episodeMetadata?.isFiller ?? false,
+                    startTime: getResumeTime(resolvedEpNum),
                 })
             })
         },
-        [computedEpisodes, entry?.media?.idMal]
+        [computedEpisodes, entry?.media?.idMal, getResumeTime]
     )
 
     const handlePlayDefault = useCallback(() => {
         if (entry?.media?.format === "MOVIE" || !computedEpisodes || computedEpisodes.length === 0) {
             if (entry?.localFiles && entry.localFiles.length > 0) {
                 let targetFile = entry.localFiles[0]
-                if (continuityData?.item?.episodeNumber) {
+                if (continuityItem?.episodeNumber) {
                     const matchedFile = entry.localFiles.find(f => {
                         const ep = f.metadata?.episode || f.parsedInfo?.episode
-                        return ep != null && Number(ep) === continuityData.item?.episodeNumber
+                        return ep != null && Number(ep) === continuityItem?.episodeNumber
                     })
                     if (matchedFile) targetFile = matchedFile
                 }
@@ -154,11 +188,11 @@ export function useSeriesPlayback({
         }
 
         let targetEp = computedEpisodes.find(ep => !ep.watched) || computedEpisodes[0]
-        if (continuityData?.item) {
+        if (continuityItem) {
             const resumeEp = computedEpisodes.find(
                 ep =>
                     (ep.absoluteEpisodeNumber || ep.episodeNumber) ===
-                    continuityData.item?.episodeNumber
+                    continuityItem?.episodeNumber
             )
             if (resumeEp) {
                 targetEp = resumeEp
@@ -174,7 +208,7 @@ export function useSeriesPlayback({
         } else {
             toast.info("No hay archivos locales disponibles para reproducir.")
         }
-    }, [entry, computedEpisodes, continuityData, handlePlayLocalFile, handlePlayEpisode])
+    }, [entry, computedEpisodes, continuityItem, handlePlayLocalFile, handlePlayEpisode])
 
     const handlePlayByNumber = useCallback(
         (episodeNumber: number) => {
@@ -255,27 +289,27 @@ export function useSeriesPlayback({
         ) {
             if (!entry.localFiles || entry.localFiles.length === 0) return null
             let targetFile = entry.localFiles[0]
-            if (continuityData?.item?.episodeNumber) {
+            if (continuityItem?.episodeNumber) {
                 const matchedFile = entry.localFiles.find(f => {
                     const ep = f.metadata?.episode || f.parsedInfo?.episode
-                    return ep != null && Number(ep) === continuityData.item?.episodeNumber
+                    return ep != null && Number(ep) === continuityItem?.episodeNumber
                 })
                 if (matchedFile) targetFile = matchedFile
             }
             return targetFile.path || null
         }
         let targetEp = computedEpisodes.find(ep => !ep.watched) || computedEpisodes[0]
-        if (continuityData?.item) {
+        if (continuityItem) {
             const resumeEp = computedEpisodes.find(
                 ep =>
                     (ep.absoluteEpisodeNumber || ep.episodeNumber) ===
-                    continuityData.item?.episodeNumber
+                    continuityItem?.episodeNumber
             )
             if (resumeEp) targetEp = resumeEp
         }
         const lf = resolveLocalFileForEpisode(targetEp, entry.localFiles)
         return lf?.path || entry.localFiles?.[0]?.path || null
-    }, [entry, computedEpisodes, continuityData])
+    }, [entry, computedEpisodes, continuityItem])
 
     // Warm the default target on page load so the first play is instant.
     React.useEffect(() => {
@@ -300,7 +334,7 @@ export function useSeriesPlayback({
             if (lf) return { ep, lf }
         }
         return null
-    }, [computedEpisodes, playTarget?.episodeNumber, entry?.localFiles])
+    }, [computedEpisodes, playTarget, entry?.localFiles])
 
     // Hay siguiente si queda un episodio local por delante o si el timeline
     // encadena con otra serie (handleNextEpisode cubre ambos caminos). El

@@ -1,21 +1,22 @@
 import type { Config } from "tailwindcss"
 
-import typography from "@tailwindcss/typography"
 import forms from "@tailwindcss/forms"
 import scrollbarHide from "tailwind-scrollbar-hide"
 import animate from "tailwindcss-animate"
 
-// @ts-expect-error - tailwindcss does not provide types for this utility
 import flattenColorPalette from "tailwindcss/lib/util/flattenColorPalette"
 
+
+/** Color de un token CSS que acepta el modificador de opacidad de Tailwind (bg-x/60). */
+const withAlpha = (cssVar: string) =>
+    `color-mix(in srgb, var(${cssVar}) calc(<alpha-value> * 100%), transparent)`
 
 const config: Config = {
     darkMode: "class",
     content: [
         "./index.html",
-        "./src/**/*.{ts,tsx,mdx}",
+        "./src/**/*.{ts,tsx}",
     ],
-    safelist: [],
     theme: {
         container: {
             center: true,
@@ -42,6 +43,18 @@ const config: Config = {
             highlighted: "highlighted",
         },
         extend: {
+            // Pasos intermedios que ya usa el código (sectionbar, admin, cronología):
+            // sin definirlos, h-6.5 / p-4.5 / h-34 no generaban clase y los elementos
+            // quedaban sin tamaño ni padding.
+            spacing: {
+                "4.5": "1.125rem",
+                "6.5": "1.625rem",
+                "34": "8.5rem",
+            },
+            scale: {
+                "102": "1.02",
+                "115": "1.15",
+            },
             screens: {
                 "3xl": "1600px",
                 "4xl": "1800px",
@@ -50,12 +63,9 @@ const config: Config = {
                 sans: ["Outfit Variable", "Outfit", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
                 display: ["Outfit Variable", "Outfit", "sans-serif"],
                 mono: ["Space Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"],
-            },
-            animationDuration: {
-                DEFAULT: "0.2s",
-                short: "100ms",
-                medium: "200ms",
-                long: "300ms",
+                serif: ["Cormorant Garamond", "Georgia", "Cambria", "Times New Roman", "serif"],
+                // Kanji decorativos (sellos de era, cronología): mincho del sistema, sin descargas.
+                kanji: ["Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "MS Mincho", "serif"],
             },
             transitionDuration: {
                 "50": "50ms",
@@ -122,10 +132,18 @@ const config: Config = {
                 "indeterminate-progress": "indeterminate-progress 1s infinite ease-out",
                 "shimmer": "shimmer 2s infinite",
                 "spin-slow": "spin 8s linear infinite",
+                // Respiración lenta de los estados vacíos (empty-state).
+                "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
                 "scale-x": "scale-x 2s ease-in-out infinite",
             },
-            transformOrigin: {
-                "left-right": "0% 100%",
+            // Micro-tipografía (metadata, badges, overlines): pasos fijos en px que
+            // antes eran arbitrarios text-[8px]..text-[11px] repartidos en ~450 usos.
+            // Solo font-size (sin line-height), igual que los arbitrarios.
+            fontSize: {
+                "2xs": "11px",
+                "3xs": "10px",
+                "4xs": "9px",
+                "5xs": "8px",
             },
             letterSpacing: {
                 // Escala 0.2em del design system (typography.css --tracking-ultra),
@@ -149,6 +167,11 @@ const config: Config = {
                 "elevation-3": "var(--elevation-3)",
                 "elevation-4": "var(--elevation-4)",
                 "elevation-5": "var(--elevation-5)",
+                // Escritas con el color como var (no el token --glass-highlight-* entero)
+                // para que Tailwind las pueda teñir: hover:shadow-brand-accent/15.
+                "glass-highlight-sm": "inset 0 1px 1px 0 var(--glass-highlight-sm-color)",
+                "glass-highlight-md": "inset 0 1px 1px 0 var(--glass-highlight-md-color)",
+                "glass-highlight-lg": "inset 0 1px 1px 0 var(--glass-highlight-lg-color)",
                 "brand-primary": "var(--shadow-brand-primary)",
                 "brand-secondary": "var(--shadow-brand-secondary)",
                 "brand-destructive": "var(--shadow-brand-destructive)",
@@ -176,6 +199,7 @@ const config: Config = {
             },
             maxWidth: {
                 content: "var(--content-max)",
+                "content-desktop": "var(--content-max-desktop)",
             },
             zIndex: {
                 base: "var(--z-base)",
@@ -276,22 +300,29 @@ const config: Config = {
                 dbs: "hsl(var(--era-dbs-hsl) / <alpha-value>)",
                 daima: "hsl(var(--era-daima-hsl) / <alpha-value>)",
             },
+            // withAlpha: bg-bg-primary/40 funciona (con var() pelado no se generaba).
             bg: {
-                primary: "var(--bg-primary)",
-                secondary: "var(--bg-secondary)",
-                tertiary: "var(--bg-tertiary)",
-                quaternary: "var(--bg-quaternary)",
+                primary: withAlpha("--bg-primary"),
+                secondary: withAlpha("--bg-secondary"),
+                tertiary: withAlpha("--bg-tertiary"),
+                quaternary: withAlpha("--bg-quaternary"),
             },
+            // Tokens MD3 con soporte de opacidad: con un var() pelado, Tailwind no
+            // genera "bg-x/60" (la clase no existe y el estilo se pierde en silencio).
+            // withAlpha aplica el modificador con color-mix; sin modificador, <alpha-value>
+            // vale 1 y el color queda idéntico al token.
             surface: {
-                DEFAULT: "var(--md-sys-color-surface)",
-                container: "var(--md-sys-color-surface-container)",
-                "container-low": "var(--md-sys-color-surface-container-low)",
-                "container-high": "var(--md-sys-color-surface-container-high)",
-                "container-highest": "var(--md-sys-color-surface-container-highest)",
-                variant: "var(--md-sys-color-surface-variant)",
+                DEFAULT: withAlpha("--md-sys-color-surface"),
+                container: withAlpha("--md-sys-color-surface-container"),
+                // Base opaca: la translucidez la pone cada uso (/60, /80...).
+                "container-lowest": withAlpha("--md-sys-color-surface-container-lowest"),
+                "container-low": withAlpha("--md-sys-color-surface-container-low"),
+                "container-high": withAlpha("--md-sys-color-surface-container-high"),
+                "container-highest": withAlpha("--md-sys-color-surface-container-highest"),
+                variant: withAlpha("--md-sys-color-surface-variant"),
             },
-            outline: "var(--md-sys-color-outline)",
-            "outline-variant": "var(--md-sys-color-outline-variant)",
+            outline: withAlpha("--md-sys-color-outline"),
+            "outline-variant": withAlpha("--md-sys-color-outline-variant"),
             scrim: "rgba(var(--scrim-rgb, 0, 0, 0), <alpha-value>)",
             glass: {
                 bg: "var(--glass-bg)",
@@ -342,7 +373,6 @@ const config: Config = {
         },
     },
     plugins: [
-        typography,
         forms,
         scrollbarHide,
         animate,

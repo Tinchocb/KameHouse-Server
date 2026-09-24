@@ -1,7 +1,8 @@
-import { create, StateCreator } from "zustand"
+import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
+import { useShallow } from "zustand/react/shallow"
 
 export interface SkipTimesState {
     seriesSkipTimes: Record<string, { opStart?: number; opEnd?: number; edOffset?: number; edEnd?: number }>
@@ -36,3 +37,9 @@ export const useSkipTimesStore = create<SkipTimesState>()(
         )
     )
 )
+
+// Shallow selector for skip times
+export const useSkipTimesMap = () => useSkipTimesStore(useShallow((state) => ({
+    seriesSkipTimes: state.seriesSkipTimes,
+    saveSeriesSkipTimes: state.saveSeriesSkipTimes,
+})))

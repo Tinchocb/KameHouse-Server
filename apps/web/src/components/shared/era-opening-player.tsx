@@ -1,6 +1,6 @@
 import React from "react"
 import { useShallow } from "zustand/react/shallow"
-import { useAppStore } from "@/lib/store"
+import { useUIStore } from "@/lib/store"
 import { IconMediaPause, IconMediaPlay } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { getEraOpening, ERA_OPENINGS_SUBDIR } from "@/lib/config/era_openings"
@@ -17,7 +17,7 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
     const opening = getEraOpening(sagaId)
     // useShallow: el selector devuelve un objeto nuevo en cada render; sin
     // igualdad shallow useSyncExternalStore entra en loop infinito de re-renders.
-    const { bgMusicDir, isVideoActive, setEraOpeningPlaying, uiSoundsVolume } = useAppStore(useShallow((state) => ({
+    const { bgMusicDir, isVideoActive, setEraOpeningPlaying, uiSoundsVolume } = useUIStore(useShallow((state) => ({
         bgMusicDir: state.bgMusicDir,
         isVideoActive: state.isVideoActive,
         setEraOpeningPlaying: state.setEraOpeningPlaying,

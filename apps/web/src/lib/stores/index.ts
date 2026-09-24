@@ -38,6 +38,20 @@ export const useAppStore = create<CombinedState>()(
                 }),
                 {
                     name: "kamehouse-app-settings",
+                    version: 1,
+                    migrate: (persisted, version) => {
+                        const p = ((persisted ?? {}) as Partial<CombinedState>) ?? {}
+                        if (version < 1) {
+                            // Limpia colas/índices potencialmente obsoletos de versiones sin versionado
+                            if (Array.isArray(p.playlistQueue) && p.playlistQueue.length > 50) {
+                                p.playlistQueue = p.playlistQueue.slice(0, 50)
+                            }
+                            if (typeof p.currentQueueIndex === "number" && Array.isArray(p.playlistQueue) && p.currentQueueIndex >= p.playlistQueue.length) {
+                                p.currentQueueIndex = p.playlistQueue.length === 0 ? -1 : p.playlistQueue.length - 1
+                            }
+                        }
+                        return p as CombinedState
+                    },
                     merge: (persistedState, currentState) => {
                         const p = persistedState as Partial<CombinedState> | undefined
                         if (p) {
@@ -64,6 +78,8 @@ export const useAppStore = create<CombinedState>()(
                         seriesSoundtrackMode: state.seriesSoundtrackMode,
                         dynamicBackdropEnabled: state.dynamicBackdropEnabled,
                         dynamicBackdropMotionEnabled: state.dynamicBackdropMotionEnabled,
+                        themeVisual: state.themeVisual,
+                        hideAudienceScore: state.hideAudienceScore,
                         // Player state
                         playerVolume: state.playerVolume,
                         autoSkipIntro: state.autoSkipIntro,
@@ -98,37 +114,31 @@ export const useAppStore = create<CombinedState>()(
 )
 
 if (typeof window !== "undefined") {
-    // Bidirectional sync between isolated sub-stores and useAppStore
+    // useAppStore es un read-model: los sub-stores (ui/player/queue) son la
+    // única fuente de escritura y se propagan aquí en una sola dirección.
+    // NO escribir useAppStore.setState desde componentes: usar el sub-store
+    // dueño (useUIStore/usePlayerStore/useQueueStore).
     let isSyncing = false
-
-    useUIStore.subscribe((state) => {
+    const guardedSync = (fn: () => void) => {
         if (isSyncing) return
         isSyncing = true
-        useAppStore.setState(state)
-        isSyncing = false
+        try {
+            fn()
+        } finally {
+            isSyncing = false
+        }
+    }
+
+    useUIStore.subscribe((state) => {
+        guardedSync(() => useAppStore.setState(state))
     })
 
     usePlayerStore.subscribe((state) => {
-        if (isSyncing) return
-        isSyncing = true
-        useAppStore.setState(state)
-        isSyncing = false
+        guardedSync(() => useAppStore.setState(state))
     })
 
     useQueueStore.subscribe((state) => {
-        if (isSyncing) return
-        isSyncing = true
-        useAppStore.setState(state)
-        isSyncing = false
-    })
-
-    useAppStore.subscribe((state) => {
-        if (isSyncing) return
-        isSyncing = true
-        useUIStore.setState(state)
-        usePlayerStore.setState(state)
-        useQueueStore.setState(state)
-        isSyncing = false
+        guardedSync(() => useAppStore.setState(state))
     })
 
     useAppStore.subscribe((state, prevState) => {

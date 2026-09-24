@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"kamehouse/internal/util"
+	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/ffmpegutil"
 
 	"github.com/labstack/echo/v4"
@@ -32,9 +33,20 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("path parameter is required"))
 	}
 
+	if strings.HasPrefix(videoPath, "gdrive://") {
+		if h.App.DriveService == nil || !h.App.DriveService.IsEnabled() {
+			return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("google drive integration is not active"))
+		}
+		return h.serveDriveThumbnail(c, videoPath)
+	}
+
 	// Validate the file exists
-	if _, err := os.Stat(videoPath); os.IsNotExist(err) {
-		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("video file not found"))
+	videoStat, err := os.Stat(videoPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("video file not found"))
+		}
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, err)
 	}
 
 	// Prevent path traversal: ensure the path belongs to one of the configured library paths
@@ -55,61 +67,109 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied to the requested file path"))
 	}
 
-	var customFfmpeg, customFfprobe string
-	if h.App.SecondarySettings.Mediastream != nil {
-		customFfmpeg = h.App.SecondarySettings.Mediastream.FfmpegPath
-		customFfprobe = h.App.SecondarySettings.Mediastream.FfprobePath
-	}
-	ffmpegPath := ffmpegutil.ResolveFFmpegPath(h.App.Config.Cache.Dir, customFfmpeg)
-	ffprobePath := ffmpegutil.ResolveFFprobePath(h.App.Config.Cache.Dir, customFfprobe)
+	// 1. Check LRU Memory Cache (Instant 0ms retrieval)
+	cacheKey := fmt.Sprintf("%s:%d:%d", videoPath, videoStat.ModTime().UnixNano(), videoStat.Size())
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(cacheKey)))
 
-	// Create cache directory for thumbnails
-	cacheDir := filepath.Join(h.App.Config.Cache.Dir, "thumbnails")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return h.RespondWithCodeError(c, http.StatusInternalServerError, errors.New("failed to create cache directory"))
+	if imgBytes, found := h.App.ThumbnailCache.Get(hash); found {
+		c.Response().Header().Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+		return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
 	}
 
-	// Generate cache key
-	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(videoPath)))
-	cacheFile := filepath.Join(cacheDir, hash+".jpg")
+	// 2. Ensure thumbnail exists on disk (cold cache or migration fallback)
+	ensuredFile, err := h.EnsureThumbnail(videoPath)
+	if err != nil {
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, fmt.Errorf("failed to extract thumbnail"))
+	}
 
-	// 1. Check HTTP Request ETag for returning 304 Not Modified
-	fileStat, err := os.Stat(cacheFile)
+	// 3. Check HTTP Request ETag for returning 304 Not Modified
+	fileStat, err := os.Stat(ensuredFile)
 	if err == nil {
 		eTag := fmt.Sprintf(`"%x-%x"`, fileStat.Size(), fileStat.ModTime().UnixNano())
 		if match := c.Request().Header.Get("If-None-Match"); match == eTag {
+			cache.TouchDiskCache(ensuredFile)
 			return c.NoContent(http.StatusNotModified)
 		}
 		c.Response().Header().Set("ETag", eTag)
 	}
 
-	c.Response().Header().Set("Cache-Control", "public, max-age=86400, immutable")
+	c.Response().Header().Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
 
-	// 2. Check LRU Memory Cache (Instant 0ms retrieval)
-	if imgBytes, found := h.App.ThumbnailCache.Get(hash); found {
-		return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
+	// 4. Read image bytes, populate memory LRU cache, and serve
+	imgBytes, readErr := os.ReadFile(ensuredFile)
+	if readErr != nil {
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, readErr)
 	}
 
-	// 3. Fallback to Disk Cache if FFMpeg already extracted it previously
-	if err == nil {
-		imgBytes, readErr := os.ReadFile(cacheFile)
-		if readErr == nil {
-			// Populate LRU cache for next rapid requests
-			h.App.ThumbnailCache.Set(hash, imgBytes)
-			return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
-		}
+	cache.TouchDiskCache(ensuredFile)
+	h.App.ThumbnailCache.Set(hash, imgBytes)
+	return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
+}
+
+// EnsureThumbnail generates or returns the cached thumbnail path for a given video file.
+func (h *Handler) EnsureThumbnail(videoPath string) (string, error) {
+	return h.EnsureThumbnailWithContext(context.Background(), videoPath)
+}
+
+// EnsureThumbnailWithContext generates or returns the cached thumbnail path with context cancellation support.
+func (h *Handler) EnsureThumbnailWithContext(parentCtx context.Context, videoPath string) (string, error) {
+	if parentCtx.Err() != nil {
+		return "", parentCtx.Err()
 	}
 
-	// 4. Generate thumbnail via FFMpeg (Cold Cache) with singleflight deduplication
-	rawBytes, sfErr, _ := thumbnailSingleFlight.Do(hash, func() (interface{}, error) {
-		// Double check cache inside singleflight callback
-		if imgBytes, found := h.App.ThumbnailCache.Get(hash); found {
-			return imgBytes, nil
+	videoStat, err := os.Stat(videoPath)
+	if err != nil {
+		return "", err
+	}
+
+	cacheDir := filepath.Join(h.App.Config.Cache.Dir, "thumbnails")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return "", err
+	}
+
+	// Generate cache key based on path, mtime, and size (O(1))
+	cacheKey := fmt.Sprintf("%s:%d:%d", videoPath, videoStat.ModTime().UnixNano(), videoStat.Size())
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(cacheKey)))
+	cacheFile := filepath.Join(cacheDir, hash+".jpg")
+
+	// 1. Check if cache file already exists
+	if _, err := os.Stat(cacheFile); err == nil {
+		return cacheFile, nil
+	}
+
+	// 2. Backward compatibility fallback: check for legacy hash (videoPath only)
+	legacyHash := fmt.Sprintf("%x", sha256.Sum256([]byte(videoPath)))
+	legacyCacheFile := filepath.Join(cacheDir, legacyHash+".jpg")
+	if _, err := os.Stat(legacyCacheFile); err == nil {
+		_ = os.Rename(legacyCacheFile, cacheFile)
+		return cacheFile, nil
+	}
+
+	if parentCtx.Err() != nil {
+		return "", parentCtx.Err()
+	}
+
+	// 3. Cold cache: generate via FFMpeg with singleflight deduplication
+	_, sfErr, _ := thumbnailSingleFlight.Do(hash, func() (interface{}, error) {
+		// Double check if created while waiting
+		if _, err := os.Stat(cacheFile); err == nil {
+			return cacheFile, nil
+		}
+		if parentCtx.Err() != nil {
+			return nil, parentCtx.Err()
 		}
 
-		seekTime := getSeekTimestamp(context.Background(), ffprobePath, videoPath)
+		var customFfmpeg, customFfprobe string
+		if h.App.SecondarySettings.Mediastream != nil {
+			customFfmpeg = h.App.SecondarySettings.Mediastream.FfmpegPath
+			customFfprobe = h.App.SecondarySettings.Mediastream.FfprobePath
+		}
+		ffmpegPath := ffmpegutil.ResolveFFmpegPath(h.App.Config.Cache.Dir, customFfmpeg)
+		ffprobePath := ffmpegutil.ResolveFFprobePath(h.App.Config.Cache.Dir, customFfprobe)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		seekTime := getSeekTimestamp(parentCtx, ffprobePath, videoPath)
+
+		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Second)
 		defer cancel()
 
 		tmpCacheFile := fmt.Sprintf("%s.%d.tmp", cacheFile, time.Now().UnixNano())
@@ -132,32 +192,18 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		}
 
 		if err := os.Rename(tmpCacheFile, cacheFile); err != nil {
-			// If rename fails (e.g. concurrent overwrite or permissions), attempt copy or cleanup
 			_ = os.Remove(tmpCacheFile)
+			return nil, err
 		}
 
-		// Re-read from disk to serve and place into LRU memory map
-		imgBytes, readErr := os.ReadFile(cacheFile)
-		if readErr == nil {
-			h.App.ThumbnailCache.Set(hash, imgBytes)
-			return imgBytes, nil
-		}
-
-		return nil, readErr
+		return cacheFile, nil
 	})
 
-
-	if sfErr != nil || rawBytes == nil {
-		return h.RespondWithCodeError(c, http.StatusInternalServerError, fmt.Errorf("failed to extract thumbnail"))
+	if sfErr != nil {
+		return "", sfErr
 	}
 
-	imgBytes := rawBytes.([]byte)
-	fileStat, err = os.Stat(cacheFile)
-	if err == nil {
-		eTag := fmt.Sprintf(`"%x-%x"`, fileStat.Size(), fileStat.ModTime().UnixNano())
-		c.Response().Header().Set("ETag", eTag)
-	}
-	return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
+	return cacheFile, nil
 }
 
 // getSeekTimestamp returns the timestamp to seek to for thumbnail extraction.

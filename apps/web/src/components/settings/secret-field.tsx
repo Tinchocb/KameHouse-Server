@@ -23,7 +23,7 @@ export function SecretField({ label, value, onChange, placeholder, id }: SecretF
                     placeholder={placeholder}
                     // text-base en mobile: iOS Safari hace zoom al enfocar cualquier
                     // input por debajo de 16px. El tamaño de desktop no cambia.
-                    className="w-full bg-zinc-950/40 backdrop-blur-overlay-md hover:bg-zinc-900/50 border border-white/20 border-t-white/30 hover:border-white/30 focus:border-white/40 focus:ring-1 focus:ring-white/25 rounded-full px-4 py-2.5 pr-11 text-base md:text-xs text-on-surface placeholder:text-on-surface-variant/40 font-mono focus:outline-none transition-all shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.15)]"
+                    className="w-full bg-zinc-950/40 backdrop-blur-overlay-md hover:bg-zinc-900/50 border border-white/20 border-t-white/30 hover:border-white/30 focus:border-white/40 focus:ring-1 focus:ring-white/25 rounded-full px-4 py-2.5 pr-11 text-base md:text-xs text-on-surface placeholder:text-on-surface-variant/40 font-mono focus:outline-none transition-all shadow-glass-highlight-md"
                 />
                 <button
                     type="button"

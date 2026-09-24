@@ -56,16 +56,12 @@ func isPathSafeBinary(cacheDir, customPath, binaryName string) bool {
 // ResolveFFmpegPath resolves the absolute or system path for ffmpeg.
 // Priority:
 // 1. Valid custom path ONLY if inside {cacheDir}/bin or found via exec.LookPath.
-// 2. System PATH (exec.LookPath).
-// 3. Application cache directory: {cacheDir}/bin/ffmpeg[.exe].
+// 2. Application cache directory: {cacheDir}/bin/ffmpeg[.exe].
+// 3. System PATH (exec.LookPath).
 // 4. Default fallback: "ffmpeg".
 func ResolveFFmpegPath(cacheDir, customPath string) string {
 	if isPathSafeBinary(cacheDir, customPath, "ffmpeg") {
 		return customPath
-	}
-
-	if p, err := exec.LookPath("ffmpeg"); err == nil {
-		return p
 	}
 
 	if cacheDir != "" {
@@ -79,22 +75,22 @@ func ResolveFFmpegPath(cacheDir, customPath string) string {
 		}
 	}
 
+	if p, err := exec.LookPath("ffmpeg"); err == nil {
+		return p
+	}
+
 	return "ffmpeg"
 }
 
 // ResolveFFprobePath resolves the absolute or system path for ffprobe.
 // Priority:
 // 1. Valid custom path ONLY if inside {cacheDir}/bin or found via exec.LookPath.
-// 2. System PATH (exec.LookPath).
-// 3. Application cache directory: {cacheDir}/bin/ffprobe[.exe].
+// 2. Application cache directory: {cacheDir}/bin/ffprobe[.exe].
+// 3. System PATH (exec.LookPath).
 // 4. Default fallback: "ffprobe".
 func ResolveFFprobePath(cacheDir, customPath string) string {
 	if isPathSafeBinary(cacheDir, customPath, "ffprobe") {
 		return customPath
-	}
-
-	if p, err := exec.LookPath("ffprobe"); err == nil {
-		return p
 	}
 
 	if cacheDir != "" {
@@ -106,6 +102,10 @@ func ResolveFFprobePath(cacheDir, customPath string) string {
 		if fi, err := os.Stat(cached); err == nil && !fi.IsDir() {
 			return cached
 		}
+	}
+
+	if p, err := exec.LookPath("ffprobe"); err == nil {
+		return p
 	}
 
 	return "ffprobe"

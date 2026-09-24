@@ -124,8 +124,8 @@ var dragonBallMovies = FranchiseDef{
 
 		// ── Classic Dragon Ball Movies ─────────────────────────────────────────
 		// Movie 1: Curse of the Blood Rubies / La Leyenda de Shenlong / Shenron (1986)
-		{Keywords: []string{"leyenda"}, AnyOf: []string{"shenlong", "shenron", "rubies", "densetsu"}, TMDBID: 39144},
-		{AnyOf: []string{"blood rubies", "leyenda de shenlong", "leyenda de shenron", "la leyenda de shenlong", "la leyenda de shenron", "curse of the blood rubies"}, TMDBID: 39144},
+		{Keywords: []string{"leyenda"}, AnyOf: []string{"shenlong", "shenron", "shen long", "shen ron", "rubies", "densetsu"}, TMDBID: 39144},
+		{AnyOf: []string{"blood rubies", "leyenda de shenlong", "leyenda de shenron", "leyenda de shen long", "leyenda de shen ron", "curse of the blood rubies"}, TMDBID: 39144},
 		// Movie 2: Sleeping Princess in Devil's Castle / La Princesa Durmiente / La Bella Durmiente (1987)
 		{Keywords: []string{"durmiente"}, AnyOf: []string{"princesa", "bella", "sleeping", "princess", "devil", "castillo", "nemuri", "mal"}, TMDBID: 39145},
 		{AnyOf: []string{"sleeping princess", "princesa durmiente", "bella durmiente", "la princesa durmiente", "la bella durmiente"}, TMDBID: 39145},
@@ -318,7 +318,7 @@ func ResolveDragonBallID(title string) (int, bool, bool) {
 			resId, found = 236994, true
 		case strings.Contains(ct, " gt ") || franchiseHasWord(ct, "dbgt") || isDragonBallGTSagaTitle(ct):
 			resId, found = 12697, true
-		case strings.Contains(ct, " kai ") || franchiseHasWord(ct, "dbkai") || franchiseHasWord(ct, "dbzkai") || isDragonBallKaiSagaTitle(ct):
+		case strings.Contains(ct, " kai ") || franchiseHasWord(ct, "kai") || franchiseHasWord(ct, "dbkai") || franchiseHasWord(ct, "dbzkai") || strings.Contains(ct, "dragon ball kai") || strings.Contains(ct, "dragon ball z kai") || isDragonBallKaiSagaTitle(ct):
 			resId, found = 61709, true
 		case strings.Contains(ct, " dragon ball super ") || franchiseHasWord(ct, "dbs") ||
 			(strings.Contains(ct, " super ") && strings.Contains(ct, "dragon")):
@@ -631,11 +631,70 @@ func CreatePrehydratedDragonBallMedia(id int) *dto.NormalizedMedia {
 		year = 2022
 		episodes = 1
 		isMovie = true
+
+	// ── Educational Shorts & Collaboration Specials ─────────────────────────
+	case 39321: // Corto Educativo: El Cuerpo de Bomberos de Goku (1988)
+		titleSpanish = "Dragon Ball: El Cuerpo de Bomberos de Goku"
+		titleEnglish = "Dragon Ball: Goku's Fire Brigade"
+		titleRomaji = "Dragon Ball: Gokū no Shōbōtai"
+		description = "Cortometraje educativo en el que Goku, Krilin, Yamcha y el Maestro Roshi enseñan lecciones vitales de prevención y seguridad contra incendios ante situaciones de emergencia."
+		posterPath = "https://image.tmdb.org/t/p/w500/k0QRU1UpJCvoConl1CSlz1RF54s.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/tZuNziXpjmOsDlmiT6adFPmmSKT.jpg"
+		year = 1988
+		episodes = 1
+		isMovie = true
+	case 39322: // Corto Educativo: Seguridad Vial de Goku (1988)
+		titleSpanish = "Dragon Ball: Seguridad Vial de Goku"
+		titleEnglish = "Dragon Ball: Goku's Traffic Safety"
+		titleRomaji = "Dragon Ball: Gokū no Kōtsū Anzen"
+		description = "Cortometraje educativo donde Goku viaja a la Capital del Oeste para celebrar el cumpleaños de Bulma, aprendiendo las normas de tráfico y seguridad vial peatonal."
+		posterPath = "https://image.tmdb.org/t/p/w500/iM7Rn5oziVlPEhQ7eyCHcYEy5vu.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg"
+		year = 1988
+		episodes = 1
+		isMovie = true
+	case 39325: // Especial: ¡Todos reunidos! El mundo de Goku (1992)
+		titleSpanish = "Dragon Ball Z: ¡Todos Reunidos! El Mundo de Goku"
+		titleEnglish = "Dragon Ball Z: Gather Together! Goku's World"
+		titleRomaji = "Dragon Ball Z: Atsumare! Gokū Wārudo"
+		description = "Especial interactivo para Terebikko donde Goku, Gohan, Krilin y Trunks viajan en la máquina del tiempo repasando batallas pasadas mientras enfrentan a Cell."
+		posterPath = "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg"
+		year = 1992
+		episodes = 1
+		isMovie = true
+	case 39326: // Especial: ¡Te lo mostramos todo! Olvida el año con DBZ (1993)
+		titleSpanish = "Dragon Ball Z: ¡Te lo Mostramos Todo! Olvida el Año con Dragon Ball Z"
+		titleEnglish = "Dragon Ball Z: Looking Back at it All: The Year-End Show"
+		titleRomaji = "Dragon Ball Z: Nenmatsu Tokuban Kessaku Renpatsu Dai Hōsō"
+		description = "Especial televisivo de fin de año donde Goku y Gohan con atuendo formal repasan los momentos y batallas cumbre de la saga de los Saiyajin, Freezer y Cell."
+		posterPath = "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg"
+		year = 1993
+		episodes = 1
+		isMovie = true
+	case 105973: // Especial: Los Aventureros de la Esfera del Pánico Regresan (2004)
+		titleSpanish = "Dragon Ball Z: Los Aventureros de la Esfera del Pánico Regresan"
+		titleEnglish = "Dragon Ball Z: Kyutai Panic Adventure Returns!"
+		titleRomaji = "Dragon Ball Z: Kyūtai Panikku Adobenchā Ritānzu!"
+		description = "Especial de animación exclusivo de Fuji TV donde Goku y los Guerreros Z unen fuerzas con Luffy y los piratas de Sombrero de Paja para defender la sede esférica."
+		posterPath = "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg"
+		year = 2004
+		episodes = 1
+		isMovie = true
+	case 444390: // Especial: Dream 9 Toriko x One Piece x DBZ Super Colaboración (2013)
+		titleSpanish = "Dream 9: Toriko x One Piece x Dragon Ball Z Super Colaboración"
+		titleEnglish = "Dream 9: Toriko & One Piece & Dragon Ball Z Super Collaboration Special!!"
+		titleRomaji = "Dream 9: Toriko & One Piece & Dragon Ball Z Chō Collaboration Special!!"
+		description = "Histórico crossover donde Goku, Toriko y Luffy compiten en la Carrera de la Organización Gourmet Internacional y enfrentan juntos a una voraz criatura marina."
+		posterPath = "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg"
+		bannerPath = "https://image.tmdb.org/t/p/original/u3nEeIkCR7mcpEJXZpUGUTLmF3O.jpg"
+		year = 2013
+		episodes = 1
+		isMovie = true
 	default:
-		titleSpanish = "Dragon Ball Serie"
-		titleEnglish = "Dragon Ball Series"
-		titleRomaji = "Dragon Ball Series"
-		year = 1989
+		return nil
 	}
 
 	format := dto.MediaFormatTV

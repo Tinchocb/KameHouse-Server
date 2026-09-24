@@ -45,6 +45,9 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	if b.Mode != "fast" && b.Mode != "deep" && b.Mode != "metadata" {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid scan mode, expected 'fast', 'deep' or 'metadata'"))
 	}
+	if h.localDiskDisconnected() {
+		return h.RespondWithCodeError(c, http.StatusConflict, errors.New("el disco local está desconectado: reconéctalo en Ajustes > Biblioteca para escanear"))
+	}
 
 	// +---------------------+
 	// |   Concurrent Lock   |
@@ -60,13 +63,13 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	}()
 
 	if h.App.Settings == nil {
-		return h.RespondWithError(c, errors.New("ajustes no encontrados, por favor configura la biblioteca primero"))
+		return h.RespondWithCodeError(c, 400, errors.New("invalid settings: ajustes no encontrados, por favor configura la biblioteca primero"))
 	}
 
 	// Retrieve the user's library path
 	libraryPaths := h.App.Settings.GetLibrary().GetAllPaths()
 	if len(libraryPaths) == 0 {
-		return h.RespondWithError(c, errors.New("no hay carpetas de origen configuradas"))
+		return h.RespondWithCodeError(c, 400, errors.New("invalid settings: no hay carpetas de origen configuradas"))
 	}
 	libraryPath := libraryPaths[0]
 	var additionalLibraryPaths []string
@@ -153,6 +156,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		TMDBClient:                 h.App.Metadata.TMDBClient,
 		FFprobePath:                ffprobePath,
 		BackgroundQueue:            h.App.BackgroundQueue,
+		UnifiedScan:                h.App.Settings.GetLibrary().UnifiedScan,
 	})
 
 	cleanupLock = false
@@ -176,9 +180,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 			if !errors.Is(err, scanner.ErrNoLocalFiles) {
 				h.App.Logger.Error().Err(err).Msg("Failed background library scan")
 				// Notify the frontend so it can display an error to the user
-				h.App.WSEventManager.SendEvent("SCAN_ERROR", map[string]string{
-					"message": err.Error(),
-				})
+				h.App.WSEventManager.SendEvent("SCAN_ERROR", err.Error())
 			}
 			return
 		}
@@ -295,7 +297,7 @@ func (h *Handler) HandleResolveUnlinkedFile(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 	if b.Path == "" || b.TargetMediaID == 0 {
-		return h.RespondWithError(c, errors.New("path and targetMediaId are required"))
+		return h.RespondWithCodeError(c, 400, errors.New("path and targetMediaId are required"))
 	}
 	if err := h.App.Database.ResolveGhostAssociation(b.Path, b.TargetMediaID); err != nil {
 		return h.RespondWithError(c, err)

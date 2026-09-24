@@ -391,6 +391,52 @@
   {
     "filepath": "../internal/api/anilist/client.go",
     "filename": "client.go",
+    "name": "StreamingEpisode",
+    "formattedName": "AL_StreamingEpisode",
+    "package": "anilist",
+    "fields": [
+      {
+        "name": "Title",
+        "jsonName": "title",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Thumbnail",
+        "jsonName": "thumbnail",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "URL",
+        "jsonName": "url",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Site",
+        "jsonName": "site",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/api/anilist/client.go",
+    "filename": "client.go",
     "name": "AniListMedia",
     "formattedName": "AL_AniListMedia",
     "package": "anilist",
@@ -553,6 +599,17 @@
         "goType": "string",
         "typescriptType": "string",
         "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "StreamingEpisodes",
+        "jsonName": "streamingEpisodes",
+        "goType": "[]StreamingEpisode",
+        "typescriptType": "Array\u003cAL_StreamingEpisode\u003e",
+        "usedTypescriptType": "AL_StreamingEpisode",
+        "usedStructName": "anilist.StreamingEpisode",
+        "required": false,
         "public": true,
         "comments": []
       }
@@ -2626,6 +2683,28 @@
         "comments": []
       },
       {
+        "name": "tmdbFallbackOnce",
+        "jsonName": "tmdbFallbackOnce",
+        "goType": "sync.Once",
+        "typescriptType": "Once",
+        "usedTypescriptType": "Once",
+        "usedStructName": "sync.Once",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "tmdbFallback",
+        "jsonName": "tmdbFallback",
+        "goType": "TMDBProviderImpl",
+        "typescriptType": "TMDBProviderImpl",
+        "usedTypescriptType": "TMDBProviderImpl",
+        "usedStructName": "metadata_provider.TMDBProviderImpl",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
         "name": "mu",
         "jsonName": "mu",
         "goType": "sync.Mutex",
@@ -2717,7 +2796,7 @@
         "required": false,
         "public": false,
         "comments": [
-          " Provider"
+          " providerWrapper"
         ]
       }
     ],
@@ -2880,6 +2959,28 @@
         "comments": []
       },
       {
+        "name": "tmdbFallbackOnce",
+        "jsonName": "tmdbFallbackOnce",
+        "goType": "sync.Once",
+        "typescriptType": "Once",
+        "usedTypescriptType": "Once",
+        "usedStructName": "sync.Once",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "tmdbFallback",
+        "jsonName": "tmdbFallback",
+        "goType": "TMDBProviderImpl",
+        "typescriptType": "TMDBProviderImpl",
+        "usedTypescriptType": "TMDBProviderImpl",
+        "usedStructName": "metadata_provider.TMDBProviderImpl",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
         "name": "mu",
         "jsonName": "mu",
         "goType": "sync.Mutex",
@@ -2897,6 +2998,26 @@
         "typescriptType": "Record\u003cnumber, jikanCachedEntry\u003e",
         "usedTypescriptType": "jikanCachedEntry",
         "usedStructName": "metadata_provider.jikanCachedEntry",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "failedUntil",
+        "jsonName": "failedUntil",
+        "goType": "map[int]time.Time",
+        "typescriptType": "Record\u003cnumber, string\u003e",
+        "usedStructName": "time.Time",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "unavailableUntil",
+        "jsonName": "unavailableUntil",
+        "goType": "time.Time",
+        "typescriptType": "string",
+        "usedStructName": "time.Time",
         "required": false,
         "public": false,
         "comments": []
@@ -3158,14 +3279,12 @@
       {
         "name": "cache",
         "jsonName": "cache",
-        "goType": "sync.Map",
-        "typescriptType": "Map",
-        "usedTypescriptType": "Map",
-        "usedStructName": "sync.Map",
+        "goType": "",
+        "typescriptType": "any",
         "required": false,
         "public": false,
         "comments": [
-          " simple in-memory cache for search results"
+          " TTL in-memory cache for search results"
         ]
       },
       {
@@ -4334,6 +4453,135 @@
     ]
   },
   {
+    "filepath": "../internal/api/tmdb/types.go",
+    "filename": "types.go",
+    "name": "TMDBImage",
+    "formattedName": "TMDBImage",
+    "package": "tmdb",
+    "fields": [
+      {
+        "name": "AspectRatio",
+        "jsonName": "aspect_ratio",
+        "goType": "float64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "FilePath",
+        "jsonName": "file_path",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Height",
+        "jsonName": "height",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "ISO6391",
+        "jsonName": "iso_639_1",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "VoteAverage",
+        "jsonName": "vote_average",
+        "goType": "float64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "VoteCount",
+        "jsonName": "vote_count",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Width",
+        "jsonName": "width",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " TMDBImage represents a backdrop, poster, or logo from TMDb."
+    ]
+  },
+  {
+    "filepath": "../internal/api/tmdb/types.go",
+    "filename": "types.go",
+    "name": "ImagesResponse",
+    "formattedName": "ImagesResponse",
+    "package": "tmdb",
+    "fields": [
+      {
+        "name": "ID",
+        "jsonName": "id",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Backdrops",
+        "jsonName": "backdrops",
+        "goType": "[]TMDBImage",
+        "typescriptType": "Array\u003cTMDBImage\u003e",
+        "usedTypescriptType": "TMDBImage",
+        "usedStructName": "tmdb.TMDBImage",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Posters",
+        "jsonName": "posters",
+        "goType": "[]TMDBImage",
+        "typescriptType": "Array\u003cTMDBImage\u003e",
+        "usedTypescriptType": "TMDBImage",
+        "usedStructName": "tmdb.TMDBImage",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Logos",
+        "jsonName": "logos",
+        "goType": "[]TMDBImage",
+        "typescriptType": "Array\u003cTMDBImage\u003e",
+        "usedTypescriptType": "TMDBImage",
+        "usedStructName": "tmdb.TMDBImage",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " ImagesResponse is the response from /tv/{id}/images or /movie/{id}/images."
+    ]
+  },
+  {
     "filepath": "..\\internal\\continuity\\history.go",
     "filename": "history.go",
     "name": "WatchHistory",
@@ -5067,6 +5315,17 @@
         "required": false,
         "public": true,
         "comments": []
+      },
+      {
+        "name": "DriveService",
+        "jsonName": "DriveService",
+        "goType": "drive.Service",
+        "typescriptType": "Service",
+        "usedTypescriptType": "Service",
+        "usedStructName": "drive.Service",
+        "required": false,
+        "public": true,
+        "comments": []
       }
     ],
     "comments": []
@@ -5429,6 +5688,17 @@
         "comments": []
       },
       {
+        "name": "configWatcher",
+        "jsonName": "configWatcher",
+        "goType": "ConfigWatcher",
+        "typescriptType": "INTERNAL_ConfigWatcher",
+        "usedTypescriptType": "INTERNAL_ConfigWatcher",
+        "usedStructName": "core.ConfigWatcher",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
         "name": "ShowTour",
         "jsonName": "ShowTour",
         "goType": "string",
@@ -5502,9 +5772,9 @@
         "name": "Server",
         "jsonName": "Server",
         "goType": "INTERNAL_Config_Server",
-        "inlineStructType": "struct{\nHost string `mapstructure:\"host\"`\nPort int `mapstructure:\"port\"`\nOffline bool `mapstructure:\"offline\"`\nUseBinaryPath bool `mapstructure:\"useBinaryPath\"`\nSystray bool `mapstructure:\"systray\"`\nDoHUrl string `mapstructure:\"dohUrl\"`\nPassword string `mapstructure:\"password\"`\nCorsOrigins []string `mapstructure:\"corsOrigins\"`\nTLS __STRUCT__ `mapstructure:\"tls\"`}",
+        "inlineStructType": "struct{\nHost string `mapstructure:\"host\"`\nPort int `mapstructure:\"port\"`\nOffline bool `mapstructure:\"offline\"`\nUseBinaryPath bool `mapstructure:\"useBinaryPath\"`\nSystray bool `mapstructure:\"systray\"`\nDoHUrl string `mapstructure:\"dohUrl\"`\nPassword string `mapstructure:\"password\"`\nCorsOrigins []string `mapstructure:\"corsOrigins\"`\nAuthTokenTTL string `mapstructure:\"authTokenTTL\"`\nTLS __STRUCT__ `mapstructure:\"tls\"`}",
         "typescriptType": "INTERNAL_Config_Server",
-        "usedTypescriptType": "{ Host: string; Port: number; Offline: boolean; UseBinaryPath: boolean; Systray: boolean; DoHUrl: string; Password: string; CorsOrigins: Array\u003cstring\u003e; TLS: { Enabled: boolean; CertPath: string; KeyPath: string; }; }",
+        "usedTypescriptType": "{ Host: string; Port: number; Offline: boolean; UseBinaryPath: boolean; Systray: boolean; DoHUrl: string; Password: string; CorsOrigins: Array\u003cstring\u003e; AuthTokenTTL: string; TLS: { Enabled: boolean; CertPath: string; KeyPath: string; }; }",
         "usedStructName": "core.Config_Server",
         "required": true,
         "public": true,
@@ -5550,9 +5820,9 @@
         "name": "Cache",
         "jsonName": "Cache",
         "goType": "INTERNAL_Config_Cache",
-        "inlineStructType": "struct{\nDir string `mapstructure:\"dir\"`\nTranscodeDir string `mapstructure:\"transcodeDir\"`}",
+        "inlineStructType": "struct{\nDir string `mapstructure:\"dir\"`\nTranscodeDir string `mapstructure:\"transcodeDir\"`\nThumbnails __STRUCT__ `mapstructure:\"thumbnails\"`}",
         "typescriptType": "INTERNAL_Config_Cache",
-        "usedTypescriptType": "{ Dir: string; TranscodeDir: string; }",
+        "usedTypescriptType": "{ Dir: string; TranscodeDir: string; Thumbnails: { MemoryMaxItems: number; MemoryMaxBytesMB: number; DiskMaxSizeMB: number; DiskTTLHours: number; CleanupInterval: string; }; }",
         "usedStructName": "core.Config_Cache",
         "required": true,
         "public": true,
@@ -5604,6 +5874,17 @@
         "usedStructName": "core.Config_Metadata",
         "required": true,
         "public": true,
+        "comments": []
+      },
+      {
+        "name": "v",
+        "jsonName": "v",
+        "goType": "viper.Viper",
+        "typescriptType": "Viper",
+        "usedTypescriptType": "Viper",
+        "usedStructName": "viper.Viper",
+        "required": false,
+        "public": false,
         "comments": []
       }
     ],
@@ -5689,6 +5970,17 @@
         "required": false,
         "public": true,
         "comments": []
+      },
+      {
+        "name": "AuthTokenTTL",
+        "jsonName": "AuthTokenTTL",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": [
+          " e.g. \"24h\", \"1h\", \"30m\" (min 5m)"
+        ]
       },
       {
         "name": "TLS",
@@ -5790,6 +6082,17 @@
         "jsonName": "TranscodeDir",
         "goType": "string",
         "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Thumbnails",
+        "jsonName": "Thumbnails",
+        "goType": "__STRUCT__",
+        "inlineStructType": "struct{\nMemoryMaxItems int `mapstructure:\"memoryMaxItems\"`\nMemoryMaxBytesMB int64 `mapstructure:\"memoryMaxBytesMB\"`\nDiskMaxSizeMB int64 `mapstructure:\"diskMaxSizeMB\"`\nDiskTTLHours int `mapstructure:\"diskTTLHours\"`\nCleanupInterval string `mapstructure:\"cleanupInterval\"`}",
+        "typescriptType": "{ MemoryMaxItems: number; MemoryMaxBytesMB: number; DiskMaxSizeMB: number; DiskTTLHours: number; CleanupInterval: string; }",
+        "usedTypescriptType": "{ MemoryMaxItems: number; MemoryMaxBytesMB: number; DiskMaxSizeMB: number; DiskTTLHours: number; CleanupInterval: string; }",
         "required": true,
         "public": true,
         "comments": []
@@ -5955,6 +6258,89 @@
         "typescriptType": "Array\u003cstring\u003e",
         "required": false,
         "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/core/config_watcher.go",
+    "filename": "config_watcher.go",
+    "name": "ConfigWatcher",
+    "formattedName": "INTERNAL_ConfigWatcher",
+    "package": "core",
+    "fields": [
+      {
+        "name": "v",
+        "jsonName": "v",
+        "goType": "viper.Viper",
+        "typescriptType": "Viper",
+        "usedTypescriptType": "Viper",
+        "usedStructName": "viper.Viper",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "configPath",
+        "jsonName": "configPath",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "logger",
+        "jsonName": "logger",
+        "goType": "zerolog.Logger",
+        "typescriptType": "Logger",
+        "usedTypescriptType": "Logger",
+        "usedStructName": "zerolog.Logger",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "cancel",
+        "jsonName": "cancel",
+        "goType": "context.CancelFunc",
+        "typescriptType": "CancelFunc",
+        "usedTypescriptType": "CancelFunc",
+        "usedStructName": "context.CancelFunc",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "watcher",
+        "jsonName": "watcher",
+        "goType": "fsnotify.Watcher",
+        "typescriptType": "Watcher",
+        "usedTypescriptType": "Watcher",
+        "usedStructName": "fsnotify.Watcher",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "callbacks",
+        "jsonName": "callbacks",
+        "goType": "[]",
+        "typescriptType": "Array\u003cany\u003e",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "mu",
+        "jsonName": "mu",
+        "goType": "sync.RWMutex",
+        "typescriptType": "RWMutex",
+        "usedTypescriptType": "RWMutex",
+        "usedStructName": "sync.RWMutex",
+        "required": false,
+        "public": false,
         "comments": []
       }
     ],
@@ -6343,89 +6729,6 @@
     "comments": []
   },
   {
-    "filepath": "../internal/core/ssdp.go",
-    "filename": "ssdp.go",
-    "name": "SSDPAnnouncer",
-    "formattedName": "INTERNAL_SSDPAnnouncer",
-    "package": "core",
-    "fields": [
-      {
-        "name": "logger",
-        "jsonName": "logger",
-        "goType": "zerolog.Logger",
-        "typescriptType": "Logger",
-        "usedTypescriptType": "Logger",
-        "usedStructName": "zerolog.Logger",
-        "required": false,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "port",
-        "jsonName": "port",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "uuid",
-        "jsonName": "uuid",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "running",
-        "jsonName": "running",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "mu",
-        "jsonName": "mu",
-        "goType": "sync.Mutex",
-        "typescriptType": "Mutex",
-        "usedTypescriptType": "Mutex",
-        "usedStructName": "sync.Mutex",
-        "required": false,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "cancel",
-        "jsonName": "cancel",
-        "goType": "",
-        "typescriptType": "any",
-        "required": true,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "wg",
-        "jsonName": "wg",
-        "goType": "sync.WaitGroup",
-        "typescriptType": "WaitGroup",
-        "usedTypescriptType": "WaitGroup",
-        "usedStructName": "sync.WaitGroup",
-        "required": false,
-        "public": false,
-        "comments": []
-      }
-    ],
-    "comments": [
-      " SSDPAnnouncer listens for SSDP M-SEARCH requests and responds with",
-      " the server's location so that KameHouseTV and other UPnP control",
-      " points can discover the server automatically on the LAN."
-    ]
-  },
-  {
     "filepath": "../internal/database/db/backup.go",
     "filename": "backup.go",
     "name": "BackupResult",
@@ -6586,6 +6889,17 @@
         "goType": "bool",
         "typescriptType": "boolean",
         "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "once",
+        "jsonName": "once",
+        "goType": "sync.Once",
+        "typescriptType": "Once",
+        "usedTypescriptType": "Once",
+        "usedStructName": "sync.Once",
+        "required": false,
         "public": false,
         "comments": []
       }
@@ -6750,6 +7064,55 @@
         "usedTypescriptType": "CancelFunc",
         "usedStructName": "context.CancelFunc",
         "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "currSettings",
+        "jsonName": "currSettings",
+        "goType": "",
+        "typescriptType": "any",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "currMediastreamSettings",
+        "jsonName": "currMediastreamSettings",
+        "goType": "",
+        "typescriptType": "any",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "migrationMu",
+        "jsonName": "migrationMu",
+        "goType": "sync.RWMutex",
+        "typescriptType": "RWMutex",
+        "usedTypescriptType": "RWMutex",
+        "usedStructName": "sync.RWMutex",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "migrationComplete",
+        "jsonName": "migrationComplete",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "migrationError",
+        "jsonName": "migrationError",
+        "goType": "error",
+        "typescriptType": "DB_error",
+        "usedTypescriptType": "DB_error",
+        "usedStructName": "db.error",
+        "required": true,
         "public": false,
         "comments": []
       }
@@ -7419,6 +7782,15 @@
         "goType": "int",
         "typescriptType": "number",
         "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "DriveFileID",
+        "jsonName": "driveFileId",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
         "public": true,
         "comments": []
       }
@@ -10616,6 +10988,15 @@
         "comments": []
       },
       {
+        "name": "DriveFileID",
+        "jsonName": "driveFileId",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
         "name": "ParsedData",
         "jsonName": "parsedInfo",
         "goType": "json.RawMessage",
@@ -10923,6 +11304,17 @@
         "comments": []
       },
       {
+        "name": "GoogleDrive",
+        "jsonName": "googleDrive",
+        "goType": "GoogleDriveSettings",
+        "typescriptType": "Models_GoogleDriveSettings",
+        "usedTypescriptType": "Models_GoogleDriveSettings",
+        "usedStructName": "models.GoogleDriveSettings",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
         "name": "Mediastream",
         "jsonName": "mediastream",
         "goType": "MediastreamSettings",
@@ -11109,6 +11501,78 @@
       {
         "name": "AutoScan",
         "jsonName": "autoScan",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "UnifiedScan",
+        "jsonName": "unifiedScan",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "PreferredAudioProfile",
+        "jsonName": "preferredAudioProfile",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "AutoSkipIntro",
+        "jsonName": "autoSkipIntro",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "AutoSkipOutro",
+        "jsonName": "autoSkipOutro",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "AutoSkipFiller",
+        "jsonName": "autoSkipFiller",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "AutoDisableSubtitlesWhenDubbed",
+        "jsonName": "autoDisableSubtitlesWhenDubbed",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "MarathonMode",
+        "jsonName": "marathonMode",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "TvMode",
+        "jsonName": "tvMode",
         "goType": "bool",
         "typescriptType": "boolean",
         "required": true,
@@ -11820,6 +12284,24 @@
         "required": true,
         "public": true,
         "comments": []
+      },
+      {
+        "name": "PerformanceProfile",
+        "jsonName": "performanceProfile",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "AutoGovernorEnabled",
+        "jsonName": "autoGovernorEnabled",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
       }
     ],
     "comments": [],
@@ -12211,6 +12693,588 @@
     ]
   },
   {
+    "filepath": "../internal/database/models/models.go",
+    "filename": "models.go",
+    "name": "GoogleDriveSettings",
+    "formattedName": "Models_GoogleDriveSettings",
+    "package": "models",
+    "fields": [
+      {
+        "name": "Enabled",
+        "jsonName": "enabled",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "ClientID",
+        "jsonName": "clientId",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "ClientSecret",
+        "jsonName": "clientSecret",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "RefreshToken",
+        "jsonName": "refreshToken",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "FolderID",
+        "jsonName": "folderId",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "FolderName",
+        "jsonName": "folderName",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/drive/client.go",
+    "filename": "client.go",
+    "name": "Client",
+    "formattedName": "Client",
+    "package": "drive",
+    "fields": [
+      {
+        "name": "httpClient",
+        "jsonName": "httpClient",
+        "goType": "http.Client",
+        "typescriptType": "Client",
+        "usedTypescriptType": "Client",
+        "usedStructName": "http.Client",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "transport",
+        "jsonName": "transport",
+        "goType": "http.Transport",
+        "typescriptType": "Transport",
+        "usedTypescriptType": "Transport",
+        "usedStructName": "http.Transport",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "tokenSource",
+        "jsonName": "tokenSource",
+        "goType": "oauth2.TokenSource",
+        "typescriptType": "TokenSource",
+        "usedTypescriptType": "TokenSource",
+        "usedStructName": "oauth2.TokenSource",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "logger",
+        "jsonName": "logger",
+        "goType": "zerolog.Logger",
+        "typescriptType": "Logger",
+        "usedTypescriptType": "Logger",
+        "usedStructName": "zerolog.Logger",
+        "required": false,
+        "public": false,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " Client wraps Google Drive API calls with automatic OAuth2 token refreshing."
+    ]
+  },
+  {
+    "filepath": "../internal/drive/indexer.go",
+    "filename": "indexer.go",
+    "name": "ResolvedDriveFile",
+    "formattedName": "ResolvedDriveFile",
+    "package": "drive",
+    "fields": [
+      {
+        "name": "TargetMediaID",
+        "jsonName": "TargetMediaID",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": [
+          " TMDB ID (or TMDB + 1,000,000 for movies)"
+        ]
+      },
+      {
+        "name": "RawTmdbID",
+        "jsonName": "RawTmdbID",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": [
+          " Raw TMDB ID"
+        ]
+      },
+      {
+        "name": "MediaType",
+        "jsonName": "MediaType",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": [
+          " \"ANIME\" or \"MOVIE\""
+        ]
+      },
+      {
+        "name": "Format",
+        "jsonName": "Format",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": [
+          " \"TV\", \"MOVIE\", \"SPECIAL\", \"OVA\""
+        ]
+      },
+      {
+        "name": "IsMovie",
+        "jsonName": "IsMovie",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "SeriesTitle",
+        "jsonName": "SeriesTitle",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "EpisodeNumber",
+        "jsonName": "EpisodeNumber",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "AbsoluteNumber",
+        "jsonName": "AbsoluteNumber",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "SeasonNumber",
+        "jsonName": "SeasonNumber",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "EpisodeTitle",
+        "jsonName": "EpisodeTitle",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "SagaName",
+        "jsonName": "SagaName",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "SagaID",
+        "jsonName": "SagaID",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "EpisodeType",
+        "jsonName": "EpisodeType",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " ResolvedDriveFile contains parsed identity and metadata for an indexed Drive file."
+    ]
+  },
+  {
+    "filepath": "../internal/drive/service.go",
+    "filename": "service.go",
+    "name": "Service",
+    "formattedName": "Service",
+    "package": "drive",
+    "fields": [
+      {
+        "name": "mu",
+        "jsonName": "mu",
+        "goType": "sync.RWMutex",
+        "typescriptType": "RWMutex",
+        "usedTypescriptType": "RWMutex",
+        "usedStructName": "sync.RWMutex",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "client",
+        "jsonName": "client",
+        "goType": "Client",
+        "typescriptType": "Client",
+        "usedTypescriptType": "Client",
+        "usedStructName": "drive.Client",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "clientID",
+        "jsonName": "clientID",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "clientSecret",
+        "jsonName": "clientSecret",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "refreshToken",
+        "jsonName": "refreshToken",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "folderID",
+        "jsonName": "folderID",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "folderName",
+        "jsonName": "folderName",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "enabled",
+        "jsonName": "enabled",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "isScanning",
+        "jsonName": "isScanning",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "cachedEmail",
+        "jsonName": "cachedEmail",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "cachedName",
+        "jsonName": "cachedName",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "userInfoCachedAt",
+        "jsonName": "userInfoCachedAt",
+        "goType": "time.Time",
+        "typescriptType": "string",
+        "usedStructName": "time.Time",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "logger",
+        "jsonName": "logger",
+        "goType": "zerolog.Logger",
+        "typescriptType": "Logger",
+        "usedTypescriptType": "Logger",
+        "usedStructName": "zerolog.Logger",
+        "required": false,
+        "public": false,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " Service coordinates Google Drive configuration and streaming operations."
+    ]
+  },
+  {
+    "filepath": "../internal/drive/types.go",
+    "filename": "types.go",
+    "name": "DriveFile",
+    "formattedName": "DriveFile",
+    "package": "drive",
+    "fields": [
+      {
+        "name": "ID",
+        "jsonName": "id",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Name",
+        "jsonName": "name",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Size",
+        "jsonName": "size",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "MimeType",
+        "jsonName": "mimeType",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "ModifiedTime",
+        "jsonName": "modifiedTime",
+        "goType": "time.Time",
+        "typescriptType": "string",
+        "usedStructName": "time.Time",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "MD5Checksum",
+        "jsonName": "md5Checksum",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "RelativePath",
+        "jsonName": "relativePath",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": [
+          " e.g. \"S01/Dragon Ball Kai - 01.mkv\" or \"Dragon Ball Kai - 01.mkv\""
+        ]
+      },
+      {
+        "name": "DurationMillis",
+        "jsonName": "durationMillis",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Width",
+        "jsonName": "width",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Height",
+        "jsonName": "height",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " DriveFile represents a media file or directory discovered in Google Drive."
+    ]
+  },
+  {
+    "filepath": "../internal/drive/types.go",
+    "filename": "types.go",
+    "name": "DriveStatus",
+    "formattedName": "DriveStatus",
+    "package": "drive",
+    "fields": [
+      {
+        "name": "Connected",
+        "jsonName": "connected",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "UserEmail",
+        "jsonName": "userEmail",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "DisplayName",
+        "jsonName": "displayName",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "FolderID",
+        "jsonName": "folderId",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "FolderName",
+        "jsonName": "folderName",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "IndexedEpisodes",
+        "jsonName": "indexedEpisodes",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "IsScanning",
+        "jsonName": "isScanning",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Error",
+        "jsonName": "error",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " DriveStatus represents current connection and health status of Google Drive integration."
+    ]
+  },
+  {
     "filepath": "../internal/events/dispatcher.go",
     "filename": "dispatcher.go",
     "name": "Event",
@@ -12347,27 +13411,6 @@
   {
     "filepath": "../internal/events/websocket.go",
     "filename": "websocket.go",
-    "name": "GlobalWSEventManagerWrapper",
-    "formattedName": "Events_GlobalWSEventManagerWrapper",
-    "package": "events",
-    "fields": [
-      {
-        "name": "WSEventManager",
-        "jsonName": "WSEventManager",
-        "goType": "WSEventManagerInterface",
-        "typescriptType": "Events_WSEventManagerInterface",
-        "usedTypescriptType": "Events_WSEventManagerInterface",
-        "usedStructName": "events.WSEventManagerInterface",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
-    "filepath": "../internal/events/websocket.go",
-    "filename": "websocket.go",
     "name": "WSEventManager",
     "formattedName": "Events_WSEventManager",
     "package": "events",
@@ -12401,6 +13444,17 @@
         "typescriptType": "any",
         "required": true,
         "public": true,
+        "comments": []
+      },
+      {
+        "name": "shutdownCtx",
+        "jsonName": "shutdownCtx",
+        "goType": "context.Context",
+        "typescriptType": "Context",
+        "usedTypescriptType": "Context",
+        "usedStructName": "context.Context",
+        "required": false,
+        "public": false,
         "comments": []
       },
       {
@@ -12888,73 +13942,182 @@
     ]
   },
   {
-    "filepath": "../internal/handlers/cast.go",
-    "filename": "cast.go",
-    "name": "CastDevice",
-    "formattedName": "CastDevice",
+    "filepath": "../internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
+    "name": "WarmingProgress",
+    "formattedName": "WarmingProgress",
     "package": "handlers",
     "fields": [
       {
-        "name": "ID",
-        "jsonName": "id",
-        "goType": "string",
-        "typescriptType": "string",
+        "name": "Total",
+        "jsonName": "total",
+        "goType": "int64",
+        "typescriptType": "number",
         "required": true,
         "public": true,
         "comments": []
       },
       {
-        "name": "Name",
-        "jsonName": "name",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
-    "filepath": "../internal/handlers/cast.go",
-    "filename": "cast.go",
-    "name": "CastDevicesResponse",
-    "formattedName": "CastDevicesResponse",
-    "package": "handlers",
-    "fields": [
-      {
-        "name": "Devices",
-        "jsonName": "devices",
-        "goType": "[]CastDevice",
-        "typescriptType": "Array\u003cCastDevice\u003e",
-        "usedTypescriptType": "CastDevice",
-        "usedStructName": "handlers.CastDevice",
-        "required": false,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
-    "filepath": "../internal/handlers/cast.go",
-    "filename": "cast.go",
-    "name": "CastPlayRequest",
-    "formattedName": "CastPlayRequest",
-    "package": "handlers",
-    "fields": [
-      {
-        "name": "DeviceID",
-        "jsonName": "deviceId",
-        "goType": "string",
-        "typescriptType": "string",
+        "name": "Processed",
+        "jsonName": "processed",
+        "goType": "int64",
+        "typescriptType": "number",
         "required": true,
         "public": true,
         "comments": []
       },
       {
-        "name": "MediaID",
-        "jsonName": "mediaId",
+        "name": "Generated",
+        "jsonName": "generated",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Skipped",
+        "jsonName": "skipped",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " WarmingProgress tracks active thumbnail generation progress."
+    ]
+  },
+  {
+    "filepath": "../internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
+    "name": "CacheStatsResponse",
+    "formattedName": "CacheStatsResponse",
+    "package": "handlers",
+    "fields": [
+      {
+        "name": "Thumbnails",
+        "jsonName": "thumbnails",
+        "goType": "CacheStatsResponse_Thumbnails",
+        "inlineStructType": "struct{\nMemoryHits uint64 `json:\"memoryHits\"`\nMemoryMisses uint64 `json:\"memoryMisses\"`\nMemoryCount int `json:\"memoryCount\"`\nMemoryMaxItems int `json:\"memoryMaxItems\"`\nMemoryBytes int64 `json:\"memoryBytes\"`\nDiskSizeBytes int64 `json:\"diskSizeBytes\"`\nDiskItemCount int `json:\"diskItemCount\"`\nDiskMaxSizeMB int64 `json:\"diskMaxSizeMB\"`}",
+        "typescriptType": "CacheStatsResponse_Thumbnails",
+        "usedTypescriptType": "{ memoryHits: number; memoryMisses: number; memoryCount: number; memoryMaxItems: number; memoryBytes: number; diskSizeBytes: number; diskItemCount: number; diskMaxSizeMB: number; }",
+        "usedStructName": "handlers.CacheStatsResponse_Thumbnails",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Videofiles",
+        "jsonName": "videofiles",
+        "goType": "CacheStatsResponse_Videofiles",
+        "inlineStructType": "struct{\nDiskSizeBytes int64 `json:\"diskSizeBytes\"`}",
+        "typescriptType": "CacheStatsResponse_Videofiles",
+        "usedTypescriptType": "{ diskSizeBytes: number; }",
+        "usedStructName": "handlers.CacheStatsResponse_Videofiles",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Keyframes",
+        "jsonName": "keyframes",
+        "goType": "CacheStatsResponse_Keyframes",
+        "inlineStructType": "struct{\nDiskSizeBytes int64 `json:\"diskSizeBytes\"`\nDiskItemCount int `json:\"diskItemCount\"`}",
+        "typescriptType": "CacheStatsResponse_Keyframes",
+        "usedTypescriptType": "{ diskSizeBytes: number; diskItemCount: number; }",
+        "usedStructName": "handlers.CacheStatsResponse_Keyframes",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Fingerprints",
+        "jsonName": "fingerprints",
+        "goType": "CacheStatsResponse_Fingerprints",
+        "inlineStructType": "struct{\nDiskSizeBytes int64 `json:\"diskSizeBytes\"`\nDiskItemCount int `json:\"diskItemCount\"`}",
+        "typescriptType": "CacheStatsResponse_Fingerprints",
+        "usedTypescriptType": "{ diskSizeBytes: number; diskItemCount: number; }",
+        "usedStructName": "handlers.CacheStatsResponse_Fingerprints",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Images",
+        "jsonName": "images",
+        "goType": "CacheStatsResponse_Images",
+        "inlineStructType": "struct{\nDiskSizeBytes int64 `json:\"diskSizeBytes\"`\nDiskItemCount int `json:\"diskItemCount\"`}",
+        "typescriptType": "CacheStatsResponse_Images",
+        "usedTypescriptType": "{ diskSizeBytes: number; diskItemCount: number; }",
+        "usedStructName": "handlers.CacheStatsResponse_Images",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "TotalDiskSizeBytes",
+        "jsonName": "totalDiskSizeBytes",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "IsWarming",
+        "jsonName": "isWarming",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "WarmingProgress",
+        "jsonName": "warmingProgress",
+        "goType": "WarmingProgress",
+        "typescriptType": "WarmingProgress",
+        "usedTypescriptType": "WarmingProgress",
+        "usedStructName": "handlers.WarmingProgress",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " CacheStatsResponse contains runtime memory and disk metrics for all caches."
+    ]
+  },
+  {
+    "filepath": "../internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
+    "name": "CacheStatsResponse_Thumbnails",
+    "formattedName": "CacheStatsResponse_Thumbnails",
+    "package": "handlers",
+    "fields": [
+      {
+        "name": "MemoryHits",
+        "jsonName": "memoryHits",
+        "goType": "uint64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "MemoryMisses",
+        "jsonName": "memoryMisses",
+        "goType": "uint64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "MemoryCount",
+        "jsonName": "memoryCount",
         "goType": "int",
         "typescriptType": "number",
         "required": true,
@@ -12962,8 +14125,8 @@
         "comments": []
       },
       {
-        "name": "EpisodeNumber",
-        "jsonName": "episodeNumber",
+        "name": "MemoryMaxItems",
+        "jsonName": "memoryMaxItems",
         "goType": "int",
         "typescriptType": "number",
         "required": true,
@@ -12971,53 +14134,156 @@
         "comments": []
       },
       {
-        "name": "EpisodeID",
-        "jsonName": "episodeId",
-        "goType": "string",
-        "typescriptType": "string",
+        "name": "MemoryBytes",
+        "jsonName": "memoryBytes",
+        "goType": "int64",
+        "typescriptType": "number",
         "required": true,
         "public": true,
         "comments": []
       },
       {
-        "name": "Title",
-        "jsonName": "title",
-        "goType": "string",
-        "typescriptType": "string",
+        "name": "DiskSizeBytes",
+        "jsonName": "diskSizeBytes",
+        "goType": "int64",
+        "typescriptType": "number",
         "required": true,
         "public": true,
         "comments": []
       },
       {
-        "name": "EpisodeLabel",
-        "jsonName": "episodeLabel",
-        "goType": "string",
-        "typescriptType": "string",
+        "name": "DiskItemCount",
+        "jsonName": "diskItemCount",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "DiskMaxSizeMB",
+        "jsonName": "diskMaxSizeMB",
+        "goType": "int64",
+        "typescriptType": "number",
         "required": true,
         "public": true,
         "comments": []
       }
     ],
-    "comments": []
+    "comments": [
+      " CacheStatsResponse contains runtime memory and disk metrics for all caches."
+    ]
   },
   {
-    "filepath": "../internal/handlers/cast.go",
-    "filename": "cast.go",
-    "name": "CastPlayResponse",
-    "formattedName": "CastPlayResponse",
+    "filepath": "../internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
+    "name": "CacheStatsResponse_Videofiles",
+    "formattedName": "CacheStatsResponse_Videofiles",
     "package": "handlers",
     "fields": [
       {
-        "name": "SentTo",
-        "jsonName": "sentTo",
-        "goType": "[]string",
-        "typescriptType": "Array\u003cstring\u003e",
-        "required": false,
+        "name": "DiskSizeBytes",
+        "jsonName": "diskSizeBytes",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
         "public": true,
         "comments": []
       }
     ],
-    "comments": []
+    "comments": [
+      " CacheStatsResponse contains runtime memory and disk metrics for all caches."
+    ]
+  },
+  {
+    "filepath": "../internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
+    "name": "CacheStatsResponse_Keyframes",
+    "formattedName": "CacheStatsResponse_Keyframes",
+    "package": "handlers",
+    "fields": [
+      {
+        "name": "DiskSizeBytes",
+        "jsonName": "diskSizeBytes",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "DiskItemCount",
+        "jsonName": "diskItemCount",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " CacheStatsResponse contains runtime memory and disk metrics for all caches."
+    ]
+  },
+  {
+    "filepath": "../internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
+    "name": "CacheStatsResponse_Fingerprints",
+    "formattedName": "CacheStatsResponse_Fingerprints",
+    "package": "handlers",
+    "fields": [
+      {
+        "name": "DiskSizeBytes",
+        "jsonName": "diskSizeBytes",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "DiskItemCount",
+        "jsonName": "diskItemCount",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " CacheStatsResponse contains runtime memory and disk metrics for all caches."
+    ]
+  },
+  {
+    "filepath": "../internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
+    "name": "CacheStatsResponse_Images",
+    "formattedName": "CacheStatsResponse_Images",
+    "package": "handlers",
+    "fields": [
+      {
+        "name": "DiskSizeBytes",
+        "jsonName": "diskSizeBytes",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "DiskItemCount",
+        "jsonName": "diskItemCount",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " CacheStatsResponse contains runtime memory and disk metrics for all caches."
+    ]
   },
   {
     "filepath": "../internal/handlers/directory_selector.go",
@@ -13171,6 +14437,83 @@
     "comments": [
       " PlaybackHeartbeatPayload is the payload sent by the frontend every 5 seconds."
     ]
+  },
+  {
+    "filepath": "../internal/handlers/health.go",
+    "filename": "health.go",
+    "name": "HealthCheckResult",
+    "formattedName": "HealthCheckResult",
+    "package": "handlers",
+    "fields": [
+      {
+        "name": "Status",
+        "jsonName": "status",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "LatencyMs",
+        "jsonName": "latency_ms",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Message",
+        "jsonName": "message",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Details",
+        "jsonName": "details",
+        "goType": "any",
+        "typescriptType": "any",
+        "usedStructName": "handlers.any",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/handlers/health.go",
+    "filename": "health.go",
+    "name": "HealthResponse",
+    "formattedName": "HealthResponse",
+    "package": "handlers",
+    "fields": [
+      {
+        "name": "Status",
+        "jsonName": "status",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Checks",
+        "jsonName": "checks",
+        "goType": "map[string]HealthCheckResult",
+        "typescriptType": "Record\u003cstring, HealthCheckResult\u003e",
+        "usedTypescriptType": "HealthCheckResult",
+        "usedStructName": "handlers.HealthCheckResult",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": []
   },
   {
     "filepath": "../internal/handlers/lore.go",
@@ -13783,6 +15126,28 @@
         "public": true,
         "comments": [
           " OS process id of the server; used by the desktop sidecar to reap orphans"
+        ]
+      },
+      {
+        "name": "TMDBDegraded",
+        "jsonName": "tmdbDegraded",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": [
+          " True when no usable TMDB token is configured (placeholder/missing)"
+        ]
+      },
+      {
+        "name": "TMDBDegradedReason",
+        "jsonName": "tmdbDegradedReason",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": [
+          " \"\", \"missing\" or \"placeholder\""
         ]
       }
     ],
@@ -19816,6 +21181,15 @@
         "required": false,
         "public": true,
         "comments": []
+      },
+      {
+        "name": "UnifiedScan",
+        "jsonName": "UnifiedScan",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
       }
     ],
     "comments": []
@@ -20658,6 +22032,15 @@
         "required": false,
         "public": true,
         "comments": []
+      },
+      {
+        "name": "UnifiedScan",
+        "jsonName": "UnifiedScan",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
       }
     ],
     "comments": []
@@ -20993,6 +22376,15 @@
         "usedTypescriptType": "Scanner_BackgroundQueue",
         "usedStructName": "scanner.BackgroundQueue",
         "required": false,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "UnifiedScan",
+        "jsonName": "UnifiedScan",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
         "public": true,
         "comments": []
       }
@@ -30598,6 +31990,36 @@
     ]
   },
   {
+    "filepath": "../internal/skipdetect/fingerprint_cache.go",
+    "filename": "fingerprint_cache.go",
+    "name": "CachedFingerprint",
+    "formattedName": "CachedFingerprint",
+    "package": "skipdetect",
+    "fields": [
+      {
+        "name": "Duration",
+        "jsonName": "duration",
+        "goType": "float64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Fingerprint",
+        "jsonName": "fingerprint",
+        "goType": "[]int",
+        "typescriptType": "Array\u003cnumber\u003e",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " CachedFingerprint representa el payload persistido en disco de una huella de audio."
+    ]
+  },
+  {
     "filepath": "../internal/skipdetect/subtitle_hints.go",
     "filename": "subtitle_hints.go",
     "name": "SubHint",
@@ -30876,24 +32298,6 @@
         "required": true,
         "public": true,
         "comments": []
-      },
-      {
-        "name": "TorBoxApiKey",
-        "jsonName": "TorBoxApiKey",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "RealDebridApiKey",
-        "jsonName": "RealDebridApiKey",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
       }
     ],
     "comments": []
@@ -31044,6 +32448,15 @@
         "comments": []
       },
       {
+        "name": "maxItems",
+        "jsonName": "maxItems",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
         "name": "stop",
         "jsonName": "stop",
         "goType": "",
@@ -31067,6 +32480,48 @@
         "jsonName": "cache",
         "goType": "",
         "typescriptType": "any",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "currentBytes",
+        "jsonName": "currentBytes",
+        "goType": "atomic.Int64",
+        "typescriptType": "Int64",
+        "usedTypescriptType": "Int64",
+        "usedStructName": "atomic.Int64",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "maxBytes",
+        "jsonName": "maxBytes",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "hits",
+        "jsonName": "hits",
+        "goType": "atomic.Uint64",
+        "typescriptType": "Uint64",
+        "usedTypescriptType": "Uint64",
+        "usedStructName": "atomic.Uint64",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "misses",
+        "jsonName": "misses",
+        "goType": "atomic.Uint64",
+        "typescriptType": "Uint64",
+        "usedTypescriptType": "Uint64",
+        "usedStructName": "atomic.Uint64",
         "required": false,
         "public": false,
         "comments": []
@@ -31503,10 +32958,10 @@
       {
         "name": "mu",
         "jsonName": "mu",
-        "goType": "sync.Mutex",
-        "typescriptType": "Mutex",
-        "usedTypescriptType": "Mutex",
-        "usedStructName": "sync.Mutex",
+        "goType": "sync.RWMutex",
+        "typescriptType": "RWMutex",
+        "usedTypescriptType": "RWMutex",
+        "usedStructName": "sync.RWMutex",
         "required": false,
         "public": false,
         "comments": []
@@ -32193,8 +33648,6 @@
       "typescriptType": "string",
       "declaredValues": [
         "\"localfile\"",
-        "\"torrent\"",
-        "\"debrid\"",
         "\"onlinestream\""
       ]
     },

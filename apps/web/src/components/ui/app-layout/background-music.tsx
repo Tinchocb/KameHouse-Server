@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useAppStore } from "@/lib/store"
+import { useUIStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { IconStatusMusic, IconStatusMusicOff } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
@@ -9,6 +9,7 @@ import { getServerBaseUrl } from "@/api/client/server-url"
 
 
 import { resolveSeriesSoundtrackPlaylist, SERIES_SOUNDTRACKS, getSeriesEraKey } from "@/lib/config/series_soundtracks"
+import { persistThemePatch } from "@/lib/server/persist-settings"
 
 // Playlist por defecto (bundleada con la app) que se usa cuando el usuario
 // todavía no ha escaneado una carpeta de música propia.
@@ -46,7 +47,7 @@ function getGlobalBgAudio(): HTMLAudioElement | null {
 // Limpieza proactiva en dev / HMR: si la música está deshabilitada en el store,
 // pausamos y limpiamos el audio inmediatamente al cargar el módulo.
 if (typeof window !== "undefined") {
-    if (window.__kamehouse_bg_audio && !useAppStore.getState().bgMusicEnabled) {
+    if (window.__kamehouse_bg_audio && !useUIStore.getState().bgMusicEnabled) {
         try {
             window.__kamehouse_bg_audio.pause()
             window.__kamehouse_bg_audio.src = ""
@@ -68,7 +69,7 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
         eraOpeningPlaying,
         activeSeriesContext,
         seriesSoundtrackMode,
-    } = useAppStore(
+    } = useUIStore(
         useShallow((state) => ({
             bgMusicEnabled: state.bgMusicEnabled,
             setBgMusicEnabled: state.setBgMusicEnabled,
@@ -110,14 +111,19 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
         return DEFAULT_PLAYLIST
     }, [bgMusicDir, bgMusicTracks, activeSeriesContext, seriesSoundtrackMode])
 
-    const [, setIsPlaying] = React.useState(false)
     const [isAnyVideoPlaying, setIsAnyVideoPlaying] = React.useState(false)
     const [currentTrackIndex, setCurrentTrackIndex] = React.useState(0)
     const fadeTimerRef = React.useRef<NodeJS.Timeout | null>(null)
 
-    // Si la serie cambia, reseteamos al primer track y realizamos transición suave (fade-out / fade-in)
-    React.useEffect(() => {
+    // Si la serie cambia, reseteamos al primer track durante el render
+    const [prevSeriesContext, setPrevSeriesContext] = React.useState(activeSeriesContext)
+    if (activeSeriesContext !== prevSeriesContext) {
+        setPrevSeriesContext(activeSeriesContext)
         setCurrentTrackIndex(0)
+    }
+
+    // Si la serie cambia, realizamos transición suave (fade-out / fade-in)
+    React.useEffect(() => {
         const audio = getGlobalBgAudio()
         if (audio && bgMusicEnabled && !isVideoActive && !eraOpeningPlaying) {
             // Suave fade out antes de cambiar la fuente
@@ -143,7 +149,9 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
 
     // Sync volume when bgMusicVolume changes (NO incluir bgMusicVolume en el hook
     // de reproducción para evitar que cambiar el volumen reinicie o corte la música).
+    const bgMusicVolumeRef = React.useRef(bgMusicVolume)
     React.useEffect(() => {
+        bgMusicVolumeRef.current = bgMusicVolume
         const audio = getGlobalBgAudio()
         if (audio) {
             audio.volume = Math.pow(bgMusicVolume, 2)
@@ -159,7 +167,6 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
         // o suena un opening de saga.
         if (!bgMusicEnabled || isVideoActive || isAnyVideoPlaying || eraOpeningPlaying) {
             audio.pause()
-            setIsPlaying(false)
             return
         }
 
@@ -172,7 +179,7 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
                 audio.load()
             }
         }
-        audio.volume = Math.pow(bgMusicVolume, 2)
+        audio.volume = Math.pow(bgMusicVolumeRef.current, 2)
 
         // Manejo de bucle / siguiente pista al terminar
         const handleEnded = () => {
@@ -181,10 +188,8 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
         audio.addEventListener("ended", handleEnded)
 
         audio.play()
-            .then(() => setIsPlaying(true))
             .catch((err) => {
                 console.warn("Could not autoplay background music:", err)
-                setIsPlaying(false)
             })
 
         return () => {
@@ -229,13 +234,13 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
         const next = !audioMasterOn
         setBgMusicEnabled(next)
         setUiSoundsEnabled(next)
+        persistThemePatch({ bgMusicEnabled: next, uiSoundsEnabled: next })
 
         const audio = getGlobalBgAudio()
         if (!next) {
             if (audio) {
                 audio.pause()
             }
-            setIsPlaying(false)
         } else {
             if (audio && !isVideoActive && !eraOpeningPlaying && !isAnyVideoPlaying) {
                 const expectedSrc = PLAYLIST[currentTrackIndex]
@@ -248,7 +253,6 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
                 }
                 audio.volume = Math.pow(bgMusicVolume, 2)
                 audio.play()
-                    .then(() => setIsPlaying(true))
                     .catch((err) => {
                         console.warn("Could not start background music on click:", err)
                     })
@@ -301,7 +305,7 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
                         Audio {audioMasterOn ? "(ON)" : "(OFF)"}
                     </span>
                     {activeSeriesInfo && audioMasterOn && (
-                        <span className="text-[10px] text-brand-accent font-mono truncate font-medium">
+                        <span className="text-3xs text-brand-accent font-mono truncate font-medium">
                             {activeSeriesInfo.shortName} OST
                         </span>
                     )}

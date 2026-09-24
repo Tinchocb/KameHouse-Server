@@ -15,8 +15,11 @@ const router = createRouter({
     routeTree,
     defaultPreload: "intent",
     defaultPreloadDelay: 50,
-    defaultPendingMs: 200,
-    defaultPendingMinMs: 300,
+    // Anti-flash: solo mostrar pending si la carga supera 800ms (evita
+    // contenido->skeleton->contenido en navegaciones rápidas con caché),
+    // y no forzar duración mínima larga del skeleton.
+    defaultPendingMs: 800,
+    defaultPendingMinMs: 200,
     context: {
         queryClient,
     },
@@ -30,8 +33,12 @@ declare module "@tanstack/react-router" {
     }
 }
 
-// React Scan para profiling visual, detección de re-renders y generador de prompts para IA
-if (typeof window !== "undefined" && import.meta.env.DEV) {
+// React Scan para profiling visual (activable con VITE_SCAN=true o localStorage.setItem("kamehouse:scan", "true"))
+const shouldEnableScan = typeof window !== "undefined" && import.meta.env.DEV && (
+    import.meta.env.VITE_SCAN === "true" ||
+    window.localStorage?.getItem("kamehouse:scan") === "true"
+)
+if (shouldEnableScan) {
     import("react-scan").then(({ scan }) => {
         scan({
             enabled: true,
@@ -85,21 +92,28 @@ window.addEventListener("error", (event) => {
 })
 
 function init() {
+    const rootElement = document.getElementById("root")
+    if (!rootElement) {
+        throw new Error("Root element '#root' not found in DOM")
+    }
     // Renderizamos la UI de inmediato para que la pantalla de carga se muestre sin ningún retraso
-    ReactDOM.createRoot(document.getElementById("root")!).render(
+    ReactDOM.createRoot(rootElement).render(
         <ClientProviders>
             <RouterProvider router={router} />
         </ClientProviders>,
     )
 
-    // En segundo plano, si estamos en Tauri, resolvemos el puerto dinámico si está disponible
     if (__isDesktop__ && __isTauriDesktop__) {
         import("@tauri-apps/api/core").then(({ invoke }) => {
+            // NOTA: el aviso `startup_renderer_ready` NO va acá: se envía desde
+            // __root.tsx (desktopApi.startup.ready) cuando la interfaz ya está pintada,
+            // para que la ventana principal se revele con la app lista y no con el loader.
+
+            // Resolvemos el puerto dinámico del servidor Go
             invoke<number>("get_local_server_port")
                 .then((port) => {
                     if (port) {
                         window.__KAMEHOUSE_PORT__ = port
-                        // Refrescamos la consulta de status con la key canónica
                         queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.STATUS.GetStatus.key] })
                         window.dispatchEvent(new CustomEvent("kamehouse-port-resolved", { detail: { port } }))
                     }

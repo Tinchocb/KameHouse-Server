@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -46,7 +48,7 @@ func TraceMiddleware(logger *zerolog.Logger) echo.MiddlewareFunc {
 
 			// Log slow requests
 			elapsed := time.Since(start)
-			if elapsed >= SlowRequestThreshold {
+			if elapsed >= SlowRequestThreshold && !isLongLivedRequest(c.Request()) {
 				logger.Warn().
 					Str("trace_id", traceID).
 					Str("method", c.Request().Method).
@@ -60,6 +62,23 @@ func TraceMiddleware(logger *zerolog.Logger) echo.MiddlewareFunc {
 			return err
 		}
 	}
+}
+
+// isLongLivedRequest detecta conexiones que duran por diseño (WebSocket, SSE,
+// streaming de video): marcarlas como "lentas" solo mete ruido en el log y
+// esconde las lentitudes reales.
+func isLongLivedRequest(r *http.Request) bool {
+	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+		return true
+	}
+	if strings.Contains(r.Header.Get("Accept"), "text/event-stream") {
+		return true
+	}
+	path := r.URL.Path
+	return strings.HasPrefix(path, "/api/v1/mediastream/direct") ||
+		strings.HasPrefix(path, "/api/v1/mediastream/transcode") ||
+		strings.HasPrefix(path, "/api/v1/mediastream/hls") ||
+		strings.HasPrefix(path, "/api/v1/drive/play")
 }
 
 // GetTraceID extracts the trace ID from the context. Returns empty string if not set.

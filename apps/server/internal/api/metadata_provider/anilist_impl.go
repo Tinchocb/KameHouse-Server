@@ -23,6 +23,11 @@ type AniListProviderImpl struct {
 	logger     *zerolog.Logger
 	tmdbClient *tmdb.Client
 
+	// Fallback TMDB compartido: crear uno por llamada descartaba su caché en
+	// memoria y obligaba a repetir la descarga de temporadas.
+	tmdbFallbackOnce sync.Once
+	tmdbFallback     *TMDBProviderImpl
+
 	mu    sync.Mutex
 	cache map[int]*anilistCachedEntry
 }
@@ -183,8 +188,7 @@ func (p *AniListProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetada
 
 	// Fallback to TMDB for episode screenshots and localized synopses
 	if p.tmdbClient != nil && len(result.Episodes) > 0 {
-		tmdbProvider := NewTMDBProviderImpl(p.tmdbClient, p.db, p.logger)
-		if tmdbMeta, err := tmdbProvider.GetAnimeMetadata(id); err == nil && tmdbMeta != nil {
+		if tmdbMeta, err := p.tmdbFallbackProvider().GetAnimeMetadata(id); err == nil && tmdbMeta != nil {
 			for epNum, ep := range result.Episodes {
 				if tmdbEp, ok := tmdbMeta.Episodes[epNum]; ok {
 					if tmdbEp.Image != "" {
@@ -228,3 +232,11 @@ func (p *AniListProviderImpl) ClearCache() {
 }
 
 func (p *AniListProviderImpl) Close() error { return nil }
+
+// tmdbFallbackProvider devuelve la instancia TMDB compartida (creada una sola vez).
+func (p *AniListProviderImpl) tmdbFallbackProvider() *TMDBProviderImpl {
+	p.tmdbFallbackOnce.Do(func() {
+		p.tmdbFallback = NewTMDBProviderImpl(p.tmdbClient, p.db, p.logger)
+	})
+	return p.tmdbFallback
+}

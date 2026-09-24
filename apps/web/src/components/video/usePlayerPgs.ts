@@ -1,6 +1,6 @@
 'use no memo'
 import { useEffect, useRef } from "react"
-import { VideoCorePgsRenderer, PgsEvent } from "./player-pgs-renderer"
+import type { VideoCorePgsRenderer, PgsEvent } from "./player-pgs-renderer"
 import { SubtitleTrack } from "@/components/ui/track-types"
 
 interface UsePlayerPgsProps {
@@ -78,6 +78,7 @@ export function usePlayerPgs({
         const loadPgs = async () => {
             try {
                 if (!pgsRendererRef.current) {
+                    const { VideoCorePgsRenderer } = await import("./player-pgs-renderer")
                     pgsRendererRef.current = new VideoCorePgsRenderer({
                         videoElement: video,
                         debug: process.env.NODE_ENV === "development",

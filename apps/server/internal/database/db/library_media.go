@@ -232,8 +232,7 @@ func UpdateLibraryMediaMappings(d *Database, id uint, anidbId, malId int) error 
 // and updates the core Dragon Ball series with their verified authentic TMDB artwork.
 func CleanBrokenLibraryMediaPosters(d *Database) {
 	const migrationKey = "clean_broken_posters_v1"
-	var done bool
-	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err == nil && ok && done {
+	if migrationDone(d, d.Logger, migrationKey) {
 		return
 	}
 

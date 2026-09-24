@@ -1,7 +1,7 @@
 import { IconUiSpinner, IconNavigationTv, IconUiClose, IconMediaClapperboard } from "@/components/ui/icons";
 
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence } from "framer-motion"
 
 import { toast } from "sonner"
 
@@ -9,7 +9,8 @@ import { cn } from "@/components/ui/core/styling"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
 import { useSound } from "@/hooks/use-sound"
-import { useAppStore, PlaylistItem } from "@/lib/store"
+import { useAppStore, usePlayerStore, useQueueStore, useUIStore, PlaylistItem } from "@/lib/store"
+import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -19,28 +20,77 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
     const [isLoading, setIsLoading] = React.useState<"movie" | "episode" | false>(false)
     const tvMode = useAppStore(state => state.tvMode)
     const sidebarOpen = useAppStore(state => state.sidebarOpen)
-    const setTvMode = useAppStore(state => state.setTvMode)
+    const setTvMode = usePlayerStore(state => state.setTvMode)
 
     const { data: collection } = useGetLibraryCollection()
 
-    // All library entries flattened
+    const modalRef = React.useRef<HTMLDivElement>(null)
+    const triggerRef = React.useRef<HTMLButtonElement>(null)
+    const lastActiveElementRef = React.useRef<HTMLElement | null>(null)
+
+    // All library entries flattened (sin huecos nulos del backend)
     const allEntries = React.useMemo(() => {
-        if (!collection?.lists) return []
-        return collection.lists.flatMap(list => list.entries ?? [])
+        return getSafeCollectionEntries(collection)
     }, [collection])
 
     const playRandomSound = React.useCallback(() => {
         playSound("random", 0.5)
     }, [playSound])
 
-    // Keyboard navigation (ESC to close) & custom event listener
+    // Focus management: Trap focus when open, restore focus when closed
+    React.useEffect(() => {
+        if (showPicker) {
+            const timer = setTimeout(() => {
+                const firstFocusable = modalRef.current?.querySelector<HTMLElement>(
+                    'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )
+                firstFocusable?.focus()
+            }, 50)
+            return () => clearTimeout(timer)
+        } else if (lastActiveElementRef.current && typeof lastActiveElementRef.current.focus === "function") {
+            lastActiveElementRef.current.focus()
+        }
+    }, [showPicker])
+
+    // Keyboard navigation (ESC to close, Tab to cycle) & custom event listener
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && showPicker) {
+            if (!showPicker) return
+
+            if (e.key === "Escape") {
                 setShowPicker(false)
+                return
+            }
+
+            if (e.key === "Tab" && modalRef.current) {
+                const focusables = Array.from(
+                    modalRef.current.querySelectorAll<HTMLElement>(
+                        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                    )
+                ).filter(el => el.offsetParent !== null)
+
+                if (focusables.length === 0) return
+
+                const first = focusables[0]
+                const last = focusables[focusables.length - 1]
+
+                if (e.shiftKey) {
+                    if (document.activeElement === first || !modalRef.current.contains(document.activeElement)) {
+                        e.preventDefault()
+                        last.focus()
+                    }
+                } else {
+                    if (document.activeElement === last || !modalRef.current.contains(document.activeElement)) {
+                        e.preventDefault()
+                        first.focus()
+                    }
+                }
             }
         }
-        const handleOpenPicker = () => setShowPicker(true)
+        const handleOpenPicker = () => {
+            lastActiveElementRef.current = (document.activeElement as HTMLElement) || triggerRef.current
+            setShowPicker(true)
+        }
 
         window.addEventListener("keydown", handleKeyDown)
         window.addEventListener("open-random-picker", handleOpenPicker)
@@ -60,8 +110,8 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
             // ── 1. Filter candidates from collection ───────────────────────
             const MOVIE_FORMATS = ["MOVIE", "OVA", "SPECIAL"]
             const candidates = allEntries.filter(e => {
-                if (!e?.media || (e.libraryData?.mainFileCount ?? 0) === 0) return false
-                const fmt = e.media.format || ""
+                if (!e || !e?.media || (e.libraryData?.mainFileCount ?? 0) === 0) return false
+                const fmt = e?.media?.format || ""
                 return isMovie ? MOVIE_FORMATS.includes(fmt) : fmt === "TV"
             })
 
@@ -160,12 +210,12 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
             // Close full-screen modal
             setShowPicker(false)
 
-            useAppStore.setState({
+            useQueueStore.setState({
                 playlistQueue: newQueue,
                 currentQueueIndex: 0,
                 activeQueuePlayItem: activeItem,
-                globalQueueOpen: false
             })
+            useUIStore.getState().setGlobalQueueOpen(false)
 
             setTvMode(true)
 
@@ -186,11 +236,13 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
             {/* ─── Hero Trigger Button (Sidebar / Footer) ─────────────────── */}
             {!modalOnly && (
                 <div className="w-full flex justify-center">
-                    <motion.button
+                    <m.button
+                        ref={triggerRef}
                         id="random-play-btn"
                         disabled={Boolean(isLoading)}
-                        title="Modo TV Leanback"
+                        title="Modo TV"
                         onClick={() => {
+                            lastActiveElementRef.current = (document.activeElement as HTMLElement) || triggerRef.current
                             playRandomSound()
                             setShowPicker(true)
                         }}
@@ -202,7 +254,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             sidebarOpen ? "h-16 px-4 justify-start gap-3.5" : "h-14 md:w-14 w-full justify-center px-0",
                             tvMode || showPicker
                                 ? "bg-brand-accent/20 border-brand-accent/50 text-on-surface shadow-brand-accent/20"
-                                : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.08] hover:border-brand-accent/40 text-on-surface-variant hover:text-on-surface"
+                                : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.08] text-on-surface-variant hover:text-on-surface"
                         )}
                     >
                         {/* Glowing background hint */}
@@ -226,12 +278,12 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                 : "bg-white/[0.06] group-hover:bg-brand-accent/20 group-hover:text-brand-accent text-on-surface-variant"
                         )}>
                             {isLoading ? (
-                                <motion.div
+                                <m.div
                                     animate={{ rotate: 360 }}
                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                 >
                                     <IconUiSpinner className="w-5 h-5" />
-                                </motion.div>
+                                </m.div>
                             ) : (
                                 <IconNavigationTv className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
                             )}
@@ -245,18 +297,18 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             <span className="uppercase tracking-ultra text-label-md font-black text-on-surface leading-tight">
                                 Modo TV
                             </span>
-                            <span className="text-[10px] font-bold text-on-surface-variant/70 tracking-wider uppercase">
-                                {tvMode ? "Activado" : "Leanback / Maratón"}
+                            <span className="text-3xs font-bold text-on-surface-variant/70 tracking-wider uppercase">
+                                {tvMode ? "Activado" : "TV / Maratón"}
                             </span>
                         </div>
 
                         {/* Badge Pill for TV Mode active state */}
                         {tvMode && sidebarOpen && (
-                            <div className="ml-auto z-10 px-2 py-0.5 rounded-full bg-brand-accent/20 border border-brand-accent/40 text-brand-accent text-[9px] font-black uppercase tracking-widest">
-                                ON
+                            <div className="ml-auto z-10 px-2 py-0.5 rounded-full bg-brand-accent/20 border border-brand-accent/40 text-brand-accent text-4xs font-black uppercase tracking-widest">
+                                TV
                             </div>
                         )}
-                    </motion.button>
+                    </m.button>
                 </div>
             )}
 
@@ -265,7 +317,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                 {showPicker && (
                     <div className="fixed inset-0 z-modal pointer-events-auto flex items-end sm:items-center justify-center p-4 md:p-6">
                         {/* Backdrop Blur Overlay */}
-                        <motion.div
+                        <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -275,16 +327,18 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                         />
 
                         {/* Modal Container — Animated from Bottom */}
-                        <motion.div
+                        <m.div
+                            ref={modalRef}
                             role="dialog"
                             aria-modal="true"
+                            aria-labelledby="tv-mode-dialog-title"
                             initial={{ opacity: 0, y: 100, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 80, scale: 0.95 }}
                             transition={{ type: "spring", stiffness: 350, damping: 26 }}
                             className={cn(
                                 "relative z-10 w-full max-w-2xl flex flex-col rounded-3xl overflow-hidden shadow-2xl pointer-events-auto",
-                                "bg-zinc-950/85 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 text-on-surface shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25),0_24px_48px_rgba(0,0,0,0.9)]"
+                                "bg-surface-container-lowest/90 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 text-on-surface shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_rgba(0,0,0,0.9)]"
                             )}
                         >
                             {/* Top Ambient Glow */}
@@ -299,10 +353,10 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <span className="px-2 py-0.5 rounded-md bg-brand-accent/20 text-brand-accent text-caption font-black uppercase tracking-widest border border-brand-accent/30">
-                                                Leanback Experience
+                                                Experiencia TV
                                             </span>
                                         </div>
-                                        <h2 className="text-2xl md:text-3xl font-black uppercase tracking-wider text-on-surface mt-1">
+                                        <h2 id="tv-mode-dialog-title" className="text-2xl md:text-3xl font-black uppercase tracking-wider text-on-surface mt-1">
                                             Modo TV
                                         </h2>
                                         <p className="text-xs md:text-sm text-on-surface-variant/80 font-medium">
@@ -318,7 +372,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                         e.stopPropagation()
                                         setShowPicker(false)
                                     }}
-                                    className="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant hover:text-on-surface transition-all duration-200 active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.2)]"
+                                    className="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant hover:text-on-surface transition-all duration-200 active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-glass-highlight-md"
                                     title="Cerrar (ESC)"
                                 >
                                     <IconUiClose className="w-5 h-5" />
@@ -331,7 +385,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             {/* Hero Cards Container */}
                             <div className="p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                                 {/* Option 1: Series / Episodes */}
-                                <motion.button
+                                <m.button
                                     type="button"
                                     disabled={Boolean(isLoading)}
                                     onClick={() => pick("episode")}
@@ -339,25 +393,25 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     whileTap={{ scale: 0.97 }}
                                     className={cn(
                                         "group relative flex flex-col p-6 rounded-2xl text-left transition-all duration-300 outline-none pointer-events-auto cursor-pointer",
-                                        "bg-zinc-950/50 hover:bg-zinc-900/70 border border-white/15 hover:border-brand-accent/60 border-t-white/35",
-                                        "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.15)] hover:shadow-brand-accent/15",
+                                        "bg-surface-container-lowest/60 hover:bg-surface-container-high/70 border border-white/15 border-t-white/35",
+                                        "shadow-glass-highlight-md hover:shadow-brand-accent/15",
                                         isLoading === "episode" && "opacity-75 pointer-events-none"
                                     )}
                                 >
                                     <div className="flex items-center justify-between w-full mb-4">
                                         <div className="w-14 h-14 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-md shadow-brand-accent/20">
                                             {isLoading === "episode" ? (
-                                                <motion.div
+                                                <m.div
                                                     animate={{ rotate: 360 }}
                                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                 >
                                                     <IconUiSpinner className="w-6 h-6" />
-                                                </motion.div>
+                                                </m.div>
                                             ) : (
                                                 <IconNavigationTv className="w-7 h-7" />
                                             )}
                                         </div>
-                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-accent/20 text-on-surface-variant group-hover:text-brand-accent text-[10px] font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-accent/30">
+                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-accent/20 text-on-surface-variant group-hover:text-brand-accent text-3xs font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-accent/30">
                                             Maratón
                                         </span>
                                     </div>
@@ -373,10 +427,10 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                         <span>Iniciar Series</span>
                                         <span>›</span>
                                     </div>
-                                </motion.button>
+                                </m.button>
 
                                 {/* Option 2: Movies */}
-                                <motion.button
+                                <m.button
                                     type="button"
                                     disabled={Boolean(isLoading)}
                                     onClick={() => pick("movie")}
@@ -384,25 +438,25 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     whileTap={{ scale: 0.97 }}
                                     className={cn(
                                         "group relative flex flex-col p-6 rounded-2xl text-left transition-all duration-300 outline-none pointer-events-auto cursor-pointer",
-                                        "bg-zinc-950/50 hover:bg-zinc-900/70 border border-white/15 hover:border-brand-secondary/60 border-t-white/35",
-                                        "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.15)] hover:shadow-brand-secondary/15",
+                                        "bg-surface-container-lowest/60 hover:bg-surface-container-high/70 border border-white/15 hover:border-brand-secondary/60 border-t-white/35",
+                                        "shadow-glass-highlight-md hover:shadow-brand-secondary/15",
                                         isLoading === "movie" && "opacity-75 pointer-events-none"
                                     )}
                                 >
                                     <div className="flex items-center justify-between w-full mb-4">
                                         <div className="w-14 h-14 rounded-2xl bg-brand-secondary/15 border border-brand-secondary/30 text-brand-secondary flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-md shadow-brand-secondary/20">
                                             {isLoading === "movie" ? (
-                                                <motion.div
+                                                <m.div
                                                     animate={{ rotate: 360 }}
                                                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                                                 >
                                                     <IconUiSpinner className="w-6 h-6" />
-                                                </motion.div>
+                                                </m.div>
                                             ) : (
                                                 <IconMediaClapperboard className="w-7 h-7" />
                                             )}
                                         </div>
-                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-secondary/20 text-on-surface-variant group-hover:text-brand-secondary text-[10px] font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-secondary/30">
+                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-secondary/20 text-on-surface-variant group-hover:text-brand-secondary text-3xs font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-secondary/30">
                                             Cine
                                         </span>
                                     </div>
@@ -418,16 +472,16 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                         <span>Iniciar Cine</span>
                                         <span>›</span>
                                     </div>
-                                </motion.button>
+                                </m.button>
                             </div>
 
                             {/* Footer info note */}
                             <div className="px-6 md:px-8 pb-6 text-center">
-                                <p className="text-[11px] text-on-surface-variant/60 font-medium">
-                                    Presiona <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-on-surface text-[10px] font-mono">ESC</kbd> o haz clic afuera para salir
+                                <p className="text-2xs text-on-surface-variant/60 font-medium">
+                                    Presiona <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-on-surface text-3xs font-mono">ESC</kbd> o haz clic afuera para salir
                                 </p>
                             </div>
-                        </motion.div>
+                        </m.div>
                     </div>
                 )}
             </AnimatePresence>

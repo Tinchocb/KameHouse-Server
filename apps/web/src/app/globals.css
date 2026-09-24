@@ -23,8 +23,16 @@
     @apply border-border;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
   *::-webkit-scrollbar { display: none; }
+
+  /* Selección de texto: solo habilitada en inputs y zonas de contenido */
+  ::selection {
+    background: hsl(var(--brand-accent) / 0.35);
+    color: inherit;
+  }
 
   html, body {
     @apply text-[var(--md-sys-color-on-surface)] font-sans antialiased;
@@ -32,9 +40,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Inputs y textareas sí permiten selección */
   input, textarea, select {
     background-color: transparent;
     color: inherit;
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   /* El color base vive SOLO en html (pinta el canvas). El body debe ser
@@ -43,15 +54,12 @@
      un body opaco lo taparía por completo (bug histórico: el backdrop nunca
      se vio). */
   html {
-    @apply bg-[var(--bg-primary)];
+    @apply bg-bg-primary;
   }
   body {
     background: transparent;
   }
 
-  *:focus-visible {
-    @apply outline-none ring-2 ring-brand-accent ring-offset-2 ring-offset-[var(--bg-primary)] transition-shadow;
-  }
 
   h1 { font: var(--display-xl); color: var(--md-sys-color-on-surface); }
   h2 { font: var(--display-lg); color: var(--md-sys-color-on-surface); }
@@ -59,51 +67,89 @@
   h4 { font: var(--h4); color: var(--md-sys-color-on-surface-variant); }
 }
 
+/* ─── Focus ring — fuera de @layer para vencer a utilities ──────────── */
+/* Tailwind ring usa --tw-ring-shadow como variable, por eso no alcanza
+   con outline:none ni box-shadow:none dentro de @layer base.
+   Los rings de Tailwind se apagan siempre (un solo estilo de foco en toda la
+   app) y el outline solo se apaga cuando el foco NO es de teclado: antes se
+   apagaba también en :focus-visible y navegar con Tab no mostraba dónde se
+   estaba. Con mouse no cambia nada. */
+*:focus,
+*:focus-visible {
+  --tw-ring-shadow: none !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-shadow: none !important;
+  box-shadow: var(--tw-shadow, 0 0 #0000) !important;
+}
+
+*:focus:not(:focus-visible),
+/* Campos de texto: Chrome los marca :focus-visible también con mouse; su
+   feedback ya es el caret y el borde de focus de cada input. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[contenteditable="true"]:focus-visible {
+  outline: none !important;
+}
+
+/* Anillo de teclado: acento de la era, sigue el border-radius del elemento.
+   El modo TV tiene el suyo (.tv-focusable, más abajo). Se excluyen los
+   contenedores con tabindex="-1" (modales/menús que Radix enfoca por código). */
+:root:not([data-tv="true"]) :focus-visible:not(input, textarea, select, [contenteditable="true"], [tabindex="-1"]) {
+  outline: 2px solid hsl(var(--focus-ring) / 0.9) !important;
+  outline-offset: 2px;
+}
+
 /* ─── Utilities ──────────────────────────────────────────────────────── */
 @layer utilities {
-  .page-px         { @apply px-4 md:px-8 lg:px-16 xl:px-20 2xl:px-24 3xl:px-32 4xl:px-40; }
-  .page-container  { @apply w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10; }
+  .page-container  { @apply w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10; }
   .text-balance    { text-wrap: balance; }
-  .text-pretty     { text-wrap: pretty; }
+
   /* Borde leve en letras difuminado de alto rendimiento (renderizado directo por rasterizador de fuentes sin filtros gaussianos pesados) */
   .text-edge-glow {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
   }
 
-
-  .scroll-snap-carousel {
-    scroll-snap-type: x proximity;
-    scroll-padding-inline: var(--space-4);
-  }
-  .scroll-snap-carousel > * {
-    scroll-snap-align: start;
-  }
-
-  /* ─── Hero Scrims (tokenizados — respetan tema amoled/era) ─────────── */
+  /* ─── Hero Scrims (negro cinematográfico — legibilidad sobre cualquier arte) ─── */
   .scrim-hero-left {
     background: linear-gradient(
       to right,
-      color-mix(in srgb, var(--bg-primary) 88%, transparent) 0%,
-      color-mix(in srgb, var(--bg-primary) 70%, transparent) 18%,
-      color-mix(in srgb, var(--bg-primary) 30%, transparent) 42%,
-      color-mix(in srgb, var(--bg-primary) 8%, transparent) 62%,
-      transparent 78%
+      rgba(0, 0, 0, 0.92) 0%,
+      rgba(0, 0, 0, 0.72) 18%,
+      rgba(0, 0, 0, 0.42) 32%,
+      rgba(0, 0, 0, 0.12) 44%,
+      transparent 56%
     );
   }
   .scrim-hero-bottom {
     background: linear-gradient(
       to top,
-      color-mix(in srgb, var(--bg-primary) 92%, transparent) 0%,
-      color-mix(in srgb, var(--bg-primary) 72%, transparent) 15%,
-      color-mix(in srgb, var(--bg-primary) 40%, transparent) 32%,
-      color-mix(in srgb, var(--bg-primary) 10%, transparent) 52%,
-      transparent 100%
+      rgba(0, 0, 0, 0.95) 0%,
+      rgba(0, 0, 0, 0.62) 22%,
+      rgba(0, 0, 0, 0.28) 38%,
+      rgba(0, 0, 0, 0.06) 52%,
+      transparent 65%
     );
   }
+  /* Máscara lateral del arte de hero según su composición (HeroArt.subject).
+     Solo desde sm: en mobile el texto va abajo y la imagen se encuadra por
+     punto focal, así que fundir la izquierda solo oscurecería al sujeto. */
+  @media (min-width: 640px) {
+    .hero-art-mask-right {
+      mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 18%, rgba(0, 0, 0, 0.75) 30%, black 42%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 18%, rgba(0, 0, 0, 0.75) 30%, black 42%);
+    }
+    /* Grupos / sujeto a la izquierda: fundido suave, la legibilidad la da el scrim */
+    .hero-art-mask-soft {
+      mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.8) 22%, black 38%);
+      -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.8) 22%, black 38%);
+    }
+  }
+
   .scrim-hero-top {
     background: linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--bg-primary) 25%, transparent) 0%,
+      rgba(0, 0, 0, 0.35) 0%,
       transparent 100%
     );
   }
@@ -123,6 +169,8 @@
   .badge-success   { background: hsl(var(--brand-success) / 0.15); color: hsl(var(--brand-success)); border-color: hsl(var(--brand-success) / 0.30); }
   .badge-warning   { background: hsl(var(--brand-warning) / 0.15); color: hsl(var(--brand-warning)); border-color: hsl(var(--brand-warning) / 0.30); }
   .badge-muted     { background: var(--glass-bg); color: var(--md-sys-color-on-surface-variant); border-color: var(--glass-border-top); }
+  .badge-subtle    { background: rgba(255, 255, 255, 0.06); color: var(--md-sys-color-on-surface-variant); border-color: rgba(255, 255, 255, 0.10); }
+  .badge-brand     { background: hsl(var(--brand-accent) / 0.25); color: #fff; border-color: hsl(var(--brand-accent) / 0.50); }
 }
 
 /* ─── TV Mode / Spatial Navigation ───────────────────────────────────── */
@@ -187,26 +235,6 @@ media-time-range {
 }
 
 /* ─── Removed Container Queries for Swimlanes ────────────────────────────────── */
-
-/* ─── Sidebar Gradient — base negra + acento del preset activo ──────── */
-.sidebar-gradient {
-  background: var(--sidebar-bg);
-}
-
-/* En modo Por Era el sidebar siempre lleva el tinte de su era.
-   En modo Clásico, se activa cuando el usuario habilita el Gradiente del Sidebar.
-   (ver [data-sidebar-gradient="true"] en colors.css). */
-[data-mode="era"] .sidebar-gradient::before,
-[data-mode="classic"][data-sidebar-gradient="true"] .sidebar-gradient::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  /* Color del preset activo sumado sobre la base negra del sidebar */
-  background: var(--sidebar-accent-gradient);
-  pointer-events: none;
-  z-index: 0;
-}
 
 /* ─── Degradé de página fijo — Clásico (viñeta sutil) y Por Era.
    Cada modo define su propio --page-gradient en colors.css. ──────────── */
@@ -273,13 +301,13 @@ media-time-range {
     @apply flex items-center justify-between px-1;
   }
   .sectionbar-header-icon {
-    @apply w-8 h-8 rounded-xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center text-brand-accent shrink-0 shadow-[0_0_12px_hsl(var(--brand-accent)/0.15)];
+    @apply w-8 h-8 rounded-xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center text-brand-accent shrink-0;
   }
   .sectionbar-header-title {
     @apply text-xs font-black uppercase tracking-wider text-on-surface font-mono;
   }
   .sectionbar-header-desc {
-    @apply text-[11px] text-on-surface-variant/70 leading-normal font-medium mt-0.5;
+    @apply text-2xs text-on-surface-variant/70 leading-normal font-medium mt-0.5;
   }
   .sectionbar-header-badge {
     @apply ml-2;
@@ -297,11 +325,36 @@ media-time-range {
     min-height: 44px;
     min-width: 44px;
   }
-
-  /* Ensure carousels and swipe areas have smooth momentum scrolling */
-  .scroll-snap-carousel {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
 }
+
+/* ─── 3D Card Flip, Manga Halftone & Perspective ───────────────────── */
+.perspective-1000 {
+  perspective: 1200px;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.bg-halftone {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 0);
+  background-size: 14px 14px;
+}
+
+.bg-manga-speed {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0.02) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
 

@@ -5,26 +5,36 @@
 .claude/
 .gemini/
 .DS_Store
-*/.DS_Store
 Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
 
 # Logs and temporary files
 logs/
 *.log
 *.err
 tmp/
+scratch/
+.run/
+testdata/
+*.cache
+
+# Database files
 *.db
 *.db-shm
 *.db-wal
-.run/
-testdata/
-scratch/
-apps/server/test_data_dir/cache/
-apps/server/test_data_dir/assets/
-apps/server/test_data_dir/logs/
-apps/server/test_data_dir/offline/
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+docs/dragonball/dragonball_chronology.sqlite
+
+# Server test data and caches
+apps/server/test_data_dir/
 apps/server/internal/util/data/user_agents.jsonl
-*.cache
 
 # Environment and secrets
 .env
@@ -34,10 +44,10 @@ apps/server/internal/util/data/user_agents.jsonl
 
 # Dependencies
 node_modules/
-**/node_modules/
 .pnp
 .pnp.js
 .yarn/install-state.gz
+.pnpm-store/
 
 # Build outputs
 dist/
@@ -52,23 +62,12 @@ apps/web/.tanstack/
 apps/server/kamehouse
 apps/server/kamehouse.exe
 apps/server/build/bin/
+apps/server/web/
 apps/desktop/web/
 apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/binaries/
-
-# Go
-coverage.out
-
-# Misc generated files
-package.json.md5
-
-# Project specific
-codegen/nonext/
-codegen/generated/
-apps/web/src/api/generated/hooks_template.ts
-whats-new.md
-TODO-priv.md
-CHANGELOG-priv.md
+apps/desktop/src-tauri/gen/
+.cargo/
 
 # KameHouseTV (Tizen) build artifacts
 apps/KameHouseTV/*.wgt
@@ -78,11 +77,32 @@ apps/KameHouseTV/author-signature.xml
 apps/KameHouseTV/Debug/
 apps/KameHouseTV/Release/
 
-# AI Agent Config
+# Tests, Coverage & Reports
+coverage/
+coverage.out
+*.lcov
+lint-*.json
+*-lint.json
+.rsdoctor/
+rsdoctor-report.html
+
+# Misc generated files
+package.json.md5
+
+# Project specific & Private notes
+codegen/nonext/
+codegen/generated/
+apps/web/src/api/generated/hooks_template.ts
+whats-new.md
+TODO-priv.md
+CHANGELOG-priv.md
+comandos.md
+
+# AI Agent Config & Prompts
 .clauderc
 .cursorrules
-
-# AI Data and Prompts
+.antigravityignore
+.cursorignore
 .github/prompts/
 
 # Local reference/scratch directories
@@ -95,12 +115,5 @@ apps/server/dbz_*.txt
 apps/server/wiki.html
 apps/server/deadcode_report.txt
 
-.antigravityignore
-.cursorignore
-
-# Zip archives
+# Archives
 *.zip
-
-comandos.md
-/apps/desktop/src-tauri/gen
-docs/dragonball/dragonball_chronology.sqlite

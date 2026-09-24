@@ -57,6 +57,9 @@ func (h *Handler) HandleUpdateTheme(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	h.invalidateSettingsCache()
+	h.App.WSEventManager.SendEvent("settings", merged)
+
 	// Send the new theme to the client
 	return h.RespondWithData(c, merged)
 }

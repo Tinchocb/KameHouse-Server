@@ -191,35 +191,38 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			strings.HasPrefix(strings.ToLower(newMedia.Description), "a ") ||
 			strings.HasPrefix(strings.ToLower(newMedia.Description), "with "))
 
-		// Fallback to offline Dragon Ball pre-hydrated catalog if poster, description or Spanish title is missing/generic/English
-		if newMedia.PosterImage == "" || newMedia.Description == "" || isGenericSpanish || isEnglishDescription {
+		isDarkNatureCollision := (newMedia.TmdbID == 39322 || id == 1039322 || id == 39322) &&
+			(strings.Contains(strings.ToLower(newMedia.TitleSpanish), "dark nature") || strings.Contains(strings.ToLower(newMedia.TitleEnglish), "dark nature"))
+
+		// Fallback to offline Dragon Ball pre-hydrated catalog if poster, description or Spanish title is missing/generic/English or collision
+		if newMedia.PosterImage == "" || newMedia.Description == "" || isGenericSpanish || isEnglishDescription || isDarkNatureCollision {
 			lookupID := id
 			if isMovie && lookupID < 1_000_000 {
 				lookupID += 1_000_000
 			}
 			if pre := CreatePrehydratedDragonBallMedia(lookupID); pre != nil {
-				if (isGenericSpanish || newMedia.TitleSpanish == "") && pre.Title != nil && pre.Title.Spanish != nil {
+				if (isGenericSpanish || isDarkNatureCollision || newMedia.TitleSpanish == "") && pre.Title != nil && pre.Title.Spanish != nil {
 					newMedia.TitleSpanish = *pre.Title.Spanish
 				}
-				if newMedia.TitleEnglish == "" && pre.Title != nil && pre.Title.English != nil {
+				if (isDarkNatureCollision || newMedia.TitleEnglish == "") && pre.Title != nil && pre.Title.English != nil {
 					newMedia.TitleEnglish = *pre.Title.English
 				}
-				if newMedia.TitleRomaji == "" && pre.Title != nil && pre.Title.Romaji != nil {
+				if (isDarkNatureCollision || newMedia.TitleRomaji == "") && pre.Title != nil && pre.Title.Romaji != nil {
 					newMedia.TitleRomaji = *pre.Title.Romaji
 				}
-				if newMedia.PosterImage == "" && pre.CoverImage != nil && pre.CoverImage.Large != nil {
+				if (isDarkNatureCollision || newMedia.PosterImage == "") && pre.CoverImage != nil && pre.CoverImage.Large != nil {
 					newMedia.PosterImage = *pre.CoverImage.Large
 				}
-				if newMedia.BannerImage == "" && pre.BannerImage != nil {
+				if (isDarkNatureCollision || newMedia.BannerImage == "") && pre.BannerImage != nil {
 					newMedia.BannerImage = *pre.BannerImage
 				}
-				if (newMedia.Description == "" || isEnglishDescription) && pre.Description != nil && *pre.Description != "" {
+				if (isDarkNatureCollision || newMedia.Description == "" || isEnglishDescription) && pre.Description != nil && *pre.Description != "" {
 					newMedia.Description = *pre.Description
 				}
-				if newMedia.TotalEpisodes == 0 && pre.Episodes != nil {
+				if (isDarkNatureCollision || newMedia.TotalEpisodes == 0) && pre.Episodes != nil {
 					newMedia.TotalEpisodes = *pre.Episodes
 				}
-				if newMedia.Year == 0 && pre.Year != nil {
+				if (isDarkNatureCollision || newMedia.Year == 0) && pre.Year != nil {
 					newMedia.Year = *pre.Year
 				}
 			}

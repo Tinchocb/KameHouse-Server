@@ -86,24 +86,32 @@ type RelationConnection struct {
 	Edges []MediaRelationEdge `json:"edges"`
 }
 
+type StreamingEpisode struct {
+	Title     string `json:"title"`
+	Thumbnail string `json:"thumbnail"`
+	URL       string `json:"url"`
+	Site      string `json:"site"`
+}
+
 type AniListMedia struct {
-	ID           int                 `json:"id"`
-	IDMal        int                 `json:"idMal"`
-	Title        MediaTitle          `json:"title"`
-	Format       string              `json:"format"`
-	Status       string              `json:"status"`
-	Description  string              `json:"description"`
-	SeasonYear   int                 `json:"seasonYear"`
-	Episodes     int                 `json:"episodes"`
-	Duration     int                 `json:"duration"`
-	AverageScore int                 `json:"averageScore"`
-	MeanScore    int                 `json:"meanScore"`
-	Genres       []string            `json:"genres"`
-	BannerImage  string              `json:"bannerImage"`
-	CoverImage   MediaCoverImage     `json:"coverImage"`
-	Characters   CharacterConnection `json:"characters"`
-	Relations    RelationConnection  `json:"relations"`
-	SiteURL      string              `json:"siteUrl"`
+	ID                int                 `json:"id"`
+	IDMal             int                 `json:"idMal"`
+	Title             MediaTitle          `json:"title"`
+	Format            string              `json:"format"`
+	Status            string              `json:"status"`
+	Description       string              `json:"description"`
+	SeasonYear        int                 `json:"seasonYear"`
+	Episodes          int                 `json:"episodes"`
+	Duration          int                 `json:"duration"`
+	AverageScore      int                 `json:"averageScore"`
+	MeanScore         int                 `json:"meanScore"`
+	Genres            []string            `json:"genres"`
+	BannerImage       string              `json:"bannerImage"`
+	CoverImage        MediaCoverImage     `json:"coverImage"`
+	Characters        CharacterConnection `json:"characters"`
+	Relations         RelationConnection  `json:"relations"`
+	SiteURL           string              `json:"siteUrl"`
+	StreamingEpisodes []StreamingEpisode  `json:"streamingEpisodes"`
 }
 
 type mediaResponse struct {
@@ -185,6 +193,12 @@ query ($id: Int) {
       }
     }
     siteUrl
+    streamingEpisodes {
+      title
+      thumbnail
+      url
+      site
+    }
   }
 }
 `
@@ -274,6 +288,26 @@ func (c *Client) GetMediaByID(ctx context.Context, id int) (*AniListMedia, error
 
 	c.cache.Store(cacheKey, res.Data.Media)
 	return res.Data.Media, nil
+}
+
+// GetEpisodeThumbnail returns the streaming thumbnail for an absolute episode number (1-based).
+// AniList lists streamingEpisodes in order, so index = absolute-1. Returns an error when
+// the series has no streaming data or the episode is out of range (caller should fall back).
+func (c *Client) GetEpisodeThumbnail(ctx context.Context, id int, absoluteEpisode int) (StreamingEpisode, error) {
+	if absoluteEpisode <= 0 {
+		return StreamingEpisode{}, fmt.Errorf("invalid absolute episode: %d", absoluteEpisode)
+	}
+	media, err := c.GetMediaByID(ctx, id)
+	if err != nil {
+		return StreamingEpisode{}, err
+	}
+	if len(media.StreamingEpisodes) == 0 {
+		return StreamingEpisode{}, fmt.Errorf("anilist media %d has no streaming episodes", id)
+	}
+	if absoluteEpisode > len(media.StreamingEpisodes) {
+		return StreamingEpisode{}, fmt.Errorf("absolute episode %d exceeds streaming count %d", absoluteEpisode, len(media.StreamingEpisodes))
+	}
+	return media.StreamingEpisodes[absoluteEpisode-1], nil
 }
 
 // SearchAnime searches for anime by title on AniList.

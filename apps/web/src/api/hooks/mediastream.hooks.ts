@@ -20,6 +20,9 @@ export function useRequestMediastreamMediaContainer(variables: Partial<RequestMe
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
         staleTime: Infinity,
+        // El reproductor muestra el error en su overlay (ver streamRequestError);
+        // un toast genérico encima sería redundante.
+        muteError: true,
         // gcTime: 0 is load-bearing for CORRECTNESS, not just memory. This POST is a
         // server-side session bind: RequestPlayback sets clientMediaContainers[clientID]
         // and currentMediaContainer, and every stream request (segments, ranges,

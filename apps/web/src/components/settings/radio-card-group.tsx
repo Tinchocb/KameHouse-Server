@@ -1,5 +1,5 @@
 import React from "react"
-import { motion } from "framer-motion"
+import { m } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 
 export interface RadioCardOption {
@@ -44,7 +44,7 @@ export function RadioCardGroup({ name, options, value, onChange, className }: Ra
                         )}
                     >
                         {isActive && (
-                            <motion.div
+                            <m.div
                                 layoutId={`radio-${name}-active`}
                                 transition={{ type: "spring", stiffness: 480, damping: 34 }}
                                 className="absolute inset-0 bg-white/[0.06] border border-white/25 rounded-xl pointer-events-none"

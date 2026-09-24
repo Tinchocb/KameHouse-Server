@@ -205,3 +205,37 @@ func (c *Client) AbsoluteToStandardMapping(ctx context.Context, tvID int, absolu
 
 	return 0, 0, fmt.Errorf("absolute episode %d exceeds total episodes %d", absoluteEpisode, details.NumberOfEpisodes)
 }
+
+// GetTVEpisode fetches a single episode by absolute number (maps to season/episode first).
+func (c *Client) GetTVEpisode(ctx context.Context, tvID int, absoluteEpisode int) (TVEpisode, error) {
+	season, episode, err := c.AbsoluteToStandardMapping(ctx, tvID, absoluteEpisode)
+	if err != nil {
+		return TVEpisode{}, err
+	}
+	seasonDetails, err := c.GetTVSeason(ctx, tvID, season)
+	if err != nil {
+		return TVEpisode{}, err
+	}
+	for _, ep := range seasonDetails.Episodes {
+		if ep.EpisodeNumber == episode {
+			return ep, nil
+		}
+	}
+	return TVEpisode{}, fmt.Errorf("episode %d not found in season %d", episode, season)
+}
+
+// GetTVImages fetches all backdrops, posters, and logos for a TV show from TMDb.
+func (c *Client) GetTVImages(ctx context.Context, tvID int) (*ImagesResponse, error) {
+	cacheKey := fmt.Sprintf("tv_images:%d", tvID)
+	if cached, ok := GetCached[*ImagesResponse](c, cacheKey); ok {
+		return cached, nil
+	}
+
+	resp, err := executeWithRetry[ImagesResponse](ctx, c, fmt.Sprintf("/tv/%d/images", tvID))
+	if err != nil {
+		return nil, fmt.Errorf("tmdb get tv images: %w", err)
+	}
+
+	SetCached(c, cacheKey, resp, 7*24*time.Hour)
+	return resp, nil
+}

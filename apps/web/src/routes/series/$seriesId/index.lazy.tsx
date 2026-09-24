@@ -2,7 +2,6 @@ import { createLazyFileRoute, useNavigate } from "@tanstack/react-router"
 import { HydrationBoundary } from "@tanstack/react-query"
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import { useSound } from "@/hooks/use-sound"
-import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
@@ -10,17 +9,16 @@ import { useServerQuery } from "@/api/client/requests"
 import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
 import { EmptyState } from "@/components/shared/empty-state"
-import { useAppStore } from "@/lib/store"
+import { useUIStore } from "@/lib/store"
 
 const VideoPlayer = React.lazy(() =>
     import("@/components/video/player").then(m => ({ default: m.VideoPlayer }))
 )
 import { isDragonBallTmdbId, getSeriesEraTheme, resolveSeriesSagas } from "@/lib/config/dragonball.config"
-import { getSeriesIdFromMedia, DRAGON_BALL_SERIES_INFO } from "@/lib/helpers/series"
+import { getSeriesIdFromMedia } from "@/lib/helpers/series"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 
-// New Design System Components
 import { SeriesHero } from "./-components/series-hero"
 import { SagaSelector } from "./-components/saga-selector"
 import { SeriesEpisodesTab } from "./-components/series-episodes-tab"
@@ -30,7 +28,7 @@ import { CharacterDetailModal, type DragonBallLoreData } from "@/components/shar
 import { Vaul, VaulContent } from "@/components/vaul"
 import { IconNavigationChevronLeft, IconNavigationLayers, IconUiClose } from "@/components/ui/icons"
 import { PlayerFallback } from "@/components/video/player-fallback"
-import { WatchProgressBar } from "@/components/ui/watch-progress-bar"
+import { SeriesContinueWatching } from "./-components/series-continue-watching"
 
 // ── Custom hooks ──────────────────────────────────────────────────────────────
 import { useSeriesData } from "./-hooks/use-series-data"
@@ -65,7 +63,6 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const { data: libraryCollection } = useGetLibraryCollection()
     const { data: continuityData, refetch: refetchContinuity } =
         useGetContinuityWatchHistoryItem(Number(seriesId))
-    const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
     const ts = useThemeSettings()
 
     const { data: lore } = useServerQuery<DragonBallLoreData>({
@@ -80,7 +77,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const [selectedCharacterName, setSelectedCharacterName] = useState<string | null>(null)
     const [mobileSagasOpen, setMobileSagasOpen] = useState(false)
 
-    const setActiveSeriesContext = useAppStore(s => s.setActiveSeriesContext)
+    const setActiveSeriesContext = useUIStore(s => s.setActiveSeriesContext)
     // Owner-guard: guardamos el valor que este mount escribió para no limpiar
     // el contexto si la ruta siguiente ya lo sobreescribió (race en navegación rápida).
     const contextWrittenRef = useRef<string | null>(null)
@@ -89,7 +86,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         contextWrittenRef.current = key
         setActiveSeriesContext(key)
         return () => {
-            if (useAppStore.getState().activeSeriesContext === contextWrittenRef.current) {
+            if (useUIStore.getState().activeSeriesContext === contextWrittenRef.current) {
                 setActiveSeriesContext(null)
             }
         }
@@ -141,15 +138,16 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const localSagas = useMemo(() => {
         return entry?.media ? resolveSeriesSagas(entry.media) : []
-    }, [entry?.media])
+    }, [entry])
 
     // ── Data derivation ───────────────────────────────────────────────────────
     const {
         computedEpisodes,
         activeSubSaga,
         nextSeriesTarget,
+        heroArt,
         heroBackdrop,
-        resumeInfo,
+        continueWatching,
         sagaProgress,
         sagasProgressMap,
         fillerStats,
@@ -173,6 +171,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         dragon_ball: "classic",
         dragon_ball_z: "z",
         dragon_ball_gt: "gt",
+        dragon_ball_kai: "kai",
         dragon_ball_super: "super",
         dragon_ball_daima: "daima",
     }
@@ -217,17 +216,36 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         preloadPath(defaultTargetPath)
     }, [preloadPath, defaultTargetPath])
 
-    // ── Backdrop sync ─────────────────────────────────────────────────────────
-    useEffect(() => {
-        if (heroBackdrop) {
-            setBackdropUrl(heroBackdrop)
-        }
-    }, [heroBackdrop, setBackdropUrl])
+    const playerEpisodes = useMemo(() => {
+        return computedEpisodes.map(ep => ({
+            title: ep.titleSpanish || ep.episodeMetadata?.title || ep.episodeTitle || ep.displayTitle || `Episodio ${ep.absoluteEpisodeNumber || ep.episodeNumber}`,
+            episodeNumber: ep.episodeNumber,
+            absoluteEpisodeNumber: ep.absoluteEpisodeNumber,
+            thumbnail: ep.episodeMetadata?.image || entry?.media?.bannerImage || entry?.media?.posterImage,
+            watched: ep.watched,
+        }))
+    }, [computedEpisodes, entry])
 
-    // ── Continuity progress ───────────────────────────────────────────────────
-    const progressPercent = continuityData?.item?.duration
-        ? (continuityData.item.currentTime / continuityData.item.duration) * 100
-        : 0
+    // ── Backdrop sync deshabilitado en detalle de serie ───────────────────────
+    // El fondo queda limpio (solo orbes/scrims del DynamicBackdrop global).
+    // El sync vive en MediaHero con opt-out (syncBackdrop={false} en SeriesHero).
+
+    // ── Ir al episodio desde "Continuar viendo" ──────────────────────────────
+    const handleGoToEpisode = useCallback(() => {
+        if (!continueWatching) return
+        if (continueWatching.sagaId && continueWatching.sagaId !== activeSagaId) {
+            setSearchParams({
+                saga: continueWatching.sagaId,
+                subSaga: "",
+            })
+        }
+        setTimeout(() => {
+            const el = document.getElementById(`episode-${continueWatching.episodeNumber}`)
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" })
+            }
+        }, 120)
+    }, [continueWatching, activeSagaId, setSearchParams])
 
     // ── DOM refs & scroll ─────────────────────────────────────────────────────
     const pageRef = useRef<HTMLDivElement>(null)
@@ -277,7 +295,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 type="button"
                 onClick={() => navigate({ to: "/series" })}
                 aria-label="Volver a series"
-                className="absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-9 h-9 rounded-full bg-zinc-950/55 border border-white/20 backdrop-blur-overlay-2xl text-white/90 hover:text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                className="absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-9 h-9 rounded-full bg-surface-container-lowest/60 border border-white/20 backdrop-blur-overlay-2xl text-white/90 hover:text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
                 <IconNavigationChevronLeft className="w-4 h-4" />
             </button>
@@ -288,12 +306,13 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     mainScrollRef.current = node
                     setScrollElement(node)
                 }}
-                className="flex-1 overflow-y-auto no-scrollbar"
+                className="flex-1 overflow-y-auto no-scrollbar bg-transparent"
             >
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 relative">
                     <SeriesHero
                         entry={entry}
                         backdropUrl={heroBackdrop || null}
+                        backdropArt={heroArt}
                         scrollContainerRef={mainScrollRef}
                         sagaCount={sagas?.length ?? 0}
                         onPlay={handlePlayDefault}
@@ -301,20 +320,22 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         footerText={sagaProgress.percent > 0 && sagaProgress.percent < 100 && activeSaga
                             ? `Vas en: ${activeSaga.name} · ${Math.round(sagaProgress.percent)}%`
                             : null}
-                        hasProgress={!!continuityData?.item?.currentTime}
-                        resumeEpisodeNumber={resumeInfo?.number}
-                        resumeEpisodeTitle={resumeInfo?.title}
+                        hasProgress={!!continueWatching}
+                        resumeEpisodeNumber={continueWatching?.episodeNumber}
+                        resumeEpisodeTitle={continueWatching?.title}
                     />
                 </div>
 
-                {/* Progress bar (overlay al final del hero, como en películas) */}
-                {continuityData?.item?.currentTime && continuityData.item.duration ? (
-                    <div className="w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10 -mt-16 mb-6 relative z-20">
-                        <WatchProgressBar percent={progressPercent} size="hero" animateOnMount />
-                    </div>
-                ) : null}
+                <div className="w-full page-container py-7 lg:py-6 pb-32 space-y-8 lg:space-y-7 min-h-full bg-transparent relative z-10">
+                    {/* Continuar viendo — integrado en el flujo de contenido sin superposición */}
+                    {continueWatching && (
+                        <SeriesContinueWatching
+                            continueWatching={continueWatching}
+                            onResume={() => handlePlayByNumber(continueWatching.episodeNumber)}
+                            onGoToEpisode={handleGoToEpisode}
+                        />
+                    )}
 
-                <div className="w-full page-container py-7 pb-32 space-y-9 min-h-full">
                     <SeriesEpisodesTab
                         sagas={sagas}
                         localSagas={localSagas}
@@ -345,6 +366,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         onToggleCollapseSidebar={() => setIsSagasSidebarCollapsed(!isSagasSidebarCollapsed)}
                         onPlayByNumber={handlePlayByNumber}
                         onEpisodePreload={handleEpisodePreload}
+                        computedEpisodes={computedEpisodes}
+                        heroBackdrop={heroBackdrop}
+                        seriesMediaId={entry.mediaId ?? Number(seriesId) ?? undefined}
                     />
                 </div>
             </main>
@@ -352,7 +376,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             {/* Mobile Vaul Drawer for Sagas */}
             <Vaul open={mobileSagasOpen} onOpenChange={setMobileSagasOpen}>
                 {mobileSagasOpen && (
-                    <VaulContent className="bg-zinc-950/95 backdrop-blur-overlay-xl border-t border-white/[0.1] p-5 pb-8 flex flex-col focus:outline-none max-h-[85vh]">
+                    <VaulContent className="bg-surface-container-high/95 backdrop-blur-overlay-xl border-t border-white/[0.1] p-5 pb-8 flex flex-col focus:outline-none max-h-[85vh]">
                         <div className="flex justify-between items-center mb-4 px-1">
                             <h3 className="font-display text-2xl tracking-display text-on-surface uppercase flex items-center gap-2">
                                 <IconNavigationLayers className="w-5 h-5 text-brand-accent" />
@@ -391,6 +415,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                     })
                                     setMobileSagasOpen(false)
                                 }}
+                                episodes={computedEpisodes}
+                                heroBackdrop={heroBackdrop}
                             />
                         </div>
                     </VaulContent>
@@ -416,8 +442,10 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                             title={title}
                             episodeLabel={playTarget.episodeLabel}
                             episodeNumber={playTarget.episodeNumber}
+                            initialProgressSeconds={playTarget.startTime}
                             mediaId={Number(seriesId)}
                             malId={playTarget.malId}
+                            isFillerEpisode={playTarget.isFiller ?? false}
                             mediaFormat={entry.media?.format ?? null}
                             nextStreamUrl={nextLocalFile?.path}
                             nextStreamType={playTarget.streamType}
@@ -434,6 +462,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                             }
                             onNextEpisode={handleNextEpisode}
                             hasNextEpisode={hasNextEpisode}
+                            episodes={playerEpisodes}
+                            onSelectEpisode={handlePlayByNumber}
                             onClose={handlePlayerClose}
                         />
                     </React.Suspense>

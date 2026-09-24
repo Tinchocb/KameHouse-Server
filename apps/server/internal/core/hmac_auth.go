@@ -16,5 +16,12 @@ func (a *App) GetServerPasswordHMACAuth() *util.HMACAuth {
 		secret = a.FallbackHMACSecret
 	}
 
-	return util.NewHMACAuth(secret, 24*time.Hour)
+	ttl := 24 * time.Hour
+	if a.Config != nil && a.Config.Server.AuthTokenTTL != "" {
+		if d, err := time.ParseDuration(a.Config.Server.AuthTokenTTL); err == nil {
+			ttl = d
+		}
+	}
+
+	return util.NewHMACAuth(secret, ttl)
 }

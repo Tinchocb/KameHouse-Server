@@ -80,7 +80,7 @@ func (d *Detector) animeThemesScan(ctx context.Context, fpcalcBin string, malID 
 			fpCache[t.AudioURL] = nil
 			return nil
 		}
-		fp, dur, err := FingerprintFile(ctx, fpcalcBin, dest, 0)
+		fp, dur, err := FingerprintFileCached(ctx, d.cacheDir, fpcalcBin, dest, 0)
 		if err != nil {
 			d.logger.Warn().Err(err).Str("path", dest).Msg("skipdetect: fallo al huellar theme")
 			fpCache[t.AudioURL] = nil
@@ -108,7 +108,7 @@ func (d *Detector) animeThemesScan(ctx context.Context, fpcalcBin string, malID 
 		// ── OP ──
 		// Vía ffmpeg (no fpcalc directo) porque fpcalc no sabe elegir track de
 		// audio y en archivos multi-audio hay que huellar el japonés.
-		if epFP, _, err := FingerprintRange(ctx, fpcalcBin, d.ffmpegPath, ep.Path, 0, athEpisodeProbeSec, ep.AudioIdx); err == nil {
+		if epFP, _, err := FingerprintRangeCached(ctx, d.cacheDir, fpcalcBin, d.ffmpegPath, ep.Path, 0, athEpisodeProbeSec, ep.AudioIdx); err == nil {
 			if start, end, score, ok := bestThemeMatch(epFP, 0, opThemes, epNum, themeFP); ok && ValidOpWindow(start, end) {
 				r.OpStart = start
 				r.OpEnd = end
@@ -120,7 +120,7 @@ func (d *Detector) animeThemesScan(ctx context.Context, fpcalcBin string, malID 
 		// ── ED ──
 		if athMatchED && len(edThemes) > 0 {
 			windowStart := ep.Duration - athOutroProbeSec
-			if edFP, _, err := FingerprintRange(ctx, fpcalcBin, d.ffmpegPath, ep.Path, windowStart, athOutroProbeSec, ep.AudioIdx); err == nil {
+			if edFP, _, err := FingerprintRangeCached(ctx, d.cacheDir, fpcalcBin, d.ffmpegPath, ep.Path, windowStart, athOutroProbeSec, ep.AudioIdx); err == nil {
 				if start, end, score, ok := bestThemeMatch(edFP, windowStart, edThemes, epNum, themeFP); ok && ValidEdWindow(start, end, ep.Duration) {
 					r.EdOffset = start
 					r.EdEnd = end

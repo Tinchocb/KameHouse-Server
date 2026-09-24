@@ -2,23 +2,25 @@ package handlers
 
 import (
 	"errors"
+	"net/http"
+	"path/filepath"
 	"strings"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog"
+	"github.com/ziflex/lecho/v3"
+	"golang.org/x/time/rate"
 	"kamehouse/internal/api/dragonball"
 	"kamehouse/internal/core"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/intelligence"
 	"kamehouse/internal/library/anime"
 	util "kamehouse/internal/util/proxies"
-	"net/http"
-	"path/filepath"
-	"sync"
-	"time"
-
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"github.com/rs/zerolog"
-	"github.com/ziflex/lecho/v3"
 )
 
 func contains(s []string, e string) bool {
@@ -28,6 +30,100 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
+}
+
+var (
+	authLimiter    = rate.NewLimiter(10, 20)   // 10 req/s, burst 20
+	generalLimiter = rate.NewLimiter(50, 100) // 50 req/s, burst 100
+
+	limiterMu      sync.Mutex
+	limitersCache, _ = lru.New[string, *rate.Limiter](1000)
+)
+
+func getLimiter(key string, r rate.Limit, b int) *rate.Limiter {
+	limiterMu.Lock()
+	defer limiterMu.Unlock()
+	if limitersCache == nil {
+		limitersCache, _ = lru.New[string, *rate.Limiter](1000)
+	}
+	l, ok := limitersCache.Get(key)
+	if !ok {
+		l = rate.NewLimiter(r, b)
+		limitersCache.Add(key, l)
+	}
+	return l
+}
+
+func rateLimitMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		path := c.Request().URL.Path
+
+		// Skip health endpoint
+		if path == "/api/health" {
+			return next(c)
+		}
+
+		// Skip non-public endpoints (auth endpoints handled by authRateLimitMiddleware)
+		if strings.HasPrefix(path, "/api/v1/auth/") {
+			return next(c)
+		}
+
+		// Public endpoints: /api/v1/status, /api/v1/image-proxy, /api/v1/ws, /api/v1/events
+		isPublic := path == "/api/v1/status" ||
+			strings.HasPrefix(path, "/api/v1/image-proxy") ||
+			path == "/api/v1/ws" ||
+			path == "/api/v1/events"
+
+		if !isPublic {
+			return next(c)
+		}
+
+		// Use client ID or IP as key
+		clientID := getClientID(c)
+		if clientID == "" {
+			clientID = c.RealIP()
+		}
+
+		limiter := getLimiter(clientID, 50, 100)
+		if !limiter.Allow() {
+			c.Response().Header().Set("Retry-After", "1")
+			return c.JSON(http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
+		}
+		return next(c)
+	}
+}
+
+func authRateLimitMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		path := c.Request().URL.Path
+
+		// Only apply to auth endpoints
+		if !strings.HasPrefix(path, "/api/v1/auth/") {
+			return next(c)
+		}
+
+		// Use client ID or IP as key
+		clientID := getClientID(c)
+		if clientID == "" {
+			clientID = c.RealIP()
+		}
+
+		limiter := getLimiter("auth:"+clientID, 10, 20)
+		if !limiter.Allow() {
+			c.Response().Header().Set("Retry-After", "1")
+			return c.JSON(http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
+		}
+		return next(c)
+	}
+}
+
+func getClientID(c echo.Context) string {
+	if v := c.Get("KameHouse-Client-Id"); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 type Handler struct {
@@ -45,25 +141,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	if contains(allowedOrigins, "*") {
 		for _, o := range allowedOrigins {
 			if o == "*" {
-				app.Logger.Warn().Msg("CORS: wildcard origin with credentials detected — rejecting to prevent session hijack")
-				// Reconfigure CORS to deny credentials with any origin
-				e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-					AllowOrigins: allowedOrigins,
-					AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions, http.MethodHead},
-					AllowHeaders: []string{
-						"Origin", "Content-Type", "Accept", "Cookie", "Authorization",
-						"Range", "Accept-Ranges", "Content-Range", "If-Range",
-						"X-KameHouse-Token",
-					},
-					ExposeHeaders: []string{
-						"Accept-Ranges", "Content-Range", "Content-Length", "Content-Disposition",
-					},
-					AllowCredentials: false,
-					Skipper: func(c echo.Context) bool {
-						return c.Path() == "/api/health"
-					},
-				}))
-				return
+				app.Logger.Fatal().Msg("CORS: wildcard origin with credentials detected — rejecting to prevent session hijack. Remove '*' from CorsOrigins or disable credentials.")
 			}
 		}
 	}
@@ -86,6 +164,9 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 			return c.Path() == "/api/health"
 		},
 	}))
+
+	e.Use(rateLimitMiddleware)
+	e.Use(authRateLimitMiddleware)
 
 	e.HTTPErrorHandler = CustomHTTPErrorHandler
 
@@ -137,6 +218,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		Skipper: func(c echo.Context) bool {
 			path := c.Request().URL.Path
 			return strings.HasPrefix(path, "/api/v1/mediastream") ||
+				strings.HasPrefix(path, "/api/v1/drive/play") ||
 				strings.HasPrefix(path, "/api/v1/image-proxy") ||
 				strings.HasPrefix(path, "/api/v1/proxy") ||
 				strings.HasPrefix(path, "/api/v1/events") ||
@@ -161,12 +243,12 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 				newCookie := new(http.Cookie)
 				newCookie.Name = "KameHouse-Client-Id"
 				newCookie.Value = u
-				newCookie.HttpOnly = true
-				newCookie.Expires = time.Now().Add(30 * 24 * time.Hour)
+				newCookie.HttpOnly = true // prevent JS access
+				newCookie.Expires = time.Now().Add(30 * 24 * time.Hour) // 30 days
 				newCookie.Path = "/"
 				newCookie.Domain = ""
-				newCookie.SameSite = http.SameSiteStrictMode
-				newCookie.Secure = c.Scheme() == "https" || c.Request().Header.Get("X-Forwarded-Proto") == "https"
+				newCookie.SameSite = http.SameSiteLaxMode // Lax: sent with top-level navigations, safe for CSRF
+				newCookie.Secure = c.Scheme() == "https" || c.Request().Header.Get("X-Forwarded-Proto") == "https" // only over TLS
 				c.SetCookie(newCookie)
 				c.Set("KameHouse-Client-Id", u)
 			} else {
@@ -195,7 +277,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 
 	h.StartPlaybackHeartbeatSubscriber()
 
-	// Health endpoint for KameHouseTV auto-discovery (no auth required, open CORS)
+	// Health endpoint (no auth required, open CORS)
 	e.GET("/api/health", h.HandleHealth)
 	e.OPTIONS("/api/health", h.HandleHealth)
 
@@ -229,6 +311,9 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.GET("/memory/goroutine", h.HandleGetGoRoutineProfile)
 	v1.GET("/memory/cpu", h.HandleGetCPUProfile)
 	v1.POST("/memory/gc", h.HandleForceGC)
+	v1.GET("/system/cache/stats", h.HandleGetCacheStats)
+	v1.POST("/system/cache/clear", h.HandleClearSystemCache)
+	v1.POST("/cache/thumbnails/warm", h.HandleWarmThumbnailCache)
 	v1.POST("/announcements", h.HandleGetAnnouncements)
 	v1.GET("/notifications", h.HandleGetNotifications)
 	v1.POST("/notifications/read", h.HandleMarkNotificationsRead)
@@ -239,11 +324,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.GET("/lore/dragonball", h.HandleGetDragonballLore)
 	v1.GET("/music/scan", h.HandleScanBackgroundMusic)
 	v1.GET("/music/stream", h.HandleStreamBackgroundMusic)
-	v1.GET("/cast/devices", h.HandleGetCastDevices)
-	v1.POST("/cast/play", h.HandleCastPlay)
 
 	h.RegisterLibraryRoutes(v1)
 	h.RegisterStreamingRoutes(v1)
+	h.RegisterDriveRoutes(v1)
 	h.RegisterSettingsRoutes(v1)
 	h.RegisterLocalRoutes(v1)
 	h.RegisterIntelligenceRoutes(v1)
@@ -306,6 +390,7 @@ func (h *Handler) invalidateSettingsCache() {
 	h.settingsMu.Lock()
 	h.settings = nil
 	h.settingsMu.Unlock()
+	ClearLibraryCollectionCache()
 }
 
 func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {

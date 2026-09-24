@@ -1,2 +1,5 @@
 
 src/routeTree.gen.ts
+# Generados por rsbuild.jassub.ts (esbuild desde src/sw.ts y jassub/dist)
+public/sw-custom.js
+public/jassub/

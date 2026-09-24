@@ -26,6 +26,7 @@ export const DRAGON_BALL_TIMELINE: TimelineEntry[] = [
     { tmdbId: DRAGON_BALL_SERIES.ORIGINAL, key: "original", label: "Dragon Ball",       canon: true },
     { tmdbId: DRAGON_BALL_SERIES.Z,        key: "z",        label: "Dragon Ball Z",     canon: true },
     { tmdbId: DRAGON_BALL_SERIES.GT,       key: "gt",       label: "Dragon Ball GT",    canon: false },
+    { tmdbId: DRAGON_BALL_SERIES.KAI,      key: "kai",      label: "Dragon Ball Kai",   canon: true },
     { tmdbId: DRAGON_BALL_SERIES.SUPER,    key: "super",    label: "Dragon Ball Super", canon: true },
     { tmdbId: DRAGON_BALL_SERIES.DAIMA,    key: "daima",    label: "Dragon Ball Daima", canon: true },
 ]

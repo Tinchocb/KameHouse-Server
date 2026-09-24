@@ -46,6 +46,10 @@
      Usar la utility `max-w-content` de Tailwind (mapeada a este token). */
   --content-max: 1800px;
 
+  /* Full-width para desktop (sin límite máximo). Para layouts que deben
+     ocupar todo el ancho disponible menos el sidebar. */
+  --content-max-desktop: 100%;
+
   /* Alias semánticos para uso común */
   --space-xs:     var(--space-1);    /* 4px  */
   --space-sm:     var(--space-2);    /* 8px  */

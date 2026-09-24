@@ -58,6 +58,10 @@ func (h *Handler) HandleLocalAddTrackedMedia(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	if len(b.Media) == 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("media is required"))
+	}
+
 	var err error
 	for _, m := range b.Media {
 		if m.MediaID <= 0 {
@@ -162,7 +166,7 @@ func (h *Handler) HandleLocalSyncData(c echo.Context) error {
 //	@route /api/v1/local/queue [GET]
 //	@returns local.QueueState
 func (h *Handler) HandleLocalGetSyncQueueState(c echo.Context) error {
-	return h.RespondWithData(c, map[string]interface{}{"queued": []interface{}{}})
+	return h.RespondWithCodeError(c, 501, errors.New("sync queue state not implemented"))
 }
 
 // HandleLocalSyncPlatformData ...

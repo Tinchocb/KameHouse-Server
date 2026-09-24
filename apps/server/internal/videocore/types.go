@@ -62,8 +62,6 @@ type PlaybackType string
 
 const (
 	PlaybackTypeLocalFile    PlaybackType = "localfile"    // NativePlayer only
-	PlaybackTypeTorrent      PlaybackType = "torrent"      // NativePlayer only
-	PlaybackTypeDebrid       PlaybackType = "debrid"       // NativePlayer only
 	PlaybackTypeOnlinestream PlaybackType = "onlinestream" // WebPlayer only
 )
 
@@ -223,8 +221,6 @@ type VideoEvent interface {
 	IsWebPlayer() bool
 	IsNativePlayer() bool
 	IsOnlinestream() bool
-	IsTorrent() bool
-	IsDebrid() bool
 	GetPlayerType() PlayerType
 	GetPlaybackType() PlaybackType
 	GetPlaybackId() string
@@ -245,8 +241,6 @@ func (e *BaseVideoEvent) GetPlaybackType() PlaybackType { return e.PlaybackType 
 func (e *BaseVideoEvent) IsNativePlayer() bool          { return e.PlayerType == NativePlayer }
 func (e *BaseVideoEvent) IsWebPlayer() bool             { return e.PlayerType == WebPlayer }
 func (e *BaseVideoEvent) IsOnlinestream() bool          { return e.PlaybackType == PlaybackTypeOnlinestream }
-func (e *BaseVideoEvent) IsTorrent() bool               { return e.PlaybackType == PlaybackTypeTorrent }
-func (e *BaseVideoEvent) IsDebrid() bool                { return e.PlaybackType == PlaybackTypeDebrid }
 func (e *BaseVideoEvent) IsCritical() bool              { return true }
 func (e *BaseVideoEvent) identify(id string, clientID string, playerType PlayerType, playbackType PlaybackType) {
 	e.PlaybackId = id

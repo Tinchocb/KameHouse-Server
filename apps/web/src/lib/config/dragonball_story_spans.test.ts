@@ -8,15 +8,15 @@ const getSpansBySeriesId = (seriesId: string) =>
   DRAGON_BALL_STORY_SPANS.filter(s => s.seriesId === seriesId)
 
 describe("Dragon Ball Story Spans Dataset", () => {
-  it("should contain exactly 33 story spans covering all eras", () => {
+  it("should contain exactly 35 story spans covering all eras", () => {
     expect(DRAGON_BALL_STORY_SPANS).toBeDefined()
-    expect(DRAGON_BALL_STORY_SPANS.length).toBe(33)
+    expect(DRAGON_BALL_STORY_SPANS.length).toBe(35)
   })
 
   it("should have correct counts per series", () => {
     expect(getSpansBySeriesId("classic").length).toBe(7)
     expect(getSpansBySeriesId("z").length).toBe(14)
-    expect(getSpansBySeriesId("super").length).toBe(6)
+    expect(getSpansBySeriesId("super").length).toBe(8)
     expect(getSpansBySeriesId("daima").length).toBe(2)
     expect(getSpansBySeriesId("gt").length).toBe(4)
   })

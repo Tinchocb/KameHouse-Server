@@ -19,7 +19,11 @@ const __FormSchemaContext = React.createContext<{
 } | undefined>(undefined)
 
 export const useFormSchema = (): { shape: z.ZodRawShape, schema: z.ZodObject<z.ZodRawShape> } => {
-    return React.useContext(__FormSchemaContext)!
+    const ctx = React.useContext(__FormSchemaContext)
+    if (!ctx) {
+        throw new Error("useFormSchema must be used within a Form")
+    }
+    return ctx
 }
 
 export type SubmitHandler<T> = (data: T, event?: React.BaseSyntheticEvent) => void | Promise<void>

@@ -2,6 +2,7 @@
 package util
 
 import (
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
@@ -92,3 +93,9 @@ func VerifyPasswordArgon2(password, encodedHash string) (bool, error) {
 
 	return false, nil
 }
+
+// CreateMD5 returns the lowercase hex-encoded MD5 hash of the given string.
+func CreateMD5(s string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(s)))
+}
+

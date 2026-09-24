@@ -27,6 +27,7 @@ export interface DBFranchiseSeries {
     color: string
     sagas: DBSagaDef[]
     movies?: DBMovieDef[]
+    associatedMovieEra?: string
 }
 
 export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
@@ -41,19 +42,21 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         icon: "",
         color: "from-blue-600 to-indigo-900",
         sagas: [
-            { id: "pilaf", name: "Saga de Pilaf", startEp: 1, endEp: 13, image: "/sagas/pilaf.jpg" },
-            { id: "torneo-21", name: "21º Torneo de Artes Marciales", startEp: 14, endEp: 28, image: "/sagas/torneo-21.jpg" },
-            { id: "red-ribbon", name: "Saga de la Patrulla Roja", startEp: 29, endEp: 68, image: "/sagas/red-ribbon.jpg" },
-            { id: "uranai-baba", name: "Saga de Uranai Baba", startEp: 69, endEp: 82, image: "/sagas/uranai-baba.jpg" },
-            { id: "torneo-22", name: "22º Torneo de Artes Marciales", startEp: 83, endEp: 101, image: "/sagas/torneo-22.jpg" },
-            { id: "piccolo", name: "Saga de Piccolo Daimaoh", startEp: 102, endEp: 122, image: "/sagas/piccolo-daimaku.jpg" },
-            { id: "piccolo-jr", name: "23º Torneo (Piccolo Jr.)", startEp: 123, endEp: 153, image: "/sagas/piccolo-jr.jpg" },
+            { id: "pilaf", name: "Saga de Pilaf", startEp: 1, endEp: 13, image: "/sagas/pilaf.webp" },
+            { id: "torneo-21", name: "21º Torneo de Artes Marciales", startEp: 14, endEp: 28, image: "/sagas/torneo-21.webp" },
+            { id: "red-ribbon", name: "Saga de la Patrulla Roja", startEp: 29, endEp: 68, image: "/sagas/red-ribbon.webp" },
+            { id: "uranai-baba", name: "Saga de Uranai Baba", startEp: 69, endEp: 82, image: "/sagas/uranai-baba.webp" },
+            { id: "torneo-22", name: "22º Torneo de Artes Marciales", startEp: 83, endEp: 101, image: "/sagas/torneo-22.webp" },
+            { id: "piccolo", name: "Saga de Piccolo Daimaoh", startEp: 102, endEp: 122, image: "/sagas/piccolo-daimaku.webp" },
+            { id: "piccolo-jr", name: "23º Torneo (Piccolo Jr.)", startEp: 123, endEp: 153, image: "/sagas/piccolo-jr.webp" },
         ],
         movies: [
             { id: "db-m1", tmdbId: 39144, title: "La Leyenda de Shenlong", year: 1986, type: "MOVIE" },
             { id: "db-m2", tmdbId: 39145, title: "La Princesa Durmiente en el Castillo del Mal", year: 1987, type: "MOVIE" },
             { id: "db-m3", tmdbId: 116776, title: "Una Aventura Mística", year: 1988, type: "MOVIE" },
             { id: "db-m4", tmdbId: 39148, title: "El Camino hacia el Poder", year: 1996, type: "MOVIE" },
+            { id: "db-sp1", tmdbId: 39321, title: "Corto: El Cuerpo de Bomberos de Goku", year: 1988, type: "SPECIAL" },
+            { id: "db-sp2", tmdbId: 39322, title: "Corto: Seguridad Vial de Goku", year: 1988, type: "SPECIAL" },
         ],
     },
     {
@@ -67,14 +70,14 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         icon: "",
         color: "from-orange-600 to-red-900",
         sagas: [
-            { id: "saiyajin", name: "Saga de los Saiyajin", startEp: 1, endEp: 35, image: "/sagas/saiyajin.jpg" },
-            { id: "freezer", name: "Saga de Freezer (Namekusei)", startEp: 36, endEp: 107, image: "/sagas/namek-freezer.jpg" },
-            { id: "garlic-jr", name: "Saga de Garlic Jr.", startEp: 108, endEp: 117, image: "/sagas/garlic-jr.jpg" },
-            { id: "androides", name: "Saga de los Androides", startEp: 118, endEp: 139, image: "/sagas/trunks-androides-cell.jpg" },
-            { id: "cell", name: "Saga de Cell", startEp: 140, endEp: 194, image: "/sagas/z/cell-games-saga.jpg" },
+            { id: "saiyajin", name: "Saga de los Saiyajin", startEp: 1, endEp: 35, image: "/sagas/saiyajin.webp" },
+            { id: "freezer", name: "Saga de Freezer (Namekusei)", startEp: 36, endEp: 107, image: "/sagas/namek-freezer.webp" },
+            { id: "garlic-jr", name: "Saga de Garlic Jr.", startEp: 108, endEp: 117, image: "/sagas/garlic-jr.webp" },
+            { id: "androides", name: "Saga de los Androides", startEp: 118, endEp: 139, image: "/sagas/trunks-androides-cell.webp" },
+            { id: "cell", name: "Saga de Cell", startEp: 140, endEp: 194, image: "/sagas/z/cell-games-saga.webp" },
             { id: "torneo-otro-mundo", name: "Torneo del Otro Mundo", startEp: 195, endEp: 199, image: "/sagas/z/other-world-saga.webp" },
-            { id: "gran-saiyaman", name: "Saga del Gran Saiyaman", startEp: 200, endEp: 209, image: "/sagas/gran-saiyaman-torneo25.jpg" },
-            { id: "majin-buu", name: "Saga de Majin Buu", startEp: 210, endEp: 291, image: "/sagas/majin-buu.jpg" },
+            { id: "gran-saiyaman", name: "Saga del Gran Saiyaman", startEp: 200, endEp: 209, image: "/sagas/gran-saiyaman-torneo25.webp" },
+            { id: "majin-buu", name: "Saga de Majin Buu", startEp: 210, endEp: 291, image: "/sagas/majin-buu.webp" },
         ],
         movies: [
             { id: "dbz-m1", tmdbId: 28609, title: "¡Devuélvanme a mi Gohan!", year: 1989, type: "MOVIE" },
@@ -108,10 +111,10 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         icon: "",
         color: "from-purple-600 to-rose-950",
         sagas: [
-            { id: "black-star", name: "Saga del Gran Viaje", startEp: 1, endEp: 16, image: "/sagas/black-star.jpg" },
-            { id: "baby", name: "Saga de Baby", startEp: 1, endEp: 40, image: "/sagas/baby.jpg" },
-            { id: "super-17", name: "Saga de Super-17", startEp: 41, endEp: 47, image: "/sagas/super-17.jpg" },
-            { id: "shadow-dragons", name: "Saga de los Dragones Malignos", startEp: 48, endEp: 64, image: "/sagas/shadow-dragons.jpg" },
+            { id: "black-star", name: "Saga del Gran Viaje", startEp: 1, endEp: 16, image: "/sagas/black-star.webp" },
+            { id: "baby", name: "Saga de Baby", startEp: 1, endEp: 40, image: "/sagas/baby.webp" },
+            { id: "super-17", name: "Saga de Super-17", startEp: 41, endEp: 47, image: "/sagas/super-17.webp" },
+            { id: "shadow-dragons", name: "Saga de los Dragones Malignos", startEp: 48, endEp: 64, image: "/sagas/shadow-dragons.webp" },
         ],
         movies: [
             { id: "dbgt-sp1", tmdbId: 18095, title: "Especial: 100 Años Después (Goku Jr.)", year: 1997, type: "SPECIAL" },
@@ -128,11 +131,14 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         icon: "",
         color: "from-amber-600 to-yellow-950",
         sagas: [
-            { id: "kai-saiyajin-freezer", name: "Sagas Saiyajin y Freezer", startEp: 1, endEp: 54, image: "/sagas/z/vegeta-saga.jpg" },
-            { id: "kai-androides-cell", name: "Sagas Androides y Cell", startEp: 55, endEp: 98, image: "/sagas/z/perfect-cell-saga.jpg" },
-            { id: "kai-buu", name: "The Final Chapters (Majin Buu)", startEp: 99, endEp: 167, image: "/sagas/z/kid-buu-saga.jpg" },
+            { id: "kai-saiyajin-freezer", name: "Sagas Saiyajin y Freezer", startEp: 1, endEp: 54, image: "/sagas/z/vegeta-saga.webp" },
+            { id: "kai-androides-cell", name: "Sagas Androides y Cell", startEp: 55, endEp: 98, image: "/sagas/z/perfect-cell-saga.webp" },
+            { id: "kai-buu", name: "The Final Chapters (Majin Buu)", startEp: 99, endEp: 167, image: "/sagas/z/kid-buu-saga.webp" },
         ],
+        // Kai no cuenta con películas propias independientes en la taxonomía canónica;
+        // en la interfaz se asocian y presentan las películas/especiales de Dragon Ball Z.
         movies: [],
+        associatedMovieEra: "dbz",
     },
     {
         id: "dbs",
@@ -145,12 +151,14 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         icon: "",
         color: "from-cyan-600 to-blue-950",
         sagas: [
-            { id: "batalla-dioses", name: "Saga Batalla de los Dioses", startEp: 1, endEp: 14, image: "/sagas/batalla-dioses.jpg" },
-            { id: "resurreccion-f", name: "Saga Resurrección de 'F'", startEp: 15, endEp: 27, image: "/sagas/resurreccion-f.jpg" },
-            { id: "universo-6", name: "Saga Torneo Universo 6", startEp: 28, endEp: 41, image: "/sagas/universo-6.jpg" },
+            { id: "batalla-dioses", name: "Saga Batalla de los Dioses", startEp: 1, endEp: 14, image: "/sagas/batalla-dioses.webp" },
+            { id: "resurreccion-f", name: "Saga Resurrección de 'F'", startEp: 15, endEp: 27, image: "/sagas/resurreccion-f.webp" },
+            { id: "universo-6", name: "Saga Torneo Universo 6", startEp: 28, endEp: 41, image: "/sagas/universo-6.webp" },
             { id: "copy-vegeta", name: "Saga del Agua Sobrenatural", startEp: 42, endEp: 46, image: "/sagas/super/copy-vegeta.webp" },
-            { id: "trunks-futuro", name: "Saga de Trunks del Futuro (Goku Black)", startEp: 47, endEp: 76, image: "/sagas/trunks-futuro.jpg" },
-            { id: "torneo-poder", name: "Saga del Torneo del Poder", startEp: 77, endEp: 131, image: "/sagas/supervivencia-universal.jpg" },
+            { id: "trunks-futuro", name: "Saga de Trunks del Futuro (Goku Black)", startEp: 47, endEp: 76, image: "/sagas/trunks-futuro.webp" },
+            { id: "exhibicion-zen", name: "Saga de Exhibición Zen", startEp: 77, endEp: 81, image: "/sagas/supervivencia-universal.webp" },
+            { id: "reclutamiento-u7", name: "Saga de Reclutamiento", startEp: 82, endEp: 96, image: "/sagas/supervivencia-universal.webp" },
+            { id: "torneo-poder", name: "Saga del Torneo del Poder", startEp: 97, endEp: 131, image: "/sagas/supervivencia-universal.webp" },
         ],
         movies: [
             { id: "dbs-m1", tmdbId: 126963, title: "La Batalla de los Dioses", year: 2013, type: "MOVIE" },
@@ -170,8 +178,8 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         icon: "",
         color: "from-yellow-500 to-amber-900",
         sagas: [
-            { id: "daima-1", name: "El Misterio del Mundo Demonio", startEp: 1, endEp: 10, image: "/sagas/daima.jpg" },
-            { id: "daima-2", name: "La Travesía en el Mundo Demonio", startEp: 11, endEp: 20, image: "/sagas/daima.jpg" },
+            { id: "daima-1", name: "El Misterio del Mundo Demonio", startEp: 1, endEp: 10, image: "/sagas/daima.webp" },
+            { id: "daima-2", name: "La Travesía en el Mundo Demonio", startEp: 11, endEp: 20, image: "/sagas/daima.webp" },
         ],
         movies: [],
     },
@@ -179,8 +187,9 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         id: "db-movies",
         tmdbId: 999999,
         title: "Películas y Especiales",
-        subtitle: "Universo Cinematográfico (27 títulos)",
-        totalEpisodes: 27,
+        subtitle: "Universo Cinematográfico",
+        // Se completa abajo con todas las películas del catálogo.
+        totalEpisodes: 0,
         type: "MOVIES",
         officialPoster: "https://image.tmdb.org/t/p/w500/pi0iZOEHeA3ih4p1IwAG4x2DZNH.jpg",
         icon: "",
@@ -188,9 +197,23 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         sagas: [
             { id: "db-classic-movies", name: "Películas DB Clásico (1 a 4)", startEp: 1, endEp: 4, image: "/sagas/original/busqueda-esferas.webp" },
             { id: "dbz-movies-1-6", name: "Películas DBZ (1 a 6: Dead Zone, Cooler...)", startEp: 5, endEp: 10, image: "/sagas/z/goku-llega-namek.webp" },
-            { id: "dbz-movies-7-13", name: "Películas DBZ (7 a 13: Broly, Fusion...)", startEp: 11, endEp: 17, image: "/sagas/z/fusion-saga.jpg" },
-            { id: "dbs-movies", name: "Películas Super (Dioses, Broly, Super Hero)", startEp: 18, endEp: 21, image: "/sagas/batalla-dioses.jpg" },
-            { id: "specials-ovas", name: "Especiales de TV y OVAs (Bardock, Trunks...)", startEp: 22, endEp: 27, image: "/sagas/z/trunks-saga.jpg" },
+            { id: "dbz-movies-7-13", name: "Películas DBZ (7 a 13: Broly, Fusion...)", startEp: 11, endEp: 17, image: "/sagas/z/fusion-saga.webp" },
+            { id: "dbs-movies", name: "Películas Super (Dioses, Broly, Super Hero)", startEp: 18, endEp: 21, image: "/sagas/batalla-dioses.webp" },
+            { id: "specials-ovas", name: "Especiales de TV y OVAs (Bardock, Trunks...)", startEp: 22, endEp: 27, image: "/sagas/z/trunks-saga.webp" },
         ],
     },
 ]
+
+/** Todas las películas, especiales y OVAs del catálogo, sin repetir. */
+export const DRAGON_BALL_SCANNER_MOVIES: DBMovieDef[] = Array.from(
+    new Map(
+        DRAGON_BALL_SCANNER_SERIES.flatMap(s => s.movies ?? []).map(m => [m.tmdbId, m] as const)
+    ).values()
+)
+
+// La tarjeta "Películas y Especiales" agrupa el catálogo completo.
+for (const series of DRAGON_BALL_SCANNER_SERIES) {
+    if (series.type !== "MOVIES") continue
+    series.movies = DRAGON_BALL_SCANNER_MOVIES
+    series.totalEpisodes = DRAGON_BALL_SCANNER_MOVIES.length
+}

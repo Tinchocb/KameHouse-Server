@@ -29,6 +29,19 @@ if (!fs.existsSync(serverDir)) {
   process.exit(1);
 }
 
+// Ensure apps/server/web exists so //go:embed all:web does not fail
+const serverWebDir = path.join(serverDir, "web");
+const webOutDir = path.join(rootDir, "apps", "web", "out");
+if (fs.existsSync(webOutDir) && fs.readdirSync(webOutDir).length > 0) {
+  if (!fs.existsSync(serverWebDir)) {
+    fs.mkdirSync(serverWebDir, { recursive: true });
+  }
+  fs.cpSync(webOutDir, serverWebDir, { recursive: true });
+} else if (!fs.existsSync(serverWebDir) || fs.readdirSync(serverWebDir).length === 0) {
+  fs.mkdirSync(serverWebDir, { recursive: true });
+  fs.writeFileSync(path.join(serverWebDir, "index.html"), "<!DOCTYPE html><html><body>KameHouse Dev</body></html>");
+}
+
 try {
   // Verify go exists
   execFileSync("go", ["version"], { stdio: "ignore" });
@@ -52,9 +65,14 @@ if (!fs.existsSync(binariesDir)) {
 }
 
 if (isDev) {
-  // Dev sidecar uses the triple naming that Tauri expects
+  // En dev el sidecar ejecuta apps/server/kamehouse.exe directo; binaries/ solo
+  // tiene que existir para el chequeo de externalBin de tauri_build. Re-copiarlo
+  // en cada arranque cambiaba su mtime y, por `rerun-if-changed=binaries/` en
+  // build.rs, forzaba a recompilar el crate de Tauri entero cada vez.
   const devTarget = path.join(binariesDir, `kamehouse-server-${getHostTarget()}${exeExt}`);
-  fs.copyFileSync(serverExe, devTarget);
+  if (!fs.existsSync(devTarget) || fs.statSync(devTarget).size === 0) {
+    fs.copyFileSync(serverExe, devTarget);
+  }
   console.log("✅ Go server binary staged for dev.");
   process.exit(0);
 }

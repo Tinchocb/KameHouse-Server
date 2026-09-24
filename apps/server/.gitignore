@@ -9,7 +9,7 @@ coverage.out
 *.db-shm
 *.db-journal
 test_data_dir/
-logs/
-cache/
+/logs/
+/cache/
 *.cache
 

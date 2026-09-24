@@ -28,7 +28,7 @@ export class PlayerPreviewManager {
     private readonly _drawingContext = this._offscreenCanvas.getContext("2d", {
         alpha: false,
         desynchronized: true,
-    })!
+    })
 
     constructor(
         videoElement: HTMLVideoElement,
@@ -243,6 +243,7 @@ export class PlayerPreviewManager {
         if (!frameWidth || !frameHeight) return undefined
 
         try {
+            if (!this._drawingContext) return undefined
             this.configureRenderingSurface(frameWidth, frameHeight)
             this._drawingContext.drawImage(
                 this.videoElement,
@@ -454,6 +455,7 @@ export class PlayerPreviewManager {
         }
 
         try {
+            if (!this._drawingContext) return undefined
             this.configureRenderingSurface(frameWidth, frameHeight)
             this._drawingContext.drawImage(
                 videoElement,

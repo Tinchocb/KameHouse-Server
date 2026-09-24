@@ -97,24 +97,11 @@ func (m *FeatureManager) UpdateFromSettings(library *models.LibrarySettings) {
 		return
 	}
 
-	type toggle struct {
-		disabled bool
-		keys     []FeatureKey
-	}
-
-	toggles := []toggle{
-		{library.DisableLocalScanning, []FeatureKey{ManageLocalAnimeLibrary, WatchingLocalAnime}},
-	}
-
-	for _, t := range toggles {
-		for _, key := range t.keys {
-			if t.disabled {
-				m.disabledFeatures[key] = true
-			} else {
-				delete(m.disabledFeatures, key)
-			}
-		}
-	}
+	// DisableLocalScanning ya no apaga features: bloqueaba /api/v1/mediastream, que
+	// también reproduce Google Drive. El escaneo lo cortan el AutoScanner, el watcher
+	// y HandleScanLocalFiles; la vista oculta los archivos locales (visibleLocalFiles).
+	delete(m.disabledFeatures, ManageLocalAnimeLibrary)
+	delete(m.disabledFeatures, WatchingLocalAnime)
 
 	// Rebuild the DisabledFeatures slice
 	m.DisabledFeatures = make([]FeatureKey, 0, len(m.disabledFeatures))

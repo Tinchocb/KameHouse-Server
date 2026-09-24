@@ -1,0 +1,3 @@
+# Que `tauri dev` no recompile/reinicie la app cuando cambian los binarios del sidecar.
+binaries/
+kamehouse-server-*

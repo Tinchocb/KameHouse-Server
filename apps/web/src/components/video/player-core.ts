@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react"
 import Hls from "hls.js"
-import JASSUB from "jassub"
+import type JASSUB from "jassub"
 import { usePlayerShortcuts } from "./usePlayerShortcuts"
 import { usePlayerJassub } from "./usePlayerJassub"
 import { usePlayerPgs } from "./usePlayerPgs"
@@ -10,73 +10,30 @@ import { usePlayerHls } from "./usePlayerHls"
 import { useAnimeTracking } from "@/api/hooks/useAnimeTracking"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { getApiWebSocketUrl } from "@/api/client/server-url"
+import { WSEvents, type WebSocketMessage } from "@/lib/server/ws-events"
 import { useMediastreamShutdownTranscodeStream, usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
-import { useAppStore } from "@/lib/store"
+import { usePlayerStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { usePlayerProgressSync } from "@/api/hooks/usePlayerProgressSync"
-import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
-import { useGetStatus } from "@/api/hooks/settings.hooks"
+import { useGetStatus, useGetSettings } from "@/api/hooks/settings.hooks"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { PlayerCoreProps, PlayerCore, PlayerStats } from "./player-core.types"
 
 import { usePlayerSkip } from "./usePlayerSkip"
-import { __DEV_SERVER_PORT } from "@/lib/server/config"
-import { toast } from "sonner"
+import { usePlayerVolume } from "./usePlayerVolume"
+import { resolveLanUrl } from "./lan-url"
+import {
+    computeAudioTracksKey,
+    computeSubtitleTracksKey,
+    matchPendingAudioTrack,
+    matchPreferredAudioTrack,
+    resolveAutoSubtitleTarget,
+} from "./track-selection"
+
 
 
 export type { PlayerStats, PlayerCoreProps, PlayerCore }
 
-
-function getAbsoluteLanUrl(playableUrl: string, serverIPs?: string[], serverPort?: number): string {
-    if (!playableUrl) return ""
-    if (typeof window !== "undefined" && (window.location.protocol === "https:" || !window.location.hostname.match(/^(192\.168\.|10\.|172\.|localhost|127\.0\.0\.1)/))) {
-        return playableUrl.startsWith("/") ? `${window.location.origin}${playableUrl}` : playableUrl;
-    }
-    let lanIp = "127.0.0.1"
-
-    if (serverIPs && serverIPs.length > 0) {
-        const preferredIp = serverIPs.find(ip =>
-            ip.startsWith("192.168.") ||
-            ip.startsWith("10.") ||
-            ip.startsWith("172.")
-        )
-        lanIp = preferredIp || serverIPs[0]
-    } else if (typeof window !== "undefined") {
-        const hn = window.location.hostname
-        if (hn !== "localhost" && hn !== "127.0.0.1" && hn !== "::1") {
-            lanIp = hn
-        }
-    }
-    const port = serverPort || __DEV_SERVER_PORT
-
-    const protocol = typeof window !== "undefined" ? window.location.protocol : "http:"
-
-    if (playableUrl.startsWith("/")) {
-        return `${protocol}//${lanIp}:${port}${playableUrl}`
-    }
-
-    try {
-        const url = new URL(playableUrl)
-        if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
-            url.hostname = lanIp
-            url.port = String(port)
-            return url.toString()
-        }
-        if (typeof window !== "undefined" && url.host === window.location.host) {
-            url.hostname = lanIp
-            url.port = String(port)
-            return url.toString()
-        }
-    } catch {
-        if (playableUrl.includes("localhost") || playableUrl.includes("127.0.0.1")) {
-            return playableUrl
-                .replace("localhost", lanIp)
-                .replace("127.0.0.1", lanIp)
-                .replace(/:\d+\//, `:${port}/`)
-        }
-    }
-    return playableUrl
-}
 
 export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const {
@@ -91,6 +48,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         mediaId,
         episodeNumber,
         malId,
+        isFillerEpisode = false,
         clientId,
         mediaFormat,
         title,
@@ -99,7 +57,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         streamType,
         onRequestStreamTypeChange,
         onDirectPlayFailed,
+        streamRequestError,
         metadataDuration,
+        onToggleSubtitle,
     } = props
 
     const { data: statusQuery } = useGetStatus()
@@ -107,7 +67,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const serverPort = statusQuery?.serverPort
 
     const absoluteLanUrl = useMemo(() => {
-        return getAbsoluteLanUrl(playableUrl, serverIPs, serverPort)
+        return resolveLanUrl(playableUrl, serverIPs, serverPort)
     }, [playableUrl, serverIPs, serverPort])
 
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -162,19 +122,22 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             return () => clearTimeout(timer)
         }
     }, [metadataDuration, duration])
-    // D3: initialize from the persisted store so volume survives page reloads.
-    const { playerVolume: persistedVolume, setPlayerVolume } = useAppStore(
-        useShallow(state => ({ playerVolume: state.playerVolume, setPlayerVolume: state.setPlayerVolume }))
-    )
-    const [volume, setVolume] = useState(() => persistedVolume ?? 1)
-    const [isMuted, setIsMuted] = useState(false)
+    // Volumen con persistencia (hook extraído; ver usePlayerVolume).
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [controlsVisible, setControlsVisible] = useState(true)
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
+    const { volume, isMuted, setVolume, setIsMuted, handleVolume, toggleMute } = usePlayerVolume({ videoRef, status })
     // true durante un cambio de stream mid-playback (ej. direct→transcode por cambio de pista de audio).
     // En ese caso el overlay de loading debe ser semitransparente (no negro sólido) para que
     // la imagen congelada del video sea visible y la UI no parezca rota.
     const [isStreamSwitching, setIsStreamSwitching] = useState(false)
+    // Motivo del cambio de stream, para que el overlay diga lo que realmente pasa.
+    const [streamSwitchReason, setStreamSwitchReason] = useState<"audio" | "source" | "fallback">("audio")
+    // usePlayerHls solo marca el switch en el fallback direct→transcode.
+    const setFallbackStreamSwitching = useCallback((switching: boolean) => {
+        if (switching) setStreamSwitchReason("fallback")
+        setIsStreamSwitching(switching)
+    }, [])
     const [errorMsg, setErrorMsg] = useState("")
     const [isBuffering, setIsBuffering] = useState(false)
     const [isSeeking, setIsSeeking] = useState(false)
@@ -217,6 +180,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setAutoSkipIntro,
         autoSkipOutro: autoSkipOutroPref,
         setAutoSkipOutro,
+        autoSkipFiller: autoSkipFillerPref,
+        setAutoSkipFiller: _setAutoSkipFiller,
         skipStepSeconds: skipStepSecondsPref,
         setSkipStepSeconds: setSkipStepSecondsPref,
         playbackRate: playbackRatePref,
@@ -246,7 +211,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setTvMode,
         ambientModeEnabled,
         setAmbientModeEnabled,
-    } = useAppStore(
+    } = usePlayerStore(
         // Note: playerVolume/setPlayerVolume already destructured above (D3).
         useShallow(state => ({
             setFullscreen: state.setFullscreen,
@@ -254,6 +219,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setAutoSkipIntro: state.setAutoSkipIntro,
             autoSkipOutro: state.autoSkipOutro,
             setAutoSkipOutro: state.setAutoSkipOutro,
+            autoSkipFiller: state.autoSkipFiller,
+            setAutoSkipFiller: state.setAutoSkipFiller,
             skipStepSeconds: state.skipStepSeconds,
             setSkipStepSeconds: state.setSkipStepSeconds,
             playbackRate: state.playbackRate,
@@ -304,36 +271,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         if (mediaId) setPreferredAudioTrackIndexMap(mediaId, index)
     }, [mediaId, setPreferredAudioTrackIndexMap])
 
-    // D3: last non-zero volume before a mute, so we can restore it on unmute.
-    const lastNonZeroVolumeRef = useRef(persistedVolume > 0 ? persistedVolume : 1)
-
-    // D3: Sync the <video> element volume with the persisted value.
-    // Antes era single-shot con volumeSyncedRef; si el <video> aún no existía
-    // (Hls montaje tardío) nunca sincronizaba, y cambios posteriores en
-    // settings (persistedVolume) no propagaban al elemento.
-    useEffect(() => {
-        const video = videoRef.current
-        const v = persistedVolume ?? 1
-        if (video && Math.abs(video.volume - v) > 0.001) {
-            video.volume = v
-            video.muted = v === 0
-        }
-        setVolume(v)
-        setIsMuted(v === 0)
-    }, [persistedVolume])
-    // Segundo pass cuando el <video> se monta después de resolverse HLS
-    useEffect(() => {
-        if (status !== "ready") return
-        const video = videoRef.current
-        if (!video) return
-        const v = persistedVolume ?? 1
-        if (Math.abs(video.volume - v) > 0.001) {
-            video.volume = v
-            video.muted = v === 0
-        }
-    }, [status, persistedVolume])
-
     const [showStats, setShowStats] = useState(false)
+    const [showShortcuts, setShowShortcuts] = useState(false)
     const [statsData, setStatsData] = useState<PlayerStats | null>(null)
 
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -414,6 +353,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         mediaFormat,
         autoSkipIntroPref,
         autoSkipOutroPref,
+        autoSkipFillerPref,
+        isFillerEpisode,
         skipStepSecondsPref,
         tvMode,
         hasNextEpisode,
@@ -452,18 +393,21 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [streamUrl, playableUrl, streamType, preferredAudioLang, preloadMutate])
 
+    const { data: serverSettings } = useGetSettings()
+    const enableWatchContinuity = serverSettings?.library?.enableWatchContinuity ?? true
+
     const { onProgress: onTrackingProgress, reset: resetTracking } = useAnimeTracking({
         mediaId,
         episodeNumber,
         filepath: streamUrl || playableUrl,
-        enabled: !!(mediaId && episodeNumber),
+        enabled: !!(mediaId && episodeNumber && enableWatchContinuity),
     })
 
     const { onProgress: onSyncProgress } = usePlayerProgressSync({
         mediaId,
         episodeNumber,
         filepath: streamUrl || playableUrl,
-        enabled: !!(mediaId && episodeNumber),
+        enabled: !!(mediaId && episodeNumber && enableWatchContinuity),
     })
 
     const lastBackendSyncTimeRef = useRef(0)
@@ -490,10 +434,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             flushBackendSync(true)
         }
     }, [flushBackendSync])
-
-    const { data: historyData } = useGetContinuityWatchHistoryItem(mediaId || 0)
-    const [showResume, setShowResume] = useState(false)
-    const [resumeTime, setResumeTime] = useState(0)
 
     useEffect(() => {
         return () => {
@@ -552,8 +492,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         backendTracks: backendTracks || null,
         initialProgressSeconds,
         streamSwitchResumeRef,
-        episodeNumber,
-        historyData,
         setStatus,
         setIsBuffering,
         setErrorMsg,
@@ -561,12 +499,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setAudioTracks,
         setSubtitleTracks,
         setActiveAudioIndex,
-        setResumeTime,
-        setShowResume,
         setIsPlaying,
         onDirectPlayFailed,
-        setIsStreamSwitching,
+        setIsStreamSwitching: setFallbackStreamSwitching,
         retryNonce,
+        streamRequestError,
     })
 
     // JASSUB Subtitle renderer hook
@@ -635,15 +572,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 if (track.language && track.language.toLowerCase() !== "und") {
                     setPreferredAudioLang(track.language)
                 }
-                if (!track.default) {
-                    streamSwitchResumeRef.current = videoRef.current?.currentTime ?? null
-                    pendingAudioSelectionRef.current = track
-                    if (onRequestStreamTypeChange) {
-                        // Marcar como stream-switch para que el overlay use fondo semitransparente
-                        setIsStreamSwitching(true)
-                        onRequestStreamTypeChange("transcode", { force: true })
-                    }
-                }
                 return
             } else if (onRequestStreamTypeChange) {
                 // Selección manual explícita del usuario. Chromium/WebView2 no puede
@@ -654,6 +582,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 streamSwitchResumeRef.current = videoRef.current?.currentTime ?? null
                 pendingAudioSelectionRef.current = track
                 // Marcar como stream-switch para que el overlay use fondo semitransparente
+                setStreamSwitchReason("audio")
                 setIsStreamSwitching(true)
                 onRequestStreamTypeChange("transcode", { force: true })
             }
@@ -704,127 +633,32 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     // pisando la elección manual. La clave "index:lang|..." es estable mientras
     // el contenido de las pistas no cambie.
     const audioAutoSelectedForRef = useRef<string | null>(null)
-    const audioTracksKey = audioTracks.map(t => `${t.index}:${t.language ?? ""}`).join("|")
+    const audioTracksKey = computeAudioTracksKey(audioTracks)
     useEffect(() => {
         if (audioTracks.length === 0) return
 
         // Prioridad máxima: pista elegida explícitamente por el usuario antes
-        // de un cambio de stream (direct → transcode). Los índices difieren
-        // entre listas (ffprobe vs renditions HLS), así que se matchea por
-        // título y, si no, por idioma.
-        //
-        // IMPORTANTE: esto se evalúa ANTES de la guarda `audioAutoSelectedForRef`.
-        // La clave por contenido (audioTracksKey = index:lang|...) COLISIONA entre
-        // direct y transcode porque ambas listas derivan del mismo ffprobe (mismos
-        // index/lang). Si chequeáramos la guarda primero, tras forzar el transcode
-        // la clave ya estaría "vista" desde el direct play y saldríamos por early
-        // return sin aplicar el pending → el stream arranca con el audio por defecto
-        // y la elección manual se pierde. Consumirlo acá lo hace inmune a la colisión.
+        // de un cambio de stream (direct → transcode).
         const pending = pendingAudioSelectionRef.current
         if (pending) {
             pendingAudioSelectionRef.current = null
-            // Matchear PRIMERO por `index` (posición de la pista dentro de la lista de
-            // audios: 0,1,2…). El backend lo asigna igual en direct y transcode (mismo
-            // ffprobe, ver streamToMap), y coincide con el hlsId secuencial de hls.js,
-            // así que es el identificador estable entre ambos streams. El título difiere
-            // entre modos (ffprobe `a.title` vs nombre de la rendition HLS `t.name`) y el
-            // idioma puede repetirse entre varias pistas (p. ej. dos dubs "Latino"), por
-            // lo que matchear por título/idioma elegía la pista equivocada.
-            const match = audioTracks.find(t => t.index === pending.index)
-                ?? audioTracks.find(t => pending.title && t.title === pending.title)
-                ?? audioTracks.find(t => t.language === pending.language)
+            const match = matchPendingAudioTrack(audioTracks, pending)
             if (match) {
                 audioAutoSelectedForRef.current = audioTracksKey
-                // La selección pendiente vino de una elección manual (antes del cambio de stream):
-                // no pasar { auto: true } para que se aplique correctamente en transcode.
                 if (activeAudioIndex !== match.index) onSelectAudio(match)
                 return
             }
-            // Sin match para el pending: caer a las heurísticas de abajo SIN pasar por la
-            // guarda (el stream recién cambió, queremos re-elegir preferida en la lista nueva).
         } else if (audioAutoSelectedForRef.current === audioTracksKey) {
-            // Guarda: sin pending, solo auto-seleccionar una vez por lista de pistas (por stream).
             return
         }
         audioAutoSelectedForRef.current = audioTracksKey
 
-        let preferred: AudioTrack | undefined
-
-        // 1. Matcheo por Perfil Inteligente de Doblaje
-        if (preferredAudioProfile === "latino") {
-            // Prioridad máxima: Latino explícito por código o título
-            preferred = audioTracks.find(t => {
-                const lang = (t.language || "").toLowerCase()
-                const title = (t.title || "").toLowerCase()
-                return lang === "spa-lat" || lang === "es-la" || lang === "es-mx" || lang === "lat" ||
-                    title.includes("latino") || title.includes("latin") || title.includes("mexico") || title.includes("hispano")
-            })
-            // Fallback: Español general que no sea castellano explícito
-            if (!preferred) {
-                preferred = audioTracks.find(t => {
-                    const lang = (t.language || "").toLowerCase()
-                    const title = (t.title || "").toLowerCase()
-                    return (lang.startsWith("es") || lang.startsWith("spa")) && !title.includes("castellano") && !title.includes("spain")
-                })
-            }
-        } else if (preferredAudioProfile === "castellano") {
-            preferred = audioTracks.find(t => {
-                const lang = (t.language || "").toLowerCase()
-                const title = (t.title || "").toLowerCase()
-                return lang === "spa-es" || lang === "es-es" || title.includes("castellano") || title.includes("españa") || title.includes("spain")
-            })
-            if (!preferred) {
-                preferred = audioTracks.find(t => {
-                    const lang = (t.language || "").toLowerCase()
-                    return lang.startsWith("es") || lang.startsWith("spa")
-                })
-            }
-        } else if (preferredAudioProfile === "japanese") {
-            preferred = audioTracks.find(t => {
-                const lang = (t.language || "").toLowerCase()
-                const title = (t.title || "").toLowerCase()
-                return lang === "jpn" || lang === "ja" || title.includes("japon") || title.includes("japan") || title.includes("raw") || title.includes("orig")
-            })
-        } else if (preferredAudioProfile === "english") {
-            preferred = audioTracks.find(t => {
-                const lang = (t.language || "").toLowerCase()
-                const title = (t.title || "").toLowerCase()
-                return lang === "eng" || lang === "en" || title.includes("english") || title.includes("ingl")
-            })
-        }
-
-        // 2. Si no hubo match por perfil, usar preferredAudioLang explícito
-        if (!preferred && preferredAudioLang && preferredAudioLang.toLowerCase() !== "und") {
-            preferred = audioTracks.find(t => {
-                const lang = t.language?.toLowerCase() || ""
-                return lang === preferredAudioLang.toLowerCase() || lang.startsWith(preferredAudioLang.toLowerCase())
-            })
-        }
-
-        // 3. Si falló el match por idioma (ej. era "und"), intentar recuperar el índice persistido.
-        if (!preferred && preferredAudioTrackIndex >= 0) {
-            preferred = audioTracks.find(t => t.index === preferredAudioTrackIndex)
-        }
-
-        // 4. Heurística fallback por defecto (Latino primero, luego Español)
-        if (!preferred) {
-            preferred = audioTracks.find(t => {
-                const lang = t.language?.toLowerCase() || ""
-                return lang === "spa-lat" || lang === "es-la"
-            })
-        }
-        if (!preferred) {
-            preferred = audioTracks.find(t => {
-                const title = t.title?.toLowerCase() || ""
-                return title.includes("latino") || title.includes("latin")
-            })
-        }
-        if (!preferred) {
-            preferred = audioTracks.find(t => {
-                const lang = t.language?.toLowerCase() || ""
-                return lang === "spa" || lang === "es" || lang.startsWith("es-") || lang.startsWith("spa-")
-            })
-        }
+        const preferred = matchPreferredAudioTrack({
+            tracks: audioTracks,
+            preferredAudioProfile,
+            preferredAudioLang,
+            preferredAudioTrackIndex,
+        })
 
         if (preferred && activeAudioIndex !== preferred.index) {
             // Pasar { auto: true } para que en direct play no dispare transcode.
@@ -833,45 +667,28 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     }, [audioTracksKey, preferredAudioProfile, preferredAudioLang, preferredAudioTrackIndex, activeAudioIndex, onSelectAudio, audioTracks])
 
     // Misma guarda que el audio: auto-configurar subtítulos UNA vez por lista
-    // de pistas. Sin esto, elegir un subtítulo manualmente con audio doblado
-    // lo apagaba al instante (y desactivarlo lo re-activaba), porque el efecto
-    // se re-dispara con cada cambio de activeSubtitleIndex.
-    // D4: misma corrección por clave de contenido.
+    // de pistas.
     const subtitleAutoSelectedForRef = useRef<string | null>(null)
-    const subtitleTracksKey = subtitleTracks.map(t => `${t.index}:${t.language ?? ""}`).join("|")
+    const subtitleTracksKey = computeSubtitleTracksKey(subtitleTracks)
     useEffect(() => {
         const timers: ReturnType<typeof setTimeout>[] = []
         if (subtitleTracks.length > 0 && subtitleAutoSelectedForRef.current !== subtitleTracksKey) {
             subtitleAutoSelectedForRef.current = subtitleTracksKey
             const currentAudio = audioTracks.find(t => t.index === activeAudioIndex)
-            const currentLang = currentAudio?.language?.toLowerCase() || ""
-            const isDubbed = currentAudio && (["spa", "es", "eng"].includes(currentLang) || currentLang.startsWith("spa-") || currentLang.startsWith("es-"))
+            const targetSubtitle = resolveAutoSubtitleTarget({
+                subtitleTracks,
+                currentAudio,
+                subtitlesEnabled,
+                autoDisableSubtitlesWhenDubbed,
+                preferredSubtitleLang,
+            })
 
-            if (!subtitlesEnabled) {
+            if (targetSubtitle === null) {
                 if (activeSubtitleIndex !== null) {
                     timers.push(setTimeout(() => onSelectSubtitle(null, { auto: true }), 0))
                 }
-            } else if (autoDisableSubtitlesWhenDubbed && isDubbed) {
-                if (activeSubtitleIndex !== null) {
-                    timers.push(setTimeout(() => onSelectSubtitle(null, { auto: true }), 0))
-                }
-            } else {
-                // Match tolerantly: ffprobe reports Spanish subs as "spa" or "es" (and
-                // regional variants like "es-la"), so exact equality misses them. Fall
-                // back to the container's default/forced track so subs still appear.
-                const pref = preferredSubtitleLang.toLowerCase()
-                const matchesPref = (t: SubtitleTrack) => {
-                    const lang = t.language?.toLowerCase() || ""
-                    if (lang === pref || lang.startsWith(pref + "-") || pref.startsWith(lang + "-")) return true
-                    const spanish = (l: string) => l === "spa" || l === "es" || l.startsWith("spa-") || l.startsWith("es-")
-                    return (pref === "spa" || pref === "es") && spanish(lang)
-                }
-                const preferred = subtitleTracks.find(matchesPref)
-                    ?? subtitleTracks.find(t => t.default)
-                    ?? subtitleTracks.find(t => t.forced)
-                if (preferred && activeSubtitleIndex !== preferred.index) {
-                    timers.push(setTimeout(() => onSelectSubtitle(preferred, { auto: true }), 0))
-                }
+            } else if (activeSubtitleIndex !== targetSubtitle.index) {
+                timers.push(setTimeout(() => onSelectSubtitle(targetSubtitle, { auto: true }), 0))
             }
         }
         return () => timers.forEach(clearTimeout)
@@ -908,6 +725,22 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             flashTimeoutRef.current = setTimeout(() => setFlash(null), 400)
         }
     }, [status, flushBackendSync])
+
+    // Cambio de fuente desde el menú (Direct Play ↔ Transcodificado): retoma en el
+    // mismo punto, igual que el cambio de pista de audio. Antes el nuevo stream
+    // arrancaba desde 0.
+    const switchSource = useCallback((type: string) => {
+        if (type === streamType) return
+        if (type !== "direct" && type !== "transcode") return
+        if (!onRequestStreamTypeChange) return
+        const current = videoRef.current?.currentTime ?? 0
+        streamSwitchResumeRef.current = Number.isFinite(current) && current > 0 ? current : null
+        setStreamSwitchReason("source")
+        setIsStreamSwitching(true)
+        // Elección explícita del usuario: igual que el cambio de pista de audio,
+        // force permite transcodificar aunque el toggle global esté apagado.
+        onRequestStreamTypeChange(type, { force: type === "transcode" })
+    }, [streamType, onRequestStreamTypeChange])
 
     const performSeek = useCallback((time: number) => {
         const video = videoRef.current
@@ -955,11 +788,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         isSeekingRef.current = true
     }, [])
 
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const val = parseFloat(e.target.value)
         performSeek(val)
         triggerControlsVisibility()
-    }
+    }, [performSeek, triggerControlsVisibility])
 
     const handleSeekEnd = useCallback((e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => {
         const video = videoRef.current
@@ -988,19 +821,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [])
 
-    const handleResume = () => {
-        const video = videoRef.current
-        if (!video || !Number.isFinite(resumeTime)) return
-        video.currentTime = resumeTime
-        setShowResume(false)
-        video.play()
-            .then(() => setIsPlaying(true))
-            .catch((err) => {
-                console.warn("Resume autoplay blocked:", err)
-                setIsPlaying(false)
-            })
-    }
-
     const skipTime = useCallback((amount: number) => {
         const video = videoRef.current
         if (!video) return
@@ -1011,37 +831,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         triggerControlsVisibility()
     }, [performSeek, triggerControlsVisibility])
 
-    const handleVolume = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const video = videoRef.current
-        if (!video) return
-        const val = parseFloat(e.target.value)
-        video.volume = val
-        setVolume(val)
-        setIsMuted(val === 0)
-        video.muted = val === 0
-        // D3: persist and track last non-zero volume.
-        setPlayerVolume(val)
-        if (val > 0) lastNonZeroVolumeRef.current = val
-    }, [setPlayerVolume])
-
-    const toggleMute = useCallback(() => {
-        const video = videoRef.current
-        if (!video) return
-        const nextMute = !isMuted
-
-        if (!nextMute) {
-            // Restore the last non-zero volume instead of defaulting to 1.
-            const restore = lastNonZeroVolumeRef.current > 0 ? lastNonZeroVolumeRef.current : 1
-            video.volume = restore
-            setVolume(restore)
-            setPlayerVolume(restore)
-        }
-
-        video.muted = nextMute
-        setIsMuted(nextMute)
-    }, [isMuted, setPlayerVolume])
-
-    const toggleFullscreen = () => {
+    const toggleFullscreen = useCallback(() => {
         const container = containerRef.current
         const video = videoRef.current
         if (!container) return
@@ -1065,71 +855,28 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                     .then(() => setIsFullscreen(false))
             }
         }
-    }
-
-    const takeScreenshot = useCallback(() => {
-        const video = videoRef.current
-        if (!video) return
-        try {
-            if (video.videoWidth === 0 || video.videoHeight === 0) {
-                toast.error("No hay frame disponible para capturar")
-                return
-            }
-            const canvas = document.createElement("canvas")
-            canvas.width = video.videoWidth
-            canvas.height = video.videoHeight
-            const ctx = canvas.getContext("2d")
-            if (!ctx) {
-                toast.error("No se pudo inicializar el canvas")
-                return
-            }
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-            let dataUrl: string
-            try {
-                dataUrl = canvas.toDataURL("image/png")
-            } catch (e) {
-                if (e instanceof DOMException && e.name === "SecurityError") {
-                    toast.error("No se puede capturar: video con origen cruzado sin CORS (canvas tainted)")
-                    console.warn("[player] takeScreenshot SecurityError (tainted canvas):", e)
-                    return
-                }
-                throw e
-            }
-            const link = document.createElement("a")
-            link.download = `kamehouse-cap-${mediaId || "video"}-${Date.now()}.png`
-            link.href = dataUrl
-            link.click()
-            toast.success("Captura guardada")
-        } catch (err) {
-            if (err instanceof DOMException && err.name === "SecurityError") {
-                toast.error("No se puede capturar: video tainted por CORS")
-            } else {
-                toast.error("Error al capturar pantalla")
-            }
-            console.error("[player] takeScreenshot failed:", err)
-        }
-    }, [mediaId])
-
-    const togglePip = useCallback(async () => {
-        const video = videoRef.current
-        if (!video || !document.pictureInPictureEnabled) return
-        try {
-            if (document.pictureInPictureElement) {
-                await document.exitPictureInPicture()
-            } else {
-                await video.requestPictureInPicture()
-            }
-        } catch (err) {
-            console.error("PIP failed:", err)
-        }
     }, [])
 
-    const changePlaybackRate = (rate: number) => {
+    const handleToggleSubtitle = useCallback(() => {
+        if (onToggleSubtitle) {
+            onToggleSubtitle()
+            return
+        }
+        if (subtitleTracks.length === 0) return
+        if (activeSubtitleIndex !== null) {
+            onSelectSubtitle(null)
+        } else {
+            const preferred = (preferredSubtitleLang && subtitleTracks.find(t => t.language?.toLowerCase() === preferredSubtitleLang?.toLowerCase())) || subtitleTracks[0]
+            onSelectSubtitle(preferred)
+        }
+    }, [onToggleSubtitle, subtitleTracks, activeSubtitleIndex, preferredSubtitleLang, onSelectSubtitle])
+
+    const changePlaybackRate = useCallback((rate: number) => {
         const video = videoRef.current
         if (!video) return
         video.playbackRate = rate
         setPlaybackRatePref(rate)
-    }
+    }, [setPlaybackRatePref])
 
     useEffect(() => {
         const video = videoRef.current
@@ -1223,9 +970,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         onClose,
         skipOpening,
         skipTime,
-        takeScreenshot,
         toggleMute,
-        togglePip,
         togglePlay,
         toggleFullscreen,
         setVolume,
@@ -1234,6 +979,12 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setShowStats,
         skipToNextChapter,
         skipToPrevChapter,
+        onToggleEpisodesSidebar: props.onToggleEpisodesSidebar,
+        onToggleQueueSidebar: props.onToggleQueueSidebar,
+        onToggleSubtitle: props.onToggleSubtitle ?? handleToggleSubtitle,
+        handleVolume,
+        onToggleShortcuts: () => setShowShortcuts((prev) => !prev),
+        onEscape: props.onEscape,
     })
 
     const handleTimeUpdate = useCallback(() => {
@@ -1299,16 +1050,20 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     }, [playbackRatePref])
 
     const handleTimeUpdateRef = useRef(handleTimeUpdate)
+    // eslint-disable-next-line react-hooks/refs -- intentional: update ref after definition to avoid stale closure
     handleTimeUpdateRef.current = handleTimeUpdate
 
     // Force skip check when preferences change (including marathon mode toggle)
     useEffect(() => {
         handleTimeUpdateRef.current()
-    }, [autoSkipIntroPref, autoSkipOutroPref, marathonMode])
+    }, [autoSkipIntroPref, autoSkipOutroPref, autoSkipFillerPref, marathonMode])
 
     const handleSetHlsLevel = useCallback((levelIndex: number) => {
         const hls = hlsRef.current
-        if (!hls) return
+        if (!hls) {
+            console.warn("[player-core] handleSetHlsLevel called without active HLS instance")
+            return
+        }
         try {
             if (levelIndex === -1) {
                 // Auto: reactivar ABR asignando currentLevel / nextLevel a -1
@@ -1324,6 +1079,55 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [])
 
+    // Remote-control commands from the server (extensions, TV remote).
+    // The hook only exists while a player is mounted, so commands never hit
+    // a dead player. Broadcasts reach every tab with a player open — accepted
+    // tradeoff until the payload carries a routable client/media id.
+    const handleVideocoreCommand = useCallback((msg: WebSocketMessage) => {
+        if (msg.type !== WSEvents.VIDEOCORE) return
+        const inner = (msg.payload ?? {}) as { type?: string; payload?: unknown }
+        const video = videoRef.current
+        switch (inner.type) {
+            case "pause": {
+                if (!video || video.paused || status !== "ready") return
+                video.pause()
+                flushBackendSync(true)
+                setIsPlaying(false)
+                break
+            }
+            case "resume": {
+                if (!video || !video.paused || status !== "ready") return
+                video.play()
+                    .then(() => setIsPlaying(true))
+                    .catch(() => setIsPlaying(false))
+                break
+            }
+            case "seek": {
+                if (typeof inner.payload !== "number" || !Number.isFinite(inner.payload)) return
+                if (!video || status !== "ready") return
+                performSeek(video.currentTime + inner.payload)
+                break
+            }
+            case "seek-to": {
+                if (typeof inner.payload !== "number" || !Number.isFinite(inner.payload)) return
+                if (!video || status !== "ready") return
+                const dur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : Infinity
+                performSeek(Math.max(0, Math.min(dur, inner.payload)))
+                break
+            }
+            case "terminate": {
+                if (video && !video.paused) video.pause()
+                setIsPlaying(false)
+                setStatus("error")
+                setErrorMsg("Reproducción terminada por el servidor")
+                break
+            }
+            default:
+                break
+        }
+    }, [status, flushBackendSync, performSeek])
+    useWebSocket(wsUrl, handleVideocoreCommand)
+
     const domElements = useMemo(() => ({
         videoElement: videoRef as React.RefObject<HTMLVideoElement>,
         containerElement: containerRef as React.RefObject<HTMLDivElement>,
@@ -1335,9 +1139,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     }), [])
 
     const state = useMemo(() => ({
-        isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
+        isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
         autoSkipIntro: autoSkipIntroPref,
         autoSkipOutro: autoSkipOutroPref,
+        autoSkipFiller: autoSkipFillerPref,
         skipStepSeconds: skipStepSecondsPref,
         playbackRate: playbackRatePref,
         showHeatmap: showHeatmapPref,
@@ -1345,6 +1150,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         subtitleSize: subtitleSizePref,
         loopEnabled: loopEnabledPref,
         showStats,
+        showShortcuts,
         statsData,
         hlsLevels,
         activeHlsLevel,
@@ -1352,8 +1158,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         get currentTime() {
             return videoRef.current?.currentTime || 0
         },
-        showResume,
-        resumeTime,
         autoDisableSubtitlesWhenDubbed,
         ambientModeEnabled,
         marathonMode,
@@ -1364,13 +1168,14 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         absoluteLanUrl,
         serverIPs,
         serverPort,
-    }), [isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast, autoSkipIntroPref, autoSkipOutroPref, skipStepSecondsPref, playbackRatePref, showHeatmapPref, aspectRatioPref, subtitleSizePref, loopEnabledPref, showStats, statsData, hlsLevels, activeHlsLevel, previewManager, showResume, resumeTime, autoDisableSubtitlesWhenDubbed, ambientModeEnabled, marathonMode, skipTimesOp, skipTimesEd, chapters, activeChapter, absoluteLanUrl, serverIPs, serverPort])
+    }), [isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast, autoSkipIntroPref, autoSkipOutroPref, autoSkipFillerPref, skipStepSecondsPref, playbackRatePref, showHeatmapPref, aspectRatioPref, subtitleSizePref, loopEnabledPref, showStats, showShortcuts, statsData, hlsLevels, activeHlsLevel, previewManager, autoDisableSubtitlesWhenDubbed, ambientModeEnabled, marathonMode, skipTimesOp, skipTimesEd, chapters, activeChapter, absoluteLanUrl, serverIPs, serverPort])
 
     const actions = useMemo(() => ({
-        setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate,
-        takeScreenshot, togglePip, changePlaybackRate, setShowStats,
+        setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleSubtitle: handleToggleSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate,
+        changePlaybackRate, setShowStats, setShowShortcuts,
         setAutoSkipIntro: handleSetAutoSkipIntro,
         setAutoSkipOutro: handleSetAutoSkipOutro,
+        setAutoSkipFiller: (val: boolean) => { usePlayerStore.getState().setAutoSkipFiller(val) },
         setSkipStepSeconds: setSkipStepSecondsPref,
         setHlsLevel: handleSetHlsLevel,
         setShowHeatmap: setShowHeatmapPref,
@@ -1380,14 +1185,13 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setTvMode: handleSetTvMode,
         setAmbientModeEnabled,
         setMarathonMode: handleSetMarathonMode,
-        handleResume,
-        setShowResume,
-        setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { useAppStore.setState(s => ({ ...s, autoDisableSubtitlesWhenDubbed: val })) },
+        setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { usePlayerStore.getState().setAutoDisableSubtitlesWhenDubbed(val) },
         skipToNextChapter,
         skipToPrevChapter,
         retryStream,
+        switchSource,
         flushProgressSync: () => flushBackendSync(true),
-    }), [setDuration, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, takeScreenshot, togglePip, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, handleSetHlsLevel, handleSetTvMode, handleSetMarathonMode, handleResume, skipToNextChapter, skipToPrevChapter, retryStream, flushBackendSync])
+    }), [switchSource, setDuration, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, handleToggleSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, handleSetHlsLevel, handleSetTvMode, handleSetMarathonMode, skipToNextChapter, skipToPrevChapter, retryStream, flushBackendSync, setSkipStepSecondsPref, setShowHeatmapPref, setAspectRatioPref, setSubtitleSizePref, setLoopEnabledPref, setAmbientModeEnabled])
 
     return { domElements, state, actions }
 }

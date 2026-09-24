@@ -1,10 +1,4 @@
-export { FranchiseRiver } from "./FranchiseRiver";
-export type { FranchiseRiverProps } from "./FranchiseRiver";
-export { ChronologySubSagaTimeline } from "./ChronologySubSagaTimeline";
-export type { ChronologySubSagaItem } from "./ChronologySubSagaTimeline";
-
-
-// Cronología cinematográfica: el viaje por Dragon Ball (nodos, eras, posters, guía/lore)
-export { CinematicChronologyTimeline } from "./CinematicChronologyTimeline";
-export { getSpanProgress, getSpanDefaultArt } from "./CinematicChronologyTimeline";
-export type { SpanStill, SpanProgress } from "./CinematicChronologyTimeline";
+// Barrel adelgazado a tipos: los datos (volumes, detailedStories, glossary,
+// spansToVolumes) y componentes se importan por ruta profunda para no arrastrar
+// ~3000 líneas + audio al importar un tipo. Sin importadores del barrel completo.
+export * from './types';

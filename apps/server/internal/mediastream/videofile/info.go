@@ -18,6 +18,8 @@ import (
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
+const MediaInfoBucketName = "mediastream_mediainfo"
+
 var (
 	ffprobePathMu      sync.Mutex
 	currentFfprobePath string
@@ -173,9 +175,8 @@ func (e *MediaInfoExtractor) GetInfo(ffprobePath, path string) (mi *MediaInfo, e
 
 	e.logger.Debug().Str("path", path).Str("hash", hash).Msg("mediastream: Getting media information [MediaInfoExtractor]")
 
-	bucketName := fmt.Sprintf("mediastream_mediainfo_%s", hash)
-	bucket := filecache.NewBucket(bucketName, 24*7*52*time.Hour)
-	e.logger.Trace().Str("bucketName", bucketName).Msg("mediastream: Using cache bucket [MediaInfoExtractor]")
+	bucket := filecache.NewBucket(MediaInfoBucketName, 30*24*time.Hour)
+	e.logger.Trace().Str("bucketName", MediaInfoBucketName).Msg("mediastream: Using cache bucket [MediaInfoExtractor]")
 
 	e.logger.Trace().Msg("mediastream: Getting media information from cache [MediaInfoExtractor]")
 

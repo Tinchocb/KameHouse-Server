@@ -19,12 +19,33 @@ const TYPOGRAPHY_SCALE = [
     "label-lg", "label-md", "label-sm",
     "badge", "caption", "overline",
     "numeric", "numeric-lg",
+    // Micro-tipografía de tailwind.config.ts (fontSize)
+    "2xs", "3xs", "4xs", "5xs",
+]
+
+/**
+ * Sombras propias de `tailwind.config.ts` (boxShadow). Mismo problema: las
+ * `brand-*` se llaman igual que los colores, así que tailwind-merge las tomaba
+ * por **color de sombra** y no descartaba el `shadow-sm` base de `Button`. El
+ * resultado era una sombra de 1 px teñida en lugar del glow del token.
+ * Límite: tailwind-merge ignora el `/20` al clasificar, así que
+ * `cn("shadow-md shadow-brand-x/20")` (tinte, no glow) perdería el `shadow-md`.
+ * Para teñir una sombra dentro de `cn()`, usar un color que no sea token de
+ * sombra (`shadow-brand-accent/20`) o ponerlo en otra variante (`hover:`).
+ */
+const SHADOW_SCALE = [
+    "glass", "glass-liquid",
+    "glass-highlight-sm", "glass-highlight-md", "glass-highlight-lg",
+    "elevation-1", "elevation-2", "elevation-3", "elevation-4", "elevation-5",
+    "brand-primary", "brand-secondary", "brand-destructive", "brand-success", "brand-magic", "brand-focus",
+    "modal", "player", "overlay",
 ]
 
 const twMerge = extendTailwindMerge({
     extend: {
         classGroups: {
             "font-size": [{ text: TYPOGRAPHY_SCALE }],
+            shadow: [{ shadow: SHADOW_SCALE }],
         },
     },
 })

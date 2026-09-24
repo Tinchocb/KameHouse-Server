@@ -113,6 +113,8 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 
 	// Get the entry's local files
 	lfs := GetLocalFilesFromMediaId(opts.LocalFiles, opts.MediaID)
+	libraryPaths, _ := opts.Database.GetAllLibraryPathsFromSettings()
+	SortLocalFilesByPlayability(lfs, libraryPaths)
 	entry.LocalFiles = lfs // Returns empty slice if no local files are found
 
 	listData, _ := db.GetMediaEntryListData(opts.Database, fetchedMedia.ID)

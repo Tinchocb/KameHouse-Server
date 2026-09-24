@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Models_Theme } from "@/api/generated/types"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
+import { useAppStore } from "@/lib/store"
 
 
 const enum ThemeLibraryScreenBannerType {
@@ -129,30 +130,56 @@ function normalizeInfoBoxSize(value: string | undefined | null): string {
  * Get the current theme settings
  * Reads the real settings persisted on the server (Settings → Apariencia),
  * falling back to THEME_DEFAULT_VALUES for anything not yet set.
+ * Local visual overrides (themeVisual store, written instantly by Apariencia
+ * controls) win over the server while set — this is what gives toggles
+ * immediate effect before Guardar. syncStoresWithSettings pushes the server
+ * back into the store on load/save/discard/WS-refresh.
  */
 export function useThemeSettings(): ThemeSettingsHook {
     const { data: serverSettings } = useGetSettings()
-    const theme = serverSettings?.theme as (Models_Theme & Partial<ThemeSettings>) | undefined
+    const themeVisual = useAppStore((s) => s.themeVisual)
+    const serverTheme = serverSettings?.theme as (Models_Theme & Partial<ThemeSettings>) | undefined
+
+    const theme = React.useMemo(() => {
+        const definedLocal = Object.fromEntries(
+            Object.entries(themeVisual ?? {}).filter(([, v]) => v !== undefined)
+        )
+        if (!serverTheme && Object.keys(definedLocal).length === 0) return undefined
+        return { ...serverTheme, ...definedLocal } as (Models_Theme & Partial<ThemeSettings>)
+    }, [serverTheme, themeVisual])
 
     return React.useMemo(() => {
-        const merged: ThemeSettings = theme
-            ? {
+        // Sin servidor (primer arranque offline): Classic explícito, como promete
+        // el comentario de resolveThemeMode. No toca la derivación legacy cuando
+        // sí hay servidor (themeMode:"" + blur heredado sigue dando era).
+        if (!theme) {
+            return {
                 ...THEME_DEFAULT_VALUES,
-                ...theme,
-                backgroundColor: theme.backgroundColor || THEME_DEFAULT_VALUES.backgroundColor,
-                accentColor: theme.accentColor || THEME_DEFAULT_VALUES.accentColor,
-                themeLibraryScreenBannerType: theme.themeLibraryScreenBannerType || THEME_DEFAULT_VALUES.themeLibraryScreenBannerType,
-                themeLibraryScreenCustomBannerPosition: theme.themeLibraryScreenCustomBannerPosition || THEME_DEFAULT_VALUES.themeLibraryScreenCustomBannerPosition,
-                themeMediaPageBannerType: theme.themeMediaPageBannerType || THEME_DEFAULT_VALUES.themeMediaPageBannerType,
-                themeMediaPageBannerSize: theme.themeMediaPageBannerSize || THEME_DEFAULT_VALUES.themeMediaPageBannerSize,
-                // El backend arrastra un "default" legacy que no es ninguna de las dos
-                // opciones reales (fluid/boxed) — normalizarlo evita que el form guarde
-                // un valor que el selector no ofrece.
-                themeMediaPageBannerInfoBoxSize: normalizeInfoBoxSize(theme.themeMediaPageBannerInfoBoxSize),
-                themeAnimeEntryScreenLayout: theme.themeAnimeEntryScreenLayout || THEME_DEFAULT_VALUES.themeAnimeEntryScreenLayout,
-                themeAnimeLibraryCollectionDefaultSorting: theme.themeAnimeLibraryCollectionDefaultSorting || THEME_DEFAULT_VALUES.themeAnimeLibraryCollectionDefaultSorting,
+                themeEra: "classic",
+                themeMode: "classic" as const,
+                effectiveMode: "classic" as ThemeMode,
+                hasCustomBackgroundColor: false,
+                hasEraTheme: false,
+                hasCustomBackground: false,
+                hasCustomAccentColor: false,
             }
-            : { ...THEME_DEFAULT_VALUES }
+        }
+        const merged: ThemeSettings = {
+            ...THEME_DEFAULT_VALUES,
+            ...theme,
+            backgroundColor: theme.backgroundColor || THEME_DEFAULT_VALUES.backgroundColor,
+            accentColor: theme.accentColor || THEME_DEFAULT_VALUES.accentColor,
+            themeLibraryScreenBannerType: theme.themeLibraryScreenBannerType || THEME_DEFAULT_VALUES.themeLibraryScreenBannerType,
+            themeLibraryScreenCustomBannerPosition: theme.themeLibraryScreenCustomBannerPosition || THEME_DEFAULT_VALUES.themeLibraryScreenCustomBannerPosition,
+            themeMediaPageBannerType: theme.themeMediaPageBannerType || THEME_DEFAULT_VALUES.themeMediaPageBannerType,
+            themeMediaPageBannerSize: theme.themeMediaPageBannerSize || THEME_DEFAULT_VALUES.themeMediaPageBannerSize,
+            // El backend arrastra un "default" legacy que no es ninguna de las dos
+            // opciones reales (fluid/boxed) — normalizarlo evita que el form guarde
+            // un valor que el selector no ofrece.
+            themeMediaPageBannerInfoBoxSize: normalizeInfoBoxSize(theme.themeMediaPageBannerInfoBoxSize),
+            themeAnimeEntryScreenLayout: theme.themeAnimeEntryScreenLayout || THEME_DEFAULT_VALUES.themeAnimeEntryScreenLayout,
+            themeAnimeLibraryCollectionDefaultSorting: theme.themeAnimeLibraryCollectionDefaultSorting || THEME_DEFAULT_VALUES.themeAnimeLibraryCollectionDefaultSorting,
+        }
 
         // Derived from raw (un-coalesced) persisted values — used to drive the
         // three independent color toggles in Settings → Apariencia, since the
@@ -187,6 +214,18 @@ export function useThemeSettings(): ThemeSettingsHook {
             hasCustomAccentColor: rawAccentColor !== "",
         }
     }, [theme])
+}
+
+/**
+ * Lee el flag de puntuación de audiencia con efecto inmediato:
+ * el override local (toggle de Apariencia) gana mientras existe;
+ * si no, manda el servidor. Converge vía syncStoresWithSettings
+ * al cargar/guardar/descartar.
+ */
+export function useHideAudienceScore(): boolean {
+    const { data: serverSettings } = useGetSettings()
+    const local = useAppStore((s) => s.hideAudienceScore)
+    return !!(local ?? serverSettings?.platform?.hideAudienceScore ?? false)
 }
 
 

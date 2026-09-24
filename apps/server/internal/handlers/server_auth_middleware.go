@@ -113,10 +113,11 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 		path := c.Request().URL.Path
 
 		// Endpoints públicos que no requieren autenticación:
-		// Login, Logout y Status (status oculta información sensible si no está autorizado).
+		// Login, Logout, Status y Callback OAuth de Google Drive (protegido por CSRF state token).
 		if path == "/api/v1/auth/login" ||
 			path == "/api/v1/auth/logout" ||
-			path == "/api/v1/status" {
+			path == "/api/v1/status" ||
+			(path == "/api/v1/drive/callback" && c.Request().Method == "GET") {
 
 			if path == "/api/v1/status" {
 				if !h.isAuthorized(c) {

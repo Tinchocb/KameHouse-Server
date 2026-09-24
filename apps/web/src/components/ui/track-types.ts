@@ -121,6 +121,10 @@ export interface SubtitleTrack {
  * Centralizes all playback, audio, and subtitle settings.
  */
 export interface PlayerSettingsMenuProps {
+    /** Nodo donde se monta el panel de escritorio. Debe estar FUERA de cualquier
+     * superficie con backdrop-filter: si no, el panel queda atrapado en su
+     * stacking context (debajo de los overlays) y su blur no funciona. */
+    panelContainer?: HTMLElement | null
     audioTracks: AudioTrack[]
     activeAudioIndex: number
     onSelectAudio: (track: AudioTrack) => void
@@ -147,6 +151,9 @@ export interface PlayerSettingsMenuProps {
 
     autoSkipOutro?: boolean
     onAutoSkipOutroChange?: (auto: boolean) => void
+
+    autoSkipFiller?: boolean
+    onAutoSkipFillerChange?: (auto: boolean) => void
 
     skipStepSeconds?: number
     onSkipStepSecondsChange?: (seconds: number) => void

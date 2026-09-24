@@ -19,6 +19,18 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/admin/library-stats",
         },
     },
+    ANILIST: {
+        /**
+         *  @description
+         *  Route get AniList episode streaming thumbnail by absolute episode number
+         *  Returns thumbnail/title/url for one episode from AniList streamingEpisodes.
+         */
+        AniListEpisodeThumbnail: {
+            key: "ANILIST-ani-list-episode-thumbnail",
+            methods: ["GET"],
+            endpoint: "/api/v1/anilist/episode/:anilistId/:absolute",
+        },
+    },
     ANIME: {
         /**
          *  @description
@@ -175,7 +187,7 @@ export const API_ENDPOINTS = {
     AUTH: {
         /**
          *  @description
-         *  Route logs in the user by saving the JWT token in the database.
+         *  Route returns the current status (login is a no-op without platform accounts).
          *  This is called when the JWT token is obtained after logging in with redirection on the client.
          */
         Login: {
@@ -189,16 +201,33 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/auth/logout",
         },
     },
-    CAST: {
-        GetCastDevices: {
-            key: "CAST-get-cast-devices",
+    CACHE_HANDLERS: {
+        GetCacheStats: {
+            key: "CACHE-HANDLERS-get-cache-stats",
             methods: ["GET"],
-            endpoint: "/api/v1/cast/devices",
+            endpoint: "/api/v1/system/cache/stats",
         },
-        CastPlay: {
-            key: "CAST-cast-play",
+        ClearSystemCache: {
+            key: "CACHE-HANDLERS-clear-system-cache",
             methods: ["POST"],
-            endpoint: "/api/v1/cast/play",
+            endpoint: "/api/v1/system/cache/clear",
+        },
+        WarmThumbnailCache: {
+            key: "CACHE-HANDLERS-warm-thumbnail-cache",
+            methods: ["POST"],
+            endpoint: "/api/v1/cache/thumbnails/warm",
+        },
+    },
+    CHRONOLOGY_FRAMES: {
+        /**
+         *  @description
+         *  Route get local episode file for chronology thumbnail
+         *  Resolves TMDB ID + absolute episode to a library media, then finds the matching episode file.
+         */
+        GetLibraryEpisodeFile: {
+            key: "CHRONOLOGY-FRAMES-get-library-episode-file",
+            methods: ["GET"],
+            endpoint: "/api/v1/library/episode-file",
         },
     },
     CONTINUITY: {
@@ -246,6 +275,28 @@ export const API_ENDPOINTS = {
             key: "DIRECTORY-SELECTOR-directory-selector",
             methods: ["POST"],
             endpoint: "/api/v1/directory-selector",
+        },
+    },
+    DRIVE: {
+        DriveAuthURL: {
+            key: "DRIVE-drive-auth-u-r-l",
+            methods: ["GET"],
+            endpoint: "/api/v1/drive/auth-url",
+        },
+        DriveStatus: {
+            key: "DRIVE-drive-status",
+            methods: ["GET"],
+            endpoint: "/api/v1/drive/status",
+        },
+        DriveDisconnect: {
+            key: "DRIVE-drive-disconnect",
+            methods: ["POST"],
+            endpoint: "/api/v1/drive/disconnect",
+        },
+        DriveScan: {
+            key: "DRIVE-drive-scan",
+            methods: ["POST"],
+            endpoint: "/api/v1/drive/scan",
         },
     },
     EXPLORER: {
@@ -890,10 +941,10 @@ export const API_ENDPOINTS = {
         /**
          *  @description
          *  Route updates the app settings.
-         *  Applies a PATCH-style merge: the incoming payload's non-nil sub-objects
-         *  replace the stored ones; AutoDownloader is always merged from the DB to
-         *  preserve scheduler state. Separate-table settings (Mediastream,
-         *  Torrentstream, Debrid, Theme) are upserted only when present in payload.
+         *  Applies a PATCH-style merge: only keys present in the payload overwrite
+         *  stored values. This applies to Library (field-by-field), Mediastream and
+         *  Theme (merge-before-upsert against the stored row). Separate-table settings
+         *  are upserted only when present in payload.
          */
         SaveSettings: {
             key: "SETTINGS-save-settings",
@@ -956,6 +1007,9 @@ export const API_ENDPOINTS = {
          *  Route generates and returns a CPU profile.
          *  This generates a CPU profile for the specified duration (default 30 seconds).
          *  Query parameter: duration=30 for duration in seconds.
+         *  Concurrency policy: a single profile runs at a time (mutex + 409 on
+         *  overlap), duration is capped at 60s, and client disconnect aborts early,
+         *  so load is bounded to one worker plus cheap 409s under hammering.
          */
         GetCPUProfile: {
             key: "STATUS-get-c-p-u-profile",
@@ -993,6 +1047,11 @@ export const API_ENDPOINTS = {
             key: "SYSTEM-backup-database",
             methods: ["POST"],
             endpoint: "/api/v1/db/backup",
+        },
+        DownloadDatabaseBackup: {
+            key: "SYSTEM-download-database-backup",
+            methods: ["GET"],
+            endpoint: "/api/v1/db/backup/download",
         },
         GetDiagnosticsReport: {
             key: "SYSTEM-get-diagnostics-report",
@@ -1060,6 +1119,26 @@ export const API_ENDPOINTS = {
             key: "TMDB-t-m-d-b-assign",
             methods: ["POST"],
             endpoint: "/api/v1/library/local-files/tmdb-assign",
+        },
+        /**
+         *  @description
+         *  Route get TMDB episode still by absolute episode number
+         *  Maps absolute->season/episode server-side and returns still_path for chronology thumbnails.
+         */
+        TMDBEpisodeStill: {
+            key: "TMDB-t-m-d-b-episode-still",
+            methods: ["GET"],
+            endpoint: "/api/v1/tmdb/episode/:tvId/:absolute",
+        },
+        /**
+         *  @description
+         *  Route get TMDB images (backdrops, posters, logos)
+         *  Fetches backdrops, posters, and logos from TMDb with caching.
+         */
+        TMDBImages: {
+            key: "TMDB-t-m-d-b-images",
+            methods: ["GET"],
+            endpoint: "/api/v1/tmdb/images/:type/:id",
         },
     },
     VIDEOCORE: {

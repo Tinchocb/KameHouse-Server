@@ -29,7 +29,8 @@ export function mapCollectionSortToOption(value: string | undefined | null): Sor
     }
 }
 
-export function getEntryTitle(entry: { media?: Models_LibraryMedia | null; mediaId?: number | null }): string {
+export function getEntryTitle(entry?: { media?: Models_LibraryMedia | null; mediaId?: number | null } | null): string {
+    if (!entry) return ""
     const spanish = entry.media?.titleSpanish?.trim()
     const english = entry.media?.titleEnglish?.trim()
     const isGenericOrEmptySpanish = !spanish ||
@@ -51,7 +52,8 @@ export function getLoreDescription(lore?: MovieLoreDefinition | null): string {
     return lore.chronologyNotes || lore.specialTrivia || lore.keyEvents?.join(" ") || ""
 }
 
-export function getEntryRating(entry: { media?: Models_LibraryMedia | null; listData?: { score?: number } | null }): number {
+export function getEntryRating(entry?: { media?: Models_LibraryMedia | null; listData?: { score?: number } | null } | null): number {
+    if (!entry) return 0
     return entry.media?.score || entry.media?.rating || entry.listData?.score || 0
 }
 
@@ -60,9 +62,10 @@ const classicTmdbIds = new Set([39144, 33499, 39145, 116776, 33513, 39148])
 const zTmdbIds = new Set([28609, 15448, 39100, 39101, 39102, 24752, 15452, 39103, 39104, 15454, 34433, 39105, 44251, 39106, 39107, 39108, 177572, 120475, 1120475])
 const gtTmdbIds = new Set([18095, 39149])
 const superTmdbIds = new Set([126963, 303857, 503314, 610150])
-const zKeywords = ["z ", " z:", "kai", "改", "freezer", "frieza", "cooler", "androide", "android", "bojack", "janemba", "tapion", "bardock", "trunks", "broly", "slug", "turles", "dead zone", "fusion", "bio-broly", "gohan", "vegeta"]
+const zKeywords = ["z ", " z:", "freezer", "frieza", "cooler", "androide", "android", "bojack", "janemba", "tapion", "bardock", "trunks", "broly", "slug", "turles", "dead zone", "fusion", "bio-broly", "gohan", "vegeta"]
 
-export function getEntryEra(entry: { media?: Models_LibraryMedia | null; mediaId?: number | null }): EraTab {
+export function getEntryEra(entry?: { media?: Models_LibraryMedia | null; mediaId?: number | null } | null): EraTab {
+    if (!entry) return "Especiales y OVAs"
     const media = entry.media
     const tmdbId = media?.tmdbId || (entry.mediaId && isTmdbId(entry.mediaId) ? entry.mediaId : 0) || 0
     const rawTmdbId = tmdbId >= 1000000 ? tmdbId - 1000000 : tmdbId
@@ -98,7 +101,8 @@ export function getEntryEra(entry: { media?: Models_LibraryMedia | null; mediaId
  * 2. lore.era (Dragon Ball / Z / GT / Super)
  * 3. Fallback a getEntryEra legacy mapeado (Especiales → dbz mayoritario)
  */
-export function getEntryEraId(entry: { media?: Models_LibraryMedia | null; mediaId?: number | null }): EraId {
+export function getEntryEraId(entry?: { media?: Models_LibraryMedia | null; mediaId?: number | null } | null): EraId {
+    if (!entry) return "dbz"
     const media = entry.media
     const tmdbId = media?.tmdbId || (entry.mediaId && isTmdbId(entry.mediaId) ? entry.mediaId : 0) || 0
     const rawTmdbId = tmdbId >= 1000000 ? tmdbId - 1000000 : tmdbId
@@ -129,7 +133,8 @@ export function getEntryEraId(entry: { media?: Models_LibraryMedia | null; media
     }
 }
 
-export function getReleaseDateTimestamp(entry: { media?: Models_LibraryMedia | null; mediaId?: number | null }): number {
+export function getReleaseDateTimestamp(entry?: { media?: Models_LibraryMedia | null; mediaId?: number | null } | null): number {
+    if (!entry) return 0
     const media = entry.media
     if (!media) return 0
     if (media.startDate) {
@@ -197,7 +202,32 @@ export function getMovieLore(entry?: { media?: Models_LibraryMedia | null; media
     if (textToSearch.includes("lucifer") || textToSearch.includes("castillo del mal") || textToSearch.includes("sleeping princess")) return DRAGON_BALL_MOVIES_LORE.m2
     if (textToSearch.includes("mifan") || textToSearch.includes("aventura mística")) return DRAGON_BALL_MOVIES_LORE.m3
     if (textToSearch.includes("camino hacia el poder") || textToSearch.includes("path to power")) return DRAGON_BALL_MOVIES_LORE.m4
+    if (textToSearch.includes("bomberos") || textToSearch.includes("fire brigade") || textToSearch.includes("shoboutai") || textToSearch.includes("shouboutai")) return DRAGON_BALL_MOVIES_LORE.sp4
+    if (textToSearch.includes("seguridad vial") || textToSearch.includes("traffic safety") || textToSearch.includes("koutsuu anzen")) return DRAGON_BALL_MOVIES_LORE.sp5
+    if (textToSearch.includes("todos reunidos") || textToSearch.includes("mundo de goku") || textToSearch.includes("goku world") || textToSearch.includes("atsumare")) return DRAGON_BALL_MOVIES_LORE.sp6
+    if (textToSearch.includes("te lo mostramos todo") || textToSearch.includes("olvida el año") || textToSearch.includes("olvida el ano") || textToSearch.includes("year-end show")) return DRAGON_BALL_MOVIES_LORE.sp7
+    if (textToSearch.includes("esfera del pánico") || textToSearch.includes("esfera del panico") || textToSearch.includes("kyutai panic")) return DRAGON_BALL_MOVIES_LORE.sp8
+    if (textToSearch.includes("toriko") || textToSearch.includes("dream 9") || textToSearch.includes("super colaboración") || textToSearch.includes("super colaboracion")) return DRAGON_BALL_MOVIES_LORE.sp9
 
     return null
 }
 
+/**
+ * Genera una permutación aleatoria sin repetición de índices [0 ... length - 1]
+ * utilizando el algoritmo Fisher-Yates (Knuth shuffle).
+ * Si se especifica `excludeFirst`, se garantiza que el primer elemento
+ * no sea igual a ese valor (siempre que length > 1).
+ */
+export function createShuffledIndices(length: number, excludeFirst?: number): number[] {
+    if (length <= 0) return []
+    const arr = Array.from({ length }, (_, i) => i)
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    if (excludeFirst !== undefined && arr.length > 1 && arr[0] === excludeFirst) {
+        const swapIdx = 1 + Math.floor(Math.random() * (arr.length - 1));
+        [arr[0], arr[swapIdx]] = [arr[swapIdx], arr[0]];
+    }
+    return arr
+}

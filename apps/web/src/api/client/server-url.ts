@@ -46,20 +46,38 @@ export function getApiWebSocketUrl(): string {
     return `ws://127.0.0.1:${__DEV_SERVER_PORT}/api/v1/ws${query}`
 }
 
+function parseKamehousePort(raw: unknown): number | null {
+    const n = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : typeof raw === "number" ? raw : NaN
+    if (!Number.isInteger(n) || n <= 0 || n > 65535) return null
+    return n
+}
+
+function resolveRuntimePort(): number {
+    if (typeof window !== "undefined") {
+        const parsed = parseKamehousePort(window.__KAMEHOUSE_PORT__)
+        if (parsed != null) return parsed
+    }
+    return __DEV_SERVER_PORT
+}
+
 export function getServerBaseUrl(removeProtocol: boolean = false): string {
     // Si el runtime de desktop (Tauri / sidecar) definió el puerto local, conectarse directamente a él.
-    if (typeof window !== "undefined" && window.__KAMEHOUSE_PORT__) {
-        let ret = `http://127.0.0.1:${window.__KAMEHOUSE_PORT__}`
-        if (removeProtocol) {
-            ret = ret.replace("http://", "").replace("https://", "")
+    // Se valida rango entero 1-65535 para evitar hijack de baseURL/WS vía inyección.
+    if (typeof window !== "undefined" && window.__KAMEHOUSE_PORT__ != null) {
+        const port = parseKamehousePort(window.__KAMEHOUSE_PORT__)
+        if (port != null) {
+            let ret = `http://127.0.0.1:${port}`
+            if (removeProtocol) {
+                ret = ret.replace("http://", "").replace("https://", "")
+            }
+            return ret
         }
-        return ret
     }
 
     if (typeof window !== "undefined") {
         const o = window.location?.origin ?? ""
         if (o.includes("wails.localhost") || o.startsWith("wails://")) {
-            const port = window.__KAMEHOUSE_PORT__ || __DEV_SERVER_PORT
+            const port = resolveRuntimePort()
             let ret = `http://127.0.0.1:${port}`
             if (removeProtocol) {
                 ret = ret.replace("http://", "").replace("https://", "")
@@ -70,16 +88,16 @@ export function getServerBaseUrl(removeProtocol: boolean = false): string {
 
     if (__isDesktop__) {
         let ret: string
-        if (typeof window !== "undefined" && window.__KAMEHOUSE_PORT__) {
-            ret = `http://127.0.0.1:${window.__KAMEHOUSE_PORT__}`
+        const runtimePort = resolveRuntimePort()
+        if (typeof window !== "undefined" && parseKamehousePort(window.__KAMEHOUSE_PORT__) != null) {
+            ret = `http://127.0.0.1:${runtimePort}`
         } else if (import.meta.env.MODE === "development") {
             if (typeof window !== "undefined") {
                 const o = window.location?.origin ?? ""
                 if (o.startsWith("http://") || o.startsWith("https://")) {
                     ret = ""
                 } else {
-                    const port = window.__KAMEHOUSE_PORT__ || __DEV_SERVER_PORT
-                    ret = `http://127.0.0.1:${port}`
+                    ret = `http://127.0.0.1:${runtimePort}`
                 }
             } else {
                 ret = `http://127.0.0.1:${__DEV_SERVER_PORT}`
@@ -89,8 +107,7 @@ export function getServerBaseUrl(removeProtocol: boolean = false): string {
             if (o.startsWith("http://") || o.startsWith("https://")) {
                 ret = o
             } else {
-                const port = window.__KAMEHOUSE_PORT__ || __DEV_SERVER_PORT
-                ret = `http://127.0.0.1:${port}`
+                ret = `http://127.0.0.1:${runtimePort}`
             }
         } else {
             ret = `http://127.0.0.1:${__DEV_SERVER_PORT}`

@@ -20,7 +20,7 @@ export const ButtonAnatomy = defineStyleAnatomy({
                 "primary": "bg-brand-accent text-on-primary hover:bg-brand-accent/90 active:bg-brand-accent shadow-elevation-1",
 
                 /* ─── MD3 Tonal (Secondary) ─────────────────────────────────────── */
-                "secondary": "bg-secondary-container text-on-secondary-container hover:bg-secondary-container/90 active:bg-secondary-container shadow-elevation-1",
+                "secondary": "bg-surface-container-high text-on-surface hover:bg-surface-container-highest active:bg-surface-container-high shadow-elevation-1",
 
                 /* ─── MD3 Outlined ──────────────────────────────────────────────── */
                 "outlined": "border border-outline bg-transparent text-brand-accent hover:bg-brand-accent/10 active:bg-brand-accent/10 shadow-none",

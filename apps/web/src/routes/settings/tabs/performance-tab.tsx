@@ -1,6 +1,6 @@
 import React, { useEffect } from "react"
-import { type Control, Controller, useFormContext, useWatch } from "react-hook-form"
-import { motion } from "framer-motion"
+import { type Control, Controller, useFormContext, useFormState, useWatch } from "react-hook-form"
+import { m } from "framer-motion"
 import { type SettingsFormValues } from "../index"
 import { usePerformanceStore, type PerformanceProfile } from "@/lib/hardware/performance-store"
 import { useShallow } from "zustand/react/shallow"
@@ -9,7 +9,8 @@ import { IconStatusSparkles, IconStatusZap, IconStatusActivity, IconUiShield, Ic
 import { cn } from "@/components/ui/core/styling"
 import { toast } from "sonner"
 import { RadioCardGroup } from "@/components/settings/radio-card-group"
-import { SettingsSection, SettingsCard, OsToggle, OsSelect, OsInput } from "../components"
+import { SectionBar } from "@/components/ui/sectionbar/sectionbar"
+import { OsToggle, DirtyOsSelect, DirtyOsInput, DirtyPill } from "../components"
 
 interface PerformanceTabProps {
     control: Control<SettingsFormValues>
@@ -29,7 +30,7 @@ const HW_ACCEL_OPTIONS = [
     { value: "qsv", label: "Intel QuickSync (QSV)", desc: "Gráficos Intel (6th gen+)", badge: "QSV" },
     { value: "amf", label: "AMD AMF", desc: "AMD Radeon (RDNA / RX series)", badge: "AMF" },
     { value: "videotoolbox", label: "VideoToolbox (macOS)", desc: "Apple Silicon (M1/M2/M3/M4)", badge: "APPLE" },
-    { value: "none", label: "Desactivado (CPU)", desc: "Renderizado y transcodificación por software", badge: "CPU" },
+    { value: "disabled", label: "Desactivado (CPU)", desc: "Renderizado y transcodificación por software", badge: "CPU" },
 ]
 
 const PRESET_OPTIONS = [
@@ -57,6 +58,11 @@ function policyOf(m: MediastreamValues): PlaybackPolicy {
 
 export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
     const transcodeHwAccel = useWatch({ control, name: "mediastream.transcodeHwAccel" })
+    // Dirty por sección para controles sin slot propio (radio, policy buttons).
+    const { dirtyFields } = useFormState({ control })
+    const msDirty = (dirtyFields as Record<string, Record<string, unknown> | undefined>)?.mediastream
+    const engineDirty = !!(msDirty?.transcodeHwAccel || msDirty?.transcodePreset)
+    const policyDirty = !!(msDirty?.transcodeEnabled || msDirty?.directPlayOnly || msDirty?.disableAutoSwitchToDirectPlay)
     const {
         hardwareSpecs,
         isDetecting,
@@ -103,13 +109,14 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
             {/* ═══════════════════════════════════════════════════════════════════
                 1. DIAGNÓSTICO DE HARDWARE Y PERFIL PRINCIPAL
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="hardware-profile"
                 label="Perfil de Rendimiento y Hardware"
                 description="Equilibrio entre fidelidad visual y consumo de recursos en tu equipo."
                 icon={IconStatusZap}
                 badge={
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/25">
+                        <span className="text-3xs font-mono font-bold text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/25">
                             TIER: {effectiveTier.toUpperCase()}
                         </span>
                         <button
@@ -124,107 +131,132 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                     </div>
                 }
             >
-                <SettingsCard divide={false} className="p-5 md:p-6 space-y-5">
+                <div className="p-5 md:p-6 space-y-5">
                     {/* Tarjetas de Telemetría */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-0.5">
-                            <span className="text-[10px] font-mono uppercase text-on-surface-variant/60 block">GPU</span>
+                            <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">GPU</span>
                             <p className="text-xs font-bold text-on-surface truncate" title={hardwareSpecs?.gpuRenderer || "GPU"}>
                                 {hardwareSpecs?.gpuRenderer || "Predeterminada"}
                             </p>
-                            <span className="text-[9px] font-mono text-emerald-400">
+                            <span className="text-4xs font-mono text-emerald-400">
                                 {hardwareSpecs?.isDedicatedGpu ? "Dedicada" : "Integrada"}
                             </span>
                         </div>
 
                         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-0.5">
-                            <span className="text-[10px] font-mono uppercase text-on-surface-variant/60 block">CPU</span>
+                            <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">CPU</span>
                             <p className="text-xs font-bold text-on-surface truncate">
                                 {hardwareSpecs?.cpuCores ? `${hardwareSpecs.cpuCores} Núcleos` : "Compatible"}
                             </p>
-                            <span className="text-[9px] font-mono text-cyan-400">Hilos: Auto</span>
+                            <span className="text-4xs font-mono text-cyan-400">Hilos: Auto</span>
                         </div>
 
                         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-0.5">
-                            <span className="text-[10px] font-mono uppercase text-on-surface-variant/60 block">RAM</span>
+                            <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">RAM</span>
                             <p className="text-xs font-bold text-on-surface truncate">
                                 {hardwareSpecs?.deviceMemoryGB ? `${hardwareSpecs.deviceMemoryGB} GB` : "RAM OK"}
                             </p>
-                            <span className="text-[9px] font-mono text-purple-400">Buffer Dinámico</span>
+                            <span className="text-4xs font-mono text-purple-400">Buffer Dinámico</span>
                         </div>
 
                         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-0.5">
-                            <span className="text-[10px] font-mono uppercase text-on-surface-variant/60 block">Modo Activo</span>
+                            <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">Modo Activo</span>
                             <p className="text-xs font-bold text-on-surface uppercase truncate">
                                 {performanceProfile}
                             </p>
-                            <span className="text-[9px] font-mono text-amber-400">Acelerado</span>
+                            <span className="text-4xs font-mono text-amber-400">Acelerado</span>
                         </div>
                     </div>
 
                     {/* Selector de Perfiles */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
-                        {PROFILES.map((p) => {
-                            const isSelected = performanceProfile === p.id
-                            const ProfileIcon = p.icon
+                    <Controller
+                        control={control}
+                        name="mediastream.performanceProfile"
+                        render={({ field }) => {
+                            const activeProfile = field.value || performanceProfile || "auto"
                             return (
-                                <motion.button
-                                    key={p.id}
-                                    type="button"
-                                    whileHover={{ scale: 1.025, y: -2 }}
-                                    whileTap={{ scale: 0.97 }}
-                                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                                    onClick={() => setPerformanceProfile(p.id)}
-                                    className={cn(
-                                        "flex flex-col p-3.5 rounded-xl border text-left transition-colors duration-200",
-                                        isSelected
-                                            ? "bg-brand-accent/10 border-brand-accent shadow-[0_0_16px_hsl(var(--brand-accent)/0.25)] ring-1 ring-brand-accent/40"
-                                            : "bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <div className={cn(
-                                            "w-7 h-7 rounded-lg flex items-center justify-center border transition-all",
-                                            isSelected ? "bg-brand-accent/20 border-brand-accent/40 text-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.3)]" : "bg-white/5 border-white/10 text-on-surface-variant"
-                                        )}>
-                                            <ProfileIcon className="w-3.5 h-3.5" />
-                                        </div>
-                                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-on-surface-variant border border-white/10">{p.badge}</span>
-                                    </div>
-                                    <span className={cn("text-xs font-bold truncate", isSelected ? "text-brand-accent" : "text-on-surface")}>
-                                        {p.label}
-                                    </span>
-                                    <span className="text-[10px] text-on-surface-variant/70 line-clamp-2 mt-0.5 leading-tight">{p.desc}</span>
-                                </motion.button>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+                                    {PROFILES.map((p) => {
+                                        const isSelected = activeProfile === p.id
+                                        const ProfileIcon = p.icon
+                                        return (
+                                            <m.button
+                                                key={p.id}
+                                                type="button"
+                                                whileHover={{ scale: 1.025, y: -2 }}
+                                                whileTap={{ scale: 0.97 }}
+                                                transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                                                onClick={() => {
+                                                    field.onChange(p.id)
+                                                    setPerformanceProfile(p.id)
+                                                }}
+                                                className={cn(
+                                                    "flex flex-col p-3.5 rounded-xl border text-left transition-colors duration-200",
+                                                    isSelected
+                                                        ? "bg-brand-accent/10 border-brand-accent shadow-[0_0_16px_hsl(var(--brand-accent)/0.25)] ring-1 ring-brand-accent/40"
+                                                        : "bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <div className={cn(
+                                                        "w-7 h-7 rounded-lg flex items-center justify-center border transition-all",
+                                                        isSelected ? "bg-brand-accent/20 border-brand-accent/40 text-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.3)]" : "bg-white/5 border-white/10 text-on-surface-variant"
+                                                    )}>
+                                                        <ProfileIcon className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <span className="text-4xs font-mono px-1.5 py-0.5 rounded bg-white/5 text-on-surface-variant border border-white/10">{p.badge}</span>
+                                                </div>
+                                                <span className={cn("text-xs font-bold truncate", isSelected ? "text-brand-accent" : "text-on-surface")}>
+                                                    {p.label}
+                                                </span>
+                                                <span className="text-3xs text-on-surface-variant/70 line-clamp-2 mt-0.5 leading-tight">{p.desc}</span>
+                                            </m.button>
+                                        )
+                                    })}
+                                </div>
                             )
-                        })}
-                    </div>
+                        }}
+                    />
 
                     <div className="pt-2 border-t border-white/[0.05]">
-                        <OsToggle
-                            label="Gobernador Térmico Inteligente (Auto-Throttle)"
-                            description="Reduce automáticamente los efectos pesados si detecta caídas de frames o sobrecalentamiento."
-                            checked={autoGovernorEnabled}
-                            onChange={setAutoGovernorEnabled}
+                        <Controller
+                            control={control}
+                            name="mediastream.autoGovernorEnabled"
+                            render={({ field }) => (
+                                <OsToggle
+                                    label="Gobernador Térmico Inteligente (Auto-Throttle)"
+                                    description="Reduce automáticamente los efectos pesados si detecta caídas de frames o sobrecalentamiento."
+                                    checked={field.value !== undefined ? !!field.value : autoGovernorEnabled}
+                                    onChange={(v) => {
+                                        field.onChange(v)
+                                        setAutoGovernorEnabled(v)
+                                    }}
+                                />
+                            )}
                         />
                     </div>
-                </SettingsCard>
-            </SettingsSection>
+                </div>
+            </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                2. MOTOR DE VIDEO Y TRANSCODIFICACIÓN GPU
+                2. MOTOR DE VIDEO Y ACELERACIÓN GPU
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="video-engine"
                 label="Motor de Video y Aceleración GPU"
-                description="Aceleración por hardware dedicada para reproducción y conversión de video."
+                description="Aceleración por hardware dedicada para reproducción y conversión de video. Al guardar se reinicia el motor (corta transcodificaciones activas)."
                 icon={IconStatusSparkles}
                 badge={
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                        {transcodeHwAccel?.toUpperCase() || "AUTO"}
+                    <span className="flex items-center gap-1.5">
+                        <DirtyPill show={engineDirty} />
+                        <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                            {transcodeHwAccel?.toUpperCase() || "AUTO"}
+                        </span>
                     </span>
                 }
             >
-                <SettingsCard divide={false} className="p-5 md:p-6 space-y-5">
+                <div className="p-5 md:p-6 space-y-5">
                     <Controller
                         control={control}
                         name="mediastream.transcodeHwAccel"
@@ -232,7 +264,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             <RadioCardGroup
                                 name="transcodeHwAccel"
                                 options={HW_ACCEL_OPTIONS}
-                                value={field.value || "auto"}
+                                value={field.value === "none" ? "disabled" : (field.value || "auto")}
                                 onChange={field.onChange}
                             />
                         )}
@@ -243,7 +275,9 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             control={control}
                             name="mediastream.transcodePreset"
                             render={({ field }) => (
-                                <OsSelect
+                                <DirtyOsSelect
+                                    control={control}
+                                    name="mediastream.transcodePreset"
                                     value={field.value || "fast"}
                                     onChange={field.onChange}
                                     options={PRESET_OPTIONS}
@@ -254,26 +288,29 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             )}
                         />
                     </div>
-                </SettingsCard>
-            </SettingsSection>
+                </div>
+            </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
                 3. POLÍTICA DE REPRODUCCIÓN Y DIRECT PLAY
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="playback-policy"
                 label="Política de Reproducción y Transmisión"
-                description="Decisión de transmisión nativa directa vs transcodificación sobre la marcha."
+                description="Decisión de transmisión nativa directa vs transcodificación sobre la marcha. Al guardar se reinicia el motor (corta transcodificaciones activas)."
                 icon={IconMediaPlay}
+                badge={<DirtyPill show={policyDirty} />}
             >
-                <SettingsCard divide={false} className="p-5 md:p-6">
+                <div className="p-5 md:p-6">
                     <PlaybackPolicyPicker control={control} />
-                </SettingsCard>
-            </SettingsSection>
+                </div>
+            </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
                 4. BINARIOS DEL SISTEMA (FFMPEG)
                ═══════════════════════════════════════════════════════════════════ */}
-            <SettingsSection
+            <SectionBar
+                id="system-binaries"
                 label="Binarios del Motor (FFmpeg)"
                 description="Herramientas de decodificación de video del servidor."
                 icon={IconStatusServer}
@@ -281,15 +318,17 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                 defaultOpen={false}
                 searchQuery={searchQuery}
             >
-                <SettingsCard divide={false} className="p-5 space-y-4">
+                <div className="p-5 space-y-4">
                     <FFmpegStatusSection />
 
-                    <div className="divide-y divide-white/[0.04] rounded-xl bg-white/[0.02] border border-white/10 overflow-hidden">
+                    <div className="sectionbar-divide rounded-xl bg-white/[0.02] border border-white/10 overflow-hidden">
                         <Controller
                             control={control}
                             name="mediastream.ffmpegPath"
                             render={({ field }) => (
-                                <OsInput
+                                <DirtyOsInput
+                                    control={control}
+                                    name="mediastream.ffmpegPath"
                                     label="Ruta Personalizada FFmpeg"
                                     description="Opcional. Deja vacío para usar el binario incluido con KameHouse."
                                     placeholder="Ej. C:\ffmpeg\bin\ffmpeg.exe o /usr/bin/ffmpeg"
@@ -299,9 +338,25 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                 />
                             )}
                         />
+                        <Controller
+                            control={control}
+                            name="mediastream.ffprobePath"
+                            render={({ field }) => (
+                                <DirtyOsInput
+                                    control={control}
+                                    name="mediastream.ffprobePath"
+                                    label="Ruta Personalizada FFprobe"
+                                    description="Opcional. Herramienta de inspección de streams de audio/video."
+                                    placeholder="Ej. C:\ffmpeg\bin\ffprobe.exe o /usr/bin/ffprobe"
+                                    value={field.value || ""}
+                                    onChange={field.onChange}
+                                    isMono
+                                />
+                            )}
+                        />
                     </div>
-                </SettingsCard>
-            </SettingsSection>
+                </div>
+            </SectionBar>
 
         </div>
     )
@@ -342,11 +397,11 @@ function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormValues
                     >
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-bold text-on-surface">{opt.label}</span>
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-on-surface-variant border border-white/10">
+                            <span className="text-4xs font-mono px-1.5 py-0.5 rounded bg-white/5 text-on-surface-variant border border-white/10">
                                 {opt.badge}
                             </span>
                         </div>
-                        <p className="text-[11px] text-on-surface-variant/80 line-clamp-3 leading-snug">{opt.desc}</p>
+                        <p className="text-2xs text-on-surface-variant/80 line-clamp-3 leading-snug">{opt.desc}</p>
                     </button>
                 )
             })}
@@ -391,16 +446,16 @@ function FFmpegStatusSection() {
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-on-surface">Estado de FFmpeg</span>
                     {isInstalled ? (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="text-3xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                             Detectado
                         </span>
                     ) : (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                        <span className="text-3xs font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
                             No instalado
                         </span>
                     )}
                 </div>
-                <p className="text-[11px] text-on-surface-variant font-mono">
+                <p className="text-2xs text-on-surface-variant font-mono">
                     {ffmpegStatus?.ffmpegPath || "Ubicación del binario gestionada automáticamente"}
                 </p>
             </div>

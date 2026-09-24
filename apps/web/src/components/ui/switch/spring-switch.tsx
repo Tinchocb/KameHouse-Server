@@ -1,10 +1,10 @@
 import React, { useState } from "react"
-import { motion, useReducedMotion } from "framer-motion"
+import { m, useReducedMotion } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 
 export const variantTrackColors = {
     default: {
-        checked: "bg-brand-accent border-white/40 shadow-[0_0_12px_var(--brand-glow)]",
+        checked: "bg-brand-accent border-white/40",
         // Thumb en on-primary: blanco en Por Era (track de color), negro #09090B
         // en Clásico (track blanco) — sin esto el toggle ON en Clásico era
         // gris-sobre-blanco lavado e ilegible.
@@ -12,17 +12,17 @@ export const variantTrackColors = {
         dot: "bg-brand-accent opacity-90",
     },
     success: {
-        checked: "bg-emerald-500 border-emerald-400/50 shadow-[0_0_16px_rgba(16,185,129,0.4)]",
+        checked: "bg-emerald-500 border-emerald-400/50",
         thumb: "bg-white text-emerald-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)]",
         dot: "bg-emerald-600 opacity-90",
     },
     warning: {
-        checked: "bg-amber-500 border-amber-400/50 shadow-[0_0_16px_rgba(245,158,11,0.4)]",
+        checked: "bg-amber-500 border-amber-400/50",
         thumb: "bg-white text-amber-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)]",
         dot: "bg-amber-600 opacity-90",
     },
     danger: {
-        checked: "bg-rose-500 border-rose-400/50 shadow-[0_0_16px_rgba(239,68,68,0.4)]",
+        checked: "bg-rose-500 border-rose-400/50",
         thumb: "bg-white text-rose-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)]",
         dot: "bg-rose-600 opacity-90",
     },
@@ -104,10 +104,11 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
                 }
             }}
             className={cn(
-                "relative inline-flex shrink-0 cursor-pointer items-center rounded-full border transition-all duration-300 outline-none select-none",
+                "relative inline-flex shrink-0 cursor-pointer items-center rounded-full border outline-none select-none",
+                // Track transitions only color/border — Framer Motion owns transforms
+                "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out)]",
                 // Accessible touch target (>= 44px) without visual overflow
                 "after:absolute after:-inset-y-2.5 after:-inset-x-2 after:content-[''] after:z-0",
-                "focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)]",
                 isSm ? "w-9 h-5 p-0.5" : "w-[46px] h-6.5 p-[3px]",
                 checked
                     ? variantConfig.checked
@@ -120,7 +121,7 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
             <span className="absolute inset-x-1.5 top-0.5 h-px bg-white/25 pointer-events-none rounded-full z-10" />
 
             {/* Tactile thumb with physics & squash */}
-            <motion.span
+            <m.span
                 animate={{
                     x: checked ? travelDistance : 0,
                     scaleX: isPressing ? 1.18 : 1,
@@ -139,7 +140,8 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
                           }
                 }
                 className={cn(
-                    "relative z-10 flex items-center justify-center rounded-full shadow-elevation-1 transition-colors duration-200 transform-gpu pointer-events-none",
+                    "relative z-10 flex items-center justify-center rounded-full shadow-elevation-1 transform-gpu pointer-events-none",
+                    "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out)]",
                     isSm ? "w-4 h-4" : "w-5 h-5",
                     checked
                         ? variantConfig.thumb
@@ -149,14 +151,14 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
                 {/* Micro-dot relief inside thumb */}
                 <span
                     className={cn(
-                        "rounded-full transition-all duration-300",
+                        "rounded-full [transition:background-color_var(--duration-fast)_var(--ease-smooth-out),transform_var(--duration-fast)_var(--ease-smooth-out),opacity_var(--duration-fast)_var(--ease-smooth-out)]",
                         isSm ? "w-1 h-1" : "w-1.5 h-1.5",
                         checked
                             ? variantConfig.dot
                             : "bg-[var(--classic-text-muted,#6E6E76)] opacity-40 scale-75"
                     )}
                 />
-            </motion.span>
+            </m.span>
         </Component>
     )
 }

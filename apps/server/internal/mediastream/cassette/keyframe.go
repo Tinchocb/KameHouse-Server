@@ -16,6 +16,7 @@ import (
 	"kamehouse/internal/util"
 
 	"github.com/rs/zerolog"
+	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 // KeyframeIndex holds extracted keyframe timestamps
@@ -96,16 +97,17 @@ func (ki *KeyframeIndex) append(values []float64) {
 // global keyframe cache
 
 var (
-	kfCache   sync.Map // map[string]*KeyframeIndex
-	kfCacheMu sync.Mutex
+	kfCache, _ = lru.New[string, *KeyframeIndex](200)
+	kfCacheMu  sync.Mutex
 )
 
 // ClearKeyframeCache removes cached indexes
 func ClearKeyframeCache() {
-	kfCache.Range(func(key, _ any) bool {
-		kfCache.Delete(key)
-		return true
-	})
+	kfCacheMu.Lock()
+	defer kfCacheMu.Unlock()
+	if kfCache != nil {
+		kfCache.Purge()
+	}
 }
 
 // getOrExtractKeyframes returns a keyframe index
@@ -115,23 +117,19 @@ func getOrExtractKeyframes(
 	settings *Settings,
 	logger *zerolog.Logger,
 ) (*KeyframeIndex, error) {
-	if v, ok := kfCache.Load(hash); ok {
-		ki := v.(*KeyframeIndex)
-		ki.ready.Wait()
-		return ki, ki.GetError()
-	}
-
 	kfCacheMu.Lock()
-	if v, ok := kfCache.Load(hash); ok {
+	if kfCache == nil {
+		kfCache, _ = lru.New[string, *KeyframeIndex](200)
+	}
+	if ki, ok := kfCache.Get(hash); ok {
 		kfCacheMu.Unlock()
-		ki := v.(*KeyframeIndex)
 		ki.ready.Wait()
 		return ki, ki.GetError()
 	}
 
 	ki := &KeyframeIndex{Sha: hash}
 	ki.ready.Add(1)
-	kfCache.Store(hash, ki)
+	kfCache.Add(hash, ki)
 	kfCacheMu.Unlock()
 
 	var doneOnce sync.Once
@@ -148,7 +146,11 @@ func getOrExtractKeyframes(
 			}
 			if err != nil {
 				ki.SetError(err)
-				kfCache.Delete(hash)
+				kfCacheMu.Lock()
+				if kfCache != nil {
+					kfCache.Remove(hash)
+				}
+				kfCacheMu.Unlock()
 			}
 			unblock()
 		}()

@@ -54,6 +54,39 @@
     }
   },
   {
+    "name": "HandleAniListEpisodeThumbnail",
+    "trimmedName": "AniListEpisodeThumbnail",
+    "comments": [
+      "HandleAniListEpisodeThumbnail returns the streaming thumbnail for an anime episode by absolute number.",
+      "",
+      "This is the fallback-3 source for chronology episode thumbnails (local -\u003e TMDB -\u003e AniList -\u003e saga).",
+      "AniList needs no API key and covers full runs (e.g. DBZ 291 streaming episodes), which makes it",
+      "the safety net when TMDB is unconfigured or a still_path is missing.",
+      "",
+      "\t@summary get AniList episode streaming thumbnail by absolute episode number",
+      "\t@desc Returns thumbnail/title/url for one episode from AniList streamingEpisodes.",
+      "\t@route /api/v1/anilist/episode/:anilistId/:absolute [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/anilist.go",
+    "filename": "anilist.go",
+    "api": {
+      "summary": "get AniList episode streaming thumbnail by absolute episode number",
+      "descriptions": [
+        "Returns thumbnail/title/url for one episode from AniList streamingEpisodes."
+      ],
+      "endpoint": "/api/v1/anilist/episode/:anilistId/:absolute",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "getTMDBEpisodeCollection",
     "trimmedName": "getTMDBEpisodeCollection",
     "comments": [
@@ -843,9 +876,11 @@
     "name": "HandleLogin",
     "trimmedName": "Login",
     "comments": [
-      "HandleLogin logs in the user by saving the JWT token in the database.",
+      "HandleLogin is a no-op kept for route compatibility: this fork has no",
+      "platform accounts and auth is handled by middleware (loopback/token).",
+      "It returns the current status so old clients don't break.",
       "",
-      "\t@summary logs in the user by saving the JWT token in the database.",
+      "\t@summary returns the current status (login is a no-op without platform accounts).",
       "\t@desc This is called when the JWT token is obtained after logging in with redirection on the client.",
       "\t@route /api/v1/auth/login [POST]",
       "\t@returns handlers.Status",
@@ -854,7 +889,7 @@
     "filepath": "internal/handlers/auth.go",
     "filename": "auth.go",
     "api": {
-      "summary": "logs in the user by saving the JWT token in the database.",
+      "summary": "returns the current status (login is a no-op without platform accounts).",
       "descriptions": [
         "This is called when the JWT token is obtained after logging in with redirection on the client."
       ],
@@ -873,9 +908,10 @@
     "name": "HandleLogout",
     "trimmedName": "Logout",
     "comments": [
-      "HandleLogout logs out the user by removing JWT token from the database.",
+      "HandleLogout is a no-op kept for route compatibility (see HandleLogin).",
+      "It returns the current status so old clients don't break.",
       "",
-      "\t@summary logs out the user by removing JWT token from the database.",
+      "\t@summary returns the current status (logout is a no-op without platform accounts).",
       "\t@route /api/v1/auth/logout [POST]",
       "\t@returns handlers.Status",
       ""
@@ -883,7 +919,7 @@
     "filepath": "internal/handlers/auth.go",
     "filename": "auth.go",
     "api": {
-      "summary": "logs out the user by removing JWT token from the database.",
+      "summary": "returns the current status (logout is a no-op without platform accounts).",
       "descriptions": [],
       "endpoint": "/api/v1/auth/logout",
       "methods": [
@@ -897,78 +933,115 @@
     }
   },
   {
-    "name": "connectedCastDevices",
-    "trimmedName": "connectedCastDevices",
+    "name": "HandleGetCacheStats",
+    "trimmedName": "GetCacheStats",
     "comments": [
-      "connectedCastDevices devuelve los IDs de conexión WS que pertenecen a TVs.",
-      ""
-    ],
-    "filepath": "internal/handlers/cast.go",
-    "filename": "cast.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetCastDevices",
-    "trimmedName": "GetCastDevices",
-    "comments": [
-      "HandleGetCastDevices",
+      "HandleGetCacheStats returns memory and disk usage metrics for the system caches.",
       "",
-      "\t@summary lista las TVs (KameHouseTV) conectadas por WebSocket disponibles para cast.",
-      "\t@route /api/v1/cast/devices [GET]",
-      "\t@returns handlers.CastDevicesResponse",
+      "\t@summary returns cache statistics",
+      "\t@route /api/v1/system/cache/stats [GET]",
+      "\t@returns handlers.CacheStatsResponse",
       ""
     ],
-    "filepath": "internal/handlers/cast.go",
-    "filename": "cast.go",
+    "filepath": "internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
     "api": {
-      "summary": "lista las TVs (KameHouseTV) conectadas por WebSocket disponibles para cast.",
+      "summary": "returns cache statistics",
       "descriptions": [],
-      "endpoint": "/api/v1/cast/devices",
+      "endpoint": "/api/v1/system/cache/stats",
       "methods": [
         "GET"
       ],
       "params": [],
       "bodyFields": [],
-      "returns": "handlers.CastDevicesResponse",
-      "returnGoType": "handlers.CastDevicesResponse",
-      "returnTypescriptType": "CastDevicesResponse"
+      "returns": "handlers.CacheStatsResponse",
+      "returnGoType": "handlers.CacheStatsResponse",
+      "returnTypescriptType": "CacheStatsResponse"
     }
   },
   {
-    "name": "HandleCastPlay",
-    "trimmedName": "CastPlay",
+    "name": "HandleClearSystemCache",
+    "trimmedName": "ClearSystemCache",
     "comments": [
-      "HandleCastPlay",
+      "HandleClearSystemCache clears disk caches and memory caches according to target.",
+      "Supports target: \"thumbnails\", \"videofiles\", \"keyframes\", \"fingerprints\", \"images\", \"metadata\", or \"all\" (default).",
       "",
-      "\t@summary envía un comando de reproducción a una TV conectada (o a todas si no se indica deviceId).",
-      "\t@route /api/v1/cast/play [POST]",
-      "\t@returns handlers.CastPlayResponse",
+      "\t@summary clears system and thumbnail caches",
+      "\t@route /api/v1/system/cache/clear [POST]",
+      "\t@returns map[string]interface{}",
       ""
     ],
-    "filepath": "internal/handlers/cast.go",
-    "filename": "cast.go",
+    "filepath": "internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
     "api": {
-      "summary": "envía un comando de reproducción a una TV conectada (o a todas si no se indica deviceId).",
+      "summary": "clears system and thumbnail caches",
       "descriptions": [],
-      "endpoint": "/api/v1/cast/play",
+      "endpoint": "/api/v1/system/cache/clear",
       "methods": [
         "POST"
       ],
       "params": [],
       "bodyFields": [],
-      "returns": "handlers.CastPlayResponse",
-      "returnGoType": "handlers.CastPlayResponse",
-      "returnTypescriptType": "CastPlayResponse"
+      "returns": "map[string]interface{}",
+      "returnGoType": "interface{}",
+      "returnTypescriptType": "Record\u003cstring, interface{}\u003e"
+    }
+  },
+  {
+    "name": "HandleWarmThumbnailCache",
+    "trimmedName": "WarmThumbnailCache",
+    "comments": [
+      "HandleWarmThumbnailCache triggers or cancels a controlled worker pool to pre-generate thumbnails for local files.",
+      "",
+      "\t@summary pre-generates thumbnails in background or cancels running operation",
+      "\t@route /api/v1/cache/thumbnails/warm [POST]",
+      "\t@returns map[string]interface{}",
+      ""
+    ],
+    "filepath": "internal/handlers/cache_handlers.go",
+    "filename": "cache_handlers.go",
+    "api": {
+      "summary": "pre-generates thumbnails in background or cancels running operation",
+      "descriptions": [],
+      "endpoint": "/api/v1/cache/thumbnails/warm",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "map[string]interface{}",
+      "returnGoType": "interface{}",
+      "returnTypescriptType": "Record\u003cstring, interface{}\u003e"
+    }
+  },
+  {
+    "name": "HandleGetLibraryEpisodeFile",
+    "trimmedName": "GetLibraryEpisodeFile",
+    "comments": [
+      "HandleGetLibraryEpisodeFile resolves the local file path for a given TMDB ID + absolute episode.",
+      "Used by chronology UI to fetch local frame via /api/v1/video-thumbnail?path=.",
+      "",
+      "\t@summary get local episode file for chronology thumbnail",
+      "\t@desc Resolves TMDB ID + absolute episode to a library media, then finds the matching episode file.",
+      "\t@route /api/v1/library/episode-file [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/chronology_frames.go",
+    "filename": "chronology_frames.go",
+    "api": {
+      "summary": "get local episode file for chronology thumbnail",
+      "descriptions": [
+        "Resolves TMDB ID + absolute episode to a library media, then finds the matching episode file."
+      ],
+      "endpoint": "/api/v1/library/episode-file",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -1108,6 +1181,29 @@
     }
   },
   {
+    "name": "validateBrowserPath",
+    "trimmedName": "validateBrowserPath",
+    "comments": [
+      "validateBrowserPath canonicaliza y rechaza traversal codificado, UNC y dirs de sistema.",
+      "Se usa en endpoints que navegan FS arbitrario (selector). No sustituye el jail",
+      "a librerías que sí hacen explorer/mediastream.",
+      ""
+    ],
+    "filepath": "internal/handlers/directory_selector.go",
+    "filename": "directory_selector.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleDirectorySelector",
     "trimmedName": "DirectorySelector",
     "comments": [
@@ -1149,6 +1245,159 @@
       "returns": "handlers.DirectorySelectorResponse",
       "returnGoType": "handlers.DirectorySelectorResponse",
       "returnTypescriptType": "DirectorySelectorResponse"
+    }
+  },
+  {
+    "name": "HandleDriveAuthURL",
+    "trimmedName": "DriveAuthURL",
+    "comments": [
+      "HandleDriveAuthURL returns the OAuth2 consent URL for Google Drive.",
+      "",
+      "\t@summary returns the Google Drive authorization URL.",
+      "\t@route /api/v1/drive/auth-url [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "returns the Google Drive authorization URL.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/auth-url",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveCallback",
+    "trimmedName": "DriveCallback",
+    "comments": [
+      "HandleDriveCallback exchanges the authorization code for OAuth2 tokens and saves them in Settings.",
+      "Supports both browser redirect (GET) and programmatic POST.",
+      "",
+      "\t@summary exchanges code and enables Google Drive integration.",
+      "\t@route /api/v1/drive/callback [GET, POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "exchanges code and enables Google Drive integration.",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveStatus",
+    "trimmedName": "DriveStatus",
+    "comments": [
+      "HandleDriveStatus returns current Google Drive integration status.",
+      "",
+      "\t@summary returns Google Drive connection status.",
+      "\t@route /api/v1/drive/status [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "returns Google Drive connection status.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/status",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveDisconnect",
+    "trimmedName": "DriveDisconnect",
+    "comments": [
+      "HandleDriveDisconnect disconnects Google Drive and resets credentials.",
+      "",
+      "\t@summary disconnects Google Drive.",
+      "\t@route /api/v1/drive/disconnect [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "disconnects Google Drive.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/disconnect",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDrivePlay",
+    "trimmedName": "DrivePlay",
+    "comments": [
+      "HandleDrivePlay streams a video file directly from Google Drive using HTTP Range forwarding.",
+      "",
+      "\t@summary proxies media bytes from Google Drive with Range header support.",
+      "\t@route /api/v1/drive/play [GET, HEAD]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "proxies media bytes from Google Drive with Range header support.",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveScan",
+    "trimmedName": "DriveScan",
+    "comments": [
+      "HandleDriveScan triggers an on-demand scan of Google Drive files.",
+      "",
+      "\t@summary scans configured Google Drive folder and indexes anime files.",
+      "\t@route /api/v1/drive/scan [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "scans configured Google Drive folder and indexes anime files.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/scan",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -1376,6 +1625,27 @@
     ],
     "filepath": "internal/handlers/home.go",
     "filename": "home.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestStubEndpointsReturn501",
+    "trimmedName": "TestStubEndpointsReturn501",
+    "comments": [
+      "Los stubs eliminados deben responder 501 honesto, no 200 con datos falsos.",
+      ""
+    ],
+    "filepath": "internal/handlers/honesty_test.go",
+    "filename": "honesty_test.go",
     "api": {
       "summary": "",
       "descriptions": [],
@@ -3179,6 +3449,15 @@
       "params": [],
       "bodyFields": [
         {
+          "name": "MediaID",
+          "jsonName": "mediaId",
+          "goType": "int",
+          "usedStructType": "",
+          "typescriptType": "number",
+          "required": true,
+          "descriptions": []
+        },
+        {
           "name": "ParentID",
           "jsonName": "parentId",
           "goType": "int",
@@ -3635,6 +3914,29 @@
     }
   },
   {
+    "name": "validPlaybackBeat",
+    "trimmedName": "validPlaybackBeat",
+    "comments": [
+      "validPlaybackBeat es fail-soft para telemetría fire-and-forget (heartbeat 5s):",
+      "los beats sin identidad o fuera de rango se descartan en silencio en vez de",
+      "ensuciar el historial o devolver 400 en el hot path.",
+      ""
+    ],
+    "filepath": "internal/handlers/playback_sync.go",
+    "filename": "playback_sync.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandlePlaybackSync",
     "trimmedName": "PlaybackSync",
     "comments": [
@@ -4045,6 +4347,27 @@
     }
   },
   {
+    "name": "RegisterDriveRoutes",
+    "trimmedName": "RegisterDriveRoutes",
+    "comments": [
+      "RegisterDriveRoutes registers Google Drive endpoints.",
+      ""
+    ],
+    "filepath": "internal/handlers/routes_drive.go",
+    "filename": "routes_drive.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "RegisterLibraryRoutes",
     "trimmedName": "RegisterLibraryRoutes",
     "comments": [
@@ -4090,7 +4413,7 @@
     "name": "RegisterSettingsRoutes",
     "trimmedName": "RegisterSettingsRoutes",
     "comments": [
-      "RegisterSettingsRoutes registers settings, auth, auto-downloader, updates, and system routes.",
+      "RegisterSettingsRoutes registers settings, auth, and system routes.",
       ""
     ],
     "filepath": "internal/handlers/routes_settings.go",
@@ -4414,6 +4737,48 @@
     }
   },
   {
+    "name": "isLoopbackRequest",
+    "trimmedName": "isLoopbackRequest",
+    "comments": [
+      "isLoopbackRequest comprueba si la petición HTTP se originó desde la máquina local (loopback).",
+      ""
+    ],
+    "filepath": "internal/handlers/server_auth_middleware.go",
+    "filename": "server_auth_middleware.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isSensitiveEndpoint",
+    "trimmedName": "isSensitiveEndpoint",
+    "comments": [
+      "isSensitiveEndpoint comprueba si la ruta expone diagnósticos profundos, logs, o control de sistema.",
+      ""
+    ],
+    "filepath": "internal/handlers/server_auth_middleware.go",
+    "filename": "server_auth_middleware.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleGetSettings",
     "trimmedName": "GetSettings",
     "comments": [
@@ -4507,10 +4872,10 @@
       "HandleSaveSettings updates the app settings.",
       "",
       "\t@summary updates the app settings.",
-      "\t@desc Applies a PATCH-style merge: the incoming payload's non-nil sub-objects",
-      "\t@desc replace the stored ones; AutoDownloader is always merged from the DB to",
-      "\t@desc preserve scheduler state. Separate-table settings (Mediastream,",
-      "\t@desc Torrentstream, Debrid, Theme) are upserted only when present in payload.",
+      "\t@desc Applies a PATCH-style merge: only keys present in the payload overwrite",
+      "\t@desc stored values. This applies to Library (field-by-field), Mediastream and",
+      "\t@desc Theme (merge-before-upsert against the stored row). Separate-table settings",
+      "\t@desc are upserted only when present in payload.",
       "\t@route /api/v1/settings [PATCH]",
       "\t@returns handlers.Status",
       ""
@@ -4520,10 +4885,10 @@
     "api": {
       "summary": "updates the app settings.",
       "descriptions": [
-        "Applies a PATCH-style merge: the incoming payload's non-nil sub-objects",
-        "replace the stored ones; AutoDownloader is always merged from the DB to",
-        "preserve scheduler state. Separate-table settings (Mediastream,",
-        "Torrentstream, Debrid, Theme) are upserted only when present in payload."
+        "Applies a PATCH-style merge: only keys present in the payload overwrite",
+        "stored values. This applies to Library (field-by-field), Mediastream and",
+        "Theme (merge-before-upsert against the stored row). Separate-table settings",
+        "are upserted only when present in payload."
       ],
       "endpoint": "/api/v1/settings",
       "methods": [
@@ -4582,6 +4947,15 @@
           "goType": "models.PlatformSettings",
           "usedStructType": "models.PlatformSettings",
           "typescriptType": "Models_PlatformSettings",
+          "required": false,
+          "descriptions": []
+        },
+        {
+          "name": "GoogleDrive",
+          "jsonName": "googleDrive",
+          "goType": "models.GoogleDriveSettings",
+          "usedStructType": "models.GoogleDriveSettings",
+          "typescriptType": "Models_GoogleDriveSettings",
           "required": false,
           "descriptions": []
         }
@@ -4787,6 +5161,9 @@
       "\t@summary generates and returns a CPU profile.",
       "\t@desc This generates a CPU profile for the specified duration (default 30 seconds).",
       "\t@desc Query parameter: duration=30 for duration in seconds.",
+      "\t@desc Concurrency policy: a single profile runs at a time (mutex + 409 on",
+      "\t@desc overlap), duration is capped at 60s, and client disconnect aborts early,",
+      "\t@desc so load is bounded to one worker plus cheap 409s under hammering.",
       "\t@route /api/v1/memory/cpu [GET]",
       "\t@returns nil",
       ""
@@ -4797,7 +5174,10 @@
       "summary": "generates and returns a CPU profile.",
       "descriptions": [
         "This generates a CPU profile for the specified duration (default 30 seconds).",
-        "Query parameter: duration=30 for duration in seconds."
+        "Query parameter: duration=30 for duration in seconds.",
+        "Concurrency policy: a single profile runs at a time (mutex + 409 on",
+        "overlap), duration is capped at 60s, and client disconnect aborts early,",
+        "so load is bounded to one worker plus cheap 409s under hammering."
       ],
       "endpoint": "/api/v1/memory/cpu",
       "methods": [
@@ -4949,6 +5329,33 @@
     }
   },
   {
+    "name": "HandleDownloadDatabaseBackup",
+    "trimmedName": "DownloadDatabaseBackup",
+    "comments": [
+      "HandleDownloadDatabaseBackup ...",
+      "",
+      "\t@summary downloads the latest SQLite DB backup file.",
+      "\t@route /api/v1/db/backup/download [GET]",
+      "\t@returns file",
+      ""
+    ],
+    "filepath": "internal/handlers/system.go",
+    "filename": "system.go",
+    "api": {
+      "summary": "downloads the latest SQLite DB backup file.",
+      "descriptions": [],
+      "endpoint": "/api/v1/db/backup/download",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "file",
+      "returnGoType": "file",
+      "returnTypescriptType": "file"
+    }
+  },
+  {
     "name": "HandleGetDiagnosticsReport",
     "trimmedName": "GetDiagnosticsReport",
     "comments": [
@@ -5069,6 +5476,48 @@
       "methods": [
         "GET"
       ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "EnsureThumbnail",
+    "trimmedName": "EnsureThumbnail",
+    "comments": [
+      "EnsureThumbnail generates or returns the cached thumbnail path for a given video file.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail.go",
+    "filename": "thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "EnsureThumbnailWithContext",
+    "trimmedName": "EnsureThumbnailWithContext",
+    "comments": [
+      "EnsureThumbnailWithContext generates or returns the cached thumbnail path with context cancellation support.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail.go",
+    "filename": "thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -5281,11 +5730,92 @@
     }
   },
   {
+    "name": "HandleTMDBEpisodeStill",
+    "trimmedName": "TMDBEpisodeStill",
+    "comments": [
+      "HandleTMDBEpisodeStill fetches the real still for a TV episode by absolute number.",
+      "",
+      "\t@summary get TMDB episode still by absolute episode number",
+      "\t@desc Maps absolute-\u003eseason/episode server-side and returns still_path for chronology thumbnails.",
+      "\t@route /api/v1/tmdb/episode/:tvId/:absolute [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/tmdb.go",
+    "filename": "tmdb.go",
+    "api": {
+      "summary": "get TMDB episode still by absolute episode number",
+      "descriptions": [
+        "Maps absolute-\u003eseason/episode server-side and returns still_path for chronology thumbnails."
+      ],
+      "endpoint": "/api/v1/tmdb/episode/:tvId/:absolute",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleTMDBImages",
+    "trimmedName": "TMDBImages",
+    "comments": [
+      "HandleTMDBImages fetches all backdrops, posters, and logos for a TV show or movie from TMDb.",
+      "",
+      "\t@summary get TMDB images (backdrops, posters, logos)",
+      "\t@desc Fetches backdrops, posters, and logos from TMDb with caching.",
+      "\t@route /api/v1/tmdb/images/:type/:id [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/tmdb.go",
+    "filename": "tmdb.go",
+    "api": {
+      "summary": "get TMDB images (backdrops, posters, logos)",
+      "descriptions": [
+        "Fetches backdrops, posters, and logos from TMDb with caching."
+      ],
+      "endpoint": "/api/v1/tmdb/images/:type/:id",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "TraceMiddleware",
     "trimmedName": "TraceMiddleware",
     "comments": [
       "TraceMiddleware injects a unique trace ID into every request context",
       "and logs slow requests (\u003e500ms) with their trace ID for correlation.",
+      ""
+    ],
+    "filepath": "internal/handlers/trace_middleware.go",
+    "filename": "trace_middleware.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isLongLivedRequest",
+    "trimmedName": "isLongLivedRequest",
+    "comments": [
+      "isLongLivedRequest detecta conexiones que duran por diseño (WebSocket, SSE,",
+      "streaming de video): marcarlas como \"lentas\" solo mete ruido en el log y",
+      "esconde las lentitudes reales.",
       ""
     ],
     "filepath": "internal/handlers/trace_middleware.go",
@@ -5403,7 +5933,32 @@
       "webSocketEventHandler creates a new websocket handler for real-time event communication.",
       "The route is registered BEFORE the auth middleware group so the HTTP→WS upgrade",
       "is never blocked by a missing Authorization header (browsers can't send one during WS connect).",
-      "Clients that need auth send their token via ?token=\u003cvalue\u003e as a query parameter instead.",
+      "Clients can authenticate via:",
+      "  - ?token=\u003cvalue\u003e query parameter (legacy)",
+      "  - Authorization: Bearer \u003ctoken\u003e header (preferred)",
+      "  - Sec-WebSocket-Protocol header with token (preferred for browsers)",
+      ""
+    ],
+    "filepath": "internal/handlers/websocket.go",
+    "filename": "websocket.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "extractWSToken",
+    "trimmedName": "extractWSToken",
+    "comments": [
+      "extractWSToken extracts the authentication token from a WebSocket request.",
+      "Priority: Authorization header \u003e Sec-WebSocket-Protocol \u003e query parameter.",
       ""
     ],
     "filepath": "internal/handlers/websocket.go",

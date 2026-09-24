@@ -53,8 +53,6 @@ type GoStructField struct {
 
 var typePrefixesByPackage = map[string]string{
 	"anilist":                "AL_",
-	"auto_downloader":        "AutoDownloader_",
-	"autodownloader":         "AutoDownloader_",
 	"entities":               "",
 	"db":                     "DB_",
 	"db_bridge":              "DB_",
@@ -106,8 +104,6 @@ var typePrefixesByPackage = map[string]string{
 	"hibikecustomsource": "HibikeCustomSource_",
 	"continuity":         "Continuity_",
 	"local":              "Local_",
-	"debrid":             "Debrid_",
-	"debrid_client":      "DebridClient_",
 	"report":             "Report_",
 	"habari":             "Habari_",
 	"vendor_habari":      "Habari_",

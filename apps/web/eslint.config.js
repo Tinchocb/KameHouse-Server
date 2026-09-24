@@ -66,12 +66,17 @@ export default tseslint.config(
             "react-hooks/refs": "warn",
             "react-hooks/rules-of-hooks": "error",
 
-            // Accessibility
+            // Accessibility — elevar a error los patrones bloqueantes detectados
             "jsx-a11y/alt-text": "warn",
             "jsx-a11y/label-has-associated-control": "warn",
+            "jsx-a11y/no-static-element-interactions": "warn",
+            "jsx-a11y/click-events-have-key-events": "warn",
+            "jsx-a11y/interactive-supports-focus": "warn",
 
             // TypeScript
             "@typescript-eslint/no-explicit-any": "warn",
+            "@typescript-eslint/no-non-null-assertion": "warn",
+            "no-console": ["warn", { allow: ["warn", "error"] }],
             "@typescript-eslint/no-unused-vars": ["warn", {
                 argsIgnorePattern: "^_",
                 varsIgnorePattern: "^_",

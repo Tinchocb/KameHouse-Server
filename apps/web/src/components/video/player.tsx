@@ -1,23 +1,24 @@
 import React, { useEffect, Suspense, lazy, useState } from "react"
 import { createPortal } from "react-dom"
 import { IconUiSpinner } from "@/components/ui/icons";
-import { useAppStore } from "@/lib/store"
+import { useUIStore } from "@/lib/store"
 import { PlayerErrorBoundary } from "./player-error-boundary"
 
 export type VideoPlayerProps = {
     streamUrl: string
     streamType?: "local" | "online" | "direct" | "transcode" | "optimized"
-    isExternalStream?: boolean
     title?: string
     episodeLabel?: string
-    initialProgressSeconds?: number
     onClose: () => void
-    onProgress?: (seconds: number) => void
     onNextEpisode?: () => void
     hasNextEpisode?: boolean
     mediaId?: number
     episodeNumber?: number
+    /** Segundo desde el que arranca (lo decide la ficha: "Continuar viendo"). */
+    initialProgressSeconds?: number
     malId?: number | null
+    /** Editorial filler mark (animefillerlist) — auto-advances when autoSkipFiller is on. */
+    isFillerEpisode?: boolean
     /** Media format ("TV", "MOVIE", "OVA", etc.) — passed to player core to control fallback skip window */
     mediaFormat?: string | null
     episodes?: {
@@ -48,7 +49,7 @@ const VideoPlayerOrchestrator = lazy(() =>
 )
 
 export function VideoPlayer(props: VideoPlayerProps) {
-    const setVideoActive = useAppStore(state => state.setVideoActive)
+    const setVideoActive = useUIStore(state => state.setVideoActive)
     const [mounted, setMounted] = useState(false)
     useEffect(() => {
         // Attempt to enter fullscreen
@@ -102,7 +103,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
             }
         }
     }, [setVideoActive])
-    const isLocal = !props.isExternalStream && Boolean(props.streamUrl) && props.streamType !== "online"
+    const isLocal = Boolean(props.streamUrl) && props.streamType !== "online"
 
     const playerContent = isLocal ? (
         <VideoPlayerOrchestrator {...props} />

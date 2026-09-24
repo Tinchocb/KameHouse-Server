@@ -26,7 +26,16 @@ export const pluginJassubTranspile = (): RsbuildPlugin => ({
             // En dev los outputs ya existen de arranques previos: si son más
             // nuevos que los inputs, se salta la transpilación (era ~varios
             // segundos en cada `rsbuild dev`). En prod siempre se regenera.
-            if (!isProd && isCacheFresh([source, swSource], [outFile, wasmOut, wasmModernOut, swOut])) {
+            // Cada output se compara contra su propio input: copyFileSync conserva el
+            // mtime del .wasm de node_modules, así que compararlo contra sw.ts lo
+            // daba siempre por viejo y la transpilación corría en cada arranque.
+            const wasmSource = path.join(jassubDir, "dist/wasm/jassub-worker.wasm")
+            const wasmModernSource = path.join(jassubDir, "dist/wasm/jassub-worker-modern.wasm")
+            if (!isProd
+                && isCacheFresh([source], [outFile])
+                && isCacheFresh([wasmSource], [wasmOut])
+                && isCacheFresh([wasmModernSource], [wasmModernOut])
+                && isCacheFresh([swSource], [swOut])) {
                 console.log("Skipping jassub transpile (cache fresh)")
                 return
             }
@@ -50,8 +59,6 @@ export const pluginJassubTranspile = (): RsbuildPlugin => ({
             })
 
             // copy wasm files
-            const wasmSource = path.join(jassubDir, "dist/wasm/jassub-worker.wasm")
-            const wasmModernSource = path.join(jassubDir, "dist/wasm/jassub-worker-modern.wasm")
             fs.copyFileSync(wasmSource, wasmOut)
             fs.copyFileSync(wasmModernSource, wasmModernOut)
             console.log("Finished transpiling jassub")

@@ -3,6 +3,7 @@ package handlers
 import (
 	"archive/zip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -29,6 +30,48 @@ func (h *Handler) HandleBackupDatabase(c echo.Context) error {
 	}
 
 	return h.RespondWithData(c, res)
+}
+
+// HandleDownloadDatabaseBackup ...
+//
+//	@summary downloads the latest SQLite DB backup file.
+//	@route /api/v1/db/backup/download [GET]
+//	@returns file
+func (h *Handler) HandleDownloadDatabaseBackup(c echo.Context) error {
+	backupDir := filepath.Join(h.App.Config.Data.AppDataDir, "backups")
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return h.RespondWithCodeError(c, 404, errors.New("no backup files found"))
+		}
+		return h.RespondWithError(c, err)
+	}
+
+	// El nombre lleva timestamp (kamehouse-backup-YYYY-MM-DD_HH-MM-SS.db):
+	// orden lexicográfico descendente = más reciente primero.
+	latest := ""
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || len(name) < 4 || name[len(name)-3:] != ".db" {
+			continue
+		}
+		if len(name) < 17 || name[:17] != "kamehouse-backup-" {
+			continue
+		}
+		if name > latest {
+			latest = name
+		}
+	}
+	if latest == "" {
+		return h.RespondWithError(c, fmt.Errorf("no backup files found"))
+	}
+
+	fullPath := filepath.Join(backupDir, latest)
+	// Defensa en profundidad: aunque el nombre sale del listado, anclar al dir.
+	if filepath.Dir(fullPath) != backupDir {
+		return h.RespondWithError(c, fmt.Errorf("invalid backup path"))
+	}
+	return c.Attachment(fullPath, latest)
 }
 
 // HandleGetDiagnosticsReport ...

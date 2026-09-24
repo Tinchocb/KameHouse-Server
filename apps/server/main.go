@@ -113,16 +113,11 @@ func run(ctx context.Context) error {
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           e,
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      0,
-		IdleTimeout:       120 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second, // limits slow header sends (Slowloris)
+		ReadTimeout:       30 * time.Second, // full request body read limit
+		WriteTimeout:      0,                // 0 = no limit (required for long HLS/segmented responses); mitigated by ReadHeaderTimeout + IdleTimeout. When behind a reverse proxy (nginx/Caddy), set proxy_write_timeout there to bound it.
+		IdleTimeout:       120 * time.Second, // keep-alive max lifetime
 	}
-
-	// Start SSDP announcer for KameHouseTV auto-discovery
-	ssdp := core.NewSSDPAnnouncer(bindPort, app.Logger)
-	ssdp.Start()
-	defer ssdp.Stop()
 
 	// Start server concurrently
 	errCh := make(chan error, 1)
@@ -133,6 +128,11 @@ func run(ctx context.Context) error {
 				app.Logger.Error().Err(err).Msg("failed to generate/verify TLS certificate")
 				errCh <- err
 				return
+			}
+			if daysLeft, certErr := core.CertDaysLeft(app.Config.Server.TLS.CertPath); certErr != nil {
+				app.Logger.Warn().Err(certErr).Msg("server: TLS certificate present but unreadable")
+			} else {
+				app.Logger.Info().Int("daysLeft", daysLeft).Msg("server: TLS certificate ready")
 			}
 			errCh <- srv.ServeTLS(bindListener, app.Config.Server.TLS.CertPath, app.Config.Server.TLS.KeyPath)
 			return

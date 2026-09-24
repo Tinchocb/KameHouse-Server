@@ -190,7 +190,10 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 
 	// 3. Save to Database Persistent Cache
 	if p.db != nil {
-		_ = db.UpsertMetadataCache(p.db, "tmdb-anime-episodes", strconv.Itoa(id), result, 7*24*time.Hour) // 1 week TTL
+		// Misma clave que la lectura de arriba (tmdbID, no el ID interno): si no
+		// coinciden, el caché persistente nunca acierta y cada apertura de una
+		// serie vuelve a descargar todas sus temporadas de TMDB (~10 s).
+		_ = db.UpsertMetadataCache(p.db, "tmdb-anime-episodes", strconv.Itoa(tmdbID), result, 7*24*time.Hour) // 1 week TTL
 	}
 
 	if p.logger != nil {
@@ -235,7 +238,7 @@ func tmdbEpisodeToMeta(ep tmdb.TVEpisode, seasonNumber int) *apiMetadata.Episode
 	epStr := strconv.Itoa(ep.EpisodeNumber)
 	// We store the original TMDB episode number as the string representation for identification
 	// but we'll use season-aware logic for enrichment matching.
-	
+
 	return &apiMetadata.EpisodeMetadata{
 		EpisodeNumber:         ep.EpisodeNumber,
 		SeasonNumber:          seasonNumber,

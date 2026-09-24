@@ -33,10 +33,9 @@ export function useScanLocalFiles(onSuccess?: () => void) {
         mutationKey: [API_ENDPOINTS.SCAN.ScanLocalFiles.key],
         onSuccess: async (data) => {
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
-            toast.success("Library scanned")
+            toast.success("Escaneo iniciado en segundo plano")
             refreshLibraryExplorerTree()
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key] })
-            // await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.AUTO_DOWNLOADER.GetAutoDownloaderItems.key] })
             if (data && data.length > 0) {
                 const mediaIds = [...new Set(data.map(f => f.mediaId).filter(id => !!id))]
                 for (const id of mediaIds) {
@@ -47,6 +46,14 @@ export function useScanLocalFiles(onSuccess?: () => void) {
             }
             await queryClient.invalidateQueries({ queryKey: scanQueryKeys.summaries() })
             onSuccess?.()
+        },
+        onError: (err) => {
+            const msg = err instanceof Error ? err.message : ""
+            if (msg.includes("409") || msg.toLowerCase().includes("already") || msg.toLowerCase().includes("en curso")) {
+                toast.error("Ya hay un escaneo en curso")
+            } else {
+                toast.error(msg || "No se pudo iniciar el escaneo")
+            }
         },
     })
 }

@@ -3,9 +3,11 @@ import { useRef, useEffect } from "react"
 
 
 import { DeferredImage } from "@/components/shared/deferred-image"
-import { getLowResImage } from "@/lib/helpers/images"
+import { HeroBackdrop, heroHighResSrc, heroLowResSrc, useHeroTone } from "@/components/ui/spotlight/hero-backdrop"
+import { heroArtFromUrl, heroObjectPosition, type HeroArt } from "@/lib/config/hero-art"
 import { cn } from "@/components/ui/core/styling"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
+import { useImagePalette } from "@/hooks/use-image-palette"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 
 const MEDIA_HERO_TITLE_CLASS = "font-sans font-extrabold leading-[1.08] tracking-tight text-on-surface text-edge-glow uppercase text-balance break-words max-w-5xl";
@@ -15,6 +17,8 @@ export interface MediaHeroProps {
     scrollContainerRef?: React.RefObject<HTMLElement | HTMLDivElement | null>
 
     backdropUrl: string | null
+    /** Arte curado (punto focal + composición). Si falta, se encuadra `backdropUrl` por defecto. */
+    backdropArt?: HeroArt | null
     posterUrl?: string | null
     hasBannerImage: boolean
     
@@ -69,9 +73,33 @@ export function resolveBackdropTreatment(bannerType: string, hasBannerImage: boo
     }
 }
 
+/**
+ * Scrim único del hero de detalle (antes: izquierdo + inferior + superior +
+ * refuerzo de HeroBackdrop + máscara, apilados → imagen "sucia").
+ * Teñido con el color de la zona del texto en vez de negro puro, así la
+ * imagen se funde con la página; la base termina exacto en `--bg-primary`.
+ * `strong` para arte claro, donde el texto necesita más contraste.
+ */
+export function heroScrimBackground(textZoneColor: string | null, strong: boolean): string {
+    const tint = textZoneColor
+        ? `color-mix(in srgb, ${textZoneColor} 16%, var(--bg-primary))`
+        : "var(--bg-primary)"
+    const a = (alpha: number) => `color-mix(in srgb, ${tint} ${Math.round(alpha * 100)}%, transparent)`
+    const k = strong ? 1 : 0.85
+    return [
+        // Superior: legibilidad de la navbar flotante.
+        `linear-gradient(to bottom, ${a(0.45)} 0px, transparent 140px)`,
+        // Lateral: columna de texto.
+        `linear-gradient(to right, ${a(0.92 * k)} 0%, ${a(0.64 * k)} 20%, ${a(0.26 * k)} 38%, transparent 58%)`,
+        // Inferior: funde con la página.
+        `linear-gradient(to top, var(--bg-primary) 0%, ${a(0.78)} 18%, ${a(0.38)} 36%, ${a(0.1)} 52%, transparent 66%)`,
+    ].join(", ")
+}
+
 export function MediaHero({
     scrollContainerRef,
     backdropUrl,
+    backdropArt,
     posterUrl,
     hasBannerImage,
     title,
@@ -93,10 +121,20 @@ export function MediaHero({
     const isSmallBanner = ts.themeMediaPageBannerSize === "small"
     const backdropTreatment = resolveBackdropTreatment(ts.themeMediaPageBannerType, hasBannerImage)
     const isBoxedInfo = ts.themeMediaPageBannerInfoBoxSize === "boxed"
-    // Fondo Ambiental: capa blur/saturada detrás del backdrop. Cuando está ON
-    // el backdrop high-res se atenúa para que el halo se perciba (antes quedaba
-    // tapado al 85% y el toggle parecía no hacer nada).
+    // Fondo Ambiental: capa blur/saturada detrás del backdrop, visible donde
+    // la máscara inferior funde la imagen nítida.
     const ambientOn = ts.themeEnableMediaPageBlurredBackground && !!backdropUrl
+    const art = React.useMemo(
+        () => backdropArt ?? (backdropUrl ? heroArtFromUrl(backdropUrl) : null),
+        [backdropArt, backdropUrl]
+    )
+    const showArt = !!art && backdropTreatment !== "hide"
+    const palette = useImagePalette(showArt ? heroHighResSrc(art) : null)
+    const tone = useHeroTone(showArt ? art : null)
+    const scrim = React.useMemo(
+        () => heroScrimBackground(palette?.left ?? null, tone === "light" || art?.subject !== "right"),
+        [palette?.left, tone, art?.subject]
+    )
 
     // Sync current backdrop with global DynamicBackdrop blur background
     useEffect(() => {
@@ -159,14 +197,14 @@ export function MediaHero({
 
             {/* ── Base 16:9 blur-fill: rellena sin recorte/zoom ───────────────────
                 Blur reducido para no lavar el fondo; solo rellena el vacío. */}
-            {backdropUrl && backdropTreatment !== "hide" && (
+            {art && backdropTreatment !== "hide" && (
                 <div className="absolute inset-0 overflow-hidden bg-black z-0" aria-hidden="true">
                     <div
                         className="absolute -inset-6"
                         style={{
-                            backgroundImage: `url(${getLowResImage(backdropUrl)})`,
+                            backgroundImage: `url(${heroLowResSrc(art) ?? art.src})`,
                             backgroundSize: "cover",
-                            backgroundPosition: "center 20%",
+                            backgroundPosition: heroObjectPosition(art),
                             filter: ambientOn
                                 ? "blur(14px) brightness(0.7) saturate(140%)"
                                 : "blur(12px) brightness(0.62) saturate(130%)",
@@ -183,10 +221,18 @@ export function MediaHero({
                 (74%→100%) llega hasta el contenido y funde con el blur-fill
                 sin dejar pozo negro. Parallax conservado sobre esta capa. */}
             <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
-                {backdropUrl && backdropTreatment !== "hide" && (
+                {art && backdropTreatment !== "hide" && (
                     <div
                         ref={backdropRef}
+                        role="button"
+                        tabIndex={onBackdropClick ? 0 : -1}
                         onClick={onBackdropClick}
+                        onKeyDown={(e) => {
+                            if ((e.key === "Enter" || e.key === " ") && onBackdropClick) {
+                                e.preventDefault()
+                                onBackdropClick()
+                            }
+                        }}
                         className={cn(
                             "relative w-full h-full overflow-hidden will-change-transform group/backdrop mx-auto",
                             onBackdropClick && "cursor-pointer pointer-events-auto"
@@ -196,25 +242,23 @@ export function MediaHero({
                             WebkitMaskImage: "linear-gradient(to bottom, black 74%, transparent 100%)",
                         }}
                     >
-                        <DeferredImage
-                            src={backdropUrl}
+                        <HeroBackdrop
+                            art={art}
                             alt="Backdrop"
-                            priority={false}
-                            loading="lazy"
-                            decoding="async"
-                            sizes="100vw"
-                            className="w-full h-full"
+                            variant="bleed"
                             imgClassName={cn(
                                 // Solo opacity: transition-all animaría también el
-                                // filter (blur 1px) y mantendría vivo el repaint
-                                // del fondo, retrasando el backdrop-filter de la
-                                // cápsula de metadatos que está encima.
-                                "w-full h-full transition-opacity duration-700 object-cover object-[center_18%] scale-[1.01]",
-                                backdropTreatment === "dim" ? "opacity-40" : ambientOn ? "opacity-90" : "opacity-95",
-                                // Difuminado mínimo: apenas 1px para suavizar sin tapar detalle.
+                                // filter y mantendría vivo el repaint del fondo,
+                                // retrasando el backdrop-filter de la cápsula de
+                                // metadatos que está encima.
+                                "transition-opacity duration-700",
+                                // Nítido y opaco como el hero del Home: cualquier
+                                // opacity < 1 deja ver el LQIP 64px y el blur-fill
+                                // debajo (efecto fantasma), y el blur ablanda el arte.
+                                backdropTreatment === "dim" && "opacity-40",
                                 backdropTreatment === "blur"
                                     ? "blur-[var(--filter-blur-hero)]"
-                                    : "blur-[1px]"
+                                    : "filter saturate-[115%] contrast-[108%] brightness-[0.95]"
                             )}
                         />
                         {/* Velo ligero sin blur para no lavar la portada */}
@@ -222,12 +266,12 @@ export function MediaHero({
                 )}
             </div>
 
-            {/* Scrims cinematográficos (tokenizados). El inferior cubre el 70% bajo
-                para asentar bloques de texto altos (pills+título+sinopsis+CTAs en
-                mobile); antes era h-64 y el título quedaba sobre arte crudo. */}
-            <div className="absolute inset-0 z-10 pointer-events-none scrim-hero-left" />
-            <div className="absolute inset-x-0 bottom-0 top-[30%] z-10 pointer-events-none scrim-hero-bottom" />
-            <div className="absolute inset-x-0 top-0 h-32 z-10 pointer-events-none scrim-hero-top" />
+            {/* Scrim cinematográfico único, teñido con la paleta del arte */}
+            <div
+                aria-hidden="true"
+                className="absolute inset-0 z-10 pointer-events-none"
+                style={{ background: scrim }}
+            />
 
             {/* Side Panel Overlay — visible solo en desktop (lg+) */}
             {sidePanel && (
@@ -280,16 +324,30 @@ export function MediaHero({
 
                     <div className="animate-slide-up delay-150 space-y-2 pointer-events-auto flex items-start justify-start flex-col">
                         {typeof title === "string" ? (
-                            <h1 
-                                onClick={onTitleClick}
-                                className={cn(
-                                    MEDIA_HERO_TITLE_CLASS,
-                                    onTitleClick && "cursor-pointer hover:text-brand-secondary transition-colors duration-slow"
-                                )} 
-                                style={{ fontSize: "max(1.6rem, min(4.2vw, 3.25rem))" }}
-                            >
-                                {title}
-                            </h1>
+                            onTitleClick ? (
+                                <button
+                                    type="button"
+                                    onClick={onTitleClick}
+                                    className="text-left p-0 border-0 bg-transparent cursor-pointer group/title"
+                                >
+                                    <h1 
+                                        className={cn(
+                                            MEDIA_HERO_TITLE_CLASS,
+                                            "group-hover/title:text-brand-secondary transition-colors duration-slow"
+                                        )} 
+                                        style={{ fontSize: "max(1.6rem, min(4.2vw, 3.25rem))" }}
+                                    >
+                                        {title}
+                                    </h1>
+                                </button>
+                            ) : (
+                                <h1 
+                                    className={MEDIA_HERO_TITLE_CLASS} 
+                                    style={{ fontSize: "max(1.6rem, min(4.2vw, 3.25rem))" }}
+                                >
+                                    {title}
+                                </h1>
+                            )
                         ) : title}
                     </div>
 

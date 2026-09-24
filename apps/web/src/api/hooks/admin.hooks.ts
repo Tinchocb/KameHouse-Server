@@ -9,6 +9,7 @@ export function useGetTranscodeStats() {
         queryKey: [API_ENDPOINTS.ADMIN.GetTranscodeStats.key],
         refetchInterval: 8000,
         refetchIntervalInBackground: false,
+        staleTime: 8000,
     })
 }
 
@@ -18,5 +19,7 @@ export function useGetLibraryStats() {
         method: API_ENDPOINTS.ADMIN.GetLibraryStats.methods[0],
         queryKey: [API_ENDPOINTS.ADMIN.GetLibraryStats.key],
         refetchInterval: 60000,
+        staleTime: 60000,
+        refetchIntervalInBackground: false,
     })
 }

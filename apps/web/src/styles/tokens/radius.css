@@ -35,26 +35,19 @@
   --radius-navbar:      var(--radius-3xl);     /* 28px - Navbar (redondeo superior en móvil) */
 }
 
-/* ─── Clases Utilitarias Tailwind Compatibles ───────────────────────────────── */
-.rounded-xs      { border-radius: var(--radius-xs); }
+/* ─── Clases Utilitarias Tailwind Compatibles (solo las usadas en tsx) ─────── */
 .rounded-sm      { border-radius: var(--radius-sm); }
 .rounded-md      { border-radius: var(--radius-md); }
 .rounded-lg      { border-radius: var(--radius-lg); }
 .rounded-xl      { border-radius: var(--radius-xl); }
 .rounded-2xl     { border-radius: var(--radius-2xl); }
 .rounded-3xl     { border-radius: var(--radius-3xl); }
-.rounded-4xl     { border-radius: var(--radius-4xl); }
 .rounded-full    { border-radius: var(--radius-full); }
 
 /* Alias semánticos para uso directo si necesario */
 .rounded-card       { border-radius: var(--radius-card); }
 .rounded-button     { border-radius: var(--radius-button); }
-.rounded-input      { border-radius: var(--radius-input); }
-.rounded-badge      { border-radius: var(--radius-badge); }
-.rounded-avatar     { border-radius: var(--radius-avatar); }
 .rounded-modal      { border-radius: var(--radius-modal); }
-.rounded-popover    { border-radius: var(--radius-popover); }
-.rounded-hero       { border-radius: var(--radius-hero); }
 .rounded-container  { border-radius: var(--radius-container); }
 .rounded-corner-lg  { border-radius: var(--radius-corner-lg); }
 .rounded-pill       { border-radius: var(--radius-pill); }

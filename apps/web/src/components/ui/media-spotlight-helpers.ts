@@ -136,10 +136,6 @@ function setInEraCache(id: string, era: EraId | null) {
     eraCache.set(id, era)
 }
 
-export function clearEraCache() {
-    eraCache.clear()
-}
-
 export function getEraFromItem(item: SwimlaneItem): EraId | null {
     const cached = eraCache.get(item.id)
     if (cached !== undefined) return cached
@@ -204,25 +200,20 @@ export function isMovieItem(item: SwimlaneItem): boolean {
         return true
     }
 
-    // 2. ID check for Dragon Ball offset (>= 1,000,000)
-    if (item.mediaId && item.mediaId >= 1_000_000) return true
-    if (item.tmdbId && item.tmdbId >= 1_000_000) return true
-    const parsedId = Number(item.id.replace(/^(media|cw)-/, ""))
-    if (!isNaN(parsedId) && parsedId >= 1_000_000) return true
-
-    // 3. Known Movie TMDB ID check
+    // 2. Known Movie TMDB ID check (offset normalizado)
     const rawTmdbId = item.tmdbId ? (item.tmdbId >= 1_000_000 ? item.tmdbId - 1_000_000 : item.tmdbId) : undefined
     if (rawTmdbId && KNOWN_MOVIE_TMDB_IDS.has(rawTmdbId)) return true
 
     const rawMediaId = item.mediaId ? (item.mediaId >= 1_000_000 ? item.mediaId - 1_000_000 : item.mediaId) : undefined
     if (rawMediaId && KNOWN_MOVIE_TMDB_IDS.has(rawMediaId)) return true
 
+    const parsedId = Number(item.id.replace(/^(media|cw)-/, ""))
     if (!isNaN(parsedId)) {
         const rawParsed = parsedId >= 1_000_000 ? parsedId - 1_000_000 : parsedId
         if (KNOWN_MOVIE_TMDB_IDS.has(rawParsed)) return true
     }
 
-    // 4. Title keywords
+    // 3. Title keywords
     const titleLower = item.title.toLowerCase()
     if (
         titleLower.includes("pelicula") ||
@@ -241,17 +232,20 @@ export function isMovieItem(item: SwimlaneItem): boolean {
 }
 
 /**
- * Resolves a dynamic thumbnail for a saga from the actual episodes of the series in the library.
- * Prioritizes the iconic/climax episode's TMDB broadcast still or local video file frame,
- * completely avoiding hardcoded static image assets.
+ * Core thumbnail resolver for any episode range (saga or sub-saga).
+ * Priority: TMDB still > local video frame > fallback.
  */
-export function resolveSagaDynamicThumbnail({
-    saga,
+export function resolveRangeDynamicThumbnail({
+    startEp,
+    endEp,
+    iconicEp,
     episodes,
     serverBase,
     fallbackUrl,
 }: {
-    saga: import("@/lib/config/dragonball_sagas").SagaDefinition
+    startEp: number
+    endEp: number
+    iconicEp?: number
     episodes?: import("@/api/generated/types").Anime_Episode[]
     serverBase?: string
     fallbackUrl?: string
@@ -261,25 +255,25 @@ export function resolveSagaDynamicThumbnail({
     }
 
     const base = serverBase || ""
-    const iconicNum = saga.iconicEp || Math.round((saga.startEp + saga.endEp) / 2)
+    const effectiveIconicEp = iconicEp ?? Math.round((startEp + endEp) / 2)
 
-    // Filter candidate episodes that fall within the saga range
-    const sagaEps = episodes.filter(
-        ep => ep.episodeNumber >= saga.startEp && ep.episodeNumber <= saga.endEp
+    // Filter candidate episodes that fall within the range
+    const rangeEps = episodes.filter(
+        ep => ep.episodeNumber >= startEp && ep.episodeNumber <= endEp
     )
 
-    if (sagaEps.length === 0) {
+    if (rangeEps.length === 0) {
         return fallbackUrl || null
     }
 
     // Prioritized order:
     // 1. Explicit iconic / climax episode
-    // 2. Ending episode of the saga
-    // 3. Any other episode in the saga range
+    // 2. Ending episode of the range
+    // 3. Any other episode in the range
     const priorityEps = [
-        sagaEps.find(ep => ep.episodeNumber === iconicNum),
-        sagaEps.find(ep => ep.episodeNumber === saga.endEp),
-        ...sagaEps
+        rangeEps.find(ep => ep.episodeNumber === effectiveIconicEp),
+        rangeEps.find(ep => ep.episodeNumber === endEp),
+        ...rangeEps
     ].filter(Boolean) as import("@/api/generated/types").Anime_Episode[]
 
     // A. Official TMDB / provider episode broadcast still
@@ -297,5 +291,31 @@ export function resolveSagaDynamicThumbnail({
     }
 
     return fallbackUrl || null
+}
+
+/**
+ * Resolves a dynamic thumbnail for a saga from the actual episodes of the series in the library.
+ * Prioritizes the iconic/climax episode's TMDB broadcast still or local video file frame,
+ * completely avoiding hardcoded static image assets.
+ */
+export function resolveSagaDynamicThumbnail({
+    saga,
+    episodes,
+    serverBase,
+    fallbackUrl,
+}: {
+    saga: import("@/lib/config/dragonball_sagas").SagaDefinition
+    episodes?: import("@/api/generated/types").Anime_Episode[]
+    serverBase?: string
+    fallbackUrl?: string
+}): string | null {
+    return resolveRangeDynamicThumbnail({
+        startEp: saga.startEp,
+        endEp: saga.endEp,
+        iconicEp: saga.iconicEp,
+        episodes,
+        serverBase,
+        fallbackUrl,
+    })
 }
 

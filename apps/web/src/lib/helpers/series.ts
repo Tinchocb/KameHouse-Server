@@ -31,7 +31,7 @@ export const DRAGON_BALL_SERIES_ORDER: Record<string, number> = {
  * Serie canónica → EraId de Home/Movies (misma píldora, mismo color).
  * Fuente para SpotlightEraNav en Series sin duplicar taxonomías.
  */
-export const SERIES_ID_TO_ERA_ID: Record<string, EraId> = {
+const SERIES_ID_TO_ERA_ID: Record<string, EraId> = {
     "dragon_ball": "db",
     "dragon_ball_z": "dbz",
     "dragon_ball_gt": "dbgt",
@@ -69,39 +69,39 @@ export const DRAGON_BALL_SERIES_INFO: Record<string, {
         episodes: 153,
         description: "Las legendarias aventuras de Son Goku desde su niñez, entrenando con el Maestro Roshi y buscando las siete Esferas del Dragón.",
         poster: "/sagas/original/busqueda-esferas.webp",
-        banner: "/sagas/pilaf.jpg",
+        banner: "/sagas/pilaf.webp",
     },
     "dragon_ball_z": {
         year: 1989,
         title: "Dragon Ball Z",
         episodes: 291,
         description: "Goku descubre sus orígenes Saiyajin y junto a los Guerreros Z defiende la Tierra contra amenazas cósmicas como Vegeta, Freezer, Cell y Majin Buu.",
-        poster: "/sagas/saiyajin.jpg",
-        banner: "/sagas/saiyajin.jpg",
+        poster: "/sagas/saiyajin.webp",
+        banner: "/sagas/saiyajin.webp",
     },
     "dragon_ball_gt": {
         year: 1996,
         title: "Dragon Ball GT",
         episodes: 64,
         description: "Tras convertirse de nuevo en niño debido a las Esferas del Dragón de Estrella Negra, Goku viaja por el cosmos junto a Trunks y Pan.",
-        poster: "/sagas/black-star.jpg",
-        banner: "/sagas/black-star.jpg",
+        poster: "/sagas/black-star.webp",
+        banner: "/sagas/black-star.webp",
     },
     "dragon_ball_kai": {
         year: 2009,
         title: "Dragon Ball Kai",
         episodes: 167,
         description: "Versión remasterizada y sin relleno de Dragon Ball Z, fiel al manga original de Akira Toriyama con sonido y animación digital renovada.",
-        poster: "/sagas/trunks-androides-cell.jpg",
-        banner: "/sagas/trunks-androides-cell.jpg",
+        poster: "/sagas/trunks-androides-cell.webp",
+        banner: "/sagas/trunks-androides-cell.webp",
     },
     "dragon_ball_super": {
         year: 2015,
         title: "Dragon Ball Super",
         episodes: 131,
         description: "Tras la derrota de Majin Buu, Goku y sus amigos despiertan los poderes de los dioses enfrentando a Bills, Goku Black y el Torneo del Poder.",
-        poster: "/sagas/batalla-dioses.jpg",
-        banner: "/sagas/supervivencia-universal.jpg",
+        poster: "/sagas/batalla-dioses.webp",
+        banner: "/sagas/supervivencia-universal.webp",
     },
     "dragon_ball_daima": {
         year: 2024,
@@ -109,7 +109,7 @@ export const DRAGON_BALL_SERIES_INFO: Record<string, {
         episodes: 20,
         description: "Debido a una conspiración en el Reino Demonio, Goku y sus amigos se transforman en niños y viajan a un mundo desconocido para revertir el hechizo.",
         poster: DAIMA_VERTICAL_POSTER,
-        banner: "/sagas/daima.jpg",
+        banner: "/sagas/daima.webp",
     },
 }
 

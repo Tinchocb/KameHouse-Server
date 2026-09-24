@@ -53,6 +53,17 @@
     inset 0 1px 1px rgba(255, 255, 255, 0.14),
     inset 0 -1px 1px rgba(0, 0, 0, 0.30);
 
+  /* ─── Brillo superior del vidrio: borde de luz de 1 px en paneles, pills y
+     botones glass. Antes había 6 intensidades a mano (0.07 a 0.3); quedan 3.
+     En Tailwind: shadow-glass-highlight-{sm,md,lg}, o dentro de una sombra
+     compuesta: shadow-[shadow:var(--glass-highlight-md),0_8px_24px_...] ─── */
+  --glass-highlight-sm-color: rgba(255, 255, 255, 0.10);
+  --glass-highlight-md-color: rgba(255, 255, 255, 0.20);
+  --glass-highlight-lg-color: rgba(255, 255, 255, 0.30);
+  --glass-highlight-sm: inset 0 1px 1px 0 var(--glass-highlight-sm-color);
+  --glass-highlight-md: inset 0 1px 1px 0 var(--glass-highlight-md-color);
+  --glass-highlight-lg: inset 0 1px 1px 0 var(--glass-highlight-lg-color);
+
   /* ─── Brand Glows (por era — usan variables dinámicas) ──────────────────── */
   --shadow-brand-primary:   0 8px 24px -4px var(--glow-primary);
   --shadow-brand-secondary: 0 8px 24px -4px var(--glow-secondary);
@@ -75,22 +86,22 @@
   --focus-ring: var(--brand-accent);
 
   /* ─── SectionBar — Contenedor unificado de sección (bordes blanco sutil + glass)
-     Black Cinema: separadores 7–9% blanco máximo, fondos #101013–#1B1B20 ─ */
-  --sectionbar-border:         rgba(255, 255, 255, 0.07);
-  --sectionbar-border-top:     rgba(255, 255, 255, 0.13);
-  --sectionbar-border-bottom:  rgba(255, 255, 255, 0.05);
-  --sectionbar-bg:             rgba(16, 16, 19, 0.55);
+     Spec canónico v5: rim top 0.35, lados 0.15, bottom 0.10, bg zinc-950/40 ─ */
+  --sectionbar-border:         rgba(255, 255, 255, 0.15);
+  --sectionbar-border-top:     rgba(255, 255, 255, 0.35);
+  --sectionbar-border-bottom:  rgba(255, 255, 255, 0.10);
+  --sectionbar-bg:             rgba(20, 20, 25, 0.45);
   --sectionbar-blur:           var(--blur-overlay-2xl);
   --sectionbar-saturate:       190%;
   --sectionbar-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.20),
+    var(--glass-highlight-md),
     0 12px 36px -6px rgba(0, 0, 0, 0.75);
 
-  --sectionbar-border-strong:       rgba(255, 255, 255, 0.13);
-  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.20);
-  --sectionbar-bg-strong:           rgba(27, 27, 32, 0.60);
+  --sectionbar-border-strong:       rgba(255, 255, 255, 0.22);
+  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.45);
+  --sectionbar-bg-strong:           rgba(25, 25, 30, 0.55);
   --sectionbar-shadow-strong:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
+    var(--glass-highlight-lg),
     0 16px 48px -8px rgba(0, 0, 0, 0.80);
 
   [data-flat="true"] {
@@ -110,14 +121,10 @@
 .shadow-elevation-4 { box-shadow: var(--elevation-4); }
 .shadow-elevation-5 { box-shadow: var(--elevation-5); }
 
-/* Alias semánticos */
+/* Alias semánticos (solo los usados en tsx) */
 .shadow-card       { box-shadow: var(--shadow-card); }
-.shadow-elevated   { box-shadow: var(--shadow-elevated); }
 .shadow-modal      { box-shadow: var(--shadow-modal); }
 .shadow-player     { box-shadow: var(--shadow-player); }
-.shadow-overlay    { box-shadow: var(--shadow-overlay); }
-.shadow-glass      { box-shadow: var(--shadow-glass); }
-.shadow-glass-liquid { box-shadow: var(--shadow-glass-liquid); }
 
 .shadow-brand-primary   { box-shadow: var(--shadow-brand-primary); }
 .shadow-brand-secondary { box-shadow: var(--shadow-brand-secondary); }
@@ -125,7 +132,3 @@
 .shadow-brand-success   { box-shadow: var(--shadow-brand-success); }
 .shadow-brand-magic     { box-shadow: var(--shadow-brand-magic); }
 .shadow-brand-focus     { box-shadow: var(--shadow-brand-focus); }
-
-/* Glass inner highlights (DEPRECATED - mantener por compatibilidad) */
-.glass-inner        { box-shadow: inset 0 1px 0 var(--glass-border-top); }
-.glass-inner-strong { box-shadow: inset 0 1px 0 var(--glass-border-strong); }

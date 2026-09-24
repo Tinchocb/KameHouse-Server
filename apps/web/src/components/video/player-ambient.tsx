@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react"
+import { usePerformanceStore, selectIsHeavyEffectsAllowed } from "@/lib/hardware/performance-store"
 
 interface PlayerAmbientBackdropProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
@@ -7,9 +8,12 @@ interface PlayerAmbientBackdropProps {
 
 export function PlayerAmbientBackdrop({ videoRef, enabled }: PlayerAmbientBackdropProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    // En hardware modesto el blur fullscreen sale caro: desactivar el ambiente
+    const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed)
+    const active = enabled && isHeavyAllowed
 
     useEffect(() => {
-        if (!enabled) return
+        if (!active) return
 
         let animationFrameId: number | null = null
         const canvas = canvasRef.current
@@ -93,9 +97,9 @@ export function PlayerAmbientBackdrop({ videoRef, enabled }: PlayerAmbientBackdr
                 video.removeEventListener("ended", stopLoop)
             }
         }
-    }, [enabled, videoRef])
+    }, [active, videoRef])
 
-    if (!enabled) return null
+    if (!active) return null
 
     return (
         /*
@@ -119,7 +123,9 @@ export function PlayerAmbientBackdrop({ videoRef, enabled }: PlayerAmbientBackdr
                     transformOrigin: "center center",
                     // Blur moderado para difuminar los bloques de píxeles del canvas pequeño.
                     // saturate alto para que los colores sean vibrantes como en YouTube.
-                    filter: "blur(36px) saturate(180%) brightness(0.9)",
+                    // 24px en vez de 36px: con fuente de 32x18 el difuminado es
+                    // indistinguible y el costo del blur fullscreen baja notablemente.
+                    filter: "blur(24px) saturate(180%) brightness(0.9)",
                     opacity: 0.85,
                     // Evitar que el canvas renderice bordes pixelados al escalar
                     imageRendering: "auto",

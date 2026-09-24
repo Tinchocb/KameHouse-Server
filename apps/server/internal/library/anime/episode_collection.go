@@ -47,7 +47,7 @@ type NewEpisodeCollectionOptions struct {
 //
 // AnimeMetadata is optional, if not provided, it will be fetched from the metadata provider.
 //
-// Note: This is used by Torrent and Debrid streaming
+// Note: This is used by download info views (episode lists for download).
 func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollection, err error) {
 	if opts.Logger == nil {
 		opts.Logger = lo.ToPtr(zerolog.Nop())
@@ -62,7 +62,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 	}
 
 	if ec, ok := episodeCollectionCache.Get(int(opts.Media.ID)); ok {
-		opts.Logger.Debug().Msg("torrentstream: Using cached episode collection")
+		opts.Logger.Debug().Msg("episode-collection: Using cached episode collection")
 		return ec, nil
 	}
 
@@ -104,14 +104,14 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 		MetadataProviderRef: opts.MetadataProviderRef,
 	})
 	if err != nil {
-		opts.Logger.Error().Err(err).Msg("torrentstream: could not get media entry info")
+		opts.Logger.Error().Err(err).Msg("episode-collection: could not get media entry info")
 		return nil, err
 	}
 
 	// As of v2.8.0, this should never happen, getMediaInfo always returns an anime metadata struct, even if it's not found
 	// causing NewEntryDownloadInfo to return a valid list of episodes to download
 	if info == nil || info.EpisodesToDownload == nil {
-		opts.Logger.Debug().Msg("torrentstream: no episodes found from AniDB, using internal provider")
+		opts.Logger.Debug().Msg("episode-collection: no episodes found from AniDB, using internal provider")
 		mediaWrapper := opts.MetadataProviderRef.GetAnimeMetadataWrapper(nil, nil)
 		for epIdx := range opts.Media.TotalEpisodes {
 			episodeNumber := epIdx + 1
@@ -149,7 +149,7 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 	}
 
 	if len(info.EpisodesToDownload) == 0 {
-		opts.Logger.Error().Msg("torrentstream: no episodes found")
+		opts.Logger.Error().Msg("episode-collection: no episodes found")
 		return nil, fmt.Errorf("no episodes found")
 	}
 

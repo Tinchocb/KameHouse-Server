@@ -2,6 +2,8 @@ package anime
 
 import (
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/util"
+	"os"
 	"slices"
 	"strings"
 
@@ -54,6 +56,35 @@ func GetLocalFilesFromMediaId(lfs []*dto.LocalFile, mID int) []*dto.LocalFile {
 		return item.MediaID == mID
 	})
 
+}
+
+// SortLocalFilesByPlayability ordena (estable) los archivos para que la copia
+// reproducible quede primera: el primer archivo de cada episodio es el que se
+// reproduce y el resto va a AdditionalFiles. Orden: local existente dentro de una
+// carpeta de biblioteca > Google Drive > local inaccesible (borrado, o fuera de las
+// carpetas configuradas, que el stream rechaza con "library not available").
+func SortLocalFilesByPlayability(lfs []*dto.LocalFile, libraryPaths []string) {
+	rank := func(lf *dto.LocalFile) int {
+		if strings.HasPrefix(lf.Path, "gdrive://") {
+			return 1
+		}
+		if _, err := os.Stat(lf.Path); err != nil {
+			return 2
+		}
+		for _, dir := range libraryPaths {
+			if util.IsFileUnderDir(dir, lf.Path) {
+				return 0
+			}
+		}
+		return 2
+	}
+	ranks := make(map[*dto.LocalFile]int, len(lfs))
+	for _, lf := range lfs {
+		ranks[lf] = rank(lf)
+	}
+	slices.SortStableFunc(lfs, func(a, b *dto.LocalFile) int {
+		return ranks[a] - ranks[b]
+	})
 }
 
 // GroupLocalFilesByMediaID returns a map of media id to local files.

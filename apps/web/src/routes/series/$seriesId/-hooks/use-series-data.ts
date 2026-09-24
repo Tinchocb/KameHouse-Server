@@ -1,10 +1,36 @@
 import { useMemo } from "react"
+import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 import { getHighResImage } from "@/lib/helpers/images"
 import { getDragonBallSpanishTitle, resolveSeriesSagas } from "@/lib/config/dragonball.config"
 import { getNextInTimeline } from "@/lib/config/franchise_timeline"
+import { getSeriesHeroArt, heroArtFromUrl } from "@/lib/config/hero-art"
 import { getServerBaseUrl } from "@/api/client/server-url"
+import { useGetSettings } from "@/api/hooks/settings.hooks"
 import type { Anime_Entry, Anime_Episode, Anime_LocalFile, Continuity_WatchHistoryItemResponse, Anime_LibraryCollection } from "@/api/generated/types"
 import type { SagaDTO, PremiumEpisode } from "@/api/types/series.types"
+
+export interface SeriesContinueWatchingData {
+    episodeNumber: number
+    title: string
+    thumbnailUrl: string
+    fallbackThumbnailUrl?: string
+    sagaId?: string
+    sagaName?: string
+    currentTime: number
+    duration: number
+    percent: number
+    timeLeftSeconds: number
+    timeLeftLabel: string
+}
+
+export function cleanEpisodeTitle(title: string | undefined): string {
+    if (!title) return ""
+    return title
+        .replace(/^[«"'\s]+|[»"'\s]+$/g, "")
+        .replace(/^«\s*/, "")
+        .replace(/\s*»$/, "")
+        .trim()
+}
 
 // ─── Module-level helpers ─────────────────────────────────────────────────────
 // Moved here from index.tsx — shared by use-series-data and use-series-playback
@@ -85,6 +111,8 @@ export function useSeriesData({
     continuityData,
     libraryCollection,
 }: UseSeriesDataInput) {
+    const { data: serverSettings } = useGetSettings()
+
     // ── Episodes derived from API or local files ──────────────────────────────
     // Solo se muestran episodios detectados localmente (con archivo). Los
     // episodios del provider sin archivo (mock/remotos) se ocultan para no
@@ -162,7 +190,7 @@ export function useSeriesData({
         }
 
         return []
-    }, [entry, sagas])
+    }, [entry, sagas, continuityData])
 
     // ── Active sub-saga object ────────────────────────────────────────────────
     const activeSubSaga = useMemo(() => {
@@ -177,38 +205,22 @@ export function useSeriesData({
     const nextSeriesTarget = useMemo(() => {
         const next = getNextInTimeline(entry?.media?.tmdbId)
         if (!next) return null
-        const entries = libraryCollection?.lists?.flatMap(l => l.entries || []) || []
-        const match = entries.find(e => e.media?.tmdbId === next.tmdbId && e.mediaId)
+        const entries = getSafeCollectionEntries(libraryCollection)
+        const match = entries.find(e => e?.media?.tmdbId === next.tmdbId && e?.mediaId)
         if (!match?.mediaId) return null
         return { seriesId: String(match.mediaId), label: next.label }
     }, [entry?.media?.tmdbId, libraryCollection])
 
-    // ── Hero backdrop ─────────────────────────────────────────────────────────
-    const heroBackdrop = useMemo(
-        () => getHighResImage(entry?.media?.bannerImage || entry?.media?.posterImage || ""),
-        [entry?.media?.bannerImage, entry?.media?.posterImage]
-    )
-
-    // ── Resume info for "Continuar viendo" ────────────────────────────────────
-    const resumeInfo = useMemo(() => {
-        if (!continuityData?.item?.currentTime) return null
-        const epNum = continuityData.item.episodeNumber
-        const resumeEp = computedEpisodes.find(
-            ep => (ep.absoluteEpisodeNumber || ep.episodeNumber) === epNum
-        )
-        const number = resumeEp
-            ? resumeEp.absoluteEpisodeNumber || resumeEp.episodeNumber
-            : epNum
-        const localizedTitle = getDragonBallSpanishTitle(entry?.media?.tmdbId, number)
-        const title =
-            localizedTitle ||
-            resumeEp?.titleSpanish ||
-            resumeEp?.episodeMetadata?.title ||
-            resumeEp?.episodeTitle ||
-            resumeEp?.displayTitle ||
-            `Episodio ${number}`
-        return { number, title }
-    }, [continuityData, computedEpisodes, entry?.media?.tmdbId])
+    // ── Hero backdrop (strictly 16:9 widescreen, never vertical portada) ─────
+    // Mismo arte curado que el Home (punto focal incluido); si la serie no está
+    // curada, su banner con encuadre por defecto.
+    const heroArt = useMemo(() => {
+        const banner = entry?.media?.bannerImage
+        return getSeriesHeroArt(entry?.media?.tmdbId || entry?.mediaId, banner, entry?.media?.posterImage)
+            ?? (banner ? heroArtFromUrl(banner) : null)
+    }, [entry?.media?.tmdbId, entry?.mediaId, entry?.media?.bannerImage, entry?.media?.posterImage])
+    // URL mediana para miniaturas de saga y fallbacks (el hero usa heroArt a resolución completa).
+    const heroBackdrop = heroArt ? getHighResImage(heroArt.src) : null
 
     // ── Saga-scoped episode lists ─────────────────────────────────────────────
     const sagaEpisodes = useMemo(() => {
@@ -271,7 +283,120 @@ export function useSeriesData({
             }
         }
         return map
-    }, [entry?.localFiles])
+    }, [entry])
+
+    // ── Continue Watching & Resume Info ──────────────────────────────────────
+    const continueWatching = useMemo<SeriesContinueWatchingData | null>(() => {
+        const enableWatchContinuity = serverSettings?.library?.enableWatchContinuity ?? true
+        if (!enableWatchContinuity) return null
+        if (entry?.media?.format === "MOVIE") return null
+
+        const item = continuityData?.item
+        if (!item || !item.currentTime || !item.duration) return null
+
+        // Paridad con player-core: solo reanudar con progreso significativo (> 10s)
+        if (item.currentTime <= 10) return null
+
+        const rawPercent = (item.currentTime / item.duration) * 100
+        const percent = Math.min(100, Math.max(0, Math.round(rawPercent)))
+        // Si superó el 95%, se considera terminado
+        if (percent >= 95) return null
+
+        const epNum = item.episodeNumber
+        const resumeEp = computedEpisodes.find(
+            ep => (ep.absoluteEpisodeNumber || ep.episodeNumber) === epNum
+        )
+        if (!resumeEp || resumeEp.watched) return null
+
+        // Seguridad: si no tiene archivo local disponible, no mostrar
+        const lf =
+            resumeEp.localFile ||
+            lfMap.get(resumeEp.absoluteEpisodeNumber || resumeEp.episodeNumber) ||
+            lfMap.get(resumeEp.episodeNumber)
+        if (!lf?.path && !resumeEp.localFile?.path && !resumeEp.isDownloaded) return null
+
+        const number = resumeEp.absoluteEpisodeNumber || resumeEp.episodeNumber || epNum
+        const localizedTitle = getDragonBallSpanishTitle(entry?.media?.tmdbId, number)
+        const rawTitle =
+            localizedTitle ||
+            resumeEp.titleSpanish ||
+            resumeEp.episodeMetadata?.title ||
+            resumeEp.episodeTitle ||
+            resumeEp.displayTitle ||
+            `Episodio ${number}`
+        const title = cleanEpisodeTitle(rawTitle) || `Episodio ${number}`
+
+        // Fallbacks de arte sincronizados con episodeViewModels
+        const currentSaga = sagas?.find(s => s.id === resumeEp.sagaId)
+        const currentSubSaga = currentSaga?.subSagas?.find(ss => number >= ss.startEp && number <= ss.endEp)
+
+        const defSaga = dbSagaDefs?.find(s => s.id === resumeEp.sagaId || (number >= s.startEp && number <= s.endEp))
+        const defSubSaga = defSaga?.subSagas?.find(ss => number >= ss.startEp && number <= ss.endEp)
+
+        const artworkFallback =
+            defSubSaga?.image ||
+            defSaga?.image ||
+            currentSubSaga?.image ||
+            (currentSaga as { image?: string } | undefined)?.image ||
+            heroBackdrop ||
+            entry?.media?.bannerImage ||
+            entry?.media?.posterImage ||
+            ""
+
+        const serverBase = getServerBaseUrl()
+        let resolvedThumbnail = resumeEp.episodeMetadata?.image || ""
+        if (!resolvedThumbnail && lf?.path) {
+            resolvedThumbnail = `${serverBase}/api/v1/video-thumbnail?path=${encodeURIComponent(lf.path)}`
+        }
+        if (!resolvedThumbnail) {
+            resolvedThumbnail = artworkFallback
+        }
+
+        const timeLeftSeconds = Math.max(0, Math.round(item.duration - item.currentTime))
+        let timeLeftLabel = ""
+        if (timeLeftSeconds >= 3600) {
+            const hours = Math.floor(timeLeftSeconds / 3600)
+            const mins = Math.round((timeLeftSeconds % 3600) / 60)
+            timeLeftLabel = mins > 0 ? `${hours}h ${mins}m restantes` : `${hours}h restantes`
+        } else {
+            const mins = Math.max(1, Math.round(timeLeftSeconds / 60))
+            timeLeftLabel = `${mins} min restantes`
+        }
+
+        return {
+            episodeNumber: number,
+            title,
+            thumbnailUrl: resolvedThumbnail,
+            fallbackThumbnailUrl: resolvedThumbnail !== artworkFallback ? artworkFallback : undefined,
+            sagaId: resumeEp.sagaId,
+            sagaName: currentSaga?.name,
+            currentTime: item.currentTime,
+            duration: item.duration,
+            percent,
+            timeLeftSeconds,
+            timeLeftLabel,
+        }
+    }, [
+        serverSettings,
+        entry?.media?.format,
+        entry?.media?.tmdbId,
+        entry?.media?.bannerImage,
+        entry?.media?.posterImage,
+        continuityData,
+        computedEpisodes,
+        lfMap,
+        sagas,
+        dbSagaDefs,
+        heroBackdrop,
+    ])
+
+    const resumeInfo = useMemo(() => {
+        if (!continueWatching) return null
+        return {
+            number: continueWatching.episodeNumber,
+            title: continueWatching.title,
+        }
+    }, [continueWatching])
 
     const episodeViewModels = useMemo<PremiumEpisode[]>(() => {
         if (!computedEpisodes) return []
@@ -356,14 +481,16 @@ export function useSeriesData({
                 sagaName: sagas?.find(s => s.id === ep.sagaId)?.name,
             } as PremiumEpisode
         }).filter((ep): ep is PremiumEpisode => ep !== null)
-    }, [computedEpisodes, sagas, activeSagaId, entry?.localFiles, entry?.media, heroBackdrop, dbSagaDefs, lfMap])
+    }, [computedEpisodes, sagas, activeSagaId, entry?.media, heroBackdrop, dbSagaDefs, lfMap])
 
     return {
         computedEpisodes,
         activeSubSaga,
         nextSeriesTarget,
+        heroArt,
         heroBackdrop,
         resumeInfo,
+        continueWatching,
         sagaEpisodes,
         sagaProgress,
         sagasProgressMap,

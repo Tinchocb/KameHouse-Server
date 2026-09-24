@@ -2,12 +2,11 @@ import { GettingStarted_Variables } from "@/api/generated/endpoint.types"
 import type { Models_Settings } from "@/api/generated/types"
 import { z } from "zod"
 
+export { persistLibraryPatch, persistThemePatch } from "./persist-settings"
 
 
 const _gettingStartedSchema = z.object({
     enableTranscode: z.boolean().optional().default(false),
-    debridProvider: z.string().optional().default("none"),
-    debridApiKey: z.string().optional().default(""),
 })
 
 export const settingsSchema = z.object({
@@ -15,10 +14,11 @@ export const settingsSchema = z.object({
         seriesPaths: z.array(z.string()).nullish().transform(v => v ?? []),
         moviePaths: z.array(z.string()).nullish().transform(v => v ?? []),
         autoScan: z.boolean().default(false),
+        unifiedScan: z.boolean().default(false),
         refreshLibraryOnStart: z.boolean().default(false),
         autoPlayNextEpisode: z.boolean().default(true),
         autoDetectSkipTimes: z.boolean().default(true),
-        enableWatchContinuity: z.boolean().default(false),
+        enableWatchContinuity: z.boolean().default(true),
         scannerMatchingThreshold: z.number().default(0),
         tmdbApiKey: z.string().default(""),
         tmdbLanguage: z.string().default("es-MX"),
@@ -27,10 +27,7 @@ export const settingsSchema = z.object({
         scannerProvider: z.string().default("anilist"),
         disableLocalScanning: z.boolean().default(false),
         primaryMetadataProvider: z.string().default("anilist"),
-        scannerConfig: z.string().optional().default(""),
-        useFallbackMetadataProvider: z.boolean().optional().default(false),
-        openWebURLOnStart: z.boolean().optional().default(false),
-        lastScanAt: z.any().optional(),
+        lastScanAt: z.unknown().optional(),
         preferredAudioProfile: z.enum(["latino", "castellano", "japanese", "english", "auto"]).default("latino"),
         autoSkipIntro: z.boolean().default(false),
         autoSkipOutro: z.boolean().default(false),
@@ -40,6 +37,14 @@ export const settingsSchema = z.object({
         tvMode: z.boolean().default(false),
     }).passthrough().default({}),
     mediaPlayer: z.object({}).passthrough().default({}),
+    googleDrive: z.object({
+        enabled: z.boolean().default(false),
+        clientId: z.string().default(""),
+        clientSecret: z.string().default(""),
+        refreshToken: z.string().default(""),
+        folderId: z.string().default(""),
+        folderName: z.string().default(""),
+    }).passthrough().default({}),
     mediastream: z.object({
         transcodeEnabled: z.boolean().default(false),
         transcodeHwAccel: z.string().default("auto"),
@@ -52,8 +57,6 @@ export const settingsSchema = z.object({
         transcodeHwAccelCustomSettings: z.string().default(""),
         ffmpegPath: z.string().default(""),
         ffprobePath: z.string().default(""),
-        transcodeFfmpegPath: z.string().optional().default(""),
-        transcodeFfprobePath: z.string().optional().default(""),
         performanceProfile: z.enum(["auto", "ultra", "balanced", "eco"]).default("auto"),
         autoGovernorEnabled: z.boolean().default(true),
     }).passthrough().default({}),
@@ -103,10 +106,12 @@ export const settingsSchema = z.object({
         disableNotifications: z.boolean().default(false),
         disableAutoScannerNotifications: z.boolean().default(false),
     }).passthrough().default({}),
-    Platform: z.object({
+    platform: z.object({
         hideAudienceScore: z.boolean().default(false),
     }).passthrough().default({}),
 }).passthrough()
+
+export type SettingsFormValues = z.infer<typeof settingsSchema>
 
 export const gettingStartedSchema = _gettingStartedSchema.extend({
     library: settingsSchema.shape.library,
@@ -114,33 +119,37 @@ export const gettingStartedSchema = _gettingStartedSchema.extend({
     notifications: settingsSchema.shape.notifications.optional(),
 })
 
-export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>, existingSettings?: Models_Settings | null): GettingStarted_Variables => ({
-    library: {
-        autoScan: data.library.autoScan ?? existingSettings?.library?.autoScan ?? false,
-        refreshLibraryOnStart: existingSettings?.library?.refreshLibraryOnStart ?? false,
-        autoPlayNextEpisode: data.library.autoPlayNextEpisode ?? existingSettings?.library?.autoPlayNextEpisode ?? true,
-        autoDetectSkipTimes: data.library.autoDetectSkipTimes ?? existingSettings?.library?.autoDetectSkipTimes ?? true,
-        enableWatchContinuity: data.library.enableWatchContinuity ?? existingSettings?.library?.enableWatchContinuity ?? true,
-        seriesPaths: data.library.seriesPaths ?? existingSettings?.library?.seriesPaths ?? [],
-        moviePaths: data.library.moviePaths ?? existingSettings?.library?.moviePaths ?? [],
-        scannerMatchingThreshold: existingSettings?.library?.scannerMatchingThreshold ?? 0,
-        scannerUseLegacyMatching: existingSettings?.library?.scannerUseLegacyMatching ?? false,
-        scannerStrictStructure: existingSettings?.library?.scannerStrictStructure ?? false,
-        scannerProvider: data.library.scannerProvider || existingSettings?.library?.scannerProvider || "anilist",
-        disableLocalScanning: data.library.disableLocalScanning ?? existingSettings?.library?.disableLocalScanning ?? false,
-        tmdbApiKey: data.library.tmdbApiKey || existingSettings?.library?.tmdbApiKey || "",
-        tmdbLanguage: existingSettings?.library?.tmdbLanguage || "es-MX",
-        primaryMetadataProvider: data.library.primaryMetadataProvider || existingSettings?.library?.primaryMetadataProvider || "anilist",
-        preferredAudioProfile: (data.library as any).preferredAudioProfile ?? (existingSettings?.library as any)?.preferredAudioProfile ?? "latino",
-        autoSkipIntro: (data.library as any).autoSkipIntro ?? (existingSettings?.library as any)?.autoSkipIntro ?? false,
-        autoSkipOutro: (data.library as any).autoSkipOutro ?? (existingSettings?.library as any)?.autoSkipOutro ?? false,
-        autoSkipFiller: (data.library as any).autoSkipFiller ?? (existingSettings?.library as any)?.autoSkipFiller ?? false,
-        autoDisableSubtitlesWhenDubbed: (data.library as any).autoDisableSubtitlesWhenDubbed ?? (existingSettings?.library as any)?.autoDisableSubtitlesWhenDubbed ?? true,
-        marathonMode: (data.library as any).marathonMode ?? (existingSettings?.library as any)?.marathonMode ?? false,
-        tvMode: (data.library as any).tvMode ?? (existingSettings?.library as any)?.tvMode ?? false,
-    } as any,
-    mediaPlayer: existingSettings?.mediaPlayer || {},
-    enableTranscode: data.enableTranscode ?? existingSettings?.mediastream?.transcodeEnabled ?? false,
-})
-
-
+export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>, existingSettings?: Models_Settings | null): GettingStarted_Variables => {
+    const libraryData = data.library
+    return {
+        library: {
+            autoScan: libraryData.autoScan ?? existingSettings?.library?.autoScan ?? false,
+            unifiedScan: libraryData.unifiedScan ?? existingSettings?.library?.unifiedScan ?? false,
+            refreshLibraryOnStart: existingSettings?.library?.refreshLibraryOnStart ?? false,
+            autoPlayNextEpisode: libraryData.autoPlayNextEpisode ?? existingSettings?.library?.autoPlayNextEpisode ?? true,
+            autoDetectSkipTimes: libraryData.autoDetectSkipTimes ?? existingSettings?.library?.autoDetectSkipTimes ?? true,
+            enableWatchContinuity: libraryData.enableWatchContinuity ?? existingSettings?.library?.enableWatchContinuity ?? true,
+            seriesPaths: libraryData.seriesPaths ?? existingSettings?.library?.seriesPaths ?? [],
+            moviePaths: libraryData.moviePaths ?? existingSettings?.library?.moviePaths ?? [],
+            scannerMatchingThreshold: existingSettings?.library?.scannerMatchingThreshold ?? 0,
+            scannerUseLegacyMatching: existingSettings?.library?.scannerUseLegacyMatching ?? false,
+            scannerStrictStructure: existingSettings?.library?.scannerStrictStructure ?? false,
+            scannerProvider: libraryData.scannerProvider || existingSettings?.library?.scannerProvider || "anilist",
+            disableLocalScanning: libraryData.disableLocalScanning ?? existingSettings?.library?.disableLocalScanning ?? false,
+            primaryMetadataProvider: libraryData.primaryMetadataProvider || existingSettings?.library?.primaryMetadataProvider || "anilist",
+            // Anti-wipe: el wizard no pide key/idioma; si vienen vacios se
+            // conserva lo guardado en vez de pisarlo con "".
+            tmdbApiKey: libraryData.tmdbApiKey || existingSettings?.library?.tmdbApiKey || "",
+            tmdbLanguage: libraryData.tmdbLanguage || existingSettings?.library?.tmdbLanguage || "es-MX",
+            preferredAudioProfile: libraryData.preferredAudioProfile ?? existingSettings?.library?.preferredAudioProfile ?? "latino",
+            autoSkipIntro: libraryData.autoSkipIntro ?? existingSettings?.library?.autoSkipIntro ?? false,
+            autoSkipOutro: libraryData.autoSkipOutro ?? existingSettings?.library?.autoSkipOutro ?? false,
+            autoSkipFiller: libraryData.autoSkipFiller ?? existingSettings?.library?.autoSkipFiller ?? false,
+            autoDisableSubtitlesWhenDubbed: libraryData.autoDisableSubtitlesWhenDubbed ?? existingSettings?.library?.autoDisableSubtitlesWhenDubbed ?? true,
+            marathonMode: libraryData.marathonMode ?? existingSettings?.library?.marathonMode ?? false,
+            tvMode: libraryData.tvMode ?? existingSettings?.library?.tvMode ?? false,
+        },
+        mediaPlayer: existingSettings?.mediaPlayer || {},
+        enableTranscode: data.enableTranscode ?? existingSettings?.mediastream?.transcodeEnabled ?? false,
+    } as GettingStarted_Variables
+}

@@ -27,7 +27,8 @@ export function DynamicBackdrop() {
         pathname === "/movies/" ||
         pathname === "/series" ||
         pathname === "/series/" ||
-        pathname.startsWith("/settings")
+        pathname.startsWith("/settings") ||
+        pathname.startsWith("/chronology")
     
     const isDetailPage = Boolean(pathname.match(/\/(movies|series)\/\d+/))
 
@@ -66,9 +67,22 @@ export function DynamicBackdrop() {
             ? 0.45
             : 0.25) * (isFlat ? 0.75 : 1)
 
-    const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(null)
+    const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(activeBackdropUrl)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const [isCrossFading, setIsCrossFading] = React.useState(false)
+    const [prevBackdropUrl, setPrevBackdropUrl] = React.useState(activeBackdropUrl)
+
+    if (activeBackdropUrl !== prevBackdropUrl) {
+        setPrevBackdropUrl(activeBackdropUrl)
+        if (!activeBackdropUrl) {
+            setIsCrossFading(true)
+        } else if (!displayedUrl) {
+            setDisplayedUrl(activeBackdropUrl)
+        } else {
+            setNextUrl(activeBackdropUrl)
+            setIsCrossFading(true)
+        }
+    }
 
     const displayedUrlLowRes = React.useMemo(() => displayedUrl ? getLowResImage(displayedUrl) : null, [displayedUrl])
     const nextUrlLowRes = React.useMemo(() => nextUrl ? getLowResImage(nextUrl) : null, [nextUrl])
@@ -135,36 +149,9 @@ export function DynamicBackdrop() {
         }
     }, [isEnabled, isMotionEnabled, tvMode, isEcoMode, isHomePage])
 
-    // Cross-fade orchestration con soporte completo de transición a null y precarga inmediata
+    // Cross-fade timer
     React.useEffect(() => {
-        if (!isEnabled) return
-        if (activeBackdropUrl === displayedUrl) return
-
-        if (!activeBackdropUrl) {
-            setIsCrossFading(true)
-            const finishTimer = setTimeout(() => {
-                setDisplayedUrl(null)
-                setNextUrl(null)
-                setIsCrossFading(false)
-            }, 350)
-            return () => {
-                clearTimeout(finishTimer)
-            }
-        }
-
-        if (!displayedUrl) {
-            setDisplayedUrl(activeBackdropUrl)
-            return
-        }
-
-        const lowRes = getLowResImage(activeBackdropUrl)
-        if (typeof window !== "undefined" && lowRes) {
-            const img = new Image()
-            img.src = lowRes
-        }
-
-        setNextUrl(activeBackdropUrl)
-        setIsCrossFading(true)
+        if (!isEnabled || !isCrossFading) return
 
         const finishTimer = setTimeout(() => {
             setDisplayedUrl(activeBackdropUrl)
@@ -175,17 +162,27 @@ export function DynamicBackdrop() {
         return () => {
             clearTimeout(finishTimer)
         }
-    }, [activeBackdropUrl, displayedUrl, isEnabled])
+    }, [isEnabled, isCrossFading, activeBackdropUrl])
+
+    // Preload next low-res image
+    React.useEffect(() => {
+        if (!nextUrl) return
+        const lowRes = getLowResImage(nextUrl)
+        if (typeof window !== "undefined" && lowRes) {
+            const img = new Image()
+            img.src = lowRes
+        }
+    }, [nextUrl])
 
     if (!isEnabled) return null
 
-    // Los orbes solo se renderizan en modo Era con tema activo; en Clásico el fondo es minimalista sin animaciones
-    const showAnimatedOrbs = !tvMode && !isEcoMode && ts.effectiveMode === "era" && ts.hasEraTheme
+    // Los orbes solo se renderizan en modo Era con tema activo (se omiten en detalle para mantener fondo negro puro)
+    const showAnimatedOrbs = !tvMode && !isEcoMode && ts.effectiveMode === "era" && ts.hasEraTheme && !isDetailPage
 
     return (
         <div
             aria-hidden="true"
-            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[var(--bg-primary)]"
+            className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-bg-primary"
             style={{ contain: "paint" }}
         >
             {/* Cinematic Gradient Orbs (Omitted in TV / Eco / Classic Mode) */}
@@ -225,7 +222,7 @@ export function DynamicBackdrop() {
                 {/* Blurred layer — low-res image, heavy blur 64px (puramente ambiental y difuso).
                     Se omite cuando el hero local ya pinta la misma imagen con su
                     propio blur (hasLocalHeroAura): evita la doble capa de blur. */}
-                {!hasLocalHeroAura && displayedUrlLowRes && (
+                {!hasLocalHeroAura && !isDetailPage && displayedUrlLowRes && (
                     <div
                         className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
                         style={{
@@ -234,12 +231,12 @@ export function DynamicBackdrop() {
                             transform: "scale(1.18)",
                             filter: isFlat || isEcoMode
                                 ? "none"
-                                : "blur(64px) brightness(0.50) saturate(135%)",
+                                : "blur(48px) brightness(0.50) saturate(135%)",
                             transition: "opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)",
                         }}
                     />
                 )}
-                {!hasLocalHeroAura && nextUrlLowRes && (
+                {!hasLocalHeroAura && !isDetailPage && nextUrlLowRes && (
                     <div
                         className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
                         style={{
@@ -248,7 +245,7 @@ export function DynamicBackdrop() {
                             transform: "scale(1.18)",
                             filter: isFlat || isEcoMode
                                 ? "none"
-                                : "blur(64px) brightness(0.50) saturate(135%)",
+                                : "blur(48px) brightness(0.50) saturate(135%)",
                             transition: "opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)",
                         }}
                     />
@@ -257,6 +254,16 @@ export function DynamicBackdrop() {
 
             {/* Film Grain Overlay */}
             {!tvMode && !isFlat && <div className="grain-overlay z-10" />}
+
+            {/* Ambient soft glow when no backdrop image is active */}
+            {!displayedUrlLowRes && !showAnimatedOrbs && (
+                <div
+                    className="absolute inset-0 pointer-events-none opacity-40"
+                    style={{
+                        background: "radial-gradient(ellipse at 50% 15%, color-mix(in srgb, var(--brand-accent, #ffffff) 8%, transparent) 0%, transparent 70%)",
+                    }}
+                />
+            )}
 
             {/* Vignette Stack — Scrim superior, lateral y de base para contraste perfecto */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,var(--glass-border-bottom),transparent_60%)]" />

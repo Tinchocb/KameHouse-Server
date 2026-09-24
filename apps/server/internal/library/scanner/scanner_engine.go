@@ -71,6 +71,7 @@ type Scanner struct {
 	TargetPaths     []string
 	FFprobePath     string
 	BackgroundQueue *BackgroundQueue
+	UnifiedScan     bool
 }
 
 // ScannerOptions mirrors all public fields of Scanner and is the canonical
@@ -110,6 +111,7 @@ type ScannerOptions struct {
 	TargetPaths                []string
 	FFprobePath                string
 	BackgroundQueue            *BackgroundQueue
+	UnifiedScan                bool
 }
 
 // NewScanner constructs a Scanner from the given options.
@@ -149,6 +151,7 @@ func NewScanner(opts *ScannerOptions) *Scanner {
 		TargetPaths:                opts.TargetPaths,
 		FFprobePath:                opts.FFprobePath,
 		BackgroundQueue:            opts.BackgroundQueue,
+		UnifiedScan:                opts.UnifiedScan,
 	}
 }
 
@@ -266,6 +269,10 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			// Retrieve skipped files from existing local files
 			for _, lf := range scn.ExistingLocalFiles {
 				if lf == nil {
+					continue
+				}
+				if strings.HasPrefix(lf.Path, "gdrive://") {
+					skippedLfs[lf.GetNormalizedPath()] = lf
 					continue
 				}
 
@@ -695,8 +702,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 			}
 		}
 		if tmdbToken == "" {
-			tmdbToken = os.Getenv("KAMEHOUSE_TMDB_TOKEN")
+			tmdbToken, _ = tmdb.ResolveTokenFromEnv()
 		}
+		tmdbToken = tmdb.SanitizeToken(tmdbToken)
 
 		if tmdbToken != "" {
 			tmdbClient = tmdb.NewClient(tmdbToken, tmdbLanguage)
@@ -782,6 +790,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 		SeriesPaths:             scn.SeriesPaths,
 		MoviePaths:              scn.MoviePaths,
 		Database:                scn.Database,
+		UnifiedScan:             scn.UnifiedScan,
 	})
 	if err != nil {
 		return nil, err

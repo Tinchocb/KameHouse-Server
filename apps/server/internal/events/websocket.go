@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/result"
@@ -21,29 +22,6 @@ type WSEventManagerInterface interface {
 	UnsubscribeFromClientEvents(id string)
 }
 
-type GlobalWSEventManagerWrapper struct {
-	WSEventManager WSEventManagerInterface
-}
-
-var (
-	GlobalWSEventManager *GlobalWSEventManagerWrapper
-	globalWSManagerOnce  sync.Once
-)
-
-func (w *GlobalWSEventManagerWrapper) SendEvent(t string, payload interface{}) {
-	if w.WSEventManager == nil {
-		return
-	}
-	w.WSEventManager.SendEvent(t, payload)
-}
-
-func (w *GlobalWSEventManagerWrapper) SendEventTo(clientID string, t string, payload interface{}, noLog ...bool) {
-	if w.WSEventManager == nil {
-		return
-	}
-	w.WSEventManager.SendEventTo(clientID, t, payload, noLog...)
-}
-
 type (
 	// WSEventManager holds the websocket connection instance.
 	// It is attached to the App instance, so it is available to other handlers.
@@ -55,6 +33,10 @@ type (
 		// a prolonged loss of WebSocket connections. The main goroutine should
 		// listen on this channel and initiate graceful shutdown.
 		ShutdownSignal chan struct{}
+
+		// shutdownCtx is the context that signals application shutdown.
+		// Used to gracefully stop background goroutines.
+		shutdownCtx context.Context
 
 		// hasHadConnection tracks if at least one WS connection was ever established.
 		// Protected by connsMu.
@@ -71,7 +53,7 @@ type (
 		clientNativePlayerEventSubscribers *result.Map[string, *ClientEventSubscriber]
 		clientVideoCoreEventSubscribers    *result.Map[string, *ClientEventSubscriber]
 
-		dispatcher                  Dispatcher
+		dispatcher Dispatcher
 	}
 
 	ClientEventSubscriber struct {
@@ -101,7 +83,7 @@ var wsEventPool = sync.Pool{
 }
 
 // NewWSEventManager creates a new WSEventManager instance for App.
-func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher) *WSEventManager {
+func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher, shutdownCtx context.Context) *WSEventManager {
 	ret := &WSEventManager{
 		Logger:                             logger,
 		Conns:                              make([]*WSConn, 0),
@@ -110,6 +92,7 @@ func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher) *WSEventMa
 		clientNativePlayerEventSubscribers: result.NewMap[string, *ClientEventSubscriber](),
 		clientVideoCoreEventSubscribers:    result.NewMap[string, *ClientEventSubscriber](),
 		dispatcher:                         dispatcher,
+		shutdownCtx:                        shutdownCtx,
 	}
 
 	// Start bridging internal events to WebSockets
@@ -118,19 +101,22 @@ func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher) *WSEventMa
 			defer util.HandlePanicInModuleThen("events/WSEventManager/Bridge", func() {})
 			ch := dispatcher.Subscribe("*")
 			defer dispatcher.Unsubscribe("*", ch)
-			for e := range ch {
-				// Avoid loops: don't bridge events that might have originated from WS if they use the same topics
-				// For now, we bridge everything to the frontend.
-				ret.SendEvent(e.Topic, e.Payload)
+			for {
+				select {
+				case <-ret.shutdownCtx.Done():
+					return
+				case e := <-ch:
+					// Avoid loops: don't bridge events that might have originated from WS if they use the same topics
+					// playback-heartbeat-progress se queda en servidor (telemetría interna):
+					// republicarlo haría eco a todos los clientes cada 5s sin clientID.
+					if e.Topic == "playback-heartbeat-progress" {
+						continue
+					}
+					ret.SendEvent(e.Topic, e.Payload)
+				}
 			}
 		}()
 	}
-
-	globalWSManagerOnce.Do(func() {
-		GlobalWSEventManager = &GlobalWSEventManagerWrapper{
-			WSEventManager: ret,
-		}
-	})
 	return ret
 }
 

@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react"
 import Hls from "hls.js"
 import { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
-import { Continuity_WatchHistoryItemResponse } from "@/api/generated/types"
 
 /**
  * Inicia la reproducción y clasifica el fallo de la promesa de `play()`.
@@ -34,8 +33,6 @@ interface UsePlayerHlsProps {
     backendTracks: { audioTracks: AudioTrack[]; subtitleTracks: SubtitleTrack[] } | null
     initialProgressSeconds?: number
     streamSwitchResumeRef?: React.MutableRefObject<number | null>
-    episodeNumber?: number
-    historyData: Continuity_WatchHistoryItemResponse | null | undefined
     setStatus: (status: "loading" | "ready" | "error") => void
     setIsBuffering: (buffering: boolean) => void
     setErrorMsg: (msg: string) => void
@@ -43,8 +40,6 @@ interface UsePlayerHlsProps {
     setAudioTracks: (tracks: AudioTrack[]) => void
     setSubtitleTracks: (tracks: SubtitleTrack[]) => void
     setActiveAudioIndex: (index: number) => void
-    setResumeTime: (time: number) => void
-    setShowResume: (show: boolean) => void
     setIsPlaying: (playing: boolean) => void
     /** Llamado UNA sola vez cuando el reproductor nativo (direct play) encuentra un
      *  error irrecuperable. Retorna true si hizo fallback a transcode, false si no
@@ -52,6 +47,8 @@ interface UsePlayerHlsProps {
     onDirectPlayFailed?: () => boolean | void
     setIsStreamSwitching?: (switching: boolean) => void
     retryNonce?: number
+    /** Error ya conocido del servidor al pedir el stream: se muestra sin esperar el timeout. */
+    streamRequestError?: string | null
 }
 
 function setRefValue<T>(ref: React.MutableRefObject<T>, value: T) {
@@ -70,8 +67,6 @@ export function usePlayerHls({
     backendTracks,
     initialProgressSeconds,
     streamSwitchResumeRef,
-    episodeNumber,
-    historyData,
     setStatus,
     setIsBuffering,
     setErrorMsg,
@@ -79,19 +74,18 @@ export function usePlayerHls({
     setAudioTracks,
     setSubtitleTracks,
     setActiveAudioIndex,
-    setResumeTime,
-    setShowResume,
     setIsPlaying,
     onDirectPlayFailed,
     setIsStreamSwitching,
     retryNonce = 0,
+    streamRequestError = null,
 }: UsePlayerHlsProps) {
     const backendTracksRef = useRef(backendTracks)
-    const hasPromptedResumeRef = useRef<string | null>(null)
     const initialProgressRef = useRef(initialProgressSeconds)
     // Guard: solo disparar onDirectPlayFailed una sola vez por playableUrl.
     const directPlayFailedFiredRef = useRef(false)
     const onDirectPlayFailedRef = useRef(onDirectPlayFailed)
+    // eslint-disable-next-line react-hooks/refs -- intentional: update ref to latest callback for useEffect
     onDirectPlayFailedRef.current = onDirectPlayFailed
 
     useEffect(() => {
@@ -104,25 +98,6 @@ export function usePlayerHls({
         directPlayFailedFiredRef.current = false
     }, [playableUrl, initialProgressSeconds])
 
-    // Decoupled watch history/resume prompt logic
-    useEffect(() => {
-        if (!historyData?.found || !historyData?.item) return
-        if (historyData.item.episodeNumber !== episodeNumber) return
-
-        const currentKey = `${episodeNumber}-${playableUrl}`
-        if (hasPromptedResumeRef.current === currentKey) return
-
-        const time = historyData.item.currentTime
-        if (time > 10) {
-            hasPromptedResumeRef.current = currentKey
-            setResumeTime(time)
-            setShowResume(true)
-
-            const timer = setTimeout(() => setShowResume(false), 10000)
-            return () => clearTimeout(timer)
-        }
-    }, [historyData, episodeNumber, playableUrl, setResumeTime, setShowResume])
-
     // Decoupled track updates.
     // - Audio: only for non-HLS streams (HLS gets tracks from AUDIO_TRACKS_UPDATED event).
     // - Subtitles: ALWAYS use backend tracks regardless of stream type.
@@ -133,13 +108,6 @@ export function usePlayerHls({
         if (!backendTracks) return
         const isHlsUrl = playableUrl.includes(".m3u8")
 
-        // [DIAGNOSTIC] Log track info
-        console.info("[player diag] backendTracks updated", {
-            streamType: isHlsUrl ? "hls" : "direct",
-            audioTracks: backendTracks.audioTracks,
-            subtitleTracks: backendTracks.subtitleTracks,
-        })
-
         if (!isHlsUrl || !Hls.isSupported()) {
             // Direct-play: seed both audio and subtitles from backend
             setAudioTracks(backendTracks.audioTracks)
@@ -149,6 +117,15 @@ export function usePlayerHls({
     }, [backendTracks, playableUrl, setAudioTracks, setSubtitleTracks])
 
     useEffect(() => {
+        if (!playableUrl && streamRequestError) {
+            Promise.resolve().then(() => {
+                setStatus("error")
+                setErrorMsg(streamRequestError)
+                setIsBuffering(false)
+            })
+            return
+        }
+
         if (!playableUrl) {
             Promise.resolve().then(() => {
                 setStatus("loading")
@@ -189,6 +166,9 @@ export function usePlayerHls({
         let mediaRecoveryAttempt = 0
         let networkRecoveryAttempt = 0
         let initialSeekDone = false
+        // `canplay` se vuelve a disparar tras cada seek a una zona sin buffer: el
+        // autoplay va solo en la primera carga para no reanudar un video pausado.
+        let initialAutoplayDone = false
         let stalledCountRef = 0
         let stallRecoveries = 0
         let destroyed = false
@@ -209,7 +189,10 @@ export function usePlayerHls({
                 video.currentTime = progressSeconds
                 initialSeekDone = true
             }
-            attemptAutoplay(video, setIsPlaying)
+            if (!initialAutoplayDone) {
+                initialAutoplayDone = true
+                attemptAutoplay(video, setIsPlaying)
+            }
         }
 
         const handleNativeError = () => {
@@ -370,9 +353,6 @@ export function usePlayerHls({
             })
 
             hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
-                // [DIAGNOSTIC]
-                console.info("[player diag] AUDIO_TRACKS_UPDATED", data.audioTracks, "backendTracks:", backendTracksRef.current?.audioTracks)
-
                 // Enrich hls.js tracks with backend metadata (absolute index, codec, channels, default).
                 // hls.js assigns sequential ids (0,1,2…) but the backend audio URI uses the
                 // ABSOLUTE stream index from the container (./audio/{index}/index.m3u8).
@@ -394,7 +374,9 @@ export function usePlayerHls({
                     }
                 })
                 setAudioTracks(mappedTracks.length > 0 ? mappedTracks : backendAudioTracks)
-                setActiveAudioIndex(hls.audioTrack)
+                // hls.audioTrack es la posición en la lista de hls.js; el resto del
+                // player compara contra track.index (índice del contenedor).
+                setActiveAudioIndex(mappedTracks[hls.audioTrack]?.index ?? hls.audioTrack)
             })
 
 
@@ -404,8 +386,7 @@ export function usePlayerHls({
             // - SUBTITLE_TRACKS_UPDATED fires with an empty array → we must NOT overwrite the
             //   backend-seeded subtitleTracks. If hls.js somehow emits real subtitle entries
             //   (future-proofing), we ignore them and keep relying on the backend URL+codec data.
-            hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_, data) => {
-                console.info("[player diag] SUBTITLE_TRACKS_UPDATED", data.subtitleTracks, "(ignored — backend tracks are authoritative)")
+            hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
                 // Intentionally do NOT call setSubtitleTracks here.
                 // Subtitles were already seeded from backendTracks in the effect above.
             })
@@ -487,9 +468,10 @@ export function usePlayerHls({
             listenersAdded = true
 
             if (backendTracksRef.current) {
+                const tracks = backendTracksRef.current
                 Promise.resolve().then(() => {
-                    setAudioTracks(backendTracksRef.current!.audioTracks)
-                    setSubtitleTracks(backendTracksRef.current!.subtitleTracks)
+                    setAudioTracks(tracks.audioTracks)
+                    setSubtitleTracks(tracks.subtitleTracks)
                 })
             }
         }
@@ -533,5 +515,7 @@ export function usePlayerHls({
         setIsPlaying,
         streamSwitchResumeRef,
         retryNonce,
+        setIsStreamSwitching,
+        streamRequestError,
     ])
 }

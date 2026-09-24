@@ -1,11 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { motion, useReducedMotion } from "framer-motion"
+import { m, useReducedMotion } from "framer-motion"
 import { useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
-import { getLargeResImage, getMediumResImage, getLowResImage, prewarmImages } from "@/lib/helpers/images"
+import { getLargeResImage, getMediumResImage, prewarmImages } from "@/lib/helpers/images"
 import { useHeroBackdrop, useHeroParallax } from "@/hooks/use-hero"
+import { HERO_PARALLAX_OVERSCAN } from "@/lib/config/hero-stage"
 import { stripHtml } from "@/lib/helpers/sanitizer"
 import { useSound } from "@/hooks/use-sound"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
@@ -18,7 +19,9 @@ import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { getServerBaseUrl } from "@/api/client/server-url"
 
 import { SpotlightEraNav } from "./spotlight/spotlight-era-nav"
+import { HERO_AURA_CLASS } from "@/lib/config/hero-stage"
 import { SpotlightHero } from "./spotlight/spotlight-hero"
+import { HERO_ROTATION_MS } from "./spotlight/hero-carousel-dots"
 import { SpotlightLowerHub } from "./spotlight/spotlight-lower-hub"
 
 interface MediaSpotlightProps {
@@ -40,7 +43,19 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     const navigate = useNavigate()
     const { playSound } = useSound()
     const themeSettings = useThemeSettings()
-    const [activeEraId, setActiveEraId] = React.useState<EraId>("db")
+    // Lazy init con la era correcta desde el primer paint: evita montar db.webp
+    // para luego cambiar a la era real (doble descarga + flash de skeleton).
+    const [activeEraId, setActiveEraId] = React.useState<EraId>(() => {
+        const rawThemeEra = themeSettings.themeEra
+        const mapped = rawThemeEra && ERAS.some(e => e.id === rawThemeEra.replace("era-", ""))
+            ? (rawThemeEra.replace("era-", "") as EraId)
+            : null
+        if (mapped && items.some(item => getEraFromItem(item) === mapped)) return mapped
+        for (const era of ERAS) {
+            if (items.some(item => getEraFromItem(item) === era.id)) return era.id
+        }
+        return mapped ?? "db"
+    })
     const [direction, setDirection] = React.useState(1)
     // El auto-rotate se pausa mientras el usuario interactúa (hover/focus):
     // rotar el hero completo bajo el cursor es la mayor fuente de jank
@@ -147,6 +162,11 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         return rawEraSagas
     }, [isSeriesComplete, rawEraSagas])
 
+    // Películas de la era activa (no dependen del 100% de la serie).
+    const activeEraMovies = React.useMemo(() => {
+        return categorizedData[activeEraId]?.movies ?? []
+    }, [categorizedData, activeEraId])
+
     const serverBase = React.useMemo(() => getServerBaseUrl(), [])
     const targetSeriesMediaId = activeSeries?.mediaId || activeEraSeriesId
     const { data: activeAnimeEntry } = useGetAnimeEntry(
@@ -183,42 +203,47 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         setActiveEraId(eraId)
     }, [activeEraId, triggerTransition])
 
+    const advanceEra = React.useCallback(() => {
+        setDirection(1)
+        triggerTransition()
+        setActiveEraId(prevEraId => {
+            const list = availableErasRef.current
+            const currentIndex = list.findIndex(e => e.id === prevEraId)
+            const nextIndex = (currentIndex + 1) % list.length
+            return list[nextIndex].id
+        })
+    }, [triggerTransition])
+
     // Consolidated: Cleanup + Auto-rotate + Predictive prewarm + Init
     React.useEffect(() => {
         // 1. Cleanup timer on unmount
         if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current)
 
-        const AUTOROTATE_MS = 8000
-
-        // 2. Predictive prewarm for next era
+        // 2. Predictive prewarm: siguiente era primero (rotación en 8s) + resto en el mismo idle
         if (availableEras.length > 1) {
             const curIdx = availableEras.findIndex(e => e.id === activeEraId)
-            const nextIdx = (curIdx + 1) % availableEras.length
-            const nextEra = availableEras[nextIdx]
-            if (nextEra) {
-                const nextSeries = categorizedData[nextEra.id]?.series
-                const nextBackdrop = nextSeries?.backdropUrl || ERA_DEFAULTS[nextEra.id]?.backdropUrl
-                const nextPoster = nextSeries?.image || ERA_DEFAULTS[nextEra.id]?.posterUrl
-                prewarmImages([getLargeResImage(nextBackdrop), getMediumResImage(nextPoster)])
+            const ordered = availableEras.slice(curIdx + 1).concat(availableEras.slice(0, curIdx + 1))
+            const urls: (string | null | undefined)[] = []
+            for (const era of ordered) {
+                const series = categorizedData[era.id]?.series
+                urls.push(
+                    getLargeResImage(series?.backdropUrl || ERA_DEFAULTS[era.id]?.backdropUrl),
+                    getMediumResImage(series?.image || ERA_DEFAULTS[era.id]?.posterUrl),
+                )
             }
+            prewarmImages(urls)
         }
 
-        // 3. Auto-rotate interval
+        // 3. Auto-rotate: con barra de progreso la dirige onCycleComplete de los
+        //    dots; este intervalo solo cubre equipos sin heavy effects.
         let intervalId: ReturnType<typeof setInterval> | null = null
-        if (availableEras.length > 1 && !reduceMotion) {
+        if (availableEras.length > 1 && !reduceMotion && !isHeavyAllowed) {
             intervalId = setInterval(() => {
                 if (document.visibilityState === "hidden") return
                 if (isUserInteractingRef.current) return
                 if (document.hasFocus && !document.hasFocus()) return
-                setDirection(1)
-                triggerTransition()
-                setActiveEraId(prevEraId => {
-                    const list = availableErasRef.current
-                    const currentIndex = list.findIndex(e => e.id === prevEraId)
-                    const nextIndex = (currentIndex + 1) % list.length
-                    return list[nextIndex].id
-                })
-            }, AUTOROTATE_MS)
+                advanceEra()
+            }, HERO_ROTATION_MS)
         }
 
         // 4. Initialize era on first load
@@ -236,11 +261,11 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         availableEras,
         availableEras.length,
         reduceMotion,
-        triggerTransition,
+        isHeavyAllowed,
+        advanceEra,
         categorizedData,
         items,
-        initialEraId,
-        prewarmImages
+        initialEraId
     ])
 
     const cleanDescription = React.useMemo(() => {
@@ -264,7 +289,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     // Parallax desactivado en eco/reduced-motion: el listener de scroll con
     // capture:true + el Ken Burns competían por el mismo layer del hero.
     const allowParallax = isHeavyAllowed && !reduceMotion
-    const heroBackdropRef = useHeroParallax(0.15, { disabled: !allowParallax })
+    const heroBackdropRef = useHeroParallax(0.15, { disabled: !allowParallax, maxOffset: HERO_PARALLAX_OVERSCAN })
 
     // Backdrop global en w1280 (no original): el DynamicBackdrop lo muestra
     // con blur 36px + scale, así que el original 4K (~10MB) es puro desperdicio
@@ -298,57 +323,41 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
     return (
         <section
+            aria-label="Contenido destacado"
             onMouseEnter={() => setIsUserInteracting(true)}
             onMouseLeave={() => setIsUserInteracting(false)}
             onFocus={() => setIsUserInteracting(true)}
             onBlur={() => setIsUserInteracting(false)}
-            className={cn("relative pt-4 md:pt-20 pb-8 w-full select-none flex flex-col justify-start space-y-4 px-4 sm:px-6 md:px-8 lg:px-10 max-w-content mx-auto", className)}
+            className={cn("relative pt-4 md:pt-20 pb-8 w-full max-w-content-desktop mx-auto select-none flex flex-col justify-start space-y-4 px-4 sm:px-6 md:px-8 lg:px-10", className)}
         >
-            {/* Ambient Aura Background (idéntico al de Películas / movies-hero.tsx) */}
-            <div className="absolute top-0 inset-x-0 h-[500px] sm:h-[560px] md:h-[640px] lg:h-[680px] pointer-events-none overflow-hidden z-0 transform-gpu">
-                {effectiveBackdropSrc && (
-                    <motion.div
+            {/* Ambient Aura Background (mismo tamaño que Películas) */}
+            <div className={HERO_AURA_CLASS}>
+                {colors && (
+                    <m.div
                         key={activeEraId + "_outer_aura"}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.5, ease: "easeOut" }}
-                        className="absolute inset-0 pointer-events-none overflow-hidden transform-gpu will-change-opacity"
-                        style={
-                            isHeavyAllowed
-                                ? {
-                                    // Tier HIGH (GPU dedicada): blur optimizado para el aura cinematográfica
-                                    backgroundImage: `url(${getLowResImage(effectiveBackdropSrc)})`,
-                                    backgroundSize: "cover",
-                                    backgroundPosition: "center 20%",
-                                    filter: "blur(48px) saturate(130%)",
-                                    opacity: 0.28,
-                                    maskImage: "radial-gradient(ellipse 90% 80% at 70% 40%, black 0%, transparent 75%)",
-                                    WebkitMaskImage: "radial-gradient(ellipse 90% 80% at 70% 40%, black 0%, transparent 75%)",
-                                }
-                                : {
-                                    // Tier BALANCED/ECO: gradiente de color puro — sin filter, sin layout, sin paint extra.
-                                    background: colors
-                                        ? `radial-gradient(ellipse 90% 80% at 70% 40%, color-mix(in srgb, ${colors.accent} 35%, transparent) 0%, transparent 75%)`
-                                        : "none",
-                                    opacity: 0.35,
-                                }
-                        }
+                        className="absolute inset-0 pointer-events-none overflow-hidden transform-gpu will-change-[opacity]"
+                        style={{
+                            background: `radial-gradient(ellipse 80% 60% at 75% 30%, color-mix(in srgb, ${colors.accent} 18%, transparent) 0%, transparent 70%)`,
+                        }}
                     />
                 )}
 
                 {isHeavyAllowed && colors && (
-                    <motion.div
+                    <m.div
                         animate={isTransitioning ? { opacity: 0 } : {
-                            opacity: [0.25, 0.38, 0.25],
+                            opacity: [0.08, 0.15, 0.08],
                         }}
                         transition={isTransitioning
                             ? { duration: 0.2, ease: "easeOut" }
                             : { duration: 8, repeat: Infinity, ease: "easeInOut" }
                         }
-                        className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full pointer-events-none transition-colors duration-700 transform-gpu will-change-opacity"
+                        className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full pointer-events-none transition-colors duration-700 transform-gpu will-change-[opacity]"
                         style={{
-                            background: `radial-gradient(ellipse, color-mix(in srgb, ${colors.accent} 50%, transparent) 0%, transparent 70%)`
+                            background: `radial-gradient(ellipse, color-mix(in srgb, ${colors.accent} 30%, transparent) 0%, transparent 70%)`
                         }}
                     />
                 )}
@@ -383,21 +392,25 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                     onNavigateSaga={handleSagaNavigate}
                     availableEras={availableEras}
                     onSelectEra={handleEraSelect}
+                    isPaused={isUserInteracting}
+                    onCycleComplete={advanceEra}
                 />
             </div>
 
-            {/* 3. Lower Hub (solo Sagas; oculto si la serie está incompleta) */}
-            {activeEraSagas.length > 0 && (
+            {/* 3. Lower Hub con switch Sagas / Películas (visible si hay contenido) */}
+            {(activeEraSagas.length > 0 || activeEraMovies.length > 0) && (
             <div className="relative z-10 w-full pt-4 md:pt-6">
                 <SpotlightLowerHub
                     activeEraId={activeEraId}
                     colors={colors}
                     activeEraSagas={activeEraSagas}
+                    activeEraMovies={activeEraMovies}
                     activeSeries={activeSeries}
                     activeEraSeriesId={activeEraSeriesId}
                     activeAnimeEntry={activeAnimeEntry}
                     serverBase={serverBase}
                     onNavigateSaga={handleSagaNavigate}
+                    onNavigateMovie={onNavigate}
                     onHoverSound={playHoverSound}
                 />
             </div>

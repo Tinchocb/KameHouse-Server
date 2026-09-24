@@ -3,7 +3,6 @@ package scanner
 import (
 	"context"
 	"math"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -88,87 +87,41 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 	pm := parsedMediaFromLocalFile(lf)
 
 	// SHORT-CIRCUIT 0: Dragon Ball Resolver Priority
-	// Dragon Ball Priority Resolver:
-	// Evaluate specific combinations in priority order (movie/episode titles and folder context first)
-	folderInfo := ParseFolderStructure(lf.Path, nil)
-	parentDir := filepath.Base(filepath.Dir(lf.Path))
-	seriesFolder := lf.GetSeriesFolderTitle()
-	if seriesFolder == "" && folderInfo.SeriesName != "" {
-		seriesFolder = folderInfo.SeriesName
-	}
-
-	var candidates []string
-	// 1. Full contextual combinations (series folder + episode/movie title or filename)
-	if seriesFolder != "" && pm.EpisodeTitle != "" {
-		candidates = append(candidates, seriesFolder+" "+pm.EpisodeTitle)
-	}
-	if pm.Title != "" && pm.EpisodeTitle != "" {
-		candidates = append(candidates, pm.Title+" "+pm.EpisodeTitle)
-	}
-	if seriesFolder != "" && lf.Name != "" {
-		candidates = append(candidates, seriesFolder+" "+lf.Name)
-	}
-	if parentDir != "" && lf.Name != "" {
-		candidates = append(candidates, parentDir+" "+lf.Name)
-	}
-	if folderInfo.SeriesName != "" && lf.Name != "" {
-		candidates = append(candidates, folderInfo.SeriesName+" "+lf.Name)
-	}
-	// 2. Direct file and title identifiers
-	if pm.EpisodeTitle != "" {
-		candidates = append(candidates, pm.EpisodeTitle)
-	}
-	if lf.Name != "" {
-		candidates = append(candidates, lf.Name)
-	}
-	if pm.Title != "" {
-		candidates = append(candidates, pm.Title)
-	}
-	if seriesFolder != "" {
-		candidates = append(candidates, seriesFolder)
-	}
-	if folderInfo.SeriesName != "" {
-		candidates = append(candidates, folderInfo.SeriesName)
-	}
-
-	for _, cand := range candidates {
-		if cand == "" {
-			continue
+	// Resolución por ruta (carpeta de serie primero), compartida con el indexer de
+	// Google Drive. Nunca se evalúa el título del episodio suelto: "El frenético
+	// ataque de Krilin" terminaba como la película "El Ataque del Dragón".
+	if dbId, isMovie, isDb := ResolveDragonBallPath(lf.Path); isDb {
+		targetId := dbId
+		if isMovie {
+			targetId += 1000000
 		}
-		if dbId, isMovie, isDb := ResolveDragonBallID(cand); isDb {
-			targetId := dbId
-			if isMovie {
-				targetId += 1000000
+		lf.MediaID = targetId
+		if isMovie {
+			lf.Metadata.Episodes = []int{1}
+			lf.Metadata.Episode = 1
+		} else {
+			lf.Metadata.Episodes = pm.Episodes
+			if len(pm.Episodes) > 0 {
+				lf.Metadata.Episode = pm.Episodes[0]
 			}
-			lf.MediaID = targetId
-			if isMovie {
-				lf.Metadata.Episodes = []int{1}
-				lf.Metadata.Episode = 1
-			} else {
-				lf.Metadata.Episodes = pm.Episodes
-				if len(pm.Episodes) > 0 {
-					lf.Metadata.Episode = pm.Episodes[0]
-				}
-			}
-			lf.Metadata.Type = dto.LocalFileTypeMain
-
-			inContainer := false
-			for _, media := range m.MediaContainer.NormalizedMedia {
-				if media.ID == targetId {
-					inContainer = true
-					break
-				}
-			}
-
-			if inContainer {
-				m.Logger.Info().Msgf("AgentMatcher: DragonBallResolver matched '%s' -> %d [priority]", cand, targetId)
-			} else {
-				m.Logger.Warn().Msgf("AgentMatcher: DragonBallResolver matched '%s' -> %d but media not in container. Forcing match.", cand, targetId)
-			}
-			return
 		}
-	}
+		lf.Metadata.Type = dto.LocalFileTypeMain
 
+		inContainer := false
+		for _, media := range m.MediaContainer.NormalizedMedia {
+			if media.ID == targetId {
+				inContainer = true
+				break
+			}
+		}
+
+		if inContainer {
+			m.Logger.Info().Msgf("AgentMatcher: DragonBallResolver matched '%s' -> %d [priority]", lf.Path, targetId)
+		} else {
+			m.Logger.Warn().Msgf("AgentMatcher: DragonBallResolver matched '%s' -> %d but media not in container. Forcing match.", lf.Path, targetId)
+		}
+		return
+	}
 
 	bestConfidence := 0.0
 	var bestMatch *dto.NormalizedMedia

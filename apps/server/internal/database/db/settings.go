@@ -3,13 +3,10 @@ package db
 import (
 	"errors"
 	"kamehouse/internal/database/models"
-	"sync/atomic"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-var currSettings atomic.Pointer[models.Settings]
 
 func (db *Database) UpsertSettings(settings *models.Settings) (*models.Settings, error) {
 
@@ -23,7 +20,7 @@ func (db *Database) UpsertSettings(settings *models.Settings) (*models.Settings,
 		return nil, err
 	}
 
-	currSettings.Store(settings)
+	db.currSettings.Store(settings)
 
 	db.Logger.Debug().Msg("db: Settings saved")
 	return settings, nil
@@ -32,7 +29,7 @@ func (db *Database) UpsertSettings(settings *models.Settings) (*models.Settings,
 
 func (db *Database) GetSettings() (*models.Settings, error) {
 
-	if cached := currSettings.Load(); cached != nil {
+	if cached := db.currSettings.Load(); cached != nil {
 		return cached, nil
 	}
 
@@ -42,13 +39,18 @@ func (db *Database) GetSettings() (*models.Settings, error) {
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			settings.ID = 1
+			// Defaults para columnas nuevas en fila recién creada.
+			if settings.Library.PreferredAudioProfile == "" {
+				settings.Library.PreferredAudioProfile = "latino"
+			}
+			settings.Library.AutoDisableSubtitlesWhenDubbed = true
 			_ = db.gormdb.Create(&settings)
-			currSettings.Store(&settings)
+			db.currSettings.Store(&settings)
 			return &settings, nil
 		}
 		return nil, err
 	}
-	currSettings.Store(&settings)
+	db.currSettings.Store(&settings)
 	return &settings, nil
 }
 
@@ -69,8 +71,6 @@ func (db *Database) AllLibraryPathsFromSettings(settings *models.Settings) *[]st
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-var currMediastreamSettings atomic.Pointer[models.MediastreamSettings]
-
 func (db *Database) UpsertMediastreamSettings(settings *models.MediastreamSettings) (*models.MediastreamSettings, error) {
 
 	err := db.gormdb.Clauses(clause.OnConflict{
@@ -83,7 +83,7 @@ func (db *Database) UpsertMediastreamSettings(settings *models.MediastreamSettin
 		return nil, err
 	}
 
-	currMediastreamSettings.Store(settings)
+	db.currMediastreamSettings.Store(settings)
 
 	db.Logger.Debug().Msg("db: Media streaming settings saved")
 	return settings, nil
@@ -92,7 +92,7 @@ func (db *Database) UpsertMediastreamSettings(settings *models.MediastreamSettin
 
 func (db *Database) GetMediastreamSettings() (*models.MediastreamSettings, bool) {
 
-	if cached := currMediastreamSettings.Load(); cached != nil {
+	if cached := db.currMediastreamSettings.Load(); cached != nil {
 		return cached, true
 	}
 
@@ -102,7 +102,7 @@ func (db *Database) GetMediastreamSettings() (*models.MediastreamSettings, bool)
 	if err != nil {
 		return nil, false
 	}
-	currMediastreamSettings.Store(&settings)
+	db.currMediastreamSettings.Store(&settings)
 	return &settings, true
 }
 

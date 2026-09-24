@@ -33,7 +33,7 @@ describe("resolveSeriesSagas", () => {
 
     it("should resolve by title (DB Super)", () => {
         const result = resolveSeriesSagas({ titleEnglish: "Dragon Ball Super" })
-        expect(result[0].title).toBe("Saga La Batalla de los Dioses")
+        expect(result[0].title).toBe("Saga de la Batalla de los Dioses")
     })
 
     it("should fallback to Original DB for 'Dragon Ball'", () => {

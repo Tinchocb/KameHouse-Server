@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dustin/go-humanize"
 )
@@ -22,6 +23,20 @@ func TestDatabaseCleanupManager(t *testing.T) {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
 	defer database.Close()
+
+	// Las migraciones de datos corren en background (incluido el purge de la
+	// tabla legacy `local_files`). Esperar a que terminen ANTES de crear y
+	// poblar la tabla evita una carrera que borraba la tabla a mitad del test.
+	waitDeadline := time.Now().Add(30 * time.Second)
+	for {
+		if complete, _ := database.MigrationStatus(); complete {
+			break
+		}
+		if time.Now().After(waitDeadline) {
+			t.Fatalf("Timed out waiting for background data migrations")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 
 	t.Log("Populating database with test data...")
 	populateCleanupTestData(t, database)

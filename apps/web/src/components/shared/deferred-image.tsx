@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/components/ui/core/styling';
-import { Skeleton } from '@/components/ui/skeleton';
 import { IconStatusImageOff } from "@/components/ui/icons";
 import { usePerformanceStore, selectIsHeavyEffectsAllowed } from '@/lib/hardware/performance-store';
+import { isImageLoaded, markImageLoaded } from '@/lib/helpers/images';
 
 interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "onDrag"> {
     src: string;
@@ -16,6 +16,11 @@ interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageEleme
     fallback?: React.ReactNode;
     imgClassName?: string;
     timeoutMs?: number;
+    sizes?: string;
+    srcSet?: string;
+    fetchPriority?: "high" | "low" | "auto";
+    /** Aplicado a la imagen y al LQIP (punto focal de los heroes). */
+    objectPosition?: string;
 }
 
 function getTmdbSrcSet(url: string): string | undefined {
@@ -26,7 +31,20 @@ function getTmdbSrcSet(url: string): string | undefined {
     const w342 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w342");
     const w500 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w500");
     const w780 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w780");
-    return `${w185} 185w, ${w342} 342w, ${w500} 500w, ${w780} 780w`;
+    const w1280 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w1280");
+    return `${w185} 185w, ${w342} 342w, ${w500} 500w, ${w780} 780w, ${w1280} 1280w`;
+}
+
+/**
+ * srcSet para heroes a pantalla completa: arranca en w780 y llega a `original`
+ * (los backdrops de TMDB son ≥1920 de ancho), así en 1440p/4K no se estira w1280.
+ */
+export function getTmdbHeroSrcSet(url: string): string | undefined {
+    if (!url || (!url.includes("tmdb.org") && !url.includes("themoviedb.org"))) {
+        return undefined;
+    }
+    const size = (s: string) => url.replace(/\/t\/p\/(?:original|w\d+)/, `/t/p/${s}`);
+    return `${size("w780")} 780w, ${size("w1280")} 1280w, ${size("original")} 1920w`;
 }
 
 const observers = new Map<string, IntersectionObserver>();
@@ -77,38 +95,50 @@ export function DeferredImage(props: DeferredImageProps) {
         fallback,
         imgClassName,
         timeoutMs = 10000,
+        sizes,
+        srcSet,
+        fetchPriority,
+        loading,
+        decoding,
+        objectPosition,
+        style,
         ...restProps
     } = props;
 
     const [isIntersecting, setIsIntersecting] = useState(priority);
-    const [isLoaded, setIsLoaded] = useState(false);
+    // Si la URL ya terminó de descargarse antes (rotación o prewarm), no
+    // flashear el skeleton: arrancar como cargada.
+    const [isLoaded, setIsLoaded] = useState(() => isImageLoaded(src));
     const [isLowResLoaded, setIsLowResLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
-    const [showLqip, setShowLqip] = useState(false);
+    const [showLqip, setShowLqip] = useState(Boolean(priority && lowResSrc));
 
     const containerRef = useRef<HTMLDivElement>(null);
     const thresholdStr = Array.isArray(threshold) ? threshold.join(',') : String(threshold);
 
     const lqipSrc = lowResSrc;
-    const computedSrcSet = getTmdbSrcSet(src);
-    const computedSizes = computedSrcSet ? '(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px' : undefined;
+    const computedSrcSet = srcSet ?? getTmdbSrcSet(src);
+    const computedSizes = sizes ?? (computedSrcSet ? '(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px' : undefined);
 
-    useEffect(() => {
+    const [prevProps, setPrevProps] = useState({ src, priority, lqipSrc });
+    if (src !== prevProps.src || priority !== prevProps.priority || lqipSrc !== prevProps.lqipSrc) {
+        setPrevProps({ src, priority, lqipSrc });
         setIsIntersecting(priority);
-        setIsLoaded(false);
+        const alreadyLoaded = isImageLoaded(src);
+        setIsLoaded(alreadyLoaded);
         setIsLowResLoaded(false);
         setHasError(false);
-        setShowLqip(false);
-    }, [src, priority]);
+        setShowLqip(Boolean(priority && lqipSrc) && !alreadyLoaded);
+    }
 
-    // Timer fallback: reveal LQIP placeholder only if high-res takes longer than 250ms
+    // Timer fallback: reveal LQIP placeholder after 250ms for non-priority to avoid flash
     useEffect(() => {
-        if (!isIntersecting || !lqipSrc || isLoaded) return;
+        if (!isIntersecting || !lqipSrc || isLoaded || priority) return;
         const timer = setTimeout(() => {
             setShowLqip(true);
         }, 250);
         return () => clearTimeout(timer);
-    }, [isIntersecting, lqipSrc, isLoaded]);
+    }, [isIntersecting, lqipSrc, isLoaded, priority]);
 
     // Hard timeout failsafe: if an image request hangs forever, trigger error state gracefully
     useEffect(() => {
@@ -122,8 +152,9 @@ export function DeferredImage(props: DeferredImageProps) {
     }, [isIntersecting, isLoaded, hasError, src, timeoutMs]);
 
     const handleLoad = useCallback(() => {
+        markImageLoaded(src);
         setIsLoaded(true);
-    }, []);
+    }, [src]);
 
     const handleError = useCallback(() => {
         setHasError(true);
@@ -170,6 +201,7 @@ export function DeferredImage(props: DeferredImageProps) {
                     aria-hidden="true"
                     decoding="async"
                     onLoad={() => setIsLowResLoaded(true)}
+                    style={objectPosition ? { objectPosition } : undefined}
                     className={cn(
                         "absolute inset-0 h-full w-full object-cover scale-[1.08] filter blur-md transition-opacity duration-slow ease-out",
                         isLowResLoaded ? "opacity-100" : "opacity-0",
@@ -185,9 +217,9 @@ export function DeferredImage(props: DeferredImageProps) {
                     srcSet={computedSrcSet}
                     sizes={computedSizes}
                     alt={alt}
-                    loading={props.loading ?? (priority ? "eager" : "lazy")}
-                    decoding={props.decoding ?? "async"}
-                    fetchPriority={priority ? "high" : "low"}
+                    loading={loading ?? (priority ? "eager" : "lazy")}
+                    decoding={decoding ?? "async"}
+                    fetchPriority={fetchPriority ?? (priority ? "high" : "low")}
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
@@ -196,6 +228,7 @@ export function DeferredImage(props: DeferredImageProps) {
                         isLoaded ? "opacity-100" : "opacity-0",
                         imgClassName
                     )}
+                    style={objectPosition ? { ...style, objectPosition } : style}
                     {...restProps}
                 />
             )}
@@ -207,7 +240,7 @@ export function DeferredImage(props: DeferredImageProps) {
                     ) : (
                         <>
                             <IconStatusImageOff className="mb-2 h-7 w-7 text-zinc-500 opacity-60" />
-                            <span className="px-2 text-center text-[11px] font-bold tracking-wider text-zinc-300 line-clamp-2 uppercase">
+                            <span className="px-2 text-center text-2xs font-bold tracking-wider text-zinc-300 line-clamp-2 uppercase">
                                 {alt || "Portada no disponible"}
                             </span>
                         </>

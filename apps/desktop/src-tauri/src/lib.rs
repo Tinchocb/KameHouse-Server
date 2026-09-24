@@ -1,6 +1,5 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-#![allow(linker_messages)]
 
 mod sidecar;
 mod settings;
@@ -189,11 +188,7 @@ pub fn run() {
                         }
                     }
                 }
-                tauri::WindowEvent::Focused(focused) => {
-                    if *focused && label == "main" {
-                        window_manager.on_renderer_ready(window.app_handle());
-                    }
-                }
+                tauri::WindowEvent::Focused(_) => {}
                 tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_)
                     if label == "main" => {
                         // Debounced: coalesces the burst of events during a drag/resize

@@ -1,7 +1,6 @@
 packages:
   - "apps/web"
   - "apps/desktop"
-  - "apps/KameHouseTV"
 allowBuilds:
   core-js: true
   esbuild: true

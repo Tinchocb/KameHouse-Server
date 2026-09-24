@@ -1,5 +1,5 @@
 import * as React from "react"
-import { motion } from "framer-motion"
+import { m } from "framer-motion"
 import { IconMediaPlay } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
@@ -36,14 +36,26 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
     return (
         // Mismo tratamiento que SpotlightMovieCard: hover CSS, sin will-change
         // permanente, sin backdrop-blur por badge, sin springs por tarjeta.
-        <motion.div
+        <m.div
             variants={spotlightCardItemVariants}
             custom={index}
             onClick={() => onNavigateSaga(seriesId, saga.id)}
+            // Activable con teclado; Enter sobre el botón "Reproducir" interno no navega.
+            role="button"
+            tabIndex={0}
+            aria-label={`Ver ${cleanTitle}`}
+            onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    onNavigateSaga(seriesId, saga.id)
+                }
+            }}
+            onFocus={onHover}
             onMouseEnter={onHover}
             className={cn(
                 "group relative w-full aspect-[16/9] rounded-2xl overflow-hidden cursor-pointer border border-[var(--glass-border-side)] select-none shrink-0 bg-[var(--md-sys-color-surface-container)] transform-gpu",
-                "transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.97]",
+                "transition-[transform,border-color,box-shadow] duration-base ease-smooth-out hover:-translate-y-1 hover:scale-[1.015] active:scale-95",
                 "hover:z-10 hover:shadow-[0_15px_35px_rgba(0,0,0,0.9)]"
             )}
             style={{
@@ -57,54 +69,59 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
                 alt={cleanTitle}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             />
+            <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-10 pointer-events-none" />
 
-            {/* Top Badges (Ep Range & Filler/Arcs) — sin backdrop-blur */}
-            <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-20 pointer-events-none">
-                <span className="text-[10px] font-mono font-bold tracking-wider px-2 py-0.5 rounded-md bg-[var(--glass-bg-strong)] border border-[var(--glass-border-top)] text-[var(--status-warning)] uppercase shadow-elevation-1">
+            {/* Top Badges (Ep Range & Filler/Arcs) — fondo opaco sin blur por rendimiento */}
+            <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 z-20 pointer-events-none">
+                <span className="text-2xs font-mono font-extrabold tracking-wider px-2 py-0.5 rounded-md bg-black/65 border border-white/20 text-white uppercase shadow-elevation-1 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
                     {epRange}
                 </span>
                 {isFiller ? (
-                    <span className="text-[9px] font-mono font-black tracking-wider px-2 py-0.5 rounded-md bg-[var(--glass-bg-strong)] border border-[var(--glass-border-top)] text-[var(--brand-secondary-hex)] uppercase shadow-elevation-1">
+                    <span className="text-2xs font-mono font-black tracking-wider px-2 py-0.5 rounded-md bg-black/65 border border-white/20 text-white uppercase shadow-elevation-1 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
                         Relleno
                     </span>
                 ) : saga.subSagas && saga.subSagas.length > 0 ? (
-                    <span className="text-[9px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-[var(--glass-bg-strong)] border border-[var(--glass-border-side)] text-on-surface-variant uppercase shadow-elevation-1">
+                    <span className="text-2xs font-mono font-extrabold tracking-wider px-2 py-0.5 rounded-md bg-black/65 border border-white/20 text-white/90 uppercase shadow-elevation-1 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
                         {saga.subSagas.length} {saga.subSagas.length === 1 ? "arco" : "arcos"}
                     </span>
                 ) : null}
             </div>
 
+            {/* Scrims: superior para badges + inferior denso para título/meta */}
+            <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/65 via-black/25 to-transparent z-10 pointer-events-none" />
             {/* Gradient overlay: difuminado idéntico al formato de películas en Home */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent z-10 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent z-10 pointer-events-none" />
 
-            {/* Play Button Overlay on Hover (CSS, sin spring por tarjeta) */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
-                <div
+            {/* Play Button Overlay on Hover (CSS, sin spring por tarjeta) — siempre visible en táctil */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
+                <button
+                    type="button"
+                    aria-label={`Reproducir ${cleanTitle}`}
                     onClick={(e) => {
                         e.stopPropagation()
                         onNavigateSaga(seriesId, saga.id)
                     }}
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-on-primary bg-brand-accent shadow-xl shadow-brand-accent/50 pointer-events-auto cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-90"
+                    className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] pointer-events-auto cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-90 p-0 border-0"
                 >
                     <IconMediaPlay size={18} fill="currentColor" className="ml-0.5" />
-                </div>
+                </button>
             </div>
 
             {/* Title & Info at bottom over difuminado */}
             <div className="absolute bottom-0 left-0 right-0 z-20 p-3 sm:p-3.5 flex flex-col justify-end pointer-events-none">
-                <p className="text-white font-bold text-xs sm:text-sm uppercase tracking-wide leading-tight line-clamp-1 text-edge-glow group-hover:text-[var(--spotlight-title-hover)] transition-colors font-display">
+                <p className="text-white font-black text-sm sm:text-[15px] uppercase tracking-wide leading-snug line-clamp-2 text-edge-glow group-hover:text-[var(--spotlight-title-hover)] transition-colors font-display">
                     {cleanTitle}
                 </p>
-                <div className="flex items-center gap-2 text-on-surface-variant text-[10px] sm:text-[11px] font-mono mt-0.5">
+                <div className="flex items-center gap-1.5 text-white/85 text-2xs sm:text-xs font-mono font-semibold mt-1 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
                     <span>{epCount} {epCount === 1 ? "episodio" : "episodios"}</span>
                     {saga.subSagas && saga.subSagas.length > 0 && (
                         <>
-                            <span className="w-1 h-1 rounded-full bg-on-surface-variant/40" />
+                            <span className="text-white/50">•</span>
                             <span>{saga.subSagas.length} {saga.subSagas.length === 1 ? "arco" : "arcos"}</span>
                         </>
                     )}
                 </div>
             </div>
-        </motion.div>
+        </m.div>
     )
 })

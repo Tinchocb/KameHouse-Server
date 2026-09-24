@@ -1,7 +1,8 @@
 import * as React from "react"
-import { motion, type Variants } from "framer-motion"
+import { m, type Variants } from "framer-motion"
 import { IconStatusHeadphones, IconUiStar } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
+import { ElasticCounter } from "@/components/ui/kinetics"
 
 export interface MediaMetadataCapsuleProps {
     format?: string | null
@@ -52,7 +53,7 @@ export const MediaMetadataCapsule = React.memo(function MediaMetadataCapsule({
         return `${num} ${num === 1 ? "Saga" : "Sagas"}`
     }, [sagas])
 
-    const Wrapper = variants ? motion.div : "div"
+    const Wrapper = variants ? m.div : "div"
 
     return (
         // El wrapper solo posiciona y —cuando el padre pasa `variants`— anima
@@ -76,62 +77,76 @@ export const MediaMetadataCapsule = React.memo(function MediaMetadataCapsule({
                 // overkill y cuesta un frame extra de rasterizado; 16px se ve
                 // idéntico y pinta en el primer frame.
                 "backdrop-blur-overlay-sm will-change-[backdrop-filter]",
-                "shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_12px_36px_-6px_rgba(0,0,0,0.85)]",
+                "shadow-[shadow:var(--glass-highlight-lg),0_12px_36px_-6px_rgba(0,0,0,0.85)]",
                 "[transform:translateZ(0)] [isolation:isolate]"
             )}
         >
             {/* Format Chip (Serie TV, Película, etc.) */}
             {format && (
-                <span className="bg-white/15 text-white text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-lg border border-white/20 uppercase shadow-sm">
+                <span className="bg-white/15 text-white text-3xs font-bold tracking-widest px-2.5 py-1 rounded-lg border border-white/20 uppercase shadow-sm">
                     {format}
                 </span>
             )}
 
             {/* Release Year */}
             {year && (
-                <span className="bg-white/10 text-zinc-200 text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
-                    {year}
+                <span className="bg-white/10 text-zinc-200 text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+                    {typeof year === "number" ? <ElasticCounter value={year} /> : year}
                 </span>
             )}
 
             {/* Episode Count */}
             {formattedEpisodes && (
-                <span className="bg-white/10 text-zinc-200 text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
-                    {formattedEpisodes}
+                <span className="bg-white/10 text-zinc-200 text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase inline-flex items-center gap-1">
+                    {typeof episodes === "number" ? (
+                        <>
+                            <ElasticCounter value={episodes} />
+                            <span>Episodios</span>
+                        </>
+                    ) : (
+                        formattedEpisodes
+                    )}
                 </span>
             )}
 
             {/* Sagas Count */}
             {formattedSagas && (
-                <span className="bg-white/10 text-zinc-200 text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
-                    {formattedSagas}
+                <span className="bg-white/10 text-zinc-200 text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase inline-flex items-center gap-1">
+                    {typeof sagas === "number" ? (
+                        <>
+                            <ElasticCounter value={sagas} />
+                            <span>{sagas === 1 ? "Saga" : "Sagas"}</span>
+                        </>
+                    ) : (
+                        formattedSagas
+                    )}
                 </span>
             )}
 
             {/* Runtime / Duration */}
             {duration && (
-                <span className="bg-white/10 text-zinc-200 text-[10px] font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+                <span className="bg-white/10 text-zinc-200 text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
                     {duration}
                 </span>
             )}
 
             {/* Age Rating (PG-13, 18+, etc.) */}
             {ageRating && (
-                <span className="bg-white/10 text-zinc-200 text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+                <span className="bg-white/10 text-zinc-200 text-3xs font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
                     {ageRating}
                 </span>
             )}
 
             {/* Quality Badge (4K / 1080p) */}
             {quality && (
-                <span className="bg-amber-950/60 text-amber-300 text-[10px] font-mono font-black tracking-widest px-2.5 py-1 rounded-lg border border-amber-500/30 uppercase shadow-sm">
+                <span className="bg-amber-950/60 text-amber-300 text-3xs font-mono font-black tracking-widest px-2.5 py-1 rounded-lg border border-amber-500/30 uppercase shadow-sm">
                     {quality}
                 </span>
             )}
 
             {/* Audio Profile (Latino Dual, etc.) */}
             {audio && (
-                <span className="bg-sky-950/60 text-sky-300 text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-lg border border-sky-500/30 uppercase shadow-sm flex items-center gap-1">
+                <span className="bg-sky-950/60 text-sky-300 text-3xs font-bold tracking-wider px-2.5 py-1 rounded-lg border border-sky-500/30 uppercase shadow-sm flex items-center gap-1">
                     <IconStatusHeadphones size={10} className="text-sky-400" />
                     {audio}
                 </span>
@@ -139,7 +154,7 @@ export const MediaMetadataCapsule = React.memo(function MediaMetadataCapsule({
 
             {/* Ki Score / Rating */}
             {formattedRating && (
-                <span className="bg-emerald-950/80 text-emerald-300 text-[10px] font-mono font-extrabold tracking-wider px-2.5 py-1 rounded-lg border border-emerald-500/40 uppercase flex items-center gap-1 shadow-sm">
+                <span className="bg-emerald-950/80 text-emerald-300 text-3xs font-mono font-extrabold tracking-wider px-2.5 py-1 rounded-lg border border-emerald-500/40 uppercase flex items-center gap-1 shadow-sm">
                     <IconUiStar size={10} fill="currentColor" className="text-emerald-400" />
                     <span>{formattedRating} Ki</span>
                 </span>

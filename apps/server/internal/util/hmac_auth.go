@@ -43,6 +43,16 @@ func NewHMACAuth(secret string, ttl time.Duration) *HMACAuth {
 	}
 }
 
+// TTL returns the current TTL
+func (h *HMACAuth) TTL() time.Duration {
+	return h.ttl
+}
+
+// SetTTL sets a new TTL
+func (h *HMACAuth) SetTTL(ttl time.Duration) {
+	h.ttl = ttl
+}
+
 // GenerateToken generates an HMAC-signed token for the given endpoint
 func (h *HMACAuth) GenerateToken(endpoint string) (string, error) {
 	now := time.Now().Unix()

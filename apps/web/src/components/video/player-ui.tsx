@@ -3,11 +3,12 @@ import React, { useEffect, useRef, useState } from "react"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerTopBar } from "./player-topbar"
 import { PlayerBottomBar } from "./player-bottombar"
-import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, ResumeOverlay, AutoSkipToastOverlay } from "./player-overlays"
+import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, AutoSkipToastOverlay } from "./player-overlays"
+import { PlayerShortcutsModal } from "./player-shortcuts-modal"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import { useGetVideoInsights } from "@/api/hooks/videocore.hooks"
 import type { PlayerCore, PlayerStats } from "./player-core"
-import { useAppStore } from "@/lib/store"
+import { useAppStore, useQueueStore, type PlaylistItem } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { PlayerEpisodesSidebar } from "./player-episodes-sidebar"
 import { PlayerQueueSidebar } from "./player-queue-sidebar"
@@ -15,28 +16,22 @@ import { PlayerAmbientBackdrop } from "./player-ambient"
 import { __isTV__ } from "@/types/constants"
 import { useFocusNavigation } from "@/hooks/use-focus-navigation"
 import { IconMediaPlay, IconMediaVolume2, IconUiStar } from "@/components/ui/icons";
+import { PLAYER_GLASS } from "./player-theme"
 
-function StatsOverlay({ show, data }: { show: boolean, data: PlayerStats }) {
+
+function StatsOverlay({ show, data }: { show: boolean, data?: PlayerStats | null }) {
     if (!show || !data) return null
     return (
-        <div className="absolute top-20 left-4 right-4 sm:right-auto sm:left-10 z-player-ui backdrop-blur-overlay-md p-4 sm:p-6 rounded-corner-lg border border-outline-variant text-label-sm font-mono uppercase tracking-ultra text-on-surface-variant space-y-3 pointer-events-none shadow-elevation-3 w-auto sm:min-w-[320px] max-w-[calc(100vw-2rem)]" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 95%, transparent)" }}>
-            <h4 className="text-on-surface font-black border-b border-outline-variant/50 pb-3 mb-4 flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
-                    DEEP INSIGHTS
-                </span>
-                <span className="text-caption opacity-40 font-mono tracking-tighter">V2.4.0</span>
-            </h4>
-            <div className="space-y-2">
-                <div className="flex justify-between items-center"><span className="opacity-50">Timeline</span> <span className="text-on-surface font-bold">{data.currentTime} <span className="text-on-surface-variant/50">/</span> {data.duration}</span></div>
-                <div className="flex justify-between items-center"><span className="opacity-50">Buffer Status</span> <span className="text-brand-success font-bold">{data.buffer}s</span></div>
-                <div className="flex justify-between items-center"><span className="opacity-50">Output</span> <span className="text-on-surface font-bold">{data.resolution}</span></div>
-                <div className="flex justify-between items-center"><span className="opacity-50">Rate</span> <span className="text-on-surface font-bold">{data.playbackRate}x</span></div>
-                <div className="flex justify-between items-center"><span className="opacity-50">Volume</span> <span className="text-on-surface font-bold">{data.volume}%</span></div>
-            </div>
-            <div className="pt-3 opacity-20 max-w-full truncate font-sans lowercase tracking-normal italic border-t border-outline-variant/50 mt-4 text-caption">
-                {data.source}
-            </div>
+        <div className={cn("absolute top-24 left-3 sm:left-6 z-player-ui w-64 max-w-[calc(100vw-1.5rem)] p-4 rounded-2xl text-xs text-on-surface-variant pointer-events-none", PLAYER_GLASS)}>
+            <div className="mb-2.5 text-2xs font-semibold uppercase tracking-widest text-brand-accent">Estadísticas</div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 tabular-nums">
+                <dt>Tiempo</dt><dd className="text-right text-white">{data.currentTime} / {data.duration}</dd>
+                <dt>Buffer</dt><dd className="text-right text-white">{data.buffer}s</dd>
+                <dt>Resolución</dt><dd className="text-right text-white">{data.resolution}</dd>
+                <dt>Velocidad</dt><dd className="text-right text-white">{data.playbackRate}x</dd>
+                <dt>Volumen</dt><dd className="text-right text-white">{data.volume}%</dd>
+            </dl>
+            <div className="mt-2.5 pt-2.5 border-t border-white/10 truncate opacity-60">{data.source}</div>
         </div>
     )
 }
@@ -68,6 +63,12 @@ export interface PlayerUIProps {
     nextEpisodeImage?: string
     /** Presente solo en la app de escritorio con mpv disponible: hace handoff de la reproducción a mpv. */
     onOpenInMpv?: () => void
+    isEpisodesSidebarOpen?: boolean
+    onToggleEpisodesSidebar?: () => void
+    setIsEpisodesSidebarOpen?: React.Dispatch<React.SetStateAction<boolean>>
+    isQueueSidebarOpen?: boolean
+    onToggleQueueSidebar?: () => void
+    setIsQueueSidebarOpen?: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export function PlayerUI(props: PlayerUIProps) {
@@ -92,8 +93,24 @@ export function PlayerUI(props: PlayerUIProps) {
         localVideoRef.current = domElements.videoElement.current
     }, [domElements.videoElement])
 
-    const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = React.useState(false)
-    const [isQueueSidebarOpen, setIsQueueSidebarOpen] = React.useState(false)
+    const [localEpisodesSidebarOpen, setLocalEpisodesSidebarOpen] = React.useState(false)
+    const [localQueueSidebarOpen, setLocalQueueSidebarOpen] = React.useState(false)
+
+    const isEpisodesSidebarOpen = props.isEpisodesSidebarOpen !== undefined ? props.isEpisodesSidebarOpen : localEpisodesSidebarOpen
+    const setIsEpisodesSidebarOpen = props.setIsEpisodesSidebarOpen || setLocalEpisodesSidebarOpen
+    const handleToggleEpisodesSidebar = props.onToggleEpisodesSidebar || (() => setIsEpisodesSidebarOpen(v => !v))
+
+    const isQueueSidebarOpen = props.isQueueSidebarOpen !== undefined ? props.isQueueSidebarOpen : localQueueSidebarOpen
+    const setIsQueueSidebarOpen = props.setIsQueueSidebarOpen || setLocalQueueSidebarOpen
+    const handleToggleQueueSidebar = props.onToggleQueueSidebar || (() => setIsQueueSidebarOpen(v => !v))
+
+    const handleQueueSelectItem = React.useCallback((item: PlaylistItem, idx: number) => {
+        useQueueStore.getState().setCurrentQueueIndex(idx)
+        if (item.mediaId === mediaId && item.episodeNumber !== undefined && onSelectEpisode) {
+            onSelectEpisode(item.episodeNumber)
+        }
+        setIsQueueSidebarOpen(false)
+    }, [mediaId, onSelectEpisode, setIsQueueSidebarOpen])
 
     // Gesture tracking for double tap to skip and hold for 2x speed
     const [isHoldSpeedActive, setIsHoldSpeedActive] = React.useState(false)
@@ -129,10 +146,10 @@ export function PlayerUI(props: PlayerUIProps) {
             if (video) {
                 video.playbackRate = state.playbackRate
             }
-            // Briefly delay resetting wasHoldingRef so it absorbs the trailing click event
+            // Delay resetting wasHoldingRef to absorb synthetic trailing clicks
             setTimeout(() => {
                 wasHoldingRef.current = false
-            }, 150)
+            }, 400)
         }
     }
 
@@ -277,7 +294,7 @@ export function PlayerUI(props: PlayerUIProps) {
             wasHoldingRef.current = true
             setTimeout(() => {
                 wasHoldingRef.current = false
-            }, 150)
+            }, 400)
         }
     }
 
@@ -294,6 +311,15 @@ export function PlayerUI(props: PlayerUIProps) {
         actions.triggerControlsVisibility()
         if (wasHoldingRef.current) {
             wasHoldingRef.current = false
+            return
+        }
+
+        const isTouch = (e.nativeEvent as PointerEvent)?.pointerType === "touch" || isHoldingRef.current
+
+        // On desktop mouse clicks, toggle play/pause immediately without artificial 300ms latency.
+        // Fullscreen toggle on desktop is handled via onDoubleClick.
+        if (!isTouch) {
+            actions.togglePlay()
             return
         }
 
@@ -358,7 +384,7 @@ export function PlayerUI(props: PlayerUIProps) {
         if (isEpisodesSidebarOpen || isQueueSidebarOpen) {
             actions.setControlsVisible(true)
         }
-    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, actions.setControlsVisible])
+    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, actions])
 
     // D-pad navigation for TV remote control
     const handleEscape = React.useCallback(() => {
@@ -373,7 +399,7 @@ export function PlayerUI(props: PlayerUIProps) {
         } else {
             onClose()
         }
-    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, state.isSettingsOpen, state.isFullscreen, actions, onClose])
+    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, state.isSettingsOpen, state.isFullscreen, actions, onClose, setIsEpisodesSidebarOpen, setIsQueueSidebarOpen])
 
     useFocusNavigation({
         containerRef: domElements.containerElement,
@@ -405,6 +431,8 @@ export function PlayerUI(props: PlayerUIProps) {
 
     return (
         <div
+            role="region"
+            aria-label="Reproductor de video"
             ref={domElements.containerElement}
             onMouseMove={actions.triggerControlsVisibility}
             onMouseLeave={() => {
@@ -473,6 +501,9 @@ export function PlayerUI(props: PlayerUIProps) {
                 con wrappers de barras en z-30, el overlay interceptaba clicks de
                 REINTENTAR/REGRESAR y botones de la bottom-bar. */}
             <div
+                role="button"
+                tabIndex={-1}
+                aria-label="Controles táctiles y de gestos del video"
                 onMouseDown={(e) => {
                     if (e.button === 0) startHold()
                 }}
@@ -483,78 +514,59 @@ export function PlayerUI(props: PlayerUIProps) {
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchEnd}
                 onClick={handleInteractionClick}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        actions.togglePlay()
+                    }
+                }}
+                onDoubleClick={(e) => {
+                    if ((e.nativeEvent as PointerEvent)?.pointerType !== "touch") {
+                        actions.toggleFullscreen()
+                    }
+                }}
                 className={cn(
                     "absolute inset-0 z-player select-none",
                     !controlsVisible && state.isPlaying ? "cursor-none" : "cursor-pointer"
                 )}
             />
 
-            {/* Temporal Gesture Swipe Overlay Indicator */}
+            {/* Indicador de gesto (swipe) */}
             {swipeIndicator && (
                 <div className="absolute inset-0 z-player-overlay pointer-events-none flex items-center justify-center animate-in fade-in duration-100">
-                    <div className="glass-liquid flex items-center gap-3 px-6 py-3.5 rounded-full border border-white/10 shadow-elevation-5 bg-surface-container-high/80">
-                        {swipeIndicator.type === "seek" && (
-                            <IconMediaPlay className="w-5 h-5 text-brand-secondary fill-current shrink-0" />
-                        )}
-                        {swipeIndicator.type === "volume" && (
-                            <IconMediaVolume2 className="w-5 h-5 text-brand-secondary shrink-0" />
-                        )}
-                        {swipeIndicator.type === "brightness" && (
-                            <IconUiStar className="w-5 h-5 text-brand-secondary shrink-0" />
-                        )}
-                        <span className="font-display text-lg tracking-wider text-on-surface uppercase">
-                            {swipeIndicator.value}
-                        </span>
+                    <div className={cn("flex items-center gap-2 h-11 px-4 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
+                        {swipeIndicator.type === "seek" && <IconMediaPlay className="w-4 h-4 fill-current shrink-0 text-brand-accent" />}
+                        {swipeIndicator.type === "volume" && <IconMediaVolume2 className="w-4 h-4 shrink-0 text-brand-accent" />}
+                        {swipeIndicator.type === "brightness" && <IconUiStar className="w-4 h-4 shrink-0 text-brand-accent" />}
+                        <span>{swipeIndicator.value}</span>
                     </div>
                 </div>
             )}
 
-            {/* Skip animation indicator left */}
-            <div
-                className={cn(
-                    "skip-indicator-left absolute left-0 top-0 bottom-0 w-[30%] z-player-overlay pointer-events-none flex items-center justify-center bg-surface-container transition-all duration-200 ease-out",
-                    skipFlash === "left" ? "opacity-100 scale-100" : "opacity-0 scale-95"
-                )}
-                style={{ clipPath: "ellipse(70% 100% at 0% 50%)" }}
-            >
-                <div className="flex flex-col items-center text-white/95 px-6 py-4 rounded-xl backdrop-blur-overlay-sm [&>*:not(:first-child)]:mt-1.5" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 30%, transparent)" }}>
-                    <div className="flex [&>*:not(:first-child)]:ml-0.5">
-                        <svg className="w-8 h-8 fill-current rotate-180" viewBox="0 0 24 24">
-                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
+            {/* Indicadores de ±10s: círculo simple a cada lado */}
+            {(["left", "right"] as const).map((side) => (
+                <div
+                    key={side}
+                    className={cn(
+                        `skip-indicator-${side} absolute top-1/2 -translate-y-1/2 z-player-overlay pointer-events-none transition-opacity duration-200 ease-out`,
+                        side === "left" ? "left-[15%]" : "right-[15%]",
+                        skipFlash === side ? "opacity-100" : "opacity-0"
+                    )}
+                >
+                    <div className={cn("flex flex-col items-center justify-center w-20 h-20 rounded-full text-white", PLAYER_GLASS)}>
+                        <svg className={cn("w-6 h-6 fill-current", side === "left" && "rotate-180")} viewBox="0 0 24 24">
+                            <path d="M5 5.5v13a1 1 0 0 0 1.53.85L15.5 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.53 4.65A1 1 0 0 0 5 5.5z" />
                         </svg>
+                        <span className="text-2xs font-semibold tracking-wide tabular-nums mt-0.5">{side === "left" ? "-10s" : "+10s"}</span>
                     </div>
-                    <span className="text-label-sm font-black uppercase tracking-cinema">-10s</span>
                 </div>
-            </div>
+            ))}
 
-            {/* Skip animation indicator right */}
-            <div
-                className={cn(
-                    "skip-indicator-right absolute right-0 top-0 bottom-0 w-[30%] z-player-overlay pointer-events-none flex items-center justify-center bg-surface-container transition-all duration-200 ease-out",
-                    skipFlash === "right" ? "opacity-100 scale-100" : "opacity-0 scale-95"
-                )}
-                style={{ clipPath: "ellipse(70% 100% at 100% 50%)" }}
-            >
-                <div className="flex flex-col items-center text-white/95 px-6 py-4 rounded-xl backdrop-blur-overlay-sm [&>*:not(:first-child)]:mt-1.5" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 30%, transparent)" }}>
-                    <div className="flex [&>*:not(:first-child)]:ml-0.5">
-                        <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
-                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
-                        </svg>
-                    </div>
-                    <span className="text-label-sm font-black uppercase tracking-cinema">+10s</span>
-                </div>
-            </div>
-
-            {/* 2x Speed Hold Indicator */}
+            {/* Velocidad 2x mientras se mantiene presionado */}
             {isHoldSpeedActive && (
-                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-player-overlay pointer-events-none animate-in fade-in zoom-in-95 duration-base">
-                    <div className="flex items-center px-5 py-2.5 rounded-full border border-white/10 backdrop-blur-overlay-sm text-white shadow-xl [&>*:not(:first-child)]:ml-2" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent)" }}>
-                        <svg className="w-3.5 h-3.5 fill-current text-brand-accent animate-pulse" viewBox="0 0 24 24">
-                            <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z" />
-                        </svg>
-                        <span className="text-label-sm font-black uppercase tracking-ultra text-on-surface">
-                            2.0x Velocidad
-                        </span>
+                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-player-overlay pointer-events-none animate-in fade-in duration-150">
+                    <div className={cn("h-9 px-4 flex items-center gap-1.5 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
+                        <span className="text-brand-accent">2x</span> Velocidad
                     </div>
                 </div>
             )}
@@ -566,6 +578,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 isBuffering={state.isBuffering}
                 isSeeking={state.isSeeking}
                 isStreamSwitching={state.isStreamSwitching}
+                streamSwitchReason={state.streamSwitchReason}
                 onClose={onClose}
                 onRetry={actions.retryStream}
             />
@@ -573,20 +586,24 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <CenterPlayFlash flash={state.flash} />
 
-            <StatsOverlay show={state.showStats} data={state.statsData!} />
+            <StatsOverlay show={state.showStats} data={state.statsData} />
 
             <SkipIntroOverlay
-                show={state.skipMode !== null}
+                // Se oculta mientras hay otro panel abierto en esa zona (ajustes, episodios, cola)
+                // o la tarjeta de siguiente episodio, que ya cubre "saltar outro". El atajo S sigue funcionando.
+                show={state.skipMode !== null && !state.showNextEpisode && !state.isSettingsOpen && !isEpisodesSidebarOpen && !isQueueSidebarOpen}
                 onSkip={actions.handleSkipIntro}
                 skipMode={state.skipMode ?? "intro"}
                 remainingSeconds={state.skipRemainingSeconds}
                 segmentProgress={state.segmentProgress}
                 shortcutKey="S"
+                controlsVisible={controlsVisible}
             />
 
             <AutoSkipToastOverlay
                 showType={state.showAutoSkipToast}
                 onUndo={actions.undoSkip}
+                controlsVisible={controlsVisible}
             />
 
             <NextEpisodeOverlay
@@ -603,16 +620,14 @@ export function PlayerUI(props: PlayerUIProps) {
                 remainingProgress={state.remainingProgress}
             />
 
-            <ResumeOverlay
-                show={state.showResume}
-                time={state.resumeTime}
-                onResume={actions.handleResume}
-                onClose={() => actions.setShowResume(false)}
+            <PlayerShortcutsModal
+                isOpen={state.showShortcuts}
+                onClose={() => actions.setShowShortcuts(false)}
             />
 
             <div
                 className={cn(
-                    "player-top-bar absolute top-0 inset-x-0 z-player-ui pointer-events-none transition-all duration-300 ease-out",
+                    "player-top-bar absolute top-0 inset-x-0 z-player-ui pointer-events-none transition-[opacity,transform] duration-300 ease-out",
                     controlsVisible
                         ? "opacity-100 translate-y-0"
                         : "opacity-0 -translate-y-4 pointer-events-none"
@@ -630,7 +645,9 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <div
                 className={cn(
-                    "player-bottom-bar absolute bottom-0 inset-x-0 z-player-ui pointer-events-none transition-opacity duration-300 ease-out",
+                    "player-bottom-bar absolute bottom-0 inset-x-0 pointer-events-none transition-opacity duration-300 ease-out",
+                    // Con ajustes abiertos la barra sube de capa para que el panel quede sobre los overlays
+                    state.isSettingsOpen ? "z-player-settings" : "z-player-ui",
                     controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
             >
@@ -673,14 +690,14 @@ export function PlayerUI(props: PlayerUIProps) {
                     videoRef={localVideoRef}
                     malId={malId}
                     mediaId={mediaId}
-                    onTakeScreenshot={actions.takeScreenshot}
-                    onTogglePip={actions.togglePip}
                     playbackRate={state.playbackRate}
                     onPlaybackRateChange={actions.changePlaybackRate}
                     autoSkipIntro={state.autoSkipIntro}
                     onAutoSkipIntroChange={actions.setAutoSkipIntro}
                     autoSkipOutro={state.autoSkipOutro}
                     onAutoSkipOutroChange={actions.setAutoSkipOutro}
+                    autoSkipFiller={state.autoSkipFiller}
+                    onAutoSkipFillerChange={actions.setAutoSkipFiller}
                     skipStepSeconds={state.skipStepSeconds}
                     onSkipStepSecondsChange={actions.setSkipStepSeconds}
                     hlsLevels={state.hlsLevels}
@@ -711,10 +728,10 @@ export function PlayerUI(props: PlayerUIProps) {
                     skipToPrevChapter={actions.skipToPrevChapter}
                     activeChapter={state.activeChapter}
                     isEpisodesSidebarOpen={isEpisodesSidebarOpen}
-                    onToggleEpisodesSidebar={() => setIsEpisodesSidebarOpen(!isEpisodesSidebarOpen)}
+                    onToggleEpisodesSidebar={handleToggleEpisodesSidebar}
                     hasEpisodes={Boolean(episodes && episodes.length > 0)}
                     isQueueSidebarOpen={isQueueSidebarOpen}
-                    onToggleQueueSidebar={() => setIsQueueSidebarOpen(!isQueueSidebarOpen)}
+                    onToggleQueueSidebar={handleToggleQueueSidebar}
                     hasQueue={playlistQueue.length > 0}
                     previewManager={state.previewManager}
                 />
@@ -737,6 +754,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 onClose={() => setIsQueueSidebarOpen(false)}
                 playlistQueue={playlistQueue}
                 currentQueueIndex={currentQueueIndex}
+                onSelectItem={handleQueueSelectItem}
             />
         </div>
     )

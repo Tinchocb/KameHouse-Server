@@ -2,7 +2,8 @@ import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
 import { NotFound } from "@/components/shared/not-found"
 import { QueryClient, useIsFetching, useQueryClient } from "@tanstack/react-query"
-import { createRootRouteWithContext, Outlet, redirect, useRouterState } from "@tanstack/react-router"
+import { createRootRouteWithContext, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
+import { __isTauriDesktop__ } from "@/types/constants"
 import React from "react"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
@@ -23,7 +24,7 @@ const PerformanceMonitor = React.lazy(() =>
 )
 import { PageTransition } from "@/components/shared/page-transition"
 
-import { useAppStore } from "@/lib/store"
+import { useAppStore, usePlayerStore, useQueueStore, useUIStore } from "@/lib/store"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
 import { useGetStatus } from "@/api/hooks/settings.hooks"
 const GlobalQueueSidebar = React.lazy(() =>
@@ -31,9 +32,6 @@ const GlobalQueueSidebar = React.lazy(() =>
 )
 const GettingStarted = React.lazy(() =>
     import("@/components/shared/getting-started").then((m) => ({ default: m.GettingStarted }))
-)
-const ChronologyModal = React.lazy(() =>
-    import("@/components/shared/chronology-modal").then((m) => ({ default: m.ChronologyModal }))
 )
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { useApplyCustomTheme, CustomThemeStyles } from "@/lib/theme/apply-custom-theme"
@@ -77,7 +75,7 @@ const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() 
                 nextEpisodeNumber={nextItem?.episodeNumber}
                 nextEpisodeImage={nextItem?.thumbnail}
                 onNextEpisode={() => {
-                    const { playlistQueue: q, currentQueueIndex: idx, setCurrentQueueIndex: setIdx, clearQueue: clear, queueRepeatMode: mode } = useAppStore.getState()
+                    const { playlistQueue: q, currentQueueIndex: idx, setCurrentQueueIndex: setIdx, clearQueue: clear, queueRepeatMode: mode } = useQueueStore.getState()
                     if (mode === "one") {
                         setReplayNonce(n => n + 1)
                         return
@@ -94,9 +92,8 @@ const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() 
                 hasNextEpisode={hasNext}
                 onClose={() => {
                     startViewTransition(() => {
-                        const { setActiveQueuePlayItem, setTvMode } = useAppStore.getState()
-                        setActiveQueuePlayItem(null)
-                        setTvMode(false)
+                        useQueueStore.getState().setActiveQueuePlayItem(null)
+                        usePlayerStore.getState().setTvMode(false)
                     })
                 }}
             />
@@ -107,12 +104,11 @@ const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() 
 function RootComponent() {
     const tvMode = useAppStore(state => state.tvMode)
     const showInitialSetup = useAppStore(state => state.showInitialSetup)
-    const setShowInitialSetup = useAppStore(state => state.setShowInitialSetup)
-    const chronologyOpen = useAppStore(state => state.chronologyOpen)
-    const setChronologyOpen = useAppStore(state => state.setChronologyOpen)
+    const setShowInitialSetup = useUIStore(state => state.setShowInitialSetup)
     useTvDpad()
     const { data: status, isLoading, isError, refetch } = useGetStatus()
 
+    const router = useRouter()
     const queryClient = useQueryClient()
     const routerState = useRouterState()
     const isCollectionFetching = useIsFetching({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] }) > 0
@@ -123,6 +119,22 @@ function RootComponent() {
     // Warm the player chunk during idle so the first play is instant (no on-click
     // JS download, no Suspense fallback flash).
     React.useEffect(() => { prewarmVideoPlayer() }, [])
+
+    // Precargar rutas de secciones principales en idle tras montar la interfaz
+    React.useEffect(() => {
+        if (!isInterfaceReady) return
+        const runPreload = () => {
+            void router.preloadRoute({ to: "/movies" }).catch(() => {})
+            void router.preloadRoute({ to: "/series" }).catch(() => {})
+        }
+        if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+            const handle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number; cancelIdleCallback: (id: number) => void }).requestIdleCallback(runPreload, { timeout: 3000 })
+            return () => (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(handle)
+        } else {
+            const timer = setTimeout(runPreload, 800)
+            return () => clearTimeout(timer)
+        }
+    }, [isInterfaceReady, router])
 
     // Update the splash status text dynamically
     React.useEffect(() => {
@@ -137,56 +149,51 @@ function RootComponent() {
         }
     }, [isLoading, status, isInterfaceReady])
 
-    // Coordinate splash screen dismissal with full interface readiness
+    const isReadyNow = !isLoading && !!status && (
+        !status.settings?.id ||
+        showInitialSetup ||
+        (!routerState.isLoading && (!isCollectionFetching || !!queryClient.getQueryData([API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key])))
+    )
+
+    if (!isInterfaceReady && isReadyNow) {
+        setIsInterfaceReady(true)
+    }
+
+    // Safety fallback timeout: never hold splash screen longer than 1.5s after status is resolved
     React.useEffect(() => {
-        if (isLoading || !status) return
+        if (isInterfaceReady || isLoading || !status) return
 
-        // Onboarding wizard is ready as soon as status is available
-        if (!status.settings?.id || showInitialSetup) {
-            setIsInterfaceReady(true)
-            return
-        }
-
-        // Normal dashboard mode: check if library collection or route is ready
-        const hasCollection = !!queryClient.getQueryData([API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key])
-        const routeReady = !routerState.isLoading && (!isCollectionFetching || hasCollection)
-
-        if (routeReady) {
-            setIsInterfaceReady(true)
-        }
-
-        // Safety fallback timeout: never hold splash screen longer than 1.5s after status is resolved
         const safetyTimer = setTimeout(() => {
             setIsInterfaceReady(true)
         }, 1500)
 
         return () => clearTimeout(safetyTimer)
-    }, [isLoading, status, showInitialSetup, routerState.isLoading, isCollectionFetching, queryClient])
+    }, [isInterfaceReady, isLoading, status])
 
-    // Once interface is ready, smoothly transition and remove the splash loader
+    // Once interface is ready, reveal the interface and remove the HTML loader.
     React.useEffect(() => {
         if (!isInterfaceReady) return
 
+        // Avisar inmediatamente a Tauri para destruir el splash nativo y revelar la ventana main
+        const desktopApi = typeof window !== "undefined" ? window.desktop : undefined
+        if (desktopApi?.startup?.ready) {
+            desktopApi.startup.ready()
+        }
+
         const loader = document.getElementById("global-loader")
         if (loader) {
-            loader.style.opacity = "0"
-            loader.style.transform = "scale(1.02)"
-            loader.style.pointerEvents = "none"
-            const timer = setTimeout(() => {
+            if (__isTauriDesktop__) {
+                // En Tauri desktop la ventana main estaba oculta hasta ready();
+                // se elimina de inmediato para que la ventana ya aparezca completamente limpia.
                 loader.remove()
-            }, 450)
-
-            // Notify Tauri desktop that the renderer is fully ready
-            const desktopApi = typeof window !== "undefined" ? window.desktop : undefined
-            if (desktopApi?.startup?.ready) {
-                desktopApi.startup.ready()
-            }
-
-            return () => clearTimeout(timer)
-        } else {
-            const desktopApi = typeof window !== "undefined" ? window.desktop : undefined
-            if (desktopApi?.startup?.ready) {
-                desktopApi.startup.ready()
+            } else {
+                // En web (sin ventana splash nativa previa), fade suave de opacidad.
+                loader.style.opacity = "0"
+                loader.style.pointerEvents = "none"
+                const timer = setTimeout(() => {
+                    loader.remove()
+                }, 350)
+                return () => clearTimeout(timer)
             }
         }
     }, [isInterfaceReady])
@@ -202,7 +209,12 @@ function RootComponent() {
     }, [isError, status])
 
     if (isLoading || !status) {
-        return <LoadingOverlayWithLogo isError={isError} refetch={refetch} />
+        if (isError) {
+            return <LoadingOverlayWithLogo isError={isError} refetch={refetch} />
+        }
+        // Anti-flash: no montar un segundo loader React sobre el HTML splash.
+        // El #global-loader de index.html sigue visible hasta isInterfaceReady.
+        return null
     }
 
     if (!status.settings?.id || showInitialSetup) {
@@ -220,9 +232,11 @@ function RootComponent() {
             <CustomThemeStyles />
             <LiquidGlassDefs />
             <DynamicBackdrop />
-            <React.Suspense fallback={null}>
-                <PerformanceMonitor />
-            </React.Suspense>
+            {import.meta.env.DEV && (
+                <React.Suspense fallback={null}>
+                    <PerformanceMonitor />
+                </React.Suspense>
+            )}
             {!tvMode && <FloatingPillNav />}
             <React.Suspense fallback={null}>
                 <CommandPalette />
@@ -235,15 +249,11 @@ function RootComponent() {
             >
                 {!tvMode && <AppTopNav />}
 
-                <PageTransition className={`flex-1 w-full overflow-y-auto ${!tvMode ? "pt-16 md:pt-0" : ""}`}>
+                <PageTransition data-scroll-container="true" className={`flex-1 w-full overflow-y-auto ${!tvMode ? "pt-16 md:pt-0" : ""}`}>
                     <Outlet />
                 </PageTransition>
             </AppLayoutContent>
             {tvMode ? <TvNavBar /> : <AppBottomNav />}
-
-            <React.Suspense fallback={null}>
-                <ChronologyModal isOpen={chronologyOpen} onClose={() => setChronologyOpen(false)} />
-            </React.Suspense>
 
             <GlobalQueuePlayerOverlay />
         </AppLayout>

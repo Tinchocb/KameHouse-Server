@@ -93,12 +93,12 @@ func (d *Detector) crossEpisodeScan(ctx context.Context, fpcalcBin string, media
 				// Vía ffmpeg con track explícito: este método compara episodios ENTRE SÍ,
 				// así que si la autoselección de ffmpeg eligiera un track distinto en cada
 				// uno, se compararían idiomas distintos y no habría subsecuencia común.
-				introFP, _, err := FingerprintRange(ctx, fpcalcBin, d.ffmpegPath, ep.Path, 0, chunk, ep.AudioIdx)
+				introFP, _, err := FingerprintRangeCached(ctx, d.cacheDir, fpcalcBin, d.ffmpegPath, ep.Path, 0, chunk, ep.AudioIdx)
 				if err != nil {
 					d.logger.Warn().Err(err).Str("path", ep.Path).Msg("skipdetect: fallo al huellar intro")
 					continue
 				}
-				outroFP, _, err := FingerprintRange(ctx, fpcalcBin, d.ffmpegPath, ep.Path, ep.Duration-chunk, chunk, ep.AudioIdx)
+				outroFP, _, err := FingerprintRangeCached(ctx, d.cacheDir, fpcalcBin, d.ffmpegPath, ep.Path, ep.Duration-chunk, chunk, ep.AudioIdx)
 				if err != nil {
 					d.logger.Warn().Err(err).Str("path", ep.Path).Msg("skipdetect: fallo al huellar outro")
 					continue

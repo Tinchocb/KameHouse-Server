@@ -1,3 +1,4 @@
+import { SERIES_HERO_ART } from "./hero-art"
 // Definition of the 6 canonical Dragon Ball eras in chronological order
 export const ERAS = [
     { id: "db", title: "Dragon Ball", shortTitle: "DB Original", subtitle: "Dragon Ball (Original)", year: 1986, tag: "Original", kanji: "亀", tagline: "La Gran Aventura Comienza", defaultSaga: "pilaf" },
@@ -77,8 +78,8 @@ export const ERA_DEFAULTS: Record<EraId, EraDefaultInfo> = {
         title: "Dragon Ball",
         subtitle: "Dragon Ball (Original)",
         description: "Goku, un niño con cola de mono y una fuerza sobrehumana, conoce a Bulma y emprende un viaje legendario en busca de las siete Esferas del Dragón, entrenando con el Maestro Roshi y enfrentando villanos en torneos de artes marciales.",
-        backdropUrl: "/backdrops/db.webp",
-        posterUrl: "https://image.tmdb.org/t/p/w500/30L49n4Dhn7dzuGG50GV3ybMhC3.jpg",
+        backdropUrl: SERIES_HERO_ART.db.src,
+        posterUrl: "https://image.tmdb.org/t/p/w500/dJlS1BsXxGEemIxs1uv4jqisJFQ.jpg",
         year: 1986,
         episodes: "153 Episodios",
     },
@@ -86,8 +87,8 @@ export const ERA_DEFAULTS: Record<EraId, EraDefaultInfo> = {
         title: "Dragon Ball Z",
         subtitle: "Dragon Ball Z",
         description: "Cinco años después del final de Dragon Ball, Goku descubre su origen extraterrestre como guerrero Saiyajin. Junto a los Guerreros Z, defiende la Tierra y el universo de amenazas colosales como Vegeta, Freezer, Cell y Majin Buu.",
-        backdropUrl: "/backdrops/dbz.webp",
-        posterUrl: "https://image.tmdb.org/t/p/w500/ydf1CeiBLfdxiyNTpskM0802TKl.jpg",
+        backdropUrl: SERIES_HERO_ART.dbz.src,
+        posterUrl: "https://image.tmdb.org/t/p/w500/f2zhRLqwRLrKhEMeIM7Z5buJFo3.jpg",
         year: 1989,
         episodes: "291 Episodios",
     },
@@ -95,8 +96,8 @@ export const ERA_DEFAULTS: Record<EraId, EraDefaultInfo> = {
         title: "Dragon Ball GT",
         subtitle: "Dragon Ball GT",
         description: "Tras un deseo accidental de las Esferas de la Estrella Negra, Goku vuelve a ser niño y viaja por el cosmos junto a Trunks y Pan para salvar la Tierra, enfrentando a Baby, Super 17 y los temibles 7 Dragones Malignos con el legendario Super Saiyajin 4.",
-        backdropUrl: "/backdrops/dbgt.webp",
-        posterUrl: "https://image.tmdb.org/t/p/w500/aJOlYXjxb5IvnTsO4I1tmFpC7GH.jpg",
+        backdropUrl: SERIES_HERO_ART.dbgt.src,
+        posterUrl: "https://image.tmdb.org/t/p/w500/621kwKHFsA0JYnHPmvzwdRw0dbr.jpg",
         year: 1996,
         episodes: "64 Episodios",
     },
@@ -104,8 +105,8 @@ export const ERA_DEFAULTS: Record<EraId, EraDefaultInfo> = {
         title: "Dragon Ball Kai",
         subtitle: "Dragon Ball Z Kai",
         description: "Versión remasterizada en alta definición de Dragon Ball Z, fiel al manga original de Akira Toriyama sin episodios de relleno, con edición dinámica y sonido renovado.",
-        backdropUrl: "/backdrops/dbkai.webp",
-        posterUrl: "https://image.tmdb.org/t/p/w500/oz5zbMBKCUsb7hsbjdxvK8yagPD.jpg",
+        backdropUrl: SERIES_HERO_ART.dbkai.src,
+        posterUrl: "https://image.tmdb.org/t/p/w500/ojsPI8fNwcecKLhVC4rB4ZZhFMc.jpg",
         year: 2009,
         episodes: "167 Episodios",
     },
@@ -113,8 +114,8 @@ export const ERA_DEFAULTS: Record<EraId, EraDefaultInfo> = {
         title: "Dragon Ball Super",
         subtitle: "Dragon Ball Super",
         description: "Goku y Vegeta alcanzan el reino de los dioses enfrentando al Dios de la Destrucción Beerus, al renacido Freezer Dorado, a Goku Black y compitiendo en el Torneo del Poder entre universos con el poder del Ultra Instinto.",
-        backdropUrl: "/backdrops/dbs.webp",
-        posterUrl: "https://image.tmdb.org/t/p/w500/qA2UwUQbj05aeBMCuC0mHSQ4loE.jpg",
+        backdropUrl: SERIES_HERO_ART.dbs.src,
+        posterUrl: "https://image.tmdb.org/t/p/w500/ruLBbIX15HrECgLJ3uZPo6X3YCN.jpg",
         year: 2015,
         episodes: "131 Episodios",
     },
@@ -122,11 +123,21 @@ export const ERA_DEFAULTS: Record<EraId, EraDefaultInfo> = {
         title: "Dragon Ball Daima",
         subtitle: "Dragon Ball Daima",
         description: "Debido a una misteriosa conspiración, Goku y sus amigos son transformados en niños pequeños. Para desentrañar el misterio y revertir la transformación, parten hacia el Reino Demoniaco en una nueva aventura llena de acción y magia.",
-        backdropUrl: "/backdrops/dbdaima.webp",
-        posterUrl: "https://image.tmdb.org/t/p/w500/oUmWLyeko3kYdUr8DBLIsxwcugl.jpg",
+        backdropUrl: SERIES_HERO_ART.dbdaima.src,
+        posterUrl: "https://image.tmdb.org/t/p/w500/lMULbSFZNXUC87MqOZQ4SSV9DXI.jpg",
         year: 2024,
         episodes: "20 Episodios",
     },
+}
+
+/**
+ * @deprecated El encuadre de los heroes vive en `hero-art.ts` (punto focal).
+ * Se mantiene solo por `resolveHeroImage` (hero-image-resolver.ts).
+ */
+export interface HeroEraVisualConfig {
+    backdropUrl: string
+    positionMobile: string
+    positionDesktop: string
 }
 
 export const MEDIA_ID_TO_ERA: Record<number, EraId> = {
@@ -196,10 +207,6 @@ export const MEDIA_ID_TO_ERA: Record<number, EraId> = {
     1039107: "dbz",
     39108: "dbz",
     1039108: "dbz",
-    126963: "dbz",
-    1126963: "dbz",
-    303857: "dbz",
-    1303857: "dbz",
     39323: "dbz",
     1039323: "dbz",
     39324: "dbz",
@@ -210,10 +217,10 @@ export const MEDIA_ID_TO_ERA: Record<number, EraId> = {
     1120475: "dbz",
     55127: "dbz",
     1055127: "dbz",
-    39321: "dbz",
-    1039321: "dbz",
-    39322: "dbz",
-    1039322: "dbz",
+    39321: "db",
+    1039321: "db",
+    39322: "db",
+    1039322: "db",
     39325: "dbz",
     1039325: "dbz",
     39326: "dbz",
@@ -231,6 +238,10 @@ export const MEDIA_ID_TO_ERA: Record<number, EraId> = {
     // Super
     62715: "dbs",
     1062715: "dbs",
+    126963: "dbs",
+    1126963: "dbs",
+    303857: "dbs",
+    1303857: "dbs",
     503314: "dbs",
     1503314: "dbs",
     610150: "dbs",
@@ -244,13 +255,14 @@ export const KNOWN_MOVIE_TMDB_IDS = new Set<number>([
     // DB
     116776, 39145, 39144, 39148, 33499, 33513, 1033499, 1033500, 1033513, 1039144, 1039145, 1116776, 1039148,
     // DBZ Movies
-    28609, 39100, 39101, 39102, 24752, 39103, 39104, 34433, 39105, 44251, 39106, 39107, 39108, 126963, 303857, 177572, 15448, 15452, 15454,
-    1028609, 1039100, 1039101, 1039102, 1024752, 1039103, 1039104, 1034433, 1039105, 1044251, 1039106, 1039107, 1039108, 1126963, 1303857, 1177572,
+    28609, 39100, 39101, 39102, 24752, 39103, 39104, 34433, 39105, 44251, 39106, 39107, 39108, 177572, 15448, 15452, 15454,
+    1028609, 1039100, 1039101, 1039102, 1024752, 1039103, 1039104, 1034433, 1039105, 1044251, 1039106, 1039107, 1039108, 1177572,
     // DBZ Specials / OVAs
     39323, 39324, 39325, 39326, 105973, 444390, 38594, 120475, 55127, 39321, 39322, 1259215, 109963,
     1039323, 1039324, 1039325, 1039326, 1105973, 1444390, 1038594, 1120475, 1055127, 1039321, 1039322,
     // GT Special
     18095, 39149, 1018095, 1039149,
     // Super Movies
-    503314, 610150, 1503314, 1610150,
+    126963, 303857, 503314, 610150, 1126963, 1303857, 1503314, 1610150,
 ])
+

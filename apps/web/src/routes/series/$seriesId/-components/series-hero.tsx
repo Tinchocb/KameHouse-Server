@@ -1,20 +1,23 @@
 import * as React from "react"
 import { toast } from "sonner"
-import { useAppStore } from "@/lib/store"
+import { useQueueStore } from "@/lib/store"
 import type { Anime_Entry } from "@/api/generated/types"
 import { IconUiListPlus } from "@/components/ui/icons";
 import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import { stripHtml } from "@/lib/helpers/sanitizer"
-import { getSeriesIdFromMedia, getSeriesEraId, DRAGON_BALL_SERIES_INFO } from "@/lib/helpers/series"
-import { ERAS, ERA_COLOR_MAP, type EraId } from "@/lib/config/eras"
+import { getSeriesIdFromMedia, DRAGON_BALL_SERIES_INFO } from "@/lib/helpers/series"
 import { MediaHero } from "@/components/ui/media-hero"
+import type { HeroArt } from "@/lib/config/hero-art"
 import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
+import { useHideAudienceScore } from "@/lib/theme/theme-hooks"
 import { PlayCta } from "@/components/ui/play-cta"
 import { GlassIconButton } from "@/components/ui/glass-icon-button"
 
 interface SeriesHeroProps {
   entry: Anime_Entry | undefined
   backdropUrl: string | null
+  /** Arte curado del hero (punto focal + composición). */
+  backdropArt?: HeroArt | null
   /** Contenedor con scroll (el <main> del detalle) para el parallax del backdrop. */
   scrollContainerRef?: React.RefObject<HTMLElement | HTMLDivElement | null>
   onPlay?: () => void
@@ -34,6 +37,7 @@ interface SeriesHeroProps {
 export const SeriesHero = React.memo(function SeriesHero({
   entry,
   backdropUrl,
+  backdropArt,
   scrollContainerRef,
   onPlay,
   onPlayHover,
@@ -51,6 +55,7 @@ export const SeriesHero = React.memo(function SeriesHero({
     || media?.titleEnglish
     || "Título Desconocido"
   const rating = media?.score ? media.score / 10 : undefined
+  const hideAudienceScore = useHideAudienceScore()
   const year = media?.year
   // Sinopsis canónica en español primero; la de la API (AniList) viene en inglés.
   const synopsis = (heroSeriesId ? DRAGON_BALL_SERIES_INFO[heroSeriesId]?.description : undefined)
@@ -61,11 +66,7 @@ export const SeriesHero = React.memo(function SeriesHero({
   // archivo (pack) y mostraba "1 EPISODIOS" por error.
   const totalEpisodes = media?.totalEpisodes || entry?.localFiles?.length || undefined
 
-  const eraId: EraId = getSeriesEraId(heroSeriesId) ?? "dbz"
-  const eraAccent = ERA_COLOR_MAP[eraId].accent
-  const eraLabel = ERAS.find(e => e.id === eraId)?.title ?? "Dragon Ball"
-
-  const addToQueue = useAppStore(state => state.addToQueue)
+  const addToQueue = useQueueStore(state => state.addToQueue)
 
   const handleAddToQueue = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -73,6 +74,10 @@ export const SeriesHero = React.memo(function SeriesHero({
       const validFiles = entry.localFiles.filter(f => Boolean(f.path))
       if (validFiles.length === 0) {
         toast.error("No hay archivos locales disponibles para reproducir.")
+        return
+      }
+      if (entry.mediaId == null) {
+        toast.error("Contenido sin identificador: no se puede encolar.")
         return
       }
 
@@ -92,12 +97,12 @@ export const SeriesHero = React.memo(function SeriesHero({
         : `Episodio ${epNum}`
 
       addToQueue({
-        id: entry.mediaId!,
+        id: entry.mediaId,
         title: title,
         subtitle: epTitle,
         playableUrl: target.path || "",
         thumbnail: getMediumResImage(media?.posterImage || ""),
-        mediaId: entry.mediaId!,
+        mediaId: entry.mediaId,
         episodeNumber: epNum,
         malId: media?.idMal ?? null,
         mediaFormat: media?.format ?? "TV"
@@ -110,27 +115,13 @@ export const SeriesHero = React.memo(function SeriesHero({
     }
   }
 
-  const topBadge = (
-    <span
-      className="inline-flex items-center font-mono text-label-sm tracking-display font-bold uppercase px-3 py-1 rounded-full border backdrop-blur-overlay-sm"
-      style={{
-        color: eraAccent,
-        borderColor: `color-mix(in srgb, ${eraAccent} 27%, transparent)`,
-        backgroundColor: `color-mix(in srgb, ${eraAccent} 8%, transparent)`,
-        boxShadow: `0 0 15px color-mix(in srgb, ${eraAccent} 15%, transparent)`
-      }}
-    >
-      {eraLabel}
-    </span>
-  )
-
   const metadataRow = (
     <MediaMetadataCapsule
       format="SERIE"
       year={year}
       episodes={totalEpisodes}
       sagas={sagaCount}
-      rating={rating}
+      rating={hideAudienceScore ? undefined : rating}
     />
   )
 
@@ -160,15 +151,18 @@ export const SeriesHero = React.memo(function SeriesHero({
     <MediaHero
       scrollContainerRef={scrollContainerRef}
       backdropUrl={backdropUrl || null}
+      backdropArt={backdropArt}
       posterUrl={posterUrl}
       hasBannerImage={hasBannerImage}
       title={title}
-      topBadge={topBadge}
       metadataRow={metadataRow}
       synopsis={synopsis}
       footerText={footerText}
       actionButtons={actionButtons}
       showPosterColumn={true}
+      // Compacto en desktop: el hero de 80svh empujaba el panel de sagas
+      // muy abajo en primera pintura. Móvil y Movies quedan intactos.
+      className="lg:min-h-[62svh] md:pt-16 md:pb-12"
       onBackdropClick={onPlay}
       onTitleClick={onPlay}
     />

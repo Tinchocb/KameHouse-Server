@@ -1,6 +1,6 @@
 import React from "react"
 import { type Control, Controller, useFormContext, useWatch } from "react-hook-form"
-import { motion, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence } from "framer-motion"
 import { type SettingsFormValues } from "../index"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
@@ -9,6 +9,36 @@ import { resolveThemeMode, type ThemeMode } from "@/lib/theme/theme-hooks"
 import { OsSelect, OsToggle } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { useUIStore } from "@/lib/stores/ui-store"
+
+function DynamicBackdropLocalToggles() {
+    const dynamicBackdropEnabled = useUIStore((s) => s.dynamicBackdropEnabled)
+    const setDynamicBackdropEnabled = useUIStore((s) => s.setDynamicBackdropEnabled)
+    const motionEnabled = useUIStore((s) => s.dynamicBackdropMotionEnabled)
+    const setDynamicBackdropMotionEnabled = useUIStore((s) => s.setDynamicBackdropMotionEnabled)
+    return (
+        <div className="pt-2 border-t border-white/[0.05]">
+            <div className="flex items-center gap-2 px-1 pb-1">
+                <span className="text-3xs font-mono px-2 py-0.5 rounded bg-brand-accent/10 text-brand-accent border border-brand-accent/20">
+                    Local
+                </span>
+                <span className="text-3xs text-on-surface-variant/70">Solo este dispositivo, sin Guardar</span>
+            </div>
+            <OsToggle
+                label="Fondo Dinámico"
+                description="Fondos ambientales animados según la sección que exploras."
+                checked={dynamicBackdropEnabled}
+                onChange={setDynamicBackdropEnabled}
+            />
+            <OsToggle
+                label="Movimiento en Fondo Dinámico"
+                description="Anima el fondo ambiental. Desactívalo para ahorrar batería."
+                checked={motionEnabled}
+                onChange={setDynamicBackdropMotionEnabled}
+            />
+        </div>
+    )
+}
 
 interface AppearanceTabProps {
     control: Control<SettingsFormValues>
@@ -46,7 +76,10 @@ const THEME_PRESETS = [
 export const AppearanceTab = React.memo(function AppearanceTab({ control }: AppearanceTabProps) {
     const { playSound } = useSound()
     const { setValue, getValues } = useFormContext<SettingsFormValues>()
+    // Dual-write: el form marca dirty (para Guardar) y el store aplica al instante.
+    const setThemeVisual = useUIStore((s) => s.setThemeVisual)
 
+    const setHideAudienceScore = useUIStore((s) => s.setHideAudienceScore)
     // Watchers consolidados en una única suscripción
     const [themeEraValue, themeModeValue, blurEffectsValue] = useWatch({
         control,
@@ -65,17 +98,24 @@ export const AppearanceTab = React.memo(function AppearanceTab({ control }: Appe
         playSound("category")
         setValue("theme.themeEra", preset.themeEra, { shouldValidate: true, shouldDirty: true })
         setValue("theme.enableColorSettings", true, { shouldDirty: true })
+        setThemeVisual({ themeEra: preset.themeEra, enableColorSettings: true })
     }
 
     const setMode = (mode: ThemeMode) => {
         playSound("category")
         setValue("theme.themeMode", mode, { shouldDirty: true })
-        if (mode === "era") {
+        if (mode === "classic") {
+            setValue("theme.themeEra", "classic", { shouldDirty: true })
+            setValue("theme.enableColorSettings", false, { shouldDirty: true })
+            setThemeVisual({ themeMode: "classic", themeEra: "classic", enableColorSettings: false })
+        } else if (mode === "era") {
             const currentEra = getValues("theme.themeEra")
-            if (!currentEra || !currentEra.startsWith("era-")) {
-                setValue("theme.themeEra", "era-universe", { shouldDirty: true })
+            const nextEra = currentEra && currentEra.startsWith("era-") ? currentEra : "era-universe"
+            if (nextEra !== currentEra) {
+                setValue("theme.themeEra", nextEra, { shouldDirty: true })
             }
             setValue("theme.enableColorSettings", true, { shouldDirty: true })
+            setThemeVisual({ themeMode: "era", themeEra: nextEra, enableColorSettings: true })
         }
     }
 
@@ -94,7 +134,7 @@ return (
                 description="Selecciona la estética visual general del sistema."
                 icon={IconUiPalette}
                 badge={
-                    <span className="text-[10px] font-mono font-bold text-brand-accent px-2 py-0.5 rounded-full bg-brand-accent/10 border border-brand-accent/25">
+                    <span className="text-3xs font-mono font-bold text-brand-accent px-2 py-0.5 rounded-full bg-brand-accent/10 border border-brand-accent/25">
                         {isEraMode ? activePresetObj.name : "Clásico AMOLED"}
                     </span>
                 }
@@ -107,7 +147,7 @@ return (
                         const isActive = uiMode === mode.id
                         const ModeIcon = mode.icon
                         return (
-                            <motion.button
+                            <m.button
                                 key={mode.id}
                                 type="button"
                                 whileHover={{ scale: 1.015, y: -2 }}
@@ -117,28 +157,28 @@ return (
                                 className={cn(
                                     "flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer",
                                     isActive
-                                        ? "bg-zinc-950/70 border-white/30 border-t-white/50 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
-                                        : "bg-zinc-950/40 border-white/10 border-t-white/25 hover:border-white/20 hover:bg-white/[0.04] shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.1)]"
+                                        ? "bg-surface-container-high/80 border-white/30 border-t-white/50 shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
+                                        : "bg-surface-container-lowest/60 border-white/10 border-t-white/25 hover:border-white/20 hover:bg-white/[0.04] shadow-glass-highlight-sm"
                                 )}
                             >
                                 <div className={cn(
                                     "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-all",
                                     isActive
-                                        ? "bg-white text-zinc-950 border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] font-black"
-                                        : "bg-white/5 border-white/10 text-zinc-400"
+                                        ? "bg-white text-black border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] font-black"
+                                        : "bg-white/5 border-white/10 text-on-surface-variant"
                                 )}>
                                     <ModeIcon className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center justify-between gap-1">
                                         <p className="text-xs font-bold text-white">{mode.name}</p>
-                                        <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full bg-white/5 text-zinc-400 border border-white/10">
+                                        <span className="text-4xs font-mono uppercase px-2 py-0.5 rounded-full bg-white/5 text-on-surface-variant border border-white/10">
                                             {mode.tag}
                                         </span>
                                     </div>
-                                    <p className="text-[11px] text-zinc-400 leading-tight mt-0.5 line-clamp-1">{mode.desc}</p>
+                                    <p className="text-2xs text-on-surface-variant leading-tight mt-0.5 line-clamp-1">{mode.desc}</p>
                                 </div>
-                            </motion.button>
+                            </m.button>
                         )
                     })}
                 </div>
@@ -146,7 +186,7 @@ return (
                 {/* Paletas por Era (Se muestra al estar en modo Era) */}
                 <AnimatePresence initial={false}>
                     {isEraMode && (
-                        <motion.div
+                        <m.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
@@ -159,14 +199,14 @@ return (
                                         <span className="w-2 h-2 rounded-full bg-brand-accent animate-pulse" />
                                         Paletas de la Franquicia Dragon Ball
                                     </span>
-                                    <span className="text-[10px] font-mono text-on-surface-variant/60">Toca para aplicar</span>
+                                    <span className="text-3xs font-mono text-on-surface-variant/60">Toca para aplicar</span>
                                 </div>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                                     {THEME_PRESETS.map((preset) => {
                                         const isActive = activePresetObj.id === preset.id
                                         return (
-                                            <motion.button
+                                            <m.button
                                                 key={preset.id}
                                                 type="button"
                                                 whileHover={{ scale: 1.03, y: -2 }}
@@ -188,13 +228,13 @@ return (
                                                     )}
                                                 </div>
                                                 <p className="text-xs font-bold text-on-surface truncate">{preset.name}</p>
-                                                <p className="text-[10px] text-on-surface-variant/70 truncate">{preset.subtitle}</p>
-                                            </motion.button>
+                                                <p className="text-3xs text-on-surface-variant/70 truncate">{preset.subtitle}</p>
+                                            </m.button>
                                         )
                                     })}
                                 </div>
                             </div>
-                        </motion.div>
+                        </m.div>
                     )}
                 </AnimatePresence>
 </SectionBar>
@@ -218,7 +258,10 @@ return (
                             label="Desenfoque y Vidrio Esmerilado (Glassmorphism)"
                             description="Translucidez dinámica sobre tarjetas, paneles y barras de navegación."
                             checked={!!field.value}
-                            onChange={field.onChange}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setThemeVisual({ themeEnableBlurringEffects: v })
+                            }}
                         />
                     )}
                 />
@@ -230,7 +273,10 @@ return (
                             label="Cristal Líquido (Liquid Glass)"
                             description="Refracción y reflejos orgánicos con aceleración por GPU."
                             checked={!!field.value}
-                            onChange={field.onChange}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setThemeVisual({ themeEnableLiquidGlass: v })
+                            }}
                         />
                     )}
                 />
@@ -242,10 +288,44 @@ return (
                             label="Fondo Ambiental en Ficha de Medios"
                             description="Ilumina el fondo de series y películas con el afiche oficial de fondo."
                             checked={!!field.value}
-                            onChange={field.onChange}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setThemeVisual({ themeEnableMediaPageBlurredBackground: v })
+                            }}
                         />
                     )}
                 />
+                <Controller
+                    control={control}
+                    name="theme.themeEnableSidebarGradient"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Degradado en Barra Lateral"
+                            description="Aplica un degradado sutil al fondo de la navegación lateral."
+                            checked={!!field.value}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setThemeVisual({ themeEnableSidebarGradient: v })
+                            }}
+                        />
+                    )}
+                />
+                <Controller
+                    control={control}
+                    name="theme.themeEnableCinematicGrain"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Grano Cinematográfico"
+                            description="Textura de grano de película sobre los fondos para un acabado cine."
+                            checked={!!field.value}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setThemeVisual({ themeEnableCinematicGrain: v })
+                            }}
+                        />
+                    )}
+                />
+                <DynamicBackdropLocalToggles />
 </SectionBar>
 
             {/* ══════════════════════════════════════════════════════════════════
@@ -275,10 +355,28 @@ return (
                                 { value: "RATING_DESC", label: "Mejor valorados", desc: "Por puntuación", badge: "TOP" },
                             ]}
                             value={field.value || "TITLE_ASC"}
-                            onChange={field.onChange}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setThemeVisual({ themeAnimeLibraryCollectionDefaultSorting: v })
+                            }}
                         />
                     )}
                     />
+                <Controller
+                    control={control}
+                    name="platform.hideAudienceScore"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Ocultar Puntuación de Audiencia"
+                            description="Oculta las puntuaciones en las tarjetas para evitar spoilers de popularidad."
+                            checked={!!field.value}
+                            onChange={(v) => {
+                                field.onChange(v)
+                                setHideAudienceScore(!!v)
+                            }}
+                        />
+                    )}
+                />
             </SectionBar>
 
         </div>

@@ -18,7 +18,7 @@ export function RangeSlider({ label, description, min, max, step = 1, value, onC
         <div className="flex flex-col md:flex-row md:items-center justify-between px-5 py-4 hover:bg-white/[0.04] transition-all duration-base gap-4 group/slider">
             <div className="space-y-1 flex-1 max-w-xl">
                 <p className="text-xs font-bold text-on-surface group-hover/slider:text-white transition-colors tracking-tight">{label}</p>
-                {description && <p className="text-[11px] text-on-surface-variant/70 leading-relaxed font-medium">{description}</p>}
+                {description && <p className="text-2xs text-on-surface-variant/70 leading-relaxed font-medium">{description}</p>}
             </div>
             <div className={cn("flex items-center gap-3 w-full md:w-72", className)}>
                 <input
@@ -30,7 +30,7 @@ export function RangeSlider({ label, description, min, max, step = 1, value, onC
                     onChange={(e) => onChange(parseFloat(e.target.value))}
                     className="w-full accent-white bg-white/15 hover:bg-white/25 h-1.5 rounded-full appearance-none cursor-pointer transition-all"
                 />
-                <span className="text-[11px] font-mono text-zinc-200 bg-white/10 border border-white/20 text-right shrink-0 min-w-[3rem] px-2 py-1 rounded-full">
+                <span className="text-2xs font-mono text-zinc-200 bg-white/10 border border-white/20 text-right shrink-0 min-w-[3rem] px-2 py-1 rounded-full">
                     {formatValue ? formatValue(value) : value}
                 </span>
             </div>

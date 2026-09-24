@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
@@ -46,6 +47,7 @@ type MediaFetcherOptions struct {
 	SeriesPaths  []string
 	MoviePaths   []string
 	Database     *db.Database
+	UnifiedScan  bool
 }
 
 // NewMediaFetcher creates a MediaFetcher using TMDB + folder structure
@@ -128,57 +130,11 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 	// Pre-inject all Dragon Ball IDs from the resolver
 	priorityIds := make(map[int]bool)
 	for _, lf := range opts.LocalFiles {
-		folderInfo := ParseFolderStructure(lf.Path, libPaths)
-		parentDir := filepath.Base(filepath.Dir(lf.Path))
-		seriesFolder := lf.GetSeriesFolderTitle()
-		if seriesFolder == "" && folderInfo.SeriesName != "" {
-			seriesFolder = folderInfo.SeriesName
-		}
-		pm := parsedMediaFromLocalFile(lf)
-
-		var candidates []string
-		if seriesFolder != "" && pm.EpisodeTitle != "" {
-			candidates = append(candidates, seriesFolder+" "+pm.EpisodeTitle)
-		}
-		if pm.Title != "" && pm.EpisodeTitle != "" {
-			candidates = append(candidates, pm.Title+" "+pm.EpisodeTitle)
-		}
-		if seriesFolder != "" && lf.Name != "" {
-			candidates = append(candidates, seriesFolder+" "+lf.Name)
-		}
-		if parentDir != "" && lf.Name != "" {
-			candidates = append(candidates, parentDir+" "+lf.Name)
-		}
-		if folderInfo.SeriesName != "" && lf.Name != "" {
-			candidates = append(candidates, folderInfo.SeriesName+" "+lf.Name)
-		}
-		if pm.EpisodeTitle != "" {
-			candidates = append(candidates, pm.EpisodeTitle)
-		}
-		if lf.Name != "" {
-			candidates = append(candidates, lf.Name)
-		}
-		if pm.Title != "" {
-			candidates = append(candidates, pm.Title)
-		}
-		if seriesFolder != "" {
-			candidates = append(candidates, seriesFolder)
-		}
-		if folderInfo.SeriesName != "" {
-			candidates = append(candidates, folderInfo.SeriesName)
-		}
-
-		for _, cand := range candidates {
-			if cand == "" {
-				continue
-			}
-			if dbId, isMovie, isDb := ResolveDragonBallID(cand); isDb {
-				if isMovie {
-					priorityIds[dbId+1000000] = true
-				} else {
-					priorityIds[dbId] = true
-				}
-				break
+		if dbId, isMovie, isDb := ResolveDragonBallPath(lf.Path); isDb {
+			if isMovie {
+				priorityIds[dbId+1000000] = true
+			} else {
+				priorityIds[dbId] = true
 			}
 		}
 	}
@@ -196,11 +152,51 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 
 				var result *dto.NormalizedMedia
 				var err error
+				// 0. Use offline prehydration directly for known educational shorts / crossover specials
+				// that do not exist as standard TMDB movies to avoid collisions (e.g., TMDB 39322 = Dark Nature).
+				isSpecialOffline := false
+				rawId := id
+				if rawId >= 1_000_000 {
+					rawId -= 1_000_000
+				}
+				switch rawId {
+				case 39321, 39322, 39325, 39326, 105973, 444390:
+					isSpecialOffline = true
+				}
 
-				// 1. Query TMDB Provider API if active
-				if opts.TMDBProvider != nil {
-					_ = tmdbLimiter.Wait(egCtx)
-					result, err = opts.TMDBProvider.GetMediaDetails(egCtx, strconv.Itoa(id))
+				if isSpecialOffline {
+					result = CreatePrehydratedDragonBallMedia(id)
+				} else {
+					// 1. Query TMDB Provider API if active
+					if opts.TMDBProvider != nil {
+						_ = tmdbLimiter.Wait(egCtx)
+						result, err = opts.TMDBProvider.GetMediaDetails(egCtx, strconv.Itoa(id))
+						// Protection against TMDB collisions: verify that result belongs to Dragon Ball
+						if result != nil && result.Title != nil {
+							var sb strings.Builder
+							if result.Title.Spanish != nil {
+								sb.WriteString(*result.Title.Spanish)
+								sb.WriteString(" ")
+							}
+							if result.Title.English != nil {
+								sb.WriteString(*result.Title.English)
+								sb.WriteString(" ")
+							}
+							if result.Title.Romaji != nil {
+								sb.WriteString(*result.Title.Romaji)
+								sb.WriteString(" ")
+							}
+							allTitles := strings.ToLower(sb.String())
+							if strings.Contains(allTitles, "dark nature") ||
+								(!strings.Contains(allTitles, "dragon ball") &&
+									!strings.Contains(allTitles, "bardock") &&
+									!strings.Contains(allTitles, "goku") &&
+									!strings.Contains(allTitles, "toriko")) {
+								result = nil
+								err = fmt.Errorf("TMDB title collision detected (%s), discarded", allTitles)
+							}
+						}
+					}
 				}
 
 				// 2. Query AniList / Jikan / Anime metadata provider API if TMDB was not used or failed
@@ -357,22 +353,9 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 			// Determine type hint based on file paths
 			var hint string
 			if len(groupFiles) > 0 {
-				nfp := filepath.ToSlash(filepath.Clean(groupFiles[0].Path))
-				for _, rp := range opts.SeriesPaths {
-					if rp == "" {
-						continue
-					}
-					nrp := filepath.ToSlash(filepath.Clean(rp))
-					if !strings.HasSuffix(nrp, "/") {
-						nrp += "/"
-					}
-					if strings.HasPrefix(nfp, nrp) {
-						hint = "series"
-						break
-					}
-				}
-				if hint == "" {
-					for _, rp := range opts.MoviePaths {
+				if !opts.UnifiedScan {
+					nfp := filepath.ToSlash(filepath.Clean(groupFiles[0].Path))
+					for _, rp := range opts.SeriesPaths {
 						if rp == "" {
 							continue
 						}
@@ -381,8 +364,23 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 							nrp += "/"
 						}
 						if strings.HasPrefix(nfp, nrp) {
-							hint = "movie"
+							hint = "series"
 							break
+						}
+					}
+					if hint == "" {
+						for _, rp := range opts.MoviePaths {
+							if rp == "" {
+								continue
+							}
+							nrp := filepath.ToSlash(filepath.Clean(rp))
+							if !strings.HasSuffix(nrp, "/") {
+								nrp += "/"
+							}
+							if strings.HasPrefix(nfp, nrp) {
+								hint = "movie"
+								break
+							}
 						}
 					}
 				}
@@ -390,6 +388,8 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 					info := ParseFolderStructure(groupFiles[0].Path, libPaths)
 					if info.IsMovie {
 						hint = "movie"
+					} else if info.SeriesName != "" {
+						hint = "series"
 					}
 				}
 			}

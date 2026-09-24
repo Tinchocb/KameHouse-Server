@@ -14,7 +14,7 @@ export const CheckboxAnatomy = defineStyleAnatomy({
     container: cva("UI-Checkbox__container inline-flex gap-2 items-center"),
     root: cva([
         "UI-Checkbox__root",
-        "appearance-none peer block relative overflow-hidden transition h-5 w-5 shrink-0 text-white rounded-[--radius-md] ring-offset-1 border ring-offset-[hsl(var(--background))]",
+        "appearance-none peer block relative overflow-hidden transition h-5 w-5 shrink-0 text-white rounded-md ring-offset-1 border ring-offset-[hsl(var(--background))]",
         "border-outline-variant",
         "outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:cursor-not-allowed data-[disabled=true]:opacity-50",
         "data-[state=unchecked]:bg-surface-container", // Unchecked
@@ -42,7 +42,7 @@ export const CheckboxAnatomy = defineStyleAnatomy({
         variants: {
             size: {
                 sm: "text-sm",
-                md: "text-md",
+                md: "text-base",
                 lg: "text-lg",
             },
         },

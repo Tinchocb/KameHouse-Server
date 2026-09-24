@@ -27,6 +27,12 @@ func (h *Handler) HandleUpdateContinuityWatchHistoryItem(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
+	// Telemetría de baja prioridad: beats inválidos se descartan en silencio
+	// para no romper el heartbeat del player con 400s.
+	if !validPlaybackBeat(b.Options.MediaID, b.Options.EpisodeNumber, b.Options.CurrentTime, b.Options.Duration) {
+		return h.RespondWithData(c, true)
+	}
+
 	// Zero-Latency Telemetry Dispatch
 	if h.App.ContinuityManager != nil && h.App.ContinuityManager.TelemetryManager != nil {
 		userID := uint(1)

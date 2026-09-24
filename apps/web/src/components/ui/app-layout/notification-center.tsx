@@ -1,7 +1,10 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
+import { m, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
-import { IconStatusFileVideo, IconStatusCpu, IconUiInfo, IconUiBell, IconUiDelete, IconUiInbox } from "@/components/ui/icons";
+import { IconStatusFileVideo, IconStatusCpu, IconUiInfo, IconUiBell, IconUiInbox } from "@/components/ui/icons"
+import { HoldConfirm } from "@/components/ui/kinetics"
+import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { useResponsive } from "@/hooks/use-responsive"
 import { useGetNotifications, useMarkNotificationsRead, useClearNotifications } from "@/api/hooks/notifications.hooks"
 import type { Models_Notification } from "@/api/generated/types"
@@ -28,14 +31,14 @@ function relativeTime(dateStr?: string): string {
  * Notification bell + dropdown panel. Shows the unread badge, and on open marks
  * everything as read. New notifications arrive via the WebSocket provider, which
  * invalidates the query this component reads.
- *
- * The default shape is the sidebar's: a full-width row that grows a text label.
- * `compact` renders it as a bare icon button for the mobile top bar, where a
- * full-width row would eat half the screen and collide with the logo.
  */
 export function NotificationBell({ sidebarOpen = false, compact = false }: { sidebarOpen?: boolean; compact?: boolean }) {
     const { isMobile } = useResponsive()
     const [open, setOpen] = React.useState(false)
+    const panelSpring = useSpringPreset("tabContent")
+    const badgeSpring = useSpringPreset("tabIndicator")
+    const bellRef = React.useRef<HTMLButtonElement>(null)
+    const panelRef = React.useRef<HTMLDivElement>(null)
 
     const { data } = useGetNotifications()
     const { mutate: markRead } = useMarkNotificationsRead()
@@ -52,15 +55,36 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
         }
     }
 
+    // Cierre con Escape + foco gestionado (el panel no es modal: no bloquea interacción)
+    React.useEffect(() => {
+        if (!open) return
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation()
+                setOpen(false)
+                bellRef.current?.focus()
+            }
+        }
+        document.addEventListener('keydown', onKey)
+        panelRef.current?.focus()
+        return () => {
+            document.removeEventListener('keydown', onKey)
+        }
+    }, [open])
+
     return (
         <>
             <div className={cn("flex justify-center", !compact && "w-full")}>
                 <button
+                    ref={bellRef}
                     onClick={handleToggle}
                     title="Notificaciones"
-                    aria-label="Notificaciones"
+                    aria-label={unreadCount > 0 ? `Notificaciones, ${unreadCount} sin leer` : "Notificaciones"}
+                    aria-expanded={open}
+                    aria-haspopup="dialog"
+                    aria-controls="notification-panel"
                     className={cn(
-                        "flex items-center group relative transition-all duration-base active:scale-95 font-bold",
+                        "flex items-center group relative transition-[background-color,border-color,color,transform] duration-base active:scale-95 font-bold cursor-pointer",
                         compact
                             ? "h-11 w-11 justify-center rounded-full text-on-surface-variant hover:text-on-surface"
                             : [
@@ -74,11 +98,20 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
                 >
                     <span className={cn("shrink-0 z-10 relative group-hover:scale-110 transition-transform duration-base", open && "text-on-surface")}>
                         <IconUiBell className="w-5 h-5" />
-                        {unreadCount > 0 && (
-                            <span className="absolute -top-2.5 -right-2.5 bg-on-surface text-surface text-label-sm font-black min-w-[18px] h-[18px] rounded-full flex items-center justify-center border border-surface px-[3px]">
-                                {unreadCount > 99 ? "99+" : unreadCount}
-                            </span>
-                        )}
+                        <AnimatePresence>
+                            {unreadCount > 0 && (
+                                <m.span
+                                    key="unread-badge"
+                                    initial={{ scale: 0.3, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0.3, opacity: 0 }}
+                                    transition={badgeSpring}
+                                    className="absolute -top-2.5 -right-2.5 bg-brand-accent text-on-primary text-label-sm font-black min-w-[18px] h-[18px] rounded-full flex items-center justify-center border border-surface px-[3px] shadow-[0_0_10px_hsl(var(--brand-accent)/0.6)]"
+                                >
+                                    {unreadCount > 99 ? "99+" : unreadCount}
+                                </m.span>
+                            )}
+                        </AnimatePresence>
                     </span>
                     {!compact && (
                         <span className={cn(
@@ -93,30 +126,48 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
             </div>
 
             {open && typeof document !== "undefined" && createPortal(
-                <>
-                    {/* Click-outside catcher */}
-                    <div className="fixed inset-0 z-overlay" onClick={() => setOpen(false)} />
-                    <div
+                <AnimatePresence>
+                    {/* Click-outside catcher (solo puntero; por teclado: Escape o la campana) */}
+                    <m.div
+                        key="notif-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="fixed inset-0 z-overlay"
+                        onClick={() => setOpen(false)}
+                    />
+                    <m.div
+                        key="notif-panel"
+                        ref={panelRef}
+                        tabIndex={-1}
+                        role="dialog"
+                        id="notification-panel"
+                        aria-label="Notificaciones"
+                        initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                        transition={panelSpring}
                         className={cn(
                             "fixed z-popover flex flex-col overflow-hidden",
-                            "bg-zinc-950/80 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25),0_20px_50px_rgba(0,0,0,0.9)]",
+                            "bg-surface/80 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[shadow:var(--glass-highlight-lg),0_20px_50px_rgba(0,0,0,0.9)]",
                             isMobile
                                 ? "top-16 left-3 right-3 max-h-[65vh]"
                                 : "left-24 bottom-6 w-[380px] max-h-[70vh]"
                         )}
                     >
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-                            <span className="text-white text-label-sm font-black uppercase tracking-widest font-mono">
+                        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
+                            <span className="text-on-surface text-label-sm font-black uppercase tracking-widest font-mono">
                                 Notificaciones
                             </span>
                             {notifications.length > 0 && (
-                                <button
-                                    onClick={() => clearAll(undefined)}
-                                    className="flex items-center gap-1.5 text-zinc-400 hover:text-white text-label-sm uppercase tracking-widest font-black transition-colors duration-base focus-visible:ring-2 focus-visible:ring-white/50 rounded-full px-2.5 py-1 hover:bg-white/10 cursor-pointer"
-                                >
-                                    <IconUiDelete className="w-3.5 h-3.5" />
-                                    Limpiar
-                                </button>
+                                <HoldConfirm
+                                    onConfirm={() => clearAll(undefined)}
+                                    holdDurationMs={800}
+                                    label="Limpiar"
+                                    confirmLabel="¡Vaciado!"
+                                    className="min-h-[44px] px-3 py-0.5 text-3xs tracking-wider"
+                                />
                             )}
                         </div>
 
@@ -148,8 +199,8 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
                                 })
                             )}
                         </div>
-                    </div>
-                </>,
+                    </m.div>
+                </AnimatePresence>,
                 document.body
             )}
         </>

@@ -5,18 +5,22 @@ import { getTitle, getBackdrop } from "./home.helpers"
 
 import { DRAGON_BALL_SCANNER_SERIES } from "@/lib/config/dragonball_scanner_series"
 import { stripHtml } from "@/lib/helpers/sanitizer"
+import { getMovieWidescreenBackdrop, getSeriesWidescreenBackdrop } from "@/lib/config/hero-art"
 
 /**
  * Maps a library entry to SwimlaneItem.
  */
 export function mapLibraryEntryToMediaCard(
-    entry: Anime_LibraryCollectionEntry | IntelligentEntry,
+    entry: Anime_LibraryCollectionEntry | IntelligentEntry | null | undefined,
     onNavigate: (mediaId: number) => void,
-): SwimlaneItem {
-    const media = entry.media!
+): SwimlaneItem | null {
+    if (!entry) return null
+    const media = entry?.media
+    if (!media) return null
     const rawMediaId = entry.mediaId || media.tmdbId || media.id
     const targetId = rawMediaId
-    const isMovieLike = media.format === "MOVIE" || media.format === "SPECIAL" || media.format === "OVA" || media.type === "MOVIE" || (rawMediaId && rawMediaId >= 1_000_000)
+    // El offset TMDB (+1M) NO indica película: las series también lo usan.
+    const isMovieLike = media.format === "MOVIE" || media.format === "SPECIAL" || media.format === "OVA" || media.type === "MOVIE"
     const effectiveFormat = media.format || (isMovieLike ? "MOVIE" : undefined)
 
     const localFilesCount = entry.libraryData?.mainFileCount ?? 0
@@ -24,6 +28,11 @@ export function mapLibraryEntryToMediaCard(
     const canonicalSeries = DRAGON_BALL_SCANNER_SERIES.find(s => s.tmdbId === rawMediaId || s.tmdbId === media.tmdbId || s.tmdbId === media.id)
     const totalEpisodesCount = rawTotalEpisodes > 0 ? rawTotalEpisodes : (canonicalSeries?.totalEpisodes ?? 0)
     const isSeriesComplete = totalEpisodesCount > 0 && localFilesCount >= totalEpisodesCount
+    const missingCount = Math.max(0, totalEpisodesCount - localFilesCount)
+
+    const resolvedBackdrop = isMovieLike
+        ? getMovieWidescreenBackdrop({ mediaId: targetId, tmdbId: media.tmdbId, bannerImage: media.bannerImage, posterImage: media.posterImage })
+        : getSeriesWidescreenBackdrop(media.tmdbId || targetId, media.bannerImage, media.posterImage)
 
     return {
         id: `media-${targetId}`,
@@ -38,10 +47,11 @@ export function mapLibraryEntryToMediaCard(
         year: media.year || undefined,
         rating: media.score ? (media.score > 10 ? media.score / 10 : media.score) : undefined,
         onClick: () => onNavigate(targetId),
-        backdropUrl: media.bannerImage || undefined,
+        backdropUrl: resolvedBackdrop || media.bannerImage || undefined,
         localFilesCount,
         totalEpisodesCount,
         isSeriesComplete,
+        missingCount,
     }
 }
 

@@ -3,15 +3,11 @@ import { useSyncExternalStore } from "react"
 export interface ResponsiveBreakpoints {
     isMobile: boolean
     isTablet: boolean
-    isDesktop: boolean
-    isWide: boolean
 }
 
 const SERVER_SNAPSHOT: ResponsiveBreakpoints = Object.freeze({
     isMobile: false,
     isTablet: false,
-    isDesktop: true,
-    isWide: true,
 })
 
 function getBreakpoints(): ResponsiveBreakpoints {
@@ -20,13 +16,11 @@ function getBreakpoints(): ResponsiveBreakpoints {
     return {
         isMobile: w <= 767,
         isTablet: w >= 768 && w <= 1023,
-        isDesktop: w >= 1024,
-        isWide: w >= 1280,
     }
 }
 
 function areBreakpointsEqual(a: ResponsiveBreakpoints, b: ResponsiveBreakpoints): boolean {
-    return a.isMobile === b.isMobile && a.isTablet === b.isTablet && a.isDesktop === b.isDesktop && a.isWide === b.isWide
+    return a.isMobile === b.isMobile && a.isTablet === b.isTablet
 }
 
 let currentBreakpoints: ResponsiveBreakpoints = getBreakpoints()

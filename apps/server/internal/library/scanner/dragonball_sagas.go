@@ -46,8 +46,8 @@ func GetDragonBallSagas(tmdbID int) []sagaResolution {
 		}
 	case 62715: // Dragon Ball Super
 		return []sagaResolution{
-			{id: "batalla-dioses", name: "Saga La Batalla de los Dioses", startEp: 1, endEp: 14, subSagas: []subSagaResolution{}},
-			{id: "resurreccion-f", name: "Saga La Resurrección de 'F'", startEp: 15, endEp: 27, subSagas: []subSagaResolution{}},
+			{id: "batalla-dioses", name: "Saga de la Batalla de los Dioses", startEp: 1, endEp: 14, subSagas: []subSagaResolution{}},
+			{id: "resurreccion-f", name: "Saga de la Resurrección de 'F'", startEp: 15, endEp: 27, subSagas: []subSagaResolution{}},
 			{id: "universo-6", name: "Saga del Torneo del Universo 6", startEp: 28, endEp: 41, subSagas: []subSagaResolution{}},
 			{id: "copy-vegeta", name: "Saga del Agua Sobrenatural (Vegeta Copia)", startEp: 42, endEp: 46, subSagas: []subSagaResolution{}},
 			{id: "trunks-futuro", name: "Saga de Goku Black", startEp: 47, endEp: 76, subSagas: []subSagaResolution{}},
@@ -227,11 +227,11 @@ func getDragonBallSagaDetails(tmdbID int) []sagaResolution {
 		}
 	case 62715: // Dragon Ball Super
 		return []sagaResolution{
-			{id: "batalla-dioses", name: "Saga La Batalla de los Dioses", startEp: 1, endEp: 14, subSagas: []subSagaResolution{
+			{id: "batalla-dioses", name: "Saga de la Batalla de los Dioses", startEp: 1, endEp: 14, subSagas: []subSagaResolution{
 				{id: "llegada-beerus", name: "La Profecía y la Llegada de Beerus", startEp: 1, endEp: 5},
 				{id: "ssg-batalla", name: "El Super Saiyajin Dios y la Batalla", startEp: 6, endEp: 14},
 			}},
-			{id: "resurreccion-f", name: "Saga La Resurrección de 'F'", startEp: 15, endEp: 27, subSagas: []subSagaResolution{
+			{id: "resurreccion-f", name: "Saga de la Resurrección de 'F'", startEp: 15, endEp: 27, subSagas: []subSagaResolution{
 				{id: "resurreccion-preparacion", name: "La Resurrección y el Entrenamiento", startEp: 15, endEp: 18},
 				{id: "freezer-dorado", name: "Freezer Dorado vs Goku y Vegeta", startEp: 19, endEp: 27},
 			}},

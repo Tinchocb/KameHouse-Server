@@ -190,11 +190,13 @@ func (vc *VideoCore) sendPlayerEventTo(clientID string, t string, payload interf
 
 	if clientID != "" {
 		vc.wsEventManager.SendEventTo(clientID, string(events.VideoCoreEventType), struct {
-			Type    string      `json:"type"`
-			Payload interface{} `json:"payload"`
+			Type     string      `json:"type"`
+			Payload  interface{} `json:"payload"`
+			ClientID string      `json:"clientID"`
 		}{
-			Type:    t,
-			Payload: payload,
+			Type:     t,
+			Payload:  payload,
+			ClientID: clientID,
 		}, noLog...)
 	} else {
 		vc.wsEventManager.SendEvent(string(events.VideoCoreEventType), struct {

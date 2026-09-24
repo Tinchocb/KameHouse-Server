@@ -36,6 +36,7 @@ type (
 		Ignored          bool                       `json:"ignored"` // Unused for now
 		LibraryMediaId   uint                       `json:"libraryMediaId"`
 		MediaID          int                        `json:"mediaId"`
+		DriveFileID      string                     `json:"driveFileId,omitempty"`
 	}
 
 	LocalFileEmbeddedMetadata struct {
@@ -223,6 +224,7 @@ func NewLocalFileFromModel(m *models.LocalFile) *LocalFile {
 		Ignored:        m.Ignored,
 		LibraryMediaId: m.LibraryMediaId,
 		MediaID:        m.MediaID,
+		DriveFileID:    m.DriveFileID,
 	}
 
 	// Unmarshal JSON fields

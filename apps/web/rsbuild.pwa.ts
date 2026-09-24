@@ -2,21 +2,22 @@ import { GenerateSW } from "workbox-webpack-plugin"
 
 export const getPwaPlugin = () => {
     return new GenerateSW({
+        swDest: "sw.js",
         clientsClaim: true,
-        skipWaiting: true,
+        skipWaiting: false, // Controlado cooperativamente desde el cliente (pwa-registry) sin cortar streams HLS
         importScripts: ['/sw-custom.js'],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15MB para soportar backdrops y sagas en precache
         exclude: [
             /\.map$/,
             /\.wasm$/,
             /\.(?:m4a|mp3|ogg|wav)$/,
-            /^backdrops\//,
-            /^sagas\//,
             /^sounds\//,
             /^jassub\//,
             /LICENSE/i,
         ],
         navigateFallback: "/index.html",
+        // Evita enmascarar 404s de API/WS con el shell: solo SPA para navegaciones documento
+        navigateFallbackDenylist: [/^\/api\//, /^\/ws/, /\.wasm$/, /\.ass$/],
         runtimeCaching: [
             {
                 urlPattern: /\/api\/v1\/continuity\/item/,
@@ -45,10 +46,13 @@ export const getPwaPlugin = () => {
                 },
             },
             {
-                urlPattern: /\.(?:png|jpg|jpeg|svg|webp|gif)$/,
+                urlPattern: /\.(?:png|jpg|jpeg|svg|webp|gif|avif)(?:\?.*)?$/i,
                 handler: 'CacheFirst',
                 options: {
                     cacheName: 'images',
+                    cacheableResponse: {
+                        statuses: [0, 200],
+                    },
                     expiration: {
                         maxEntries: 1000,
                         maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days

@@ -239,61 +239,132 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, binDir s
 		return err
 	}
 
-	client := &http.Client{Timeout: 10 * time.Minute}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error al conectar con servidor de descarga (%s): %w", url, err)
-	}
-	defer resp.Body.Close()
+	// 3 min total timeout with per-attempt retry logic
+	const maxAttempts = 3
+	const baseTimeout = 3 * time.Minute
+	var lastErr error
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("código HTTP inesperado: %d desde %s", resp.StatusCode, url)
-	}
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 
-	tmpFile, err := os.CreateTemp("", "ffmpeg-dl-*")
-	if err != nil {
-		return fmt.Errorf("error creando archivo temporal: %w", err)
-	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+		// Create a client with per-attempt timeout
+		client := &http.Client{Timeout: baseTimeout}
 
-	pr := &progressReader{
-		Reader: resp.Body,
-		total:  resp.ContentLength,
-		onProgress: func(pct int) {
-			if onProgress != nil {
-				onProgress(pct, "Descargando paquete...")
+		var logger *zerolog.Logger
+		if attempt > 1 {
+			l := zerolog.DefaultContextLogger.With().Int("attempt", attempt).Logger()
+			logger = &l
+			logger.Info().Str("url", url).Msg("ffmpegutil: Reintentando descarga...")
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("error al conectar con servidor de descarga (%s): %w", url, err)
+			if attempt < maxAttempts {
+				waitTime := time.Duration(attempt*attempt) * 5 * time.Second // 5s, 20s, 45s
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(waitTime):
+					// Retry with fresh request (context may have updated headers)
+					req = req.WithContext(ctx)
+					continue
+				}
 			}
-		},
-	}
-
-	if _, err := io.Copy(tmpFile, pr); err != nil {
-		return fmt.Errorf("error guardando archivo descargado: %w", err)
-	}
-
-	if onProgress != nil {
-		onProgress(85, "Descomprimiendo binarios...")
-	}
-
-	if _, err := tmpFile.Seek(0, 0); err != nil {
-		return err
-	}
-
-	if isZip {
-		if err := extractBinariesFromZip(tmpFile, binDir); err != nil {
-			return fmt.Errorf("error descomprimiendo zip: %w", err)
+			return lastErr
 		}
-	} else {
-		if err := extractBinariesFromTarGz(tmpFile, binDir); err != nil {
-			return fmt.Errorf("error descomprimiendo tar.gz: %w", err)
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("código HTTP inesperado: %d desde %s", resp.StatusCode, url)
+			if attempt < maxAttempts {
+				waitTime := time.Duration(attempt*attempt) * 5 * time.Second
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(waitTime):
+					req = req.WithContext(ctx)
+					continue
+				}
+			}
+			return lastErr
 		}
+
+		tmpFile, err := os.CreateTemp("", "ffmpeg-dl-*")
+		if err != nil {
+			resp.Body.Close()
+			return fmt.Errorf("error creando archivo temporal: %w", err)
+		}
+		defer os.Remove(tmpFile.Name())
+		defer tmpFile.Close()
+
+		pr := &progressReader{
+			Reader: resp.Body,
+			total:  resp.ContentLength,
+			onProgress: func(pct int) {
+				if onProgress != nil {
+					onProgress(pct, "Descargando paquete...")
+				}
+			},
+		}
+
+		if _, err := io.Copy(tmpFile, pr); err != nil {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("error guardando archivo descargado: %w", err)
+			if attempt < maxAttempts {
+				waitTime := time.Duration(attempt*attempt) * 5 * time.Second
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(waitTime):
+					req = req.WithContext(ctx)
+					continue
+				}
+			}
+			return lastErr
+		}
+		resp.Body.Close()
+
+		if onProgress != nil {
+			onProgress(85, "Descomprimiendo binarios...")
+		}
+
+		if _, err := tmpFile.Seek(0, 0); err != nil {
+			return err
+		}
+
+		var extractErr error
+		if isZip {
+			extractErr = extractBinariesFromZip(tmpFile, binDir)
+		} else {
+			extractErr = extractBinariesFromTarGz(tmpFile, binDir)
+		}
+
+		if extractErr != nil {
+			lastErr = fmt.Errorf("error descomprimiendo: %w", extractErr)
+			if attempt < maxAttempts {
+				waitTime := time.Duration(attempt*attempt) * 5 * time.Second
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(waitTime):
+					req = req.WithContext(ctx)
+					continue
+				}
+			}
+			return lastErr
+		}
+
+		if onProgress != nil {
+			onProgress(100, "Binarios listos")
+		}
+
+		return nil
 	}
 
-	if onProgress != nil {
-		onProgress(100, "Binarios listos")
-	}
-
-	return nil
+	return lastErr
 }
 
 func isTargetBinary(name string) bool {

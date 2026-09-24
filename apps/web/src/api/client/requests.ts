@@ -1,7 +1,10 @@
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { useEffect } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
+
+const baseUrlCache = new Map<string, string>()
 
 export class ApiError extends Error {
     constructor(
@@ -12,6 +15,16 @@ export class ApiError extends Error {
         super(message);
         this.name = "ApiError";
     }
+}
+
+/** 502/503/504: backend arrancando o gateway caído. Transitorio, vale reintentar. */
+export function isTransientStatus(status: number): boolean {
+    return status === 502 || status === 503 || status === 504
+}
+
+/** true si el error indica que el backend todavía no está disponible. */
+export function isBackendUnavailableError(error: unknown): boolean {
+    return error instanceof ApiError && isTransientStatus(error.status)
 }
 
 type SeaQuery<D> = {
@@ -38,7 +51,15 @@ export async function buildSeaQuery<T, D = void>(
     const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
     let url: URL
     try {
-        url = new URL(endpoint, base)
+        let baseToUse = baseUrlCache.get(base)
+        if (!baseToUse) {
+            if (baseUrlCache.size >= 20) {
+                baseUrlCache.clear()
+            }
+            baseUrlCache.set(base, base)
+            baseToUse = base
+        }
+        url = new URL(endpoint, baseToUse)
     } catch (e) {
         console.error("FAILED URL:", endpoint, base)
         throw e
@@ -97,7 +118,7 @@ export async function buildSeaQuery<T, D = void>(
                 }
 
                 // If 502, 503, 504, 429 -> retry silenciosamente solo si es idempotente
-                if (isIdempotent && (res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) && attempt < maxRetries) {
+                if (isIdempotent && (res.status === 429 || isTransientStatus(res.status)) && attempt < maxRetries) {
                     attempt++
                     const delay = 300 * attempt
                     await sleep(delay)
@@ -113,7 +134,12 @@ export async function buildSeaQuery<T, D = void>(
             const text = await res.text()
             if (!text) return undefined as T
 
-            const json = JSON.parse(text)
+            let json: unknown
+            try {
+                json = JSON.parse(text)
+            } catch {
+                throw new ApiError("Respuesta no JSON del servidor", res.status, text.slice(0, 2000))
+            }
             
             // Soporta tanto envoltorio { data: T } como respuestas directas T o arrays [...]
             if (json && typeof json === "object" && !Array.isArray(json) && "error" in json && json.error) {
@@ -156,17 +182,26 @@ export function useServerMutation<R = void, V = void, C = unknown>(
         ...options
     }: ServerMutationProps<R, V, C>) {
 
+    const navigate = useNavigate()
+
     const password = undefined
 
     return useMutation<R | undefined, ApiError, V, C>({
         onError: (...args) => {
             const [error] = args;
-            console.debug("Mutation error", error)
-            const errorMsg = _handleSeaError(error.data)
-            if (errorMsg.includes("feature disabled")) {
-                toast.warning("This feature is disabled")
+            const isUnauth = error.status === 401 ||
+                error.data === "UNAUTHENTICATED" ||
+                (typeof error.data === "object" && error.data !== null && (error.data as Record<string, unknown>).error === "UNAUTHENTICATED")
+            if (isUnauth) {
+                toast.error("Sesión no autorizada o expirada", { id: "mutation-err-unauth" })
+                navigate({ to: "/settings", search: { tab: "system" }, replace: true }).catch(() => {})
             } else {
-                toast.error(errorMsg)
+                const errorMsg = _handleSeaError(error.data)
+                if (errorMsg.includes("feature disabled")) {
+                    toast.warning("This feature is disabled")
+                } else {
+                    toast.error(errorMsg)
+                }
             }
             if (options.onError) {
                 options.onError(...args)
@@ -203,6 +238,8 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
         ...options
     }: ServerQueryProps<R, V, TData>) {
 
+    const navigate = useNavigate()
+
     const props = useQuery<R | undefined, ApiError, TData>({
         queryFn: async ({ signal }) => {
             return buildSeaQuery<R, V>({
@@ -224,9 +261,10 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
 
             if (isUnauth) {
                 toast.error("Sesión no autorizada o expirada", { id: "query-err-unauth" })
+                // Redirect to settings so user can reconfigure if needed
+                navigate({ to: "/settings", search: { tab: "system" }, replace: true }).catch(() => {})
                 return
             }
-            console.debug("Server error", props.error)
             const errorMsg = _handleSeaError(props.error.data || props.error.message)
             if (errorMsg.includes("feature disabled")) {
                 return
@@ -235,7 +273,7 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
                 toast.error(errorMsg, { id: `query-err-${props.error.message}` })
             }
         }
-    }, [props.error, props.isError, muteError])
+    }, [props.error, props.isError, muteError, navigate])
 
     return props
 }
@@ -258,7 +296,6 @@ function _handleSeaError(data: unknown): string {
 
     try {
         const graphqlErr = JSON.parse(err) as { graphqlErrors?: Array<{ message?: string }> }
-        console.debug("Platform error", graphqlErr)
         if (graphqlErr.graphqlErrors && graphqlErr.graphqlErrors.length > 0 && !!graphqlErr.graphqlErrors[0]?.message) {
             return "Platform error: " + graphqlErr.graphqlErrors[0]?.message
         }

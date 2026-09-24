@@ -1,24 +1,102 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8" />
     <meta content="#09090b" name="theme-color" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
+    <link rel="dns-prefetch" href="https://image.tmdb.org" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet" />
+    <link rel="preload" as="image" href="/backdrops/db.webp" type="image/webp" fetchpriority="high" />
+    <!-- El resto de las eras del carrusel: prefetch (en tiempo ocioso, sin competir
+         con el LCP ni disparar avisos de "preload sin usar" en otras rutas). -->
+    <link rel="prefetch" as="image" href="/backdrops/dbz.webp" type="image/webp" />
+    <link rel="prefetch" as="image" href="/backdrops/dbgt.webp" type="image/webp" />
+    <link rel="prefetch" as="image" href="/backdrops/dbkai.webp" type="image/webp" />
+    <link rel="prefetch" as="image" href="/backdrops/dbs.webp" type="image/webp" />
+    <link rel="prefetch" as="image" href="/backdrops/dbdaima.webp" type="image/webp" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png?v=2" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2" />
     <link rel="shortcut icon" href="/icons/favicon-32x32.png?v=2" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>KameHouse</title>
-    <meta name="description" content="Self-hosted, user-friendly media server for anime." />
+    <meta name="description" content="Servidor multimedia personal y cinemático para anime y series." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:site_name" content="KameHouse" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="KameHouse — Servidor Multimedia" />
+    <meta property="og:description" content="Servidor multimedia personal y cinemático para anime y series." />
+    <meta property="og:image" content="/backdrops/db.webp" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="KameHouse — Servidor Multimedia" />
+    <meta name="twitter:description" content="Servidor multimedia personal y cinemático para anime y series." />
+    <meta name="twitter:image" content="/backdrops/db.webp" />
+
+    <!-- Apple Web App & PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="KameHouse" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link href="/manifest.json" rel="manifest" />
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "KameHouse",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "All",
+        "description": "Servidor multimedia personal y cinemático para anime y series."
+    }
+    </script>
+    <script>
+        // Pre-paint tema: evita FOUC classic->era y flash de blur/liquid.
+        // Lee los persists de zustand de forma síncrona antes del primer paint.
+        try {
+            var readStore = function (key) {
+                try {
+                    var raw = localStorage.getItem(key);
+                    if (!raw) return null;
+                    var parsed = JSON.parse(raw);
+                    return parsed && parsed.state ? parsed.state : parsed;
+                } catch { return null; }
+            };
+            var app = readStore("kamehouse-app-settings") || {};
+            var ui = readStore("kamehouse-ui-settings") || {};
+            var player = readStore("kamehouse-player-settings") || {};
+            var perf = readStore("kamehouse-performance-settings") || {};
+            var visual = app.themeVisual || ui.themeVisual || {};
+            var tvMode = app.tvMode === true || player.tvMode === true;
+            var eco = perf.performanceProfile === "eco";
+            var mode = visual.themeMode === "classic" || visual.themeMode === "era"
+                ? visual.themeMode
+                : (visual.themeEra && visual.themeEra.indexOf("era-") === 0 ? "era" : "classic");
+            var era = visual.themeEra || (mode === "era" ? "era-universe" : "classic");
+            var blurOff = visual.themeEnableBlurringEffects === false;
+            var flat = tvMode || eco || blurOff;
+            var liquid = !flat && !eco && !tvMode && visual.themeEnableLiquidGlass === true;
+            var html = document.documentElement;
+            html.dataset.mode = mode;
+            html.dataset.theme = era;
+            if (flat) html.dataset.flat = "true";
+            if (liquid) html.dataset.liquid = "true";
+            if (visual.themeEnableSidebarGradient === true) html.dataset.sidebargradient = "true";
+            if (visual.themeEnableCinematicGrain === true) html.dataset.grain = "true";
+            if (tvMode) html.dataset.tv = "true";
+        } catch {}
+    </script>
     <style>
         html { background-color: #09090b; }
+        html[data-mode="classic"] { background-color: #09090b; }
         body { margin: 0; background: transparent; -webkit-font-smoothing: antialiased; }
         @keyframes ball-bounce {
             0%, 80%, 100% {
@@ -29,6 +107,11 @@
                 transform: translateY(-12px) scale(1.1);
                 opacity: 1;
             }
+        }
+        @keyframes progress-slide {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(0); }
+            100% { transform: translateX(100%); }
         }
         .loading-dot {
             width: 14px;
@@ -45,7 +128,7 @@
 </head>
 
 <body>
-    <div id="global-loader" style="background-color: #09090b; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; overflow: hidden; z-index: 9999; transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); user-select: none;">
+    <div id="global-loader" style="background-color: #09090b; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; overflow: hidden; z-index: 9999; transition: opacity 0.3s ease; user-select: none;">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 1.75rem;">
             <h1 style="color: white; font-size: 2.25rem; font-family: 'Outfit', sans-serif; letter-spacing: 0.3em; text-transform: uppercase; line-height: 1; margin: 0 0 0 0.3em; font-weight: 900; text-shadow: 0 0 28px rgba(245,158,11,0.3);">KAMEHOUSE</h1>
             
@@ -57,8 +140,18 @@
             </div>
 
             <span id="global-loader-text" style="font-family: monospace; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; color: #71717a; margin-top: -0.5rem;">Iniciando KameHouse...</span>
+
+            <div id="global-loader-progress" style="margin-top: 1.5rem; width: 60%; max-width: 200px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 9999px; overflow: hidden; opacity: 0; transition: opacity 0.3s ease;">
+                <div style="width: 100%; height: 100%; background: linear-gradient(90deg, #f59e0b, #b45309); border-radius: 9999px; transform: translateX(-100%); animation: progress-slide 2s ease-in-out infinite;"></div>
+            </div>
         </div>
     </div>
+<script>
+        setTimeout(() => {
+            const progress = document.getElementById('global-loader-progress');
+            if (progress) progress.style.opacity = '1';
+        }, 800);
+    </script>
 <div id="root"></div>
 </body>
 

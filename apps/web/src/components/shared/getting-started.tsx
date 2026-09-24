@@ -10,12 +10,13 @@ import { getDefaultSettings, gettingStartedSchema } from "@/lib/server/settings"
 import type { UseFormReturn } from "react-hook-form"
 import type { z } from "zod"
 import type { Variants } from "framer-motion"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, m } from "framer-motion"
 import React from "react"
 import { IconStatusFolder, IconStatusZap, IconMediaPlay, IconUiSettings, IconUiCheck, IconUiSpinner, IconUiCheckCircle, IconUiAlert, IconUiDownload, IconMediaSkipNext, IconTimeClock, IconNavigationLibrary, IconNavigationHome, IconNavigationChevronLeft, IconNavigationRocket, IconNavigationChevronRight } from "@/components/ui/icons";
 import { SpringSwitch } from "@/components/ui/switch/spring-switch"
 import { toast } from "sonner"
 import { useNavigate } from "@tanstack/react-router"
+import { usePlayerStore } from "@/lib/store"
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -55,28 +56,23 @@ const stepVariants: Variants = {
     enter: (direction: number) => ({
         x: direction > 0 ? 30 : -30,
         opacity: 0,
-        filter: "blur(3px)",
     }),
     center: {
         zIndex: 1,
         x: 0,
         opacity: 1,
-        filter: "blur(0px)",
         transition: {
             x: { duration: 0.3, type: "spring", damping: 25, stiffness: 220 },
             opacity: { duration: 0.25 },
-            filter: { duration: 0.25 },
         },
     },
     exit: (direction: number) => ({
         zIndex: 0,
         x: direction < 0 ? 30 : -30,
         opacity: 0,
-        filter: "blur(3px)",
         transition: {
             x: { duration: 0.2 },
             opacity: { duration: 0.15 },
-            filter: { duration: 0.15 },
         },
     }),
 }
@@ -120,7 +116,7 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
                     const isActive = i === currentStep
                     const isCompleted = i < currentStep
                     return (
-                        <motion.button
+                        <m.button
                             type="button"
                             key={step.id}
                             whileHover={{ scale: 1.02 }}
@@ -129,14 +125,14 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
                             className={cn(
                                 "flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all duration-200 text-left relative overflow-hidden cursor-pointer",
                                 isActive
-                                    ? "bg-brand-accent/15 border-brand-accent/50 text-on-surface shadow-lg shadow-brand-accent/15"
+                                    ? "bg-brand-accent/15 border-brand-accent/50 text-on-surface shadow-elevation-1"
                                     : isCompleted
                                         ? "bg-surface-container/70 border-border-subtle text-on-surface-variant hover:border-border-strong"
                                         : "bg-surface-container/40 border-border-subtle/50 text-on-surface-variant/70 hover:border-border-subtle"
                             )}
                         >
                             {isActive && (
-                                <motion.div
+                                <m.div
                                     layoutId="step-active-indicator"
                                     className="absolute inset-0 bg-brand-accent/10 pointer-events-none rounded-xl"
                                     transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
@@ -158,11 +154,11 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
                                 <p className={cn("text-xs font-bold tracking-tight truncate", isActive ? "text-on-surface" : "text-on-surface-variant")}>
                                     {step.title}
                                 </p>
-                                <p className="text-[10px] text-on-surface-variant/70 truncate">
+                                <p className="text-3xs text-on-surface-variant/70 truncate">
                                     {step.subtitle}
                                 </p>
                             </div>
-                        </motion.button>
+                        </m.button>
                     )
                 })}
             </div>
@@ -172,7 +168,7 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
 
 function StepCard({ children, className }: CardProps) {
     return (
-        <motion.div
+        <m.div
             variants={itemVariants}
             className={cn(
                 "relative rounded-2xl bg-surface/80 backdrop-blur-overlay-xl border border-border-subtle p-4 sm:p-5 shadow-modal overflow-hidden",
@@ -180,31 +176,31 @@ function StepCard({ children, className }: CardProps) {
             )}
         >
             {children}
-        </motion.div>
+        </m.div>
     )
 }
 
 /* ---------------- STEP 1: BIBLIOTECA ---------------- */
 function LibraryStep() {
     return (
-        <motion.div
+        <m.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             className="space-y-4 max-w-2xl mx-auto"
         >
-            <motion.div variants={itemVariants} className="text-center space-y-1">
+            <m.div variants={itemVariants} className="text-center space-y-1">
                 <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
                     1. Biblioteca y Rutas de Archivos
                 </h2>
                 <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     Indica las carpetas de tu equipo donde guardas tus animes. KameHouse escaneará y organizará automáticamente los episodios y sagas.
                 </p>
-            </motion.div>
+            </m.div>
 
             <StepCard>
-                <motion.div variants={itemVariants} className="space-y-4">
+                <m.div variants={itemVariants} className="space-y-4">
                     <Field.MultiDirectorySelector
                         name="library.seriesPaths"
                         label="Carpetas de Series de Anime"
@@ -220,9 +216,9 @@ function LibraryStep() {
                         help="Ubicaciones que contienen películas individuales, especiales o películas animadas."
                         shouldExist
                     />
-                </motion.div>
+                </m.div>
             </StepCard>
-        </motion.div>
+        </m.div>
     )
 }
 
@@ -235,24 +231,24 @@ function MediaEngineStep() {
     const isBothAvailable = !!status?.ffmpegAvailable && !!status?.ffprobeAvailable
 
     return (
-        <motion.div
+        <m.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             className="space-y-4 max-w-2xl mx-auto"
         >
-            <motion.div variants={itemVariants} className="text-center space-y-1">
+            <m.div variants={itemVariants} className="text-center space-y-1">
                 <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
                     2. Motor de Video (FFmpeg)
                 </h2>
                 <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     KameHouse utiliza FFmpeg y FFprobe para leer códecs, pistas de audio, subtítulos integrados y generar miniaturas.
                 </p>
-            </motion.div>
+            </m.div>
 
             <StepCard>
-                <motion.div variants={itemVariants} className="space-y-4">
+                <m.div variants={itemVariants} className="space-y-4">
                     {/* Status Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-surface-container-low border border-border-subtle">
                         <div className="flex items-center gap-3">
@@ -279,22 +275,22 @@ function MediaEngineStep() {
                                         Estado de FFmpeg / FFprobe
                                     </h4>
                                     {isLoading ? (
-                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">Verificando...</span>
+                                        <span className="text-3xs px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">Verificando...</span>
                                     ) : isBothAvailable ? (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                        <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                                             Listo
                                         </span>
                                     ) : isDownloading ? (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                        <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
                                             Instalando ({status?.downloadProgress ?? 0}%)
                                         </span>
                                     ) : (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                        <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
                                             No instalado
                                         </span>
                                     )}
                                 </div>
-                                <p className="text-[11px] text-on-surface-variant truncate">
+                                <p className="text-2xs text-on-surface-variant truncate">
                                     {isBothAvailable
                                         ? "Los binarios necesarios están correctamente instalados y listos."
                                         : isDownloading
@@ -305,7 +301,7 @@ function MediaEngineStep() {
                         </div>
 
                         {!isBothAvailable && (
-                            <motion.button
+                            <m.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 type="button"
@@ -328,7 +324,7 @@ function MediaEngineStep() {
                                         <span>Instalar Automáticamente</span>
                                     </>
                                 )}
-                            </motion.button>
+                            </m.button>
                         )}
                     </div>
 
@@ -353,15 +349,15 @@ function MediaEngineStep() {
                         <div className="p-3 rounded-xl bg-surface-container-low border border-border-subtle flex flex-col gap-1">
                             <div className="flex items-center justify-between">
                                 <span className="font-semibold text-on-surface">ffprobe</span>
-                                <span className={status?.ffprobeAvailable ? "text-emerald-400 font-medium text-[11px]" : "text-rose-400 text-[11px]"}>
+                                <span className={status?.ffprobeAvailable ? "text-emerald-400 font-medium text-2xs" : "text-rose-400 text-2xs"}>
                                     {status?.ffprobeAvailable ? "Detectado" : "Faltante"}
                                 </span>
                             </div>
-                            <span className="font-mono text-[10px] text-on-surface-variant truncate" title={status?.ffprobePath}>
+                            <span className="font-mono text-3xs text-on-surface-variant truncate" title={status?.ffprobePath}>
                                 {status?.ffprobePath || "No configurado"}
                             </span>
                             {status?.ffprobeVersion && (
-                                <span className="text-[10px] text-on-surface-variant/70 truncate" title={status?.ffprobeVersion}>
+                                <span className="text-3xs text-on-surface-variant/70 truncate" title={status?.ffprobeVersion}>
                                     {status?.ffprobeVersion}
                                 </span>
                             )}
@@ -370,23 +366,23 @@ function MediaEngineStep() {
                         <div className="p-3 rounded-xl bg-surface-container-low border border-border-subtle flex flex-col gap-1">
                             <div className="flex items-center justify-between">
                                 <span className="font-semibold text-on-surface">ffmpeg</span>
-                                <span className={status?.ffmpegAvailable ? "text-emerald-400 font-medium text-[11px]" : "text-rose-400 text-[11px]"}>
+                                <span className={status?.ffmpegAvailable ? "text-emerald-400 font-medium text-2xs" : "text-rose-400 text-2xs"}>
                                     {status?.ffmpegAvailable ? "Detectado" : "Faltante"}
                                 </span>
                             </div>
-                            <span className="font-mono text-[10px] text-on-surface-variant truncate" title={status?.ffmpegPath}>
+                            <span className="font-mono text-3xs text-on-surface-variant truncate" title={status?.ffmpegPath}>
                                 {status?.ffmpegPath || "No configurado"}
                             </span>
                             {status?.ffmpegVersion && (
-                                <span className="text-[10px] text-on-surface-variant/70 truncate" title={status?.ffmpegVersion}>
+                                <span className="text-3xs text-on-surface-variant/70 truncate" title={status?.ffmpegVersion}>
                                     {status?.ffmpegVersion}
                                 </span>
                             )}
                         </div>
                     </div>
-                </motion.div>
+                </m.div>
             </StepCard>
-        </motion.div>
+        </m.div>
     )
 }
 
@@ -440,27 +436,27 @@ function PlaybackStep({
     ]
 
     return (
-        <motion.div
+        <m.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             className="space-y-4 max-w-2xl mx-auto"
         >
-            <motion.div variants={itemVariants} className="text-center space-y-1">
+            <m.div variants={itemVariants} className="text-center space-y-1">
                 <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
                     3. Automatizaciones de Reproducción
                 </h2>
                 <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     Activa las funciones inteligentes para maratonear y disfrutar sin interrupciones ni adelantos manuales.
                 </p>
-            </motion.div>
+            </m.div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 {list.map(item => {
                     const isEnabled = features[item.key]
                     return (
-                        <motion.div
+                        <m.div
                             key={item.key}
                             role="checkbox"
                             tabIndex={0}
@@ -496,22 +492,22 @@ function PlaybackStep({
                                     </h4>
                                     <div
                                         className={cn(
-                                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[10px] transition-colors duration-200",
+                                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-3xs transition-colors duration-200",
                                             isEnabled ? "bg-brand-accent border-brand-accent text-on-primary" : "border-border-subtle"
                                         )}
                                     >
                                         {isEnabled && "✓"}
                                     </div>
                                 </div>
-                                <p className="text-[11px] text-on-surface-variant mt-1 leading-snug">
+                                <p className="text-2xs text-on-surface-variant mt-1 leading-snug">
                                     {item.description}
                                 </p>
                             </div>
-                        </motion.div>
+                        </m.div>
                     )
                 })}
             </div>
-        </motion.div>
+        </m.div>
     )
 }
 
@@ -555,21 +551,21 @@ function LanguageStep({
     ]
 
     return (
-        <motion.div
+        <m.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             className="space-y-4 max-w-2xl mx-auto"
         >
-            <motion.div variants={itemVariants} className="text-center space-y-1">
+            <m.div variants={itemVariants} className="text-center space-y-1">
                 <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
                     4. Idioma y Metadatos
                 </h2>
                 <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     Configura el idioma preferido para los títulos de episodios, carteleras, sinopsis y reconocimiento de archivos.
                 </p>
-            </motion.div>
+            </m.div>
 
             <StepCard>
                 <div className="space-y-3">
@@ -580,7 +576,7 @@ function LanguageStep({
                         {languages.map(lang => {
                             const isSelected = selectedLanguage === lang.code
                             return (
-                                <motion.div
+                                <m.div
                                     key={lang.code}
                                     role="radio"
                                     tabIndex={0}
@@ -606,18 +602,18 @@ function LanguageStep({
                                         <span className="text-xl shrink-0">{lang.flag}</span>
                                         <div className="min-w-0">
                                             <p className="font-semibold text-xs sm:text-sm truncate">{lang.label}</p>
-                                            <p className="text-[10px] text-on-surface-variant/70 truncate">{lang.region}</p>
+                                            <p className="text-3xs text-on-surface-variant/70 truncate">{lang.region}</p>
                                         </div>
                                     </div>
                                     <div
                                         className={cn(
-                                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-[10px] ml-2",
+                                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-3xs ml-2",
                                             isSelected ? "bg-brand-accent border-brand-accent text-on-primary" : "border-border-subtle"
                                         )}
                                     >
                                         {isSelected && "✓"}
                                     </div>
-                                </motion.div>
+                                </m.div>
                             )
                         })}
                     </div>
@@ -626,7 +622,7 @@ function LanguageStep({
                 <div className="h-[1px] bg-border-subtle my-4" />
 
                 {/* Reconocimiento flexible de archivos de fansub */}
-                <motion.div
+                <m.div
                     role="switch"
                     tabIndex={0}
                     aria-checked={flexibleMatching}
@@ -651,8 +647,8 @@ function LanguageStep({
                         <p className="text-xs font-semibold text-on-surface">
                             Detección Flexible de Fansubs
                         </p>
-                        <p className="text-[11px] text-on-surface-variant">
-                            Reconoce nombres complejos como <span className="text-on-surface-variant font-mono text-[10px]">[Fansub] DBZ - 001 [1080p].mkv</span> sin obligarte a renombrar archivos.
+                        <p className="text-2xs text-on-surface-variant">
+                            Reconoce nombres complejos como <span className="text-on-surface-variant font-mono text-3xs">[Fansub] DBZ - 001 [1080p].mkv</span> sin obligarte a renombrar archivos.
                         </p>
                     </div>
                     <SpringSwitch
@@ -661,9 +657,9 @@ function LanguageStep({
                         ariaHidden={true}
                         className="pointer-events-none shrink-0 ml-3"
                     />
-                </motion.div>
+                </m.div>
             </StepCard>
-        </motion.div>
+        </m.div>
     )
 }
 
@@ -687,6 +683,16 @@ export function GettingStarted({
 
     const formRef = React.useRef<UseFormReturn<z.infer<typeof gettingStartedSchema>> | null>(null)
     const currentSettings = status?.settings
+
+    // El player lee marathon/tvMode del store local, no del servidor:
+    // sincronizar al guardar para no quedar divergente hasta pasar por Ajustes.
+    const syncLocalPlaybackModes = (lib: { marathonMode?: boolean; tvMode?: boolean } | undefined) => {
+        try {
+            const st = usePlayerStore.getState()
+            st.setMarathonMode?.(lib?.marathonMode ?? currentSettings?.library?.marathonMode ?? false)
+            st.setTvMode?.(lib?.tvMode ?? currentSettings?.library?.tvMode ?? false)
+        } catch {}
+    }
 
     // States for the 3 Essential Steps pre-filled from existing server settings
     const [playbackFeatures, setPlaybackFeatures] = React.useState({
@@ -752,7 +758,7 @@ export function GettingStarted({
         )}>
             {/* Cinematic animated background gradients */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-[var(--bg-primary)]/70 z-base" />
+                <div className="absolute inset-0 bg-bg-primary/70 z-base" />
                 <div className="absolute inset-0 opacity-[0.22] blur-3xl mix-blend-screen">
                     <div 
                         className="absolute top-[10%] left-[10%] w-[40vw] h-[40vw] rounded-full animate-float-blur"
@@ -776,7 +782,7 @@ export function GettingStarted({
                         <span className="font-display tracking-widest text-lg sm:text-xl font-bold text-on-surface uppercase">
                             KAMEHOUSE
                         </span>
-                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30">
+                        <span className="text-3xs uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30">
                             Configuración
                         </span>
                     </div>
@@ -815,6 +821,7 @@ export function GettingStarted({
 
                                 mutateStart(payload, {
                                     onSuccess: () => {
+                                        syncLocalPlaybackModes(data.library)
                                         toast.success("Configuración de KameHouse guardada con éxito")
                                         handleGoToHome()
                                     },
@@ -840,8 +847,6 @@ export function GettingStarted({
                                 tmdbLanguage: selectedLanguage,
                             },
                             enableTranscode: currentSettings?.mediastream?.transcodeEnabled ?? false,
-                            debridProvider: "none",
-                            debridApiKey: "",
                             notifications: {
                                 disableNotifications: currentSettings?.notifications?.disableNotifications ?? false,
                                 disableAutoScannerNotifications: currentSettings?.notifications?.disableAutoScannerNotifications ?? false,
@@ -855,7 +860,7 @@ export function GettingStarted({
                                     <StepIndicator currentStep={currentStep} onStepClick={goToStep} />
 
                                     <AnimatePresence mode="wait" custom={direction}>
-                                        <motion.div
+                                        <m.div
                                             key={currentStep}
                                             custom={direction}
                                             variants={stepVariants}
@@ -884,7 +889,7 @@ export function GettingStarted({
                                                     setFlexibleMatching={setFlexibleMatching}
                                                 />
                                             )}
-                                        </motion.div>
+                                        </m.div>
                                     </AnimatePresence>
                                 </div>
                             )
@@ -897,7 +902,7 @@ export function GettingStarted({
             <div className="w-full relative z-20 bg-surface/90 backdrop-blur-overlay-xl border-t border-border-subtle px-4 sm:px-8 py-3.5 flex justify-between items-center max-w-3xl mx-auto rounded-t-2xl shadow-modal mt-2">
                 <div className="flex items-center gap-2">
                     {currentStep > 0 && (
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                        <m.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                             <Button
                                 type="button"
                                 intent="gray-outline"
@@ -911,13 +916,13 @@ export function GettingStarted({
                             >
                                 Anterior
                             </Button>
-                        </motion.div>
+                        </m.div>
                     )}
                 </div>
 
                 <div className="flex items-center gap-3">
                     {currentStep === STEPS.length - 1 ? (
-                        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                        <m.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                             <Button
                                 type="button"
                                 intent="primary"
@@ -936,6 +941,7 @@ export function GettingStarted({
                                             }
                                             mutateStart(payload, {
                                                 onSuccess: () => {
+                                                    syncLocalPlaybackModes(data.library)
                                                     toast.success("Configuración actualizada con éxito")
                                                     handleGoToHome()
                                                 },
@@ -946,15 +952,15 @@ export function GettingStarted({
                                         })()
                                     }
                                 }}
-                                className="rounded-xl font-bold uppercase tracking-wider px-6 h-10 text-xs sm:text-sm shadow-lg shadow-brand-primary bg-brand-accent hover:bg-brand-accent/90 text-on-primary cursor-pointer border-none"
+                                className="rounded-full font-bold uppercase tracking-wider px-6 h-10 text-xs sm:text-sm shadow-elevation-2 bg-brand-accent hover:bg-brand-accent/90 text-on-primary cursor-pointer border-none"
                                 loading={isPending}
                                 rightIcon={<IconNavigationRocket className="w-4 h-4" />}
                             >
                                 Guardar y Comenzar
                             </Button>
-                        </motion.div>
+                        </m.div>
                     ) : (
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                        <m.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                             <Button
                                 type="button"
                                 intent="primary"
@@ -968,7 +974,7 @@ export function GettingStarted({
                             >
                                 Siguiente
                             </Button>
-                        </motion.div>
+                        </m.div>
                     )}
                 </div>
             </div>

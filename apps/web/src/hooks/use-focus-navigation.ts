@@ -248,15 +248,4 @@ export function useFocusNavigation({
             container.removeEventListener("keydown", handleKeyDown)
         }
     }, [enabled, containerRef, handleKeyDown])
-
-    return {
-        /** Programmatically focus an element */
-        focusElement,
-        /** Get the currently focused element */
-        getFocusedElement: () => focusedElementRef.current,
-        /** Reset focus (clear tracked element) */
-        resetFocus: () => {
-            focusedElementRef.current = null
-        },
-    }
 }

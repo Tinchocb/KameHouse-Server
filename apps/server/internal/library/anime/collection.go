@@ -343,7 +343,16 @@ func (lc *LibraryCollection) hydrateCollectionLists(
 
 	lists := make([]*LibraryCollectionList, 0)
 	for status, entries := range statusGroups {
+		entries = lo.Filter(entries, func(e *LibraryCollectionEntry, _ int) bool {
+			return e != nil && e.Media != nil
+		})
 		sort.Slice(entries, func(i, j int) bool {
+			if entries[i] == nil || entries[i].Media == nil {
+				return false
+			}
+			if entries[j] == nil || entries[j].Media == nil {
+				return true
+			}
 			return entries[i].Media.TitleRomaji < entries[j].Media.TitleRomaji
 		})
 

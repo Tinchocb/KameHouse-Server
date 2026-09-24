@@ -1,8 +1,9 @@
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence } from "framer-motion"
 import { IconNavigationSearch, IconUiClose, IconArrowDownUp, IconNavigationChevronDown } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { SortOption, SORT_OPTIONS } from "./movies-utils"
+import { useMagneticSpring } from "@/components/ui/kinetics/hooks"
 
 export type MovieStatusFilter = "all" | "completed" | "unwatched"
 
@@ -30,8 +31,8 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
     setStatusFilter,
     sortBy,
     setSortBy,
-    totalCount,
-    filteredCount,
+    totalCount: _totalCount,
+    filteredCount: _filteredCount,
 }: MoviesFilterBarProps) {
     const [sortOpen, setSortOpen] = React.useState(false)
     const dropdownRef = React.useRef<HTMLDivElement>(null)
@@ -61,41 +62,30 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
         return () => window.removeEventListener("keydown", handleKeyDown)
     }, [])
 
+    const magneticSpring = useMagneticSpring()
     return (
         <div className="w-full flex flex-col gap-3.5 select-none pb-2">
-            {/* Fila Superior: Título, Contador, Buscador y Dropdown de Orden */}
+            {/* Fila Superior: Buscador y Dropdown de Orden */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                {/* Título y Conteo */}
-                <div className="flex items-center gap-2.5">
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-lg md:text-xl font-black uppercase tracking-wider text-on-surface font-display leading-none">
-                            Películas de Dragon Ball
-                        </h2>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[var(--glass-bg)] text-on-surface-variant border border-[var(--glass-border-side)]">
-                            {filteredCount === totalCount ? `${totalCount} títulos` : `${filteredCount} de ${totalCount}`}
-                        </span>
-                    </div>
-                </div>
-
                 {/* Buscador y Orden */}
                 <div className="flex items-center gap-2.5 w-full sm:w-auto">
                     {/* Campo de búsqueda */}
                     <div className="relative flex-1 sm:w-60 md:w-64">
-                        <IconNavigationSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50 pointer-events-none" />
+                        <IconNavigationSearch className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-4 h-4 text-on-surface-variant/50 pointer-events-none" />
                         <input
                             ref={searchInputRef}
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Buscar película... (/)"
-                            className="w-full bg-zinc-950/45 border border-white/20 border-t-white/40 border-b-white/10 rounded-full py-1.5 pl-9 pr-8 text-xs font-medium text-white placeholder:text-zinc-500 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/40 transition-all backdrop-blur-overlay-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.2)]"
+                            className="w-full bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 rounded-full py-1.5 pl-9 pr-8 text-xs font-medium text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/40 transition-[border-color,box-shadow] duration-base ease-smooth-out backdrop-blur-overlay-2xl shadow-glass-highlight-md"
                         />
                         {searchQuery && (
                             <button
                                 type="button"
                                 onClick={() => setSearchQuery("")}
                                 aria-label="Limpiar búsqueda"
-                                className="absolute right-0.5 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-zinc-400 hover:text-white transition-colors"
+                                className="absolute right-0.5 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-on-surface-variant hover:text-white transition-colors"
                             >
                                 <IconUiClose className="w-3.5 h-3.5" />
                             </button>
@@ -107,24 +97,24 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                         <button
                             type="button"
                             onClick={() => setSortOpen((o) => !o)}
-                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-950/45 hover:bg-zinc-900/60 border border-white/20 border-t-white/40 border-b-white/10 text-xs font-mono font-bold text-zinc-300 hover:text-white transition-all backdrop-blur-overlay-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.2)] cursor-pointer"
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-container-lowest/60 hover:bg-surface-container-high/60 border border-white/20 border-t-white/40 border-b-white/10 text-xs font-mono font-bold text-on-surface-variant hover:text-white active:scale-95 transition-[background-color,color,border-color,box-shadow] duration-base ease-smooth-out backdrop-blur-overlay-2xl shadow-glass-highlight-md cursor-pointer"
                         >
-                            <IconArrowDownUp className="w-3 h-3 text-zinc-400" />
+                            <IconArrowDownUp className="w-3 h-3 text-on-surface-variant" />
                             <span className="hidden md:inline">{SORT_OPTIONS.find((s) => s.value === sortBy)?.label}</span>
                             <span className="md:hidden">Orden</span>
-                            <motion.span animate={{ rotate: sortOpen ? 180 : 0 }} transition={{ duration: 0.15 }}>
-                                <IconNavigationChevronDown className="w-3 h-3 text-zinc-400" />
-                            </motion.span>
+                            <m.span animate={{ rotate: sortOpen ? 180 : 0 }} transition={{ duration: 0.15 }}>
+                                <IconNavigationChevronDown className="w-3 h-3 text-on-surface-variant" />
+                            </m.span>
                         </button>
 
                         <AnimatePresence>
                             {sortOpen && (
-                                <motion.div
+                                <m.div
                                     initial={{ opacity: 0, scale: 0.95, y: -4 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                                    transition={{ duration: 0.15, ease: "easeOut" }}
-                                    className="absolute right-0 top-[calc(100%+6px)] w-44 bg-zinc-950/80 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.25),0_16px_40px_-6px_rgba(0,0,0,0.9)] z-50 overflow-hidden p-1"
+                                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                    className="absolute right-0 top-[calc(100%+6px)] w-44 bg-surface-container-lowest/90 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[shadow:var(--glass-highlight-lg),0_16px_40px_-6px_rgba(0,0,0,0.9)] z-50 overflow-hidden p-1"
                                 >
                                     {SORT_OPTIONS.map((opt) => (
                                         <button
@@ -137,15 +127,15 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                                             className={cn(
                                                 "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono font-medium transition-colors cursor-pointer",
                                                 sortBy === opt.value
-                                                    ? "text-zinc-950 bg-white/95 font-bold shadow-[0_2px_10px_rgba(255,255,255,0.3)]"
-                                                    : "text-zinc-300 hover:text-white hover:bg-white/10"
+                                                    ? "text-black bg-white/95 font-bold shadow-[0_2px_10px_rgba(255,255,255,0.3)]"
+                                                    : "text-on-surface-variant hover:text-white hover:bg-white/10"
                                             )}
                                         >
                                             <span>{opt.label}</span>
-                                            {sortBy === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-zinc-950" />}
+                                            {sortBy === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
                                         </button>
                                     ))}
-                                </motion.div>
+                                </m.div>
                             )}
                         </AnimatePresence>
                     </div>
@@ -155,7 +145,7 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
             {/* Fila Inferior: solo Filtro de Estado (la Era vive en la píldora superior) */}
             <div className="flex items-center justify-start gap-2.5 pt-2 border-t border-white/10">
                 {/* Filtro de Estado (Todas, Vistas, Sin ver) */}
-                <div className="flex items-center gap-1 shrink-0 bg-zinc-950/45 border border-white/20 border-t-white/40 border-b-white/10 rounded-full p-1 backdrop-blur-overlay-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_8px_24px_rgba(0,0,0,0.6)]">
+                <div className="flex items-center gap-1 shrink-0 bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 rounded-full p-1 backdrop-blur-overlay-2xl shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_rgba(0,0,0,0.6)]">
                     {STATUS_FILTER_OPTIONS.map((status) => {
                         const isSelected = statusFilter === status.id
                         return (
@@ -165,17 +155,17 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                                         onClick={() => setStatusFilter(status.id)}
                                         aria-pressed={isSelected}
                                         className={cn(
-                                    "relative px-3.5 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider transition-colors duration-200 shrink-0 cursor-pointer select-none",
+                                    "relative px-3.5 py-1 rounded-full text-2xs font-mono font-bold uppercase tracking-wider transition-colors duration-200 shrink-0 cursor-pointer select-none",
                                     isSelected
-                                        ? "text-zinc-950"
-                                        : "text-zinc-300 hover:text-white hover:bg-white/10"
+                                        ? "text-black"
+                                        : "text-on-surface-variant hover:text-white hover:bg-white/10"
                                 )}
                             >
                                 {isSelected && (
-                                    <motion.div
+                                    <m.div
                                         layoutId="statusFilterActivePill"
-                                        transition={{ type: "spring", stiffness: 480, damping: 34 }}
-                                        className="absolute inset-0 bg-white/95 rounded-full shadow-[0_2px_12px_rgba(255,255,255,0.4),inset_0_1px_1px_rgba(255,255,255,1)] -z-0"
+                                        transition={magneticSpring}
+                                        className="absolute inset-0 bg-white/95 rounded-full -z-0"
                                     />
                                 )}
                                 <span className="relative z-10">{status.label}</span>

@@ -191,8 +191,10 @@ func (a *App) InitOrRefreshModules() {
 	if envMovies := os.Getenv("KAMEHOUSE_MOVIE_PATHS"); envMovies != "" {
 		settings.Library.MoviePaths = strings.Split(envMovies, ",")
 	}
-	if envTmdb := os.Getenv("KAMEHOUSE_TMDB_TOKEN"); envTmdb != "" {
+	if envTmdb, envReason := tmdb.ResolveTokenFromEnv(); envTmdb != "" {
 		settings.Library.TmdbApiKey = envTmdb
+	} else if envReason == "placeholder" {
+		a.Logger.Warn().Msg("app: KAMEHOUSE_TMDB_TOKEN/KAMEHOUSE_TMDB_API_KEY looks like an unreplaced placeholder - ignoring env override")
 	}
 	if envTmdbLang := os.Getenv("KAMEHOUSE_TMDB_LANGUAGE"); envTmdbLang != "" {
 		settings.Library.TmdbLanguage = envTmdbLang
@@ -211,6 +213,7 @@ func (a *App) InitOrRefreshModules() {
 	}
 
 	if a.AutoScanner != nil {
+		a.AutoScanner.SetSettings(settings.Library)
 		a.AutoScanner.SetEnabled(settings.Library.AutoScan && !settings.Library.DisableLocalScanning)
 	}
 
@@ -228,16 +231,17 @@ func (a *App) InitOrRefreshModules() {
 		a.Logger.Info().Msg("app: Using Jikan platform")
 		a.Metadata.Platform.SetPlatform(jikan_platform.NewPlatform(a.Logger))
 
-		tmdbAPIKey := settings.Library.TmdbApiKey
-		if tmdbAPIKey == "" {
-			tmdbAPIKey = a.Config.Metadata.TMDBApiKey
-		}
+		tmdbAPIKey, tmdbReason := tmdb.ResolveToken(settings.Library.TmdbApiKey, a.Config.Metadata.TMDBApiKey)
 		tmdbLanguage := settings.Library.TmdbLanguage
 		if tmdbLanguage == "" {
 			tmdbLanguage = "es-MX"
 		}
 		if tmdbAPIKey == "" {
-			a.Logger.Warn().Msg("app: No TMDB API key configured â€” platform features will be limited")
+			if tmdbReason == "placeholder" {
+				a.Logger.Warn().Msg("app: TMDB token is an unreplaced placeholder - TMDB features degraded, using default provider")
+			} else {
+				a.Logger.Warn().Msg("app: No TMDB API key configured - TMDB features degraded, using default provider")
+			}
 		}
 		tmdbClient := tmdb.NewClient(tmdbAPIKey, tmdbLanguage)
 		if a.Database != nil {
@@ -250,6 +254,17 @@ func (a *App) InitOrRefreshModules() {
 			Database:   a.Database,
 			TMDBClient: a.Metadata.TMDBClient,
 		}))
+	}
+
+	if a.DriveService != nil {
+		_ = a.DriveService.UpdateConfig(
+			settings.GoogleDrive.Enabled,
+			settings.GoogleDrive.ClientID,
+			settings.GoogleDrive.ClientSecret,
+			settings.GoogleDrive.RefreshToken,
+			settings.GoogleDrive.FolderID,
+			settings.GoogleDrive.FolderName,
+		)
 	}
 
 	a.Logger.Info().Msg("app: Refreshed modules")
@@ -276,7 +291,9 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 		}
 	}
 
-	if settings.TranscodeHwAccel == "disabled" || settings.TranscodeHwAccel == "" {
+	// Solo las filas legacy sin valor migran a "auto". "disabled" es un modo
+	// válido (solo-CPU, libx264) elegido explícitamente por el usuario.
+	if settings.TranscodeHwAccel == "" || settings.TranscodeHwAccel == "none" {
 		settings.TranscodeHwAccel = "auto"
 		updatedSettings, err := a.Database.UpsertMediastreamSettings(settings)
 		if err != nil {
@@ -297,6 +314,19 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 	}()
 
 	a.SecondarySettings.Mediastream = settings
+
+	if s, err := a.Database.GetSettings(); err == nil && s != nil {
+		if a.DriveService != nil {
+			_ = a.DriveService.UpdateConfig(
+				s.GoogleDrive.Enabled,
+				s.GoogleDrive.ClientID,
+				s.GoogleDrive.ClientSecret,
+				s.GoogleDrive.RefreshToken,
+				s.GoogleDrive.FolderID,
+				s.GoogleDrive.FolderName,
+			)
+		}
+	}
 }
 
 func (a *App) performActionsOnce() {

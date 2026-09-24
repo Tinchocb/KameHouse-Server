@@ -77,7 +77,7 @@ export function WatchProgressBar({
     return (
         <div className={cn("w-full flex flex-col gap-1", className)}>
             {showLabel && (
-                <div className="flex justify-between items-center text-[10px] font-mono uppercase tracking-wider text-white/70">
+                <div className="flex justify-between items-center text-3xs font-mono uppercase tracking-wider text-white/70">
                     <span>Progreso</span>
                     <span className="font-bold text-on-surface">{clampedPercent}%</span>
                 </div>

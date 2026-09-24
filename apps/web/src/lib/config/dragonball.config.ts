@@ -77,7 +77,11 @@ export function getDragonBallSpanishTitle(tmdbId: number | undefined | null, epi
         case DRAGON_BALL_SERIES.ORIGINAL: seriesKey = "original"; break;
         case DRAGON_BALL_SERIES.Z: seriesKey = "z"; break;
         case DRAGON_BALL_SERIES.GT: seriesKey = "gt"; break;
-        case DRAGON_BALL_SERIES.KAI: seriesKey = "kai"; break;
+        case DRAGON_BALL_SERIES.KAI:
+        case DRAGON_BALL_SERIES.KAI_FINAL_CHAPTERS:
+        case 42705:
+            seriesKey = "kai";
+            break;
         case DRAGON_BALL_SERIES.SUPER: seriesKey = "super"; break;
         case DRAGON_BALL_SERIES.DAIMA: seriesKey = "daima"; break;
     }

@@ -1,12 +1,12 @@
 package local
 
 import (
+	"errors"
+
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util/result"
-
-	"github.com/pkg/errors"
 )
 
 // OfflineMetadataProvider replaces the metadata provider only when offline

@@ -25,7 +25,7 @@ export const CharacterCarousel = memo(function CharacterCarousel({ characters, o
       >
         {characters.map((char, idx) => (
           <div
-            key={idx}
+            key={char.name ?? idx}
             className="snap-start min-w-[100px] animate-fade-in"
             style={{ animationDelay: `${Math.min(idx, ENTER_STAGGER_CAP) * ENTER_STAGGER_MS}ms` }}
           >

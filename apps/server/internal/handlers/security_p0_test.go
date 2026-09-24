@@ -26,7 +26,7 @@ func setupTestApp(t *testing.T) (*core.App, string) {
 	_ = os.MkdirAll(logsDir, 0755)
 
 	l := zerolog.Nop()
-	database, err := db.NewDatabase(context.Background(), "", "test_db", &l)
+	database, err := db.NewDatabase(context.Background(), appDataDir, "test_db", &l)
 	if err != nil {
 		t.Fatalf("failed to init test database: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestHandleOpenInExplorer_Confinement(t *testing.T) {
 
 	_ = h.HandleOpenInExplorer(cInside)
 	if recInside.Code != http.StatusOK {
-		t.Errorf("expected 200 for path inside library, got %d", recInside.Code)
+		t.Errorf("expected 200 for path inside library, got %d: %s", recInside.Code, recInside.Body.String())
 	}
 
 	// Request with path outside library and app data -> Should return 403

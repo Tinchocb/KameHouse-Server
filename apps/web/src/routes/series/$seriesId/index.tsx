@@ -3,7 +3,6 @@ import { dehydrate } from "@tanstack/react-query"
 import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { SagaDetailSearchParams } from "@/api/types/series.types"
-import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 
 export const Route = createFileRoute("/series/$seriesId/")({
@@ -22,5 +21,7 @@ export const Route = createFileRoute("/series/$seriesId/")({
         return { dehydrateState: dehydrate(qc) }
     },
     errorComponent: AppErrorBoundary,
-    pendingComponent: BentoDetailsSkeleton,
+    // Anti-flash: sin pendingComponent de router. El loader hace prefetch y el
+    // componente lazy ya muestra BentoDetailsSkeleton solo si no hay caché
+    // (isLoading && !entry). Evita doble skeleton router->lazy.
 })

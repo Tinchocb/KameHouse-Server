@@ -1,6 +1,7 @@
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { IconMediaVolume2, IconMediaSubtitles, IconNavigationLayers, IconStatusMonitor, IconMediaForward, IconUiCheck, IconUiSettings, IconUiSpinner, IconUiClose } from "@/components/ui/icons";
+import { createPortal } from "react-dom"
+import { m, AnimatePresence } from "framer-motion"
+import { IconMediaVolume2, IconMediaSubtitles, IconNavigationLayers, IconStatusMonitor, IconMediaForward, IconUiCheck, IconUiSettings, IconUiSpinner } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { Vaul, VaulContent } from "@/components/vaul"
 
@@ -10,8 +11,27 @@ import { AudioSettings } from "./player-settings/AudioSettings"
 import { SubtitleSettings } from "./player-settings/SubtitleSettings"
 import { QualitySettings } from "./player-settings/QualitySettings"
 import { PlaybackSettings } from "./player-settings/PlaybackSettings"
+import { PLAYER_ICON_BTN, PLAYER_ICON_BTN_ACTIVE } from "@/components/video/player-theme"
 
 type SettingsView = "main" | "audio" | "subtitles" | "quality" | "playback" | "image"
+
+const DESKTOP_QUERY = "(min-width: 768px)"
+
+/** true en escritorio (breakpoint md de Tailwind). Decide si se usa el panel flotante
+ * o la hoja de Vaul: Vaul se monta en un portal a <body>, así que ocultarlo con
+ * `md:hidden` no alcanza — abierto igual pone un overlay a pantalla completa y
+ * `pointer-events: none` en el body, lo que bloqueaba todos los clics del panel. */
+function useIsDesktop() {
+    return React.useSyncExternalStore(
+        (onChange) => {
+            const mql = window.matchMedia(DESKTOP_QUERY)
+            mql.addEventListener("change", onChange)
+            return () => mql.removeEventListener("change", onChange)
+        },
+        () => window.matchMedia(DESKTOP_QUERY).matches,
+        () => true
+    )
+}
 
 const ASPECT_RATIO_LABELS: Record<string, string> = {
     contain: "Ajustado",
@@ -22,6 +42,7 @@ const ASPECT_RATIO_LABELS: Record<string, string> = {
 }
 
 export function PlayerSettingsMenu({
+    panelContainer,
     audioTracks,
     activeAudioIndex,
     onSelectAudio,
@@ -42,6 +63,8 @@ export function PlayerSettingsMenu({
     onAutoSkipIntroChange,
     autoSkipOutro = false,
     onAutoSkipOutroChange,
+    autoSkipFiller = false,
+    onAutoSkipFillerChange,
     skipStepSeconds = 85,
     onSkipStepSecondsChange,
     showHeatmap = true,
@@ -66,6 +89,7 @@ export function PlayerSettingsMenu({
     ambientModeEnabled = true,
     onAmbientModeEnabledChange,
 }: PlayerSettingsMenuProps) {
+    const isDesktop = useIsDesktop()
     const [internalOpen, setInternalOpen] = React.useState(false)
     const [view, setView] = React.useState<SettingsView>("main")
 
@@ -111,6 +135,7 @@ export function PlayerSettingsMenu({
         const onKey = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 e.stopPropagation()
+                e.stopImmediatePropagation()
                 setIsOpen(false)
             }
         }
@@ -170,7 +195,7 @@ export function PlayerSettingsMenu({
                     <MenuButton
                         icon={<IconMediaVolume2 className="w-4 h-4" />}
                         label="Audio"
-                        value={activeAudio ? (activeAudio.title || langLabel(activeAudio.language)) : "Desconocido"}
+                        value={activeAudio ? (activeAudio.title || langLabel(activeAudio.language)) : "Predeterminado"}
                         onClick={() => setView("audio")}
                     />
                     <MenuButton
@@ -198,7 +223,7 @@ export function PlayerSettingsMenu({
                     <MenuButton
                         icon={<IconMediaForward className="w-4 h-4" />}
                         label="Reproducción"
-                        value={`Skip ${autoSkipLabel}`}
+                        value={autoSkipLabel === "Apagado" ? "Normal" : `Salto auto: ${autoSkipLabel}`}
                         onClick={() => setView("playback")}
                     />
                 </SettingsLayout>
@@ -250,12 +275,12 @@ export function PlayerSettingsMenu({
                 >
                     {hlsLevels.length > 0 && (
                         <div className="flex flex-col border-b border-white/5 pb-2 mb-2">
-                            <div className="px-4 py-2 text-label-sm font-black text-zinc-500 uppercase tracking-widest">Resolución HLS</div>
+                            <div className="px-3 pt-2 pb-1 text-2xs font-semibold uppercase tracking-widest text-on-surface-variant">Resolución HLS</div>
                             <button
                                 onClick={() => { onHlsLevelChange?.(-1); setIsOpen(false) }}
                                 className={cn(
-                                    "flex items-center justify-between px-4 py-3 transition-all",
-                                    activeHlsLevel === -1 ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                                    "flex items-center justify-between w-full min-h-10 py-2 px-3 rounded-full transition-colors duration-200",
+                                    activeHlsLevel === -1 ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
                                 )}
                             >
                                 <span className="text-xs font-bold">Auto</span>
@@ -266,8 +291,8 @@ export function PlayerSettingsMenu({
                                     key={level.index}
                                     onClick={() => { onHlsLevelChange?.(level.index); setIsOpen(false) }}
                                     className={cn(
-                                        "flex items-center justify-between px-4 py-3 transition-all",
-                                        activeHlsLevel === level.index ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                                        "flex items-center justify-between w-full min-h-10 py-2 px-3 rounded-full transition-colors duration-200",
+                                        activeHlsLevel === level.index ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
                                     )}
                                 >
                                     <span className="text-xs font-bold">{level.label}</span>
@@ -279,7 +304,7 @@ export function PlayerSettingsMenu({
 
                     {sources.length > 0 && (
                         <>
-                            {hlsLevels.length > 0 && <div className="px-4 py-2 text-label-sm font-black text-zinc-500 uppercase tracking-widest">Fuentes</div>}
+                            {hlsLevels.length > 0 && <div className="px-3 pt-2 pb-1 text-2xs font-semibold uppercase tracking-widest text-on-surface-variant">Fuentes</div>}
                             <QualitySettings
                                 sources={sources}
                                 currentSourceUrl={currentSourceUrl}
@@ -301,14 +326,14 @@ export function PlayerSettingsMenu({
                     onBack={() => setView("main")}
                     onClose={() => setIsOpen(false)}
                 >
-                    <div className="px-4 py-2 text-label-sm font-black text-zinc-500 uppercase tracking-widest">Relación de aspecto</div>
+                    <div className="px-3 pt-2 pb-1 text-2xs font-semibold uppercase tracking-widest text-on-surface-variant">Relación de aspecto</div>
                     {(["contain", "cover", "fill", "16/9", "21/9"] as const).map((ratio) => (
                         <button
                             key={ratio}
                             onClick={() => onAspectRatioChange?.(ratio)}
                             className={cn(
-                                "flex items-center justify-between w-full px-4 py-3 transition-all",
-                                aspectRatio === ratio ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                                "flex items-center justify-between w-full min-h-10 py-2 px-3 rounded-full transition-colors duration-200",
+                                aspectRatio === ratio ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
                             )}
                         >
                             <div className="flex flex-col items-start">
@@ -341,6 +366,8 @@ export function PlayerSettingsMenu({
                         onAutoSkipIntroChange={onAutoSkipIntroChange ?? (() => {})}
                         autoSkipOutro={autoSkipOutro}
                         onAutoSkipOutroChange={onAutoSkipOutroChange ?? (() => {})}
+                        autoSkipFiller={autoSkipFiller}
+                        onAutoSkipFillerChange={onAutoSkipFillerChange}
                         skipStepSeconds={skipStepSeconds}
                         onSkipStepSecondsChange={onSkipStepSecondsChange ?? (() => {})}
                         showHeatmap={showHeatmap}
@@ -373,13 +400,12 @@ export function PlayerSettingsMenu({
                 aria-label="Configuración [O]"
                 title="Configuración [O]"
                 className={cn(
-                    "relative flex items-center justify-center w-11 h-11 md:w-7 md:h-7",
-                    "text-zinc-500 hover:text-white",
-                    "transition-all duration-base",
-                    isOpen && "text-white"
+                    "relative",
+                    PLAYER_ICON_BTN,
+                    isOpen && PLAYER_ICON_BTN_ACTIVE
                 )}
             >
-                <IconUiSettings className={cn("w-4 h-4 md:w-3.5 md:h-3.5 transition-transform duration-base", isOpen && "rotate-90")} />
+                <IconUiSettings className={cn("w-4 h-4 transition-transform duration-base", isOpen && "rotate-45")} />
                 {isLoadingSubtitle && (
                     <span className="absolute -top-0.5 -right-0.5">
                         <IconUiSpinner className="w-3 h-3 text-white animate-spin" />
@@ -387,42 +413,41 @@ export function PlayerSettingsMenu({
                 )}
             </button>
 
-            {/* Desktop panel — z-player-settings para quedar sobre gesture/ui/overlay/sidebar */}
-            <div ref={panelRef} className="hidden md:block absolute bottom-16 right-0 z-player-settings pointer-events-auto">
-                <AnimatePresence>
-                    {isOpen && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            transition={{ duration: 0.15, ease: "easeOut" }}
-                        >
-                            {renderContent()}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
+            {/* Desktop panel — se monta en panelContainer (fuera de la cápsula de vidrio) */}
+            {isDesktop && (() => {
+                const panel = (
+                    <div
+                        ref={panelRef}
+                        className={cn(
+                            "absolute right-0 pointer-events-auto",
+                            panelContainer ? "bottom-0" : "bottom-[calc(100%+14px)] z-player-settings"
+                        )}
+                    >
+                        <AnimatePresence>
+                            {isOpen && (
+                                <m.div
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 8 }}
+                                    transition={{ duration: 0.15, ease: "easeOut" }}
+                                >
+                                    {renderContent()}
+                                </m.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )
+                return panelContainer ? createPortal(panel, panelContainer) : panel
+            })()}
 
-            {/* Mobile bottom-sheet */}
-            <div className="md:hidden">
+            {/* Mobile bottom-sheet — solo se monta en móvil (ver useIsDesktop) */}
+            {!isDesktop && (
                 <Vaul open={isOpen} onOpenChange={setIsOpen}>
-                    <VaulContent className="bg-zinc-950/95 backdrop-blur-overlay-xl border-t border-outline-variant/10 p-5 pb-8 focus:outline-none max-h-[80vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4 px-1">
-                            <h3 className="font-display text-2xl tracking-widest text-on-surface uppercase">
-                                Ajustes
-                            </h3>
-                            <button 
-                                onClick={() => setIsOpen(false)}
-                                aria-label="Cerrar ajustes"
-                                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface active:scale-95"
-                            >
-                                <IconUiClose className="w-5 h-5 hover:rotate-90 transition-transform duration-base" />
-                            </button>
-                        </div>
+                    <VaulContent className="bg-zinc-950 border-t border-white/10 p-3 pb-8 focus:outline-none max-h-[85vh] overflow-y-auto">
                         {renderContent()}
                     </VaulContent>
                 </Vaul>
-            </div>
+            )}
         </div>
     )
 }

@@ -127,6 +127,7 @@ func (h *Handler) HandleGetMediaMetadataParent(c echo.Context) error {
 //	@returns models.MediaMetadataParent
 func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 	type body struct {
+		MediaID       int `json:"mediaId"`
 		ParentID      int `json:"parentId"`
 		SpecialOffset int `json:"specialOffset"`
 	}
@@ -140,8 +141,15 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 		return h.RespondWithError(c, errors.New("invalid parent id"))
 	}
 
+	// Antes MediaID se forzaba a ParentID porque el body no traía mediaId;
+	// se acepta explícito y se conserva el fallback para clientes viejos.
+	mediaID := b.MediaID
+	if mediaID == 0 {
+		mediaID = b.ParentID
+	}
+
 	savedParent, err := h.App.Database.InsertMediaMetadataParent(models.MediaMetadataParent{
-		MediaID:       b.ParentID,
+		MediaID:       mediaID,
 		ParentID:      b.ParentID,
 		SpecialOffset: b.SpecialOffset,
 	})
@@ -165,8 +173,8 @@ func (h *Handler) HandleSaveMediaMetadataParent(c echo.Context) error {
 //	@route /api/v1/metadata/cache [DELETE]
 //	@returns bool
 func (h *Handler) HandleClearMetadataCache(c echo.Context) error {
-	// Explicit provider allowlist: never wipe "migrations" markers or other buckets.
 	providers := []string{
+		"tmdb-api",
 		"tmdb-anime-episodes",
 		"tmdb-media-details",
 		"tmdb-season-details",
@@ -188,6 +196,9 @@ func (h *Handler) HandleClearMetadataCache(c echo.Context) error {
 	}
 
 	h.App.Metadata.Provider.ClearCache()
+	if h.App.Metadata.TMDBClient != nil {
+		h.App.Metadata.TMDBClient.ClearCache()
+	}
 	anime.ClearEpisodeCollectionCache()
 
 	return h.RespondWithData(c, true)

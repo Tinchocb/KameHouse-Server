@@ -369,6 +369,9 @@ func (h *Handler) HandleUpdateLocalFiles(c echo.Context) error {
 	if !validActions[b.Action] {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid action"))
 	}
+	if len(b.Paths) == 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("paths is required"))
+	}
 
 	// Get all the local files
 	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
@@ -440,12 +443,15 @@ func (h *Handler) HandleDeleteLocalFiles(c echo.Context) error {
 	if err := c.Bind(b); err != nil {
 		return h.RespondWithError(c, err)
 	}
+	if len(b.Paths) == 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("paths is required"))
+	}
 
 	// Security: Only allow deletion of files that reside within registered library paths.
 	// Without this check, an attacker could delete arbitrary system files via the API.
 	libraryPaths, libErr := h.App.Database.GetAllLibraryPathsFromSettings()
 	if libErr != nil || len(libraryPaths) == 0 {
-		return h.RespondWithError(c, errors.New("cannot delete files: no library paths configured"))
+		return h.RespondWithCodeError(c, 400, errors.New("invalid request: cannot delete files with no library paths configured"))
 	}
 
 	for _, p := range b.Paths {
@@ -462,7 +468,7 @@ func (h *Handler) HandleDeleteLocalFiles(c echo.Context) error {
 			}
 		}
 		if !inLibrary {
-			return h.RespondWithError(c, fmt.Errorf("path outside library boundaries: %s", p))
+			return h.RespondWithCodeError(c, 403, fmt.Errorf("forbidden: path outside library boundaries: %s", p))
 		}
 	}
 

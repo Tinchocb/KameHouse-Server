@@ -5,23 +5,58 @@
 
 /* ─── Duraciones ───────────────────────────────────────────────────── */
 :root {
-  --duration-instant:  50ms;
-  --duration-fast:     150ms;
-  --duration-base:     250ms;
-  --duration-slow:     400ms;
-  --duration-slower:   600ms;
-  --duration-slowest:  800ms;
+  /* Transitions.dev canonical scale + KameHouse extensions
+     --duration-quick  = 150ms → modal/dropdown CLOSE, text swap, tooltip appear
+     --duration-fast   = 250ms → icon swap, dropdown/modal OPEN, tabs sliding, page slide
+     --duration-base   = 250ms → alias KameHouse (mismo valor que fast)
+     --duration-medium = 350ms → panel close, toast close
+     --duration-slow   = 400ms → panel open, skeleton reveal, input clear
+     --duration-very-slow = 500ms → badge appear, text reveal, success check */
+  --duration-stagger:   40ms;
+  --duration-instant:   50ms;
+  --duration-micro:     80ms;
+  --duration-quick:     150ms;
+  --duration-fast:      250ms;   /* transitions.dev canonical — icon swap, modal open, tabs */
+  --duration-base:      250ms;   /* alias KameHouse — mantiene compatibilidad existente */
+  --duration-medium:    350ms;
+  --duration-slow:      400ms;
+  --duration-very-slow: 500ms;
+  --duration-slower:    600ms;
+  --duration-slowest:   800ms;
+
+  /* Alias --dur para uso inline en keyframes */
+  --dur: var(--duration-base);
+
+  /* Transitions.dev Distances */
+  --distance-micro:     4px;
+  --distance-small:     6px;
+  --distance-base:      8px;
+  --distance-medium:    12px;
+  --distance-large:     30px;
+
+  /* Transitions.dev Scales */
+  --scale-large:        0.96;
+  --scale-medium:       0.97;
+  --scale-small:        0.98;
+  --scale-tiny:         0.99;
+
+  /* Transitions.dev Blur */
+  --blur-small:         2px;
+  --blur-medium:        3px;
+  --blur-large:         8px;
 
   /* ─── Easings ──────────────────────────────────────────────────────── */
-  --ease-linear:       linear;
-  --ease-in:           cubic-bezier(0.4, 0, 1, 1);
-  --ease-out:          cubic-bezier(0, 0, 0.2, 1);
-  --ease-in-out:       cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-smooth:       cubic-bezier(0.25, 0.1, 0.25, 1.0);
-  --ease-spring:       cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-smooth-out:   cubic-bezier(0.2, 1, 0.2, 1);
-  --ease-expo-out:     cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-glass:        cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-linear:        linear;                           /* shimmer, skeleton pulse, spinner */
+  --ease-in:            cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:           ease-out;                         /* transitions.dev canonical — tooltip open/close */
+  --ease-in-out:        ease-in-out;                      /* transitions.dev canonical — icon swap, text swap, skeleton reveal */
+  --ease-smooth:        cubic-bezier(0.25, 0.1, 0.25, 1.0);
+  --ease-spring:        cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth-out:    cubic-bezier(0.22, 1, 0.36, 1);   /* modal/dropdown/panel open+close, page slide */
+  --ease-bounce:        cubic-bezier(0.34, 1.36, 0.64, 1); /* badge pop open */
+  --ease-bounce-strong: cubic-bezier(0.34, 3.85, 0.64, 1); /* bouncy hover-out (avatar return) */
+  --ease-expo-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-glass:         cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ─── Keyframes ─────────────────────────────────────────────────────── */
@@ -97,6 +132,57 @@
 .vhs-shelf > article {
   animation: vhs-card-enter 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* ─── Transitions.dev Keyframes & Micro-interactions ────────────────── */
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(calc(-1 * var(--distance-small))); }
+  40%      { transform: translateX(var(--distance-small)); }
+  60%      { transform: translateX(calc(-1 * var(--distance-micro))); }
+  80%      { transform: translateX(var(--distance-micro)); }
+}
+
+@keyframes success-pop {
+  0%   { transform: scale(0.85); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes success-check {
+  0%   { transform: scale(0.6) rotate(-20deg); opacity: 0; }
+  60%  { transform: scale(1.2) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes number-pop-in {
+  0%   { transform: scale(0.4) translate(-4px, 4px); opacity: 0; }
+  70%  { transform: scale(1.15) translate(0, 0); opacity: 1; }
+  100% { transform: scale(1) translate(0, 0); opacity: 1; }
+}
+
+@keyframes menu-dropdown {
+  from { opacity: 0; transform: scale(0.96) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes text-swap-out {
+  from { opacity: 1; transform: translateY(0); filter: blur(0); }
+  to   { opacity: 0; transform: translateY(calc(-1 * var(--distance-micro))); filter: blur(3px); }
+}
+
+@keyframes text-swap-in {
+  from { opacity: 0; transform: translateY(var(--distance-micro)); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.animate-error-shake     { animation: error-shake var(--duration-medium) var(--ease-smooth-out) both; }
+.animate-success-pop     { animation: success-pop var(--duration-base) var(--ease-bounce) both; }
+.animate-success-check   { animation: success-check var(--duration-base) var(--ease-bounce) both; }
+.animate-number-pop-in   { animation: number-pop-in var(--duration-base) var(--ease-bounce) both; }
+.animate-menu-dropdown   { animation: menu-dropdown var(--duration-fast) var(--ease-smooth-out) both; }
+.animate-text-swap-in    { animation: text-swap-in var(--duration-quick) var(--ease-smooth-out) both; }
+.animate-text-swap-out   { animation: text-swap-out var(--duration-quick) var(--ease-smooth-out) both; }
 
 /* Stagger delays */
 .delay-50   { animation-delay: 50ms; }
