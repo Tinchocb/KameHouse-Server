@@ -36,7 +36,7 @@ export function useMpvPlayer(options: UseMpvPlayerOptions) {
 
     const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
     const { sendJsonMessage } = useWebSocket(wsUrl)
-    const { mutate: saveProgress } = useUpdateContinuityWatchHistoryItem()
+    const { mutate: saveProgress } = useUpdateContinuityWatchHistoryItem({ background: true })
 
     const lastHeartbeatRef = useRef(0)
     const lastContinuitySaveRef = useRef(0)

@@ -6,7 +6,6 @@ import { useSound } from "@/hooks/use-sound"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useServerQuery } from "@/api/client/requests"
-import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useUIStore } from "@/lib/store"
@@ -33,6 +32,7 @@ import { SeriesContinueWatching } from "./-components/series-continue-watching"
 // ── Custom hooks ──────────────────────────────────────────────────────────────
 import { useSeriesData } from "./-hooks/use-series-data"
 import { useSeriesPlayback } from "./-hooks/use-series-playback"
+import { resolveEpisodeTitle } from "./-hooks/series-playback.helpers"
 import { queryKeys } from "@/lib/query-keys"
 
 export const Route = createLazyFileRoute("/series/$seriesId/")({
@@ -201,13 +201,6 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         setSearchParams,
     })
 
-    // Stable onPreload for PremiumEpisodeList
-    const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
-    const handleEpisodePreload = useCallback(
-        (path: string) => preloadStream({ path, streamType: "direct", audioStreamIndex: 0, preferredAudioLang: "" }),
-        [preloadStream]
-    )
-
     const activeSaga = useMemo(() => {
         return sagas?.find(s => s.id === activeSagaId)
     }, [sagas, activeSagaId])
@@ -218,7 +211,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const playerEpisodes = useMemo(() => {
         return computedEpisodes.map(ep => ({
-            title: ep.titleSpanish || ep.episodeMetadata?.title || ep.episodeTitle || ep.displayTitle || `Episodio ${ep.absoluteEpisodeNumber || ep.episodeNumber}`,
+            title: resolveEpisodeTitle(ep, entry?.media?.tmdbId),
             episodeNumber: ep.episodeNumber,
             absoluteEpisodeNumber: ep.absoluteEpisodeNumber,
             thumbnail: ep.episodeMetadata?.image || entry?.media?.bannerImage || entry?.media?.posterImage,
@@ -365,7 +358,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         }}
                         onToggleCollapseSidebar={() => setIsSagasSidebarCollapsed(!isSagasSidebarCollapsed)}
                         onPlayByNumber={handlePlayByNumber}
-                        onEpisodePreload={handleEpisodePreload}
+                        onEpisodePreload={preloadPath}
                         computedEpisodes={computedEpisodes}
                         heroBackdrop={heroBackdrop}
                         seriesMediaId={entry.mediaId ?? Number(seriesId) ?? undefined}
@@ -426,11 +419,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             {/* Video Player Modal */}
             {playTarget && (() => {
                 const nextTitle = nextEp
-                    ? nextEp.titleSpanish ||
-                      nextEp.episodeMetadata?.title ||
-                      nextEp.episodeTitle ||
-                      nextEp.displayTitle ||
-                      `Episodio ${nextEp.absoluteEpisodeNumber || nextEp.episodeNumber}`
+                    ? resolveEpisodeTitle(nextEp, entry?.media?.tmdbId)
                     : nextSeriesTarget
                       ? `Continuar con ${nextSeriesTarget.label}`
                       : undefined

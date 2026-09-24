@@ -16,7 +16,7 @@ export function usePlayerProgressSync({
     intervalMs = 15000,
     enabled = true,
 }: UsePlayerProgressSyncOptions) {
-    const { mutate: saveProgress } = useUpdateContinuityWatchHistoryItem()
+    const { mutate: saveProgress } = useUpdateContinuityWatchHistoryItem({ background: true })
     const lastSavedTimeRef = useRef(0)
     const currentTimeRef = useRef(0)
     const durationRef = useRef(0)

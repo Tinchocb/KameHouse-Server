@@ -1,13 +1,21 @@
 import { useMemo } from "react"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 import { getHighResImage } from "@/lib/helpers/images"
-import { getDragonBallSpanishTitle, resolveSeriesSagas } from "@/lib/config/dragonball.config"
+import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
 import { getNextInTimeline } from "@/lib/config/franchise_timeline"
 import { getSeriesHeroArt, heroArtFromUrl } from "@/lib/config/hero-art"
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import type { Anime_Entry, Anime_Episode, Anime_LocalFile, Continuity_WatchHistoryItemResponse, Anime_LibraryCollection } from "@/api/generated/types"
 import type { SagaDTO, PremiumEpisode } from "@/api/types/series.types"
+import {
+    episodeNumberOf,
+    findEpisodeByNumber,
+    isResumable,
+    isWatchedProgress,
+    resolveEpisodeTitle,
+    resolveLocalFileForEpisode,
+} from "./series-playback.helpers"
 
 export interface SeriesContinueWatchingData {
     episodeNumber: number
@@ -33,8 +41,8 @@ export function cleanEpisodeTitle(title: string | undefined): string {
 }
 
 // ─── Module-level helpers ─────────────────────────────────────────────────────
-// Moved here from index.tsx — shared by use-series-data and use-series-playback
-// without circular dependency issues.
+// El matching episodio↔archivo y la regla de resume viven en
+// series-playback.helpers (compartidos con use-series-playback).
 
 /**
  * Fallback para episodios que NO tienen sagaId asignado en el escaneo del servidor.
@@ -71,25 +79,6 @@ function resolveSagaId(epNum: number, sagas: SagaDTO[] | undefined): string | un
         }
     }
     return (fallbackSaga ?? sagas[0]).id
-}
-
-export function resolveLocalFileForEpisode(
-    episode: Anime_Episode,
-    localFiles: Anime_LocalFile[] | undefined | null
-): Anime_LocalFile | undefined {
-    if (episode.localFile) return episode.localFile
-    return (localFiles || []).find(f => {
-        const fEp = f.metadata?.episode || f.parsedInfo?.episode
-        const fSeason = f.parsedInfo?.season
-        if (fEp == null) return false
-        if (Number(fEp) === episode.absoluteEpisodeNumber) {
-            return true
-        }
-        if (typeof episode.seasonNumber === "number" && fSeason != null) {
-            return Number(fEp) === episode.episodeNumber && Number(fSeason) === episode.seasonNumber
-        }
-        return Number(fEp) === episode.episodeNumber
-    })
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -153,10 +142,9 @@ export function useSeriesData({
 
             // Determine watched status from continuity data (last played episode with high progress)
             const continuityEpNum = continuityData?.item?.episodeNumber
-            const continuityProgress = continuityData?.item?.duration
-                ? continuityData.item.currentTime / continuityData.item.duration
-                : 0
-            const isContinuityWatched = continuityEpNum != null && continuityProgress > 0.9
+            const isContinuityWatched =
+                continuityEpNum != null &&
+                isWatchedProgress(continuityData?.item?.currentTime, continuityData?.item?.duration)
 
             entry.localFiles.forEach(lf => {
                 const parsedEp = lf.parsedInfo?.episode || lf.metadata?.episode
@@ -165,7 +153,7 @@ export function useSeriesData({
 
                 if (!epMap.has(epNum)) {
                     const sagaId = resolveSagaId(epNum, sagas)
-                    // Mark as watched if this is the continuity episode with >90% progress
+                    // Mark as watched if this is the continuity episode past WATCHED_THRESHOLD
                     const watched = isContinuityWatched && epNum === continuityEpNum
                     epMap.set(epNum, {
                         episodeNumber: epNum,
@@ -292,20 +280,14 @@ export function useSeriesData({
         if (entry?.media?.format === "MOVIE") return null
 
         const item = continuityData?.item
-        if (!item || !item.currentTime || !item.duration) return null
-
-        // Paridad con player-core: solo reanudar con progreso significativo (> 10s)
-        if (item.currentTime <= 10) return null
+        // Misma regla (> 10 s y < 95 %) que el resume del reproductor.
+        if (!item || !isResumable(item.currentTime, item.duration)) return null
 
         const rawPercent = (item.currentTime / item.duration) * 100
         const percent = Math.min(100, Math.max(0, Math.round(rawPercent)))
-        // Si superó el 95%, se considera terminado
-        if (percent >= 95) return null
 
         const epNum = item.episodeNumber
-        const resumeEp = computedEpisodes.find(
-            ep => (ep.absoluteEpisodeNumber || ep.episodeNumber) === epNum
-        )
+        const resumeEp = findEpisodeByNumber(computedEpisodes, epNum)
         if (!resumeEp || resumeEp.watched) return null
 
         // Seguridad: si no tiene archivo local disponible, no mostrar
@@ -315,15 +297,8 @@ export function useSeriesData({
             lfMap.get(resumeEp.episodeNumber)
         if (!lf?.path && !resumeEp.localFile?.path && !resumeEp.isDownloaded) return null
 
-        const number = resumeEp.absoluteEpisodeNumber || resumeEp.episodeNumber || epNum
-        const localizedTitle = getDragonBallSpanishTitle(entry?.media?.tmdbId, number)
-        const rawTitle =
-            localizedTitle ||
-            resumeEp.titleSpanish ||
-            resumeEp.episodeMetadata?.title ||
-            resumeEp.episodeTitle ||
-            resumeEp.displayTitle ||
-            `Episodio ${number}`
+        const number = episodeNumberOf(resumeEp) || epNum
+        const rawTitle = resolveEpisodeTitle(resumeEp, entry?.media?.tmdbId)
         const title = cleanEpisodeTitle(rawTitle) || `Episodio ${number}`
 
         // Fallbacks de arte sincronizados con episodeViewModels
@@ -409,19 +384,12 @@ export function useSeriesData({
         const serverBase = getServerBaseUrl()
 
         return filtered.map(ep => {
-            const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-            const lf = ep.localFile || lfMap.get(ep.absoluteEpisodeNumber || ep.episodeNumber) || lfMap.get(ep.episodeNumber)
+            const epNum = episodeNumberOf(ep)
+            const lf = ep.localFile || lfMap.get(epNum) || lfMap.get(ep.episodeNumber)
             // Seguridad: si no hay archivo local, no es reproducible → ocultar.
             if (!lf?.path && !ep.localFile?.path && !ep.isDownloaded) return null
 
-            const localizedTitle = getDragonBallSpanishTitle(tmdbId, epNum)
-            const resolvedTitle =
-                localizedTitle ||
-                ep.titleSpanish ||
-                ep.episodeMetadata?.title ||
-                ep.episodeTitle ||
-                ep.displayTitle ||
-                `Episodio ${epNum}`
+            const resolvedTitle = resolveEpisodeTitle(ep, tmdbId)
 
             const metaDuration = (ep.episodeMetadata as { duration?: number } | undefined)?.duration
             const durationSec =

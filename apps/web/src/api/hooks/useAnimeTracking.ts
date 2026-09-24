@@ -45,7 +45,7 @@ export function useAnimeTracking({
     threshold = 0.85,
     enabled = true,
 }: UseAnimeTrackingOptions): UseAnimeTrackingReturn {
-    const { mutate: saveContinuity } = useUpdateContinuityWatchHistoryItem()
+    const { mutate: saveContinuity } = useUpdateContinuityWatchHistoryItem({ background: true })
 
     // Guards — fire only once per episode
     const syncedRef = useRef(false)
