@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -339,8 +340,9 @@ func (h *Handler) HandleDrivePlay(c echo.Context) error {
 		return nil
 	}
 
-	buf := make([]byte, 64*1024)
-	_, err = io.CopyBuffer(res.Writer, resp.Body, buf)
+	bufp := driveCopyBufPool.Get().(*[]byte)
+	defer driveCopyBufPool.Put(bufp)
+	_, err = io.CopyBuffer(res.Writer, resp.Body, *bufp)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		h.App.Logger.Trace().Err(err).Msg("drive: Stream closed by client")
 	}
@@ -407,4 +409,16 @@ func (h *Handler) HandleDriveScan(c echo.Context) error {
 	return h.RespondWithData(c, map[string]interface{}{
 		"started": true,
 	})
+}
+
+// driveCopyBufPool recicla los buffers de 64 KB del proxy de streaming de Drive.
+// Con HTTP/1.1 io.CopyBuffer delega en http.response.ReadFrom (que ya usa su
+// propio pool) y el buffer no se toca; con HTTP/2 o un writer envuelto sí se
+// usa. Con el pool ninguno de los dos casos asigna 64 KB por petición.
+// Se guarda *[]byte para que Put no asigne (SA6002).
+var driveCopyBufPool = sync.Pool{
+	New: func() any {
+		b := make([]byte, 64*1024)
+		return &b
+	},
 }
