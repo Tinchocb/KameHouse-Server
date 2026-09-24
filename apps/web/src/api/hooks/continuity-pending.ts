@@ -1,5 +1,7 @@
 import type { UpdateContinuityWatchHistoryItem_Variables } from "@/api/generated/endpoint.types"
-import { ApiError, isTransientStatus } from "@/api/client/requests"
+import { ApiError, buildSeaQuery, isTransientStatus } from "@/api/client/requests"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { confirmLocalProgress } from "./continuity-local"
 
 // ─── Cola offline de continuidad ──────────────────────────────────────────────
 // Los writers periódicos (sync cada 15 s, mpv, tracking) no deben perder el
@@ -98,4 +100,26 @@ export async function flushPendingContinuity(
     } finally {
         flushing = false
     }
+}
+
+/**
+ * Envío de último recurso al cerrar/ocultar la pestaña: `fetch` con keepalive
+ * sobrevive a la descarga de la página (sendBeacon no sirve: el endpoint es
+ * PATCH). Si falla estando aún viva la página, queda en la cola.
+ */
+export function sendContinuityOnExit(variables: UpdateContinuityWatchHistoryItem_Variables): void {
+    buildSeaQuery<boolean, UpdateContinuityWatchHistoryItem_Variables>({
+        endpoint: API_ENDPOINTS.CONTINUITY.UpdateContinuityWatchHistoryItem.endpoint,
+        method: API_ENDPOINTS.CONTINUITY.UpdateContinuityWatchHistoryItem.methods[0],
+        data: variables,
+        keepalive: true,
+    }).then(
+        () => {
+            clearPendingContinuity(variables.options.mediaId)
+            confirmLocalProgress(variables.options)
+        },
+        (error: unknown) => {
+            if (isRecoverableSaveError(error)) queuePendingContinuity(variables)
+        }
+    )
 }

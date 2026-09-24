@@ -34,6 +34,8 @@ type SeaQuery<D> = {
     params?: D
     password?: string
     signal?: AbortSignal
+    /** Deja que la petición sobreviva al cierre de la pestaña (pagehide). */
+    keepalive?: boolean
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -46,6 +48,7 @@ export async function buildSeaQuery<T, D = void>(
         params,
         password,
         signal,
+        keepalive,
     }: SeaQuery<D>): Promise<T | undefined> {
 
     const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
@@ -102,6 +105,7 @@ export async function buildSeaQuery<T, D = void>(
                 headers,
                 body: data !== undefined ? JSON.stringify(data) : undefined,
                 signal,
+                keepalive,
             });
 
             if (res.status === 204) {

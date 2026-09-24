@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ApiError, isTransientStatus, useServerMutation, useServerQuery } from "@/api/client/requests"
@@ -11,6 +11,7 @@ import {
     isRecoverableSaveError,
     queuePendingContinuity,
 } from "./continuity-pending"
+import { confirmLocalProgress, getLocalProgress, mergeWithLocalProgress } from "./continuity-local"
 
 const continuityQueryKeys = {
     all: ["continuity"] as const,
@@ -34,7 +35,10 @@ export function useUpdateContinuityWatchHistoryItem({ background = false }: Upda
         method: API_ENDPOINTS.CONTINUITY.UpdateContinuityWatchHistoryItem.methods[0],
         mutationKey: [API_ENDPOINTS.CONTINUITY.UpdateContinuityWatchHistoryItem.key],
         onSuccess: async (_data, variables) => {
-            if (background) clearPendingContinuity(variables?.options?.mediaId)
+            if (variables?.options) {
+                clearPendingContinuity(variables.options.mediaId)
+                confirmLocalProgress(variables.options)
+            }
             await queryClient.invalidateQueries({ queryKey: continuityQueryKeys.history() })
             if (variables?.options?.mediaId != null) {
                 await queryClient.invalidateQueries({
@@ -75,7 +79,7 @@ export function useUpdateContinuityWatchHistoryItem({ background = false }: Upda
 
 export function useGetContinuityWatchHistoryItem(id: number | string) {
     const numericId = Number(id)
-    return useServerQuery<Continuity_WatchHistoryItemResponse>({
+    const query = useServerQuery<Continuity_WatchHistoryItemResponse>({
         endpoint: API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.endpoint.replace("{id}", String(numericId)),
         method: API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.methods[0],
         queryKey: continuityQueryKeys.item(numericId),
@@ -83,6 +87,14 @@ export function useGetContinuityWatchHistoryItem(id: number | string) {
         staleTime: 30_000, // 30s: reduce refetch storms, still fresh enough for watch history
         refetchOnReconnect: true, // el global está en false; aquí sí importa revalidar al volver la red
     })
+    // El espejo local (progreso aún no confirmado por el servidor) gana si es
+    // más reciente, y cubre el hueco mientras la query todavía no respondió.
+    // Se relee en cada render (lectura cacheada), así que al cerrar el
+    // reproductor la página ya ve el último progreso aunque el refetch falle.
+    const local = getLocalProgress(numericId)
+    const serverData = query.data
+    const data = useMemo(() => mergeWithLocalProgress(serverData, local), [serverData, local])
+    return { ...query, data }
 }
 
 export function useGetContinuityWatchHistory() {

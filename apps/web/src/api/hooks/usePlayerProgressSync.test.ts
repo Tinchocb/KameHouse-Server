@@ -1,11 +1,16 @@
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { saveProgress } = vi.hoisted(() => ({ saveProgress: vi.fn() }))
+const { saveProgress, sendOnExit } = vi.hoisted(() => ({ saveProgress: vi.fn(), sendOnExit: vi.fn() }))
 
 vi.mock("@/api/hooks/continuity.hooks", () => ({
     useUpdateContinuityWatchHistoryItem: () => ({ mutate: saveProgress }),
 }))
+vi.mock("@/api/hooks/continuity-pending", () => ({
+    sendContinuityOnExit: sendOnExit,
+}))
+
+import { getLocalProgress } from "./continuity-local"
 
 import { usePlayerProgressSync } from "./usePlayerProgressSync"
 
@@ -19,11 +24,14 @@ describe("usePlayerProgressSync", () => {
     beforeEach(() => {
         vi.useFakeTimers()
         saveProgress.mockClear()
+        sendOnExit.mockClear()
+        localStorage.clear()
     })
 
     afterEach(() => {
         vi.useRealTimers()
         vi.clearAllMocks()
+        vi.restoreAllMocks()
     })
 
     it("saves progress on each interval tick once playback moved >= 2s", () => {
@@ -130,6 +138,34 @@ describe("usePlayerProgressSync", () => {
         act(() => {
             vi.advanceTimersByTime(60_000)
         })
+        expect(saveProgress).not.toHaveBeenCalled()
+    })
+
+    it("mirrors progress to localStorage on every onProgress", () => {
+        const { result } = renderHook(() => usePlayerProgressSync(baseProps))
+        act(() => {
+            result.current.onProgress(321, 1400)
+        })
+        expect(getLocalProgress(7)).toMatchObject({ episodeNumber: 3, currentTime: 321, duration: 1400 })
+    })
+
+    it("sends with keepalive on pagehide / hidden tab and does not resend unchanged progress", () => {
+        const { result } = renderHook(() => usePlayerProgressSync(baseProps))
+        act(() => {
+            result.current.onProgress(400, 1400)
+        })
+        act(() => {
+            window.dispatchEvent(new Event("pagehide"))
+        })
+        expect(sendOnExit).toHaveBeenCalledTimes(1)
+        expect(sendOnExit.mock.calls[0][0]).toMatchObject({ options: { mediaId: 7, currentTime: 400 } })
+
+        // Ocultar la pestaña sin avanzar: nada nuevo que enviar.
+        vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
+        act(() => {
+            document.dispatchEvent(new Event("visibilitychange"))
+        })
+        expect(sendOnExit).toHaveBeenCalledTimes(1)
         expect(saveProgress).not.toHaveBeenCalled()
     })
 })
