@@ -28,7 +28,7 @@ type KeyframeIndex struct {
 
 	mu        sync.RWMutex
 	ready     sync.WaitGroup
-	listeners []func(keyframes []float64)
+	listeners []func(length int)
 }
 
 // Get returns the keyframe timestamp
@@ -78,19 +78,27 @@ func (ki *KeyframeIndex) SetDone() {
 	ki.IsDone = true
 }
 
-// AddListener registers a callback for new keyframes
-func (ki *KeyframeIndex) AddListener(fn func([]float64)) {
+// AddListener registers a callback invoked with the new keyframe count after
+// each batch is appended. It runs outside ki.mu.
+func (ki *KeyframeIndex) AddListener(fn func(length int)) {
 	ki.mu.Lock()
 	defer ki.mu.Unlock()
 	ki.listeners = append(ki.listeners, fn)
 }
 
+// append adds a batch of keyframes, then notifies listeners outside the lock
+// so they never run (or take their own locks) while ki.mu is held. The
+// keyframes are published before listeners grow the segment tables, so a
+// segment index is never valid before its keyframe exists.
 func (ki *KeyframeIndex) append(values []float64) {
 	ki.mu.Lock()
-	defer ki.mu.Unlock()
 	ki.Keyframes = append(ki.Keyframes, values...)
-	for _, fn := range ki.listeners {
-		fn(ki.Keyframes)
+	length := len(ki.Keyframes)
+	listeners := append([]func(int){}, ki.listeners...)
+	ki.mu.Unlock()
+
+	for _, fn := range listeners {
+		fn(length)
 	}
 }
 

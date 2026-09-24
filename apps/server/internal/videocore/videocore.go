@@ -381,16 +381,25 @@ func (vc *VideoCore) setPlaybackStatusFn(status *PlaybackStatus) {
 // updatePlaybackStatus updates the current playback status of the player only if it exists.
 // and notifies all subscribers of the change.
 func (vc *VideoCore) updatePlaybackStatusFn(do func()) {
-	vc.playbackStatusMu.Lock()
-	if vc.playbackStatus == nil || len(vc.playbackStatus.Id) == 0 || vc.playbackStatus.Duration <= 0 {
-		vc.playbackStatusMu.Unlock()
+	var currentTime, duration float64
+	var paused bool
+	// Unlock via defer so a panic inside do() can't leave the mutex held
+	// (every later playback status access would deadlock).
+	ok := func() bool {
+		vc.playbackStatusMu.Lock()
+		defer vc.playbackStatusMu.Unlock()
+		if vc.playbackStatus == nil || len(vc.playbackStatus.Id) == 0 || vc.playbackStatus.Duration <= 0 {
+			return false
+		}
+		do()
+		currentTime = vc.playbackStatus.CurrentTime
+		duration = vc.playbackStatus.Duration
+		paused = vc.playbackStatus.Paused
+		return true
+	}()
+	if !ok {
 		return
 	}
-	do()
-	currentTime := vc.playbackStatus.CurrentTime
-	duration := vc.playbackStatus.Duration
-	paused := vc.playbackStatus.Paused
-	vc.playbackStatusMu.Unlock()
 
 	vc.PushEvent(&VideoStatusEvent{
 		CurrentTime: currentTime,

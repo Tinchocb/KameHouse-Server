@@ -156,9 +156,13 @@ func NewPipeline(cfg PipelineConfig) *Pipeline {
 	}
 
 	if !isDone {
-		cfg.Session.Keyframes.AddListener(func(keyframes []float64) {
-			segments.Grow(len(keyframes))
+		cfg.Session.Keyframes.AddListener(func(length int) {
+			segments.Grow(length)
 		})
+		// Catch up on any batch appended between Length() and AddListener
+		// (Grow is monotonic, so this is a no-op otherwise).
+		n, _ := cfg.Session.Keyframes.Length()
+		segments.Grow(int(n))
 	}
 
 	// Scan for existing segments on disk (segment reuse).
