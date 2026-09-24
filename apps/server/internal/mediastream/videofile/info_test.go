@@ -1,6 +1,7 @@
 package videofile
 
 import (
+	"context"
 	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
@@ -34,7 +35,7 @@ func TestExtractAttachment(t *testing.T) {
 
 	util.Spew(mi)
 
-	err = ExtractAttachment("", testFilePath, "1", mi, testDir, util.NewLogger())
+	err = ExtractAttachment(context.Background(), "", testFilePath, "1", mi, testDir, util.NewLogger())
 	if err != nil {
 		t.Fatalf("Error extracting attachment: %v", err)
 	}

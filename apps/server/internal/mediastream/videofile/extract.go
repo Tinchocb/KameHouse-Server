@@ -20,7 +20,7 @@ func GetFileAttCacheDir(outDir string, hash string) string {
 	return filepath.Join(outDir, "videofiles", hash, "/att")
 }
 
-func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *MediaInfo, cacheDir string, logger *zerolog.Logger) (err error) {
+func ExtractAttachment(ctx context.Context, ffmpegPath string, path string, hash string, mediaInfo *MediaInfo, cacheDir string, logger *zerolog.Logger) (err error) {
 	logger.Debug().Str("hash", hash).Msgf("videofile: Starting media attachment extraction")
 
 	attachmentPath := GetFileAttCacheDir(cacheDir, hash)
@@ -90,7 +90,8 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 	
 	args = append(args, "-i", path)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	// Cap the run even if the caller's ctx has no deadline.
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
 	cmd := util.NewCmdCtx(
@@ -109,7 +110,7 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 					cmd.Args,
 					"-map", fmt.Sprintf("0:s:%d", sub.Index),
 					"-c:s", "copy",
-					fmt.Sprintf("%s/%d.sup", subsPath, sub.Index),
+					filepath.Join(subsPath, fmt.Sprintf("%d.sup", sub.Index)),
 				)
 			}
 			continue
@@ -119,7 +120,7 @@ func ExtractAttachment(ffmpegPath string, path string, hash string, mediaInfo *M
 				cmd.Args,
 				"-map", fmt.Sprintf("0:s:%d", sub.Index),
 				"-c:s", "copy",
-				fmt.Sprintf("%s/%d.%s", subsPath, sub.Index, *ext),
+				filepath.Join(subsPath, fmt.Sprintf("%d.%s", sub.Index, *ext)),
 			)
 		}
 	}

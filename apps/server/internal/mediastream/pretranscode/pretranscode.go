@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -334,8 +335,10 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 	if err != nil {
 		return fmt.Errorf("could not open ffmpeg stdout: %w", err)
 	}
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
+	// Only the tail matters (lastLine / DetectHwAccelFailure); a long encode
+	// that keeps warning must not grow this without bound.
+	stderr := cassette.NewLimitedBuffer(64 * 1024)
+	cmd.Stderr = stderr
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("could not start ffmpeg: %w", err)
@@ -343,7 +346,14 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 
 	// -progress pipe:1 emits key=value lines; out_time_ms against the probed
 	// duration is the only reliable progress signal ffmpeg gives us.
-	go m.trackProgress(stdout, job.Hash, totalDuration)
+	progressDone := make(chan struct{})
+	go func() {
+		defer close(progressDone)
+		m.trackProgress(stdout, job.Hash, totalDuration)
+	}()
+	// cmd.Wait closes stdout, so all reads must finish first (os/exec docs).
+	// trackProgress returns on EOF, i.e. once ffmpeg exits or is killed by ctx.
+	<-progressDone
 
 	if err := cmd.Wait(); err != nil {
 		if ctx.Err() != nil {
@@ -448,7 +458,7 @@ func probeDurationWithFfprobe(ffprobePath string, filePath string) (float64, err
 	return d, nil
 }
 
-func (m *Manager) trackProgress(stdout interface{ Read([]byte) (int, error) }, hash string, totalDuration float64) {
+func (m *Manager) trackProgress(stdout io.Reader, hash string, totalDuration float64) {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		key, value, found := strings.Cut(strings.TrimSpace(scanner.Text()), "=")
@@ -469,6 +479,9 @@ func (m *Manager) trackProgress(stdout interface{ Read([]byte) (int, error) }, h
 		}
 		m.setStatus(hash, StatusRunning, pct, "")
 	}
+	// If the scanner stopped early (e.g. an over-long line) keep draining so
+	// ffmpeg never blocks writing to a full pipe; returns at EOF.
+	_, _ = io.Copy(io.Discard, stdout)
 }
 
 func (m *Manager) setStatus(hash string, status JobStatus, progress float64, errMsg string) {

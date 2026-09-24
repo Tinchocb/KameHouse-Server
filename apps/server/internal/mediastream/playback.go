@@ -456,7 +456,20 @@ func (p *PlaybackManager) startAttachmentExtraction(filePath string, hash string
 			defer func() { <-attachmentSemaphore }()
 		}
 
-		if err := videofile.ExtractAttachment(p.repository.settings.MustGet().FfmpegPath, filePath, hash, mediaInfo, p.repository.cacheDir, p.logger); err != nil {
+		// Read settings/cacheDir under settingsMu: InitializeModules may be
+		// swapping them concurrently.
+		p.repository.settingsMu.RLock()
+		settings, hasSettings := p.repository.settings.Get()
+		cacheDir := p.repository.cacheDir
+		p.repository.settingsMu.RUnlock()
+		if !hasSettings || settings == nil {
+			p.extractionJobs.Delete(hash)
+			return
+		}
+
+		// Background on purpose: the extracted fonts/subs are shared by every
+		// client of this file, so no single request may cancel the job.
+		if err := videofile.ExtractAttachment(context.Background(), settings.FfmpegPath, filePath, hash, mediaInfo, cacheDir, p.logger); err != nil {
 			p.logger.Error().Err(err).Str("filepath", filePath).Msg("mediastream: Attachment extraction failed")
 			// Allow a later request to retry by dropping the (about-to-close) job entry.
 			p.extractionJobs.Delete(hash)

@@ -43,7 +43,8 @@ type LimitedBuffer struct {
 	max int
 }
 
-func newLimitedBuffer(max int) *LimitedBuffer {
+// NewLimitedBuffer returns a LimitedBuffer keeping at most max bytes.
+func NewLimitedBuffer(max int) *LimitedBuffer {
 	return &LimitedBuffer{buf: make([]byte, 0, max), max: max}
 }
 
@@ -51,6 +52,11 @@ func (b *LimitedBuffer) Write(p []byte) (n int, err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	n = len(p)
+	if len(p) >= b.max {
+		// A single write larger than the buffer: keep only its tail.
+		b.buf = append(b.buf[:0], p[len(p)-b.max:]...)
+		return n, nil
+	}
 	if len(b.buf)+len(p) > b.max {
 		overflow := (len(b.buf) + len(p)) - b.max
 		if overflow < len(b.buf) {
@@ -712,7 +718,7 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		combinedRelease()
 		return err
 	}
-	stderr := newLimitedBuffer(64 * 1024)
+	stderr := NewLimitedBuffer(64 * 1024)
 	cmd.Stderr = stderr
 
 	if err := cmd.Start(); err != nil {

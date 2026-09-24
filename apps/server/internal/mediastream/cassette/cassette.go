@@ -129,6 +129,7 @@ func (c *Cassette) Destroy() {
 // session management
 
 func (c *Cassette) getSession(
+	ctx context.Context,
 	filePath, hash string,
 	mediaInfo *videofile.MediaInfo,
 ) (*Session, error) {
@@ -140,12 +141,7 @@ func (c *Cassette) getSession(
 			c.sessions.Delete(filePath)
 			return nil, errors.New("cassette: internal error: invalid session type")
 		}
-		s.WaitReady()
-		if s.err != nil {
-			c.sessions.Delete(filePath)
-			return nil, s.err
-		}
-		return s, nil
+		return c.waitSession(ctx, filePath, s)
 	}
 
 	// create session
@@ -158,22 +154,25 @@ func (c *Cassette) getSession(
 			c.sessions.Delete(filePath)
 			return nil, errors.New("cassette: internal error: invalid session type")
 		}
-		s.WaitReady()
-		if s.err != nil {
-			c.sessions.Delete(filePath)
-			return nil, s.err
-		}
-		return s, nil
+		return c.waitSession(ctx, filePath, s)
 	}
 
 	s := NewSession(filePath, hash, mediaInfo, &c.settings, c.governor, c.logger)
 	c.sessions.Store(filePath, s)
 	c.sessionsMu.Unlock()
 
-	s.WaitReady()
-	if s.err != nil {
-		c.sessions.Delete(filePath)
-		return nil, s.err
+	return c.waitSession(ctx, filePath, s)
+}
+
+// waitSession waits for s to be ready. A session whose keyframe extraction
+// failed is evicted so the next request retries; a caller that merely gave up
+// (ctx done) leaves the session in place for the other clients.
+func (c *Cassette) waitSession(ctx context.Context, filePath string, s *Session) (*Session, error) {
+	if err := s.WaitReady(ctx); err != nil {
+		if ctx.Err() == nil {
+			c.sessions.CompareAndDelete(filePath, s)
+		}
+		return nil, err
 	}
 	return s, nil
 }
@@ -220,13 +219,14 @@ func (c *Cassette) sendClientInfo(info ClientInfo) {
 
 // GetMaster returns the hls master playlist
 func (c *Cassette) GetMaster(
+	ctx context.Context,
 	filePath, hash string,
 	mediaInfo *videofile.MediaInfo,
 	client string,
 	token string,
 ) (string, error) {
 	start := time.Now()
-	s, err := c.getSession(filePath, hash, mediaInfo)
+	s, err := c.getSession(ctx, filePath, hash, mediaInfo)
 	if err != nil {
 		return "", err
 	}
@@ -241,13 +241,14 @@ func (c *Cassette) GetMaster(
 // GetVideoIndex returns the hls variant playlist for video quality.
 // fetching a variant is just a probe.
 func (c *Cassette) GetVideoIndex(
+	ctx context.Context,
 	filePath, hash string,
 	mediaInfo *videofile.MediaInfo,
 	quality Quality,
 	client string,
 	token string,
 ) (string, error) {
-	s, err := c.getSession(filePath, hash, mediaInfo)
+	s, err := c.getSession(ctx, filePath, hash, mediaInfo)
 	if err != nil {
 		return "", err
 	}
@@ -256,13 +257,14 @@ func (c *Cassette) GetVideoIndex(
 
 // GetAudioIndex returns the hls variant playlist for an audio track.
 func (c *Cassette) GetAudioIndex(
+	ctx context.Context,
 	filePath, hash string,
 	mediaInfo *videofile.MediaInfo,
 	audio int32,
 	client string,
 	token string,
 ) (string, error) {
-	s, err := c.getSession(filePath, hash, mediaInfo)
+	s, err := c.getSession(ctx, filePath, hash, mediaInfo)
 	if err != nil {
 		return "", err
 	}
@@ -278,7 +280,7 @@ func (c *Cassette) GetVideoSegment(
 	segment int32,
 	client string,
 ) (string, error) {
-	s, err := c.getSession(filePath, hash, mediaInfo)
+	s, err := c.getSession(ctx, filePath, hash, mediaInfo)
 	if err != nil {
 		return "", err
 	}
@@ -297,7 +299,7 @@ func (c *Cassette) GetAudioSegment(
 	audio, segment int32,
 	client string,
 ) (string, error) {
-	s, err := c.getSession(filePath, hash, mediaInfo)
+	s, err := c.getSession(ctx, filePath, hash, mediaInfo)
 	if err != nil {
 		return "", err
 	}

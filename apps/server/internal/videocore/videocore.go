@@ -709,8 +709,18 @@ func (vc *VideoCore) RecordEvent(event *mkvparser.SubtitleEvent) {
 func (vc *VideoCore) listenToClientEvents() {
 	// Start a goroutine to listen to video core events
 	go func() {
-		// Listen to video core events from the client
-		for clientEvent := range vc.clientPlayerEventSubscriber.Channel {
+		// Listen to video core events from the client until Shutdown
+		for {
+			var clientEvent *events.WebsocketClientEvent
+			select {
+			case <-vc.dispatcherStop:
+				return
+			case ev, ok := <-vc.clientPlayerEventSubscriber.Channel:
+				if !ok {
+					return
+				}
+				clientEvent = ev
+			}
 			playerEvent := &ClientEvent{}
 			marshaled, _ := json.Marshal(clientEvent.Payload)
 			// Unmarshal the player event

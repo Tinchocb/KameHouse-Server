@@ -14,9 +14,9 @@ import (
 
 // Session represents a per-file transcode session
 type Session struct {
-	// ready is decremented once keyframes load
-	ready sync.WaitGroup
-	// err is set if initialization fails
+	// ready is closed once keyframes load (or fail to)
+	ready chan struct{}
+	// err is set if initialization fails; only read after ready is closed
 	err error
 
 	Path      string
@@ -46,6 +46,7 @@ func NewSession(
 	logger *zerolog.Logger,
 ) *Session {
 	s := &Session{
+		ready:    make(chan struct{}),
 		Path:     path,
 		Out:      filepath.Join(settings.StreamDir, hash),
 		videos:   make(map[Quality]*Pipeline),
@@ -57,9 +58,8 @@ func NewSession(
 		logger:   logger,
 	}
 
-	s.ready.Add(1)
 	go func() {
-		defer s.ready.Done()
+		defer close(s.ready)
 		kf, err := getOrExtractKeyframes(path, hash, settings, logger)
 		if err != nil {
 			s.err = err
@@ -78,10 +78,16 @@ func NewSession(
 	return s
 }
 
-// WaitReady blocks until the keyframe index is ready
-func (s *Session) WaitReady() error {
-	s.ready.Wait()
-	return s.err
+// WaitReady blocks until the keyframe index is ready or ctx is done. The
+// extraction itself is not tied to ctx: the index is shared by every client of
+// this file (and cached), so one client giving up must not abort it.
+func (s *Session) WaitReady(ctx context.Context) error {
+	select {
+	case <-s.ready:
+		return s.err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // master / index / segment accessors

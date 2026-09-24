@@ -114,7 +114,7 @@ func (d *Detector) extractSubsOnDemand(videoPath string) bool {
 	if err != nil {
 		return false
 	}
-	if err := videofile.ExtractAttachment(d.ffmpegPath, videoPath, hash, mi, d.cacheDir, d.logger); err != nil {
+	if err := videofile.ExtractAttachment(context.Background(), d.ffmpegPath, videoPath, hash, mi, d.cacheDir, d.logger); err != nil {
 		d.logger.Debug().Err(err).Str("path", videoPath).Msg("skipdetect: extracción on-demand de subs falló")
 		return false
 	}
