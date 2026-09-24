@@ -5,11 +5,13 @@ import * as React from "react"
 import { HomeSkeleton } from "@/components/ui/shimmer-skeleton"
 
 import {
-    mapLibraryEntryToMediaCard
+    dedupeAndMapToSpotlight,
+    isMovieLike,
+    resolveTargetId,
+    type MappableEntry,
 } from "./home.mappers"
 import { ErrorBanner, EmptyState } from "./home.components"
 import { MediaSpotlight } from "@/components/ui/media-spotlight"
-import type { SwimlaneItem } from "@/components/ui/swimlane"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 
 export const Route = createFileRoute("/home/")({
@@ -31,29 +33,35 @@ function HomeClient() {
 
     const allEntries = React.useMemo(() => {
         if (!collection?.lists) return []
-        return collection.lists.flatMap(list => list.entries ?? [])
+        return collection.lists.flatMap(list => list?.entries ?? [])
     }, [collection])
+
+    // Índice id → entry (mediaId, tmdbId o id, como el antiguo `.find`): O(1)
+    // por navegación. Gana la primera entry que declara cada id.
+    const entriesById = React.useMemo(() => {
+        const byId = new Map<number, MappableEntry>()
+        for (const entry of allEntries) {
+            if (!entry) continue
+            for (const id of [entry.mediaId, entry.media?.id, entry.media?.tmdbId]) {
+                if (typeof id === "number" && id > 0 && !byId.has(id)) byId.set(id, entry)
+            }
+        }
+        return byId
+    }, [allEntries])
 
     const handleNavigate = React.useCallback(
         (mediaId: number) => {
-            const entry = allEntries.find(e =>
-                e.mediaId === mediaId ||
-                e.media?.id === mediaId ||
-                e.media?.tmdbId === mediaId
-            )
-            const resolvedId = entry?.mediaId || entry?.media?.tmdbId || entry?.media?.id || mediaId
-            const format = entry?.media?.format?.toUpperCase()
-            const type = entry?.media?.type?.toUpperCase()
-            // El offset TMDB (+1M) NO indica película: las series también lo usan
-            // (ej. Super 1062715). Solo formato/tipo deciden la plantilla.
-            const isMovie = format === "MOVIE" || format === "SPECIAL" || format === "OVA" || type === "MOVIE"
-            if (isMovie) {
+            // El spotlight también navega con items sintéticos (era por defecto)
+            // que no están en la colección: sin entry, se abre como serie.
+            const entry = entriesById.get(mediaId)
+            const resolvedId = (entry?.media ? resolveTargetId(entry, entry.media) : null) ?? mediaId
+            if (isMovieLike(entry?.media)) {
                 navigate({ to: "/movies/$movieId", params: { movieId: String(resolvedId) } })
             } else {
                 navigate({ to: "/series/$seriesId", params: { seriesId: String(resolvedId) } })
             }
         },
-        [allEntries, navigate],
+        [entriesById, navigate],
     )
 
     const handleSpotlightNavigate = React.useCallback(
@@ -64,25 +72,10 @@ function HomeClient() {
         [handleNavigate],
     )
 
-    // Un solo useMemo para deduplicar allEntries y derivar spotlightItems
-    const { spotlightItems } = React.useMemo(() => {
-        if (!allEntries.length) return { spotlightItems: [] }
-
-        const seen = new Set<number>()
-        const uniqueEntries = allEntries.filter(entry => {
-            if (!entry || !entry.media) return false
-            const resolvedId = entry.mediaId || entry.media.tmdbId || entry.media.id
-            if (!resolvedId || seen.has(resolvedId)) return false
-            seen.add(resolvedId)
-            return true
-        })
-
-        const spotlight = uniqueEntries
-            .map(entry => mapLibraryEntryToMediaCard(entry, handleNavigate))
-            .filter((item): item is SwimlaneItem => item !== null)
-
-        return { spotlightItems: spotlight }
-    }, [allEntries, handleNavigate])
+    const spotlightItems = React.useMemo(
+        () => dedupeAndMapToSpotlight(allEntries, handleNavigate),
+        [allEntries, handleNavigate],
+    )
 
     if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
     // Anti-flash: skeleton mientras no haya colección (cubre isLoading y

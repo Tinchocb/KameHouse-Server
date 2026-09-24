@@ -1,15 +1,31 @@
 import type { Models_LibraryMedia } from "@/api/generated/types"
 
 /**
- * Returns the best title for a media object.
+ * Los tipos generados declaran estos campos como `string` requeridos, pero
+ * AniList/TMDb incompletos devuelven `null`/`undefined` en runtime.
  */
-export function getTitle(media: Models_LibraryMedia): string {
-    return media.titleSpanish || media.titleEnglish || media.titleRomaji || "Sin título"
+type MediaLike = Partial<Models_LibraryMedia> | null | undefined
+
+/** Devuelve el string recortado, o `""` si no es un string con contenido. */
+export function cleanString(value: unknown): string {
+    return typeof value === "string" ? value.trim() : ""
 }
 
 /**
- * Returns the backdrop/banner URL for a media object.
+ * Returns the best title for a media object.
  */
-export function getBackdrop(media: Models_LibraryMedia): string {
-    return media.bannerImage || media.posterImage
+export function getTitle(media: MediaLike): string {
+    if (!media) return "Sin título"
+    return cleanString(media.titleSpanish)
+        || cleanString(media.titleEnglish)
+        || cleanString(media.titleRomaji)
+        || "Sin título"
+}
+
+/**
+ * Returns the backdrop/banner URL for a media object, or `""` if there is none.
+ */
+export function getBackdrop(media: MediaLike): string {
+    if (!media) return ""
+    return cleanString(media.bannerImage) || cleanString(media.posterImage)
 }
