@@ -31,6 +31,10 @@ type DragonballLoreTransformation struct {
 
 // HandleGetDragonballLore returns the local Dragon Ball character wiki used to
 // populate the character detail modal.
+//
+//	@summary returns the Dragon Ball character wiki.
+//	@route /api/v1/lore/dragonball [GET]
+//	@returns handlers.DragonballLore
 func (h *Handler) HandleGetDragonballLore(c echo.Context) error {
 	characters := []DragonballLoreCharacter{
 		{

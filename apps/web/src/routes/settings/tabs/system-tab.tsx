@@ -194,8 +194,8 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
         queryFn: async () => {
             try {
                 const res = await buildSeaQuery<CacheStats>({
-                    endpoint: "/api/v1/system/cache/stats",
-                    method: "GET",
+                    endpoint: API_ENDPOINTS.CACHE_HANDLERS.GetCacheStats.endpoint,
+                    method: API_ENDPOINTS.CACHE_HANDLERS.GetCacheStats.methods[0],
                 })
                 return res ?? null
             } catch {
@@ -242,9 +242,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
         const label = labels[target] || "caché"
         toast.loading(`Limpiando ${label}...`, { id: "cache-toast" })
         try {
-            const res = await buildSeaQuery<{ freedBytes: number; freedCount: number }>({
-                endpoint: `/api/v1/system/cache/clear?target=${target}`,
-                method: "POST",
+            const res = await buildSeaQuery<{ freedBytes: number; freedCount: number }, { target: string }>({
+                endpoint: API_ENDPOINTS.CACHE_HANDLERS.ClearSystemCache.endpoint,
+                method: API_ENDPOINTS.CACHE_HANDLERS.ClearSystemCache.methods[0],
+                params: { target },
             })
             const freedMsg = res?.freedBytes ? ` (${formatBytes(res.freedBytes)})` : ""
             toast.success(`Se liberó ${label}${freedMsg}`, { id: "cache-toast" })
@@ -261,8 +262,8 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
         toast.loading("Iniciando pre-generación de miniaturas...", { id: "warm-toast" })
         try {
             const res = await buildSeaQuery<{ status: string; totalFiles?: number; message?: string }>({
-                endpoint: "/api/v1/cache/thumbnails/warm",
-                method: "POST",
+                endpoint: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.endpoint,
+                method: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.methods[0],
             })
             if (res?.status === "already_running") {
                 toast.info("La pre-generación ya está en curso", { id: "warm-toast" })
@@ -279,9 +280,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
     const handleCancelWarm = async () => {
         toast.loading("Cancelando pre-generación...", { id: "warm-toast" })
         try {
-            await buildSeaQuery<{ status: string; message?: string }>({
-                endpoint: "/api/v1/cache/thumbnails/warm?action=cancel",
-                method: "POST",
+            await buildSeaQuery<{ status: string; message?: string }, { action: string }>({
+                endpoint: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.endpoint,
+                method: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.methods[0],
+                params: { action: "cancel" },
             })
             toast.info("Pre-generación detenida", { id: "warm-toast" })
             fetchCacheStats()

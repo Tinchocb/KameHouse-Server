@@ -18,6 +18,7 @@ import { SectionBar } from "@/components/ui/sectionbar"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { useShallow } from "zustand/react/shallow"
 import { persistThemePatch } from "@/lib/server/persist-settings"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
 interface PlaybackTabProps {
     control: Control<SettingsFormValues>
@@ -49,8 +50,8 @@ function LibrarySkipScanRow() {
         setPercent(0)
         try {
             await buildSeaQuery<unknown>({
-                endpoint: "/api/v1/mediastream/skip-times/scan-all",
-                method: "POST",
+                endpoint: API_ENDPOINTS.MEDIASTREAM.ScanAllSkipTimes.endpoint,
+                method: API_ENDPOINTS.MEDIASTREAM.ScanAllSkipTimes.methods[0],
             })
         } catch {
             setStatus("error")
@@ -186,8 +187,8 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
         try {
             type MusicScanPayload = { data?: { tracks?: BackgroundMusicTrack[] }; tracks?: BackgroundMusicTrack[] }
             const payload = await buildSeaQuery<MusicScanPayload, { dir: string }>({
-                endpoint: "/api/v1/music/scan",
-                method: "GET",
+                endpoint: API_ENDPOINTS.MUSIC.ScanBackgroundMusic.endpoint,
+                method: API_ENDPOINTS.MUSIC.ScanBackgroundMusic.methods[0],
                 params: { dir },
             })
             const tracks = payload?.data?.tracks ?? payload?.tracks ?? []

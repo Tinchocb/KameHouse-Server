@@ -583,6 +583,13 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/library/empty-directories",
         },
     },
+    LORE: {
+        GetDragonballLore: {
+            key: "LORE-get-dragonball-lore",
+            methods: ["GET"],
+            endpoint: "/api/v1/lore/dragonball",
+        },
+    },
     MEDIASTREAM: {
         /**
          *  @description
@@ -970,6 +977,31 @@ export const API_ENDPOINTS = {
             key: "STATUS-get-status",
             methods: ["GET"],
             endpoint: "/api/v1/status",
+        },
+        /**
+         *  @description
+         *  Route returns the content of a log file.
+         *  The filename is the wildcard segment of the route (/api/v1/log/{filename}).
+         */
+        GetLogContent: {
+            key: "STATUS-get-log-content",
+            methods: ["GET"],
+            endpoint: "/api/v1/log/{filename}",
+        },
+        GetLogFilenames: {
+            key: "STATUS-get-log-filenames",
+            methods: ["GET"],
+            endpoint: "/api/v1/logs/filenames",
+        },
+        DeleteLogs: {
+            key: "STATUS-delete-logs",
+            methods: ["DELETE"],
+            endpoint: "/api/v1/logs",
+        },
+        GetLatestLogContent: {
+            key: "STATUS-get-latest-log-content",
+            methods: ["GET"],
+            endpoint: "/api/v1/logs/latest",
         },
         /**
          *  @description

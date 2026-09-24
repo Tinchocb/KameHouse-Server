@@ -1040,6 +1040,10 @@ export type CacheStatsResponse_Videofiles = {
  * - Filepath: internal/handlers/directory_selector.go
  * - Filename: directory_selector.go
  * - Package: handlers
+ * @description
+ *  DirectoryInfo usa claves JSON en PascalCase ("Path", "Name") por
+ *  compatibilidad con clientes existentes: es una excepción deliberada a la
+ *  convención camelCase del resto del API. No renombrar sin migrar los clientes.
  */
 export type DirectoryInfo = {
     Path: string
@@ -1056,7 +1060,51 @@ export type DirectorySelectorResponse = {
     exists: boolean
     basePath: string
     suggestions: Array<DirectoryInfo> | null
+    /**
+     * PascalCase deliberado (ver DirectoryInfo); null cuando el path no existe y no es inválido
+     */
     Directories: Array<DirectoryInfo> | null
+}
+
+/**
+ * - Filepath: internal/handlers/lore.go
+ * - Filename: lore.go
+ * - Package: handlers
+ * @description
+ *  DragonballLore is the response shape consumed by the web client's
+ *  CharacterDetailModal (loreData.characters_wiki).
+ */
+export type DragonballLore = {
+    characters_wiki: Array<DragonballLoreCharacter> | null
+}
+
+/**
+ * - Filepath: internal/handlers/lore.go
+ * - Filename: lore.go
+ * - Package: handlers
+ */
+export type DragonballLoreCharacter = {
+    name: string
+    alias?: Array<string>
+    race?: string
+    origin?: string
+    height_cm?: number
+    weight_kg?: number
+    biography?: string
+    personality?: string
+    techniques?: Array<string>
+    transformations?: Array<DragonballLoreTransformation>
+}
+
+/**
+ * - Filepath: internal/handlers/lore.go
+ * - Filename: lore.go
+ * - Package: handlers
+ */
+export type DragonballLoreTransformation = {
+    name: string
+    multiplier?: string
+    description?: string
 }
 
 /**

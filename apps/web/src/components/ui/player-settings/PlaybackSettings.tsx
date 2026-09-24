@@ -6,6 +6,7 @@ import { buildSeaQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { getApiWebSocketUrl } from "@/api/client/server-url"
 import { WSEvents, type WebSocketMessage } from "@/lib/server/ws-events"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
 interface PlaybackSettingsProps {
     playbackRate: number
@@ -78,8 +79,8 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
         setPercent(0)
         try {
             await buildSeaQuery<unknown, { mediaId: number }>({
-                endpoint: "/api/v1/mediastream/skip-times/scan",
-                method: "POST",
+                endpoint: API_ENDPOINTS.MEDIASTREAM.ScanEpisodeSkipTimes.endpoint,
+                method: API_ENDPOINTS.MEDIASTREAM.ScanEpisodeSkipTimes.methods[0],
                 data: { mediaId },
             })
         } catch {

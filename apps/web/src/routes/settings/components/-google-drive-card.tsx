@@ -100,9 +100,10 @@ export function GoogleDriveCard() {
                 },
             })
 
-            const authRes = await buildSeaQuery<{ data?: { url?: string }; url?: string }>({
-                endpoint: `/api/v1/drive/auth-url?clientId=${encodeURIComponent(cleanClientId)}`,
-                method: "GET",
+            const authRes = await buildSeaQuery<{ data?: { url?: string }; url?: string }, { clientId: string }>({
+                endpoint: API_ENDPOINTS.DRIVE.DriveAuthURL.endpoint,
+                method: API_ENDPOINTS.DRIVE.DriveAuthURL.methods[0],
+                params: { clientId: cleanClientId },
             })
 
             const authUrl = authRes?.data?.url ?? authRes?.url
@@ -123,8 +124,8 @@ export function GoogleDriveCard() {
     const { mutate: disconnectDrive, isPending: isDisconnecting } = useMutation({
         mutationFn: async () => {
             await buildSeaQuery({
-                endpoint: "/api/v1/drive/disconnect",
-                method: "POST",
+                endpoint: API_ENDPOINTS.DRIVE.DriveDisconnect.endpoint,
+                method: API_ENDPOINTS.DRIVE.DriveDisconnect.methods[0],
             })
         },
         onSuccess: () => {

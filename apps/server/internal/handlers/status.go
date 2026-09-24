@@ -163,6 +163,12 @@ func (h *Handler) HandleGetStatus(c echo.Context) error {
 
 }
 
+// HandleGetLogContent returns the content of one log file.
+//
+//	@summary returns the content of a log file.
+//	@desc The filename is the wildcard segment of the route (/api/v1/log/{filename}).
+//	@route /api/v1/log/{filename} [GET]
+//	@returns string
 func (h *Handler) HandleGetLogContent(c echo.Context) error {
 	if h.App.Config == nil || h.App.Config.Logs.Dir == "" {
 		return h.RespondWithData(c, "")
@@ -197,6 +203,11 @@ func (h *Handler) HandleGetLogContent(c echo.Context) error {
 }
 
 
+// HandleGetLogFilenames lists the log files, newest first.
+//
+//	@summary returns the log filenames.
+//	@route /api/v1/logs/filenames [GET]
+//	@returns []string
 func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 	if h.App.Config == nil || h.App.Config.Logs.Dir == "" {
 		return h.RespondWithData(c, []string{})
@@ -218,6 +229,11 @@ func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 	return h.RespondWithData(c, filenames)
 }
 
+// HandleDeleteLogs deletes the given log files.
+//
+//	@summary deletes log files.
+//	@route /api/v1/logs [DELETE]
+//	@returns bool
 func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 	type body struct {
 		Filenames []string `json:"filenames"`
@@ -297,6 +313,11 @@ func (h *Handler) latestServerLogPath() (string, error) {
 	return logFiles[0], nil
 }
 
+// HandleGetLatestLogContent flushes the logger and returns the latest server log.
+//
+//	@summary returns the content of the latest server log.
+//	@route /api/v1/logs/latest [GET]
+//	@returns string
 func (h *Handler) HandleGetLatestLogContent(c echo.Context) error {
 	if h.App.OnFlushLogs != nil {
 		h.App.OnFlushLogs()

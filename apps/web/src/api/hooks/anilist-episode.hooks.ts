@@ -1,4 +1,5 @@
 import { useServerQuery } from "@/api/client/requests"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
 export interface AniListEpisodeThumbnailResponse {
     anilistId: number
@@ -22,9 +23,11 @@ export function useGetAniListEpisodeThumbnail(
     const valid = typeof anilistId === "number" && anilistId > 0 && typeof absoluteEpisode === "number" && absoluteEpisode > 0
 
     return useServerQuery<AniListEpisodeThumbnailResponse>({
-        endpoint: `/api/v1/anilist/episode/${anilistId}/${absoluteEpisode}`,
-        method: "GET",
-        queryKey: ["anilist-episode-thumbnail", anilistId, absoluteEpisode],
+        endpoint: API_ENDPOINTS.ANILIST.AniListEpisodeThumbnail.endpoint
+            .replace(":anilistId", String(anilistId))
+            .replace(":absolute", String(absoluteEpisode)),
+        method: API_ENDPOINTS.ANILIST.AniListEpisodeThumbnail.methods[0],
+        queryKey: [API_ENDPOINTS.ANILIST.AniListEpisodeThumbnail.key, anilistId, absoluteEpisode],
         enabled: Boolean(valid),
         staleTime: 24 * 60 * 60 * 1000, // 24h caché
         muteError: true,

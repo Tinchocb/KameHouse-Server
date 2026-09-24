@@ -11,6 +11,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// DirectoryInfo usa claves JSON en PascalCase ("Path", "Name") por
+// compatibilidad con clientes existentes: es una excepción deliberada a la
+// convención camelCase del resto del API. No renombrar sin migrar los clientes.
 type DirectoryInfo struct {
 	FullPath   string `json:"Path"`
 	FolderName string `json:"Name"`
@@ -21,7 +24,7 @@ type DirectorySelectorResponse struct {
 	Exists      bool            `json:"exists"`
 	BasePath    string          `json:"basePath"`
 	Suggestions []DirectoryInfo `json:"suggestions"`
-	Directories []DirectoryInfo `json:"Directories"`
+	Directories []DirectoryInfo `json:"Directories"` // PascalCase deliberado (ver DirectoryInfo); null cuando el path no existe y no es inválido
 }
 
 func isBlockedSystemDirectory(p string) bool {

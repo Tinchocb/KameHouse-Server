@@ -1,4 +1,5 @@
 import { useServerQuery } from "@/api/client/requests"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
 export interface TMDBEpisodeStillResponse {
     tvId: number
@@ -23,9 +24,11 @@ export function useGetTMDBEpisodeStill(
     const valid = typeof tvId === "number" && tvId > 0 && typeof absoluteEpisode === "number" && absoluteEpisode > 0
 
     return useServerQuery<TMDBEpisodeStillResponse>({
-        endpoint: `/api/v1/tmdb/episode/${tvId}/${absoluteEpisode}`,
-        method: "GET",
-        queryKey: ["tmdb-episode-still", tvId, absoluteEpisode],
+        endpoint: API_ENDPOINTS.TMDB.TMDBEpisodeStill.endpoint
+            .replace(":tvId", String(tvId))
+            .replace(":absolute", String(absoluteEpisode)),
+        method: API_ENDPOINTS.TMDB.TMDBEpisodeStill.methods[0],
+        queryKey: [API_ENDPOINTS.TMDB.TMDBEpisodeStill.key, tvId, absoluteEpisode],
         enabled: Boolean(valid),
         staleTime: 24 * 60 * 60 * 1000, // 24h caché
         muteError: true,

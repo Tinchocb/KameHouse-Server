@@ -2716,20 +2716,26 @@
     "comments": [
       "HandleGetDragonballLore returns the local Dragon Ball character wiki used to",
       "populate the character detail modal.",
+      "",
+      "\t@summary returns the Dragon Ball character wiki.",
+      "\t@route /api/v1/lore/dragonball [GET]",
+      "\t@returns handlers.DragonballLore",
       ""
     ],
     "filepath": "internal/handlers/lore.go",
     "filename": "lore.go",
     "api": {
-      "summary": "",
+      "summary": "returns the Dragon Ball character wiki.",
       "descriptions": [],
-      "endpoint": "",
-      "methods": null,
+      "endpoint": "/api/v1/lore/dragonball",
+      "methods": [
+        "GET"
+      ],
       "params": [],
       "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
+      "returns": "handlers.DragonballLore",
+      "returnGoType": "handlers.DragonballLore",
+      "returnTypescriptType": "DragonballLore"
     }
   },
   {
@@ -5125,6 +5131,127 @@
       "returns": "handlers.Status",
       "returnGoType": "handlers.Status",
       "returnTypescriptType": "Status"
+    }
+  },
+  {
+    "name": "HandleGetLogContent",
+    "trimmedName": "GetLogContent",
+    "comments": [
+      "HandleGetLogContent returns the content of one log file.",
+      "",
+      "\t@summary returns the content of a log file.",
+      "\t@desc The filename is the wildcard segment of the route (/api/v1/log/{filename}).",
+      "\t@route /api/v1/log/{filename} [GET]",
+      "\t@returns string",
+      ""
+    ],
+    "filepath": "internal/handlers/status.go",
+    "filename": "status.go",
+    "api": {
+      "summary": "returns the content of a log file.",
+      "descriptions": [
+        "The filename is the wildcard segment of the route (/api/v1/log/{filename})."
+      ],
+      "endpoint": "/api/v1/log/{filename}",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "string",
+      "returnGoType": "string",
+      "returnTypescriptType": "string"
+    }
+  },
+  {
+    "name": "HandleGetLogFilenames",
+    "trimmedName": "GetLogFilenames",
+    "comments": [
+      "HandleGetLogFilenames lists the log files, newest first.",
+      "",
+      "\t@summary returns the log filenames.",
+      "\t@route /api/v1/logs/filenames [GET]",
+      "\t@returns []string",
+      ""
+    ],
+    "filepath": "internal/handlers/status.go",
+    "filename": "status.go",
+    "api": {
+      "summary": "returns the log filenames.",
+      "descriptions": [],
+      "endpoint": "/api/v1/logs/filenames",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "[]string",
+      "returnGoType": "string",
+      "returnTypescriptType": "Array\u003cstring\u003e"
+    }
+  },
+  {
+    "name": "HandleDeleteLogs",
+    "trimmedName": "DeleteLogs",
+    "comments": [
+      "HandleDeleteLogs deletes the given log files.",
+      "",
+      "\t@summary deletes log files.",
+      "\t@route /api/v1/logs [DELETE]",
+      "\t@returns bool",
+      ""
+    ],
+    "filepath": "internal/handlers/status.go",
+    "filename": "status.go",
+    "api": {
+      "summary": "deletes log files.",
+      "descriptions": [],
+      "endpoint": "/api/v1/logs",
+      "methods": [
+        "DELETE"
+      ],
+      "params": [],
+      "bodyFields": [
+        {
+          "name": "Filenames",
+          "jsonName": "filenames",
+          "goType": "[]string",
+          "usedStructType": "",
+          "typescriptType": "Array\u003cstring\u003e",
+          "required": true,
+          "descriptions": []
+        }
+      ],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleGetLatestLogContent",
+    "trimmedName": "GetLatestLogContent",
+    "comments": [
+      "HandleGetLatestLogContent flushes the logger and returns the latest server log.",
+      "",
+      "\t@summary returns the content of the latest server log.",
+      "\t@route /api/v1/logs/latest [GET]",
+      "\t@returns string",
+      ""
+    ],
+    "filepath": "internal/handlers/status.go",
+    "filename": "status.go",
+    "api": {
+      "summary": "returns the content of the latest server log.",
+      "descriptions": [],
+      "endpoint": "/api/v1/logs/latest",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "string",
+      "returnGoType": "string",
+      "returnTypescriptType": "string"
     }
   },
   {

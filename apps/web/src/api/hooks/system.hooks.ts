@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { useServerMutation } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { toast } from "sonner"
 
@@ -28,7 +27,7 @@ export function useDownloadDatabaseBackup() {
         setIsDownloading(true)
         try {
             const base = getServerBaseUrl()
-            const url = new URL(EXTRA_ENDPOINTS.BACKUP.Download.endpoint, base || window.location.origin)
+            const url = new URL(API_ENDPOINTS.SYSTEM.DownloadDatabaseBackup.endpoint, base || window.location.origin)
             const res = await fetch(url.toString(), { method: "GET", credentials: "include" })
             if (!res.ok) throw new Error(`Backup falló con ${res.status}`)
             const blob = await res.blob()

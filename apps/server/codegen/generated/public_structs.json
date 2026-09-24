@@ -15112,7 +15112,11 @@
         "comments": []
       }
     ],
-    "comments": []
+    "comments": [
+      " DirectoryInfo usa claves JSON en PascalCase (\"Path\", \"Name\") por",
+      " compatibilidad con clientes existentes: es una excepción deliberada a la",
+      " convención camelCase del resto del API. No renombrar sin migrar los clientes."
+    ]
   },
   {
     "filepath": "../internal/handlers/directory_selector.go",
@@ -15170,7 +15174,9 @@
         "required": false,
         "nilable": true,
         "public": true,
-        "comments": []
+        "comments": [
+          " PascalCase deliberado (ver DirectoryInfo); null cuando el path no existe y no es inválido"
+        ]
       }
     ],
     "comments": []

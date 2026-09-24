@@ -1,7 +1,7 @@
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetUnlinkedFiles } from "@/api/hooks/unlinked.hooks"
 import { useServerQuery } from "@/api/client/requests"
-import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { IntelligentEntry } from "@/api/types/intelligence.types"
 import { useState, useMemo, useEffect } from "react"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
@@ -104,10 +104,10 @@ export function useGlobalSearch(enabled = true) {
 
     // Semantic intelligence search query
     const { data: semanticResults, isLoading: isLoadingSemantic } = useServerQuery<SemanticSearchResult[], { q: string }>({
-        endpoint: EXTRA_ENDPOINTS.INTELLIGENCE.Search.endpoint,
+        endpoint: API_ENDPOINTS.INTELLIGENCE.SemanticSearch.endpoint,
         method: "GET",
         params: { q: debouncedQuery },
-        queryKey: [EXTRA_ENDPOINTS.INTELLIGENCE.Search.key, debouncedQuery],
+        queryKey: [API_ENDPOINTS.INTELLIGENCE.SemanticSearch.key, debouncedQuery],
         staleTime: 60000,
         enabled: isSemanticEnabled,
         muteError: true,

@@ -1,4 +1,5 @@
 import { useServerQuery } from "@/api/client/requests"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { TMDBImagesResponse } from "@/lib/helpers/hero-image-resolver"
 
 /**
@@ -10,9 +11,11 @@ export function useGetTMDBImages(mediaType: "tv" | "movie" | undefined, tmdbId: 
     const validMediaType = mediaType === "tv" || mediaType === "movie"
 
     return useServerQuery<TMDBImagesResponse>({
-        endpoint: `/api/v1/tmdb/images/${mediaType}/${tmdbId}`,
-        method: "GET",
-        queryKey: ["tmdb-images", mediaType, tmdbId],
+        endpoint: API_ENDPOINTS.TMDB.TMDBImages.endpoint
+            .replace(":type", String(mediaType))
+            .replace(":id", String(tmdbId)),
+        method: API_ENDPOINTS.TMDB.TMDBImages.methods[0],
+        queryKey: [API_ENDPOINTS.TMDB.TMDBImages.key, mediaType, tmdbId],
         enabled: Boolean(validId && validMediaType),
         staleTime: 24 * 60 * 60 * 1000, // 24 horas de caché
         muteError: true,

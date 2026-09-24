@@ -6,7 +6,7 @@ import { useSound } from "@/hooks/use-sound"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useServerQuery } from "@/api/client/requests"
-import { EXTRA_ENDPOINTS } from "@/api/client/endpoints.extra"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { EmptyState } from "@/components/shared/empty-state"
 import { useUIStore } from "@/lib/store"
 
@@ -66,9 +66,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const ts = useThemeSettings()
 
     const { data: lore } = useServerQuery<DragonBallLoreData>({
-        endpoint: EXTRA_ENDPOINTS.DRAGONBALL.Lore.endpoint,
-        method: "GET",
-        queryKey: [EXTRA_ENDPOINTS.DRAGONBALL.Lore.key],
+        endpoint: API_ENDPOINTS.LORE.GetDragonballLore.endpoint,
+        method: API_ENDPOINTS.LORE.GetDragonballLore.methods[0],
+        queryKey: [API_ENDPOINTS.LORE.GetDragonballLore.key],
         staleTime: 300000,
         enabled: isDragonBallTmdbId(entry?.media?.tmdbId),
         muteError: true,
@@ -124,8 +124,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     }, [entry?.media?.id, playSound])
 
     const { data: sagas } = useServerQuery<SagaDTO[]>({
-        endpoint: `/api/v1/library/anime-entry/${seriesId}/sagas`,
-        method: "GET",
+        endpoint: API_ENDPOINTS.SERIES_DETAILS.GetSeriesSagas.endpoint.replace("{id}", seriesId),
+        method: API_ENDPOINTS.SERIES_DETAILS.GetSeriesSagas.methods[0],
         queryKey: queryKeys.series.sagas(seriesId),
         staleTime: 600000,
     })
