@@ -84,10 +84,15 @@ func (h *Handler) HandleOpenInExplorer(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied to path outside library or application data"))
 	}
 
-	OpenDirInExplorer(cleaned)
+	openDirInExplorer(cleaned)
 
 	return h.RespondWithData(c, true)
 }
+
+// openDirInExplorer es el lanzador que usa el handler. Los tests lo reemplazan
+// para no abrir ventanas reales (Explorer abría la carpeta temporal ya borrada
+// y mostraba "Ubicación no disponible").
+var openDirInExplorer = OpenDirInExplorer
 
 func OpenDirInExplorer(dir string) {
 	if dir == "" {

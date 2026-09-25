@@ -95,6 +95,12 @@ func TestHandleOpenInExplorer_Confinement(t *testing.T) {
 	e := echo.New()
 	e.HTTPErrorHandler = CustomHTTPErrorHandler
 
+	// No abrir el Explorer real: solo registrar qué carpeta se abriría.
+	var opened []string
+	prevOpen := openDirInExplorer
+	openDirInExplorer = func(dir string) { opened = append(opened, dir) }
+	t.Cleanup(func() { openDirInExplorer = prevOpen })
+
 	// Register a library path in settings
 	libraryDir := filepath.Join(tempDir, "anime_library")
 	_ = os.MkdirAll(libraryDir, 0755)
@@ -131,6 +137,11 @@ func TestHandleOpenInExplorer_Confinement(t *testing.T) {
 	_ = h.HandleOpenInExplorer(cOutside)
 	if recOutside.Code != http.StatusForbidden {
 		t.Errorf("expected 403 for path outside library, got %d: %s", recOutside.Code, recOutside.Body.String())
+	}
+
+	// Solo la carpeta permitida llega al lanzador.
+	if len(opened) != 1 || filepath.Clean(opened[0]) != filepath.Clean(libraryDir) {
+		t.Errorf("opened = %v, want solo %q", opened, libraryDir)
 	}
 }
 
