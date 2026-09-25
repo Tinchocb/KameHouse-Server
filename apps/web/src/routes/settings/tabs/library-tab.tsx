@@ -132,7 +132,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 collapsible
                 defaultOpen={true}
                 badge={localDisconnected && cloudPaused ? (
-                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/25">
+                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25">
                         Sin orígenes
                     </span>
                 ) : undefined}
@@ -162,7 +162,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     )}
                 />
                 {localDisconnected && cloudPaused && (
-                    <p className="px-1 text-xs text-amber-300">
+                    <p className="px-1 text-xs text-status-warning">
                         Con los dos orígenes apagados la biblioteca queda vacía.
                     </p>
                 )}
@@ -179,7 +179,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 collapsible
                 defaultOpen={true}
                 badge={localDisconnected ? (
-                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/25">
+                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25">
                         Desconectado
                     </span>
                 ) : undefined}

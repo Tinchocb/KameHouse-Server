@@ -2,7 +2,6 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
-import { useShallow } from "zustand/react/shallow"
 import { useQueueStore } from "./queue-store"
 
 export interface BackgroundMusicTrack {
@@ -140,74 +139,6 @@ export const useUIStore = create<UIState>()(
         )
     )
 )
-
-// Shallow selectors for object/array state to prevent unnecessary re-renders
-export const useSidebarState = () => useUIStore(useShallow((state) => ({
-    sidebarOpen: state.sidebarOpen,
-    sidebarMode: state.sidebarMode,
-    setSidebarOpen: state.setSidebarOpen,
-    setSidebarMode: state.setSidebarMode,
-})))
-
-export const useVideoActiveState = () => useUIStore(useShallow((state) => ({
-    isVideoActive: state.isVideoActive,
-    setVideoActive: state.setVideoActive,
-})))
-
-export const useBgMusicState = () => useUIStore(useShallow((state) => ({
-    bgMusicEnabled: state.bgMusicEnabled,
-    bgMusicVolume: state.bgMusicVolume,
-    bgMusicDir: state.bgMusicDir,
-    bgMusicTracks: state.bgMusicTracks,
-    setBgMusicEnabled: state.setBgMusicEnabled,
-    setBgMusicVolume: state.setBgMusicVolume,
-    setBgMusicDir: state.setBgMusicDir,
-    setBgMusicTracks: state.setBgMusicTracks,
-})))
-
-export const useUiSoundsState = () => useUIStore(useShallow((state) => ({
-    uiSoundsEnabled: state.uiSoundsEnabled,
-    uiSoundsVolume: state.uiSoundsVolume,
-    setUiSoundsEnabled: state.setUiSoundsEnabled,
-    setUiSoundsVolume: state.setUiSoundsVolume,
-})))
-
-export const useGlobalQueueState = () => useUIStore(useShallow((state) => ({
-    globalQueueOpen: state.globalQueueOpen,
-    setGlobalQueueOpen: state.setGlobalQueueOpen,
-})))
-
-export const useDynamicBackdropState = () => useUIStore(useShallow((state) => ({
-    dynamicBackdropEnabled: state.dynamicBackdropEnabled,
-    dynamicBackdropMotionEnabled: state.dynamicBackdropMotionEnabled,
-    setDynamicBackdropEnabled: state.setDynamicBackdropEnabled,
-    setDynamicBackdropMotionEnabled: state.setDynamicBackdropMotionEnabled,
-})))
-
-export const useSeriesSoundtrackState = () => useUIStore(useShallow((state) => ({
-    seriesSoundtrackMode: state.seriesSoundtrackMode,
-    activeSeriesContext: state.activeSeriesContext,
-    setSeriesSoundtrackMode: state.setSeriesSoundtrackMode,
-    setActiveSeriesContext: state.setActiveSeriesContext,
-})))
-
-export const useThemeVisualState = () => useUIStore(useShallow((state) => ({
-    themeVisual: state.themeVisual,
-    hideAudienceScore: state.hideAudienceScore,
-    setThemeVisual: state.setThemeVisual,
-    clearThemeVisual: state.clearThemeVisual,
-    setHideAudienceScore: state.setHideAudienceScore,
-})))
-
-export const useEraOpeningState = () => useUIStore(useShallow((state) => ({
-    eraOpeningPlaying: state.eraOpeningPlaying,
-    setEraOpeningPlaying: state.setEraOpeningPlaying,
-})))
-
-export const useInitialSetupState = () => useUIStore(useShallow((state) => ({
-    showInitialSetup: state.showInitialSetup,
-    setShowInitialSetup: state.setShowInitialSetup,
-})))
 
 // La UI reacciona a los `addToQueue` del dominio abriendo el sidebar.
 // Dirección única ui->queue (el queue-store ya no importa este módulo).

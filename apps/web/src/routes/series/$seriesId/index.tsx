@@ -10,6 +10,10 @@ export const Route = createFileRoute("/series/$seriesId/")({
         saga: (search.saga as string) ?? "",
         subSaga: (search.subSaga as string) ?? "",
         autoplay: (search.autoplay as string) || undefined,
+        t: typeof search.t === "number" || typeof search.t === "string" ? String(search.t) : undefined,
+        moment: (search.moment as string) || undefined,
+        momentTitle: (search.momentTitle as string) || undefined,
+        chrono: (search.chrono as string) || undefined,
     }),
     loader: async ({ params: { seriesId }, context }) => {
         const qc = context.queryClient

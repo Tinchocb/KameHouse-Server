@@ -181,20 +181,34 @@ function RootComponent() {
         }
 
         const loader = document.getElementById("global-loader")
-        if (loader) {
-            if (__isTauriDesktop__) {
-                // En Tauri desktop la ventana main estaba oculta hasta ready();
-                // se elimina de inmediato para que la ventana ya aparezca completamente limpia.
-                loader.remove()
-            } else {
-                // En web (sin ventana splash nativa previa), fade suave de opacidad.
-                loader.style.opacity = "0"
-                loader.style.pointerEvents = "none"
-                const timer = setTimeout(() => {
-                    loader.remove()
-                }, 350)
-                return () => clearTimeout(timer)
+        if (!loader) return
+
+        // Transición splash → interfaz (estilos en index.html): el loader se abre y
+        // se desvanece mientras la interfaz entra con un leve zoom de asentamiento.
+        // En Tauri la ventana main se revela recién tras ready(); se espera un
+        // instante para que la transición se vea en vez de correr con la ventana oculta.
+        const startDelay = __isTauriDesktop__ ? 140 : 0
+        const root = document.getElementById("root")
+        let removeTimer: ReturnType<typeof setTimeout> | undefined
+
+        const startTimer = setTimeout(() => {
+            loader.classList.add("is-exiting")
+            if (root) {
+                root.classList.add("kh-root-enter")
+                const onEnd = (e: AnimationEvent) => {
+                    // animationend burbujea desde los hijos: solo cuenta la del propio #root
+                    if (e.target !== root) return
+                    root.classList.remove("kh-root-enter")
+                    root.removeEventListener("animationend", onEnd)
+                }
+                root.addEventListener("animationend", onEnd)
             }
+            removeTimer = setTimeout(() => loader.remove(), 600)
+        }, startDelay)
+
+        return () => {
+            clearTimeout(startTimer)
+            if (removeTimer) clearTimeout(removeTimer)
         }
     }, [isInterfaceReady])
 
@@ -229,6 +243,7 @@ function RootComponent() {
 
     return (
         <AppLayout>
+            <SkipToContent />
             <CustomThemeStyles />
             <LiquidGlassDefs />
             <DynamicBackdrop />
@@ -249,7 +264,12 @@ function RootComponent() {
             >
                 {!tvMode && <AppTopNav />}
 
-                <PageTransition data-scroll-container="true" className={`flex-1 w-full overflow-y-auto ${!tvMode ? "pt-16 md:pt-0" : ""}`}>
+                <PageTransition
+                    id={MAIN_CONTENT_ID}
+                    tabIndex={-1}
+                    data-scroll-container="true"
+                    className={`flex-1 w-full overflow-y-auto outline-none ${!tvMode ? "pt-[calc(4rem+env(safe-area-inset-top,0px))] md:pt-0" : ""}`}
+                >
                     <Outlet />
                 </PageTransition>
             </AppLayoutContent>
@@ -257,6 +277,25 @@ function RootComponent() {
 
             <GlobalQueuePlayerOverlay />
         </AppLayout>
+    )
+}
+
+const MAIN_CONTENT_ID = "main-content"
+
+/** Primer foco de Tab: salta la navegación. Foco manual en vez de navegar al
+ *  hash para no tocar la URL del router. */
+function SkipToContent() {
+    return (
+        <a
+            href={`#${MAIN_CONTENT_ID}`}
+            onClick={(e) => {
+                e.preventDefault()
+                document.getElementById(MAIN_CONTENT_ID)?.focus()
+            }}
+            className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[9999] focus:inline-flex focus:items-center focus:min-h-[44px] focus:px-5 focus:rounded-full focus:bg-white focus:text-zinc-950 focus:text-sm focus:font-semibold focus:outline-none focus:ring-2 focus:ring-brand-accent"
+        >
+            Saltar al contenido
+        </a>
     )
 }
 

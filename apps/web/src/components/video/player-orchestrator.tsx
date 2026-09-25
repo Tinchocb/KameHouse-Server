@@ -317,6 +317,8 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             isQueueSidebarOpen={isQueueSidebarOpen}
             onToggleQueueSidebar={handleToggleQueueSidebar}
             setIsQueueSidebarOpen={setIsQueueSidebarOpen}
+            momentKey={props.momentKey}
+            momentTitle={props.momentTitle}
         />
         </>
     )

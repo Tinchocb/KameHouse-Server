@@ -22,13 +22,22 @@ declare module "jassub" {
         timeOffset?: number
     }
 
+    /** Proxy (comlink/abslink) al ASSRenderer del worker: todas las llamadas son async. */
+    interface JassubRenderer {
+        /** Reemplaza la pista completa por otro documento ASS. */
+        setTrack(content: string): Promise<void>
+    }
+
     class JASSUB {
         constructor(options: JassubOptions)
+        /** Resuelve cuando el worker terminó de inicializar el renderer. */
+        ready: Promise<void>
+        renderer: JassubRenderer
         destroy(): void
         setCurrentTime(time: number): void
         setVolume(volume: number): void
         setIsPaused(isPaused: boolean): void
-        resize(): void
+        resize(forceRepaint?: boolean): Promise<void>
     }
 
     export default JASSUB

@@ -179,8 +179,8 @@ export function GoogleDriveCard() {
             defaultOpen={true}
             badge={
                 isConnected ? (
-                    <span className="flex items-center gap-1.5 text-3xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="flex items-center gap-1.5 text-3xs font-medium px-2 py-0.5 rounded-full bg-status-success/10 text-status-success border border-status-success/25">
+                        <span className="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
                         Conectado: {driveStatus?.userEmail || "Google Drive"}
                     </span>
                 ) : (
@@ -193,14 +193,14 @@ export function GoogleDriveCard() {
             <div className="space-y-6 pt-2">
                 {/* Status Alert */}
                 {isConnected ? (
-                    <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/20 flex items-center justify-between gap-4">
+                    <div className="p-4 rounded-xl bg-[var(--success-bg)] border border-[var(--success-border)] flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                            <CheckCircle2 className="w-5 h-5 text-status-success shrink-0" />
                             <div>
-                                <h4 className="text-sm font-medium text-emerald-200">
+                                <h4 className="text-sm font-medium text-status-success">
                                     Cuenta vinculada: {driveStatus?.displayName || driveStatus?.userEmail}
                                 </h4>
-                                <p className="text-xs text-emerald-300/70">
+                                <p className="text-xs text-status-success/70">
                                     {driveStatus?.indexedEpisodes ?? 0} archivos de Google Drive indexados en tu biblioteca.
                                 </p>
                             </div>
@@ -210,7 +210,7 @@ export function GoogleDriveCard() {
                                 type="button"
                                 onClick={() => disconnectDrive()}
                                 disabled={isDisconnecting}
-                                className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                                className="px-3 py-1.5 rounded-lg bg-status-error/10 hover:bg-status-error/20 text-status-error border border-status-error/20 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50"
                             >
                                 <Unlink className="w-3.5 h-3.5" />
                                 Desconectar
@@ -228,7 +228,7 @@ export function GoogleDriveCard() {
                                 </p>
                             </div>
                         </div>
-                        <div className="bg-black/40 border border-white/10 rounded-lg p-3 font-mono text-2xs text-emerald-400 space-y-1">
+                        <div className="bg-black/40 border border-white/10 rounded-lg p-3 font-mono text-2xs text-status-success space-y-1">
                             <div>http://127.0.0.1:43212/api/v1/drive/callback</div>
                             <div>http://localhost:43212/api/v1/drive/callback</div>
                             <div>http://127.0.0.1:43211/api/v1/drive/callback</div>
@@ -334,7 +334,7 @@ export function GoogleDriveCard() {
                             <button
                                 type="button"
                                 onClick={() => openInBrowser(manualAuthUrl)}
-                                className="px-3.5 py-1.5 rounded-lg bg-brand-accent hover:brightness-110 text-on-primary font-bold text-xs flex items-center gap-1.5 transition-[filter,transform,opacity] duration-fast ease-smooth-out shadow-sm active:scale-95"
+                                className="px-3.5 py-1.5 rounded-lg bg-brand-accent hover:brightness-110 text-on-primary font-bold text-xs flex items-center gap-1.5 transition-[filter,transform,opacity] duration-fast ease-smooth-out shadow-elevation-1 active:scale-95"
                             >
                                 <ExternalLink className="w-3.5 h-3.5" />
                                 Abrir en el Navegador
@@ -361,7 +361,7 @@ export function GoogleDriveCard() {
                             type="button"
                             onClick={handleConnect}
                             disabled={isConnecting || !clientId.trim() || !clientSecret.trim()}
-                            className="px-5 py-2.5 rounded-xl bg-brand-accent hover:brightness-110 text-on-primary font-bold text-xs flex items-center gap-2 transition-[filter,transform,opacity] duration-fast ease-smooth-out shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-5 py-2.5 rounded-xl bg-brand-accent hover:brightness-110 text-on-primary font-bold text-xs flex items-center gap-2 transition-[filter,transform,opacity] duration-fast ease-smooth-out shadow-elevation-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isConnecting ? (
                                 <IconUiSpinner className="w-4 h-4 animate-spin" />

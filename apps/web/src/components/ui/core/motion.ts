@@ -7,12 +7,3 @@ export const SPRING_PILL: Transition = {
     damping: 34,
     mass: 1,
 };
-
-/** Para snap-back de SlideToConfirm y rebotes de drag */
-export const SPRING_SNAP: Transition = {
-    type: "spring",
-    stiffness: 500,
-    damping: 38,
-    mass: 0.8,
-};
-

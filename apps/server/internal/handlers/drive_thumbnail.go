@@ -43,17 +43,38 @@ func (h *Handler) serveDriveThumbnail(c echo.Context, videoPath string) error {
 	}
 
 	hash := fmt.Sprintf("%x", sha256.Sum256(fmt.Appendf(nil, "gdrive:%s:%d:%d", lf.DriveFileID, lf.FileModTime, driveThumbWidth)))
-	c.Response().Header().Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+	eTag := thumbnailETag(hash)
+	cacheControl := thumbnailCacheControlDefault
+	if c.QueryParam("v") != "" {
+		cacheControl = thumbnailCacheControlImmutable
+	}
+	// Only on successful responses: a transient Drive error must never be cached by the browser.
+	setCacheHeaders := func() {
+		header := c.Response().Header()
+		header.Set("ETag", eTag)
+		header.Set("Cache-Control", cacheControl)
+	}
+	serve := func(imgBytes []byte) error {
+		setCacheHeaders()
+		return c.Blob(http.StatusOK, http.DetectContentType(imgBytes), imgBytes)
+	}
+
+	if etagMatches(c.Request().Header.Get("If-None-Match"), eTag) {
+		setCacheHeaders()
+		return c.NoContent(http.StatusNotModified)
+	}
 
 	if imgBytes, found := h.App.ThumbnailCache.Get(hash); found {
-		return c.Blob(http.StatusOK, http.DetectContentType(imgBytes), imgBytes)
+		return serve(imgBytes)
 	}
 
 	cacheFile := filepath.Join(h.App.Config.Cache.Dir, "thumbnails", "gdrive-"+hash+".jpg")
 	if imgBytes, err := os.ReadFile(cacheFile); err == nil {
-		cache.TouchDiskCache(cacheFile)
+		if info, statErr := os.Stat(cacheFile); statErr == nil {
+			cache.TouchDiskCacheIfOlder(cacheFile, info, thumbnailTouchMinAge)
+		}
 		h.App.ThumbnailCache.Set(hash, imgBytes)
-		return c.Blob(http.StatusOK, http.DetectContentType(imgBytes), imgBytes)
+		return serve(imgBytes)
 	}
 
 	if at, ok := driveThumbMissing.Load(hash); ok && time.Since(at.(time.Time)) < driveThumbMissingTTL {
@@ -98,5 +119,5 @@ func (h *Handler) serveDriveThumbnail(c echo.Context, videoPath string) error {
 
 	imgBytes := v.([]byte)
 	h.App.ThumbnailCache.Set(hash, imgBytes)
-	return c.Blob(http.StatusOK, http.DetectContentType(imgBytes), imgBytes)
+	return serve(imgBytes)
 }

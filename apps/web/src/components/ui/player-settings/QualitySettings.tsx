@@ -16,10 +16,18 @@ export function QualitySettings({
     currentSourceType,
     onSourceChange,
 }: QualitySettingsProps) {
+    // Activa = la que coincide por URL. Solo si ninguna coincide (p. ej. la URL
+    // reproducida es la de transcode, no la de la fuente) se cae al tipo, y aun así
+    // se marca una sola: antes todas las fuentes del mismo tipo salían tildadas.
+    const urlMatch = currentSourceUrl ? sources.findIndex(s => s.url === currentSourceUrl) : -1
+    const activeIdx = urlMatch !== -1
+        ? urlMatch
+        : (currentSourceType ? sources.findIndex(s => s.type === currentSourceType) : -1)
+
     return (
         <div className="flex flex-col">
             {sources.map((source, idx) => {
-                const isActive = (currentSourceType && source.type === currentSourceType) || (source.url === currentSourceUrl)
+                const isActive = idx === activeIdx
                 const sourceSubtext = source.type === 'direct'
                     ? "Direct Play (Nativo sin conversión)"
                     : source.type === 'transcode'

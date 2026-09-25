@@ -72,11 +72,11 @@ export const AppBottomNav = () => {
     if (isFullscreen) return null
 
     return (
-        <div className="md:hidden fixed bottom-3 inset-x-3 z-mobile-nav pointer-events-none">
+        <div className="md:hidden fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] inset-x-3 z-mobile-nav pointer-events-none">
             <nav
                 role="navigation"
                 aria-label="Navegación móvil"
-                className="pointer-events-auto h-14 bg-surface-container-lowest/85 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-full shadow-[shadow:var(--glass-highlight-lg),0_12px_36px_-6px_rgba(0,0,0,0.9)] flex items-center justify-around px-2"
+                className="pointer-events-auto h-14 bg-surface-container-lowest/85 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-full shadow-[shadow:var(--glass-highlight-lg),0_12px_36px_-6px_rgba(0,0,0,0.9)] flex items-stretch gap-0.5 px-1.5 py-1.5"
             >
                 {NAV_ITEMS.map((item) => {
                     const isActive = item.to === "/home"
@@ -85,12 +85,13 @@ export const AppBottomNav = () => {
                     const Icon = item.icon
 
                     return (
-                        <MagneticHover key={item.to} scale={1.012} className="relative">
+                        <MagneticHover key={item.to} scale={1.012} className="relative flex-1 min-w-0">
                             <Link
                                 to={item.to}
                                 aria-current={isActive ? "page" : undefined}
                                 className={cn(
-                                    "relative flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full min-h-[44px] text-xs font-semibold select-none cursor-pointer transition-colors duration-150 z-10",
+                                    // Ícono arriba y texto abajo: los cinco destinos entran en 320px sin salirse de la pantalla.
+                                    "relative flex h-full w-full flex-col items-center justify-center gap-0.5 px-0.5 rounded-full min-h-[44px] select-none cursor-pointer transition-colors duration-150 z-10",
                                     isActive ? "text-black font-bold" : "text-on-surface-variant hover:text-white"
                                 )}
                             >
@@ -101,7 +102,7 @@ export const AppBottomNav = () => {
                                     />
                                 )}
                                 <Icon className={cn("w-4 h-4 relative z-10 shrink-0", "iconClass" in item && item.iconClass)} />
-                                <span className="text-2xs font-bold uppercase tracking-wider relative z-10">
+                                <span className="max-w-full truncate text-3xs font-bold uppercase tracking-normal min-[360px]:tracking-wide relative z-10">
                                     {item.label}
                                 </span>
                             </Link>

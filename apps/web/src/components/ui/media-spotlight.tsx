@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { m, useReducedMotion } from "framer-motion"
+import { m, useReducedMotion, type Variants } from "framer-motion"
 import { useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
 import { getLargeResImage, getMediumResImage, prewarmImages } from "@/lib/helpers/images"
@@ -11,6 +11,7 @@ import { stripHtml } from "@/lib/helpers/sanitizer"
 import { useSound } from "@/hooks/use-sound"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 import { usePerformanceStore, selectIsHeavyEffectsAllowed } from "@/lib/hardware/performance-store"
+import { heroItemVariants, useMotionTier } from "@/components/ui/kinetics"
 import type { SwimlaneItem } from "./swimlane"
 
 import { ERAS, ERA_COLOR_MAP, ERA_DEFAULTS, type EraId, getEraFromItem, isMovieItem } from "./media-spotlight-helpers"
@@ -28,6 +29,16 @@ interface MediaSpotlightProps {
     items: SwimlaneItem[]
     onNavigate: (item: SwimlaneItem) => void
     className?: string
+}
+
+/**
+ * Entrada de página (solo tier full, solo al montar): nav de eras → hero → hub
+ * suben en cascada de 60ms con el spring de entrada de heroItemVariants. El
+ * contenedor no anima nada propio; solo orquesta.
+ */
+const spotlightEntranceVariants: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.06 } },
 }
 
 const ERA_SERIES_ID_MAP: Record<EraId, number> = {
@@ -63,6 +74,9 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     const [isUserInteracting, setIsUserInteracting] = React.useState(false)
     const reduceMotion = useReducedMotion()
     const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed)
+    // Labels solo en full: en subtle/off el fundido de la ruta (home) basta.
+    const isFullMotion = useMotionTier() === "full"
+    const entranceBlock = isFullMotion ? heroItemVariants : undefined
 
     const colors = ERA_COLOR_MAP[activeEraId]
     const currentEraConfig = React.useMemo(() => ERAS.find(e => e.id === activeEraId), [activeEraId])
@@ -172,25 +186,11 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     const { data: activeAnimeEntry } = useGetAnimeEntry(
         isSeriesComplete ? targetSeriesMediaId : null
     )
-    // isTransitioning: flag de 600 ms que se activa en cada cambio de era.
-    // Pausa las animaciones secundarias (orbe pulsante) mientras coinciden el crossfade del
-    // DynamicBackdrop (~1000ms), la transición del hero (450ms) y el stagger del contenido.
-    const [isTransitioning, setIsTransitioning] = React.useState(false)
-    const transitionTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
     const initializedRef = React.useRef(false)
     const availableErasRef = React.useRef(availableEras)
     availableErasRef.current = availableEras
     const isUserInteractingRef = React.useRef(isUserInteracting)
     isUserInteractingRef.current = isUserInteracting
-
-    const triggerTransition = React.useCallback(() => {
-        setIsTransitioning(true)
-        if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current)
-        transitionTimerRef.current = setTimeout(() => {
-            setIsTransitioning(false)
-            transitionTimerRef.current = null
-        }, 600)
-    }, [])
 
     // Update active items when switching eras (calcula dirección del slide)
     const handleEraSelect = React.useCallback((eraId: EraId) => {
@@ -198,27 +198,29 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         const delta = order.indexOf(eraId) - order.indexOf(activeEraId)
         if (eraId !== activeEraId) {
             setDirection(delta >= 0 ? 1 : -1)
-            triggerTransition()
         }
         setActiveEraId(eraId)
-    }, [activeEraId, triggerTransition])
+    }, [activeEraId])
+
+    // Clic en la barra de eras: mismo sonido que dots y swipe del hero (que ya
+    // lo reproducen ellos antes de llamar a handleEraSelect).
+    const handleEraNavSelect = React.useCallback((eraId: EraId) => {
+        if (eraId !== activeEraId) playSound("category", 0.05)
+        handleEraSelect(eraId)
+    }, [activeEraId, handleEraSelect, playSound])
 
     const advanceEra = React.useCallback(() => {
         setDirection(1)
-        triggerTransition()
         setActiveEraId(prevEraId => {
             const list = availableErasRef.current
             const currentIndex = list.findIndex(e => e.id === prevEraId)
             const nextIndex = (currentIndex + 1) % list.length
             return list[nextIndex].id
         })
-    }, [triggerTransition])
+    }, [])
 
-    // Consolidated: Cleanup + Auto-rotate + Predictive prewarm + Init
+    // Consolidated: Auto-rotate + Predictive prewarm + Init
     React.useEffect(() => {
-        // 1. Cleanup timer on unmount
-        if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current)
-
         // 2. Predictive prewarm: siguiente era primero (rotación en 8s) + resto en el mismo idle
         if (availableEras.length > 1) {
             const curIdx = availableEras.findIndex(e => e.id === activeEraId)
@@ -253,7 +255,6 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         }
 
         return () => {
-            if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current)
             if (intervalId) clearInterval(intervalId)
         }
     }, [
@@ -322,8 +323,11 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     }, [navigate])
 
     return (
-        <section
+        <m.section
             aria-label="Contenido destacado"
+            variants={isFullMotion ? spotlightEntranceVariants : undefined}
+            initial={isFullMotion ? "hidden" : false}
+            animate={isFullMotion ? "visible" : undefined}
             onMouseEnter={() => setIsUserInteracting(true)}
             onMouseLeave={() => setIsUserInteracting(false)}
             onFocus={() => setIsUserInteracting(true)}
@@ -345,36 +349,21 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                         }}
                     />
                 )}
-
-                {isHeavyAllowed && colors && (
-                    <m.div
-                        animate={isTransitioning ? { opacity: 0 } : {
-                            opacity: [0.08, 0.15, 0.08],
-                        }}
-                        transition={isTransitioning
-                            ? { duration: 0.2, ease: "easeOut" }
-                            : { duration: 8, repeat: Infinity, ease: "easeInOut" }
-                        }
-                        className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full pointer-events-none transition-colors duration-700 transform-gpu will-change-[opacity]"
-                        style={{
-                            background: `radial-gradient(ellipse, color-mix(in srgb, ${colors.accent} 30%, transparent) 0%, transparent 70%)`
-                        }}
-                    />
-                )}
+                {/* Sin orbe que respira: el color de la era llega solo por el tinte de arriba. */}
             </div>
 
             {/* 1. Barra de Navegación Horizontal de Eras */}
-            <div className="relative z-10 w-full">
+            <m.div variants={entranceBlock} className="relative z-10 w-full">
                 <SpotlightEraNav
                     activeEraId={activeEraId}
                     categorizedData={categorizedData}
-                    onSelectEra={handleEraSelect}
+                    onSelectEra={handleEraNavSelect}
                     onHoverSound={playHoverSound}
                 />
-            </div>
+            </m.div>
 
             {/* 2. Hero Cinematográfico (Serie Principal) */}
-            <div className="relative z-10 w-full">
+            <m.div variants={entranceBlock} className="relative z-10 w-full">
                 <SpotlightHero
                     activeEraId={activeEraId}
                     direction={direction}
@@ -395,13 +384,14 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                     isPaused={isUserInteracting}
                     onCycleComplete={advanceEra}
                 />
-            </div>
+            </m.div>
 
             {/* 3. Lower Hub con switch Sagas / Películas (visible si hay contenido) */}
             {(activeEraSagas.length > 0 || activeEraMovies.length > 0) && (
-            <div className="relative z-10 w-full pt-4 md:pt-6">
+            <m.div variants={entranceBlock} className="relative z-10 w-full pt-4 md:pt-6">
                 <SpotlightLowerHub
                     activeEraId={activeEraId}
+                    direction={direction}
                     colors={colors}
                     activeEraSagas={activeEraSagas}
                     activeEraMovies={activeEraMovies}
@@ -413,8 +403,8 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                     onNavigateMovie={onNavigate}
                     onHoverSound={playHoverSound}
                 />
-            </div>
+            </m.div>
             )}
-        </section>
+        </m.section>
     )
 })

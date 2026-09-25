@@ -1,3 +1,6 @@
+import { getServerBaseUrl } from "@/api/client/server-url"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
+
 /**
  * Utility to ensure we always get the highest resolution image possible from TMDB or other providers.
  * TMDB often provides 'w500' or 'w780' by default, which can look blurry on high-PPI displays.
@@ -90,6 +93,35 @@ export const getPixelSampleImage = (url: string | null | undefined): string => {
         }
         return url
     })
+}
+
+interface VideoThumbnailSource {
+    path: string
+    fileModTime?: number | null
+    fileSize?: number | null
+}
+
+/**
+ * URL del frame que extrae el servidor (`/api/v1/video-thumbnail`).
+ *
+ * Con `fileModTime` y `fileSize` agrega `v`, que cambia cuando cambia el archivo:
+ * el servidor la responde como `immutable` y el navegador no la vuelve a pedir.
+ * Los parámetros van siempre en el mismo orden para que cada imagen tenga una sola
+ * URL y, por lo tanto, una sola entrada de caché.
+ */
+export const buildVideoThumbnailUrl = (
+    source: VideoThumbnailSource,
+    options: { startSec?: number | null; base?: string } = {},
+): string => {
+    const params = new URLSearchParams({ path: source.path })
+    if (options.startSec != null && options.startSec >= 0) {
+        params.set("t", String(Math.round(options.startSec)))
+    }
+    if (source.fileModTime && source.fileSize) {
+        params.set("v", `${source.fileModTime.toString(36)}-${source.fileSize.toString(36)}`)
+    }
+    const base = options.base ?? getServerBaseUrl()
+    return `${base}${API_ENDPOINTS.THUMBNAIL.GetVideoThumbnail.endpoint}?${params.toString()}`
 }
 
 const MAX_PREWARMED_URLS = 200

@@ -11,7 +11,7 @@ export function NotFound() {
                 El módulo que buscas no existe en este sector del universo.
             </p>
             <Link to="/home">
-                <Button className="px-8 py-3 bg-brand-accent text-on-primary font-display font-black text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all rounded-full h-auto shadow-brand-primary">
+                <Button className="px-8 py-3 bg-brand-accent text-on-primary font-display font-black text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition rounded-full h-auto shadow-brand-primary">
                     VOLVER AL INICIO
                 </Button>
             </Link>

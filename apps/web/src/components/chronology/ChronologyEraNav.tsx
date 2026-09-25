@@ -30,13 +30,15 @@ export const CHRONO_ERAS: ChronoEraItem[] = [
     shortTitle: 'Todas',
     years: '749 - 790',
     kanji: '全',
+    // --brand-accent guarda canales HSL ("0 0% 100%"): usado como color directo es inválido
+    // y la píldora activa quedaba sin fondo. Neutro propio, válido con cualquier tema.
     colors: {
-      accent: 'var(--brand-accent)',
-      glow: 'rgba(245, 158, 11, 0.5)',
-      glowStrong: 'rgba(245, 158, 11, 0.8)',
-      textBrand: 'text-brand-accent',
-      ambientGlow1: 'var(--brand-accent)',
-      ambientGlow2: '#f59e0b',
+      accent: 'rgba(255, 255, 255, 0.16)',
+      glow: 'rgba(255, 255, 255, 0.25)',
+      glowStrong: 'rgba(255, 255, 255, 0.4)',
+      textBrand: 'text-white',
+      ambientGlow1: '#e4e4e7',
+      ambientGlow2: '#a1a1aa',
     },
   },
   {
@@ -81,16 +83,21 @@ export const CHRONO_ERAS: ChronoEraItem[] = [
   },
 ];
 
+export interface EraProgress {
+  count: number;
+  read: number;
+}
+
 export interface ChronologyEraNavProps {
   activeEraId: EraFilter;
   onSelectEra: (eraId: EraFilter) => void;
-  volumeCountsByEra?: Record<EraFilter, number>;
+  eraProgress?: Record<EraFilter, EraProgress>;
 }
 
 export const ChronologyEraNav = React.memo(function ChronologyEraNav({
   activeEraId,
   onSelectEra,
-  volumeCountsByEra,
+  eraProgress,
 }: ChronologyEraNavProps) {
   const reduceMotion = useReducedMotion();
   const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed);
@@ -138,13 +145,14 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
     <div
       role="tablist"
       aria-label="Navegación de Eras de la Cronología"
-      className="relative z-20 flex items-center justify-between gap-2 bg-white/[0.04] backdrop-blur-overlay-xl border border-white/15 border-t-white/30 border-b-white/5 rounded-2xl p-1.5 sm:p-2 shadow-glass-highlight-md transform-gpu"
+      className="relative z-20 inline-flex max-w-full items-center bg-white/[0.04] border border-white/15 border-t-white/25 border-b-white/5 rounded-full p-1 shadow-glass-highlight-md"
     >
-      <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 py-0.5 max-w-full flex-1">
+      <div className="flex items-center gap-1 max-w-full overflow-x-auto no-scrollbar snap-x snap-mandatory flex-nowrap scroll-smooth">
         {CHRONO_ERAS.map((era, index) => {
           const isEraActive = era.id === activeEraId;
           const eraColors = era.colors;
-          const count = volumeCountsByEra ? volumeCountsByEra[era.id] ?? 0 : null;
+          const progress = eraProgress?.[era.id];
+          const readPercent = progress && progress.count > 0 ? (progress.read / progress.count) * 100 : 0;
 
           return (
             <button
@@ -161,12 +169,12 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
               }}
               onKeyDown={(e) => handleKeyDown(e, index)}
               title={
-                count !== null
-                  ? `Filtrar por ${era.title} (${era.years}) — ${count} lapsos`
+                progress
+                  ? `Filtrar por ${era.title} (${era.years}) — ${progress.read} de ${progress.count} lapsos vistos`
                   : `Filtrar por ${era.title} (${era.years})`
               }
               className={cn(
-                'relative flex flex-1 items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-full text-center shrink-0 select-none transition-[transform,background-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+                'relative flex shrink-0 items-center justify-center gap-1.5 sm:gap-2 min-h-[44px] px-2.5 sm:px-3 py-1.5 rounded-full text-center shrink-0 snap-start select-none transition-[transform,background-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black',
                 isEraActive
                   ? 'text-white font-extrabold cursor-pointer'
                   : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 cursor-pointer hover:scale-[1.02] active:scale-[0.98]',
@@ -219,7 +227,28 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
                 >
                   {era.shortTitle}
                 </span>
+                {progress && (
+                  <span className="sr-only">
+                    , {progress.read} de {progress.count} lapsos vistos
+                  </span>
+                )}
               </div>
+
+              {/* Avance de la era: filete fino en lugar de números dentro de la pastilla */}
+              {progress && progress.read > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute left-4 right-4 bottom-1 h-0.5 rounded-full bg-white/15 overflow-hidden z-10 pointer-events-none"
+                >
+                  <span
+                    className="block h-full rounded-full"
+                    style={{
+                      width: `${readPercent}%`,
+                      background: isEraActive ? 'rgba(255,255,255,0.9)' : eraColors.ambientGlow1,
+                    }}
+                  />
+                </span>
+              )}
             </button>
           );
         })}

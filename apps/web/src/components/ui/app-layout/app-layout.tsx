@@ -14,109 +14,11 @@ export const AppLayoutAnatomy = defineStyleAnatomy({
     ]),
 })
 
-export const AppLayoutHeaderAnatomy = defineStyleAnatomy({
-    root: cva([
-        "UI-AppLayoutHeader__root",
-        "relative w-full",
-    ]),
-})
-
-
-
 export const AppLayoutContentAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayoutContent__root",
         "flex-1 min-w-0 h-full flex flex-col overflow-hidden relative w-full",
     ]),
-})
-
-export const AppLayoutFooterAnatomy = defineStyleAnatomy({
-    root: cva([
-        "UI-AppLayoutFooter__root",
-        "relative",
-    ]),
-})
-
-export const AppLayoutStackAnatomy = defineStyleAnatomy({
-    root: cva([
-        "UI-AppLayoutStack__root",
-        "relative",
-    ], {
-        variants: {
-            spacing: {
-                sm: "space-y-2",
-                md: "space-y-4",
-                lg: "space-y-8",
-                xl: "space-y-10",
-            },
-        },
-        defaultVariants: {
-            spacing: "md",
-        },
-    }),
-})
-
-export const AppLayoutGridAnatomy = defineStyleAnatomy({
-    root: cva([
-        "UI-AppLayoutGrid__root",
-        "relative flex flex-col",
-    ], {
-        variants: {
-            breakBelow: {
-                sm: "sm:grid sm:space-y-0",
-                md: "md:grid md:space-y-0",
-                lg: "lg:grid lg:space-y-0",
-                xl: "xl:grid xl:space-y-0",
-                "2xl": "2xl:grid 2xl:space-y-0",
-                "3xl": "3xl:grid 3xl:space-y-0",
-            },
-            spacing: {
-                sm: "gap-2",
-                md: "gap-4",
-                lg: "gap-8",
-                xl: "gap-10",
-                "2xl": "gap-12",
-            },
-            cols: { 1: null, 2: null, 3: null, 4: null, 5: null, 6: null },
-        },
-        defaultVariants: {
-            breakBelow: "xl",
-            spacing: "md",
-            cols: 3,
-        },
-        compoundVariants: [
-            { breakBelow: "sm", cols: 1, className: "sm:grid-cols-1" },
-            { breakBelow: "sm", cols: 2, className: "sm:grid-cols-2" },
-            { breakBelow: "sm", cols: 3, className: "sm:grid-cols-3" },
-            { breakBelow: "sm", cols: 4, className: "sm:grid-cols-4" },
-            { breakBelow: "sm", cols: 5, className: "sm:grid-cols-5" },
-            { breakBelow: "sm", cols: 6, className: "sm:grid-cols-6" },
-            { breakBelow: "md", cols: 1, className: "md:grid-cols-1" },
-            { breakBelow: "md", cols: 2, className: "md:grid-cols-2" },
-            { breakBelow: "md", cols: 3, className: "md:grid-cols-3" },
-            { breakBelow: "md", cols: 4, className: "md:grid-cols-4" },
-            { breakBelow: "md", cols: 5, className: "md:grid-cols-5" },
-            { breakBelow: "md", cols: 6, className: "md:grid-cols-6" },
-            { breakBelow: "lg", cols: 1, className: "lg:grid-cols-1" },
-            { breakBelow: "lg", cols: 2, className: "lg:grid-cols-2" },
-            { breakBelow: "lg", cols: 3, className: "lg:grid-cols-3" },
-            { breakBelow: "lg", cols: 4, className: "lg:grid-cols-4" },
-            { breakBelow: "lg", cols: 5, className: "lg:grid-cols-5" },
-            { breakBelow: "lg", cols: 6, className: "lg:grid-cols-6" },
-            { breakBelow: "xl", cols: 1, className: "xl:grid-cols-1" },
-            { breakBelow: "xl", cols: 2, className: "xl:grid-cols-2" },
-            { breakBelow: "xl", cols: 3, className: "xl:grid-cols-3" },
-            { breakBelow: "xl", cols: 4, className: "xl:grid-cols-4" },
-            { breakBelow: "xl", cols: 5, className: "xl:grid-cols-5" },
-            { breakBelow: "xl", cols: 6, className: "xl:grid-cols-6" },
-            { breakBelow: "3xl", cols: 1, className: "3xl:grid-cols-1" },
-            { breakBelow: "3xl", cols: 2, className: "3xl:grid-cols-2" },
-            { breakBelow: "3xl", cols: 3, className: "3xl:grid-cols-3" },
-            { breakBelow: "3xl", cols: 4, className: "3xl:grid-cols-4" },
-            { breakBelow: "3xl", cols: 5, className: "3xl:grid-cols-5" },
-            { breakBelow: "3xl", cols: 6, className: "3xl:grid-cols-6" },
-        ],
-    }),
 })
 
 /* -------------------------------------------------------------------------------------------------

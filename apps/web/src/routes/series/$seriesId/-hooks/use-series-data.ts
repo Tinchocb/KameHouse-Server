@@ -1,10 +1,9 @@
 import { useMemo } from "react"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
-import { getHighResImage } from "@/lib/helpers/images"
+import { buildVideoThumbnailUrl, getHighResImage } from "@/lib/helpers/images"
 import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
 import { getNextInTimeline } from "@/lib/config/franchise_timeline"
 import { getSeriesHeroArt, heroArtFromUrl } from "@/lib/config/hero-art"
-import { getServerBaseUrl } from "@/api/client/server-url"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import type { Anime_Entry, Anime_Episode, Anime_LocalFile, Continuity_WatchHistoryItemResponse, Anime_LibraryCollection } from "@/api/generated/types"
 import type { SagaDTO, PremiumEpisode } from "@/api/types/series.types"
@@ -318,10 +317,9 @@ export function useSeriesData({
             entry?.media?.posterImage ||
             ""
 
-        const serverBase = getServerBaseUrl()
         let resolvedThumbnail = resumeEp.episodeMetadata?.image || ""
         if (!resolvedThumbnail && lf?.path) {
-            resolvedThumbnail = `${serverBase}/api/v1/video-thumbnail?path=${encodeURIComponent(lf.path)}`
+            resolvedThumbnail = buildVideoThumbnailUrl(lf)
         }
         if (!resolvedThumbnail) {
             resolvedThumbnail = artworkFallback
@@ -381,7 +379,6 @@ export function useSeriesData({
             : computedEpisodes.filter(ep => ep.sagaId === activeSagaId)
 
         const tmdbId = entry?.media?.tmdbId
-        const serverBase = getServerBaseUrl()
 
         return filtered.map(ep => {
             const epNum = episodeNumberOf(ep)
@@ -423,7 +420,7 @@ export function useSeriesData({
 
             let resolvedThumbnail = ep.episodeMetadata?.image || ""
             if (!resolvedThumbnail && lf?.path) {
-                resolvedThumbnail = `${serverBase}/api/v1/video-thumbnail?path=${encodeURIComponent(lf.path)}`
+                resolvedThumbnail = buildVideoThumbnailUrl(lf)
             }
             if (!resolvedThumbnail) {
                 resolvedThumbnail = artworkFallback

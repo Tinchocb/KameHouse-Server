@@ -1,76 +1,49 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
-import { createLazyFileRoute, useNavigate } from '@tanstack/react-router';
+import { createLazyFileRoute, useNavigate, useRouter } from '@tanstack/react-router';
 import { toast } from 'sonner';
-import { VOLUMES_DATA } from '@/components/chronology/data/volumes';
-import { VolumeData, EraFilter, AspectRatioType, MovieFilterOption } from '@/components/chronology/types';
+import { VOLUMES_DATA, LEGACY_VOLUME_TO_SPANS } from '@/components/chronology/data/volumes';
+import { VolumeData, EraFilter, AspectRatioType } from '@/components/chronology/types';
+import type { EraProgress } from '@/components/chronology/ChronologyEraNav';
 import { compareInUniverse } from '@/components/chronology/data/spansToVolumes';
-import { getMoviesForFilter, CHRONOLOGY_MOVIES_DATA } from '@/components/chronology/data/moviesData';
-import { useReadVolumeIds } from './-hooks/use-timeline-prefs';
-import { Header } from '@/components/chronology/Header';
-import { SimplifiedTimeline } from '@/components/chronology/SimplifiedTimeline';
-import { VolumeInspectorModal } from '@/components/chronology/VolumeInspectorModal';
+import { useChronologyProgress, useShowInterludes } from './-hooks/use-timeline-prefs';
+import { Header, type StatusFilter } from '@/components/chronology/Header';
+import { AlternatingTimeline } from '@/components/chronology/AlternatingTimeline';
+import { ChronologyViewMenu } from '@/components/chronology/ChronologyViewMenu';
+import { type MomentPlayInfo } from '@/components/chronology/MomentStrip';
 import { SectionBar } from '@/components/ui/sectionbar';
 import { useSpring, useReducedMotion } from '@/components/ui/kinetics/hooks';
-import { useGetChronologyTimeline } from '@/api/hooks/chronology.hooks';
+
+const VolumeInspectorModal = React.lazy(() =>
+  import('@/components/chronology/VolumeInspectorModal').then((mod) => ({ default: mod.VolumeInspectorModal }))
+);
+const LoreEncyclopediaModal = React.lazy(() =>
+  import('@/components/chronology/LoreEncyclopediaModal').then((mod) => ({ default: mod.LoreEncyclopediaModal }))
+);
+import { useGetChronologyMomentTimes } from '@/api/hooks/chronology.hooks';
 import { useGetLibraryCollection } from '@/api/hooks/anime_collection.hooks';
 import { getSafeCollectionEntries } from '@/lib/helpers/collection';
 import { DRAGON_BALL_SERIES } from '@/lib/config/dragonball_sagas';
 import { getVolumeLoreEnrichment } from '@/components/chronology/data/loreEnrichment';
 import { sounds } from '@/components/chronology/utils/audio';
+import { PlayerFallback } from '@/components/video/player-fallback';
 
 export const Route = createLazyFileRoute('/chronology/')({
   component: ChronologyPage,
 });
 
-const MILESTONE_TO_VOLUME_MAP: Record<string, string | string[]> = {
-  m_db_pilaf_21tb: ['db-pilaf', 'db-torneo-21'],
-  m_db_red_ribbon: ['db-red-ribbon', 'db-uranai-baba'],
-  m_db_22tb_piccolo: ['db-torneo-22', 'db-piccolo-daimaku'],
-  m_db_23tb_piccolojr: ['db-piccolo-jr'],
-  m_dbz_saiyans: ['dbz-saiyajin-raditz', 'dbz-saiyajin-vegeta'],
-  m_dbz_saiyajin: ['dbz-saiyajin-raditz', 'dbz-saiyajin-vegeta'],
-  m_dbz_namek_frieza: ['dbz-namek-viaje', 'dbz-namek-ginyu-freezer', 'dbz-freezer-super-saiyajin'],
-  m_dbz_freezer: ['dbz-namek-viaje', 'dbz-namek-ginyu-freezer', 'dbz-freezer-super-saiyajin', 'dbz-garlic-jr'],
-  m_dbz_androids_cell: ['dbz-androides-trunks', 'dbz-cell-imperfecto-perfeccion'],
-  m_dbz_cell_games: ['dbz-juegos-de-cell', 'dbz-torneo-otro-mundo'],
-  m_dbz_majin_buu: ['dbz-buu-majin-vegeta', 'dbz-buu-ssj3-fusion', 'dbz-buu-gotenks-gohan-mistico', 'dbz-buu-vegetto-kidbuu-final'],
-  m_db_daima: ['db-daima-conspiracion', 'db-daima-climax'],
-  m_dbs_gods_frieza: ['dbs-batalla-dioses', 'dbs-resurreccion-f'],
-  m_dbs_u6_black: ['dbs-torneo-u6', 'dbs-copy-vegeta', 'dbs-goku-black'],
-  // Nuevos hitos finos del backend (cuando existan)
-  m_dbs_u6: ['dbs-torneo-u6'],
-  m_dbs_copy_vegeta: ['dbs-copy-vegeta'],
-  m_dbs_black: ['dbs-goku-black'],
-  m_dbs_exhibicion: ['dbs-exhibicion-zen'],
-  m_dbs_reclutamiento: ['dbs-reclutamiento-u7'],
-  m_dbs_top: ['dbs-torneo-del-poder'],
-  m_db_gt: ['dbgt-black-star', 'dbgt-baby-ssj4', 'dbgt-super-17', 'dbgt-dragones-malignos'],
-  m_db_gt_black_star: ['dbgt-black-star'],
-  m_db_gt_baby: ['dbgt-baby-ssj4'],
-  m_db_gt_super17: ['dbgt-super-17'],
-  m_db_gt_dragons: ['dbgt-dragones-malignos'],
-  // Aliases legacy (13 tomos) → primer lapso del grupo para deep-links antiguos
-  'vol-clasico-origen': 'db-pilaf',
-  'vol-clasico-redribbon': 'db-red-ribbon',
-  'vol-clasico-piccolo': 'db-piccolo-daimaku',
-  'vol-saiyan-choque': 'dbz-saiyajin-raditz',
-  'vol-freezer-ssj': 'dbz-namek-viaje',
-  'vol-cell-trunks': 'dbz-androides-trunks',
-  'vol-cell-games': 'dbz-juegos-de-cell',
-  'vol-buu-caos': 'dbz-buu-majin-vegeta',
-  'vol-daima-reino': 'db-daima-conspiracion',
-  'vol-super-dioses': 'dbs-batalla-dioses',
-  'vol-super-black': 'dbs-goku-black',
-  'vol-super-torneo': 'dbs-torneo-del-poder',
-  'vol-gt-viaje': 'dbgt-black-star',
-};
-
-function resolveVolumeIds(milestoneId: string): string[] {
-  const mapped = MILESTONE_TO_VOLUME_MAP[milestoneId];
-  if (!mapped) return [milestoneId];
-  return Array.isArray(mapped) ? mapped : [mapped];
+/** Deep-links viejos (`vol-*`, 13 tomos) apuntan al primer lapso de su grupo. */
+function resolveHighlightId(id: string): string {
+  return LEGACY_VOLUME_TO_SPANS[id]?.[0] ?? id;
 }
+
+const ERA_BY_SERIES_TAG: Record<VolumeData['seriesTag'], Exclude<EraFilter, 'all'>> = {
+  'Dragon Ball Clásico': 'db-clasico',
+  'Dragon Ball Z': 'db-z',
+  'Dragon Ball Daima': 'db-daima',
+  'Dragon Ball Super': 'db-super',
+  'Dragon Ball GT': 'db-gt',
+};
 
 function parseEraParam(rawEra?: string): EraFilter {
   if (!rawEra) return 'all';
@@ -85,23 +58,27 @@ function parseEraParam(rawEra?: string): EraFilter {
   return validEras.includes(raw as EraFilter) ? (raw as EraFilter) : 'all';
 }
 
+/** Lapso enriquecido por (id, mediaId, arte): la misma entrada devuelve el mismo objeto entre renders. */
+const ENRICHED_VOLUME_CACHE = new Map<string, VolumeData>();
+
 function ChronologyPage() {
   const searchParams = Route.useSearch();
-  const { data: chronologyData, isLoading } = useGetChronologyTimeline();
   const reduceMotion = useReducedMotion();
 
-  const initialTargetVolumeId = searchParams.highlight
-    ? (resolveVolumeIds(searchParams.highlight)[0] ?? searchParams.highlight)
-    : null;
+  const initialTargetVolumeId = searchParams.highlight ? resolveHighlightId(searchParams.highlight) : null;
 
   // Highlight state for deep-linking
   const [highlightedVolumeId, setHighlightedVolumeId] = useState<string | null>(initialTargetVolumeId);
   const [prevHighlight, setPrevHighlight] = useState(searchParams.highlight);
+  // Resaltado que llega por URL (p. ej. al volver del reproductor): se salta directo a la tarjeta,
+  // sin recorrer la página con scroll suave.
+  const highlightFromUrlRef = React.useRef(Boolean(initialTargetVolumeId));
 
   if (searchParams.highlight !== prevHighlight) {
     setPrevHighlight(searchParams.highlight);
     if (searchParams.highlight) {
-      setHighlightedVolumeId(resolveVolumeIds(searchParams.highlight)[0] ?? searchParams.highlight);
+      highlightFromUrlRef.current = true;
+      setHighlightedVolumeId(resolveHighlightId(searchParams.highlight));
     }
   }
 
@@ -116,7 +93,8 @@ function ChronologyPage() {
     }
   }
 
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.q ?? '');
+  const { data: serverMomentTimes } = useGetChronologyMomentTimes();
 
   // Handle highlight and auto-scroll
   useEffect(() => {
@@ -125,10 +103,13 @@ function ChronologyPage() {
     const timer = setTimeout(() => {
       const el = document.getElementById(`timeline-node-${highlightedVolumeId}`);
       if (el) {
+        // 'start' + el scroll-margin del nodo: la tarjeta queda entera debajo de la barra superior
+        // (con 'center' las tarjetas más altas que la ventana quedaban con el tope afuera).
         el.scrollIntoView({
-          behavior: reduceMotion ? 'auto' : 'smooth',
-          block: 'center',
+          behavior: reduceMotion || highlightFromUrlRef.current ? 'auto' : 'smooth',
+          block: 'start',
         });
+        highlightFromUrlRef.current = false;
       }
     }, 350);
 
@@ -146,153 +127,128 @@ function ChronologyPage() {
   const [inspectedVolume, setInspectedVolume] = useState<VolumeData | null>(null);
   const [aspectRatio, setAspectRatio] = useState<AspectRatioType>('2:3');
   const [isFlipped, setIsFlipped] = useState(false);
-
-  // Mark as Read Persistence State (Synchronized with localStorage & server)
-  // Migra IDs legacy vol-* a span ids (35 lapsos) una sola vez.
-  const { readVolumeIds, handleToggleRead, handleMarkAllRead, handleResetRead, mergeServerWatched } = useReadVolumeIds();
-
-  // Sync watched status from server into local read status
-  useEffect(() => {
-    if (chronologyData?.milestones) {
-      const serverWatchedIds = new Set<string>();
-      for (const m of chronologyData.milestones) {
-        if (m.isWatched) {
-          for (const volId of resolveVolumeIds(m.id)) serverWatchedIds.add(volId);
-        }
-      }
-      if (serverWatchedIds.size > 0) {
-        mergeServerWatched(serverWatchedIds);
-      }
-    }
-  }, [chronologyData, mergeServerWatched]);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const { showInterludes, handleToggleInterludes } = useShowInterludes();
+  const [isEncyclopediaOpen, setIsEncyclopediaOpen] = useState(false);
 
   const navigate = useNavigate();
+  const router = useRouter();
+  // Pantalla de carga desde el toque en reproducir hasta que la serie abre el reproductor.
+  const [launching, setLaunching] = useState<{ label: string; sublabel: string } | null>(null);
   const { data: libraryCollection } = useGetLibraryCollection();
-  const [movieFilter, setMovieFilter] = useState<MovieFilterOption>('none');
 
-  const movieCounts = useMemo(() => {
-    return {
-      none: VOLUMES_DATA.length,
-      canon: VOLUMES_DATA.length + CHRONOLOGY_MOVIES_DATA.filter((m) => m.isCanonMovie).length,
-      all: VOLUMES_DATA.length + CHRONOLOGY_MOVIES_DATA.length,
-    };
-  }, []);
-
-  // Map user library entries to resolved mediaId
-  const { seriesMediaMap, moviesMediaMap } = useMemo(() => {
-    const safeEntries = getSafeCollectionEntries(libraryCollection);
-    const seriesMap = new Map<'classic' | 'z' | 'super' | 'daima' | 'gt', number>();
-    const moviesMap = new Map<number, number>();
-
-    for (const entry of safeEntries) {
+  // Serie de la biblioteca por era: mediaId para reproducir y arte para el inspector.
+  const seriesMediaMap = useMemo(() => {
+    const map = new Map<NonNullable<VolumeData['seriesId']>, { mediaId: number; posterUrl?: string; backdropUrl?: string }>();
+    for (const entry of getSafeCollectionEntries(libraryCollection)) {
       const tmdbId = entry.media?.tmdbId;
       if (!tmdbId) continue;
-
-      // Series mapping
-      if (tmdbId === DRAGON_BALL_SERIES.ORIGINAL) seriesMap.set('classic', entry.mediaId);
+      const info = {
+        mediaId: entry.mediaId,
+        posterUrl: entry.media?.posterImage || undefined,
+        backdropUrl: entry.media?.bannerImage || undefined,
+      };
+      if (tmdbId === DRAGON_BALL_SERIES.ORIGINAL) map.set('classic', info);
       else if (
         tmdbId === DRAGON_BALL_SERIES.Z ||
         tmdbId === DRAGON_BALL_SERIES.KAI ||
         tmdbId === DRAGON_BALL_SERIES.KAI_FINAL_CHAPTERS ||
         tmdbId === 42705
       ) {
-        if (!seriesMap.has('z')) seriesMap.set('z', entry.mediaId);
-      } else if (tmdbId === DRAGON_BALL_SERIES.SUPER) seriesMap.set('super', entry.mediaId);
-      else if (tmdbId === DRAGON_BALL_SERIES.DAIMA) seriesMap.set('daima', entry.mediaId);
-      else if (tmdbId === DRAGON_BALL_SERIES.GT) seriesMap.set('gt', entry.mediaId);
-
-      // Movie mapping
-      if (
-        entry.media?.format === 'MOVIE' ||
-        entry.media?.format === 'SPECIAL' ||
-        entry.media?.format === 'ONA' ||
-        entry.media?.format === 'OVA'
-      ) {
-        moviesMap.set(tmdbId, entry.mediaId);
-      }
+        if (!map.has('z')) map.set('z', info);
+      } else if (tmdbId === DRAGON_BALL_SERIES.SUPER) map.set('super', info);
+      else if (tmdbId === DRAGON_BALL_SERIES.DAIMA) map.set('daima', info);
+      else if (tmdbId === DRAGON_BALL_SERIES.GT) map.set('gt', info);
     }
-
-    return { seriesMediaMap: seriesMap, moviesMediaMap: moviesMap };
+    return map;
   }, [libraryCollection]);
 
-  // Combine TV volumes + Movies according to selected filter
-  const baseVolumes = useMemo(() => {
-    const movies = getMoviesForFilter(movieFilter);
-    return [...VOLUMES_DATA, ...movies];
-  }, [movieFilter]);
-
-  // Enrich volumes with backend media, poster data, and lore catch-up keys, ordenados in-universe
+  // Lapsos con serie de la biblioteca y lore de catch-up, ordenados in-universe.
+  // Un lapso cuyo arte y mediaId no cambiaron conserva el mismo objeto: así una
+  // actualización de la biblioteca no re-renderiza las 40 tarjetas.
   const enrichedVolumes: VolumeData[] = useMemo(() => {
-    type BackendMilestone = NonNullable<NonNullable<typeof chronologyData>['milestones']>[number];
-    const milestonesByVolumeId = new Map<string, BackendMilestone>();
-    if (chronologyData?.milestones) {
-      for (const m of chronologyData.milestones) {
-        for (const volId of resolveVolumeIds(m.id)) {
-          if (!milestonesByVolumeId.has(volId)) {
-            milestonesByVolumeId.set(volId, m);
-          }
-        }
-      }
-    }
-
-    return baseVolumes.map((vol) => {
-      const m = milestonesByVolumeId.get(vol.id);
+    return VOLUMES_DATA.map((vol) => {
+      const series = vol.seriesId ? seriesMediaMap.get(vol.seriesId) : undefined;
+      const mediaId = series?.mediaId ?? vol.mediaId;
+      const posterUrl = series?.posterUrl || vol.posterUrl;
+      const backdropUrl = series?.backdropUrl || vol.backdropUrl;
+      const cacheKey = `${vol.id}|${mediaId ?? ''}|${posterUrl ?? ''}|${backdropUrl ?? ''}`;
+      const cached = ENRICHED_VOLUME_CACHE.get(cacheKey);
+      if (cached) return cached;
       const lore = getVolumeLoreEnrichment(vol.id);
-
-      // Resolve mediaId from local library if not provided by backend
-      let resolvedMediaId = m?.mediaId ?? vol.mediaId;
-      if (!resolvedMediaId) {
-        if (vol.isMovie && vol.tmdbId) {
-          resolvedMediaId = moviesMediaMap.get(vol.tmdbId);
-        } else if (vol.seriesId) {
-          resolvedMediaId = seriesMediaMap.get(vol.seriesId);
-        }
-      }
-
-      return {
+      const enriched: VolumeData = {
         ...vol,
-        mediaId: resolvedMediaId,
-        tmdbId: m?.tmdbId ?? vol.tmdbId,
-        canonStatus: m?.canonStatus ?? vol.canonStatus,
-        importance: m?.importance ?? vol.importance,
-        posterUrl: m?.posterImage || vol.posterUrl,
-        backdropUrl: m?.backdropImage || vol.backdropUrl,
-        isWatched: m?.isWatched ?? vol.isWatched,
+        mediaId,
+        posterUrl,
+        backdropUrl,
         fillerEpisodes: lore?.fillerEpisodes ?? vol.fillerEpisodes,
         previouslyOn: lore?.previouslyOn ?? vol.previouslyOn,
         quickCatchUpKeys: lore?.quickCatchUpKeys ?? vol.quickCatchUpKeys,
         recommendedStartEpisode: lore?.recommendedStartEpisode ?? vol.recommendedStartEpisode,
       };
+      ENRICHED_VOLUME_CACHE.set(cacheKey, enriched);
+      return enriched;
     }).sort(compareInUniverse);
-  }, [baseVolumes, chronologyData, seriesMediaMap, moviesMediaMap]);
+  }, [seriesMediaMap]);
+
+  // Avance por lapso (historial + marcas manuales), guardado en el servidor.
+  const {
+    progressById,
+    readVolumeIds,
+    handleToggleRead,
+    setWatched,
+    snapshotOverrides,
+    restoreOverrides,
+  } = useChronologyProgress(enrichedVolumes);
+
+  // Precarga de la página de cada serie (código + datos) para que reproducir no espere:
+  // en segundo plano al abrir la cronología y otra vez al apuntar una tarjeta, porque la
+  // precarga del router vence a los 30 s.
+  const preloadedAtRef = React.useRef(new Map<number, number>());
+  const preloadSeries = useCallback(
+    (mediaId: number | undefined) => {
+      if (!mediaId) return;
+      const last = preloadedAtRef.current.get(mediaId) ?? 0;
+      if (Date.now() - last < 25_000) return;
+      preloadedAtRef.current.set(mediaId, Date.now());
+      router
+        .preloadRoute({ to: '/series/$seriesId', params: { seriesId: String(mediaId) }, search: { saga: '', subSaga: '' } })
+        .catch(() => preloadedAtRef.current.delete(mediaId));
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    const mediaIds = [...new Set(enrichedVolumes.map((v) => v.mediaId).filter((id): id is number => !!id))];
+    if (mediaIds.length === 0) return;
+    const run = () => mediaIds.forEach(preloadSeries);
+    if (typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(run, { timeout: 3000 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const timer = setTimeout(run, 1500);
+    return () => clearTimeout(timer);
+  }, [enrichedVolumes, preloadSeries]);
 
   // Playback navigation handler directly from chronology to player/series/movies
   const handlePlayVolume = useCallback(
-    (vol: VolumeData, targetEpisodeNum?: number) => {
+    (vol: VolumeData, targetEpisodeNum?: number, momentInfo?: MomentPlayInfo) => {
       sounds.playSelect();
-      if (vol.isMovie) {
-        if (vol.mediaId) {
-          navigate({
-            to: '/movies/$movieId',
-            params: { movieId: String(vol.mediaId) },
-          });
-        } else {
-          toast.info(`"${vol.title}" no está disponible en tu biblioteca.`, {
-            description: 'Puedes escanearla o vincularla desde Ajustes > Biblioteca.',
-          });
-        }
-        return;
-      }
-
       // Serie de TV
       const resolvedEp = targetEpisodeNum ?? vol.recommendedStartEpisode ?? vol.startEpisode ?? 1;
       if (vol.mediaId) {
+        setLaunching({ label: `Preparando Cap. ${resolvedEp}`, sublabel: momentInfo?.title || vol.title });
         navigate({
           to: '/series/$seriesId',
           params: { seriesId: String(vol.mediaId) },
           search: {
             saga: vol.sagaId ?? '',
             autoplay: String(resolvedEp),
+            ...(momentInfo?.seconds != null && momentInfo.seconds > 0 ? { t: momentInfo.seconds } : {}),
+            ...(momentInfo?.key ? { moment: momentInfo.key } : {}),
+            ...(momentInfo?.title ? { momentTitle: momentInfo.title } : {}),
+            // Al cerrar el reproductor, la serie vuelve a este lapso de la cronología.
+            chrono: vol.id,
           },
         });
       } else {
@@ -304,33 +260,66 @@ function ChronologyPage() {
     [navigate]
   );
 
-  const handleMarkAllReadHere = () => {
-    handleMarkAllRead(enrichedVolumes.map((v) => v.id));
-  };
+  // "Marcar todos" y "Reiniciar" se aplican al instante y se pueden deshacer.
+  const applyBulkWithUndo = useCallback(
+    (watched: boolean) => {
+      const snapshot = snapshotOverrides();
+      setWatched(enrichedVolumes.map((v) => v.id), watched);
+      toast.success(watched ? 'Todos los lapsos marcados como vistos' : 'Progreso de la cronología reiniciado', {
+        action: {
+          label: 'Deshacer',
+          onClick: () => {
+            restoreOverrides(snapshot);
+            toast.info('Progreso restaurado');
+          },
+        },
+      });
+    },
+    [enrichedVolumes, setWatched, snapshotOverrides, restoreOverrides]
+  );
+  const handleMarkAllReadHere = useCallback(() => applyBulkWithUndo(true), [applyBulkWithUndo]);
+  const handleResetReadWithUndo = useCallback(() => applyBulkWithUndo(false), [applyBulkWithUndo]);
 
-  // Count volumes per narrative Era
-  const volumeCountsByEra = useMemo(() => {
-    return {
-      all: enrichedVolumes.length,
-      'db-clasico': enrichedVolumes.filter((v) => v.seriesTag === 'Dragon Ball Clásico').length,
-      'db-z': enrichedVolumes.filter((v) => v.seriesTag === 'Dragon Ball Z').length,
-      'db-daima': enrichedVolumes.filter((v) => v.seriesTag === 'Dragon Ball Daima').length,
-      'db-super': enrichedVolumes.filter((v) => v.seriesTag === 'Dragon Ball Super').length,
-      'db-gt': enrichedVolumes.filter((v) => v.seriesTag === 'Dragon Ball GT').length,
-    };
-  }, [enrichedVolumes]);
+  // Sync URL search params with era and search query
+  useEffect(() => {
+    navigate({
+      to: '/chronology',
+      search: (prev) => ({
+        ...prev,
+        era: eraFilter !== 'all' ? eraFilter : undefined,
+        q: searchQuery.trim() || undefined,
+      }),
+      replace: true,
+    });
+  }, [eraFilter, searchQuery, navigate]);
 
-  // Filter volumes by Era, Saga, and Search query
+  // Lapsos y vistos por era: alimenta las pestañas de era (única navegación por eras).
+  const eraProgress = useMemo(() => {
+    const out = Object.fromEntries(
+      (['all', 'db-clasico', 'db-z', 'db-daima', 'db-super', 'db-gt'] as const).map((era) => [era, { count: 0, read: 0 }])
+    ) as Record<EraFilter, EraProgress>;
+    for (const vol of enrichedVolumes) {
+      const isRead = readVolumeIds.has(vol.id);
+      for (const era of ['all', ERA_BY_SERIES_TAG[vol.seriesTag]] as const) {
+        out[era].count += 1;
+        if (isRead) out[era].read += 1;
+      }
+    }
+    return out;
+  }, [enrichedVolumes, readVolumeIds]);
+
+  // Filter volumes by Era, Status, Saga, and Search query
   const filteredVolumes = useMemo(() => {
     return enrichedVolumes.filter((vol) => {
       // 1. Era filter
-      if (eraFilter === 'db-clasico' && vol.seriesTag !== 'Dragon Ball Clásico') return false;
-      if (eraFilter === 'db-z' && vol.seriesTag !== 'Dragon Ball Z') return false;
-      if (eraFilter === 'db-daima' && vol.seriesTag !== 'Dragon Ball Daima') return false;
-      if (eraFilter === 'db-super' && vol.seriesTag !== 'Dragon Ball Super') return false;
-      if (eraFilter === 'db-gt' && vol.seriesTag !== 'Dragon Ball GT') return false;
+      if (eraFilter !== 'all' && ERA_BY_SERIES_TAG[vol.seriesTag] !== eraFilter) return false;
 
-      // 2. Search query
+      // 2. Status filter
+      const isRead = readVolumeIds.has(vol.id);
+      if (statusFilter === 'pending' && isRead) return false;
+      if (statusFilter === 'watched' && !isRead) return false;
+
+      // 3. Search query
       const q = searchQuery.trim().toLowerCase();
       if (!q) return true;
 
@@ -348,7 +337,7 @@ function ChronologyPage() {
 
       return matchesQuery;
     });
-  }, [enrichedVolumes, eraFilter, searchQuery]);
+  }, [enrichedVolumes, eraFilter, statusFilter, readVolumeIds, searchQuery]);
 
   const inspectedIndex = useMemo(() => {
     if (!inspectedVolume) return -1;
@@ -369,61 +358,66 @@ function ChronologyPage() {
     }
   }, [inspectedIndex, filteredVolumes]);
 
-  const handleOpenInspector = (vol: VolumeData) => {
+  const handleOpenInspector = useCallback((vol: VolumeData) => {
     setInspectedVolume(vol);
     setIsFlipped(false);
-  };
+  }, []);
+  const handleVolumeIntent = useCallback((vol: VolumeData) => preloadSeries(vol.mediaId), [preloadSeries]);
+
+  // Keyboard navigation: j/k move, Enter plays, v toggles watched
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === 'j' || e.key === 'J') {
+        e.preventDefault();
+        sounds.playSelect();
+        const currentIdx = filteredVolumes.findIndex((v) => v.id === highlightedVolumeId);
+        const nextIdx = currentIdx < filteredVolumes.length - 1 ? currentIdx + 1 : 0;
+        const targetVol = filteredVolumes[nextIdx];
+        if (targetVol) {
+          setHighlightedVolumeId(targetVol.id);
+        }
+      } else if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        sounds.playSelect();
+        const currentIdx = filteredVolumes.findIndex((v) => v.id === highlightedVolumeId);
+        const prevIdx = currentIdx > 0 ? currentIdx - 1 : filteredVolumes.length - 1;
+        const targetVol = filteredVolumes[prevIdx];
+        if (targetVol) {
+          setHighlightedVolumeId(targetVol.id);
+        }
+      } else if (e.key === 'v' || e.key === 'V') {
+        if (highlightedVolumeId) {
+          e.preventDefault();
+          sounds.playSelect();
+          handleToggleRead(highlightedVolumeId);
+        }
+      } else if (e.key === 'Enter') {
+        if (highlightedVolumeId) {
+          const targetVol = filteredVolumes.find((v) => v.id === highlightedVolumeId);
+          if (targetVol) {
+            e.preventDefault();
+            sounds.playSelect();
+            handlePlayVolume(targetVol);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredVolumes, highlightedVolumeId, handleToggleRead, handlePlayVolume]);
 
   const emptyStateSpring = useSpring(320, 28, 0.8);
-
-  if (isLoading && !chronologyData) {
-    return (
-      <div className="relative min-h-screen text-on-surface overflow-x-hidden font-sans">
-        <div className="relative z-10 flex flex-col">
-          {/* Header Skeleton inside full-width container */}
-          <div className="w-full px-4 sm:px-6 md:px-8 xl:px-12 2xl:px-16 pt-4 md:pt-12 pb-4 space-y-4 animate-pulse">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-surface-container-high shrink-0" />
-                <div className="space-y-2">
-                  <div className="h-6 w-56 sm:w-72 bg-surface-container-high rounded-lg" />
-                  <div className="h-3 w-44 sm:w-60 bg-surface-container-high/60 rounded-md" />
-                </div>
-              </div>
-              <div className="h-10 w-full sm:w-72 bg-surface-container-low rounded-full border border-white/10" />
-            </div>
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-3 pt-1">
-              <div className="flex-1 w-full flex items-center gap-2 bg-bg-primary/65 border border-white/15 rounded-full p-1.5 sm:p-2 overflow-hidden">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="h-9 sm:h-10 w-24 sm:w-32 bg-surface-container-low rounded-full shrink-0" />
-                ))}
-              </div>
-              <div className="h-10 w-48 bg-surface-container-low rounded-full border border-white/10 shrink-0 self-start lg:self-auto" />
-            </div>
-          </div>
-
-          {/* SectionBar Skeleton & Grid Skeleton inside page-container */}
-          <div className="page-container space-y-4 pb-12 animate-pulse">
-            {/* Eje cronológico Skeleton (espeja la pista de nodos) */}
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
-              <div className="flex gap-3 overflow-hidden">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="h-16 w-20 rounded-xl bg-surface-container-low shrink-0" />
-                ))}
-              </div>
-            </div>
-            <SectionBar variant="minimal" label="Línea de Tiempo" className="bg-transparent text-on-surface">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 pt-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-                  <div key={i} className="aspect-[2/3] bg-surface-container/60 border border-white/10 rounded-2xl" />
-                ))}
-              </div>
-            </SectionBar>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="relative min-h-screen text-on-surface overflow-x-hidden selection:bg-brand-accent/30 font-sans">
@@ -436,14 +430,26 @@ function ChronologyPage() {
           }}
           searchQuery={searchQuery}
           onSearchChange={(q) => setSearchQuery(q)}
-          volumeCountsByEra={volumeCountsByEra}
-          movieFilter={movieFilter}
-          onSelectMovieFilter={setMovieFilter}
-          movieCounts={movieCounts}
+          eraProgress={eraProgress}
+          onOpenEncyclopedia={() => setIsEncyclopediaOpen(true)}
+          actions={
+            <ChronologyViewMenu
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              showInterludes={showInterludes}
+              onToggleInterludes={handleToggleInterludes}
+              totalVolumes={eraProgress.all.count}
+              readCount={eraProgress.all.read}
+              onMarkAllRead={handleMarkAllReadHere}
+              onResetRead={handleResetReadWithUndo}
+            />
+          }
         />
 
-        <div className="w-full px-4 sm:px-6 md:px-8 xl:px-12 2xl:px-16 space-y-4 pb-8">
-          {/* Main Single-Focus Content: The Simplified Timeline */}
+        {/* La línea de tiempo queda en una columna de lectura */}
+        <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 space-y-4 pt-4 pb-8">
+
+          {/* Main Single-Focus Content: The Alternating Timeline */}
           <main className="flex-1 w-full py-2 flex flex-col gap-6">
             {filteredVolumes.length === 0 ? (
               <div className="flex min-h-[50vh] items-center justify-center px-4">
@@ -455,7 +461,7 @@ function ChronologyPage() {
                 >
                   <h3 className="font-display text-lg font-black uppercase tracking-wide text-white">Sin resultados</h3>
                   <p className="text-xs text-on-surface-variant font-mono">
-                    No se encontraron episodios o películas para los filtros seleccionados
+                    No se encontraron lapsos para los filtros seleccionados
                     {searchQuery && ` con la búsqueda «${searchQuery}»`}.
                   </p>
                   <div className="pt-2">
@@ -463,9 +469,10 @@ function ChronologyPage() {
                       type="button"
                       onClick={() => {
                         setEraFilter('all');
+                        setStatusFilter('all');
                         setSearchQuery('');
                       }}
-                      className="min-h-[44px] px-6 py-2 rounded-full bg-brand-accent hover:brightness-110 text-xs font-display tracking-widest font-black uppercase text-black shadow-brand-primary cursor-pointer active:scale-95 transition-all"
+                      className="min-h-[44px] px-6 py-2 rounded-full bg-brand-accent hover:brightness-110 text-xs font-display tracking-widest font-black uppercase text-black shadow-brand-primary cursor-pointer active:scale-95 transition"
                     >
                       Restablecer filtros
                     </button>
@@ -473,15 +480,16 @@ function ChronologyPage() {
                 </m.div>
               </div>
             ) : (
-              <SimplifiedTimeline
+              <AlternatingTimeline
                 volumes={filteredVolumes}
-                totalVolumesCount={enrichedVolumes.length}
                 readVolumeIds={readVolumeIds}
+                progressById={progressById}
+                serverMomentTimes={serverMomentTimes}
                 onToggleRead={handleToggleRead}
-                onMarkAllRead={handleMarkAllReadHere}
-                onResetRead={handleResetRead}
+                showInterludes={showInterludes}
                 onInspectThumbnail={handleOpenInspector}
                 onPlayVolume={handlePlayVolume}
+                onVolumeIntent={handleVolumeIntent}
                 highlightedVolumeId={highlightedVolumeId}
                 searchQuery={searchQuery}
               />
@@ -491,30 +499,44 @@ function ChronologyPage() {
           {/* Modal Inspector for Full Artwork View */}
           <AnimatePresence>
             {inspectedVolume && (
-              <VolumeInspectorModal
-                volume={inspectedVolume}
-                isOpen={true}
-                onClose={() => setInspectedVolume(null)}
-                aspectRatio={aspectRatio}
-                onChangeAspectRatio={setAspectRatio}
-                isFlipped={isFlipped}
-                onToggleFlip={() => setIsFlipped((f) => !f)}
-                isRead={readVolumeIds.has(inspectedVolume.id)}
-                onToggleRead={() => handleToggleRead(inspectedVolume.id)}
-                onPlayVolume={handlePlayVolume}
-                hasPrev={inspectedIndex > 0}
-                hasNext={inspectedIndex >= 0 && inspectedIndex < filteredVolumes.length - 1}
-                onPrevVolume={handlePrevVolume}
-                onNextVolume={handleNextVolume}
-              />
+              <React.Suspense fallback={null}>
+                <VolumeInspectorModal
+                  volume={inspectedVolume}
+                  isOpen={true}
+                  onClose={() => setInspectedVolume(null)}
+                  aspectRatio={aspectRatio}
+                  onChangeAspectRatio={setAspectRatio}
+                  isFlipped={isFlipped}
+                  onToggleFlip={() => setIsFlipped((f) => !f)}
+                  isRead={readVolumeIds.has(inspectedVolume.id)}
+                  onToggleRead={() => handleToggleRead(inspectedVolume.id)}
+                  onPlayVolume={handlePlayVolume}
+                  hasPrev={inspectedIndex > 0}
+                  hasNext={inspectedIndex >= 0 && inspectedIndex < filteredVolumes.length - 1}
+                  onPrevVolume={handlePrevVolume}
+                  onNextVolume={handleNextVolume}
+                />
+              </React.Suspense>
             )}
           </AnimatePresence>
 
+          {/* Enciclopedia: artefactos, líneas temporales y glosario */}
+          {isEncyclopediaOpen && (
+            <React.Suspense fallback={null}>
+              <LoreEncyclopediaModal
+                isOpen={isEncyclopediaOpen}
+                onClose={() => setIsEncyclopediaOpen(false)}
+              />
+            </React.Suspense>
+          )}
+
+          {launching && <PlayerFallback label={launching.label} sublabel={launching.sublabel} />}
+
           {/* Clean, Minimalist Footer */}
           <footer className="border-t border-white/10 bg-transparent py-5 px-4 text-center text-xs font-mono text-on-surface-variant/70">
-            <div className="w-full px-4 sm:px-6 md:px-8 xl:px-12 2xl:px-16 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="page-container flex flex-col sm:flex-row items-center justify-between gap-2">
               <span className="tracking-widest font-semibold uppercase">DRAGON BALL: LÍNEA DE TIEMPO OFICIAL</span>
-              <span className="text-on-surface-variant/50">CRONOLOGÍA POR SAGAS Y LAPSOS (AÑO 749 - 790) • {enrichedVolumes.length} ENTREGAS • POR AKIRA TORIYAMA</span>
+              <span className="text-on-surface-variant/50">CRONOLOGÍA POR SAGAS Y LAPSOS (AÑO 749 - 790) • {enrichedVolumes.length} LAPSOS • POR AKIRA TORIYAMA</span>
             </div>
           </footer>
         </div>

@@ -130,16 +130,6 @@ export const ERA_DEFAULTS: Record<EraId, EraDefaultInfo> = {
     },
 }
 
-/**
- * @deprecated El encuadre de los heroes vive en `hero-art.ts` (punto focal).
- * Se mantiene solo por `resolveHeroImage` (hero-image-resolver.ts).
- */
-export interface HeroEraVisualConfig {
-    backdropUrl: string
-    positionMobile: string
-    positionDesktop: string
-}
-
 export const MEDIA_ID_TO_ERA: Record<number, EraId> = {
     // Kai
     61709: "dbkai",

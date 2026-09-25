@@ -15,6 +15,8 @@ export const PopoverAnatomy = defineStyleAnatomy({
         "data-[state=open]:fade-in-50 data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-95",
         "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
         "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        // Crece desde el botón que lo abrió, con ease-out fuerte y cierre más rápido.
+        "origin-[--radix-popover-content-transform-origin] ease-out-strong duration-200 data-[state=closed]:duration-fast",
     ]),
 })
 

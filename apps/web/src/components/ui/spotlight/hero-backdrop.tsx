@@ -112,11 +112,7 @@ export function HeroBackdrop({
             {needsBoost && (
                 <div
                     aria-hidden="true"
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                        background:
-                            "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 30%, transparent 55%), linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 30%, transparent 50%)",
-                    }}
+                    className="absolute inset-0 pointer-events-none scrim-hero-boost"
                 />
             )}
         </div>

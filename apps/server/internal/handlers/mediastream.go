@@ -7,17 +7,14 @@ import (
 	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream"
-	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/ffmpegutil"
 	"kamehouse/internal/util/result"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -139,56 +136,7 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	}
 
 	if strings.HasPrefix(b.Path, "gdrive://") {
-		clean := strings.TrimPrefix(b.Path, "gdrive://")
-		parts := strings.Split(clean, "/")
-		fileID := ""
-		fileName := "stream.mkv"
-		if len(parts) > 0 {
-			fileID = parts[0]
-		}
-		if len(parts) > 1 {
-			fileName = parts[len(parts)-1]
-		}
-		if fileID == "" {
-			return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid gdrive path"))
-		}
-
-		var dbFile models.LocalFile
-		var techInfo *dto.FileTechnicalInfo
-		if err := h.App.Database.Gorm().Where("path = ?", b.Path).First(&dbFile).Error; err == nil {
-			if len(dbFile.TechnicalInfo) > 0 {
-				_ = json.Unmarshal(dbFile.TechnicalInfo, &techInfo)
-			}
-		}
-
-		streamURL := fmt.Sprintf("/api/v1/drive/play?fileId=%s", fileID)
-		ext := filepath.Ext(fileName)
-		if ext == "" {
-			ext = ".mkv"
-		}
-
-		mediaInfo := &videofile.MediaInfo{
-			Path:      b.Path,
-			Extension: strings.TrimPrefix(ext, "."),
-		}
-		if techInfo != nil && techInfo.VideoStream != nil {
-			mediaInfo.Video = &videofile.Video{
-				Width:  uint32(techInfo.VideoStream.Width),
-				Height: uint32(techInfo.VideoStream.Height),
-				Codec:  techInfo.VideoStream.Codec,
-			}
-		}
-
-		mediaContainer := &mediastream.MediaContainer{
-			Filepath:   b.Path,
-			Hash:       util.CreateMD5(b.Path),
-			StreamType: mediastream.StreamTypeDirect,
-			StreamURL:  streamURL,
-			MediaInfo:  mediaInfo,
-		}
-
-		h.signStreamURL(mediaContainer)
-		return h.RespondWithData(c, mediaContainer)
+		return h.requestDriveMediaContainer(c, b.Path, b.StreamType, b.ClientID, b.Force, b.ClientCapabilities)
 	}
 
 	if _, err := os.Stat(b.Path); os.IsNotExist(err) {

@@ -60,6 +60,9 @@ export const CommandDialogAnatomy = defineStyleAnatomy({
     content: cva([
         "UI-CommandDialog__content",
         "overflow-hidden p-0",
+        // Se abre con teclado y muchas veces al día: aparece y se va al instante, sin zoom.
+        // `!` porque animate-in del plugin se declara después de animate-none y ganaría.
+        "data-[state=open]:!animate-none data-[state=closed]:!animate-none",
     ]),
     command: cva([
         "UI-CommandDialog__command",

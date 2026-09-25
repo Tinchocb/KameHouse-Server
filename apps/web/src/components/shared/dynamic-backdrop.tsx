@@ -176,8 +176,8 @@ export function DynamicBackdrop() {
 
     if (!isEnabled) return null
 
-    // Los orbes solo se renderizan en modo Era con tema activo (se omiten en detalle para mantener fondo negro puro)
-    const showAnimatedOrbs = !tvMode && !isEcoMode && ts.effectiveMode === "era" && ts.hasEraTheme && !isDetailPage
+    // La capa de era solo se renderiza en modo Era con tema activo (se omite en detalle para mantener fondo negro puro)
+    const showEraLayer = !tvMode && !isEcoMode && ts.effectiveMode === "era" && ts.hasEraTheme && !isDetailPage
 
     return (
         <div
@@ -185,29 +185,11 @@ export function DynamicBackdrop() {
             className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-bg-primary"
             style={{ contain: "paint" }}
         >
-            {/* Cinematic Gradient Orbs (Omitted in TV / Eco / Classic Mode) */}
-            {showAnimatedOrbs && (
+            {/* Capa de degradé del tema Universo. Sin orbes flotantes: el color de la
+                era llega por --page-gradient, que tiñe el fondo sin formas visibles. */}
+            {showEraLayer && (
                 <div className="absolute inset-0 overflow-hidden">
-                    {/* Era Universe gradient layer */}
                     <div className="era-universe-layer absolute inset-0 transition-opacity duration-slow opacity-0" />
-                    <div className="absolute top-[10%] left-[8%] w-[clamp(220px,35vw,550px)] h-[clamp(220px,35vw,550px)] rounded-full animate-float-blur"
-                        style={{
-                            background: "radial-gradient(circle at 30% 30%, var(--glow-color-1) 0%, transparent 80%)",
-                            opacity: (isListingPage || isDetailPage) && !activeBackdropUrl ? 0.60 : 0.35,
-                        }}
-                    />
-                    <div className="absolute bottom-[8%] right-[6%] w-[clamp(200px,30vw,500px)] h-[clamp(200px,30vw,500px)] rounded-full animate-float-blur-reverse"
-                        style={{
-                            background: "radial-gradient(circle at 70% 70%, var(--glow-color-2) 0%, transparent 80%)",
-                            opacity: (isListingPage || isDetailPage) && !activeBackdropUrl ? 0.50 : 0.30,
-                        }}
-                    />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[clamp(240px,38vw,580px)] h-[clamp(240px,38vw,580px)] rounded-full animate-pulse-glow-soft transform-gpu"
-                        style={{
-                            background: "radial-gradient(circle at 50% 50%, var(--glow-color-3) 0%, transparent 70%)",
-                            opacity: (isListingPage || isDetailPage) && !activeBackdropUrl ? 0.40 : 0.20,
-                        }}
-                    />
                 </div>
             )}
 
@@ -256,11 +238,12 @@ export function DynamicBackdrop() {
             {!tvMode && !isFlat && <div className="grain-overlay z-10" />}
 
             {/* Ambient soft glow when no backdrop image is active */}
-            {!displayedUrlLowRes && !showAnimatedOrbs && (
+            {/* --brand-accent-hex (no --brand-accent, que es un triplete HSL y dejaba el color-mix inválido) */}
+            {!displayedUrlLowRes && (
                 <div
                     className="absolute inset-0 pointer-events-none opacity-40"
                     style={{
-                        background: "radial-gradient(ellipse at 50% 15%, color-mix(in srgb, var(--brand-accent, #ffffff) 8%, transparent) 0%, transparent 70%)",
+                        background: "radial-gradient(ellipse at 50% 15%, color-mix(in srgb, var(--brand-accent-hex, #ffffff) 8%, transparent) 0%, transparent 70%)",
                     }}
                 />
             )}

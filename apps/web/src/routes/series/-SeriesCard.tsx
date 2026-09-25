@@ -165,8 +165,10 @@ export const SeriesCard = memo(function SeriesCard({
             onFocus={handlePrefetch}
             onClick={handleActivate}
             onKeyDown={handleKeyDown}
+            // Entrada en cascada por CSS (corre fuera del hilo principal mientras
+            // el shelf decodifica pósters); el delay llega por animationDelay.
             className={cn(
-                "h-full flex flex-col cursor-pointer overflow-hidden relative group/card border-r border-white/5 select-none shrink-0 transform-gpu"
+                "h-full flex flex-col cursor-pointer overflow-hidden relative group/card border-r border-white/5 select-none shrink-0 transform-gpu animate-slide-up"
             )}
             style={{
                 flex: isSelected ? '3 0 380px' : '1 0 150px',
@@ -199,7 +201,8 @@ export const SeriesCard = memo(function SeriesCard({
                         style={{
                             transition: isSelected
                                 ? 'opacity 300ms ease-out'
-                                : 'opacity 300ms ease-in',
+                                // Al soltar la selección responde rápido (ease-in arrancaba lento y se quedaba pegado).
+                                : 'opacity 200ms cubic-bezier(0.23, 1, 0.32, 1)',
                         }}
                     />
                 )}
@@ -224,7 +227,7 @@ export const SeriesCard = memo(function SeriesCard({
                         style={{
                             transition: isSelected
                                 ? 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1), transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
-                                : 'opacity 300ms cubic-bezier(0.4, 0, 1, 1), transform 300ms cubic-bezier(0.4, 0, 1, 1)',
+                                : 'opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 200ms cubic-bezier(0.23, 1, 0.32, 1)',
                         }}
                     />
                 )}
@@ -337,10 +340,16 @@ export const SeriesCard = memo(function SeriesCard({
                         />
                     )}
 
-                    {/* 6. Barra de progreso colapsada en la base */}
+                    {/* 6. Barra de progreso colapsada en la base — scaleX con origin-left acelerado por GPU */}
                     {item.progress > 0 && (
-                        <div className="absolute bottom-0 inset-x-0 h-[3px] bg-white/10 z-[6]">
-                            <div className="h-full transition-all duration-500" style={{ width: `${item.progress}%`, background: eraAccent }} />
+                        <div className="absolute bottom-0 inset-x-0 h-[3px] bg-white/10 z-[6] overflow-hidden">
+                            <div
+                                className="h-full w-full origin-left transition-transform duration-500 ease-smooth-out"
+                                style={{
+                                    transform: `scaleX(${item.progress / 100})`,
+                                    background: eraAccent,
+                                }}
+                            />
                         </div>
                     )}
                 </div>
@@ -422,9 +431,9 @@ export const SeriesCard = memo(function SeriesCard({
                             </div>
                             <div className="h-1.5 w-full bg-surface-container-high/60 rounded-full overflow-hidden border border-[var(--sectionbar-border)]">
                                 <div
-                                    className="h-full rounded-full transition-[width] duration-slower ease-expo-out origin-left"
+                                    className="h-full w-full rounded-full transition-transform duration-slower ease-expo-out origin-left"
                                     style={{
-                                        width: isSelected ? `${item.progress}%` : '0%',
+                                        transform: `scaleX(${isSelected ? item.progress / 100 : 0})`,
                                         background: `linear-gradient(90deg, ${eraAccent}, color-mix(in srgb, ${eraAccent} 55%, white))`,
                                     }}
                                 />
@@ -439,13 +448,13 @@ export const SeriesCard = memo(function SeriesCard({
                             <button
                                 type="button"
                                 onClick={handlePlayClick}
-                                className="w-full min-h-11 text-zinc-950 font-display font-black uppercase tracking-display rounded-full text-label-sm py-2.5 transition-all duration-base ease-out flex justify-center items-center gap-2 relative overflow-hidden group/btn hover:brightness-110 active:scale-95 cursor-pointer"
+                                className="w-full min-h-11 text-zinc-950 font-display font-black uppercase tracking-display rounded-full text-label-sm py-2.5 transition duration-base ease-out flex justify-center items-center gap-2 relative overflow-hidden group/btn hover:brightness-110 active:scale-95 cursor-pointer"
                                 style={{
                                     background: eraAccent,
                                     boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.45)',
                                 }}
                             >
-                                <div className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-slower ease-out bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none" />
+                                <div className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-none group-hover/btn:transition-transform duration-slower ease-out bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none" />
                                 <IconMediaPlay className="w-3.5 h-3.5 fill-current drop-shadow-sm" />
                                 {item.progress <= 0
                                     ? 'Ver serie'

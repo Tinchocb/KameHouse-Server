@@ -1,8 +1,7 @@
 import { m } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { IconNavigationChevronRight } from "@/components/ui/icons"
-import { useReducedMotion, useSpringPreset } from "@/components/ui/kinetics/hooks"
-import { usePerformanceStore, selectIsHeavyEffectsAllowed } from "@/lib/hardware/performance-store"
+import { useSpringPreset, useMotionTier } from "@/components/ui/kinetics"
 
 interface SubSagaTimelineItem {
   id: string
@@ -14,6 +13,7 @@ interface SubSagaTimelineItem {
 interface SubSagaTimelineProps {
   items: SubSagaTimelineItem[]
   activeId?: string
+  timelineId?: string
   onSelect: (id: string) => void
   className?: string
 }
@@ -22,11 +22,12 @@ interface SubSagaTimelineProps {
  * Lista vertical de sub-sagas / arcos argumentales.
  * Provee títulos legibles, rango de episodios, tracing beam y estado activo visible.
  */
-export function SubSagaTimeline({ items, activeId, onSelect, className }: SubSagaTimelineProps) {
-  const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed)
-  const prefersReducedMotion = useReducedMotion()
+export function SubSagaTimeline({ items, activeId, timelineId, onSelect, className }: SubSagaTimelineProps) {
+  const motionTier = useMotionTier()
   const tabContentSpring = useSpringPreset("tabContent")
   const activeIndex = items.findIndex(item => item.id === activeId)
+  const showTracingRail = motionTier === "full" && activeIndex >= 0
+  const layoutScope = timelineId ?? (items[0]?.id ? items[0].id.split("-")[0] : "default")
 
   if (items.length === 0) return null
 
@@ -37,7 +38,7 @@ export function SubSagaTimeline({ items, activeId, onSelect, className }: SubSag
         aria-hidden="true"
         className="absolute left-[40px] -translate-x-1/2 top-6 bottom-6 w-0.5 bg-white/[0.06] rounded-full pointer-events-none"
       >
-        {isHeavyAllowed && !prefersReducedMotion && activeIndex >= 0 && (
+        {showTracingRail && (
           <m.div
             className="w-full bg-gradient-to-b from-brand-accent/80 via-brand-accent to-brand-accent/30 rounded-full shadow-[0_0_10px_hsl(var(--brand-accent))]"
             initial={{ height: 0 }}
@@ -74,11 +75,15 @@ export function SubSagaTimeline({ items, activeId, onSelect, className }: SubSag
             )}
           >
             {isActive && (
-              <m.div
-                layoutId="activeSubSagaPill"
-                transition={tabContentSpring}
-                className="absolute inset-0 rounded-xl bg-brand-accent/[0.06] border border-brand-accent/30 pointer-events-none -z-10"
-              />
+              motionTier === "off" ? (
+                <div className="absolute inset-0 rounded-xl bg-brand-accent/[0.06] border border-brand-accent/30 pointer-events-none -z-10" />
+              ) : (
+                <m.div
+                  layoutId={`activeSubSagaPill-${layoutScope}`}
+                  transition={tabContentSpring}
+                  className="absolute inset-0 rounded-xl bg-brand-accent/[0.06] border border-brand-accent/30 pointer-events-none -z-10"
+                />
+              )
             )}
 
             <div className="flex items-center gap-2.5 min-w-0 flex-1">

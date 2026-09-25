@@ -63,6 +63,10 @@ func (c *ThumbnailCache) Set(key string, data []byte) bool {
 		return false
 	}
 
+	// Add over an existing key does not fire the evict callback, so the old bytes would
+	// never be discounted. Remove first (it does fire it) to keep currentBytes accurate.
+	c.cache.Remove(key)
+
 	// If byte limit is set, evict oldest until room is available
 	if c.maxBytes > 0 {
 		for c.currentBytes.Load()+dataSize > c.maxBytes && c.cache.Len() > 0 {

@@ -79,7 +79,10 @@
   --shadow-glow-tip:        0 0 12px rgb(255 255 255 / 0.9);
 
   /* Sombra cinematográfica de los heroes (Spotlight y Películas) */
-  --shadow-hero:            0 25px 60px -15px rgba(0, 0, 0, 0.95);
+  --shadow-hero:                   0 25px 60px -15px rgba(0, 0, 0, 0.95);
+  --shadow-hero-cta-primary:       inset 0 1px 1px 0 rgba(255, 255, 255, 0.6), 0 8px 24px rgba(255, 255, 255, 0.25);
+  --shadow-hero-cta-primary-hover: 0 12px 32px rgba(255, 255, 255, 0.35);
+  --shadow-hero-dot-active:        0 0 10px rgba(255, 255, 255, 0.4);
 
   /* ─── Alias semánticos para componentes ─────────────────────────────────── */
   --shadow-sm:  var(--elevation-1);
@@ -109,15 +112,39 @@
   --sectionbar-shadow-strong:
     var(--glass-highlight-lg),
     0 16px 48px -8px rgba(0, 0, 0, 0.80);
+}
 
-  [data-flat="true"] {
-    --sectionbar-border:         rgba(255, 255, 255, 0.12);
-    --sectionbar-border-top:     rgba(255, 255, 255, 0.20);
-    --sectionbar-border-bottom:  rgba(255, 255, 255, 0.08);
-    --sectionbar-bg:             var(--bg-secondary);
-    --sectionbar-blur:           0;
-    --sectionbar-shadow:         0 2px 8px rgba(0, 0, 0, 0.30);
-  }
+/* ─── SectionBar: overrides por modo — fuente única (antes duplicados en
+   colors.css). Van fuera de :root y DESPUÉS de él: data-mode/data-flat viven
+   en <html>, así que un bloque anidado en :root (":root [data-flat]") nunca
+   matcheaba; y con igual especificidad que :root, un override en colors.css
+   quedaba pisado porque este archivo carga después. ─── */
+
+/* Clásico (Black Cinema): bordes 7–13%, fondos #101013–#1B1B20, igual que el
+   resto de su glass. */
+[data-mode="classic"] {
+  --sectionbar-border:              rgba(255, 255, 255, 0.07);
+  --sectionbar-border-top:          rgba(255, 255, 255, 0.13);
+  --sectionbar-border-bottom:       rgba(255, 255, 255, 0.05);
+  --sectionbar-bg:                  rgba(16, 16, 19, 0.55);
+  --sectionbar-border-strong:       rgba(255, 255, 255, 0.13);
+  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.20);
+  --sectionbar-bg-strong:           rgba(27, 27, 32, 0.60);
+}
+
+/* Flat: superficies sólidas, sin blur. Declarado después de Clásico para
+   ganarle cuando ambos están activos. */
+[data-flat="true"] {
+  --sectionbar-border:              rgba(255, 255, 255, 0.12);
+  --sectionbar-border-top:          rgba(255, 255, 255, 0.20);
+  --sectionbar-border-bottom:       rgba(255, 255, 255, 0.08);
+  --sectionbar-bg:                  var(--bg-secondary);
+  --sectionbar-blur:                0px;
+  --sectionbar-shadow:              0 2px 8px rgba(0, 0, 0, 0.30);
+  --sectionbar-border-strong:       rgba(255, 255, 255, 0.16);
+  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.28);
+  --sectionbar-bg-strong:           var(--bg-tertiary);
+  --sectionbar-shadow-strong:       0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 /* ─── Clases Utilitarias ───────────────────────────────────────────────────── */
@@ -138,3 +165,7 @@
 .shadow-brand-success   { box-shadow: var(--shadow-brand-success); }
 .shadow-brand-magic     { box-shadow: var(--shadow-brand-magic); }
 .shadow-brand-focus     { box-shadow: var(--shadow-brand-focus); }
+.shadow-hero               { box-shadow: var(--shadow-hero); }
+.shadow-hero-cta           { box-shadow: var(--shadow-hero-cta-primary); }
+.shadow-hero-cta-hover     { box-shadow: var(--shadow-hero-cta-primary-hover); }
+.shadow-hero-dot           { box-shadow: var(--shadow-hero-dot-active); }

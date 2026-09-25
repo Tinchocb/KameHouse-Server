@@ -1,19 +1,24 @@
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
 
-export interface RippleFeedbackProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface RippleFeedbackProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     rippleColor?: string
     children: React.ReactNode
 }
 
-export const RippleFeedback = React.forwardRef<HTMLDivElement, RippleFeedbackProps>(
-    ({ rippleColor, children, className, onClick, ...props }, ref) => {
+/**
+ * Botón nativo con onda en el punto de click. Enter/Espacio los resuelve el
+ * navegador (click con detail 0): en ese caso la onda nace en el centro.
+ */
+export const RippleFeedback = React.forwardRef<HTMLButtonElement, RippleFeedbackProps>(
+    ({ rippleColor, children, className, onClick, type = "button", ...props }, ref) => {
         const [ripples, setRipples] = React.useState<Array<{ id: number; x: number; y: number }>>([])
 
-        const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
             const rect = e.currentTarget.getBoundingClientRect()
-            const x = e.clientX - rect.left
-            const y = e.clientY - rect.top
+            const fromKeyboard = e.detail === 0
+            const x = fromKeyboard ? rect.width / 2 : e.clientX - rect.left
+            const y = fromKeyboard ? rect.height / 2 : e.clientY - rect.top
             const id = Date.now()
 
             setRipples((prev) => [...prev, { id, x, y }])
@@ -21,44 +26,23 @@ export const RippleFeedback = React.forwardRef<HTMLDivElement, RippleFeedbackPro
                 setRipples((prev) => prev.filter((r) => r.id !== id))
             }, 600)
 
-            if (onClick) {
-                onClick(e)
-            }
-        }
-
-        const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-            props.onKeyDown?.(e)
-            if ((e.key === "Enter" || e.key === " ") && onClick) {
-                e.preventDefault()
-                const rect = e.currentTarget.getBoundingClientRect()
-                const x = rect.width / 2
-                const y = rect.height / 2
-                const id = Date.now()
-
-                setRipples((prev) => [...prev, { id, x, y }])
-                setTimeout(() => {
-                    setRipples((prev) => prev.filter((r) => r.id !== id))
-                }, 600)
-
-                onClick(e as unknown as React.MouseEvent<HTMLDivElement>)
-            }
+            onClick?.(e)
         }
 
         return (
-            <div
+            <button
                 ref={ref}
-                role="button"
-                tabIndex={props.tabIndex ?? 0}
+                type={type}
                 className={cn("relative overflow-hidden", className)}
                 onClick={handleClick}
-                onKeyDown={handleKeyDown}
                 {...props}
             >
                 {children}
                 {ripples.map((ripple) => (
                     <span
                         key={ripple.id}
-                        className="absolute rounded-full pointer-events-none animate-ping"
+                        aria-hidden="true"
+                        className="absolute rounded-full pointer-events-none animate-ping motion-reduce:hidden"
                         style={{
                             left: ripple.x - 10,
                             top: ripple.y - 10,
@@ -68,7 +52,7 @@ export const RippleFeedback = React.forwardRef<HTMLDivElement, RippleFeedbackPro
                         }}
                     />
                 ))}
-            </div>
+            </button>
         )
     }
 )

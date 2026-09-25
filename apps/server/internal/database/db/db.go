@@ -318,6 +318,8 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 		&models.EpisodeSkipTime{},
 		&models.ShelvedLocalFiles{},
 		&models.Notification{},
+		&models.ChronologyMomentTime{},
+		&models.ChronologySpanOverride{},
 	); err != nil {
 		return err
 	}

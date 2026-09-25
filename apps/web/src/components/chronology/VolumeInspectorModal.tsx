@@ -113,10 +113,10 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                   const epNum = currentEp.absoluteEpisode || Number(currentEp.episode.match(/\d+/)?.[0]) || volume.recommendedStartEpisode || volume.startEpisode;
                   onPlayVolume(volume, epNum);
                 }}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-brand-accent hover:brightness-110 text-black font-display font-black uppercase text-xs flex items-center gap-1.5 cursor-pointer shadow-brand-primary active:scale-95 transition-all"
+                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-brand-accent hover:brightness-110 text-black font-display font-black uppercase text-xs flex items-center gap-1.5 cursor-pointer shadow-brand-primary active:scale-95 transition"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{volume.isMovie ? 'Ver película' : 'Reproducir lapso'}</span>
+                <span>Reproducir lapso</span>
               </button>
             )}
 
@@ -157,7 +157,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
               id="btn-close-volume-modal"
               onClick={handleClose}
               aria-label="Cerrar inspección del tomo"
-              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-surface-container-low border border-white/10 hover:border-white/30 text-on-surface-variant hover:text-white flex items-center justify-center transition-colors duration-150 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-surface-container-low border border-white/10 hover:border-white/30 text-on-surface-variant hover:text-white flex items-center justify-center transition-[color,background-color,border-color,transform] duration-150 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
               title="Cerrar Inspección"
             >
               <X className="w-5 h-5" />
@@ -266,10 +266,10 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                           const epNum = currentEp.absoluteEpisode || Number(currentEp.episode.match(/\d+/)?.[0]) || volume.startEpisode || 1;
                           onPlayVolume(volume, epNum);
                         }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-accent hover:brightness-110 text-black text-xs font-mono font-bold shadow-brand-primary active:scale-95 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-accent hover:brightness-110 text-black text-xs font-mono font-bold shadow-brand-primary active:scale-95 transition cursor-pointer"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>{volume.isMovie ? 'Ver película completa' : `Reproducir ${currentEp.episode}`}</span>
+                        <span>Reproducir {currentEp.episode}</span>
                       </button>
                     </div>
                   )}
@@ -312,7 +312,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                           setSelectedEpIdx(idx);
                         }
                       }}
-                      className={`relative rounded-xl p-3 border transition-all cursor-pointer flex flex-col justify-between min-h-[120px] shadow-md group/epcard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+                      className={`relative rounded-xl p-3 border transition cursor-pointer flex flex-col justify-between min-h-[120px] shadow-md group/epcard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
                         isSelected
                           ? 'bg-surface-container border-brand-accent transform -translate-y-1'
                           : 'bg-surface-container-low/80 hover:bg-surface-container-low border-white/10 hover:border-white/30'

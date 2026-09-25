@@ -103,7 +103,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
     >
       {/* Physical Bookshelf Ledge Depth Shadow (simulates pulling volume from shelf) */}
       <div
-        className={`absolute -bottom-2 inset-x-3 h-2.5 rounded-full transition-all duration-300 pointer-events-none ${
+        className={`absolute -bottom-2 inset-x-3 h-2.5 rounded-full transition duration-300 pointer-events-none ${
           isSelected
             ? 'bg-brand-accent/40 translate-y-2 scale-x-105 opacity-90 shadow-elevation-2'
             : 'bg-black/70 opacity-60 group-hover:scale-x-105 group-hover:opacity-85 shadow-elevation-1'
@@ -235,7 +235,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
                       sounds.playSelect();
                       onToggleRead();
                     }}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-3xs font-mono font-bold uppercase transition-all ${
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-3xs font-mono font-bold uppercase transition ${
                       isRead
                         ? 'bg-status-success/90 text-white border border-status-success/50 shadow-sm'
                         : 'bg-black/70 text-on-surface-variant hover:text-white border border-white/10 hover:border-white/30'
@@ -269,7 +269,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
             <button
               id={`btn-flip-front-${volume.id}`}
               onClick={handleFlipClick}
-              className="w-full mt-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-surface-container/90 hover:bg-surface-container-high text-brand-accent border border-brand-accent/40 text-xs font-mono font-bold tracking-wider transition-all duration-200 shadow-md group/btn"
+              className="w-full mt-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-surface-container/90 hover:bg-surface-container-high text-brand-accent border border-brand-accent/40 text-xs font-mono font-bold tracking-wider transition duration-200 shadow-md group/btn"
             >
               <RotateCw className="w-3.5 h-3.5 transition-transform duration-500 group-hover/btn:rotate-180 text-brand-accent" />
               <span>GIRAR AL DORSO: ARCHIVO DE LORE</span>
@@ -310,7 +310,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
                     sounds.playSelect();
                     onToggleRead();
                   }}
-                  className={`px-1.5 py-0.5 rounded text-4xs font-mono font-bold uppercase border transition-all ${
+                  className={`px-1.5 py-0.5 rounded text-4xs font-mono font-bold uppercase border transition ${
                     isRead
                       ? 'bg-status-success text-white border-status-success/50'
                       : 'bg-black/60 text-on-surface-variant border-white/10'
@@ -378,7 +378,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
             <button
               id={`btn-flip-back-${volume.id}`}
               onClick={handleFlipClick}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/50 text-xs font-mono font-bold tracking-wider transition-all duration-200"
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/50 text-xs font-mono font-bold tracking-wider transition duration-200"
             >
               <RotateCw className="w-3.5 h-3.5 rotate-180 text-brand-accent" />
               <span>VOLVER A LA PORTADA FRONTAL</span>

@@ -4,20 +4,42 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"kamehouse/internal/matroska"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util"
+	"kamehouse/internal/util/httprange"
 
 	"github.com/rs/zerolog"
 	lru "github.com/hashicorp/golang-lru/v2"
 )
+
+// loopbackHTTPClient lee fuentes remotas servidas por el propio servidor (Drive por
+// loopback). El servidor lo reemplaza con SetLoopbackHTTPClient cuando usa TLS,
+// para confiar en su propio certificado.
+var loopbackHTTPClient atomic.Pointer[http.Client]
+
+// SetLoopbackHTTPClient define el cliente usado para leer fuentes remotas.
+func SetLoopbackHTTPClient(c *http.Client) {
+	loopbackHTTPClient.Store(c)
+}
+
+// LoopbackHTTPClient devuelve el cliente configurado o uno por defecto.
+func LoopbackHTTPClient() *http.Client {
+	if c := loopbackHTTPClient.Load(); c != nil {
+		return c
+	}
+	return &http.Client{Timeout: 30 * time.Second}
+}
 
 // KeyframeIndex holds extracted keyframe timestamps
 type KeyframeIndex struct {
@@ -192,7 +214,9 @@ func extractKeyframes(
 	logger *zerolog.Logger,
 ) error {
 	// Try parsing via pure Go Matroska parser for MKV/WebM files first (much faster than ffprobe)
-	ext := strings.ToLower(filepath.Ext(path))
+	// PathExt contempla URLs remotas (fuentes de Drive servidas por loopback),
+	// cuya ruta no tiene extensión pero la informan en el parámetro `ext`.
+	ext := videofile.PathExt(path)
 	if ext == ".mkv" || ext == ".webm" {
 		if err := extractKeyframesFromMatroska(path, ki, unblock, logger); err == nil {
 			return nil
@@ -319,11 +343,29 @@ func makeDummyKeyframes(ffprobePath, path, hash string) ([]float64, error) {
 // extractKeyframesFromMatroska parses MKV/WebM cues directly (takes only milliseconds)
 func extractKeyframesFromMatroska(path string, ki *KeyframeIndex, unblock func(), logger *zerolog.Logger) error {
 	start := time.Now()
-	file, err := os.Open(path)
-	if err != nil {
-		return err
+	var file io.ReadSeeker
+	if httprange.IsRemote(path) {
+		// Fuente remota: se leen por Range solo la cabecera, el SeekHead y los Cues.
+		// El fallback a ffprobe descargaría el archivo entero para listar keyframes.
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		rr, err := httprange.Open(ctx, LoopbackHTTPClient(), path)
+		if err != nil {
+			return err
+		}
+		defer rr.Close()
+		file = rr
+		defer func() {
+			logger.Debug().Int("requests", rr.Requests).Msg("cassette: remote matroska cues read over HTTP Range")
+		}()
+	} else {
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		file = f
 	}
-	defer file.Close()
 
 	demuxer, err := matroska.NewDemuxer(file)
 	if err != nil {

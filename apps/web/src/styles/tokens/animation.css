@@ -24,6 +24,9 @@
   --duration-slower:    600ms;
   --duration-slowest:   800ms;
 
+  /* Rotación automática de carruseles de Hero (Home Spotlight / Películas) */
+  --hero-rotation-duration: 8000ms;
+
   /* Alias --dur para uso inline en keyframes */
   --dur: var(--duration-base);
 
@@ -48,7 +51,8 @@
   /* ─── Easings ──────────────────────────────────────────────────────── */
   --ease-linear:        linear;                           /* shimmer, skeleton pulse, spinner */
   --ease-in:            cubic-bezier(0.4, 0, 1, 1);
-  --ease-out:           ease-out;                         /* transitions.dev canonical — tooltip open/close */
+  --ease-out:           cubic-bezier(0.23, 1, 0.32, 1);   /* ease-out fuerte: entradas, press, fades de UI */
+  --ease-drawer:        cubic-bezier(0.32, 0.72, 0, 1);   /* paneles y hojas que se deslizan (estilo iOS) */
   --ease-in-out:        ease-in-out;                      /* transitions.dev canonical — icon swap, text swap, skeleton reveal */
   --ease-smooth:        cubic-bezier(0.25, 0.1, 0.25, 1.0);
   --ease-spring:        cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -123,7 +127,7 @@
 .animate-float-blur-reverse { animation: float-blur-reverse 25s ease-in-out infinite; }
 .animate-music-bars    { animation: music-bars 0.9s ease-in-out infinite; transform-origin: bottom; }
 /* scaleX: solo compositor — sin layout ni paint. transform-origin: left para expandir desde el borde izquierdo. */
-.animate-hero-progress  { animation: hero-progress 8s linear forwards; transform-origin: left center; will-change: transform; }
+.animate-hero-progress  { animation: hero-progress var(--hero-rotation-duration, 8s) linear forwards; transform-origin: left center; will-change: transform; }
 
 @keyframes vhs-card-enter {
   from { opacity: 0; transform: translateY(16px); }
@@ -183,6 +187,14 @@
 .animate-menu-dropdown   { animation: menu-dropdown var(--duration-fast) var(--ease-smooth-out) both; }
 .animate-text-swap-in    { animation: text-swap-in var(--duration-quick) var(--ease-smooth-out) both; }
 .animate-text-swap-out   { animation: text-swap-out var(--duration-quick) var(--ease-smooth-out) both; }
+
+/* Era completada: un destello cruza la cabecera una sola vez (momento poco frecuente) */
+@keyframes era-complete-sweep {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+.animate-era-complete-sweep { animation: era-complete-sweep 1100ms var(--ease-out) both; }
 
 /* Stagger delays */
 .delay-50   { animation-delay: 50ms; }

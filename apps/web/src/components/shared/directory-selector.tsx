@@ -120,7 +120,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                 <div className={cn(
                     "group flex items-center gap-1.5 rounded-full bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10",
                     "pl-4 pr-1.5 py-1.5 shadow-glass-highlight-sm",
-                    "transition-all duration-200 hover:border-white/30 hover:bg-white/[0.04]",
+                    "transition duration-200 hover:border-white/30 hover:bg-white/[0.04]",
                     "focus-within:border-white/35 focus-within:bg-white/[0.06] focus-within:shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.1)]"
                 )}>
                     <IconStatusFolder className="w-4 h-4 shrink-0 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" />
@@ -230,7 +230,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             <button
                                 key={folder.Path}
                                 type="button"
-                                className="py-1.5 flex items-center gap-2 text-xs px-3 rounded-full border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/25 transition-all flex-none cursor-pointer active:scale-95 min-h-[32px]"
+                                className="py-1.5 flex items-center gap-2 text-xs px-3 rounded-full border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/25 transition flex-none cursor-pointer active:scale-95 min-h-[32px]"
                                 onClick={() => setInput(folder.Path)}
                             >
                                 <IconStatusFolder className="w-3.5 h-3.5 text-on-surface-variant" />
@@ -251,7 +251,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             <button
                                 key={folder.Path}
                                 type="button"
-                                className="w-full flex items-center gap-2.5 py-2 px-3 min-h-[44px] cursor-pointer hover:bg-white/[0.06] transition-colors text-left active:scale-[0.99]"
+                                className="w-full flex items-center gap-2.5 py-2 px-3 min-h-[44px] cursor-pointer hover:bg-white/[0.06] transition-[color,background-color,border-color,transform] text-left active:scale-[0.99]"
                                 onClick={() => setInput(folder.Path)}
                                 title={folder.Path}
                             >

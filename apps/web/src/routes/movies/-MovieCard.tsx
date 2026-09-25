@@ -1,5 +1,6 @@
-import { memo, useState, useCallback } from "react"
-import { IconUiStar, IconUiMoreHorizontal, IconMediaPlay, IconUiListPlus } from "@/components/ui/icons";
+import { memo, useState, useCallback, useRef, useEffect } from "react"
+import { IconUiStar, IconUiMoreHorizontal, IconMediaPlay, IconUiListPlus, IconUiCheck } from "@/components/ui/icons";
+import { cn } from "@/components/ui/core/styling"
 import { MoviePosterCard } from "@/components/ui/movie-poster-card"
 import { useResponsive } from "@/hooks/use-responsive"
 import { Vaul, VaulContent } from "@/components/vaul"
@@ -8,10 +9,9 @@ import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useHideAudienceScore } from "@/lib/theme/theme-hooks"
 import { useQueueStore } from "@/lib/store"
 import { usePrefetchAnimeEntry } from "@/hooks/use-prefetch-anime-entry"
-import { getMovieLore, getEntryTitle, getLoreDescription } from "./-components/movies-utils"
+import { getMovieLore, getEntryTitle, getMovieSynopsis } from "./-components/movies-utils"
 import { ERAS, ERA_COLOR_MAP, type EraId } from "@/lib/config/eras"
 import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "@/api/generated/types"
-import { stripHtml } from "@/lib/helpers/sanitizer"
 import { toast } from "sonner"
 
 export type EraTab = "all" | "Dragon Ball" | "Dragon Ball Z" | "Dragon Ball Super" | "Dragon Ball GT" | "Especiales y OVAs"
@@ -40,6 +40,8 @@ export const MovieCard = memo(function MovieCard({
     era,
     eraId,
     watchHistoryItem,
+    index,
+    initial,
     onClick,
     onHoverCard,
 }: {
@@ -47,6 +49,8 @@ export const MovieCard = memo(function MovieCard({
     era: EraTab
     eraId?: EraId
     watchHistoryItem?: Continuity_WatchHistoryItem | null
+    index?: number
+    initial?: boolean | "hidden"
     onClick: (id: number) => void
     onHoverCard: (entry: (Anime_LibraryCollectionEntry & { era: EraTab; eraId: EraId; startedAtTimestamp: number }) | null) => void
 }) {
@@ -74,6 +78,14 @@ export const MovieCard = memo(function MovieCard({
     const lore = getMovieLore(entry ?? undefined)
     const rawTitle = (entry ? getEntryTitle(entry) : "") || lore?.title || "Película"
     const title = cleanMovieTitle(rawTitle)
+    const synopsis = getMovieSynopsis(movie?.description, lore)
+
+    // Confirmación en el mismo botón (el aviso sale lejos, arriba): el ícono pasa a tilde un momento.
+    const [justQueued, setJustQueued] = useState(false)
+    const queuedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    useEffect(() => () => {
+        if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
+    }, [])
 
     const handleQuickQueue = useCallback(async (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -96,6 +108,9 @@ export const MovieCard = memo(function MovieCard({
                 toast.success("Añadida a la cola de reproducción", {
                     description: title,
                 })
+                setJustQueued(true)
+                if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
+                queuedTimerRef.current = setTimeout(() => setJustQueued(false), 1400)
             } else {
                 toast.info("No hay archivos locales disponibles para esta película.")
             }
@@ -138,6 +153,8 @@ export const MovieCard = memo(function MovieCard({
             <MoviePosterCard
                 image={posterUrl}
                 title={title}
+                index={index}
+                initial={initial}
                 showSkeleton={false}
                 imageFallback={
                     <div
@@ -223,7 +240,7 @@ export const MovieCard = memo(function MovieCard({
                                     e.stopPropagation()
                                     handleCardClick()
                                 }}
-                                className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] hover:scale-110 active:scale-90 transition-transform cursor-pointer"
+                                className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] hover:scale-[1.06] active:scale-[0.94] transition-transform duration-150 ease-out-strong cursor-pointer"
                                 aria-label="Ver Película"
                                 title="Ver Película"
                             >
@@ -232,11 +249,28 @@ export const MovieCard = memo(function MovieCard({
                             {hasLocalFiles && (
                                 <button
                                     onClick={handleQuickQueue}
-                                    className="w-11 h-11 rounded-full flex items-center justify-center bg-zinc-950/80 text-white ring-1 ring-white/30 border border-white/10 shadow-[shadow:0_2px_12px_rgba(0,0,0,0.5),var(--glass-highlight-md)] hover:scale-110 active:scale-90 transition-transform cursor-pointer"
-                                    aria-label="Añadir a la cola"
+                                    className={cn(
+                                        "relative w-11 h-11 rounded-full flex items-center justify-center ring-1 border shadow-[shadow:0_2px_12px_rgba(0,0,0,0.5),var(--glass-highlight-md)] hover:scale-[1.06] active:scale-[0.94] transition-[transform,background-color,color] duration-150 ease-out-strong cursor-pointer",
+                                        justQueued
+                                            ? "bg-emerald-950/90 text-emerald-300 ring-emerald-400/50 border-emerald-400/30"
+                                            : "bg-zinc-950/80 text-white ring-white/30 border-white/10"
+                                    )}
+                                    aria-label={justQueued ? "Añadida a la cola" : "Añadir a la cola"}
                                     title="Añadir a la cola"
                                 >
-                                    <IconUiListPlus className="w-4 h-4" />
+                                    <IconUiListPlus
+                                        className={cn(
+                                            "absolute w-4 h-4 transition-[opacity,transform,filter] duration-200 ease-out-strong",
+                                            justQueued ? "opacity-0 scale-50 blur-[2px]" : "opacity-100 scale-100 blur-0"
+                                        )}
+                                    />
+                                    <IconUiCheck
+                                        aria-hidden
+                                        className={cn(
+                                            "absolute w-4 h-4 transition-[opacity,transform,filter] duration-200 ease-out-strong",
+                                            justQueued ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-50 blur-[2px]"
+                                        )}
+                                    />
                                 </button>
                             )}
                         </div>
@@ -277,18 +311,11 @@ export const MovieCard = memo(function MovieCard({
                             </div>
                         </div>
 
-                        {(() => {
-                            const loreDesc = getLoreDescription(lore)
-                            const isDescriptionEnglish = movie.description && /^(the|after|when|with|in\s+the|during|a\s+|goku\b)/i.test(movie.description.trim())
-                            const displayDesc = (!movie.description || isDescriptionEnglish)
-                                ? (loreDesc || movie.description)
-                                : movie.description
-                            return displayDesc ? (
-                                <p className="text-label-sm leading-relaxed text-on-surface-variant line-clamp-4 mb-6">
-                                    {stripHtml(displayDesc)}
-                                </p>
-                            ) : null
-                        })()}
+                        {synopsis && (
+                            <p className="text-label-sm leading-relaxed text-on-surface-variant line-clamp-4 mb-6">
+                                {synopsis}
+                            </p>
+                        )}
 
                         <div className="flex flex-col gap-3">
                             <button
@@ -296,7 +323,7 @@ export const MovieCard = memo(function MovieCard({
                                     setDrawerOpen(false)
                                     handleCardClick()
                                 }}
-                                className="w-full py-3 bg-brand-accent text-on-primary font-black uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                className="w-full py-3 bg-brand-accent text-on-primary font-black uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 active:scale-[0.97] transition-transform duration-150 ease-out-strong"
                             >
                                 <IconMediaPlay className="w-4 h-4 fill-current" />
                                 <span>Ver Detalles</span>
@@ -309,7 +336,7 @@ export const MovieCard = memo(function MovieCard({
                                         setDrawerOpen(false)
                                         await handleQuickQueue(e)
                                     }}
-                                    className="w-full py-3 border border-outline-variant/30 text-on-surface font-bold uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                    className="w-full py-3 border border-outline-variant/30 text-on-surface font-bold uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 active:scale-[0.97] transition-transform duration-150 ease-out-strong"
                                 >
                                     <IconUiListPlus className="w-4 h-4" />
                                     <span>Añadir a la cola</span>
@@ -318,7 +345,7 @@ export const MovieCard = memo(function MovieCard({
 
                             <button
                                 onClick={() => setDrawerOpen(false)}
-                                className="w-full py-3 border border-outline-variant/30 text-on-surface-variant font-bold uppercase tracking-wider text-xs rounded-xl active:scale-95 transition-all"
+                                className="w-full py-3 border border-outline-variant/30 text-on-surface-variant font-bold uppercase tracking-wider text-xs rounded-xl active:scale-[0.97] transition-transform duration-150 ease-out-strong"
                             >
                                 Cerrar
                             </button>

@@ -1,51 +1,80 @@
 package intelligence
 
 import (
+	"context"
+	"reflect"
 	"testing"
+
+	"kamehouse/internal/database/db"
+	"kamehouse/internal/database/models"
+	"kamehouse/internal/util"
 )
 
-func TestCanonicalTimeline(t *testing.T) {
-	if len(CanonicalTimeline) == 0 {
-		t.Fatalf("expected CanonicalTimeline to have milestones, got 0")
+func TestBuildChronologyProgress(t *testing.T) {
+	database, err := db.NewDatabase(context.Background(), t.TempDir(), "test-chronology-progress", util.NewLogger())
+	if err != nil {
+		t.Fatalf("NewDatabase: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+
+	const account uint = 1
+	z := &models.LibraryMedia{Type: "SHOW", TmdbID: 12971}
+	gt := &models.LibraryMedia{Type: "SHOW", TmdbID: 12697}
+	other := &models.LibraryMedia{Type: "SHOW", TmdbID: 1399}
+	for _, lm := range []*models.LibraryMedia{z, gt, other} {
+		if err := database.Gorm().Create(lm).Error; err != nil {
+			t.Fatalf("create media: %v", err)
+		}
+	}
+	if err := database.Gorm().Create(&models.MediaEntryListData{LibraryMediaID: z.ID, Status: "CURRENT", Progress: 3}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Gorm().Create(&models.MediaEntryListData{LibraryMediaID: gt.ID, Status: "COMPLETED"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	history := []models.WatchHistory{
+		{AccountID: account, MediaID: 12971, EpisodeNumber: 10, CurrentTime: 95, Duration: 100},     // TMDB id, visto
+		{AccountID: account, MediaID: int(z.ID), EpisodeNumber: 11, CurrentTime: 90, Duration: 100}, // id de biblioteca, visto
+		{AccountID: account, MediaID: 12971, EpisodeNumber: 12, CurrentTime: 50, Duration: 100},     // a medias
+		{AccountID: 2, MediaID: 12971, EpisodeNumber: 20, CurrentTime: 100, Duration: 100},          // otra cuenta
+		{AccountID: account, MediaID: 1399, EpisodeNumber: 1, CurrentTime: 100, Duration: 100},      // otra serie
+	}
+	if err := database.Gorm().Create(&history).Error; err != nil {
+		t.Fatal(err)
+	}
+	yes, no := true, false
+	if err := database.SetChronologySpanOverrides(account, map[string]*bool{"dbz-saiyajin-raditz": &yes, "db-pilaf": &no}); err != nil {
+		t.Fatal(err)
 	}
 
-	// Verify timeline continuity and order
-	for i, m := range CanonicalTimeline {
-		if m.Order != i+1 {
-			t.Errorf("milestone %q: expected order %d, got %d", m.ID, i+1, m.Order)
-		}
-		if m.Year == "" {
-			t.Errorf("milestone %q has empty in-universe Year", m.ID)
-		}
-		if m.Title == "" {
-			t.Errorf("milestone %q has empty Title", m.ID)
-		}
-		if m.MediaID == 0 {
-			t.Errorf("milestone %q has 0 MediaID", m.ID)
-		}
+	resp, err := BuildChronologyProgress(database, account)
+	if err != nil {
+		t.Fatalf("BuildChronologyProgress: %v", err)
+	}
+	if len(resp.Series) != len(ChronologySeriesTmdbIDs) {
+		t.Fatalf("expected %d series, got %d", len(ChronologySeriesTmdbIDs), len(resp.Series))
+	}
+	byTmdb := map[int]*ChronologySeriesProgress{}
+	for _, s := range resp.Series {
+		byTmdb[s.TmdbID] = s
+	}
+	if got := byTmdb[12971].WatchedEpisodes; !reflect.DeepEqual(got, []int{1, 2, 3, 10, 11}) {
+		t.Errorf("Z watched episodes = %v", got)
+	}
+	if byTmdb[12971].Completed || !byTmdb[12697].Completed {
+		t.Errorf("completed flags wrong: Z=%v GT=%v", byTmdb[12971].Completed, byTmdb[12697].Completed)
+	}
+	if !reflect.DeepEqual(resp.Overrides, map[string]bool{"dbz-saiyajin-raditz": true, "db-pilaf": false}) {
+		t.Errorf("overrides = %v", resp.Overrides)
 	}
 
-	// Locks the Super/GT lapso splits (1:1 with the 35 story spans).
-	wantIDs := []string{
-		"m_dbs_u6",
-		"m_dbs_copy_vegeta",
-		"m_dbs_black",
-		"m_dbs_exhibicion",
-		"m_dbs_reclutamiento",
-		"m_dbs_top",
-		"m_db_gt_black_star",
-		"m_db_gt_baby",
-		"m_db_gt_super17",
-		"m_db_gt_dragons",
+	// null borra la marca
+	if err := database.SetChronologySpanOverrides(account, map[string]*bool{"db-pilaf": nil}); err != nil {
+		t.Fatal(err)
 	}
-	byID := make(map[string]bool)
-	for _, m := range CanonicalTimeline {
-		byID[m.ID] = true
-	}
-	for _, id := range wantIDs {
-		if !byID[id] {
-			t.Errorf("expected split milestone %q in CanonicalTimeline", id)
-		}
+	resp, _ = BuildChronologyProgress(database, account)
+	if _, ok := resp.Overrides["db-pilaf"]; ok || len(resp.Overrides) != 1 {
+		t.Errorf("expected db-pilaf override removed, got %v", resp.Overrides)
 	}
 }
 

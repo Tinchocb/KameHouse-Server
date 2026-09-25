@@ -1,9 +1,9 @@
 import * as React from "react"
-import { m, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence, useReducedMotion } from "framer-motion"
 import { IconNavigationSearch, IconUiClose, IconArrowDownUp, IconNavigationChevronDown } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { SortOption, SORT_OPTIONS } from "./movies-utils"
-import { useMagneticSpring } from "@/components/ui/kinetics/hooks"
+import { MagneticIndicator } from "@/components/ui/kinetics"
 
 export type MovieStatusFilter = "all" | "completed" | "unwatched"
 
@@ -62,7 +62,7 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
         return () => window.removeEventListener("keydown", handleKeyDown)
     }, [])
 
-    const magneticSpring = useMagneticSpring()
+    const reduceMotion = useReducedMotion()
     return (
         <div className="w-full flex flex-col gap-3.5 select-none pb-2">
             {/* Fila Superior: Buscador y Dropdown de Orden */}
@@ -97,12 +97,14 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                         <button
                             type="button"
                             onClick={() => setSortOpen((o) => !o)}
-                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-container-lowest/60 hover:bg-surface-container-high/60 border border-white/20 border-t-white/40 border-b-white/10 text-xs font-mono font-bold text-on-surface-variant hover:text-white active:scale-95 transition-[background-color,color,border-color,box-shadow] duration-base ease-smooth-out backdrop-blur-overlay-2xl shadow-glass-highlight-md cursor-pointer"
+                            aria-haspopup="true"
+                            aria-expanded={sortOpen}
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-container-lowest/60 hover:bg-surface-container-high/60 border border-white/20 border-t-white/40 border-b-white/10 text-xs font-mono font-bold text-on-surface-variant hover:text-white active:scale-[0.97] transition-[background-color,color,border-color,box-shadow,transform] duration-150 ease-out-strong backdrop-blur-overlay-2xl shadow-glass-highlight-md cursor-pointer"
                         >
                             <IconArrowDownUp className="w-3 h-3 text-on-surface-variant" />
                             <span className="hidden md:inline">{SORT_OPTIONS.find((s) => s.value === sortBy)?.label}</span>
                             <span className="md:hidden">Orden</span>
-                            <m.span animate={{ rotate: sortOpen ? 180 : 0 }} transition={{ duration: 0.15 }}>
+                            <m.span animate={{ rotate: sortOpen ? 180 : 0 }} transition={reduceMotion ? { duration: 0 } : { duration: 0.15 }}>
                                 <IconNavigationChevronDown className="w-3 h-3 text-on-surface-variant" />
                             </m.span>
                         </button>
@@ -114,12 +116,13 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: -4 }}
                                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                    className="absolute right-0 top-[calc(100%+6px)] w-44 bg-surface-container-lowest/90 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[shadow:var(--glass-highlight-lg),0_16px_40px_-6px_rgba(0,0,0,0.9)] z-50 overflow-hidden p-1"
+                                    className="absolute right-0 top-[calc(100%+6px)] origin-top-right w-44 bg-surface-container-lowest/90 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[shadow:var(--glass-highlight-lg),0_16px_40px_-6px_rgba(0,0,0,0.9)] z-50 overflow-hidden p-1"
                                 >
                                     {SORT_OPTIONS.map((opt) => (
                                         <button
                                             key={opt.value}
                                             type="button"
+                                            aria-pressed={sortBy === opt.value}
                                             onClick={() => {
                                                 setSortBy(opt.value)
                                                 setSortOpen(false)
@@ -144,30 +147,33 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
 
             {/* Fila Inferior: solo Filtro de Estado (la Era vive en la píldora superior) */}
             <div className="flex items-center justify-start gap-2.5 pt-2 border-t border-white/10">
-                {/* Filtro de Estado (Todas, Vistas, Sin ver) */}
-                <div className="flex items-center gap-1 shrink-0 bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 rounded-full p-1 backdrop-blur-overlay-2xl shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_rgba(0,0,0,0.6)]">
+                {/* Filtro de Estado (Todas, Vistas, Sin ver): segmented control §5.3 */}
+                <div
+                    role="radiogroup"
+                    aria-label="Filtrar por estado"
+                    className="flex items-center gap-1 shrink-0 rounded-full border border-white/20 border-t-white/40 border-b-white/10 bg-zinc-950/40 p-1.5"
+                >
                     {STATUS_FILTER_OPTIONS.map((status) => {
                         const isSelected = statusFilter === status.id
                         return (
-                                <button
-                                        key={status.id}
-                                        type="button"
-                                        onClick={() => setStatusFilter(status.id)}
-                                        aria-pressed={isSelected}
-                                        className={cn(
-                                    "relative px-3.5 py-1 rounded-full text-2xs font-mono font-bold uppercase tracking-wider transition-colors duration-200 shrink-0 cursor-pointer select-none",
-                                    isSelected
-                                        ? "text-black"
-                                        : "text-on-surface-variant hover:text-white hover:bg-white/10"
+                            <button
+                                key={status.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                onClick={() => setStatusFilter(status.id)}
+                                className={cn(
+                                    "relative flex min-h-11 items-center rounded-full px-4 text-xs font-semibold shrink-0 cursor-pointer select-none transition-colors duration-base",
+                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                    isSelected ? "text-zinc-950 font-bold" : "text-on-surface-variant hover:text-on-surface",
                                 )}
                             >
-                                {isSelected && (
-                                    <m.div
-                                        layoutId="statusFilterActivePill"
-                                        transition={magneticSpring}
-                                        className="absolute inset-0 bg-white/95 rounded-full -z-0"
-                                    />
-                                )}
+                                <MagneticIndicator
+                                    layoutId="statusFilterActivePill"
+                                    active={isSelected}
+                                    disableAnimation={!!reduceMotion}
+                                    className="bg-white/95 shadow-[0_2px_14px_rgba(255,255,255,0.4),inset_0_1px_1px_rgba(255,255,255,1)]"
+                                />
                                 <span className="relative z-10">{status.label}</span>
                             </button>
                         )

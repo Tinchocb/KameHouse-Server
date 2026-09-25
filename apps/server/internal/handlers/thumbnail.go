@@ -8,7 +8,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"kamehouse/internal/util"
@@ -19,7 +22,73 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-var thumbnailSingleFlight singleflight.Group
+const (
+	// Versioned URLs (?v=) change whenever the source file does, so they can be cached forever.
+	thumbnailCacheControlImmutable = "public, max-age=31536000, immutable"
+	thumbnailCacheControlDefault   = "public, max-age=86400, stale-while-revalidate=604800"
+
+	// Disk eviction works at day granularity; touching more often only adds writes.
+	thumbnailTouchMinAge = 24 * time.Hour
+	// A file ffmpeg couldn't extract a frame from is not retried on every render.
+	thumbnailFailedTTL = 30 * time.Minute
+	// How long a flight may wait for a free ffmpeg slot before giving up.
+	thumbnailQueueTimeout = 30 * time.Second
+)
+
+var (
+	thumbnailSingleFlight singleflight.Group
+	// singleflight only dedupes identical keys: without this cap a cold grid spawns one
+	// ffprobe+ffmpeg per tile at the same time.
+	thumbnailGenSem = make(chan struct{}, thumbnailGenConcurrency())
+	// hash -> time.Time of the last failed extraction.
+	thumbnailFailed sync.Map
+
+	errThumbnailUnavailable = errors.New("thumbnail extraction failed recently")
+)
+
+func thumbnailGenConcurrency() int {
+	return min(max(runtime.NumCPU()/2, 2), 4)
+}
+
+// thumbnailHash identifies one extracted frame: source path, mtime, size and optional offset.
+// The disk file, the memory LRU entry and the ETag all derive from it.
+func thumbnailHash(videoPath string, videoStat os.FileInfo, offsetSec *int) string {
+	key := fmt.Sprintf("%s:%d:%d", videoPath, videoStat.ModTime().UnixNano(), videoStat.Size())
+	if offsetSec != nil {
+		key = fmt.Sprintf("%s:t=%d", key, *offsetSec)
+	}
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+}
+
+func thumbnailETag(hash string) string {
+	return `"` + hash[:16] + `"`
+}
+
+// etagMatches reports whether an If-None-Match header lists etag (weak or strong).
+func etagMatches(ifNoneMatch, etag string) bool {
+	if ifNoneMatch == "" {
+		return false
+	}
+	for _, candidate := range strings.Split(ifNoneMatch, ",") {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "*" || strings.TrimPrefix(candidate, "W/") == etag {
+			return true
+		}
+	}
+	return false
+}
+
+func thumbnailFailedRecently(hash string) bool {
+	at, ok := thumbnailFailed.Load(hash)
+	if !ok {
+		return false
+	}
+	if time.Since(at.(time.Time)) < thumbnailFailedTTL {
+		return true
+	}
+	thumbnailFailed.Delete(hash)
+	return false
+}
 
 // HandleGetVideoThumbnail ...
 //
@@ -67,52 +136,73 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied to the requested file path"))
 	}
 
-	// 1. Check LRU Memory Cache (Instant 0ms retrieval)
-	cacheKey := fmt.Sprintf("%s:%d:%d", videoPath, videoStat.ModTime().UnixNano(), videoStat.Size())
-	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(cacheKey)))
+	var offsetSec *int
+	if tParam := c.QueryParam("t"); tParam != "" {
+		if sec, parseErr := strconv.Atoi(tParam); parseErr == nil && sec >= 0 {
+			offsetSec = &sec
+		}
+	}
 
+	hash := thumbnailHash(videoPath, videoStat, offsetSec)
+	eTag := thumbnailETag(hash)
+	cacheControl := thumbnailCacheControlDefault
+	if c.QueryParam("v") != "" {
+		cacheControl = thumbnailCacheControlImmutable
+	}
+	// Only on successful responses: an error must never be cached by the browser.
+	setCacheHeaders := func() {
+		header := c.Response().Header()
+		header.Set("ETag", eTag)
+		header.Set("Cache-Control", cacheControl)
+	}
+
+	// 1. Revalidation: the ETag derives from the source file, so it is known before
+	// touching memory or disk.
+	if etagMatches(c.Request().Header.Get("If-None-Match"), eTag) {
+		setCacheHeaders()
+		return c.NoContent(http.StatusNotModified)
+	}
+
+	// 2. Memory LRU
 	if imgBytes, found := h.App.ThumbnailCache.Get(hash); found {
-		c.Response().Header().Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+		setCacheHeaders()
 		return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
 	}
 
-	// 2. Ensure thumbnail exists on disk (cold cache or migration fallback)
-	ensuredFile, err := h.EnsureThumbnail(videoPath)
+	// 3. Disk, generating it on a cold cache
+	ensuredFile, err := h.ensureThumbnailFile(c.Request().Context(), videoPath, hash, offsetSec)
 	if err != nil {
+		if errors.Is(err, errThumbnailUnavailable) {
+			return h.RespondWithCodeError(c, http.StatusNotFound, err)
+		}
 		return h.RespondWithCodeError(c, http.StatusInternalServerError, fmt.Errorf("failed to extract thumbnail"))
 	}
 
-	// 3. Check HTTP Request ETag for returning 304 Not Modified
-	fileStat, err := os.Stat(ensuredFile)
-	if err == nil {
-		eTag := fmt.Sprintf(`"%x-%x"`, fileStat.Size(), fileStat.ModTime().UnixNano())
-		if match := c.Request().Header.Get("If-None-Match"); match == eTag {
-			cache.TouchDiskCache(ensuredFile)
-			return c.NoContent(http.StatusNotModified)
-		}
-		c.Response().Header().Set("ETag", eTag)
-	}
-
-	c.Response().Header().Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
-
-	// 4. Read image bytes, populate memory LRU cache, and serve
 	imgBytes, readErr := os.ReadFile(ensuredFile)
 	if readErr != nil {
 		return h.RespondWithCodeError(c, http.StatusInternalServerError, readErr)
 	}
 
-	cache.TouchDiskCache(ensuredFile)
+	if fileStat, statErr := os.Stat(ensuredFile); statErr == nil {
+		cache.TouchDiskCacheIfOlder(ensuredFile, fileStat, thumbnailTouchMinAge)
+	}
 	h.App.ThumbnailCache.Set(hash, imgBytes)
+	setCacheHeaders()
 	return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
 }
 
 // EnsureThumbnail generates or returns the cached thumbnail path for a given video file.
 func (h *Handler) EnsureThumbnail(videoPath string) (string, error) {
-	return h.EnsureThumbnailWithContext(context.Background(), videoPath)
+	return h.EnsureThumbnailWithOffset(context.Background(), videoPath, nil)
 }
 
 // EnsureThumbnailWithContext generates or returns the cached thumbnail path with context cancellation support.
 func (h *Handler) EnsureThumbnailWithContext(parentCtx context.Context, videoPath string) (string, error) {
+	return h.EnsureThumbnailWithOffset(parentCtx, videoPath, nil)
+}
+
+// EnsureThumbnailWithOffset generates or returns the cached thumbnail path at an optional second offset.
+func (h *Handler) EnsureThumbnailWithOffset(parentCtx context.Context, videoPath string, offsetSec *int) (string, error) {
 	if parentCtx.Err() != nil {
 		return "", parentCtx.Err()
 	}
@@ -122,14 +212,17 @@ func (h *Handler) EnsureThumbnailWithContext(parentCtx context.Context, videoPat
 		return "", err
 	}
 
+	return h.ensureThumbnailFile(parentCtx, videoPath, thumbnailHash(videoPath, videoStat, offsetSec), offsetSec)
+}
+
+// ensureThumbnailFile returns the disk path of the thumbnail identified by hash, extracting
+// it with ffmpeg when missing. parentCtx only bounds how long the caller waits: the
+// extraction itself is shared and keeps running if that caller goes away.
+func (h *Handler) ensureThumbnailFile(parentCtx context.Context, videoPath string, hash string, offsetSec *int) (string, error) {
 	cacheDir := filepath.Join(h.App.Config.Cache.Dir, "thumbnails")
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return "", err
 	}
-
-	// Generate cache key based on path, mtime, and size (O(1))
-	cacheKey := fmt.Sprintf("%s:%d:%d", videoPath, videoStat.ModTime().UnixNano(), videoStat.Size())
-	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(cacheKey)))
 	cacheFile := filepath.Join(cacheDir, hash+".jpg")
 
 	// 1. Check if cache file already exists
@@ -137,26 +230,41 @@ func (h *Handler) EnsureThumbnailWithContext(parentCtx context.Context, videoPat
 		return cacheFile, nil
 	}
 
-	// 2. Backward compatibility fallback: check for legacy hash (videoPath only)
-	legacyHash := fmt.Sprintf("%x", sha256.Sum256([]byte(videoPath)))
-	legacyCacheFile := filepath.Join(cacheDir, legacyHash+".jpg")
-	if _, err := os.Stat(legacyCacheFile); err == nil {
-		_ = os.Rename(legacyCacheFile, cacheFile)
-		return cacheFile, nil
+	// 2. Backward compatibility fallback: check for legacy hash (videoPath only) when offsetSec is nil
+	if offsetSec == nil {
+		legacyHash := fmt.Sprintf("%x", sha256.Sum256([]byte(videoPath)))
+		legacyCacheFile := filepath.Join(cacheDir, legacyHash+".jpg")
+		if _, err := os.Stat(legacyCacheFile); err == nil {
+			_ = os.Rename(legacyCacheFile, cacheFile)
+			return cacheFile, nil
+		}
 	}
 
 	if parentCtx.Err() != nil {
 		return "", parentCtx.Err()
 	}
+	if thumbnailFailedRecently(hash) {
+		return "", errThumbnailUnavailable
+	}
 
 	// 3. Cold cache: generate via FFMpeg with singleflight deduplication
-	_, sfErr, _ := thumbnailSingleFlight.Do(hash, func() (interface{}, error) {
+	flight := thumbnailSingleFlight.DoChan(hash, func() (interface{}, error) {
 		// Double check if created while waiting
 		if _, err := os.Stat(cacheFile); err == nil {
 			return cacheFile, nil
 		}
-		if parentCtx.Err() != nil {
-			return nil, parentCtx.Err()
+
+		// Detached from the request: other callers may be waiting on this flight, and a
+		// viewer scrolling past the tile must not kill the extraction for everyone.
+		baseCtx := context.WithoutCancel(parentCtx)
+
+		queueCtx, cancelQueue := context.WithTimeout(baseCtx, thumbnailQueueTimeout)
+		defer cancelQueue()
+		select {
+		case thumbnailGenSem <- struct{}{}:
+			defer func() { <-thumbnailGenSem }()
+		case <-queueCtx.Done():
+			return nil, queueCtx.Err()
 		}
 
 		var customFfmpeg, customFfprobe string
@@ -167,9 +275,14 @@ func (h *Handler) EnsureThumbnailWithContext(parentCtx context.Context, videoPat
 		ffmpegPath := ffmpegutil.ResolveFFmpegPath(h.App.Config.Cache.Dir, customFfmpeg)
 		ffprobePath := ffmpegutil.ResolveFFprobePath(h.App.Config.Cache.Dir, customFfprobe)
 
-		seekTime := getSeekTimestamp(parentCtx, ffprobePath, videoPath)
+		var seekTime string
+		if offsetSec != nil {
+			seekTime = formatSeekTimestamp(time.Duration(*offsetSec) * time.Second)
+		} else {
+			seekTime = getSeekTimestamp(baseCtx, ffprobePath, videoPath)
+		}
 
-		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Second)
+		ctx, cancel := context.WithTimeout(baseCtx, 15*time.Second)
 		defer cancel()
 
 		tmpCacheFile := fmt.Sprintf("%s.%d.tmp", cacheFile, time.Now().UnixNano())
@@ -187,6 +300,7 @@ func (h *Handler) EnsureThumbnailWithContext(parentCtx context.Context, videoPat
 
 		if out, err := cmd.CombinedOutput(); err != nil {
 			_ = os.Remove(tmpCacheFile)
+			thumbnailFailed.Store(hash, time.Now())
 			h.App.Logger.Error().Err(err).Str("path", videoPath).Str("output", string(out)).Msg("thumbnail: failed to extract frame")
 			return nil, err
 		}
@@ -199,11 +313,27 @@ func (h *Handler) EnsureThumbnailWithContext(parentCtx context.Context, videoPat
 		return cacheFile, nil
 	})
 
-	if sfErr != nil {
-		return "", sfErr
+	select {
+	case res := <-flight:
+		if res.Err != nil {
+			return "", res.Err
+		}
+		return cacheFile, nil
+	case <-parentCtx.Done():
+		return "", parentCtx.Err()
 	}
+}
 
-	return cacheFile, nil
+// clearThumbnailFailures forgets failed extractions, e.g. after a manual cache purge.
+func clearThumbnailFailures() {
+	thumbnailFailed.Clear()
+}
+
+func formatSeekTimestamp(dur time.Duration) string {
+	hours := int(dur.Hours())
+	minutes := int(dur.Minutes()) % 60
+	seconds := int(dur.Seconds()) % 60
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
 
 // getSeekTimestamp returns the timestamp to seek to for thumbnail extraction.
@@ -237,10 +367,5 @@ func getSeekTimestamp(parentCtx context.Context, ffprobePath, videoPath string) 
 		targetSec = durationSec * 0.25
 	}
 
-	dur := time.Duration(targetSec * float64(time.Second))
-	hours := int(dur.Hours())
-	minutes := int(dur.Minutes()) % 60
-	seconds := int(dur.Seconds()) % 60
-
-	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	return formatSeekTimestamp(time.Duration(targetSec * float64(time.Second)))
 }

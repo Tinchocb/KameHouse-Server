@@ -34,7 +34,7 @@ export function TvNavBar() {
                         key={to}
                         to={to}
                         className={cn(
-                            "flex flex-col items-center gap-1 px-7 py-2.5 rounded-full transition-all duration-200",
+                            "flex flex-col items-center gap-1 px-7 py-2.5 rounded-full transition duration-200",
                             "focus:outline-none focus-visible:outline-none",
                             "tv-focusable",
                             isActive
@@ -55,7 +55,7 @@ export function TvNavBar() {
                     usePlayerStore.setState({ tvMode: false })
                 }}
                 className={cn(
-                    "flex flex-col items-center gap-1 px-7 py-2.5 rounded-full transition-all duration-200 cursor-pointer",
+                    "flex flex-col items-center gap-1 px-7 py-2.5 rounded-full transition duration-200 cursor-pointer",
                     "text-on-surface-variant hover:text-brand-destructive hover:bg-brand-destructive/15 active:scale-95",
                     "focus:outline-none focus-visible:outline-none tv-focusable"
                 )}

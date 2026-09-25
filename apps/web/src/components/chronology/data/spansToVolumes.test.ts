@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { SPAN_VOLUMES, groupVolumesBySaga, groupVolumesByEra, compareInUniverse, formatYearShort } from "./spansToVolumes"
 import { VOLUMES_DATA } from "./volumes"
-import { TIME_JUMPS } from "./timeJumps"
 
 describe("Chronology spans -> volumes (35 lapsos)", () => {
   it("exposes 35 lapso volumes in global order", () => {
@@ -80,14 +79,6 @@ describe("Chronology spans -> volumes (35 lapsos)", () => {
     expect(eras[2].sagas.length).toBeGreaterThan(0)
     expect(eras[3].sagas.length).toBeGreaterThan(0)
     expect(eras[4].sagas.length).toBeGreaterThan(0)
-  })
-
-  it("Todos los TIME_JUMPS[].beforeVolumeId existen en VOLUMES_DATA", () => {
-    expect(TIME_JUMPS.length).toBeGreaterThan(0)
-    const volumeIds = new Set(VOLUMES_DATA.map((v) => v.id))
-    for (const jump of TIME_JUMPS) {
-      expect(volumeIds.has(jump.beforeVolumeId)).toBe(true)
-    }
   })
 
   it("formatYearShort formatea correctamente los rangos", () => {

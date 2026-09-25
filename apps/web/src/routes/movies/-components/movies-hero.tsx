@@ -1,7 +1,7 @@
 import * as React from "react"
 import { getFormatLabel } from "@/lib/helpers/media"
 import { useState, useCallback, useMemo } from "react"
-import { m, AnimatePresence, useReducedMotion, type Variants } from "framer-motion"
+import { m, AnimatePresence } from "framer-motion"
 import { IconUiCheck, IconMediaPlay, IconUiPlus, IconUiInfo } from "@/components/ui/icons";
 import type { Continuity_WatchHistory } from "@/api/generated/types"
 import { cleanMovieTitle } from "../-MovieCard"
@@ -13,8 +13,14 @@ import { useHeroBackdrop } from "@/hooks/use-hero"
 import { stripHtml } from "@/lib/helpers/sanitizer"
 import { getMediumResImage, getLowResImage } from "@/lib/helpers/images"
 import { HeroBackdrop, heroLowResSrc } from "@/components/ui/spotlight/hero-backdrop"
-import { useAppStore, useQueueStore } from "@/lib/store"
-import { usePerformanceStore, selectIsHeavyEffectsAllowed } from "@/lib/hardware/performance-store"
+import { useQueueStore } from "@/lib/store"
+import {
+    useMotionTier,
+    heroContentContainerVariants,
+    heroItemVariants,
+    heroFadeOnlyVariants,
+    heroBackdropFadeVariants,
+} from "@/components/ui/kinetics"
 import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { toast } from "sonner"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -37,40 +43,6 @@ interface MoviesHeroProps {
     isLoading?: boolean
 }
 
-// ─── Animation Variants ────────────────────────────────────────────────────────
-const heroContentContainerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.05,
-            delayChildren: 0.03,
-        }
-    },
-    exit: {
-        opacity: 0,
-        y: -8,
-        transition: { duration: 0.25, ease: "easeOut" }
-    }
-}
-
-const heroItemVariants: Variants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { type: "spring", stiffness: 380, damping: 30, mass: 0.8 }
-    }
-}
-
-const heroFadeOnlyVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { duration: 0.25, ease: "easeOut" }
-    }
-}
-
 export function MoviesHero({
     topFeatured,
     debouncedMovie,
@@ -85,15 +57,9 @@ export function MoviesHero({
     const [featuredIndex, setFeaturedIndex] = useState(0)
     const [, setShuffleQueue] = useState<number[]>([])
     const [isHeroHovered, setIsHeroHovered] = useState(false)
-    const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed)
-    const reduceMotion = useReducedMotion()
-    const tvMode = useAppStore(s => s.tvMode)
+    const motionTier = useMotionTier()
     const hideAudienceScore = useHideAudienceScore()
-    const allowCinematicMotion = !reduceMotion
-    // Halo garantizado por color de era (como Inicio): la animación solo en
-    // equipos capaces y sin reduced-motion/TV; en el resto se muestra un orbe
-    // estático barato para que los backdrops oscuros no queden sin halo.
-    const showAnimatedOrb = isHeavyAllowed && !reduceMotion && !tvMode
+    const allowCinematicMotion = motionTier === "full"
 
     // Identificador estable de la colección para detectar cambios reales de era o filtro
     const topFeaturedIds = useMemo(() => topFeatured.map((m, idx) => m.mediaId ?? idx).join(","), [topFeatured])
@@ -254,33 +220,7 @@ export function MoviesHero({
                     />
                 )}
 
-                {showAnimatedOrb && (
-                    <m.div
-                        animate={{
-                            scale: [1, 1.08, 1],
-                            opacity: [0.25, 0.4, 0.25],
-                        }}
-                        transition={{
-                            duration: 8,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                        }}
-                        className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full pointer-events-none transition-colors duration-700 transform-gpu"
-                        style={{
-                            background: `radial-gradient(ellipse, color-mix(in srgb, ${currentColors.accent} 50%, transparent) 0%, transparent 70%)`
-                        }}
-                    />
-                )}
-
-                {!showAnimatedOrb && !tvMode && (
-                    <div
-                        className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full pointer-events-none transform-gpu"
-                        style={{
-                            background: `radial-gradient(ellipse, color-mix(in srgb, ${currentColors.accent} 50%, transparent) 0%, transparent 70%)`,
-                            opacity: 0.35,
-                        }}
-                    />
-                )}
+                {/* Sin orbe de era: el color llega solo por el tinte de fondo de arriba. */}
             </div>
 
             {/* 1. Barra de Navegación Horizontal de Eras (misma posición que Home) */}
@@ -297,12 +237,12 @@ export function MoviesHero({
             <div className="relative z-10 w-full">
                 {isLoading && !currentMovie ? (
                     <div
-                        className="w-full relative rounded-3xl overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] border border-outline-variant bg-bg-primary animate-pulse"
+                        className="w-full relative rounded-hero overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] border border-outline-variant bg-bg-primary animate-pulse"
                         aria-label="Cargando destacadas"
                     />
                 ) : !currentMovie ? (
                     <div
-                        className="w-full relative rounded-3xl overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] flex items-center justify-center border border-outline-variant shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] bg-bg-primary transition-colors duration-700 p-6"
+                        className="w-full relative rounded-hero overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] flex items-center justify-center border border-outline-variant shadow-hero bg-bg-primary transition-colors duration-700 p-6"
                         style={{
                             borderColor: `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
                         }}
@@ -314,7 +254,7 @@ export function MoviesHero({
                     </div>
                 ) : (
                     <div
-                        className={`w-full relative rounded-3xl overflow-hidden ${HERO_STAGE_CLASS} flex flex-col justify-end border border-outline-variant shadow-hero bg-black transition-colors duration-700`}
+                        className={`w-full relative rounded-hero overflow-hidden ${HERO_STAGE_CLASS} flex flex-col justify-end border border-outline-variant shadow-hero bg-black transition-colors duration-700`}
                         style={{
                             borderColor: `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
                         }}
@@ -323,25 +263,24 @@ export function MoviesHero({
                     <AnimatePresence mode="popLayout">
                         <m.div
                             key={currentMovie.mediaId + "_visual"}
-                            // Fundido "por encima" (igual que el hero de Inicio): la saliente
-                            // queda opaca debajo hasta que la entrante terminó de aparecer; si no,
-                            // entre 0.3s y 0.7s solo se ve el fondo negro.
-                            initial={{ opacity: 0, scale: 1.01, zIndex: 1 }}
-                            animate={{ opacity: 1, scale: 1, zIndex: 1, transition: { duration: 0.7, ease: "easeOut" } }}
-                            exit={{ opacity: 0, zIndex: 0, transition: { opacity: { delay: 0.7, duration: 0.05 } } }}
-                            className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-0"
+                            variants={heroBackdropFadeVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-hero-base"
                         >
                             {visualArt && (
                                 <>
                                     {/* 1. Base negra cinematográfica: evita wash plano si la imagen tarda/falla */}
                                      <div className="absolute inset-0 w-full h-full bg-black pointer-events-none" />
                                      <div
-                                          className="absolute inset-0 w-full h-full pointer-events-none"
+                                          className="absolute -inset-6 pointer-events-none"
                                           style={{
                                               backgroundImage: `url(${heroLowResSrc(visualArt) ?? visualArt.src})`,
                                               backgroundSize: "cover",
                                               backgroundPosition: heroObjectPosition(visualArt),
-                                              filter: "blur(10px) brightness(0.5) saturate(110%)",
+                                              filter: "blur(var(--filter-blur-hero, 12px)) brightness(0.62) saturate(130%)",
+                                              transform: "scale(1.08)",
                                           }}
                                       />
 
@@ -349,7 +288,7 @@ export function MoviesHero({
                                       <HeroBackdrop
                                           art={visualArt}
                                           alt={movieTitle}
-                                          imgClassName="filter saturate-[115%] contrast-[108%] brightness-[0.95]"
+                                          imgClassName="hero-image-filter"
                                       />
                                 </>
                             )}
@@ -365,7 +304,7 @@ export function MoviesHero({
                     </AnimatePresence>
 
                     {/* Content Overlay (idéntico padding y ritmo que Home) */}
-                    <div className="relative z-20 flex flex-col justify-end p-5 sm:p-6 md:p-7 space-y-2.5 w-full pointer-events-none">
+                    <div className="relative z-hero-content flex flex-col justify-end p-5 sm:p-6 md:p-7 space-y-2.5 w-full pointer-events-none">
                         <AnimatePresence mode="wait">
                             <m.div
                                 key={currentMovie.mediaId + "_content"}
@@ -373,7 +312,7 @@ export function MoviesHero({
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
-                                className="flex flex-col space-y-2.5 transform-gpu will-change-transform text-left w-full pointer-events-auto max-w-2xl"
+                                className="flex flex-col space-y-2.5 transform-gpu will-change-transform text-left w-full pointer-events-auto max-w-hero-content-wide"
                             >
                                 {/* Top Era Badge */}
                                 {currentEraLabel && (
@@ -455,7 +394,7 @@ export function MoviesHero({
                                         if (currentMovie.mediaId == null) return
                                         handleMovieClick(currentMovie.mediaId)
                                     }}
-                                    className="flex items-center justify-center bg-white text-black font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6),0_8px_24px_rgba(255,255,255,0.25)] hover:shadow-[0_12px_32px_rgba(255,255,255,0.35)] transition-all duration-200 hover:scale-[1.04] hover:-translate-y-px active:scale-95"
+                                    className="flex items-center justify-center bg-white text-black font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.04] hover:-translate-y-px active:scale-95"
                                 >
                                     <IconMediaPlay size={15} fill="currentColor" />
                                     <span>{hasProgress ? "Reanudar" : "Ver Película"}</span>

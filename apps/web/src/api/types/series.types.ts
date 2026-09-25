@@ -28,6 +28,14 @@ export interface SagaDetailSearchParams {
    * una serie se navega a la siguiente con `autoplay=1`).
    */
   autoplay?: string
+  /** Segundo inicial opcional para arrancar la reproducción (ej: hito de cronología). */
+  t?: string | number
+  /** Clave estable del momento (`${span.id}:${episode}:${index}`) para corrección in-player. */
+  moment?: string
+  /** Título del momento para mostrar en el chip del player. */
+  momentTitle?: string
+  /** Lapso de la cronología desde el que se lanzó la reproducción: al cerrar el reproductor se vuelve ahí. */
+  chrono?: string
 }
 
 import type { EpisodeTag } from "@/lib/helpers/synopsis-tagger"

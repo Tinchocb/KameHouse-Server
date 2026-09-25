@@ -20,14 +20,13 @@ import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
 import { startViewTransition } from "@/lib/helpers/transitions"
-import { stripHtml } from "@/lib/helpers/sanitizer"
 import { MediaHero } from "@/components/ui/media-hero"
 import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
 import { IconUiListPlus, IconUiCheck, IconUiPlus, IconUiHeart } from "@/components/ui/icons"
 import { cleanMovieTitle } from "./-MovieCard"
-import { getEntryEraId, getEntryTitle, getMovieLore } from "./-components/movies-utils"
+import { getEntryEraId, getEntryTitle, getMovieLore, getMovieSynopsis } from "./-components/movies-utils"
 import { ERAS, ERA_COLOR_MAP } from "@/lib/config/eras"
 
 import { getSeriesEraTheme } from "@/lib/config/dragonball.config"
@@ -65,6 +64,14 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const validNumericMovieId = Number.isFinite(numericMovieId) ? numericMovieId : null
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(validNumericMovieId ?? 0)
     const containerRef = useRef<HTMLDivElement>(null)
+    // Confirmación en el mismo botón de cola (el aviso sale lejos, arriba): el ícono pasa a tilde un momento.
+    const [justQueued, setJustQueued] = useState(false)
+    const queuedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    useEffect(() => () => {
+        if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
+    }, [])
+    // El latido del corazón solo cuando lo marcás, no al abrir una película que ya era favorita.
+    const [favoriteBeat, setFavoriteBeat] = useState(false)
     const addToQueue = useQueueStore(state => state.addToQueue)
     const ts = useThemeSettings()
     const hideAudienceScore = useHideAudienceScore()
@@ -91,19 +98,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const serverWatched = entry?.episodes?.[0]?.watched
         || (entry?.listData?.progress ?? 0) >= (entry?.media?.totalEpisodes ?? 1)
         || false
+    // El estado local (override, favorito) se reinicia solo al cambiar de
+    // película: MovieDetailPage monta este componente con key={movieId}.
     const isWatched = userWatchedOverride ?? serverWatched
-
-    // Resetear override de usuario al cambiar de película
-    const [prevMovieId, setPrevMovieId] = useState(movieId)
-    if (movieId !== prevMovieId) {
-        setPrevMovieId(movieId)
-        setUserWatchedOverride(null)
-        try {
-            setIsFavorite(localStorage.getItem(`kamehouse-favorite-movie-${movieId}`) === "1")
-        } catch {
-            setIsFavorite(false)
-        }
-    }
 
     const { mutate: updateProgress } = useUpdateAnimeEntryProgress(validNumericMovieId ?? 0, 1, false)
     const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
@@ -155,7 +152,19 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         }
         return (
             <div className="min-h-screen text-on-surface flex items-center justify-center">
-                <EmptyState title="Película no encontrada" message="No pudimos cargar este contenido." />
+                <EmptyState
+                    title="Película no encontrada"
+                    message="No pudimos cargar este contenido."
+                    action={
+                        <button
+                            type="button"
+                            onClick={() => navigate({ to: "/movies" })}
+                            className="min-h-11 px-5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors duration-base cursor-pointer"
+                        >
+                            Volver a Películas
+                        </button>
+                    }
+                />
             </div>
         )
     }
@@ -172,13 +181,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const eraTheme = getSeriesEraTheme(media.tmdbId)
     const isAdaptiveEra = ts.effectiveMode === "era" && (!ts.themeEra || ts.themeEra === "era-universe")
     const localTheme = isAdaptiveEra && eraTheme ? eraTheme : undefined
-    const loreSynopsis = lore?.specialTrivia || lore?.chronologyNotes || lore?.keyEvents?.join(" ")
-    const isDescriptionEnglish = media.description && /^(the|after|when|with|in\s+the|during|a\s+|goku\b)/i.test(media.description.trim())
-    const synopsis = stripHtml(
-        (!media.description || isDescriptionEnglish ? (loreSynopsis || media.description) : media.description)
-        || loreSynopsis
-        || "Sin descripción disponible."
-    )
+    const synopsis = getMovieSynopsis(media.description, lore) || "Sin descripción disponible."
     const heroArt = getMovieHeroArt({
         mediaId: entry.mediaId,
         tmdbId: media.tmdbId,
@@ -196,12 +199,16 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const techInfo = entry.localFiles?.[0]?.technicalInfo as FileTechnicalInfo | undefined
     const streamWidth = techInfo?.videoStream?.width ?? 0
     const colorTransfer = (techInfo?.videoStream?.colorTransfer || "").toLowerCase()
-    const isHDR = colorTransfer.includes("smpte2084") || colorTransfer.includes("arib-std-b67") || (((techInfo?.videoStream as unknown as { bitsPerRawSample?: number })?.bitsPerRawSample ?? 0) > 8)
+    // HDR solo por función de transferencia: PQ (HDR10) o HLG. La profundidad de
+    // 10 bits no implica HDR: casi todo el anime moderno se codifica en 10 bits SDR.
+    const hdrLabel = colorTransfer.includes("smpte2084") ? "HDR10" : colorTransfer.includes("arib-std-b67") ? "HLG" : null
     const technicalData = techInfo ? {
         fileSize: formatFileSize(techInfo.size || 0),
-        resolutionTag: streamWidth >= 3840 ? "4K UHD" : streamWidth >= 1920 ? "1080P FHD" : streamWidth >= 1280 ? "720P HD" : "SD",
+        // Sin ancho conocido no hay resolución que mostrar (antes decía "SD").
+        resolutionTag: streamWidth >= 3840 ? "4K UHD" : streamWidth >= 1920 ? "1080P FHD" : streamWidth >= 1280 ? "720P HD" : streamWidth > 0 ? "SD" : undefined,
         is4K: streamWidth >= 3840,
-        isHDR,
+        hdrLabel,
+        hasSubtitles: (techInfo.subtitleStreams?.length ?? 0) + (techInfo.externalSubtitles?.length ?? 0) > 0,
         videoCodec: techInfo.videoStream?.codec?.toUpperCase(),
         audioCodec: techInfo.audioStreams?.[0]?.codec?.toUpperCase(),
     } : null
@@ -229,6 +236,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         e.stopPropagation()
         const next = !isFavorite
         setIsFavorite(next)
+        if (next) setFavoriteBeat(true)
         try {
             if (next) {
                 localStorage.setItem(`kamehouse-favorite-movie-${movieId}`, "1")
@@ -284,6 +292,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 mediaFormat: media.format ?? "MOVIE"
             })
             toast.success("Añadido a la cola de reproducción")
+            setJustQueued(true)
+            if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
+            queuedTimerRef.current = setTimeout(() => setJustQueued(false), 1400)
         } else {
             toast.error("No hay archivos locales disponibles.")
         }
@@ -310,13 +321,13 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             format="PELÍCULA"
             year={year}
             duration={formattedDuration}
-            ageRating={media.isNsfw ? "18+" : "PG-13"}
+            ageRating={media.isNsfw ? "18+" : undefined}
             quality={technicalData?.is4K ? "4K UHD" : technicalData?.resolutionTag || undefined}
             rating={hideAudienceScore ? undefined : (media.score ? media.score / 10 : undefined)}
         >
-            {technicalData?.isHDR && (
+            {technicalData?.hdrLabel && (
                 <span className="bg-status-warning/20 text-status-warning text-3xs font-mono font-black tracking-widest px-2.5 py-1 rounded-lg border border-status-warning/30 uppercase shadow-sm">
-                    HDR10
+                    {technicalData.hdrLabel}
                 </span>
             )}
             {technicalData?.videoCodec && (
@@ -324,9 +335,11 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     {technicalData.videoCodec}
                 </span>
             )}
-            <span className="bg-white/10 text-on-surface-variant text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
-                CC
-            </span>
+            {technicalData?.hasSubtitles && (
+                <span className="bg-white/10 text-on-surface-variant text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+                    CC
+                </span>
+            )}
         </MediaMetadataCapsule>
     )
 
@@ -346,8 +359,20 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 {entry.localFiles && entry.localFiles.length > 0 && (
                     <GlassIconButton
                         onClick={handleAddToQueue}
-                        icon={<IconUiListPlus className="w-5 h-5" />}
-                        title="Añadir a la cola"
+                        isActive={justQueued}
+                        activeTone="success"
+                        icon={
+                            <m.span
+                                key={justQueued ? "queued" : "queue"}
+                                initial={{ scale: 0.6, opacity: 0, filter: "blur(2px)" }}
+                                animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                                transition={{ type: "spring", stiffness: 480, damping: 28 }}
+                                className="inline-flex"
+                            >
+                                {justQueued ? <IconUiCheck className="w-5 h-5 stroke-[3px]" /> : <IconUiListPlus className="w-5 h-5" />}
+                            </m.span>
+                        }
+                        title={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
                         className="flex-1 md:flex-initial"
                     />
                 )}
@@ -379,8 +404,11 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         <m.span
                             key={isFavorite ? "fav" : "unfav"}
                             initial={{ scale: 0.7, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: "spring", stiffness: 480, damping: 28 }}
+                            // Al marcar favorito el corazón late una vez (momento de gusto, poco frecuente).
+                            animate={isFavorite && favoriteBeat ? { scale: [0.7, 1.25, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
+                            transition={isFavorite && favoriteBeat
+                                ? { duration: 0.42, times: [0, 0.45, 1], ease: [0.23, 1, 0.32, 1] }
+                                : { type: "spring", stiffness: 480, damping: 28 }}
                             className="inline-flex"
                         >
                             <IconUiHeart className={cn("w-5 h-5", isFavorite && "fill-current")} />

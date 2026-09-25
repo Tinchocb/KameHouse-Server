@@ -123,7 +123,7 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
                             whileTap={{ scale: 0.98 }}
                             onClick={() => onStepClick(i)}
                             className={cn(
-                                "flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all duration-200 text-left relative overflow-hidden cursor-pointer",
+                                "flex items-center gap-2.5 px-3 py-2 rounded-xl border transition duration-200 text-left relative overflow-hidden cursor-pointer",
                                 isActive
                                     ? "bg-brand-accent/15 border-brand-accent/50 text-on-surface shadow-elevation-1"
                                     : isCompleted
@@ -140,7 +140,7 @@ function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onSt
                             )}
                             <div
                                 className={cn(
-                                    "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold transition-all duration-200",
+                                    "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold transition duration-200",
                                     isActive
                                         ? "bg-brand-accent text-on-primary shadow-md shadow-brand-accent/30"
                                         : isCompleted
@@ -308,7 +308,7 @@ function MediaEngineStep() {
                                 onClick={() => installFFmpeg()}
                                 disabled={isDownloading}
                                 className={cn(
-                                    "px-4 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shrink-0",
+                                    "px-4 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition shrink-0",
                                     "bg-brand-accent text-on-primary hover:bg-brand-accent/90 shadow-md shadow-brand-accent/20",
                                     isDownloading && "opacity-60 cursor-not-allowed"
                                 )}
@@ -337,7 +337,7 @@ function MediaEngineStep() {
                             </div>
                             <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-brand-accent transition-all duration-base rounded-full"
+                                    className="h-full bg-brand-accent transition-[width] duration-base rounded-full"
                                     style={{ width: `${Math.max(5, status?.downloadProgress ?? 0)}%` }}
                                 />
                             </div>
@@ -472,14 +472,14 @@ function PlaybackStep({
                                 }
                             }}
                             className={cn(
-                                "cursor-pointer p-4 rounded-xl border transition-all duration-200 text-left flex items-start space-x-3 select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                "cursor-pointer p-4 rounded-xl border transition duration-200 text-left flex items-start space-x-3 select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                 isEnabled
                                     ? "bg-surface border-brand-accent/50 shadow-md shadow-brand-accent/10"
                                     : "bg-glass-bg border-border-subtle hover:border-border-strong opacity-70 hover:opacity-100"
                             )}
                         >
                             <div className={cn(
-                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br transition-all duration-200 shadow-md",
+                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br transition duration-200 shadow-md",
                                 item.color,
                                 isEnabled ? "opacity-100 scale-100" : "opacity-40 scale-95"
                             )}>
@@ -592,7 +592,7 @@ function LanguageStep({
                                         }
                                     }}
                                     className={cn(
-                                        "cursor-pointer p-3 rounded-xl border transition-all duration-200 flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                        "cursor-pointer p-3 rounded-xl border transition duration-200 flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                         isSelected
                                             ? "bg-brand-accent/20 border-brand-accent text-on-surface shadow-md shadow-brand-accent/15"
                                             : "bg-glass-bg border-border-subtle hover:border-border-strong text-on-surface-variant"
@@ -637,7 +637,7 @@ function LanguageStep({
                         }
                     }}
                     className={cn(
-                        "cursor-pointer p-3.5 rounded-xl border transition-all duration-200 flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                        "cursor-pointer p-3.5 rounded-xl border transition duration-200 flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                         flexibleMatching
                             ? "bg-surface border-brand-accent/40"
                             : "bg-glass-bg border-border-subtle opacity-75"
@@ -756,24 +756,19 @@ export function GettingStarted({
             "w-full bg-bg-primary relative flex flex-col justify-between select-none overflow-hidden",
             embedded ? "rounded-2xl border border-border-subtle p-4 sm:p-6" : isModal ? "p-4 sm:p-6" : "min-h-[100dvh] h-[100dvh]"
         )}>
-            {/* Cinematic animated background gradients */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-bg-primary/70 z-base" />
-                <div className="absolute inset-0 opacity-[0.22] blur-3xl mix-blend-screen">
-                    <div 
-                        className="absolute top-[10%] left-[10%] w-[40vw] h-[40vw] rounded-full animate-float-blur"
-                        style={{ background: "radial-gradient(circle, var(--era-db-hex, #E87A2D) 0%, transparent 70%)" }}
-                    />
-                    <div 
-                        className="absolute top-[5%] right-[10%] w-[35vw] h-[35vw] rounded-full animate-float-blur-reverse"
-                        style={{ background: "radial-gradient(circle, var(--era-dbz-hex, #E6B43C) 0%, transparent 70%)", animationDelay: "-4s" }}
-                    />
-                    <div 
-                        className="absolute bottom-[10%] right-[15%] w-[40vw] h-[40vw] rounded-full animate-float-blur"
-                        style={{ background: "radial-gradient(circle, var(--era-dbgt-hex, #D23859) 0%, transparent 70%)", animationDelay: "-8s" }}
-                    />
-                </div>
-            </div>
+            {/* Fondo: velo fijo con tres colores de era desde las esquinas, sin orbes
+                flotantes (misma línea que el fondo del Modo por Era). */}
+            <div
+                aria-hidden
+                className="absolute inset-0 overflow-hidden pointer-events-none"
+                style={{
+                    background: [
+                        "radial-gradient(90% 70% at 0% 0%, color-mix(in srgb, var(--era-db-hex) 14%, transparent), transparent 60%)",
+                        "radial-gradient(80% 65% at 100% 0%, color-mix(in srgb, var(--era-dbz-hex) 10%, transparent), transparent 60%)",
+                        "radial-gradient(90% 70% at 100% 100%, color-mix(in srgb, var(--era-dbgt-hex) 10%, transparent), transparent 60%)",
+                    ].join(", "),
+                }}
+            />
 
             {/* Top header bar */}
             {!isModal && !embedded && (
@@ -912,7 +907,7 @@ export function GettingStarted({
                                     e.preventDefault()
                                     prevStep()
                                 }}
-                                className="rounded-xl text-xs sm:text-sm px-4 h-10 border-border-subtle hover:border-border-strong hover:bg-surface-container transition-all cursor-pointer"
+                                className="rounded-xl text-xs sm:text-sm px-4 h-10 border-border-subtle hover:border-border-strong hover:bg-surface-container transition cursor-pointer"
                                 leftIcon={<IconNavigationChevronLeft className="w-4 h-4" />}
                             >
                                 Anterior

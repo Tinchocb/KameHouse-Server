@@ -1,4 +1,4 @@
-﻿import React from "react"
+import React from "react"
 import { m, AnimatePresence } from "framer-motion"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { cn } from "@/components/ui/core/styling"
@@ -23,7 +23,7 @@ export function DirtyPill({ show }: { show?: boolean }) {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.6 }}
                     transition={popSpring}
-                    className="text-4xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0"
+                    className="text-4xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25 shrink-0"
                 >
                     Requiere Guardar
                 </m.span>
@@ -247,7 +247,7 @@ export const OsSelect = React.memo(function OsSelect({
                 <SelectPrimitive.Trigger
                     aria-label={label}
                     className={cn(
-                        "group relative flex items-center justify-between gap-3 shrink-0 w-full sm:w-auto sm:min-w-[264px] sm:max-w-[320px]",
+                        "group relative flex items-center justify-between gap-3 shrink-0 w-full sm:w-auto sm:min-w-[264px] sm:max-w-[320px] min-h-[44px]",
                         "rounded-full bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10",
                         "pl-4 pr-1.5 py-1.5 text-left outline-none select-none cursor-pointer",
                         "shadow-glass-highlight-sm",
@@ -264,7 +264,7 @@ export const OsSelect = React.memo(function OsSelect({
                             transition={dotSpring}
                             className={cn(
                                 "w-1.5 h-1.5 rounded-full shrink-0",
-                                selected ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-outline/60"
+                                selected ? "bg-status-success shadow-[0_0_8px_rgba(var(--status-success-rgb),0.8)]" : "bg-outline/60"
                             )}
                         />
                         <span className="block truncate text-xs font-semibold text-white min-w-0">
@@ -294,7 +294,8 @@ export const OsSelect = React.memo(function OsSelect({
                         style={{ transformOrigin: "var(--radix-select-content-transform-origin)" }}
                         className={cn(
                             "z-dropdown min-w-[var(--radix-select-trigger-width)] max-w-[min(92vw,360px)] overflow-hidden",
-                            "rounded-2xl border border-white/15 border-t-white/35 border-b-white/10",
+                            // Mismos bordes que .sectionbar vía tokens: siguen a Clásico y Flat.
+                            "rounded-2xl border border-[var(--sectionbar-border)] border-t-[var(--sectionbar-border-top)] border-b-[var(--sectionbar-border-bottom)]",
                             "bg-surface-container-lowest/90 backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
                             "shadow-[shadow:var(--glass-highlight-md),0_12px_36px_-6px_rgba(0,0,0,0.75)]",
                             "p-1.5 origin-[var(--radix-select-content-transform-origin)]",
@@ -324,7 +325,7 @@ export const OsSelect = React.memo(function OsSelect({
                                         )}
                                     >
                                         <span className={cn(
-                                            "w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-[background-color,border-color,color,transform,box-shadow] duration-fast ease-bounce",
+                                            "w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-[background-color,border-color,color,transform,box-shadow] duration-fast ease-bounce-spring",
                                             isActive
                                                 ? "bg-white border-white text-black shadow-[0_0_10px_rgba(255,255,255,0.5)] scale-100"
                                                 : "border-white/25 bg-transparent text-transparent scale-90"
@@ -405,7 +406,7 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                 <div className="space-y-0.5 min-w-0 max-w-xl py-0.5">
                     <p className="text-xs font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2 flex-wrap">{label}<DirtyPill show={dirty} /></p>
                     {description && <p className="text-2xs text-on-surface-variant/70 leading-normal font-medium line-clamp-2">{description}</p>}
-                    {error && <p className="text-3xs text-red-400 font-mono tracking-tight mt-0.5 animate-fade-in">{error}</p>}
+                    {error && <p className="text-3xs text-status-error font-mono tracking-tight mt-0.5 animate-fade-in">{error}</p>}
                 </div>
             </div>
 
@@ -413,7 +414,7 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                 "flex items-center gap-2 bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 rounded-full pl-4 pr-3 py-2 w-full sm:w-64 lg:w-72 transition-[border-color,background-color,box-shadow] duration-fast ease-smooth-out relative",
                 "shadow-glass-highlight-sm",
                 "focus-within:border-white/35 focus-within:bg-white/[0.06] focus-within:shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.1)] hover:border-white/30",
-                error && "border-red-500/50 focus-within:border-red-500 focus-within:shadow-[inset_0_1px_1px_0_rgba(239,68,68,0.2),0_0_16px_rgba(239,68,68,0.2)] animate-error-shake",
+                error && "border-status-error/50 focus-within:border-status-error focus-within:shadow-[inset_0_1px_1px_0_rgba(var(--status-error-rgb),0.2),0_0_16px_rgba(var(--status-error-rgb),0.2)] animate-error-shake",
                 className
             )}>
                 <input
@@ -494,13 +495,13 @@ function PathRow({ dir, showFullPath, onRemove }: { dir: string, showFullPath: b
             transition={rowSpring}
             className={cn(
             "flex items-center justify-between gap-2 bg-white/[0.03] border rounded-xl px-3.5 py-2 group/path transition-[border-color,background-color] duration-fast ease-smooth-out",
-            missing ? "border-amber-400/30 hover:border-amber-400/50" : "border-white/10 hover:border-white/20",
+            missing ? "border-status-warning/30 hover:border-status-warning/50" : "border-white/10 hover:border-white/20",
         )}>
             <span className="text-xs text-on-surface-variant font-mono truncate" title={dir}>{displayPath}</span>
             <div className="flex items-center gap-1.5 shrink-0">
                 {missing && (
                     <span
-                        className="flex items-center gap-1 text-3xs font-semibold text-amber-300"
+                        className="flex items-center gap-1 text-3xs font-semibold text-status-warning"
                         title="La carpeta no existe o no está accesible. Revisá que el disco esté conectado."
                     >
                         <IconUiAlertTriangle className="w-3 h-3" aria-hidden="true" />
@@ -510,7 +511,7 @@ function PathRow({ dir, showFullPath, onRemove }: { dir: string, showFullPath: b
                 <button
                     type="button"
                     onClick={() => onRemove(dir)}
-                    className="text-on-surface-variant/70 hover:text-red-400 transition-[color,background-color,transform] duration-fast ease-smooth-out p-1 rounded-lg hover:bg-red-500/10 active:scale-90"
+                    className="relative text-on-surface-variant/70 hover:text-status-error transition-[color,background-color,transform] duration-fast ease-smooth-out min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-status-error/10 active:scale-90 before:absolute before:-inset-2"
                     title="Eliminar ruta"
                     aria-label={`Eliminar ruta ${dir}`}
                 >

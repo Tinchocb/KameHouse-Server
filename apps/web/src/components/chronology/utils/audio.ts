@@ -18,6 +18,10 @@ class SoundEngine {
     // No-op
   }
 
+  public playSuccess(): void {
+    // No-op
+  }
+
   public playLoreReveal(): void {
     // No-op
   }

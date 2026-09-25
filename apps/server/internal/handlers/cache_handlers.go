@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -183,6 +182,7 @@ func (h *Handler) HandleClearSystemCache(c echo.Context) error {
 		if h.App.ThumbnailCache != nil {
 			h.App.ThumbnailCache.Purge()
 		}
+		clearThumbnailFailures()
 		fb, fc := clearDirFiles(thumbnailDir)
 		freedBytes += fb
 		freedCount += fc
@@ -353,9 +353,7 @@ func (h *Handler) HandleWarmThumbnailCache(c echo.Context) error {
 						continue
 					}
 
-					cacheKey := fmt.Sprintf("%s:%d:%d", videoPath, fi.ModTime().UnixNano(), fi.Size())
-					hash := fmt.Sprintf("%x", sha256.Sum256([]byte(cacheKey)))
-					cacheFile := filepath.Join(cacheDir, hash+".jpg")
+					cacheFile := filepath.Join(cacheDir, thumbnailHash(videoPath, fi, nil)+".jpg")
 
 					// Fast O(1) disk existence check: skip if thumbnail already exists
 					if _, err := os.Stat(cacheFile); err == nil {

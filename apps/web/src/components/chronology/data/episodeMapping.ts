@@ -75,7 +75,9 @@ export function getLocalEpisodeThumbnail(
   explicitUrl?: string,
 ): string | undefined {
   if (explicitUrl && explicitUrl.trim() !== '') return explicitUrl;
-  if (!absoluteEpisode || absoluteEpisode <= 0) return undefined;
-  const slug = getSeriesSlugForVolume(volume);
-  return `/episodes/${slug}/${absoluteEpisode}.webp`;
+  // No hay set curado en /public/episodes: adivinar la ruta daba un 404 por miniatura
+  // (y un re-render al caer a la fuente siguiente). Solo cuenta una URL explícita.
+  void volume;
+  void absoluteEpisode;
+  return undefined;
 }

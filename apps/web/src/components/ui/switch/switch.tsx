@@ -17,7 +17,7 @@ const hiddenInputStyles = cn(
 export const SwitchAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Switch__root",
-        "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border border-outline-variant transition-colors",
+        "group/switch peer inline-flex shrink-0 cursor-pointer items-center rounded-full border border-outline-variant transition-colors duration-200",
         "disabled:cursor-not-allowed data-[disabled=true]:opacity-50",
         "outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background",
         "data-[state=unchecked]:bg-surface-container", // Unchecked
@@ -52,8 +52,12 @@ export const SwitchAnatomy = defineStyleAnatomy({
     }),
     thumb: cva([
         "UI-Switch__thumb",
-        "pointer-events-none block rounded-full data-[state=checked]:bg-white shadow-elevation-2 ring-0 transition-transform duration-200 ease-bounce-spring",
+        "pointer-events-none block rounded-full data-[state=checked]:bg-white shadow-elevation-2 ring-0 transition-[transform,background-color] duration-200 ease-bounce-spring",
         "data-[state=unchecked]:translate-x-1 data-[state=unchecked]:bg-white/50",
+        // Al mantenerlo presionado el círculo se estira hacia el centro, como en iOS:
+        // confirma que el toque llegó antes de soltar.
+        // (Un <button disabled> no recibe :active, así que deshabilitado no se estira.)
+        "data-[state=unchecked]:origin-left data-[state=checked]:origin-right group-active/switch:scale-x-[1.3]",
     ], {
         variants: {
             size: {
@@ -143,7 +147,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>((props, r
             id={basicFieldProps.id}
             fieldClass={cn(
                 "w-fit",
-                side === "right" && "w-full group/switch transition-all duration-base hover:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_50%,transparent)] rounded-lg p-2 border border-transparent hover:border-outline-variant",
+                side === "right" && "w-full group/switch transition duration-base hover:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_50%,transparent)] rounded-lg p-2 border border-transparent hover:border-outline-variant",
                 basicFieldProps.fieldClass,
             )}
             fieldHelpTextClass={cn("")}

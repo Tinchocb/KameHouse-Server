@@ -1,5 +1,5 @@
 import * as React from "react"
-import { AnimatePresence, m, useReducedMotion, type PanInfo, type Variants } from "framer-motion"
+import { AnimatePresence, m, type PanInfo } from "framer-motion"
 import { IconNavigationLayers, IconMediaPlay, IconUiInfo } from "@/components/ui/icons"
 import { EraOpeningPlayer } from "@/components/shared/era-opening-player"
 import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
@@ -11,9 +11,16 @@ import { HeroBackdrop, heroHighResSrc } from "@/components/ui/spotlight/hero-bac
 import { HERO_PARALLAX_OVERSCAN, HERO_STAGE_CLASS } from "@/lib/config/hero-stage"
 import { cn } from "@/components/ui/core/styling"
 import { useSound } from "@/hooks/use-sound"
-import { usePerformanceStore, selectIsHeavyEffectsAllowed } from "@/lib/hardware/performance-store"
 import { useImagePalette } from "@/hooks/use-image-palette"
-import { RippleFeedback } from "@/components/ui/kinetics"
+import {
+    RippleFeedback,
+    useMotionTier,
+    heroContentContainerVariants,
+    heroItemVariants,
+    heroFadeOnlyVariants,
+    heroBackdropSlideVariants,
+    useSpringPreset,
+} from "@/components/ui/kinetics"
 import { HeroCarouselDots } from "@/components/ui/spotlight/hero-carousel-dots"
 
 export type EraConfig = typeof ERAS[number]
@@ -22,72 +29,6 @@ export type EraConfig = typeof ERAS[number]
 const ERA_AGE_RATING: Partial<Record<EraId, string>> = {
     db: "TV-PG", dbgt: "TV-PG", dbdaima: "TV-PG",
     dbz: "TV-14", dbkai: "TV-14", dbs: "TV-14",
-}
-
-const heroBackdropVariants: Variants = {
-    // Fundido "por encima": la capa entrante va arriba y aparece; la saliente se
-    // queda opaca debajo hasta que la nueva terminó de entrar. Si ambas se
-    // desvanecen a la vez, a mitad de camino las dos quedan semitransparentes
-    // sobre el fondo negro y el hero "parpadea" oscuro en cada rotación.
-    initial: (direction: number = 1) => ({
-        opacity: 0,
-        x: direction >= 0 ? 12 : -12,
-        scale: 1.005,
-        zIndex: 1,
-    }),
-    animate: {
-        opacity: 1,
-        x: 0,
-        scale: 1,
-        zIndex: 1,
-        transition: {
-            duration: 0.35,
-            ease: [0.22, 1, 0.36, 1]
-        }
-    },
-    exit: (direction: number = 1) => ({
-        opacity: 0,
-        x: direction >= 0 ? -12 : 12,
-        scale: 1,
-        zIndex: 0,
-        transition: {
-            x: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
-            opacity: { delay: 0.35, duration: 0.05 },
-        }
-    })
-}
-
-const heroContentContainerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.03,
-            delayChildren: 0.02,
-        }
-    },
-    exit: {
-        opacity: 0,
-        y: -6,
-        transition: { duration: 0.18, ease: "easeOut" }
-    }
-}
-
-const heroItemVariants: Variants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] }
-    }
-}
-
-const heroFadeOnlyVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { duration: 0.25, ease: "easeOut" }
-    }
 }
 
 /** Base negra cinematográfica con tinte tenue de la imagen (nunca wash plano). */
@@ -101,7 +42,7 @@ function PaletteAmbient({
     const palette = useImagePalette(imageSrc)
     return (
         <div
-            className="absolute inset-0 w-full h-full pointer-events-none bg-black"
+            className="absolute inset-0 w-full h-full pointer-events-none bg-black transition-[background,filter] duration-500 ease-smooth-out"
             style={{
                 background: palette
                     ? `linear-gradient(to right, #000000 0%, color-mix(in srgb, ${palette.left} 18%, #000000) 34%, rgba(0,0,0,0) 58%), radial-gradient(ellipse 70% 60% at 78% 32%, color-mix(in srgb, ${palette.right} 26%, transparent) 0%, transparent 70%), #000000`
@@ -158,11 +99,11 @@ export const SpotlightHero = React.memo(function SpotlightHero({
     onCycleComplete,
 }: SpotlightHeroProps) {
     const { playSound } = useSound()
-    const reduceMotion = useReducedMotion()
-    const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed)
-    // Ken Burns y slides solo en equipos capaces y sin reduced-m.
-    const allowCinematicMotion = isHeavyAllowed && !reduceMotion
+    const motionTier = useMotionTier()
+    // Ken Burns y slides solo en equipos capaces y sin reduced-m / tvMode.
+    const allowCinematicMotion = motionTier === "full"
     const canSlide = (availableEras?.length ?? 0) > 1
+    const pressSpring = useSpringPreset("press")
 
     const goToOffset = React.useCallback((offset: number) => {
         if (!availableEras || availableEras.length <= 1 || !onSelectEra) return
@@ -199,8 +140,11 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.2}
                 onDragEnd={handleDragEnd}
+                // Al arrastrar el hero cede apenas: confirma que el gesto se tomó.
+                whileDrag={allowCinematicMotion && canSlide ? { scale: 0.99 } : undefined}
+                transition={pressSpring}
                 className={cn(
-                    "group w-full relative z-10 rounded-3xl overflow-hidden flex flex-col justify-end border border-white/10 shadow-hero bg-black transition-colors duration-700",
+                    "group w-full relative z-10 rounded-hero overflow-hidden flex flex-col justify-end border border-white/10 shadow-hero bg-black transition-colors duration-700",
                     HERO_STAGE_CLASS
                 )}
                 style={{
@@ -211,7 +155,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                     el parallax (topado en ese valor) nunca descubra una franja negra. */}
                 <div
                     ref={backdropRef}
-                    className="absolute inset-x-0 bottom-0 w-full pointer-events-none overflow-hidden z-0 transform-gpu"
+                    className="absolute inset-x-0 bottom-0 w-full pointer-events-none overflow-hidden z-hero-base transform-gpu"
                     style={{ top: -HERO_PARALLAX_OVERSCAN }}
                 >
                     {/* sync: crossfade sin bloquear 250ms la entrada (las capas son absolute y se solapan) */}
@@ -219,11 +163,11 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                         <m.div
                             key={activeEraId + "_visual"}
                             custom={direction}
-                            variants={heroBackdropVariants}
+                            variants={heroBackdropSlideVariants}
                             initial="initial"
                             animate="animate"
                             exit="exit"
-                            className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-0"
+                            className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-hero-base"
                         >
                             {heroArt && (
                                 <>
@@ -240,7 +184,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                      <HeroBackdrop
                                          art={heroArt}
                                          alt={displayTitle}
-                                         imgClassName="filter saturate-[115%] contrast-[108%] brightness-[0.95]"
+                                         imgClassName="hero-image-filter"
                                      />
                                 </>
                             )}
@@ -248,20 +192,14 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                             {/* Sombra inferior atada al contenido: ocupa solo la mitad baja,
                                 nace transparente debajo del título y crece hacia la base.
                                 Sin componente lateral, sin radiales, sin máscaras. */}
-                            <div
-                                className="absolute inset-x-0 bottom-0 top-[52%] pointer-events-none"
-                                style={{
-                                    background:
-                                        "linear-gradient(to bottom, transparent 0%, color-mix(in srgb, var(--bg-primary) 30%, transparent) 35%, color-mix(in srgb, var(--bg-primary) 75%, transparent) 70%, color-mix(in srgb, var(--bg-primary) 95%, transparent) 100%)",
-                                }}
-                            />
+                            <div className="absolute inset-x-0 bottom-0 top-[52%] pointer-events-none scrim-hero-bottom-rise" />
 
                         </m.div>
                     </AnimatePresence>
                 </div>
 
                 {/* Columna de texto en Zona Segura (máximo 480px para no tapar los personajes a la derecha) */}
-                <div className="relative z-20 flex flex-col justify-end p-5 sm:p-6 md:p-8 space-y-2.5 w-full pointer-events-none">
+                <div className="relative z-hero-content flex flex-col justify-end p-5 sm:p-6 md:p-8 space-y-2.5 w-full pointer-events-none">
                     <AnimatePresence mode="wait" initial={false}>
                         <m.div
                             key={activeEraId}
@@ -269,7 +207,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                             initial={allowCinematicMotion ? "hidden" : { opacity: 0 }}
                             animate={allowCinematicMotion ? "visible" : { opacity: 1, transition: { duration: 0.25 } }}
                             exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                            className="flex flex-col space-y-2.5 transform-gpu will-change-transform text-left w-full pointer-events-auto max-w-sm sm:max-w-md lg:max-w-[480px]"
+                            className="flex flex-col space-y-2.5 transform-gpu will-change-transform text-left w-full pointer-events-auto max-w-sm sm:max-w-md lg:max-w-hero-content"
                             style={{
                                 "--spotlight-title-hover": colors?.ambientGlow1 ?? "#FBBF24",
                             } as React.CSSProperties}
@@ -330,7 +268,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                         <button
                                             key={saga.id}
                                             onClick={() => onNavigateSaga(activeEraSeriesId, saga.id)}
-                                            className="px-2.5 py-1 rounded-full text-3xs sm:text-2xs font-semibold bg-zinc-950/45 hover:bg-zinc-900/60 border border-white/15 hover:border-white/30 text-zinc-300 hover:text-white transition-colors cursor-pointer select-none active:scale-95 backdrop-blur-sm truncate max-w-[120px]"
+                                            className="px-2.5 py-1 rounded-full text-3xs sm:text-2xs font-semibold bg-zinc-950/45 hover:bg-zinc-900/60 border border-white/15 hover:border-white/30 text-zinc-300 hover:text-white transition-[color,background-color,border-color,transform] cursor-pointer select-none active:scale-95 backdrop-blur-sm truncate max-w-[120px]"
                                             title={`Ir a ${saga.title}`}
                                         >
                                             {saga.title.replace(/^Saga (de |del |de los )?/i, "").replace(/^Arco de /i, "")}
@@ -350,7 +288,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                     onNavigateHero()
                                 }}
                                 rippleColor="rgba(0, 0, 0, 0.22)"
-                                className="flex items-center justify-center bg-white hover:bg-zinc-100 text-zinc-950 font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6),0_8px_24px_rgba(255,255,255,0.25)] hover:shadow-[0_12px_32px_rgba(255,255,255,0.35)] transition-all duration-200 hover:scale-[1.03] active:scale-95 select-none"
+                                className="flex items-center justify-center bg-white hover:bg-zinc-100 text-zinc-950 font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
                             >
                                 <IconMediaPlay size={15} fill="currentColor" />
                                 <span>Reproducir</span>
@@ -362,7 +300,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                     onNavigateHero()
                                 }}
                                 rippleColor="rgba(255, 255, 255, 0.2)"
-                                className="flex items-center justify-center bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-xl text-white font-bold text-xs sm:text-sm uppercase tracking-wider font-display py-2.5 px-5 rounded-full gap-2 cursor-pointer shadow-glass-highlight-md transition-all duration-200 hover:scale-[1.03] active:scale-95 select-none"
+                                className="flex items-center justify-center bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-xl text-white font-bold text-xs sm:text-sm uppercase tracking-wider font-display py-2.5 px-5 rounded-full gap-2 cursor-pointer shadow-glass-highlight-md transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
                             >
                                 <IconUiInfo size={15} />
                                 <span>Más información</span>

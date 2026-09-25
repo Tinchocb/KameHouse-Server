@@ -1,9 +1,10 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useRef } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { IconUiClose } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { PLAYER_GLASS, PLAYER_ICON_BTN } from "./player-theme"
 import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { useFocusTrap } from "@/hooks/use-focus-trap"
 
 interface PlayerShortcutsModalProps {
     isOpen: boolean
@@ -56,6 +57,8 @@ const SHORTCUT_GROUPS: { groupName: string; shortcuts: ShortcutItem[] }[] = [
 export function PlayerShortcutsModal({ isOpen, onClose }: PlayerShortcutsModalProps) {
     const spring = useSpringPreset("entrance")
     const prefersReduced = useReducedMotion()
+    const dialogRef = useRef<HTMLDivElement>(null)
+    useFocusTrap(dialogRef, isOpen)
 
     useEffect(() => {
         if (!isOpen) return
@@ -86,6 +89,7 @@ export function PlayerShortcutsModal({ isOpen, onClose }: PlayerShortcutsModalPr
 
                     {/* Modal Window */}
                     <m.div
+                        ref={dialogRef}
                         key="shortcuts-dialog"
                         role="dialog"
                         aria-modal="true"

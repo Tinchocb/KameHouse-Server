@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 
 	"github.com/goccy/go-json"
-	"gorm.io/gorm/clause"
 )
 
 var (
@@ -63,10 +62,11 @@ func (db *Database) GetThemeCopy() (*models.Theme, error) {
 // UpsertTheme updates the theme settings.
 func (db *Database) UpsertTheme(settings *models.Theme) (*models.Theme, error) {
 
-	err := db.gormdb.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id"}},
-		UpdateAll: true,
-	}).Create(settings).Error
+	// Save (UPDATE de todas las columnas, INSERT solo si la fila no existe) en vez
+	// de Create+OnConflict: Create reemplaza los valores cero por el `default` del
+	// tag GORM, así que bgMusicEnabled/uiSoundsEnabled=false (default:true) o un
+	// volumen 0 nunca llegaban a guardarse y volvían a su default.
+	err := db.gormdb.Save(settings).Error
 
 	if err != nil {
 		db.Logger.Error().Err(err).Msg("db: Failed to save theme in the database")

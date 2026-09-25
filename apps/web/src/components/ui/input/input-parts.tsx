@@ -9,7 +9,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const InputAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Input__root",
-        "flex h-12 w-full rounded-none border border-white/15 bg-zinc-950/60 backdrop-blur-overlay-2xl px-3 py-2 text-base md:text-sm text-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:border-white/50 focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-base"
+        "flex h-12 w-full rounded-none border border-white/15 bg-zinc-950/60 backdrop-blur-overlay-2xl px-3 py-2 text-base md:text-sm text-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:border-white/50 focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 transition duration-base"
     ], {
         variants: {
             size: {

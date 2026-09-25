@@ -36,6 +36,11 @@ func (h *Handler) isAuthorized(c echo.Context) bool {
 
 	path := c.Request().URL.Path
 
+	// 0. Lectura interna de Drive (ffprobe/ffmpeg por loopback, ver drive_mediastream.go)
+	if isDriveInternalRequest(c) {
+		return true
+	}
+
 	// 1. Cabecera X-KameHouse-Token
 	if token := c.Request().Header.Get("X-KameHouse-Token"); token != "" {
 		if h.isCorrectPasswordToken(token) {

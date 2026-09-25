@@ -35,7 +35,7 @@ function ActionButton({ label, title, onClick, disabled }: { label: string; titl
                 e.stopPropagation()
                 onClick(e)
             }}
-            className="px-2 py-1 rounded-md text-3xs font-mono font-bold uppercase tracking-wider border border-white/15 bg-white/[0.04] text-on-surface-variant hover:text-white hover:border-white/30 active:scale-95 transition-all disabled:opacity-40 shrink-0"
+            className="px-2 py-1 rounded-md text-3xs font-mono font-bold uppercase tracking-wider border border-white/15 bg-white/[0.04] text-on-surface-variant hover:text-white hover:border-white/30 active:scale-95 transition disabled:opacity-40 shrink-0"
         >
             {label}
         </button>

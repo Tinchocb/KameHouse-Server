@@ -2,6 +2,7 @@ import type { VolumeData, SagaCategory, DetailedStoryNarrative, ChapterMilestone
 import { DRAGON_BALL_STORY_SPANS, type StorySpan } from '@/lib/config/dragonball_story_spans';
 import { DETAILED_STORIES } from './detailedStories';
 import { SPAN_DETAILED_STORIES } from './spanDetailedStories';
+import { SPAN_LORE } from './spanLore';
 
 const SERIES_TAG_BY_ID: Record<StorySpan['seriesId'], VolumeData['seriesTag']> = {
   classic: 'Dragon Ball Clásico',
@@ -44,10 +45,10 @@ const COVER_TEMPLATES: Record<StorySpan['seriesId'], VolumeData['coverArt']> = {
     symbolGlyph: '亀',
     auraGradient: 'from-amber-950 via-emerald-950/70 to-stone-950',
     spineColor: '#15803d',
-    borderColor: 'border-amber-500/60',
-    badgeBg: 'bg-amber-950/80 text-amber-300 border-amber-500/50',
-    tagColor: 'text-amber-400',
-    accentHex: '#f59e0b',
+    borderColor: 'border-orange-500/60',
+    badgeBg: 'bg-orange-950/80 text-orange-300 border-orange-500/50',
+    tagColor: 'text-orange-400',
+    accentHex: '#F2762E', // = --era-db-hex
     themeClass: 'theme-clasico',
   },
   z: {
@@ -56,12 +57,12 @@ const COVER_TEMPLATES: Record<StorySpan['seriesId'], VolumeData['coverArt']> = {
     kanjiTitle: '界王の試練',
     kanjiSubtitle: '超サイヤ人伝説',
     symbolGlyph: '超',
-    auraGradient: 'from-red-950/90 via-amber-950/60 to-neutral-950',
-    spineColor: '#b91c1c',
-    borderColor: 'border-red-500/60',
-    badgeBg: 'bg-red-950/80 text-red-300 border-red-500/50',
-    tagColor: 'text-red-400',
-    accentHex: '#ef4444',
+    auraGradient: 'from-amber-950/90 via-yellow-950/60 to-neutral-950',
+    spineColor: '#b45309',
+    borderColor: 'border-amber-400/60',
+    badgeBg: 'bg-amber-950/80 text-amber-200 border-amber-400/50',
+    tagColor: 'text-amber-300',
+    accentHex: '#F5C242', // = --era-dbz-hex
     themeClass: 'theme-z',
   },
   daima: {
@@ -70,12 +71,12 @@ const COVER_TEMPLATES: Record<StorySpan['seriesId'], VolumeData['coverArt']> = {
     kanjiTitle: '大魔界の陰謀',
     kanjiSubtitle: '小さき戦士の冒険',
     symbolGlyph: '大',
-    auraGradient: 'from-amber-950 via-purple-950/70 to-zinc-950',
-    spineColor: '#ca8a04',
-    borderColor: 'border-yellow-500/60',
-    badgeBg: 'bg-yellow-950/80 text-yellow-300 border-yellow-500/50',
-    tagColor: 'text-yellow-400',
-    accentHex: '#eab308',
+    auraGradient: 'from-purple-950 via-violet-950/70 to-zinc-950',
+    spineColor: '#7e22ce',
+    borderColor: 'border-violet-400/60',
+    badgeBg: 'bg-violet-950/80 text-violet-300 border-violet-400/50',
+    tagColor: 'text-violet-300',
+    accentHex: '#A56EF0', // = --era-daima-hex
     themeClass: 'theme-daima',
   },
   super: {
@@ -84,12 +85,12 @@ const COVER_TEMPLATES: Record<StorySpan['seriesId'], VolumeData['coverArt']> = {
     kanjiTitle: '神と神の領域',
     kanjiSubtitle: '超サイヤ人ゴッド',
     symbolGlyph: '神',
-    auraGradient: 'from-cyan-950 via-blue-950/80 to-indigo-950',
-    spineColor: '#0284c7',
-    borderColor: 'border-cyan-500/60',
-    badgeBg: 'bg-cyan-950/80 text-cyan-300 border-cyan-500/50',
-    tagColor: 'text-cyan-400',
-    accentHex: '#06b6d4',
+    auraGradient: 'from-blue-950 via-blue-950/80 to-indigo-950',
+    spineColor: '#1d4ed8',
+    borderColor: 'border-blue-400/60',
+    badgeBg: 'bg-blue-950/80 text-blue-300 border-blue-400/50',
+    tagColor: 'text-blue-400',
+    accentHex: '#3D8BFF', // = --era-dbs-hex
     themeClass: 'theme-super',
   },
   gt: {
@@ -103,7 +104,7 @@ const COVER_TEMPLATES: Record<StorySpan['seriesId'], VolumeData['coverArt']> = {
     borderColor: 'border-rose-500/60',
     badgeBg: 'bg-rose-950/80 text-rose-300 border-rose-500/50',
     tagColor: 'text-rose-400',
-    accentHex: '#f43f5e',
+    accentHex: '#E23A55', // = --era-dbgt-hex
     themeClass: 'theme-gt',
   },
 };
@@ -154,9 +155,31 @@ const SERIES_ICON_EMOJI: Record<StorySpan['seriesId'], string> = {
   gt: '🌌',
 };
 
+/** Parsea una cadena "mm:ss" a segundos totales. Devuelve undefined si no tiene formato válido. */
+export function parseTimeToSeconds(time?: string): number | undefined {
+  if (!time) return undefined;
+  const match = time.trim().match(/^(\d{1,3}):([0-5]\d)$/);
+  if (!match) return undefined;
+  const mins = Number.parseInt(match[1], 10);
+  const secs = Number.parseInt(match[2], 10);
+  return mins * 60 + secs;
+}
+
+/** Formatea segundos a "mm:ss" o "hh:mm:ss". */
+export function formatSecondsToTime(totalSeconds: number): string {
+  const safeSec = Math.max(0, Math.floor(totalSeconds));
+  const hrs = Math.floor(safeSec / 3600);
+  const mins = Math.floor((safeSec % 3600) / 60);
+  const secs = safeSec % 60;
+  if (hrs > 0) {
+    return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
 function buildEpisodeMilestones(span: StorySpan, accentHex: string, auraGradient: string): ChapterMilestone[] {
   const iconEmoji = SERIES_ICON_EMOJI[span.seriesId];
-  return span.milestones.map((m) => ({
+  return span.milestones.map((m, index) => ({
     episode: `Cap. ${m.episode}`,
     title: m.title,
     synopsis: m.description,
@@ -166,6 +189,8 @@ function buildEpisodeMilestones(span: StorySpan, accentHex: string, auraGradient
     iconEmoji,
     characterFocus: span.seriesTitle,
     absoluteEpisode: m.episode,
+    startSec: parseTimeToSeconds(m.time),
+    momentKey: `${span.id}:${m.episode}:${index}`,
   }));
 }
 
@@ -256,6 +281,9 @@ export function spanToVolume(span: StorySpan): VolumeData {
     quickCatchUpKeys: span.quickCatchUpKeys,
     dragonBallsStatus: span.worldStateAtStart.dragonBallsStatus,
     threatLevel: span.worldStateAtStart.threatLevel,
+    interChapter: SPAN_LORE[span.id]?.interChapter,
+    keyFacts: SPAN_LORE[span.id]?.keyFacts,
+    behindTheScenes: SPAN_LORE[span.id]?.behindTheScenes,
   };
 }
 

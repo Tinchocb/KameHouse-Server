@@ -3,6 +3,7 @@ import { m, AnimatePresence } from "framer-motion"
 import { IconUiClose } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { useFocusTrap } from "@/hooks/use-focus-trap"
 import { PLAYER_GLASS, PLAYER_ICON_BTN } from "./player-theme"
 
 export interface PlayerPanelRevealProps {
@@ -29,6 +30,7 @@ export function PlayerPanelReveal({
     const prefersReducedMotion = useReducedMotion()
     const panelSpring = useSpringPreset("tabIndicator") // 480/34
     const dialogRef = useRef<HTMLDivElement>(null)
+    useFocusTrap(dialogRef, isOpen)
 
     // Accesibilidad: captura de Escape
     useEffect(() => {

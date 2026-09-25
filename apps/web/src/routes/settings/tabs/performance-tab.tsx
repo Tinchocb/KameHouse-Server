@@ -118,7 +118,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                 icon={IconStatusZap}
                 badge={
                     <div className="flex items-center gap-2">
-                        <span className="text-3xs font-mono font-bold text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/25">
+                        <span className="text-3xs font-mono font-bold text-status-warning px-2 py-0.5 rounded bg-status-warning/10 border border-status-warning/25">
                             TIER: {effectiveTier.toUpperCase()}
                         </span>
                         <button
@@ -141,7 +141,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             <p className="text-xs font-bold text-on-surface truncate tabular-nums" title={hardwareSpecs?.gpuRenderer || "GPU"}>
                                 {hardwareSpecs?.gpuRenderer || "Predeterminada"}
                             </p>
-                            <span className="text-4xs font-mono text-emerald-400">
+                            <span className="text-4xs font-mono text-status-success">
                                 {hardwareSpecs?.isDedicatedGpu ? "Dedicada" : "Integrada"}
                             </span>
                         </div>
@@ -167,7 +167,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             <p key={performanceProfile} className="text-xs font-bold text-on-surface uppercase truncate animate-text-swap-in">
                                 {performanceProfile}
                             </p>
-                            <span className="text-4xs font-mono text-amber-400">Acelerado</span>
+                            <span className="text-4xs font-mono text-status-warning">Acelerado</span>
                         </div>
                     </div>
 
@@ -457,11 +457,11 @@ function FFmpegStatusSection() {
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-on-surface">Estado de FFmpeg</span>
                     {isInstalled ? (
-                        <span className="text-3xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="text-3xs font-mono px-2 py-0.5 rounded bg-status-success/10 text-status-success border border-status-success/20">
                             Detectado
                         </span>
                     ) : (
-                        <span className="text-3xs font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                        <span className="text-3xs font-mono px-2 py-0.5 rounded bg-status-error/10 text-status-error border border-status-error/20">
                             No instalado
                         </span>
                     )}
@@ -475,7 +475,7 @@ function FFmpegStatusSection() {
                     type="button"
                     onClick={handleInstall}
                     disabled={isInstalling}
-                    className="shrink-0 px-3.5 py-2 rounded-lg bg-brand-accent text-on-primary font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-50"
+                    className="shrink-0 px-3.5 py-2 rounded-lg bg-brand-accent text-on-primary font-bold text-xs flex items-center gap-1.5 shadow-elevation-1 active:scale-95 disabled:opacity-50"
                 >
                     {isInstalling ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconUiDownload className="w-3.5 h-3.5" />}
                     <span>{isInstalling ? "Instalando..." : "Descargar e Instalar FFmpeg"}</span>

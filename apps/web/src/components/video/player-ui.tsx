@@ -69,6 +69,8 @@ export interface PlayerUIProps {
     isQueueSidebarOpen?: boolean
     onToggleQueueSidebar?: () => void
     setIsQueueSidebarOpen?: React.Dispatch<React.SetStateAction<boolean>>
+    momentKey?: string
+    momentTitle?: string
 }
 
 export function PlayerUI(props: PlayerUIProps) {
@@ -78,7 +80,9 @@ export function PlayerUI(props: PlayerUIProps) {
         mediaId, episodeNumber, malId,
         episodes, onSelectEpisode, mediaFormat,
         nextEpisodeTitle, nextEpisodeNumber, nextEpisodeImage,
-        onOpenInMpv
+        onOpenInMpv,
+        momentKey,
+        momentTitle,
     } = props
 
     const {
@@ -499,11 +503,12 @@ export function PlayerUI(props: PlayerUIProps) {
             {/* Gesture Interaction Overlay — z-player (base) para quedar DEBAJO de
                 barras (z-player-ui) y overlays (z-player-overlay). Antes en z-player-ui
                 con wrappers de barras en z-30, el overlay interceptaba clicks de
-                REINTENTAR/REGRESAR y botones de la bottom-bar. */}
+                REINTENTAR/REGRESAR y botones de la bottom-bar.
+                Superficie solo de puntero: sin foco ni onKeyDown propio. Si tomaba
+                el foco al clickear, Espacio alternaba acá y otra vez en el atajo
+                global de usePlayerShortcuts (doble toggle = no pasaba nada). */}
             <div
-                role="button"
-                tabIndex={-1}
-                aria-label="Controles táctiles y de gestos del video"
+                aria-hidden="true"
                 onMouseDown={(e) => {
                     if (e.button === 0) startHold()
                 }}
@@ -514,12 +519,6 @@ export function PlayerUI(props: PlayerUIProps) {
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchEnd}
                 onClick={handleInteractionClick}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault()
-                        actions.togglePlay()
-                    }
-                }}
                 onDoubleClick={(e) => {
                     if ((e.nativeEvent as PointerEvent)?.pointerType !== "touch") {
                         actions.toggleFullscreen()
@@ -627,10 +626,12 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <div
                 className={cn(
-                    "player-top-bar absolute top-0 inset-x-0 z-player-ui pointer-events-none transition-[opacity,transform] duration-300 ease-out",
+                    // Asimétrico: al mover el mouse aparecen enseguida; al quedar quieto se
+                    // retiran despacio, porque ese momento no lo decide la persona.
+                    "player-top-bar absolute top-0 inset-x-0 z-player-ui pointer-events-none transition-[opacity,transform] ease-out-strong",
                     controlsVisible
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 -translate-y-4 pointer-events-none"
+                        ? "opacity-100 translate-y-0 duration-150"
+                        : "opacity-0 -translate-y-3 pointer-events-none duration-500"
                 )}
             >
                 <PlayerTopBar
@@ -640,15 +641,18 @@ export function PlayerUI(props: PlayerUIProps) {
                     onClose={onClose}
                     mediaFormat={mediaFormat}
                     onOpenInMpv={onOpenInMpv}
+                    momentKey={momentKey}
+                    momentTitle={momentTitle}
+                    currentTime={state.currentTime}
                 />
             </div>
 
             <div
                 className={cn(
-                    "player-bottom-bar absolute bottom-0 inset-x-0 pointer-events-none transition-opacity duration-300 ease-out",
+                    "player-bottom-bar absolute bottom-0 inset-x-0 pointer-events-none transition-opacity ease-out-strong",
                     // Con ajustes abiertos la barra sube de capa para que el panel quede sobre los overlays
                     state.isSettingsOpen ? "z-player-settings" : "z-player-ui",
-                    controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+                    controlsVisible ? "opacity-100 duration-150" : "opacity-0 pointer-events-none duration-500"
                 )}
             >
                 <PlayerBottomBar

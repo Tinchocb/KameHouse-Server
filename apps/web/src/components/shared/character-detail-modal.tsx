@@ -3,6 +3,7 @@ import { AnimatePresence, m } from "framer-motion"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { IconUiClose, IconStatusSparkles } from "@/components/ui/icons";
 import { getScouterKi } from "@/lib/config/dragonball-lore.config"
+import { useFocusTrap } from "@/hooks/use-focus-trap"
 
 interface LoreTransformation {
     name: string
@@ -73,6 +74,8 @@ export function CharacterDetailModal({
 
     const isOpen = Boolean(characterName && charInfo)
     const modalSpring = useSpringPreset("tabContent")
+    const dialogRef = React.useRef<HTMLDivElement>(null)
+    useFocusTrap(dialogRef, isOpen)
 
     React.useEffect(() => {
         if (!isOpen) return
@@ -99,7 +102,8 @@ export function CharacterDetailModal({
                         className="absolute inset-0 bg-black/60 backdrop-blur-overlay-xl"
                     />
 
-                    <m.div 
+                    <m.div
+                        ref={dialogRef}
                         role="dialog"
                         aria-modal="true"
                         aria-label={charInfo.name}

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { m } from "framer-motion"
+import { m, type Variants } from "framer-motion"
 import { IconNavigationChevronRight } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
@@ -22,7 +22,20 @@ export interface ArcCinematicCardProps {
     onHover?: () => void
     borderGlow?: string
     layoutId?: string
+    /** Posición en la lista: escalona la entrada (tope 12 · 40ms). */
+    index?: number
     children?: React.ReactNode
+}
+
+// Entrada solo por opacidad: si Framer animara transform dejaría
+// `transform: none` inline al terminar y anularía el hover (-translate-y) y el
+// press (active:scale) de CSS, que son los que dan la respuesta al puntero.
+const arcCardEntranceVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: (i: number = 0) => ({
+        opacity: 1,
+        transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1], delay: Math.min(i, 12) * 0.04 },
+    }),
 }
 
 export const ArcCinematicCard = React.memo(function ArcCinematicCard({
@@ -42,16 +55,17 @@ export const ArcCinematicCard = React.memo(function ArcCinematicCard({
     onHover,
     borderGlow,
     layoutId,
+    index = 0,
 }: ArcCinematicCardProps) {
     const activeCardTransition = useSpringPreset("tabIndicator")
 
     return (
         <m.button
             type="button"
-            variants={{ hidden: { opacity: 0, scale: 0.98 }, visible: { opacity: 1, scale: 1 } }}
+            variants={arcCardEntranceVariants}
+            custom={index}
             initial="hidden"
             animate="visible"
-            transition={activeCardTransition}
             onClick={onClick}
             onDoubleClick={onDoubleClick}
             onMouseEnter={onHover}
@@ -129,7 +143,7 @@ export const ArcCinematicCard = React.memo(function ArcCinematicCard({
             </div>
 
             {/* Lado derecho: Badge opcional + Chevron */}
-            <div className="shrink-0 flex items-center gap-1.5 text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition-all">
+            <div className="shrink-0 flex items-center gap-1.5 text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition">
                 {topRight && (
                     <span className={cn(
                         "text-4xs font-mono font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0",
@@ -148,7 +162,7 @@ export const ArcCinematicCard = React.memo(function ArcCinematicCard({
                 <div className="absolute bottom-0 inset-x-3 h-0.5 bg-white/10 rounded-full overflow-hidden">
                     <div
                         className={cn(
-                            "h-full transition-all duration-300",
+                            "h-full transition-[width] duration-300",
                             isActive ? "bg-brand-accent shadow-[0_0_6px_hsl(var(--brand-accent)/0.8)]" : "bg-white/40"
                         )}
                         style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}

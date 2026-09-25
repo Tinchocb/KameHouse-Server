@@ -2,7 +2,6 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
-import { useShallow } from "zustand/react/shallow"
 
 export interface PlaylistItem {
     id: string | number
@@ -169,24 +168,3 @@ export const useQueueStore = create<QueueState>()(
         )
     )
 )
-
-// Shallow selectors for object/array state to prevent unnecessary re-renders
-export const useQueueListState = () => useQueueStore(useShallow((state) => ({
-    playlistQueue: state.playlistQueue,
-    currentQueueIndex: state.currentQueueIndex,
-    activeQueuePlayItem: state.activeQueuePlayItem,
-    setCurrentQueueIndex: state.setCurrentQueueIndex,
-    setActiveQueuePlayItem: state.setActiveQueuePlayItem,
-    addToQueue: state.addToQueue,
-    removeFromQueue: state.removeFromQueue,
-    clearQueue: state.clearQueue,
-    playNext: state.playNext,
-    shuffleQueue: state.shuffleQueue,
-    playPrevious: state.playPrevious,
-    moveQueueItem: state.moveQueueItem,
-})))
-
-export const useQueueModeState = () => useQueueStore(useShallow((state) => ({
-    queueRepeatMode: state.queueRepeatMode,
-    setQueueRepeatMode: state.setQueueRepeatMode,
-})))

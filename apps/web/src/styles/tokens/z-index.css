@@ -29,6 +29,13 @@
   --z-player-sidebar: 10030; /* Sidebars del player (episodios, cola) */
   --z-player-settings: 10040; /* Settings panel del player */
   
+  /* ─── Hero Internal Stacking (Aislamiento de capas del hero) ───────── */
+  --z-hero-base:     0;       /* Backdrop blur, ambient aura, LQIP */
+  --z-hero-visual:   1;       /* Capa nítida de imagen (reemplaza z-[1]) */
+  --z-hero-scrim:    10;      /* Gradientes de contraste y viñetas */
+  --z-hero-content:  20;      /* Textos, títulos, badges y sinopsis */
+  --z-hero-controls: 30;      /* Dots del carrusel, botones flotantes */
+
   /* ─── Máximo ───────────────────────────────────────────────────────── */
   --z-max:          2147483647; /* Límite técnico (2^31-1) */
 }
@@ -48,3 +55,8 @@
 .z-player-overlay { z-index: var(--z-player-overlay); }
 .z-player-sidebar { z-index: var(--z-player-sidebar); }
 .z-player-settings { z-index: var(--z-player-settings); }
+.z-hero-base      { z-index: var(--z-hero-base); }
+.z-hero-visual    { z-index: var(--z-hero-visual); }
+.z-hero-scrim     { z-index: var(--z-hero-scrim); }
+.z-hero-content   { z-index: var(--z-hero-content); }
+.z-hero-controls  { z-index: var(--z-hero-controls); }

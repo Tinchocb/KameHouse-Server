@@ -66,7 +66,7 @@ function LibrarySkipScanRow() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-0.5 max-w-lg">
                     <p className="text-xs font-bold text-on-surface">Escanear marcas de Skip en toda la biblioteca</p>
-                    <p className={cn("text-2xs leading-tight", status === "error" ? "text-red-400" : "text-on-surface-variant/70")}>
+                    <p className={cn("text-2xs leading-tight", status === "error" ? "text-status-error" : "text-on-surface-variant/70")}>
                         {status === "idle"
                             ? "Analiza todas las series locales para detectar marcas de Openings y Endings automáticamente."
                             : (message || "Detectando marcas de skip...")}
@@ -80,7 +80,7 @@ function LibrarySkipScanRow() {
                         "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-[background-color,border-color,color,filter,transform] duration-fast ease-smooth-out active:scale-95",
                         running
                             ? "bg-brand-accent/10 border border-brand-accent/20 text-brand-accent cursor-not-allowed"
-                            : "bg-brand-accent hover:brightness-110 text-on-primary shadow-sm"
+                            : "bg-brand-accent hover:brightness-110 text-on-primary shadow-elevation-1"
                     )}
                 >
                     {running ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconMediaWand className="w-3.5 h-3.5" />}
@@ -90,8 +90,8 @@ function LibrarySkipScanRow() {
             {running && (
                 <div className="w-full h-1.5 bg-white/10 rounded-full relative overflow-hidden">
                     <div
-                        className="absolute left-0 h-full bg-brand-accent rounded-full transition-[width] duration-slow ease-smooth-out"
-                        style={{ width: `${Math.min(100, Math.max(2, percent))}%` }}
+                        className="w-full h-full bg-brand-accent rounded-full origin-left transition-transform duration-slow ease-smooth-out"
+                        style={{ transform: `scaleX(${Math.min(100, Math.max(2, percent)) / 100})` }}
                     />
                 </div>
             )}

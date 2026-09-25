@@ -20,6 +20,7 @@ import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { toast } from "sonner"
 import { SectionBar } from "@/components/ui/sectionbar"
 import { ElasticCounter } from "@/components/ui/kinetics"
+import { Skeleton } from "@/components/ui/skeleton/skeleton"
 
 export const Route = createLazyFileRoute("/admin/")({
     component: AdminPage,
@@ -97,7 +98,7 @@ function AdminHeader() {
                         <button
                             onClick={handleBackup}
                             disabled={isBackingUp || isDownloadingBackup}
-                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition-all duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
+                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
                         >
                             <IconUiDownload size={16} strokeWidth={2.5} />
                             {isBackingUp ? "Creando..." : isDownloadingBackup ? "Descargando..." : "Backup"}
@@ -105,7 +106,7 @@ function AdminHeader() {
                         <button
                             onClick={downloadReport}
                             disabled={isDownloadingReport}
-                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition-all duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
+                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
                         >
                             <IconStatusFile size={16} strokeWidth={2.5} />
                             {isDownloadingReport ? "Descargando..." : "Reporte"}
@@ -138,7 +139,7 @@ function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTransco
             <h2 id="stats-title" className="sr-only">Estadísticas Generales</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
                 {stats.map((stat) => (
-                    <div key={stat.label} className="sectionbar p-4.5 relative overflow-hidden group hover:border-white/30 transition-all duration-base">
+                    <div key={stat.label} className="sectionbar p-4.5 relative overflow-hidden group hover:border-white/30 transition duration-base">
                         <div className="flex items-start justify-between">
                             <stat.icon size={24} className="text-on-surface-variant group-hover:text-on-surface transition-colors" style={{ color: stat.color }} />
                             <span className="text-3xs font-mono text-on-surface-variant/60 uppercase tracking-wider">—</span>
@@ -214,7 +215,7 @@ function AdminActionsGrid() {
             {actions.map((action, i) => {
                 if (action.variant === "destructive") {
                     return (
-                        <div key={i} className="w-full text-left sectionbar p-5 transition-all duration-base flex flex-col justify-between">
+                        <div key={i} className="w-full text-left sectionbar p-5 transition duration-base flex flex-col justify-between">
                             <div className="flex items-start gap-3.5">
                                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-red-500/15 text-red-400 border border-red-500/25">
                                     <action.icon size={20} strokeWidth={2.5} />
@@ -238,7 +239,7 @@ function AdminActionsGrid() {
                         key={i}
                         type="button"
                         onClick={action.action}
-                        className="w-full text-left sectionbar p-5 cursor-pointer transition-all duration-base hover:border-white/30 hover:bg-white/[0.04] active:scale-[0.98] group flex flex-col justify-between"
+                        className="w-full text-left sectionbar p-5 cursor-pointer transition duration-base hover:border-white/30 hover:bg-white/[0.04] active:scale-[0.98] group flex flex-col justify-between"
                     >
                         <div className="flex items-start gap-3.5">
                             <div className={cn(
@@ -254,7 +255,7 @@ function AdminActionsGrid() {
                                 <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase font-mono">{action.label}</h3>
                                 <p className="text-2xs text-on-surface-variant/70 mt-0.5">{action.desc}</p>
                             </div>
-                            <IconArrowRight size={18} className="text-on-surface-variant/70 group-hover:text-brand-accent group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
+                            <IconArrowRight size={18} className="text-on-surface-variant/70 group-hover:text-brand-accent group-hover:translate-x-0.5 transition shrink-0 mt-0.5" />
                         </div>
                     </button>
                 )
@@ -336,7 +337,7 @@ function AdminServicesGrid() {
             {services.map((service, i) => {
                 const status = getStatusConfig(service.status)
                 return (
-                    <div key={i} className="sectionbar p-5 transition-all duration-base hover:border-white/25 flex flex-col justify-between">
+                    <div key={i} className="sectionbar p-5 transition duration-base hover:border-white/25 flex flex-col justify-between">
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3.5 min-w-0">
                                 <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center shrink-0">
@@ -357,7 +358,7 @@ function AdminServicesGrid() {
                             <Link
                                 to="/settings"
                                 search={{ tab: service.tab }}
-                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 hover:border-white/25 hover:bg-white/[0.06] hover:text-white active:scale-95 transition-all min-h-[30px]"
+                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 hover:border-white/25 hover:bg-white/[0.06] hover:text-white active:scale-95 transition min-h-[30px]"
                             >
                                 Configurar
                             </Link>
@@ -379,7 +380,7 @@ function StatBar({ label, value, max, display, color }: { label: string; value: 
             </div>
             <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden border border-white/5">
                 <div
-                    className="h-full rounded-full transition-all duration-base ease-smooth-out"
+                    className="h-full rounded-full transition-[width] duration-base ease-smooth-out"
                     style={{ width: `${percent}%`, background: color || "var(--brand-accent)" }}
                 />
             </div>
@@ -402,7 +403,7 @@ function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTr
         <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {/* Motor de transcodificación */}
-            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition-all duration-base">
+            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition duration-base">
                 <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">Motor de Streaming</h3>
                     <span className={cn(
@@ -447,7 +448,7 @@ function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTr
             </div>
 
             {/* Sistema */}
-            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition-all duration-base">
+            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition duration-base">
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">Sistema</h3>
                 <StatBar
                     label="CPU"
@@ -465,7 +466,7 @@ function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTr
             </div>
 
             {/* GPU (solo si nvidia-smi respondió) */}
-            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition-all duration-base">
+            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition duration-base">
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">GPU · NVIDIA</h3>
                 {gpu ? (
                     <>
@@ -491,13 +492,27 @@ function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTr
     )
 }
 
+/** Filas de carga con la misma caja que las filas reales, para que nada salte al llegar los datos. */
+function AdminRowSkeletons({ count }: { count: number }) {
+    return (
+        <>
+            {Array.from({ length: count }, (_, i) => (
+                <Skeleton key={i} className="h-[58px] rounded-xl" />
+            ))}
+        </>
+    )
+}
+
 function PreTranscodeJobsList() {
     const { data: jobs, isLoading } = useGetPreTranscodeJobs()
     const { mutate: cancelJob, isPending: isCancelling } = useCancelPreTranscode()
 
     if (isLoading) {
         return (
-            <p className="text-2xs text-on-surface-variant/70 mt-3.5">Cargando cola de pre-transcode...</p>
+            <div className="sectionbar p-5 mt-3.5 space-y-2.5" role="status" aria-label="Cargando cola de pre-transcode">
+                <Skeleton className="h-3 w-40 rounded-full" />
+                <AdminRowSkeletons count={2} />
+            </div>
         )
     }
     if (!jobs || jobs.length === 0) return null
@@ -515,7 +530,7 @@ function PreTranscodeJobsList() {
                             <div className="flex items-center gap-2 mt-1.5">
                                 <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
                                     <div
-                                        className="h-full rounded-full bg-brand-accent transition-all"
+                                        className="h-full rounded-full bg-brand-accent transition-[width]"
                                         style={{ width: `${Math.min(100, Math.max(0, job.progress))}%` }}
                                     />
                                 </div>
@@ -532,7 +547,7 @@ function PreTranscodeJobsList() {
                             onClick={() => cancelJob(job.hash)}
                             disabled={isCancelling}
                             title="Cancelar pre-transcode"
-                            className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 text-on-surface-variant hover:text-red-400 hover:border-red-500/40 active:scale-95 transition-all disabled:opacity-50"
+                            className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 text-on-surface-variant hover:text-red-400 hover:border-red-500/40 active:scale-95 transition disabled:opacity-50"
                         >
                             <IconUiDelete size={14} />
                         </button>
@@ -557,16 +572,16 @@ function AdminSystemGrid() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {items.map((item, i) => (
-                <button key={i} type="button" onClick={item.action} className="w-full text-left sectionbar p-5 cursor-pointer transition-all duration-base hover:border-white/30 hover:bg-white/[0.04] active:scale-[0.98] group flex flex-col justify-between">
+                <button key={i} type="button" onClick={item.action} className="w-full text-left sectionbar p-5 cursor-pointer transition duration-base hover:border-white/30 hover:bg-white/[0.04] active:scale-[0.98] group flex flex-col justify-between">
                     <div className="flex items-start gap-3.5">
-                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center group-hover:bg-white/[0.08] group-hover:border-white/20 transition-all shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center group-hover:bg-white/[0.08] group-hover:border-white/20 transition shrink-0">
                             <item.icon size={20} className="text-on-surface-variant/80" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase font-mono">{item.label}</h3>
                             <p className="text-2xs text-on-surface-variant/70 mt-0.5">{item.desc}</p>
                         </div>
-                        <IconArrowRight size={18} className="text-on-surface-variant/70 group-hover:text-brand-accent group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
+                        <IconArrowRight size={18} className="text-on-surface-variant/70 group-hover:text-brand-accent group-hover:translate-x-0.5 transition shrink-0 mt-0.5" />
                     </div>
                 </button>
             ))}
@@ -608,7 +623,7 @@ function AdminLogsViewer() {
                         })
                     }}
                     disabled={isDeleting || !selected}
-                    className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/10 active:scale-95 transition-all disabled:opacity-50 min-h-[40px]"
+                    className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/10 active:scale-95 transition disabled:opacity-50 min-h-[40px]"
                 >
                     {isDeleting ? "Eliminando..." : "Eliminar"}
                 </button>
@@ -646,7 +661,7 @@ function AdminRecentActivity() {
                     <button
                         type="button"
                         onClick={() => navigate({ to: "/settings", search: { tab: "system" } })}
-                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 hover:border-white/25 hover:bg-white/[0.06] hover:text-white active:scale-95 transition-all cursor-pointer min-h-[32px]"
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 hover:border-white/25 hover:bg-white/[0.06] hover:text-white active:scale-95 transition cursor-pointer min-h-[32px]"
                     >
                         Ver Todo en Sistema
                         <IconArrowRight size={13} strokeWidth={2.5} />
@@ -654,7 +669,9 @@ function AdminRecentActivity() {
                 </div>
                 <div className="space-y-2.5">
                     {isLoading ? (
-                        <p className="text-2xs text-on-surface-variant/70">Cargando actividad...</p>
+                        <div role="status" aria-label="Cargando actividad" className="space-y-2.5">
+                            <AdminRowSkeletons count={3} />
+                        </div>
                     ) : notifications.length === 0 ? (
                         <p className="text-2xs text-on-surface-variant/70">Sin actividad reciente.</p>
                     ) : (

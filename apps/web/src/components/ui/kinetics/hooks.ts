@@ -1,6 +1,7 @@
 import { useReducedMotion } from "framer-motion"
 
 export { useReducedMotion }
+export { useMotionTier, cardMotionProps, useCardMotionProps, type MotionTier, type CardMotionProps } from "./motion-tier"
 
 export type SpringPresetName =
     | "entrance"

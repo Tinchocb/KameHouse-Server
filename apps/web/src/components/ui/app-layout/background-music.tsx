@@ -269,7 +269,7 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
                 onClick={togglePlayback}
                 title={audioMasterOn ? "Silenciar audio" : "Activar audio"}
                 className={cn(
-                    "flex items-center h-14 rounded-xl group px-4 relative transition-all duration-base w-full",
+                    "flex items-center h-14 rounded-xl group px-4 relative transition-[width,height,padding,gap,background-color,border-color,color,box-shadow,transform] duration-base w-full",
                     "active:scale-95 font-bold",
                     sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
                     audioMasterOn
@@ -279,7 +279,7 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
             >
                 {/* Active Indicator Line */}
                 <div className={cn(
-                    "absolute left-0 w-1 h-6 bg-on-surface rounded-r-full transition-all duration-slow hidden md:block",
+                    "absolute left-0 w-1 h-6 bg-on-surface rounded-r-full transition duration-slow hidden md:block",
                     audioMasterOn ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                 )} />
 

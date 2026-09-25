@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getDotWindow } from "./hero-carousel-dots"
+import { getDotEdges, getDotWindow } from "./hero-carousel-dots"
 
 describe("getDotWindow", () => {
     it("shows every dot when the total fits", () => {
@@ -21,6 +21,26 @@ describe("getDotWindow", () => {
             const mobile = getDotWindow(active, 19, 5)
             expect(mobile).toContain(active)
             for (const i of mobile) expect(desktop).toContain(i)
+        }
+    })
+})
+
+describe("getDotEdges", () => {
+    it("marks no edges when every dot is visible", () => {
+        expect([...getDotEdges(getDotWindow(2, 5), 5)]).toEqual([])
+    })
+
+    it("only marks the side that has hidden dots behind it", () => {
+        expect([...getDotEdges(getDotWindow(0, 19), 19)]).toEqual([6])
+        expect([...getDotEdges(getDotWindow(18, 19), 19)]).toEqual([12])
+        expect([...getDotEdges(getDotWindow(9, 19), 19)]).toEqual([6, 12])
+    })
+
+    it("never shrinks the active dot", () => {
+        for (let active = 0; active < 19; active++) {
+            for (const size of [5, 7]) {
+                expect(getDotEdges(getDotWindow(active, 19, size), 19).has(active)).toBe(false)
+            }
         }
     })
 })

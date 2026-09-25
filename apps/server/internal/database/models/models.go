@@ -415,3 +415,20 @@ type GoogleDriveSettings struct {
 	FolderName   string `gorm:"column:folder_name" json:"folderName"`
 }
 
+type ChronologyMomentTime struct {
+	BaseModel
+	MomentKey string `gorm:"column:moment_key;uniqueIndex;not null" json:"momentKey"`
+	Seconds   int    `gorm:"column:seconds;not null" json:"seconds"`
+}
+
+// ChronologySpanOverride es la marca manual de visto/no visto de un lapso de la
+// cronología (ids de dragonball_story_spans.json). Pisa el avance calculado a
+// partir del historial de reproducción.
+type ChronologySpanOverride struct {
+	BaseModel
+	AccountID uint   `gorm:"column:account_id;uniqueIndex:idx_chronology_span_account;not null" json:"accountId"`
+	SpanID    string `gorm:"column:span_id;uniqueIndex:idx_chronology_span_account;not null" json:"spanId"`
+	Watched   bool   `gorm:"column:watched;not null" json:"watched"`
+}
+
+

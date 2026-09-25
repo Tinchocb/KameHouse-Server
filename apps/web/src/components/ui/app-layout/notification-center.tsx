@@ -151,9 +151,10 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
                         className={cn(
                             "fixed z-popover flex flex-col overflow-hidden",
                             "bg-surface/80 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[shadow:var(--glass-highlight-lg),0_20px_50px_rgba(0,0,0,0.9)]",
+                            // origin-*: la escala de entrada nace del lado donde está anclado el panel
                             isMobile
-                                ? "top-16 left-3 right-3 max-h-[65vh]"
-                                : "left-24 bottom-6 w-[380px] max-h-[70vh]"
+                                ? "top-16 left-3 right-3 max-h-[65vh] origin-top-right"
+                                : "left-24 bottom-6 w-[380px] max-h-[70vh] origin-bottom-left"
                         )}
                     >
                         <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10">

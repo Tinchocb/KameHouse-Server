@@ -118,7 +118,7 @@ export function LoadingOverlayWithLogo({
                                 <span className="w-3.5 h-3.5 dragonball-orb animate-bounce [animation-delay:-0.16s]" />
                                 <span className="w-3.5 h-3.5 dragonball-orb animate-bounce" />
                             </div>
-                            <p className="text-caption font-mono tracking-ultra text-on-surface-variant uppercase transition-all duration-300">
+                            <p className="text-caption font-mono tracking-ultra text-on-surface-variant uppercase transition duration-300">
                                 {statusMessage}
                             </p>
                         </div>

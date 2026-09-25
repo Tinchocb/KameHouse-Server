@@ -98,7 +98,7 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
             )}
             <button
                 onClick={handleReset}
-                className="px-8 py-3 bg-white text-black font-black text-xs uppercase tracking-ultra rounded-full hover:bg-zinc-200 active:scale-95 transition-all shadow-elevation-2"
+                className="px-8 py-3 bg-white text-black font-black text-xs uppercase tracking-ultra rounded-full hover:bg-zinc-200 active:scale-95 transition shadow-elevation-2"
             >
                 {isChunkLoadError ? "RECARGAR AHORA" : "REINTENTAR ACCESO"}
             </button>

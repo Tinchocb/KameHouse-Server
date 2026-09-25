@@ -63,4 +63,19 @@
   /* Ancho de barra lateral */
   --sidebar-width-expanded: 260px;
   --sidebar-width-collapsed: 80px;
+
+  /* ─── Hero Stage Geometría y Zonas Seguras ──────────────────────────── */
+  --hero-stage-min-h-mobile: 528px;
+  --hero-stage-min-h-sm:     616px;
+  --hero-stage-min-h-lg:     min(682px, max(540px, calc(100dvh - 218px)));
+  --hero-stage-max-h:        min(748px, max(540px, calc(100dvh - 218px)));
+  --hero-stage-aspect:       16 / 9;
+  --hero-stage-aspect-sm:    1.9 / 1;
+  --hero-stage-aspect-lg:    1.85 / 1;
+
+  --hero-parallax-overscan:  40px;
+
+  /* Ancho seguro de contenido de hero (evita tapar al sujeto a la derecha) */
+  --hero-content-max-w:      30rem; /* 480px canonical */
+  --hero-content-max-w-wide: 42rem; /* 672px / max-w-2xl */
 }

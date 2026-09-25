@@ -7,6 +7,7 @@ import { useShallow } from "zustand/react/shallow"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useSpringPreset, useSpring, useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { useFocusTrap } from "@/hooks/use-focus-trap"
 
 export const GlobalQueueSidebar = () => {
     const navigate = useNavigate()
@@ -15,6 +16,8 @@ export const GlobalQueueSidebar = () => {
     const tabContentSpring = useSpringPreset("tabContent")
     const tabIndicatorSpring = useSpringPreset("tabIndicator")
     const emptySpring = useSpring(320, 28, 0.8)
+    // Reorder glide (guía §12.1): al mover o quitar un ítem, las filas se deslizan a su lugar.
+    const reorderSpring = useSpring(280, 28)
     const {
         playlistQueue,
         currentQueueIndex,
@@ -46,6 +49,9 @@ export const GlobalQueueSidebar = () => {
         setGlobalQueueOpen: state.setGlobalQueueOpen,
     })))
 
+    const panelRef = React.useRef<HTMLDivElement>(null)
+    useFocusTrap(panelRef, globalQueueOpen)
+
     // Cerrar con Escape
     React.useEffect(() => {
         if (!globalQueueOpen) return
@@ -75,6 +81,7 @@ export const GlobalQueueSidebar = () => {
 
                     {/* Panel lateral — shell estructurado + tokens SectionBar strong (una sola capa de blur) */}
                     <m.div
+                        ref={panelRef}
                         initial={{ x: "100%" }}
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
@@ -117,7 +124,7 @@ export const GlobalQueueSidebar = () => {
                             <button
                                 onClick={() => setGlobalQueueOpen(false)}
                                 aria-label="Cerrar lista de reproducción"
-                                className="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent hover:border-white/20 transition-all duration-base cursor-pointer active:scale-95 shrink-0"
+                                className="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent hover:border-white/20 transition duration-base cursor-pointer active:scale-95 shrink-0"
                             >
                                 <IconUiClose className="w-5 h-5" />
                             </button>
@@ -127,6 +134,7 @@ export const GlobalQueueSidebar = () => {
                         <div className="flex-1 overflow-y-auto no-scrollbar px-4 sm:px-5 py-5">
                             {playlistQueue.length > 0 ? (
                                 <div className="space-y-3">
+                                    <AnimatePresence>
                                     {playlistQueue.slice(0, Math.max(50, currentQueueIndex + 10)).map((item, idx) => {
                                         const isCurrent = idx === currentQueueIndex
                                         const isHistory = idx < currentQueueIndex
@@ -136,10 +144,12 @@ export const GlobalQueueSidebar = () => {
                                                 key={`${String(item.id)}_${String(item.episodeNumber ?? '')}_${String(item.mediaId)}_${item.playableUrl}`}
                                                 initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
                                                 animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                                                transition={{ ...tabContentSpring, delay: Math.min(idx, 8) * 0.06 }}
+                                                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 24, transition: { duration: 0.18 } }}
+                                                layout={prefersReducedMotion ? false : "position"}
+                                                transition={{ ...tabContentSpring, delay: Math.min(idx, 8) * 0.06, layout: reorderSpring }}
                                                 whileHover={prefersReducedMotion ? undefined : { scale: 1.012 }}
                                                 className={cn(
-                                                    "w-full text-left flex gap-3 p-3 rounded-2xl border transition-all duration-base group relative items-center",
+                                                    "w-full text-left flex gap-3 p-3 rounded-2xl border transition duration-base group relative items-center",
                                                     "border-[var(--sectionbar-border)] bg-white/[0.04]",
                                                     isCurrent
                                                         ? "bg-white/[0.08] border-[var(--sectionbar-border-strong)] text-on-surface"
@@ -175,7 +185,7 @@ export const GlobalQueueSidebar = () => {
 
                                                         {/* Play overlay */}
                                                         <div className={cn(
-                                                            "absolute inset-0 flex items-center justify-center transition-all duration-base",
+                                                            "absolute inset-0 flex items-center justify-center transition duration-base",
                                                             isCurrent
                                                                 ? "opacity-100 bg-brand-accent/10"
                                                                 : "opacity-0 group-hover:opacity-100 bg-black/60"
@@ -219,7 +229,7 @@ export const GlobalQueueSidebar = () => {
                                                             if (idx > 0) moveQueueItem(idx, idx - 1)
                                                         }}
                                                         disabled={idx === 0}
-                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-95"
+                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] disabled:opacity-20 disabled:cursor-not-allowed transition active:scale-95"
                                                         aria-label="Mover arriba"
                                                         title="Mover arriba"
                                                     >
@@ -231,7 +241,7 @@ export const GlobalQueueSidebar = () => {
                                                             if (idx < playlistQueue.length - 1) moveQueueItem(idx, idx + 1)
                                                         }}
                                                         disabled={idx === playlistQueue.length - 1}
-                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-95"
+                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] disabled:opacity-20 disabled:cursor-not-allowed transition active:scale-95"
                                                         aria-label="Mover abajo"
                                                         title="Mover abajo"
                                                     >
@@ -244,7 +254,7 @@ export const GlobalQueueSidebar = () => {
                                                         e.stopPropagation()
                                                         removeFromQueue(idx)
                                                     }}
-                                                    className="w-11 h-11 rounded-xl flex items-center justify-center text-on-surface-variant/70 hover:text-red-400 self-center hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all duration-base shrink-0 z-10 cursor-pointer active:scale-95"
+                                                    className="w-11 h-11 rounded-xl flex items-center justify-center text-on-surface-variant/70 hover:text-red-400 self-center hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition duration-base shrink-0 z-10 cursor-pointer active:scale-95"
                                                     aria-label={`Eliminar ${item.title} de la cola`}
                                                     title="Eliminar de la lista"
                                                 >
@@ -253,6 +263,7 @@ export const GlobalQueueSidebar = () => {
                                             </m.div>
                                         )
                                     })}
+                                    </AnimatePresence>
                                 </div>
                             ) : (
                                 /* Empty — patrón oro Home (glass-card rounded-3xl + CTA brand-accent pill) */
@@ -279,7 +290,7 @@ export const GlobalQueueSidebar = () => {
                                             setGlobalQueueOpen(false)
                                             navigate({ to: "/home" })
                                         }}
-                                        className="px-8 py-3 rounded-full bg-brand-accent text-on-primary font-display tracking-widest text-xs uppercase active:scale-95 hover:brightness-110 transition-all shadow-brand-primary min-h-[44px] cursor-pointer"
+                                        className="px-8 py-3 rounded-full bg-brand-accent text-on-primary font-display tracking-widest text-xs uppercase active:scale-95 hover:brightness-110 transition shadow-brand-primary min-h-[44px] cursor-pointer"
                                     >
                                         Explorar catálogo
                                     </button>
@@ -294,7 +305,7 @@ export const GlobalQueueSidebar = () => {
                                     <button
                                         onClick={() => playPrevious()}
                                         disabled={currentQueueIndex <= 0 && queueRepeatMode !== "all"}
-                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed"
                                         aria-label="Anterior"
                                         title="Anterior"
                                     >
@@ -303,7 +314,7 @@ export const GlobalQueueSidebar = () => {
                                     </button>
                                     <button
                                         onClick={() => shuffleQueue()}
-                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface"
+                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface"
                                         aria-label="Aleatorio"
                                         title="Mezclar cola"
                                     >
@@ -319,7 +330,7 @@ export const GlobalQueueSidebar = () => {
                                         aria-label="Repetir"
                                         title={`Repetir: ${queueRepeatMode}`}
                                         className={cn(
-                                            "relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1 min-h-[44px]",
+                                            "relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition active:scale-95 flex items-center justify-center gap-1 min-h-[44px]",
                                             isRepeating ? "text-zinc-950 font-bold" : "text-on-surface-variant hover:text-on-surface"
                                         )}
                                     >
@@ -341,7 +352,7 @@ export const GlobalQueueSidebar = () => {
                                         clearQueue()
                                         setGlobalQueueOpen(false)
                                     }}
-                                    className="w-full py-3 min-h-[44px] border border-white/15 hover:border-red-500/40 hover:bg-red-500/10 text-on-surface-variant hover:text-red-400 font-display font-bold text-xs uppercase tracking-widest rounded-full transition-all duration-base cursor-pointer active:scale-95"
+                                    className="w-full py-3 min-h-[44px] border border-white/15 hover:border-red-500/40 hover:bg-red-500/10 text-on-surface-variant hover:text-red-400 font-display font-bold text-xs uppercase tracking-widest rounded-full transition duration-base cursor-pointer active:scale-95"
                                 >
                                     Vaciar Lista
                                 </button>

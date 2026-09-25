@@ -59,7 +59,7 @@ export class PlayerErrorBoundary extends React.Component<Props, State> {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={this.handleRetry}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-sm font-medium cursor-pointer"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 transition text-sm font-medium cursor-pointer"
                         >
                             <IconUiRefresh className="w-4 h-4" />
                             Reintentar
@@ -67,7 +67,7 @@ export class PlayerErrorBoundary extends React.Component<Props, State> {
                         {onClose && (
                             <button
                                 onClick={onClose}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-destructive/20 text-brand-destructive hover:bg-brand-destructive/30 active:scale-95 transition-all text-sm font-medium cursor-pointer"
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-destructive/20 text-brand-destructive hover:bg-brand-destructive/30 active:scale-95 transition text-sm font-medium cursor-pointer"
                             >
                                 <IconUiClose className="w-4 h-4" />
                                 Cerrar Reproductor

@@ -76,11 +76,19 @@ const config: Config = {
                 "300": "300ms",
                 "400": "400ms",
                 "500": "500ms",
-                // Tokens del design system (animation.css) — duration-base es el default del sistema
-                fast: "150ms",
-                base: "250ms",
-                slow: "400ms",
-                slower: "600ms",
+                // Tokens del design system: apuntan a animation.css (única fuente de
+                // verdad) para que Tailwind y CSS no se desvíen. duration-base es el
+                // default del sistema.
+                // `fast` conserva los 150ms que siempre renderizó Tailwind (117 usos);
+                // en animation.css --duration-fast vale 250ms, igual que base.
+                fast: "var(--duration-quick)",
+                quick: "var(--duration-quick)",
+                base: "var(--duration-base)",
+                medium: "var(--duration-medium)",
+                slow: "var(--duration-slow)",
+                "very-slow": "var(--duration-very-slow)",
+                slower: "var(--duration-slower)",
+                slowest: "var(--duration-slowest)",
             },
             transitionTimingFunction: {
                 DEFAULT: "cubic-bezier(0.2, 0, 0.38, 0.9)",
@@ -90,8 +98,10 @@ const config: Config = {
                 "bounce-spring": "cubic-bezier(0.34, 1.56, 0.64, 1)",
                 "image-zoom": "cubic-bezier(0.2, 1, 0.2, 1)",
                 // Tokens del design system (animation.css)
-                "smooth-out": "cubic-bezier(0.2, 1, 0.2, 1)",
-                "expo-out": "cubic-bezier(0.16, 1, 0.3, 1)",
+                "smooth-out": "var(--ease-smooth-out)",
+                "expo-out": "var(--ease-expo-out)",
+                "out-strong": "var(--ease-out)",
+                drawer: "var(--ease-drawer)",
                 fluid: "cubic-bezier(0.2, 0.8, 0.2, 1)",
             },
             keyframes: {
@@ -180,6 +190,9 @@ const config: Config = {
                 "brand-focus": "var(--shadow-brand-focus)",
                 "glow-tip": "var(--shadow-glow-tip)",
                 "hero": "var(--shadow-hero)",
+                "hero-cta": "var(--shadow-hero-cta-primary)",
+                "hero-cta-hover": "var(--shadow-hero-cta-primary-hover)",
+                "hero-dot": "var(--shadow-hero-dot-active)",
                 "modal": "var(--shadow-modal, var(--elevation-3))",
                 "player": "var(--shadow-player, var(--elevation-4))",
                 "overlay": "var(--shadow-overlay, var(--elevation-3))",
@@ -198,13 +211,21 @@ const config: Config = {
                 pill: "9999px",
                 container: "var(--radius-container, 16px)",
                 "corner-lg": "var(--radius-corner-lg, 28px)",
+                hero: "var(--radius-hero, 28px)",
             },
             maxWidth: {
                 content: "var(--content-max)",
                 "content-desktop": "var(--content-max-desktop)",
+                "hero-content": "var(--hero-content-max-w, 30rem)",
+                "hero-content-wide": "var(--hero-content-max-w-wide, 42rem)",
             },
             zIndex: {
                 base: "var(--z-base)",
+                "hero-base": "var(--z-hero-base)",
+                "hero-visual": "var(--z-hero-visual)",
+                "hero-scrim": "var(--z-hero-scrim)",
+                "hero-content": "var(--z-hero-content)",
+                "hero-controls": "var(--z-hero-controls)",
                 raised: "var(--z-raised)",
                 dropdown: "var(--z-dropdown)",
                 sticky: "var(--z-sticky)",
@@ -239,6 +260,13 @@ const config: Config = {
                 xl: "var(--filter-blur-xl, 24px)",
                 "2xl": "var(--filter-blur-2xl, 40px)",
                 "3xl": "var(--filter-blur-3xl, 64px)",
+                hero: "var(--filter-blur-hero, 12px)",
+                "hero-bg": "var(--filter-blur-hero-bg, 32px)",
+                orb: "var(--filter-blur-orb, 28px)",
+                "ambient-sm": "var(--filter-blur-ambient-sm, 14px)",
+                "ambient-md": "var(--filter-blur-ambient-md, 22px)",
+                "ambient-lg": "var(--filter-blur-ambient-lg, 28px)",
+                "ambient-xl": "var(--filter-blur-ambient-xl, 36px)",
             },
             colors: {
                 border: "hsl(var(--border) / <alpha-value>)",
@@ -288,7 +316,20 @@ const config: Config = {
             "status-warning": "rgba(var(--status-warning-rgb), <alpha-value>)",
             "secondary-container": "var(--md-sys-color-secondary-container)",
             "on-secondary-container": "var(--md-sys-color-on-secondary-container)",
-            "brand-accent": "hsl(var(--brand-accent) / <alpha-value>)",
+            // DEFAULT mantiene bg-brand-accent/60; 100–900 es la escala tonal de la era
+            // (colors.css), sin modificador de opacidad porque son color-mix.
+            "brand-accent": {
+                DEFAULT: "hsl(var(--brand-accent) / <alpha-value>)",
+                100: "var(--brand-accent-100)",
+                200: "var(--brand-accent-200)",
+                300: "var(--brand-accent-300)",
+                400: "var(--brand-accent-400)",
+                500: "var(--brand-accent-500)",
+                600: "var(--brand-accent-600)",
+                700: "var(--brand-accent-700)",
+                800: "var(--brand-accent-800)",
+                900: "var(--brand-accent-900)",
+            },
             "brand-primary": "hsl(var(--brand-primary) / <alpha-value>)",
             "brand-secondary": "hsl(var(--brand-secondary) / <alpha-value>)",
             "brand-destructive": "hsl(var(--brand-destructive) / <alpha-value>)",

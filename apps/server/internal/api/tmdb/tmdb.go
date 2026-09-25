@@ -14,6 +14,7 @@ import (
 
 	httputil "kamehouse/internal/util/http"
 
+	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
 )
 
@@ -31,6 +32,7 @@ type Client struct {
 	persistentCache Cache             // persistent SQL-backed cache
 	limiter         *rate.Limiter
 	httpClient      *http.Client
+	flights         singleflight.Group // collapses concurrent fetches of the same cache key
 }
 
 // language is a BCP 47 language tag (e.g. "es-MX", "en-US"). If empty, defaults to "es-MX".
@@ -49,6 +51,20 @@ func NewClient(bearerToken string, language ...string) *Client {
 		limiter:     rate.NewLimiter(rate.Limit(30), 10), // 30 req/sec, burst of 10
 		httpClient:  httputil.NewFastClient(),
 	}
+}
+
+// dedupe runs fetch once for all concurrent callers of the same cache key, so N episode
+// tiles asking for the same series on a cold cache send one request instead of N.
+// The shared fetch is detached from the first caller's cancellation, since others wait on it.
+func dedupe[T any](ctx context.Context, c *Client, key string, fetch func(ctx context.Context) (T, error)) (T, error) {
+	v, err, _ := c.flights.Do(key, func() (interface{}, error) {
+		return fetch(context.WithoutCancel(ctx))
+	})
+	if err != nil {
+		var zero T
+		return zero, err
+	}
+	return v.(T), nil
 }
 
 // SetPersistentCache assigns a persistent cache backend to the client.

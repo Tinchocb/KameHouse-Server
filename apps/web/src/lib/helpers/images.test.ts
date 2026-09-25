@@ -8,6 +8,7 @@ import {
     markImageLoaded,
     isImageLoaded,
     getPixelSampleImage,
+    buildVideoThumbnailUrl,
 } from "./images"
 
 describe("images helper", () => {
@@ -105,6 +106,25 @@ describe("images helper", () => {
         it("no toca URLs locales ni vacías", () => {
             expect(getPixelSampleImage("/api/v1/image-proxy?url=x")).toBe("/api/v1/image-proxy?url=x")
             expect(getPixelSampleImage(null)).toBe("")
+        })
+    })
+
+    describe("buildVideoThumbnailUrl", () => {
+        const base = "http://127.0.0.1:43211"
+
+        it("versiona la URL con mtime y tamaño del archivo", () => {
+            expect(buildVideoThumbnailUrl({ path: "D:\\Anime\\ep 1.mkv", fileModTime: 1700000000, fileSize: 123456 }, { base }))
+                .toBe(`${base}/api/v1/video-thumbnail?path=D%3A%5CAnime%5Cep+1.mkv&v=${(1700000000).toString(36)}-${(123456).toString(36)}`)
+        })
+
+        it("mantiene el orden path, t, v y redondea el segundo", () => {
+            expect(buildVideoThumbnailUrl({ path: "/a.mkv", fileModTime: 10, fileSize: 20 }, { base, startSec: 12.6 }))
+                .toBe(`${base}/api/v1/video-thumbnail?path=%2Fa.mkv&t=13&v=a-k`)
+        })
+
+        it("omite v sin datos del archivo y t cuando no hay segundo válido", () => {
+            expect(buildVideoThumbnailUrl({ path: "/a.mkv" }, { base, startSec: -1 }))
+                .toBe(`${base}/api/v1/video-thumbnail?path=%2Fa.mkv`)
         })
     })
 })

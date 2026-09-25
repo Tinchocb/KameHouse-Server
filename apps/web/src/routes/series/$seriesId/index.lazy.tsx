@@ -59,6 +59,10 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         saga: activeSagaId,
         subSaga: activeSubSagaId,
         autoplay: autoplayEp,
+        t: initialTime,
+        moment: momentKey,
+        momentTitle,
+        chrono: chronoReturnId,
     } = Route.useSearch()
     const { data: entry, isLoading } = useGetAnimeEntry(seriesId)
     const { data: libraryCollection } = useGetLibraryCollection()
@@ -199,6 +203,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         continuityData,
         refetchContinuity,
         autoplayEp,
+        initialTime,
+        momentKey,
+        momentTitle,
         setSearchParams,
     })
 
@@ -246,6 +253,33 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const mainScrollRef = useRef<HTMLElement | null>(null)
     const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
 
+    // Llegando con ?autoplay (cronología o continuación entre series) no se muestra la ficha:
+    // la pantalla de carga cubre todo hasta que el reproductor se monta. El parámetro se limpia
+    // antes de que el reproductor aparezca (se abre dentro de una view transition), por eso el
+    // estado vive aparte y no depende de la URL.
+    const [launch, setLaunch] = useState<{ label: string; sublabel?: string } | null>(() =>
+        autoplayEp ? { label: `Preparando Cap. ${autoplayEp}`, sublabel: momentTitle } : null
+    )
+    const playerShownRef = useRef(false)
+    useEffect(() => {
+        if (!launch) return
+        if (playTarget) {
+            playerShownRef.current = true
+            return
+        }
+        // Se cerró el reproductor que abrió el autoplay: la ficha vuelve a verse.
+        if (playerShownRef.current) {
+            playerShownRef.current = false
+            setLaunch(null)
+            return
+        }
+        // El autoplay terminó sin abrir nada (episodio faltante): no dejar la pantalla colgada.
+        if (!autoplayEp) {
+            const timer = setTimeout(() => setLaunch(null), 1200)
+            return () => clearTimeout(timer)
+        }
+    }, [launch, playTarget, autoplayEp])
+
     // Scroll inicial controlado al top del contenedor en lugar de salto brusco
     useEffect(() => {
         if (mainScrollRef.current) {
@@ -255,6 +289,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     // ── Early returns ─────────────────────────────────────────────────────────
     if (isLoading && !entry) {
+        if (launch) return <PlayerFallback label={launch.label} sublabel={launch.sublabel} />
         return (
             <div className="h-full w-full text-on-surface pb-16 overflow-y-auto">
                 <BentoDetailsSkeleton />
@@ -289,7 +324,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 type="button"
                 onClick={() => navigate({ to: "/series" })}
                 aria-label="Volver a series"
-                className="absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-9 h-9 rounded-full bg-surface-container-lowest/60 border border-white/20 backdrop-blur-overlay-2xl text-white/90 hover:text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                className="absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-9 h-9 rounded-full bg-surface-container-lowest/60 border border-white/20 backdrop-blur-overlay-2xl text-white/90 hover:text-white flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer"
             >
                 <IconNavigationChevronLeft className="w-4 h-4" />
             </button>
@@ -320,7 +355,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     />
                 </div>
 
-                <div className="w-full page-container py-7 lg:py-6 pb-32 space-y-8 lg:space-y-7 min-h-full bg-transparent relative z-10">
+                <div className="w-full page-container py-7 lg:py-6 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] space-y-8 lg:space-y-7 min-h-full bg-transparent relative z-10">
                     {/* Continuar viendo — integrado en el flujo de contenido sin superposición */}
                     {continueWatching && (
                         <SeriesContinueWatching
@@ -419,6 +454,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 )}
             </Vaul>
 
+            {/* Debajo del reproductor: tapa la ficha mientras el reproductor todavía no se montó */}
+            {launch && <PlayerFallback label={launch.label} sublabel={launch.sublabel || seriesTitle} />}
+
             {/* Video Player Modal */}
             {playTarget && (() => {
                 const nextTitle = nextEp
@@ -435,6 +473,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                             episodeLabel={playTarget.episodeLabel}
                             episodeNumber={playTarget.episodeNumber}
                             initialProgressSeconds={playTarget.startTime}
+                            momentKey={playTarget.momentKey}
+                            momentTitle={playTarget.momentTitle}
                             mediaId={Number(seriesId)}
                             malId={playTarget.malId}
                             isFillerEpisode={playTarget.isFiller ?? false}
@@ -456,7 +496,15 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                             hasNextEpisode={hasNextEpisode}
                             episodes={playerEpisodes}
                             onSelectEpisode={handlePlayByNumber}
-                            onClose={handlePlayerClose}
+                            onClose={
+                                chronoReturnId
+                                    ? () => {
+                                          // Vino desde la cronología: se vuelve al lapso de origen.
+                                          handlePlayerClose()
+                                          navigate({ to: "/chronology", search: { highlight: chronoReturnId } })
+                                      }
+                                    : handlePlayerClose
+                            }
                         />
                     </React.Suspense>
                 )

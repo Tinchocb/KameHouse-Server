@@ -123,16 +123,17 @@ export function LoadingErrorOverlay({
 export function CenterPlayFlash({ flash }: { flash: "play" | "pause" | null }) {
     const reduceMotion = useReducedMotion()
 
+    // Sin mode="wait": con play/pausa seguidos (barra espaciadora) el ícono nuevo entra
+    // mientras el anterior se va, en vez de hacer cola detrás de su salida.
     return (
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
             {flash && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                <div key={flash} className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                     <m.div
-                        key={flash}
-                        initial={{ scale: reduceMotion ? 1 : 0.8, opacity: 0 }}
+                        initial={{ scale: reduceMotion ? 1 : 0.85, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: reduceMotion ? 1 : 1.35, opacity: 0 }}
-                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                        exit={{ scale: reduceMotion ? 1 : 1.25, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
                         className={cn("flex items-center justify-center w-20 h-20 rounded-full", PLAYER_GLASS)}
                     >
                         {flash === "play"
@@ -174,10 +175,13 @@ export function SkipIntroOverlay({
             className={cn(
                 // Esquina inferior derecha (convención Netflix/Crunchyroll): el lado
                 // izquierdo lo ocupan play/volumen y sus tooltips.
-                "absolute right-3 sm:right-6 z-player-overlay pointer-events-auto",
-                "transition-[opacity,transform,bottom] duration-300 ease-out",
-                controlsVisible ? "bottom-24" : "bottom-8",
-                show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3 pointer-events-none"
+                // Sube sobre la barra de controles con transform (no con `bottom`, que
+                // recalcula el layout en cada cuadro): bottom-8 − 4rem = bottom-24.
+                "absolute right-3 sm:right-6 bottom-8 z-player-overlay pointer-events-auto",
+                "transition-[opacity,transform] duration-300 ease-out-strong",
+                show
+                    ? cn("opacity-100", controlsVisible ? "-translate-y-16" : "translate-y-0")
+                    : cn("opacity-0 pointer-events-none", controlsVisible ? "-translate-y-[3.25rem]" : "translate-y-3")
             )}>
             <button
                 id="skip-intro-btn"
@@ -192,7 +196,7 @@ export function SkipIntroOverlay({
                     PLAYER_GLASS,
                     "text-white text-xs font-semibold tracking-wide",
                     "hover:bg-white/95 hover:text-black",
-                    "transition-colors duration-200 active:scale-[0.97] cursor-pointer group",
+                    "transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.97] cursor-pointer group",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 )}
             >
@@ -200,10 +204,10 @@ export function SkipIntroOverlay({
                 <div
                     aria-hidden
                     className={cn(
-                        "absolute inset-y-0 left-0 -z-10 transition-[width] duration-slow ease-linear group-hover:opacity-0",
+                        "absolute inset-0 -z-10 origin-left transition-transform duration-slow ease-linear group-hover:opacity-0",
                         isOutro ? "bg-brand-secondary/30" : "bg-brand-accent/30"
                     )}
-                    style={{ width: `${fillProgress}%` }}
+                    style={{ transform: `scaleX(${Math.min(100, Math.max(0, fillProgress)) / 100})` }}
                 />
 
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 shrink-0">
@@ -253,6 +257,14 @@ export function AutoSkipToastOverlay({
     const canUndo = showType !== "filler"
 
     return (
+        // El contenedor sube sobre la barra de controles con transform (no con `bottom`,
+        // que recalcula el layout); la entrada y salida del aviso las anima framer adentro.
+        <div
+            className={cn(
+                "absolute right-3 sm:right-6 bottom-8 z-player-overlay pointer-events-none transition-transform duration-300 ease-out-strong",
+                controlsVisible ? "-translate-y-16" : "translate-y-0"
+            )}
+        >
         <AnimatePresence>
             {showType && (
                 <m.div
@@ -261,10 +273,7 @@ export function AutoSkipToastOverlay({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
                     transition={reduceMotion ? { duration: 0.15 } : entranceSpring}
-                    className={cn(
-                        "absolute right-3 sm:right-6 z-player-overlay pointer-events-auto transition-[bottom] duration-300 ease-out",
-                        controlsVisible ? "bottom-24" : "bottom-8"
-                    )}
+                    className="pointer-events-auto"
                 >
                     <div className={cn(
                         "flex items-center h-11 pl-4 pr-1.5 text-white rounded-full",
@@ -289,6 +298,7 @@ export function AutoSkipToastOverlay({
                 </m.div>
             )}
         </AnimatePresence>
+        </div>
     )
 }
 
@@ -375,8 +385,8 @@ export function NextEpisodeOverlay({
                             {showCountdown && (
                                 <div className="w-full h-0.5 bg-white/15 overflow-hidden rounded-full">
                                     <div
-                                        className="h-full bg-brand-accent transition-[width] duration-slow ease-linear"
-                                        style={{ width: `${remainingProgress}%` }}
+                                        className="h-full w-full bg-brand-accent origin-left transition-transform duration-slow ease-linear"
+                                        style={{ transform: `scaleX(${Math.min(100, Math.max(0, remainingProgress)) / 100})` }}
                                     />
                                 </div>
                             )}

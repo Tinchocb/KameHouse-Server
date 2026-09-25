@@ -34,6 +34,10 @@
   --leading-relaxed:   1.625;
   --leading-loose:     2;
 
+  /* ─── Hero Title Typography ─────────────────────────────────────────── */
+  --hero-title-size:    clamp(1.6rem, 4.2vw, 3.25rem);
+  --hero-title-leading: 1.05;
+
   /* ─── Font Weights ──────────────────────────────────────────────────── */
   --weight-thin:       100;
   --weight-extralight: 200;
@@ -124,3 +128,4 @@
 .font-sans      { font-family: var(--font-sans); }
 .font-display   { font-family: var(--font-display); }
 .font-mono      { font-family: var(--font-mono); }
+.text-hero-title { font-size: var(--hero-title-size); line-height: var(--hero-title-leading); }

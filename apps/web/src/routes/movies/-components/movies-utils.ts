@@ -1,5 +1,6 @@
 import type { Models_LibraryMedia } from "@/api/generated/types"
 import { isTmdbId } from "@/lib/helpers/type-guards"
+import { stripHtml } from "@/lib/helpers/sanitizer"
 import { EraTab } from "../-MovieCard"
 import { MEDIA_ID_TO_ERA, type EraId } from "@/lib/config/eras"
 
@@ -50,6 +51,39 @@ export function getEntryTitle(entry?: { media?: Models_LibraryMedia | null; medi
 export function getLoreDescription(lore?: MovieLoreDefinition | null): string {
     if (!lore) return ""
     return lore.chronologyNotes || lore.specialTrivia || lore.keyEvents?.join(" ") || ""
+}
+
+// Palabras funcionales frecuentes de cada idioma (sin las ambiguas como "a").
+const ENGLISH_WORDS = new Set(["the", "and", "of", "to", "his", "her", "their", "is", "are", "with", "after", "when", "from", "who", "must", "this", "that", "for", "during", "an"])
+const SPANISH_WORDS = new Set(["el", "la", "los", "las", "de", "del", "y", "que", "con", "su", "sus", "en", "para", "por", "un", "una", "es", "se", "al", "tras"])
+
+/**
+ * Detecta descripciones de TMDB que llegaron en inglés contando palabras
+ * funcionales de cada idioma en el comienzo del texto. Antes se miraba solo la
+ * primera palabra, y cualquier sinopsis en español que empezara por "Goku" se
+ * tomaba como inglesa.
+ */
+export function looksEnglish(text: string): boolean {
+    const words = text.toLowerCase().match(/[a-záéíóúñü]+/g)?.slice(0, 40) ?? []
+    let english = 0
+    let spanish = 0
+    for (const w of words) {
+        if (ENGLISH_WORDS.has(w)) english++
+        else if (SPANISH_WORDS.has(w)) spanish++
+    }
+    return english > spanish
+}
+
+/**
+ * Sinopsis canónica de una película (hero, tarjeta y detalle usan la misma):
+ * la descripción de la biblioteca si está en español; si falta o parece estar
+ * en inglés, la del lore curado. Devuelve texto plano ("" si no hay nada).
+ */
+export function getMovieSynopsis(description: string | null | undefined, lore?: MovieLoreDefinition | null): string {
+    const loreText = getLoreDescription(lore)
+    const raw = description?.trim() ?? ""
+    const preferLore = !raw || looksEnglish(stripHtml(raw))
+    return stripHtml(preferLore ? (loreText || raw) : raw) || stripHtml(loreText)
 }
 
 export function getEntryRating(entry?: { media?: Models_LibraryMedia | null; listData?: { score?: number } | null } | null): number {

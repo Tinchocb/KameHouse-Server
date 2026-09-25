@@ -65,7 +65,8 @@ export function WatchProgressBar({
         : undefined;
 
     const fillStyle: React.CSSProperties = {
-        width: `${clampedPercent}%`,
+        transform: `scaleX(${clampedPercent / 100})`,
+        transformOrigin: "left",
         ...(activeColor ? {
             background: activeColor.startsWith("linear-gradient") || activeColor.startsWith("var(")
                 ? activeColor
@@ -88,9 +89,11 @@ export function WatchProgressBar({
             >
                 <div
                     className={cn(
-                        "h-full rounded-pill",
+                        "h-full w-full rounded-pill origin-left",
                         !activeColor && defaultFillClass,
-                        animateOnMount && "duration-slower ease-expo-out transition-all"
+                        animateOnMount
+                            ? "transition-transform duration-slower ease-expo-out"
+                            : "transition-transform duration-base ease-smooth-out"
                     )}
                     style={fillStyle}
                 />

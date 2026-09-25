@@ -17,7 +17,8 @@ export const ToasterAnatomy = defineStyleAnatomy({
         "group-[.toaster]:rounded-2xl group-[.toaster]:border group-[.toaster]:border-t group-[.toaster]:shadow-elevation-4",
         "group-[.toaster]:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_90%,transparent)] group-[.toaster]:backdrop-blur-overlay-xl group-[.toaster]:border-white/15 group-[.toaster]:border-t-white/35",
         "group-[.toaster]:text-on-surface",
-        "group-[.toaster]:transition-colors group-[.toaster]:duration-base",
+        // Sin clases transition-*: pisarían la transición propia de Sonner (transform/opacity/height)
+        // y los avisos aparecerían y se irían de golpe en vez de deslizarse.
         // Success
         "group-[.toaster]:data-[type=success]:bg-success-bg group-[.toaster]:data-[type=success]:border-success-border group-[.toaster]:data-[type=success]:text-success-bg",
         // Warning
@@ -37,14 +38,14 @@ export const ToasterAnatomy = defineStyleAnatomy({
         "group/toast:bg-white group/toast:text-black",
         "group/toast:rounded-full group/toast:px-3.5 group/toast:py-1.5",
         "group/toast:text-xs group/toast:font-bold",
-        "group/toast:transition-all group/toast:hover:bg-zinc-200 group/toast:active:scale-95",
+        "group/toast:transition group/toast:hover:bg-zinc-200 group/toast:active:scale-95",
         "group/toast:shadow-elevation-1",
     ]),
     cancelButton: cva([
         "group/toast:bg-transparent group/toast:text-on-surface-variant",
         "group/toast:rounded-full group/toast:px-3.5 group/toast:py-1.5",
         "group/toast:text-xs group/toast:font-medium",
-        "group/toast:transition-all group/toast:hover:bg-white/10 group/toast:active:scale-95",
+        "group/toast:transition group/toast:hover:bg-white/10 group/toast:active:scale-95",
     ]),
 })
 

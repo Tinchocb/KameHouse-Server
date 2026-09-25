@@ -104,7 +104,7 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
         <button
             onClick={togglePlay}
             className={cn(
-                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm transition-all duration-base group",
+                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm transition duration-base group",
                 isPlaying
                     ? "bg-brand-accent/15 border-brand-accent/30 text-brand-accent"
                     : "bg-surface-container-high/50 border-white/5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container",

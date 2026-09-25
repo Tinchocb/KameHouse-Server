@@ -39,7 +39,7 @@ export function SubtitleSettings({
                             <span className="text-sm font-bold text-white tabular-nums">{subtitleSize}%</span>
                             <div className="w-full h-1.5 bg-white/10 rounded-full relative">
                                 <div
-                                    className="absolute left-0 h-full bg-white rounded-full transition-all"
+                                    className="absolute left-0 h-full bg-white rounded-full transition-[width]"
                                     style={{ width: `${((subtitleSize - 50) / 150) * 100}%` }}
                                 />
                                 <input
@@ -76,7 +76,7 @@ export function SubtitleSettings({
                 )} />
 
                 <span className={cn(
-                    "text-sm transition-colors duration-base ",
+                    "text-xs font-bold transition-colors duration-base",
                     activeSubtitleIndex === null ? "text-brand-accent" : "text-on-surface group-hover:text-on-surface"
                 )}>
                     Desactivado

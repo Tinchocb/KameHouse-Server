@@ -16,13 +16,13 @@ Fuente: `apps/web/src/styles/tokens/*.css` + `app/globals.css`.
 
 | Dominio | Regla |
 |---|---|
-| **Color** | Usar `brand-accent`, `on-surface`, `on-surface-variant`, `surface-container*`, `outline-variant`. Fondos glass: `bg-zinc-950/40` + **SectionBar border** `border-white/15 border-t-white/35 border-b-white/10`. Nunca hex fijo salvo `--era-*-hex`. |
+| **Color** | Usar `brand-accent`, `on-surface`, `on-surface-variant`, `surface-container*`, `outline-variant`. Fondos glass: clase `.sectionbar` (o `var(--sectionbar-bg/border/border-top/border-bottom)` si hace falta suelto); **nunca** reescribir sus valores como `bg-zinc-950/40 border-white/15 border-t-white/35…`, porque así no siguen a Clásico ni Flat. Nunca hex fijo salvo `--era-*-hex`. |
 | **Tipografía** | `font-display` (Outfit) para títulos, `font-sans` cuerpo, `font-mono` (Space Mono) para labels técnicos/contadores. Escala fluida con `clamp` (`--text-*`). |
-| **Radio** | Solo escala: pill `rounded-full` (botones, inputs, selects, tabs), `rounded-xl` filas/botones sidebar, `rounded-2xl` cards (`SectionCard`), `rounded-3xl` heros (`--radius-hero`). Prohibidos valores arbitrarios (13px, 19px…). |
-| **Sombra** | Solo tokens: `shadow-elevation-1..5`, `shadow-[var(--shadow-brand-primary)]` para CTA, **SectionBar shadow** `shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_12px_36px_-6px_rgba(0,0,0,0.85)]` para cards glass. Nunca `shadow-lg` genérico ni inline. |
-| **Blur** | Solo overlays: `backdrop-blur-overlay-md/2xl`, clases `.glass-card` / `.glass-liquid`. Una sola capa de blur por panel; filas internas con `bg-white/[0.04]` sin blur. Respeta `[data-flat]` y `[data-liquid]`. |
-| **Motion** | Springs framer-motion: entrada `stiffness:380 damping:30 mass:0.8`, tabs `stiffness:280 damping:28`. Clases CSS: `duration-base` (250ms), `ease-out/smooth-out`. `active:scale-95`, `hover-lift` en cards. Respetar `prefers-reduced-motion` / `useReducedMotion`. |
-| **Layout** | Contenedor: `page-container` (`w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10`, `--content-max:1800px`). Utilidades: `.scrim-hero-*`, `.text-edge-glow`, `.no-scrollbar`, `.gpu`. |
+| **Radio** | Solo escala: pill `rounded-full` (botones, inputs, selects, tabs), `rounded-xl` filas/botones sidebar, `rounded-2xl` cards (`SectionCard`), `rounded-hero` (`--radius-hero: var(--radius-3xl)`). Prohibidos valores arbitrarios (13px, 19px…). |
+| **Sombra** | Solo tokens: `shadow-elevation-1..5`, `shadow-hero` (`--shadow-hero`), `shadow-hero-cta` (`--shadow-hero-cta-primary`), `shadow-hero-dot` (`--shadow-hero-dot-active`), `shadow-[var(--shadow-brand-primary)]` para CTA, **SectionBar shadow** `shadow-[var(--sectionbar-shadow)]` para cards glass. Sombra compuesta con brillo: `shadow-[shadow:var(--glass-highlight-md),var(--elevation-2)]` (el prefijo `shadow:` es el type hint de Tailwind 3 y es **válido**). Nunca `shadow-lg` genérico ni valores `rgba` inline. |
+| **Blur** | Solo overlays: `backdrop-blur-overlay-md/2xl`, clases `.glass-card` / `.glass-liquid`. Para filtros directos: `blur-hero`, `blur-hero-bg`, `blur-ambient-*`, `.hero-image-filter`. Una sola capa de blur por panel; filas internas con `bg-white/[0.04]` sin blur. Respeta `[data-flat]` y `[data-liquid]`. |
+| **Motion** | Springs framer-motion: entrada `stiffness:380 damping:30 mass:0.8`, tabs `stiffness:280 damping:28`. Clases CSS: `duration-base` (250ms), `ease-out/smooth-out`. `active:scale-95`, `hover-lift` en cards. Variantes hero: `heroBackdropSlideVariants`, `heroBackdropFadeVariants`, `heroContentContainerVariants`. Auto-rotación: `--hero-rotation-duration: 8000ms` / `HERO_ROTATION_MS`. Respetar `prefers-reduced-motion` / `useReducedMotion`. |
+| **Layout** | Contenedor: `page-container` (`w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10`, `--content-max:1800px`). Zonas hero: `max-w-hero-content` (480px) / `max-w-hero-content-wide` (672px). Capas: `z-hero-base` (0), `z-hero-visual` (1), `z-hero-scrim` (10), `z-hero-content` (20), `z-hero-controls` (30). Utilidades: `.scrim-hero-*`, `.scrim-hero-bottom-rise`, `.scrim-hero-boost`, `.text-hero-title`, `.text-edge-glow`, `.no-scrollbar`, `.gpu`. |
 
 ---
 
@@ -30,7 +30,9 @@ Fuente: `apps/web/src/styles/tokens/*.css` + `app/globals.css`.
 
 El "Section Bar" es el contenedor visual base que une **SettingsSection (collapsible)**, **SettingsCard**, y se extiende a **Home sections**, **Movies/Series grids**, **Admin panels**.
 
-### 3.1 Tokens CSS (añadir a `tokens/shadows.css` y `tokens/colors.css`)
+### 3.1 Tokens CSS — fuente única: `tokens/shadows.css`
+
+> Los overrides por modo (`[data-mode="classic"]`, `[data-flat="true"]`) van **fuera** de `:root` y después de él: esos atributos viven en `<html>`, así que un bloque anidado en `:root` no matchea nunca, y en `colors.css` quedarían pisados por el `:root` de `shadows.css` (misma especificidad, carga después). No redefinir `--sectionbar-*` en otro archivo.
 
 ```css
 :root {
@@ -54,15 +56,17 @@ El "Section Bar" es el contenedor visual base que une **SettingsSection (collaps
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
     0 16px 48px -8px rgba(0, 0, 0, 0.80);
 
-  /* Flat mode overrides */
-  [data-flat="true"] {
-    --sectionbar-border:       rgba(255, 255, 255, 0.12);
-    --sectionbar-border-top:   rgba(255, 255, 255, 0.20);
-    --sectionbar-border-bottom:rgba(255, 255, 255, 0.08);
-    --sectionbar-bg:           var(--bg-secondary);
-    --sectionbar-blur:         0;
-    --sectionbar-shadow:       0 2px 8px rgba(0, 0, 0, 0.30);
-  }
+}
+
+/* Clásico: bordes 7–13%, fondos #101013–#1B1B20 (ver shadows.css) */
+[data-mode="classic"] { --sectionbar-border: rgba(255, 255, 255, 0.07); /* … */ }
+
+/* Flat: sólido, sin blur — después de Clásico para ganarle */
+[data-flat="true"] {
+  --sectionbar-bg:     var(--bg-secondary);
+  --sectionbar-blur:   0px;
+  --sectionbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.30);
+  /* … */
 }
 ```
 
@@ -79,8 +83,12 @@ El "Section Bar" es el contenedor visual base que une **SettingsSection (collaps
   -webkit-backdrop-filter: saturate(var(--sectionbar-saturate)) blur(var(--sectionbar-blur));
   backdrop-filter: saturate(var(--sectionbar-saturate)) blur(var(--sectionbar-blur));
   box-shadow: var(--sectionbar-shadow);
-  @apply transition-all duration-base;
+  @apply transition-[border-color,background-color,box-shadow] duration-base ease-smooth-out;
 }
+
+/* Variante pill (segmented controls, barras de filtros): `.sectionbar` se
+   emite después de `.rounded-full`, así que el radio va en clase propia */
+.sectionbar-pill { border-radius: 9999px; }
 
 /* Variante fuerte (hero sections, featured panels) */
 .sectionbar-strong {
@@ -363,7 +371,22 @@ Fila base: `flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 
 
 ### 5.3 Segmented Control (modos / presets / tabs inferiores Home)
 
-Contenedor `flex items-center gap-1 bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10 p-1.5 rounded-full` (usa SectionBar border tokens). Botón `relative flex-1 px-4 py-2 rounded-full text-xs font-semibold`, activo `text-zinc-950 font-bold` + indicador `layoutId` único (`motion.div bg-white/95 rounded-full shadow-[0_2px_14px_rgba(255,255,255,0.4),inset_0_1px_1px_rgba(255,255,255,1)]`, spring `480/34`).
+**Usar el componente `SegmentedControl`** (`components/ui/segmented-control`), no reimplementarlo:
+
+```tsx
+<SegmentedControl
+  aria-label="Contenido de la era"
+  layoutId="spotlight-lower-hub-indicator"   // único por instancia visible
+  semantics="tablist"                        // o "radiogroup" (default) para filtros/modos
+  tone="neutral"                             // "accent" = pill del color de marca/era
+  surface="glass"                            // "inset" dentro de un panel que ya tiene blur
+  value={tab}
+  onChange={setTab}
+  options={[{ value: "sagas", label: "Sagas", icon: <IconNavigationLayers size={14} />, count: 12 }, …]}
+/>
+```
+
+Resuelve: contenedor `.sectionbar .sectionbar-pill` (sigue Clásico/Flat), pill `MagneticIndicator` con spring `tabIndicator` 480/34 y `--control-primary-bg/fg`, touch `min-h-11`, roving tabindex con flechas/Home/End, `aria-checked`/`aria-selected` y fallback sin animación con `prefers-reduced-motion`.
 
 ### 5.4 Navegación por Pilares (sidebar desktop + pills móvil)
 
@@ -409,7 +432,7 @@ Orquesta dinámicamente la transición entre eras, sincronizando el hero superio
   5. Catálogo con solo 1 era disponible (`availableEras.length <= 1`).
 
 #### 4. `SpotlightLowerHub` (Segmented Control y Grids)
-- **Segmented Control de Modo**: Selector de vistas con `bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10 p-1.5 rounded-full`. Botón activo con `layoutId` único y resplandor sutil.
+- **Segmented Control de Modo**: `SegmentedControl` con `semantics="tablist"` (§5.3).
 - **Grids de Catálogo**: `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5`.
 - **Cards y Pósteres**: `aspect-[2/3] rounded-2xl` con badge `SPECIAL / OVA / PELÍCULA`.
 - **Integración con SectionBar**: Cuando se usan dentro de `SectionBar`, optar por `variant="minimal"` para mantener el aspecto edge-to-edge sin saturar con doble caja.
@@ -451,7 +474,7 @@ Filtrar por `keywords` por sección; helper `matchesSettingsQuery` (tokens AND, 
 
 ## 9. Anti-patrones (rechazar)
 
-- Radios arbitrarios · sombras inline · `bg-black` opaco en body · blur por fila · animar `width` por JS (usar `animate-hero-progress`) · tabs sin `layoutId` (parpadeo) · texto sin `text-on-surface*` (rompe eras) · buscador sin `SettingsFilter`+keywords · **SectionBar sin tokens** (usar clases inline) · **mezclar SettingsCard/SettingsSection sin migrar a SectionBar** · **imágenes sin aspect-ratio fijo en colapsables** (provocan tirones y saltos de altura) · **encajonar cuadrículas de pósteres con SectionBar default rígido** cuando se requiere un look inmersivo edge-to-edge (usar `variant="minimal"`).
+- Radios arbitrarios · sombras inline · `bg-black` opaco en body · blur por fila · animar `width` por JS (usar `animate-hero-progress`) · tabs sin `layoutId` (parpadeo) · texto sin `text-on-surface*` (rompe eras) · buscador sin `SettingsFilter`+keywords · **SectionBar sin tokens** (reescribir sus valores como clases `zinc/white/*` en vez de `.sectionbar` / `var(--sectionbar-*)`) · **segmented controls a mano** (usar `SegmentedControl`) · `transition-all` · **mezclar SettingsCard/SettingsSection sin migrar a SectionBar** · **imágenes sin aspect-ratio fijo en colapsables** (provocan tirones y saltos de altura) · **encajonar cuadrículas de pósteres con SectionBar default rígido** cuando se requiere un look inmersivo edge-to-edge (usar `variant="minimal"`).
 
 ---
 
@@ -485,12 +508,12 @@ Filtrar por `keywords` por sección; helper `matchesSettingsQuery` (tokens AND, 
 │  ██████████████████████████████████████████████████████████  │  ← border-bottom: white/10 (rim sutil)
 └─────────────────────────────────────────────────────────────┘
   ↑ rounded-2xl
-  ↑ bg: zinc-950/40 + blur-overlay-2xl + saturate-190%
-  ↑ shadow: inset 0 1px 1px white/20 + 0 12px 36px -6px black/75
+  ↑ bg: var(--sectionbar-bg) + blur-overlay-2xl + saturate-190%
+  ↑ shadow: var(--sectionbar-shadow)  (Clásico y Flat la ajustan solos)
   ↑ border-left/right: white/15
 ```
 
-**Variante `strong`**: bordes +10% opacidad, bg zinc-950/55, sombra +4px blur +8px spread.
+**Variante `strong`**: `var(--sectionbar-*-strong)` — bordes +10% opacidad, bg más denso, sombra más profunda.
 
 ---
 

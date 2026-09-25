@@ -1037,6 +1037,25 @@ export type CacheStatsResponse_Videofiles = {
 }
 
 /**
+ * - Filepath: internal/handlers/chronology_frames.go
+ * - Filename: chronology_frames.go
+ * - Package: handlers
+ * @description
+ *  ChronologyEpisodeFile is one episode of the batch response: the same fields as
+ *  HandleGetLibraryEpisodeFile, plus the TMDB ID it belongs to.
+ */
+export type ChronologyEpisodeFile = {
+    tmdbId: number
+    absoluteEpisode: number
+    path: string
+    hasImage: boolean
+    title?: string
+    sagaName?: string
+    fileModTime?: number
+    fileSize?: number
+}
+
+/**
  * - Filepath: internal/handlers/directory_selector.go
  * - Filename: directory_selector.go
  * - Package: handlers
@@ -1251,14 +1270,24 @@ export type WarmingProgress = {
  * - Filename: chronology.go
  * - Package: intelligence
  * @description
- *  ChronologyResponse is the structured payload for the frontend timeline guide.
+ *  ChronologyProgressResponse es el avance de la cronología para la cuenta actual.
  */
-export type ChronologyResponse = {
-    totalMilestones: number
-    completedMilestones: number
-    progressPercentage: number
-    nextMilestone?: TimelineMilestone
-    milestones: Array<TimelineMilestone> | null
+export type ChronologyProgressResponse = {
+    series: Array<ChronologySeriesProgress> | null
+    overrides: Record<string, boolean> | null
+}
+
+/**
+ * - Filepath: internal/intelligence/chronology.go
+ * - Filename: chronology.go
+ * - Package: intelligence
+ * @description
+ *  ChronologySeriesProgress es el avance real de una serie.
+ */
+export type ChronologySeriesProgress = {
+    tmdbId: number
+    completed: boolean
+    watchedEpisodes: Array<number> | null
 }
 
 /**
@@ -1359,60 +1388,6 @@ export type SemanticSearchResult = {
     entity: SemanticEntity | null
     score: number
     matchLabel: string
-}
-
-/**
- * - Filepath: internal/intelligence/chronology.go
- * - Filename: chronology.go
- * - Package: intelligence
- * @description
- *  TimelineMilestone represents an in-universe historical milestone in Dragon Ball lore.
- */
-export type TimelineMilestone = {
-    id: string
-    order: number
-    /**
-     * In-universe timeline year (e.g. "Año 737", "Año 749-753")
-     */
-    year: string
-    /**
-     * Milestone title (e.g. "El Origen: El Padre de Goku")
-     */
-    title: string
-    /**
-     * "db", "dbz", "dbs", "dbgt", "dbdaima"
-     */
-    era: string
-    /**
-     * "MOVIE", "SPECIAL", "SHOW"
-     */
-    mediaType: string
-    /**
-     * TMDB ID or offset movie ID
-     */
-    mediaId: number
-    /**
-     * Raw TMDB ID
-     */
-    tmdbId: number
-    startEpisode?: number
-    endEpisode?: number
-    description: string
-    /**
-     * "CANON", "CANON_INTERPOLATED", "SPECIAL", "EXPANDED"
-     */
-    canonStatus: string
-    /**
-     * "CRUCIAL", "RECOMMENDED", "OPTIONAL"
-     */
-    importance: string
-    posterImage: string
-    backdropImage: string
-    isWatched: boolean
-    /**
-     * 0 - 100
-     */
-    watchedPercent: number
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

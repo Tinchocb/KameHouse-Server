@@ -69,6 +69,24 @@ func TestThumbnailCache_ByteLimitEviction(t *testing.T) {
 	assert.Equal(t, 0, c.Len())
 }
 
+func TestThumbnailCache_ReplaceKeyKeepsByteCount(t *testing.T) {
+	c, err := NewThumbnailCache(10, 100)
+	require.NoError(t, err)
+
+	c.Set("img", make([]byte, 30))
+	c.Set("img", make([]byte, 30))
+	c.Set("img", make([]byte, 10))
+	assert.Equal(t, int64(10), c.BytesUsed())
+	assert.Equal(t, 1, c.Len())
+
+	// Con el contador correcto entran dos imágenes más sin desalojar "img".
+	c.Set("a", make([]byte, 40))
+	c.Set("b", make([]byte, 40))
+	_, found := c.Get("img")
+	assert.True(t, found)
+	assert.Equal(t, int64(90), c.BytesUsed())
+}
+
 func TestPruneDirectory_Generic(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -181,4 +199,28 @@ func TestTouchDiskCache(t *testing.T) {
 	infoAfter, err := os.Stat(f)
 	require.NoError(t, err)
 	assert.True(t, infoAfter.ModTime().After(time.Now().Add(-2*time.Second)))
+}
+
+func TestTouchDiskCacheIfOlder(t *testing.T) {
+	tmpDir := t.TempDir()
+	f := filepath.Join(tmpDir, "test.jpg")
+	require.NoError(t, os.WriteFile(f, []byte("data"), 0644))
+
+	recent := time.Now().Add(-1 * time.Hour)
+	_ = os.Chtimes(f, recent, recent)
+	info, err := os.Stat(f)
+	require.NoError(t, err)
+	TouchDiskCacheIfOlder(f, info, 24*time.Hour)
+	after, err := os.Stat(f)
+	require.NoError(t, err)
+	assert.True(t, after.ModTime().Equal(info.ModTime()), "recent file must not be touched")
+
+	old := time.Now().Add(-48 * time.Hour)
+	_ = os.Chtimes(f, old, old)
+	info, err = os.Stat(f)
+	require.NoError(t, err)
+	TouchDiskCacheIfOlder(f, info, 24*time.Hour)
+	after, err = os.Stat(f)
+	require.NoError(t, err)
+	assert.True(t, after.ModTime().After(time.Now().Add(-2*time.Second)))
 }

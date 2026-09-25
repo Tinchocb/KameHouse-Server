@@ -13,22 +13,16 @@ import { getApiWebSocketUrl } from "@/api/client/server-url"
 import { WSEvents, type WebSocketMessage } from "@/lib/server/ws-events"
 import { useMediastreamShutdownTranscodeStream, usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { usePlayerStore } from "@/lib/store"
+import { persistLibraryPatch } from "@/lib/server/persist-settings"
 import { useShallow } from "zustand/react/shallow"
 import { usePlayerProgressSync } from "@/api/hooks/usePlayerProgressSync"
 import { useGetStatus, useGetSettings } from "@/api/hooks/settings.hooks"
-import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { PlayerCoreProps, PlayerCore, PlayerStats } from "./player-core.types"
 
 import { usePlayerSkip } from "./usePlayerSkip"
 import { usePlayerVolume } from "./usePlayerVolume"
+import { usePlayerTrackSelection } from "./usePlayerTrackSelection"
 import { resolveLanUrl } from "./lan-url"
-import {
-    computeAudioTracksKey,
-    computeSubtitleTracksKey,
-    matchPendingAudioTrack,
-    matchPreferredAudioTrack,
-    resolveAutoSubtitleTarget,
-} from "./track-selection"
 
 
 
@@ -151,10 +145,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setRetryNonce(n => n + 1)
     }, [])
 
-    const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
-    const [activeAudioIndex, setActiveAudioIndex] = useState(0)
-    const [subtitleTracks, setSubtitleTracks] = useState<SubtitleTrack[]>([])
-    const [activeSubtitleIndex, setActiveSubtitleIndex] = useState<number | null>(null)
     const [isJassubLoading, setIsJassubLoading] = useState(false)
     const [isJassubActive, setIsJassubActive] = useState(false)
     const [isPgsLoading, setIsPgsLoading] = useState(false)
@@ -186,15 +176,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setSkipStepSeconds: setSkipStepSecondsPref,
         playbackRate: playbackRatePref,
         setPlaybackRate: setPlaybackRatePref,
-        preferredAudioProfile,
         preferredAudioLang,
-        setPreferredAudioLang,
-        preferredAudioTrackIndexMap,
-        setPreferredAudioTrackIndexMap,
         preferredSubtitleLang,
-        setPreferredSubtitleLang,
-        subtitlesEnabled,
-        setSubtitlesEnabled,
         showHeatmap: showHeatmapPref,
         setShowHeatmap: setShowHeatmapPref,
         aspectRatio: globalAspectRatioPref,
@@ -225,15 +208,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setSkipStepSeconds: state.setSkipStepSeconds,
             playbackRate: state.playbackRate,
             setPlaybackRate: state.setPlaybackRate,
-            preferredAudioProfile: state.preferredAudioProfile,
             preferredAudioLang: state.preferredAudioLang,
-            setPreferredAudioLang: state.setPreferredAudioLang,
-            preferredAudioTrackIndexMap: state.preferredAudioTrackIndex,
-            setPreferredAudioTrackIndexMap: state.setPreferredAudioTrackIndex,
             preferredSubtitleLang: state.preferredSubtitleLang,
-            setPreferredSubtitleLang: state.setPreferredSubtitleLang,
-            subtitlesEnabled: state.subtitlesEnabled,
-            setSubtitlesEnabled: state.setSubtitlesEnabled,
             showHeatmap: state.showHeatmap,
             setShowHeatmap: state.setShowHeatmap,
             aspectRatio: state.aspectRatio,
@@ -254,8 +230,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }))
     )
     
-    const preferredAudioTrackIndex = mediaId ? (preferredAudioTrackIndexMap[mediaId] ?? -1) : -1
-
     // Aspect ratio efectivo: el override de esta serie gana; el global es fallback.
     // El setter escribe en el mapa por serie cuando hay mediaId, así el ajuste
     // queda recordado para esta serie sin pisar el de las demás.
@@ -267,9 +241,33 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setGlobalAspectRatioPref(ratio)
         }
     }, [mediaId, setAspectRatioForSeries, setGlobalAspectRatioPref])
-    const setPreferredAudioTrackIndex = useCallback((index: number) => {
-        if (mediaId) setPreferredAudioTrackIndexMap(mediaId, index)
-    }, [mediaId, setPreferredAudioTrackIndexMap])
+
+    // Cambio de pista que reconstruye el stream: retomar en el mismo punto y
+    // marcar el switch para que el overlay use fondo semitransparente.
+    const onAudioStreamSwitch = useCallback((resumeAt: number | null) => {
+        streamSwitchResumeRef.current = resumeAt
+        setStreamSwitchReason("audio")
+        setIsStreamSwitching(true)
+    }, [])
+    const {
+        audioTracks,
+        setAudioTracks,
+        activeAudioIndex,
+        setActiveAudioIndex,
+        subtitleTracks,
+        setSubtitleTracks,
+        activeSubtitleIndex,
+        onSelectAudio,
+        onSelectSubtitle,
+    } = usePlayerTrackSelection({
+        videoRef,
+        hlsRef,
+        playableUrl,
+        mediaId,
+        streamType,
+        onRequestStreamTypeChange,
+        onAudioStreamSwitch,
+    })
 
     const [showStats, setShowStats] = useState(false)
     const [showShortcuts, setShowShortcuts] = useState(false)
@@ -449,10 +447,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            setAudioTracks([])
-            setSubtitleTracks([])
-            setActiveAudioIndex(0)
-            setActiveSubtitleIndex(null)
+            // (Las pistas se resetean en usePlayerTrackSelection.)
             // Nuevo episodio o URL completamente distinta: nunca es un stream-switch de audio.
             // Resetear para que el loading inicial use fondo negro sólido.
             setIsStreamSwitching(false)
@@ -541,158 +536,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setPreviewManager(null)
         }
     }, [playableUrl, streamType])
-
-    // Selección de audio pendiente tras un cambio de stream (direct → transcode):
-    // se aplica cuando llega la nueva lista de pistas HLS.
-    const pendingAudioSelectionRef = useRef<AudioTrack | null>(null)
-
-    // Auto-select preferred tracks
-    // opts.auto === true → selección automática (preferencia): nunca forzar transcode.
-    // Sin opts (o auto === false) → selección manual del usuario.
-    const onSelectAudio = useCallback((track: AudioTrack, opts?: { auto?: boolean }) => {
-        const isAuto = opts?.auto === true
-        if (hlsRef.current) {
-            // Use hlsId (hls.js sequential manifest position) for hls.audioTrack.
-            // `track.index` is the ABSOLUTE container index (used in backend URIs);
-            // hls.js expects the positional id within its own audioTracks list.
-            // hlsId is set during AUDIO_TRACKS_UPDATED merging; fall back to index
-            // only when hlsId is not available (e.g. backend-only fallback list).
-            hlsRef.current.audioTrack = track.hlsId ?? track.index
-        } else if (videoRef.current && 'audioTracks' in videoRef.current && (videoRef.current as HTMLVideoElement & { audioTracks: AudioTrackList }).audioTracks?.length > 0) {
-            const video = videoRef.current as HTMLVideoElement & { audioTracks: AudioTrackList }
-            const trackList = Array.from(video.audioTracks)
-            for (let i = 0; i < trackList.length; i++) {
-                trackList[i].enabled = i === track.index
-            }
-        } else if (streamType === "direct" || streamType === "local") {
-            // Chromium/WebView2 no soporta la API nativa de audioTracks en direct play.
-            if (isAuto) {
-                // Auto-selección: solo persistir la preferencia de idioma y mantener
-                // direct play con la pista por defecto. No disparar transcode.
-                if (track.language && track.language.toLowerCase() !== "und") {
-                    setPreferredAudioLang(track.language)
-                }
-                return
-            } else if (onRequestStreamTypeChange) {
-                // Selección manual explícita del usuario. Chromium/WebView2 no puede
-                // cambiar de pista sin reconstruir el stream, así que forzamos el salto a
-                // HLS transcode aunque el toggle global esté apagado: force:true permite al
-                // backend inicializar el transcoder on-demand. Para fuentes H264 el video se
-                // copia (-c:v copy) y solo se re-encodea el audio a AAC, así que es barato.
-                streamSwitchResumeRef.current = videoRef.current?.currentTime ?? null
-                pendingAudioSelectionRef.current = track
-                // Marcar como stream-switch para que el overlay use fondo semitransparente
-                setStreamSwitchReason("audio")
-                setIsStreamSwitching(true)
-                onRequestStreamTypeChange("transcode", { force: true })
-            }
-        }
-        setActiveAudioIndex(track.index)
-        if (!isAuto) {
-            // Guardar el índice como fallback persistido, ideal para "und".
-            setPreferredAudioTrackIndex(track.index)
-            // "und" (unlabeled track, común en MKVs de anime) no identifica un idioma:
-            // persistirlo hacía que en el siguiente episodio se auto-seleccionara la
-            // PRIMERA pista sin etiqueta (normalmente japonés) en vez de la elegida.
-            if (track.language && track.language.toLowerCase() !== "und") {
-                setPreferredAudioLang(track.language)
-            }
-        }
-    }, [setPreferredAudioLang, setPreferredAudioTrackIndex, onRequestStreamTypeChange, streamType])
-
-
-    const onSelectSubtitle = useCallback((track: SubtitleTrack | null, opts?: { auto?: boolean }) => {
-        const isAuto = opts?.auto === true
-        if (track === null) {
-            setActiveSubtitleIndex(null)
-            if (!isAuto) setSubtitlesEnabled(false)
-            if (hlsRef.current) {
-                hlsRef.current.subtitleTrack = -1
-            }
-        } else {
-            if (hlsRef.current) {
-                hlsRef.current.subtitleTrack = track.index
-            }
-            setActiveSubtitleIndex(track.index)
-            if (!isAuto) setSubtitlesEnabled(true)
-            if (!isAuto && track.language) {
-                setPreferredSubtitleLang(track.language)
-            }
-        }
-    }, [setPreferredSubtitleLang, setSubtitlesEnabled])
-
-    // Guarda: auto-seleccionar UNA sola vez por lista de pistas (por stream).
-    // Este efecto también se re-dispara cuando el usuario cambia de pista
-    // manualmente (activeAudioIndex está en las deps) — sin esta guarda, la
-    // heurística "Latino primero" revertía la selección manual al instante
-    // y el menú de audio parecía no funcionar.
-    //
-    // D4: La guarda usa una clave de CONTENIDO estable en lugar de identidad de array.
-    // Si React crea un nuevo array con los mismos elementos (ej. re-render de HLS),
-    // la comparación por referencia fallaba y se re-ejecutaba la auto-selección,
-    // pisando la elección manual. La clave "index:lang|..." es estable mientras
-    // el contenido de las pistas no cambie.
-    const audioAutoSelectedForRef = useRef<string | null>(null)
-    const audioTracksKey = computeAudioTracksKey(audioTracks)
-    useEffect(() => {
-        if (audioTracks.length === 0) return
-
-        // Prioridad máxima: pista elegida explícitamente por el usuario antes
-        // de un cambio de stream (direct → transcode).
-        const pending = pendingAudioSelectionRef.current
-        if (pending) {
-            pendingAudioSelectionRef.current = null
-            const match = matchPendingAudioTrack(audioTracks, pending)
-            if (match) {
-                audioAutoSelectedForRef.current = audioTracksKey
-                if (activeAudioIndex !== match.index) onSelectAudio(match)
-                return
-            }
-        } else if (audioAutoSelectedForRef.current === audioTracksKey) {
-            return
-        }
-        audioAutoSelectedForRef.current = audioTracksKey
-
-        const preferred = matchPreferredAudioTrack({
-            tracks: audioTracks,
-            preferredAudioProfile,
-            preferredAudioLang,
-            preferredAudioTrackIndex,
-        })
-
-        if (preferred && activeAudioIndex !== preferred.index) {
-            // Pasar { auto: true } para que en direct play no dispare transcode.
-            onSelectAudio(preferred, { auto: true })
-        }
-    }, [audioTracksKey, preferredAudioProfile, preferredAudioLang, preferredAudioTrackIndex, activeAudioIndex, onSelectAudio, audioTracks])
-
-    // Misma guarda que el audio: auto-configurar subtítulos UNA vez por lista
-    // de pistas.
-    const subtitleAutoSelectedForRef = useRef<string | null>(null)
-    const subtitleTracksKey = computeSubtitleTracksKey(subtitleTracks)
-    useEffect(() => {
-        const timers: ReturnType<typeof setTimeout>[] = []
-        if (subtitleTracks.length > 0 && subtitleAutoSelectedForRef.current !== subtitleTracksKey) {
-            subtitleAutoSelectedForRef.current = subtitleTracksKey
-            const currentAudio = audioTracks.find(t => t.index === activeAudioIndex)
-            const targetSubtitle = resolveAutoSubtitleTarget({
-                subtitleTracks,
-                currentAudio,
-                subtitlesEnabled,
-                autoDisableSubtitlesWhenDubbed,
-                preferredSubtitleLang,
-            })
-
-            if (targetSubtitle === null) {
-                if (activeSubtitleIndex !== null) {
-                    timers.push(setTimeout(() => onSelectSubtitle(null, { auto: true }), 0))
-                }
-            } else if (activeSubtitleIndex !== targetSubtitle.index) {
-                timers.push(setTimeout(() => onSelectSubtitle(targetSubtitle, { auto: true }), 0))
-            }
-        }
-        return () => timers.forEach(clearTimeout)
-    }, [subtitleTracksKey, subtitleTracks, audioTracks, activeAudioIndex, preferredSubtitleLang, autoDisableSubtitlesWhenDubbed, activeSubtitleIndex, onSelectSubtitle, subtitlesEnabled])
 
     useEffect(() => {
         Promise.resolve().then(() => {
@@ -872,10 +715,13 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     }, [onToggleSubtitle, subtitleTracks, activeSubtitleIndex, preferredSubtitleLang, onSelectSubtitle])
 
     const changePlaybackRate = useCallback((rate: number) => {
+        // La preferencia se guarda siempre (antes se perdía si aún no había <video>);
+        // defaultPlaybackRate hace que sobreviva al load() de un cambio de fuente.
+        setPlaybackRatePref(rate)
         const video = videoRef.current
         if (!video) return
+        video.defaultPlaybackRate = rate
         video.playbackRate = rate
-        setPlaybackRatePref(rate)
     }, [setPlaybackRatePref])
 
     useEffect(() => {
@@ -887,8 +733,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
     useEffect(() => {
         const video = videoRef.current
-        if (video && playbackRatePref !== 1) {
-            video.playbackRate = playbackRatePref
+        if (video) {
+            video.defaultPlaybackRate = playbackRatePref
+            if (video.playbackRate !== playbackRatePref) video.playbackRate = playbackRatePref
         }
     }, [status, playbackRatePref])
 
@@ -1173,9 +1020,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const actions = useMemo(() => ({
         setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleSubtitle: handleToggleSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate,
         changePlaybackRate, setShowStats, setShowShortcuts,
-        setAutoSkipIntro: handleSetAutoSkipIntro,
-        setAutoSkipOutro: handleSetAutoSkipOutro,
-        setAutoSkipFiller: (val: boolean) => { usePlayerStore.getState().setAutoSkipFiller(val) },
+        // Los flags de Biblioteca se persisten al servidor: Ajustes sincroniza el
+        // store desde el servidor al montarse y, si no, revertía lo cambiado aquí.
+        setAutoSkipIntro: (val: boolean) => { handleSetAutoSkipIntro(val); persistLibraryPatch({ autoSkipIntro: val }) },
+        setAutoSkipOutro: (val: boolean) => { handleSetAutoSkipOutro(val); persistLibraryPatch({ autoSkipOutro: val }) },
+        setAutoSkipFiller: (val: boolean) => { usePlayerStore.getState().setAutoSkipFiller(val); persistLibraryPatch({ autoSkipFiller: val }) },
         setSkipStepSeconds: setSkipStepSecondsPref,
         setHlsLevel: handleSetHlsLevel,
         setShowHeatmap: setShowHeatmapPref,
@@ -1184,8 +1033,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setLoopEnabled: setLoopEnabledPref,
         setTvMode: handleSetTvMode,
         setAmbientModeEnabled,
-        setMarathonMode: handleSetMarathonMode,
-        setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { usePlayerStore.getState().setAutoDisableSubtitlesWhenDubbed(val) },
+        setMarathonMode: (val: boolean) => { handleSetMarathonMode(val); persistLibraryPatch({ marathonMode: val }) },
+        setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { usePlayerStore.getState().setAutoDisableSubtitlesWhenDubbed(val); persistLibraryPatch({ autoDisableSubtitlesWhenDubbed: val }) },
         skipToNextChapter,
         skipToPrevChapter,
         retryStream,

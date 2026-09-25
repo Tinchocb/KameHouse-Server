@@ -229,6 +229,60 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/library/episode-file",
         },
+        /**
+         *  @description
+         *  Route get local episode files for all chronology thumbnails
+         *  Same resolution as /library/episode-file, for every episode of the given TMDB IDs (comma separated). Episodes without image or local file are omitted.
+         */
+        GetChronologyEpisodeFiles: {
+            key: "CHRONOLOGY-FRAMES-get-chronology-episode-files",
+            methods: ["GET"],
+            endpoint: "/api/v1/library/chronology-episode-files",
+        },
+    },
+    CHRONOLOGY_MOMENTS: {
+        /**
+         *  @description
+         *  Route get custom start times for chronology moments.
+         *  Returns map of momentKey to seconds for manually calibrated moments.
+         */
+        GetChronologyMomentTimes: {
+            key: "CHRONOLOGY-MOMENTS-get-chronology-moment-times",
+            methods: ["GET"],
+            endpoint: "/api/v1/intelligence/chronology/moment-times",
+        },
+        /**
+         *  @description
+         *  Route update or remove custom start time for a chronology moment.
+         *  Upserts custom start second correction for a chronology moment, or deletes if seconds < 0 or omitted.
+         */
+        SaveChronologyMomentTime: {
+            key: "CHRONOLOGY-MOMENTS-save-chronology-moment-time",
+            methods: ["POST"],
+            endpoint: "/api/v1/intelligence/chronology/moment-times",
+        },
+    },
+    CHRONOLOGY_PROGRESS: {
+        /**
+         *  @description
+         *  Route get Dragon Ball chronology progress.
+         *  Returns watched episodes per Dragon Ball series and the manual per-span overrides.
+         */
+        GetChronologyProgress: {
+            key: "CHRONOLOGY-PROGRESS-get-chronology-progress",
+            methods: ["GET"],
+            endpoint: "/api/v1/intelligence/chronology",
+        },
+        /**
+         *  @description
+         *  Route set or clear manual watched marks for chronology spans.
+         *  Upserts each spanId -> watched mark; a null value removes the mark so the span follows watch history again.
+         */
+        SaveChronologySpanOverrides: {
+            key: "CHRONOLOGY-PROGRESS-save-chronology-span-overrides",
+            methods: ["POST"],
+            endpoint: "/api/v1/intelligence/chronology/overrides",
+        },
     },
     CONTINUITY: {
         /**
@@ -374,16 +428,6 @@ export const API_ENDPOINTS = {
             key: "INTELLIGENCE-get-intelligence-stats",
             methods: ["GET"],
             endpoint: "/api/v1/intelligence/stats",
-        },
-        /**
-         *  @description
-         *  Route get Dragon Ball canon timeline.
-         *  Returns full historical timeline order with user progress.
-         */
-        GetChronologyTimeline: {
-            key: "INTELLIGENCE-get-chronology-timeline",
-            methods: ["GET"],
-            endpoint: "/api/v1/intelligence/chronology",
         },
         /**
          *  @description

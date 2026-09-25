@@ -7,6 +7,7 @@ export {
     type EraId,
 } from "@/lib/config/eras"
 import { MEDIA_ID_TO_ERA, KNOWN_MOVIE_TMDB_IDS, type EraId } from "@/lib/config/eras"
+import { buildVideoThumbnailUrl } from "@/lib/helpers/images"
 
 // Helper to classify media into an era based on title matching
 function getEraFromTitle(title: string): EraId | null {
@@ -286,7 +287,7 @@ export function resolveRangeDynamicThumbnail({
     // B. Local video file frame extracted via video-thumbnail endpoint
     for (const ep of priorityEps) {
         if (ep.localFile?.path) {
-            return `${base}/api/v1/video-thumbnail?path=${encodeURIComponent(ep.localFile.path)}`
+            return buildVideoThumbnailUrl(ep.localFile, { base })
         }
     }
 

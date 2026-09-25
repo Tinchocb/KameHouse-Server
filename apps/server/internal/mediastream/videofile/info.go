@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"kamehouse/internal/util/filecache"
 	"mime"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -239,7 +238,7 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 		return nil, err
 	}
 
-	ext := strings.TrimPrefix(filepath.Ext(path), ".")
+	ext := strings.TrimPrefix(PathExt(path), ".")
 
 	sizeUint64, _ := strconv.ParseUint(data.Format.Size, 10, 64)
 

@@ -69,7 +69,7 @@ export const usePlayerStore = create<PlayerState>()(
     devtools(
         subscribeWithSelector(
             persist(
-                (set) => ({
+                (set, get) => ({
                     playerVolume: 1,
                     isFullscreen: false,
                     autoSkipIntro: false,
@@ -117,10 +117,7 @@ export const usePlayerStore = create<PlayerState>()(
                     tvMode: false,
                     tvModePrevPrefs: null,
                     setTvMode: (tvMode) => {
-                        // Persistir al servidor: si no, Ajustes resetea el store
-                        // al visitarlo y el modo TV "se pierde" solo.
-                        persistLibraryPatch({ tvMode })
-                        return set((state) => {
+                        set((state) => {
                         if (tvMode) {
                             return {
                                 tvMode: true,
@@ -142,6 +139,16 @@ export const usePlayerStore = create<PlayerState>()(
                             autoSkipOutro: prev.autoSkipOutro,
                             marathonMode: prev.marathonMode,
                         }
+                        })
+                        // Persistir al servidor: si no, Ajustes resetea el store
+                        // al visitarlo y el modo TV "se pierde" solo. Van también
+                        // los flags que el modo fuerza/restaura, o Ajustes los revertía.
+                        const s = get()
+                        persistLibraryPatch({
+                            tvMode,
+                            autoSkipIntro: s.autoSkipIntro,
+                            autoSkipOutro: s.autoSkipOutro,
+                            marathonMode: s.marathonMode,
                         })
                     },
                     ambientModeEnabled: true,

@@ -51,10 +51,31 @@
   --filter-blur-ambient-md: 22px;   /* medio: detalle por defecto */
   --filter-blur-ambient-lg: 28px;   /* fuerte: listing */
   --filter-blur-ambient-xl: 36px;   /* máximo: home hero */
+
+  /* ─── Filter blur estándar (mapeados a Tailwind blur-*) ─────────────── */
+  --filter-blur-sm:      4px;
+  --filter-blur-default: 8px;
+  --filter-blur-md:      12px;
+  --filter-blur-lg:      16px;
+  --filter-blur-xl:      24px;
+  --filter-blur-2xl:     40px;
+  --filter-blur-3xl:     64px;
+
+  /* ─── Hero Image Filters (Tratamiento cinematográfico unificado) ─────── */
+  --hero-img-saturate:         115%;
+  --hero-img-contrast:         108%;
+  --hero-img-brightness:       0.95;
+  --hero-img-filter:           saturate(var(--hero-img-saturate)) contrast(var(--hero-img-contrast)) brightness(var(--hero-img-brightness));
+
+  --hero-blur-fill-blur:       12px;
+  --hero-blur-fill-brightness: 0.62;
+  --hero-blur-fill-saturate:   130%;
+  --hero-blur-fill-scale:      1.08;
 }
 
 /* ─── Clases Utilitarias legacy (solo .blur-md, usada en tsx) ───────────── */
-.blur-md      { backdrop-filter: blur(var(--blur-md))  saturate(var(--glass-saturate)); }
+.blur-md           { backdrop-filter: blur(var(--blur-md))  saturate(var(--glass-saturate)); }
+.hero-image-filter { filter: var(--hero-img-filter); }
 
 /* ─── Liquid Glass — vidrio en capas con refracción especular ────────────
      Base frosted siempre; con [data-liquid="true"] sube a refracción completa

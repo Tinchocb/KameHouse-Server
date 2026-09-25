@@ -4,6 +4,7 @@ export interface StorySpanMilestone {
   episode: number
   title: string
   description: string
+  time?: string
 }
 
 export interface StorySpanCharacterStatus {

@@ -345,7 +345,7 @@ export function ExpandableSearch() {
                                                     type="button"
                                                     onClick={() => handleSelectResult(result)}
                                                     className={cn(
-                                                        "w-full group flex items-center gap-3 p-2 rounded-xl transition-all duration-150 cursor-pointer text-left",
+                                                        "w-full group flex items-center gap-3 p-2 rounded-xl transition duration-150 cursor-pointer text-left",
                                                         isSelected
                                                             ? "bg-brand-accent/20 border border-brand-accent/40"
                                                             : "hover:bg-white/10 active:bg-white/15 border border-transparent"

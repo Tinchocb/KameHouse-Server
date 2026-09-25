@@ -28,8 +28,10 @@ interface PlayTarget {
     episodeNumber: number
     malId?: number | null
     isFiller?: boolean
-    /** Segundo guardado en continuity: el reproductor arranca desde ahí. */
+    /** Segundo guardado en continuity o timestamp de momento: el reproductor arranca desde ahí. */
     startTime?: number
+    momentKey?: string
+    momentTitle?: string
 }
 
 /** Subconjunto de opciones de TanStack Router que usa este hook. */
@@ -50,6 +52,9 @@ interface UseSeriesPlaybackInput {
     continuityData: Continuity_WatchHistoryItemResponse | undefined | null
     refetchContinuity: () => void
     autoplayEp: string | undefined
+    initialTime?: string | number
+    momentKey?: string
+    momentTitle?: string
     setSearchParams: (updates: Partial<Record<string, string>>) => void
 }
 
@@ -89,6 +94,9 @@ export function useSeriesPlayback({
     continuityData,
     refetchContinuity,
     autoplayEp,
+    initialTime,
+    momentKey,
+    momentTitle,
     setSearchParams,
 }: UseSeriesPlaybackInput) {
     const queryClient = useQueryClient()
@@ -108,7 +116,14 @@ export function useSeriesPlayback({
 
     // ── Abrir el reproductor ──────────────────────────────────────────────────
     const openPlayer = useCallback(
-        (path: string, episodeNumber: number, episodeLabel: string, isFiller: boolean) => {
+        (
+            path: string,
+            episodeNumber: number,
+            episodeLabel: string,
+            isFiller: boolean,
+            overrideStartTime?: number,
+            momentMeta?: { momentKey?: string; momentTitle?: string }
+        ) => {
             startViewTransition(() => {
                 setPlayTarget({
                     path,
@@ -117,7 +132,11 @@ export function useSeriesPlayback({
                     episodeNumber,
                     malId,
                     isFiller,
-                    startTime: getResumeTimeForEpisode(continuityItem, episodeNumber),
+                    startTime: overrideStartTime !== undefined
+                        ? overrideStartTime
+                        : getResumeTimeForEpisode(continuityItem, episodeNumber),
+                    momentKey: momentMeta?.momentKey,
+                    momentTitle: momentMeta?.momentTitle,
                 })
             })
         },
@@ -125,7 +144,12 @@ export function useSeriesPlayback({
     )
 
     const handlePlayEpisode = useCallback(
-        (localFile: Anime_LocalFile, episode: Anime_Episode) => {
+        (
+            localFile: Anime_LocalFile,
+            episode: Anime_Episode,
+            overrideStartTime?: number,
+            momentMeta?: { momentKey?: string; momentTitle?: string }
+        ) => {
             if (!localFile.path) {
                 toast.error("Archivo local no disponible.")
                 return
@@ -134,21 +158,34 @@ export function useSeriesPlayback({
                 localFile.path,
                 episodeNumberOf(episode),
                 resolveEpisodeTitle(episode, tmdbId),
-                episode.episodeMetadata?.isFiller ?? false
+                episode.episodeMetadata?.isFiller ?? false,
+                overrideStartTime,
+                momentMeta
             )
         },
         [openPlayer, tmdbId]
     )
 
     const handlePlayLocalFile = useCallback(
-        (localFile: Anime_LocalFile) => {
+        (
+            localFile: Anime_LocalFile,
+            overrideStartTime?: number,
+            momentMeta?: { momentKey?: string; momentTitle?: string }
+        ) => {
             if (!localFile.path) {
                 toast.error("Archivo no disponible.")
                 return
             }
             const matchedEp = findEpisodeForLocalFile(computedEpisodes, localFile)
             const epNum = matchedEp ? episodeNumberOf(matchedEp) : (fileEpisodeNumber(localFile) || 1)
-            openPlayer(localFile.path, epNum, localFile.name, matchedEp?.episodeMetadata?.isFiller ?? false)
+            openPlayer(
+                localFile.path,
+                epNum,
+                localFile.name,
+                matchedEp?.episodeMetadata?.isFiller ?? false,
+                overrideStartTime,
+                momentMeta
+            )
         },
         [computedEpisodes, openPlayer]
     )
@@ -179,17 +216,21 @@ export function useSeriesPlayback({
     }, [defaultTargetPath, preloadPath])
 
     const handlePlayByNumber = useCallback(
-        (episodeNumber: number) => {
+        (
+            episodeNumber: number,
+            overrideStartTime?: number,
+            momentMeta?: { momentKey?: string; momentTitle?: string }
+        ) => {
             const target = selectTargetByNumber(computedEpisodes, localFiles, episodeNumber)
             switch (target.kind) {
                 case "episode":
                     if (target.skippedFrom != null) {
                         toast.info(`Episodio ${target.skippedFrom} no disponible. Saltando al episodio ${episodeNumberOf(target.ep)}.`)
                     }
-                    handlePlayEpisode(target.lf, target.ep)
+                    handlePlayEpisode(target.lf, target.ep, overrideStartTime, momentMeta)
                     return
                 case "file":
-                    handlePlayLocalFile(target.file)
+                    handlePlayLocalFile(target.file, overrideStartTime, momentMeta)
                     return
                 case "missing-file":
                     toast.error("Archivo local no disponible para este episodio.")
@@ -245,7 +286,16 @@ export function useSeriesPlayback({
         })
     }, [nextAvailable, handlePlayEpisode, continueToNextSeries])
 
-    useSeriesAutoplay({ seriesId, autoplayEp, computedEpisodes, handlePlayByNumber, setSearchParams })
+    useSeriesAutoplay({
+        seriesId,
+        autoplayEp,
+        initialTime,
+        momentKey,
+        momentTitle,
+        computedEpisodes,
+        handlePlayByNumber,
+        setSearchParams,
+    })
 
     // ── Player close callback ─────────────────────────────────────────────────
     const handlePlayerClose = useCallback(() => {
@@ -278,19 +328,29 @@ export function useSeriesPlayback({
 }
 
 // ─── Autoplay between series ──────────────────────────────────────────────────
-// Autoplay al llegar desde la continuación entre series: reproduce el episodio
-// indicado en la URL (?autoplay=N) una sola vez y limpia el flag.
+// Autoplay al llegar desde la continuación entre series o desde la cronología:
+// reproduce el episodio indicado en la URL (?autoplay=N) una sola vez y limpia los flags.
 function useSeriesAutoplay({
     seriesId,
     autoplayEp,
+    initialTime,
+    momentKey,
+    momentTitle,
     computedEpisodes,
     handlePlayByNumber,
     setSearchParams,
 }: {
     seriesId: string
     autoplayEp: string | undefined
+    initialTime?: string | number
+    momentKey?: string
+    momentTitle?: string
     computedEpisodes: Anime_Episode[]
-    handlePlayByNumber: (n: number) => void
+    handlePlayByNumber: (
+        n: number,
+        overrideStartTime?: number,
+        momentMeta?: { momentKey?: string; momentTitle?: string }
+    ) => void
     setSearchParams: (updates: Partial<Record<string, string>>) => void
 }) {
     const firedRef = React.useRef(false)
@@ -302,8 +362,11 @@ function useSeriesAutoplay({
         if (computedEpisodes.length === 0) return
         firedRef.current = true
         const n = Number(autoplayEp)
+        const tSec = initialTime != null && initialTime !== "" ? Number(initialTime) : undefined
+        const parsedTime = Number.isFinite(tSec) && tSec! >= 0 ? tSec : undefined
+        const momentMeta = momentKey ? { momentKey, momentTitle } : undefined
         // ?autoplay=abc se descarta sin toast de error.
-        if (Number.isFinite(n)) handlePlayByNumber(n)
-        setSearchParams({ autoplay: "" })
-    }, [autoplayEp, computedEpisodes, handlePlayByNumber, setSearchParams])
+        if (Number.isFinite(n)) handlePlayByNumber(n, parsedTime, momentMeta)
+        setSearchParams({ autoplay: "", t: "", moment: "", momentTitle: "" })
+    }, [autoplayEp, initialTime, momentKey, momentTitle, computedEpisodes, handlePlayByNumber, setSearchParams])
 }

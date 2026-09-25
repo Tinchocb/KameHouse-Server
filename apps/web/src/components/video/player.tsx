@@ -34,6 +34,8 @@ export type VideoPlayerProps = {
     nextEpisodeTitle?: string
     nextEpisodeNumber?: number
     nextEpisodeImage?: string
+    momentKey?: string
+    momentTitle?: string
 }
 
 function PlayerLoadingScreen() {
@@ -120,7 +122,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
 
     return createPortal(
         <PlayerErrorBoundary label="Video Player" onClose={props.onClose}>
-            <div className="fixed inset-0 z-player animate-in fade-in zoom-in-95 duration-slow fill-mode-forwards">
+            <div className="fixed inset-0 z-player animate-in fade-in zoom-in-95 duration-300 ease-out-strong fill-mode-forwards">
                 <Suspense fallback={<PlayerLoadingScreen />}>
                     {playerContent}
                 </Suspense>

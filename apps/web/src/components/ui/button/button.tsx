@@ -124,7 +124,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
                     size,
                     intent,
                 }),
-                !isDisabled && !disableSpring && "transition-transform duration-150 [transition-timing-function:cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-[1.02] active:scale-[0.96]",
+                // Respuesta al toque: se hunde al presionar (160 ms, ease-out fuerte) sin
+                // rebote. El agrandado de hover queda solo para mouse: en touch se pega.
+                // Una sola transición con color y transform, porque twMerge descarta
+                // `transition-colors` si le sigue otra clase `transition-*`.
+                !isDisabled && !disableSpring && "transition-[transform,background-color,border-color,color,box-shadow] duration-[160ms] ease-[cubic-bezier(0.23,1,0.32,1)] [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.02] active:scale-[0.97]",
                 className,
             )}
             disabled={isDisabled}

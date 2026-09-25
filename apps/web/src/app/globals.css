@@ -116,26 +116,42 @@ select:focus-visible,
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
   }
 
-  /* ─── Hero Scrims (negro cinematográfico — legibilidad sobre cualquier arte) ─── */
+  /* ─── Hero Scrims (cinematográficos — reactivos a var(--bg-primary) / var(--scrim-hero-base)) ─── */
   .scrim-hero-left {
     background: linear-gradient(
       to right,
-      rgba(0, 0, 0, 0.92) 0%,
-      rgba(0, 0, 0, 0.72) 18%,
-      rgba(0, 0, 0, 0.42) 32%,
-      rgba(0, 0, 0, 0.12) 44%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 92%, transparent) 0%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 72%, transparent) 18%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 42%, transparent) 32%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 12%, transparent) 44%,
       transparent 56%
     );
   }
   .scrim-hero-bottom {
     background: linear-gradient(
       to top,
-      rgba(0, 0, 0, 0.95) 0%,
-      rgba(0, 0, 0, 0.62) 22%,
-      rgba(0, 0, 0, 0.28) 38%,
-      rgba(0, 0, 0, 0.06) 52%,
-      transparent 65%
+      var(--scrim-hero-base, var(--bg-primary, #000000)) 0%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 78%, transparent) 18%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 38%, transparent) 36%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 10%, transparent) 52%,
+      transparent 66%
     );
+  }
+  /* Sombra inferior en ascenso suave atada al contenido (Spotlight / Cards) */
+  .scrim-hero-bottom-rise {
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 30%, transparent) 35%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 75%, transparent) 70%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 95%, transparent) 100%
+    );
+  }
+  /* Refuerzo para backdrops claros o con personajes bajo el texto */
+  .scrim-hero-boost {
+    background:
+      linear-gradient(to top, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 55%, transparent) 0%, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 25%, transparent) 30%, transparent 55%),
+      linear-gradient(to right, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 50%, transparent) 0%, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 20%, transparent) 30%, transparent 50%);
   }
   /* Máscara lateral del arte de hero según su composición (HeroArt.subject).
      Solo desde sm: en mobile el texto va abajo y la imagen se encuadra por
@@ -155,7 +171,7 @@ select:focus-visible,
   .scrim-hero-top {
     background: linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.35) 0%,
+      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 45%, transparent) 0%,
       transparent 100%
     );
   }
@@ -281,7 +297,7 @@ media-time-range {
     -webkit-backdrop-filter: saturate(var(--sectionbar-saturate)) blur(var(--sectionbar-blur));
     backdrop-filter: saturate(var(--sectionbar-saturate)) blur(var(--sectionbar-blur));
     box-shadow: var(--sectionbar-shadow);
-    @apply transition-all duration-base;
+    @apply transition-[border-color,background-color,box-shadow] duration-base ease-smooth-out;
   }
 
   .sectionbar-strong {
@@ -297,6 +313,13 @@ media-time-range {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     box-shadow: none;
+  }
+
+  /* Variante pill (segmented controls, barras de filtros). Hace falta como
+     clase propia: .sectionbar se emite después de .rounded-full y su
+     rounded-2xl le ganaría. */
+  .sectionbar-pill {
+    border-radius: 9999px;
   }
 
   .sectionbar-divide > * + * {

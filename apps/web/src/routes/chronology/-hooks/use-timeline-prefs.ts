@@ -1,86 +1,111 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { LEGACY_VOLUME_TO_SPANS } from "@/components/chronology/data/volumes"
+import { computeSpanProgress, overrideFor, type SpanProgress, type SpanRange } from "@/components/chronology/data/spanProgress"
+import { useGetChronologyProgress, useSaveChronologySpanOverrides } from "@/api/hooks/chronology.hooks"
 
-const READ_IDS_KEY = "dragonball_timeline_read"
+/** Clave del progreso previo a guardarlo en el servidor; se migra una vez y se borra. */
+const LEGACY_READ_IDS_KEY = "dragonball_timeline_read"
 const SHOW_INTERLUDES_KEY = "dragonball_timeline_show_interludes"
 
-function readStoredIds(): Set<string> {
+function takeLegacyReadIds(): string[] {
     try {
-        const saved = localStorage.getItem(READ_IDS_KEY)
-        if (saved) {
-            const parsed: unknown = JSON.parse(saved)
-            if (Array.isArray(parsed)) {
-                const cleaned = parsed.filter((id): id is string => typeof id === "string")
-                const expanded = expandLegacyReadIds(cleaned)
-                if (expanded.size !== cleaned.length || cleaned.some((id) => LEGACY_VOLUME_TO_SPANS[id])) {
-                    writeStoredIds(expanded)
-                }
-                return expanded
-            }
+        const saved = localStorage.getItem(LEGACY_READ_IDS_KEY)
+        if (!saved) return []
+        const parsed: unknown = JSON.parse(saved)
+        if (!Array.isArray(parsed)) return []
+        const out = new Set<string>()
+        for (const id of parsed) {
+            if (typeof id !== "string") continue
+            for (const spanId of LEGACY_VOLUME_TO_SPANS[id] ?? [id]) out.add(spanId)
         }
-    } catch (e) {
-        console.error("Error loading read volumes from localStorage:", e)
+        return [...out]
+    } catch {
+        return []
     }
-    return new Set<string>()
 }
 
-function writeStoredIds(ids: Set<string> | string[]) {
+function dropLegacyReadIds() {
     try {
-        localStorage.setItem(READ_IDS_KEY, JSON.stringify(Array.from(ids)))
-    } catch (e) {
-        console.error("Error saving read volumes to localStorage:", e)
+        localStorage.removeItem(LEGACY_READ_IDS_KEY)
+    } catch {
+        // Sin storage no hay nada que migrar.
     }
 }
 
-function expandLegacyReadIds(ids: Iterable<string>): Set<string> {
-    const out = new Set<string>()
-    for (const id of ids) {
-        const spans = LEGACY_VOLUME_TO_SPANS[id]
-        if (spans) {
-            for (const s of spans) out.add(s)
-        } else {
-            out.add(id)
+/**
+ * Progreso por lapso: episodios vistos (historial y lista) más marcas manuales,
+ * todo guardado en el servidor por cuenta.
+ */
+export function useChronologyProgress(spans: SpanRange[]) {
+    const { data, isLoading } = useGetChronologyProgress()
+    const { mutate: saveOverrides } = useSaveChronologySpanOverrides()
+
+    const progressById = useMemo(() => computeSpanProgress(spans, data), [spans, data])
+    const readVolumeIds = useMemo(() => {
+        const ids = new Set<string>()
+        for (const [id, p] of progressById) if (p.watched) ids.add(id)
+        return ids
+    }, [progressById])
+
+    // Migración única: lo marcado en localStorage pasa al servidor como marca manual.
+    const migrated = useRef(false)
+    useEffect(() => {
+        if (!data || migrated.current) return
+        migrated.current = true
+        const legacy = takeLegacyReadIds()
+        if (legacy.length === 0) return
+        const overrides: Record<string, boolean | null> = {}
+        for (const id of legacy) {
+            const p = progressById.get(id)
+            if (p && !p.watched) overrides[id] = true
         }
-    }
-    return out
-}
+        if (Object.keys(overrides).length === 0) {
+            dropLegacyReadIds()
+            return
+        }
+        saveOverrides({ overrides }, { onSuccess: dropLegacyReadIds })
+    }, [data, progressById, saveOverrides])
 
-/** Tomos marcados como leídos (vistos), persistidos en localStorage con migración legacy. */
-export function useReadVolumeIds() {
-    const [readVolumeIds, setReadVolumeIds] = useState<Set<string>>(readStoredIds)
-
-    const handleToggleRead = useCallback((volumeId: string) => {
-        setReadVolumeIds((prev) => {
-            const next = new Set(prev)
-            if (next.has(volumeId)) {
-                next.delete(volumeId)
-            } else {
-                next.add(volumeId)
+    const setWatched = useCallback(
+        (ids: Iterable<string>, desired: boolean) => {
+            const overrides: Record<string, boolean | null> = {}
+            for (const id of ids) {
+                const p = progressById.get(id)
+                if (p?.watched === desired) continue
+                overrides[id] = overrideFor(p, desired)
             }
-            writeStoredIds(next)
-            return next
-        })
-    }, [])
+            if (Object.keys(overrides).length > 0) saveOverrides({ overrides })
+        },
+        [progressById, saveOverrides],
+    )
 
-    const handleMarkAllRead = useCallback((allIds: string[]) => {
-        const ids = new Set(allIds)
-        setReadVolumeIds(ids)
-        writeStoredIds(ids)
-    }, [])
+    const handleToggleRead = useCallback(
+        (id: string) => setWatched([id], !readVolumeIds.has(id)),
+        [readVolumeIds, setWatched],
+    )
 
-    const handleResetRead = useCallback(() => {
-        setReadVolumeIds(new Set<string>())
-        writeStoredIds([])
-    }, [])
+    /** Foto de las marcas actuales, para deshacer "marcar todos" y "reiniciar". */
+    const snapshotOverrides = useCallback((): Record<string, boolean | null> => {
+        const current = data?.overrides ?? {}
+        const snapshot: Record<string, boolean | null> = {}
+        for (const span of spans) snapshot[span.id] = current[span.id] ?? null
+        return snapshot
+    }, [data, spans])
 
-    const mergeServerWatched = useCallback((watchedIds: Iterable<string>) => {
-        setReadVolumeIds((prev) => {
-            const merged = new Set([...prev, ...watchedIds])
-            return merged
-        })
-    }, [])
+    const restoreOverrides = useCallback(
+        (snapshot: Record<string, boolean | null>) => saveOverrides({ overrides: snapshot }),
+        [saveOverrides],
+    )
 
-    return { readVolumeIds, handleToggleRead, handleMarkAllRead, handleResetRead, mergeServerWatched }
+    return {
+        isLoading,
+        progressById: progressById as ReadonlyMap<string, SpanProgress>,
+        readVolumeIds,
+        handleToggleRead,
+        setWatched,
+        snapshotOverrides,
+        restoreOverrides,
+    }
 }
 
 /** Mostrar u ocultar los interludios entre lapsos, persistido en localStorage. */

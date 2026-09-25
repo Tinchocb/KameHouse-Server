@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"kamehouse/internal/util"
+	"kamehouse/internal/util/cache"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,10 +15,39 @@ import (
 
 	"github.com/imroc/req/v3"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/sync/singleflight"
+)
+
+// Disk eviction is size-based on ModTime: touching hits keeps popular images, but at most
+// once a day so a busy grid doesn't turn every read into a metadata write.
+const imageProxyTouchMinAge = 24 * time.Hour
+
+var (
+	// Shared so upstream connections (TLS, keep-alive) are reused across images.
+	imageProxyClient = req.C().SetTimeout(30 * time.Second)
+	// Collapses concurrent cold fetches of the same URL into one download.
+	imageProxyFlights singleflight.Group
 )
 
 type ImageProxy struct {
 	CacheDir string
+}
+
+type proxiedImage struct {
+	body        []byte
+	contentType string
+}
+
+// readCached returns the cached bytes for cachePath, touching the file so eviction keeps it.
+func readCached(cachePath string) ([]byte, bool) {
+	data, err := os.ReadFile(cachePath)
+	if err != nil || len(data) == 0 {
+		return nil, false
+	}
+	if info, statErr := os.Stat(cachePath); statErr == nil {
+		cache.TouchDiskCacheIfOlder(cachePath, info, imageProxyTouchMinAge)
+	}
+	return data, true
 }
 
 func (ip *ImageProxy) getCachePath(url string) string {
@@ -32,12 +62,26 @@ func (ip *ImageProxy) getCachePath(url string) string {
 
 func (ip *ImageProxy) GetImage(url string, headers map[string]string) ([]byte, string, error) {
 	cachePath := ip.getCachePath(url)
-	if data, err := os.ReadFile(cachePath); err == nil && len(data) > 0 {
-		contentType := http.DetectContentType(data)
-		return data, contentType, nil
+	if data, ok := readCached(cachePath); ok {
+		return data, http.DetectContentType(data), nil
 	}
 
-	request := req.C().NewRequest()
+	v, err, _ := imageProxyFlights.Do(cachePath, func() (interface{}, error) {
+		body, contentType, err := ip.fetchImage(url, cachePath, headers)
+		if err != nil {
+			return nil, err
+		}
+		return proxiedImage{body: body, contentType: contentType}, nil
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	img := v.(proxiedImage)
+	return img.body, img.contentType, nil
+}
+
+func (ip *ImageProxy) fetchImage(url string, cachePath string, headers map[string]string) ([]byte, string, error) {
+	request := imageProxyClient.NewRequest()
 
 	for key, value := range headers {
 		request.SetHeader(key, value)
@@ -87,7 +131,6 @@ func (ip *ImageProxy) setHeaders(c echo.Context, contentType string) {
 	c.Response().Header().Set("Access-Control-Allow-Origin", "*")
 	c.Response().Header().Set("Access-Control-Allow-Methods", "GET")
 	c.Response().Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-	c.Response().Header().Set("Access-Control-Allow-Credentials", "true")
 }
 
 func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
@@ -101,7 +144,7 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 	// Fast path: check local disk cache first. If already downloaded, serve immediately
 	// without any network or DNS lookup overhead.
 	cachePath := ip.getCachePath(url)
-	if data, err := os.ReadFile(cachePath); err == nil && len(data) > 0 {
+	if data, ok := readCached(cachePath); ok {
 		contentType := http.DetectContentType(data)
 		ip.setHeaders(c, contentType)
 		return c.Blob(http.StatusOK, contentType, data)

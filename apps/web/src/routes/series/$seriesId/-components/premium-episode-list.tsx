@@ -2,7 +2,7 @@
 import React from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { EpisodeBadge } from "@/components/ui/episode-badge"
-import { IconStatusFolderPlus, IconNavigationSearch, IconUiClose, IconMediaPlay, IconUiListPlus } from "@/components/ui/icons";
+import { IconStatusFolderPlus, IconNavigationSearch, IconUiClose, IconMediaPlay, IconUiListPlus, IconUiCheck } from "@/components/ui/icons";
 import type { PremiumEpisode } from "@/api/types/series.types"
 import { cn } from "@/components/ui/core/styling"
 import { useHoverPreload } from "@/hooks/use-hover-preload"
@@ -93,7 +93,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
           <button
             type="button"
             onClick={() => navigate({ to: "/settings" })}
-            className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-brand-primary cursor-pointer"
+            className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
           >
             Configurar biblioteca
           </button>
@@ -171,7 +171,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
               "bg-zinc-900/50 border border-white/[0.12] backdrop-blur-xl text-white placeholder:text-zinc-500 shadow-glass-highlight-sm",
               "focus:outline-none focus:ring-0 focus:border-white/40 focus:bg-zinc-900/80",
               "hover:border-white/25",
-              "transition-all duration-200 ease-out",
+              "transition-[background-color,border-color,box-shadow] duration-200 ease-out",
               isSearchFocused && "bg-zinc-900/90 border-white/50 shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.08)]",
             )}
           />
@@ -335,6 +335,12 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
 
     const displayTitle = cleanEpisodeTitle(ep.title) || `Episodio ${ep.number}`
 
+    const [justQueued, setJustQueued] = React.useState(false)
+    const queuedTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+    React.useEffect(() => () => {
+        if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
+    }, [])
+
     const handleQuickQueue = React.useCallback((e: React.MouseEvent) => {
         e.stopPropagation()
         if (!ep.localFilePath) {
@@ -354,6 +360,10 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
             episodeNumber: ep.number,
         })
         toast.success("Añadido a la cola", { description: displayTitle })
+        // Confirmación en el mismo botón (el aviso sale lejos, arriba): el ícono pasa a tilde un momento.
+        setJustQueued(true)
+        if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
+        queuedTimerRef.current = setTimeout(() => setJustQueued(false), 1400)
     }, [ep.id, ep.number, ep.localFilePath, displayTitle, currentThumbnail, seriesMediaId])
 
     return (
@@ -382,7 +392,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                             type="button"
                             onClick={handlePlay}
                             aria-label={`Reproducir episodio ${ep.number}, ${displayTitle}${ep.isWatched ? ", visto" : ""}`}
-                            className="flex flex-1 min-w-0 items-stretch gap-3.5 sm:gap-5 text-left cursor-pointer rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
+                            className="flex flex-1 min-w-0 items-stretch gap-3.5 sm:gap-5 text-left cursor-pointer rounded-xl transition-transform duration-150 ease-out-strong active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
                         >
                         {/* Thumbnail en proporción cinematográfica 16/9 */}
                         <div className="relative aspect-[16/9] w-32 sm:w-48 md:w-56 lg:w-60 shrink-0 rounded-xl overflow-hidden border border-white/10 bg-zinc-950 shadow-md">
@@ -418,6 +428,16 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                             {/* Scrim interno del thumbnail */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent z-10 pointer-events-none" />
 
+                            {/* Play al apuntar la fila (solo con mouse): anticipa qué hace el clic */}
+                            <div
+                                aria-hidden
+                                className="absolute inset-0 z-20 hidden [@media(hover:hover)_and_(pointer:fine)]:flex items-center justify-center pointer-events-none"
+                            >
+                                <span className="w-10 h-10 rounded-full bg-black/60 border border-white/25 text-white flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-[opacity,transform] duration-200 ease-out-strong">
+                                    <IconMediaPlay className="w-4 h-4 ml-0.5" />
+                                </span>
+                            </div>
+
                             {/* Badge de "VISTO" si ya fue reproducido */}
                             {ep.isWatched && (
                                 <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/85 border border-emerald-500/30 text-3xs font-mono font-bold text-emerald-400 flex items-center gap-1 shadow-sm">
@@ -430,10 +450,10 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
 
                             {/* Progress bar en thumbnail */}
                             {ep.isWatched || (ep.progressPercent != null && ep.progressPercent > 0 && ep.progressPercent < 100) ? (
-                                <div className="absolute bottom-0 inset-x-0 h-1 bg-black/70 z-20 pointer-events-none">
+                                <div className="absolute bottom-0 inset-x-0 h-1 bg-black/70 z-20 pointer-events-none overflow-hidden">
                                     <div
-                                        className="h-full bg-brand-accent shadow-[0_0_6px_hsl(var(--brand-accent)/0.8)] [transition:width_var(--duration-fast)_var(--ease-smooth-out)]"
-                                        style={{ width: `${ep.isWatched ? 100 : (ep.progressPercent || 0)}%` }}
+                                        className="h-full w-full bg-brand-accent shadow-[0_0_6px_hsl(var(--brand-accent)/0.8)] origin-left transition-transform duration-fast ease-smooth-out"
+                                        style={{ transform: `scaleX(${Math.min(100, Math.max(0, ep.isWatched ? 100 : (ep.progressPercent || 0))) / 100})` }}
                                     />
                                 </div>
                             ) : null}
@@ -481,18 +501,36 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                     <button
                                         type="button"
                                         onClick={handleQuickQueue}
-                                        aria-label="Añadir a la cola"
+                                        aria-label={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
                                         title="Añadir a la cola"
-                                        className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-white/[0.06] border border-white/15 text-zinc-300 flex items-center justify-center hover:bg-white/[0.12] hover:text-white hover:border-white/30 active:scale-95 transition-all cursor-pointer"
+                                        className={cn(
+                                            "relative min-w-[44px] min-h-[44px] w-11 h-11 rounded-full border flex items-center justify-center active:scale-[0.94] transition-[transform,color,background-color,border-color] duration-base ease-out-strong cursor-pointer",
+                                            justQueued
+                                                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                                                : "bg-white/[0.06] border-white/15 text-zinc-300 hover:bg-white/[0.12] hover:text-white hover:border-white/30"
+                                        )}
                                     >
-                                        <IconUiListPlus className="w-4 h-4" />
+                                        {/* Cambio de ícono con fundido, escala y un poco de blur para que se lea como una sola transformación */}
+                                        <IconUiListPlus
+                                            className={cn(
+                                                "absolute w-4 h-4 transition-[opacity,transform,filter] duration-200 ease-out-strong",
+                                                justQueued ? "opacity-0 scale-50 blur-[2px]" : "opacity-100 scale-100 blur-0"
+                                            )}
+                                        />
+                                        <IconUiCheck
+                                            aria-hidden
+                                            className={cn(
+                                                "absolute w-4 h-4 transition-[opacity,transform,filter] duration-200 ease-out-strong",
+                                                justQueued ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-50 blur-[2px]"
+                                            )}
+                                        />
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handlePlay}
                                         aria-label="Reproducir episodio"
                                         title="Reproducir"
-                                        className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-brand-accent text-on-primary flex items-center justify-center hover:brightness-110 active:scale-95 transition-all shadow-brand-primary cursor-pointer"
+                                        className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-brand-accent text-on-primary flex items-center justify-center hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
                                     >
                                         <IconMediaPlay className="w-4 h-4 ml-px" />
                                     </button>

@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react"
 import type JASSUB from "jassub"
 import { SubtitleTrack } from "@/components/ui/track-types"
-import { convertToAss } from "./subtitle-convert"
+import { convertToAss, scaleAssStyles } from "./subtitle-convert"
 
 interface UsePlayerJassubProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
@@ -32,6 +32,13 @@ export function usePlayerJassub({
     setIsJassubActive,
 }: UsePlayerJassubProps) {
     const cachedAssContentRef = useRef<{ url: string; content: string } | null>(null)
+    // El tamaño se lee por ref al crear la instancia: cambiarlo no debe recrear
+    // JASSUB (refetch + parpadeo), lo aplica en caliente el efecto de más abajo.
+    // (Se sincroniza en un efecto declarado antes que el de init, así ya está al día.)
+    const subtitleSizeRef = useRef(subtitleSizePref)
+    useEffect(() => {
+        setRefValue(subtitleSizeRef, subtitleSizePref)
+    }, [subtitleSizePref])
     const activeTrack = activeSubtitleIndex !== null && subtitleTracks 
         ? subtitleTracks.find(t => t.index === activeSubtitleIndex) ?? null 
         : null
@@ -146,11 +153,10 @@ export function usePlayerJassub({
                 // defaultFont already falls back to the bundled "liberation sans".
                 const jassub = new (await import("jassub")).default({
                     video,
-                    subContent: assContent,
+                    subContent: scaleAssStyles(assContent, subtitleSizeRef.current / 100),
                     workerUrl: "/jassub/jassub-worker.js",
                     wasmUrl: "/jassub/jassub-worker.wasm",
                     modernWasmUrl: "/jassub/jassub-worker-modern.wasm",
-                    prescaleFactor: subtitleSizePref / 100,
                     fonts: fontUrls ?? [],
                 })
 
@@ -185,7 +191,25 @@ export function usePlayerJassub({
                 setIsJassubActive(false)
             }
         }
-    }, [activeSubtitleIndex, trackUrl, trackCodec, subtitleSizePref, fontUrls, videoRef, jassubRef, setIsJassubLoading, setIsJassubActive])
+    }, [activeSubtitleIndex, trackUrl, trackCodec, fontUrls, videoRef, jassubRef, setIsJassubLoading, setIsJassubActive])
+
+    // Tamaño de subtítulos en caliente: reescala los estilos del documento ASS y
+    // reemplaza la pista en el renderer existente (resize(true) fuerza el repintado
+    // aunque el video esté en pausa).
+    // Solo depende del tamaño: una instancia nueva ya nace con el tamaño vigente.
+    useEffect(() => {
+        const jassub = jassubRef.current
+        const cached = cachedAssContentRef.current
+        if (!jassub || !cached) return
+        const content = scaleAssStyles(cached.content, subtitleSizePref / 100)
+        jassub.ready
+            .then(async () => {
+                if (jassubRef.current !== jassub) return
+                await jassub.renderer.setTrack(content)
+                await jassub.resize(true)
+            })
+            .catch((err: unknown) => console.warn("jassub: no se pudo aplicar el tamaño de subtítulos:", err))
+    }, [subtitleSizePref, jassubRef])
     // Note: JASSUB owns canvas sizing via its internal ResizeObserver. Because the
     // canvas control is transferred to the offscreen worker (useOffscreen + app-supplied
     // canvas), writing canvas.width/height on the main thread throws InvalidStateError

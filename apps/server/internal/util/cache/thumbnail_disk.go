@@ -22,6 +22,16 @@ func TouchDiskCache(cacheFile string) {
 	_ = os.Chtimes(cacheFile, now, now)
 }
 
+// TouchDiskCacheIfOlder touches cacheFile only when its ModTime is older than minAge.
+// Eviction works at day granularity, so touching on every hit (including 304s) only
+// adds a metadata write per request.
+func TouchDiskCacheIfOlder(cacheFile string, info os.FileInfo, minAge time.Duration) {
+	if info != nil && time.Since(info.ModTime()) < minAge {
+		return
+	}
+	TouchDiskCache(cacheFile)
+}
+
 // PruneDiskCache cleans up the thumbnail cache directory based on TTL and maximum disk size.
 // Preserved for backwards compatibility, delegates to PruneDirectory for ".jpg" files.
 func PruneDiskCache(cacheDir string, maxAge time.Duration, maxSizeBytes int64) (freedBytes int64, removedCount int, err error) {

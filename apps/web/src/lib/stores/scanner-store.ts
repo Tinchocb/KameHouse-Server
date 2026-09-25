@@ -1,7 +1,6 @@
 import { create } from "zustand"
 import { subscribeWithSelector, devtools } from "zustand/middleware"
 import { type ScannerMessage } from "@/lib/server/ws-events"
-import { useShallow } from "zustand/react/shallow"
 
 export interface ScanEvent extends ScannerMessage {
     /** file: archivo analizado · status: cambio de etapa · detail: mensaje técnico. */
@@ -76,34 +75,3 @@ export const useScannerStore = create<ScannerState>()(
         }))
     )
 )
-
-// Shallow selectors for object/array state to prevent unnecessary re-renders
-export const useScannerState = () => useScannerStore(useShallow((state) => ({
-    isScanning: state.isScanning,
-    scanProgress: state.scanProgress,
-    currentScanningFile: state.currentScanningFile,
-    events: state.events,
-    activeStageIdx: state.activeStageIdx,
-    lastFinish: state.lastFinish,
-    pruneCount: state.pruneCount,
-    setScanning: state.setScanning,
-    setScanProgress: state.setScanProgress,
-    setScanningFile: state.setScanningFile,
-    setEvents: state.setEvents,
-    setScannerState: state.setScannerState,
-    resetScanner: state.resetScanner,
-})))
-
-export const useScannerProgress = () => useScannerStore(useShallow((state) => ({
-    isScanning: state.isScanning,
-    scanProgress: state.scanProgress,
-    currentScanningFile: state.currentScanningFile,
-    activeStageIdx: state.activeStageIdx,
-})))
-
-export const useScannerEvents = () => useScannerStore(useShallow((state) => ({
-    events: state.events,
-    lastFinish: state.lastFinish,
-    pruneCount: state.pruneCount,
-    setEvents: state.setEvents,
-})))

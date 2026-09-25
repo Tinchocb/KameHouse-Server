@@ -14,6 +14,15 @@ func (c *Client) GetTVSeason(ctx context.Context, tvID int, seasonNumber int) (T
 	if cached, ok := GetCached[TVSeasonDetails](c, cacheKey); ok {
 		return cached, nil
 	}
+	return dedupe(ctx, c, cacheKey, func(ctx context.Context) (TVSeasonDetails, error) {
+		return c.fetchTVSeason(ctx, tvID, seasonNumber, cacheKey)
+	})
+}
+
+func (c *Client) fetchTVSeason(ctx context.Context, tvID int, seasonNumber int, cacheKey string) (TVSeasonDetails, error) {
+	if cached, ok := GetCached[TVSeasonDetails](c, cacheKey); ok {
+		return cached, nil
+	}
 
 	params := url.Values{}
 	params.Set("language", c.language)
@@ -149,6 +158,15 @@ func (c *Client) fetchTVDetails(ctx context.Context, tvID int) (TVDetails, error
 	if cached, ok := GetCached[TVDetails](c, cacheKey); ok {
 		return cached, nil
 	}
+	return dedupe(ctx, c, cacheKey, func(ctx context.Context) (TVDetails, error) {
+		if cached, ok := GetCached[TVDetails](c, cacheKey); ok {
+			return cached, nil
+		}
+		return c.fetchTVDetailsUncached(ctx, tvID, cacheKey)
+	})
+}
+
+func (c *Client) fetchTVDetailsUncached(ctx context.Context, tvID int, cacheKey string) (TVDetails, error) {
 
 	params := url.Values{}
 	params.Set("language", c.language)

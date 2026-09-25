@@ -249,6 +249,20 @@ export const Route = createLazyFileRoute("/settings/")({
     component: SettingsPage,
 })
 
+/** Espeja las SectionBar de una pestaña (guía §5.7): al terminar de cargar, el contenido no salta. */
+function SettingsTabSkeleton() {
+    return (
+        <div role="status" aria-label="Cargando ajustes" className="space-y-9">
+            {["h-44", "h-64", "h-36"].map((height) => (
+                <div
+                    key={height}
+                    className={`sectionbar rounded-2xl bg-surface-container animate-pulse motion-reduce:animate-none ${height}`}
+                />
+            ))}
+        </div>
+    )
+}
+
 function SettingsPage() {
     const { data: serverSettings, isLoading } = useGetSettings()
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
@@ -514,7 +528,7 @@ function SettingsPage() {
                             key={activeTab}
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
+                            exit={{ opacity: 0, transition: { duration: 0.08 } }}
                             transition={tabContentSpring}
                         >
                             <div className="flex items-center gap-2 mb-1.5">
@@ -552,13 +566,13 @@ function SettingsPage() {
                             onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>, onFormError)}
                             className="w-full max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 py-7 pb-32 space-y-9 min-h-full"
                         >
-                            <Suspense fallback={<div className="flex items-center justify-center w-full h-64"><div className="w-8 h-8 rounded-full border-2 border-brand-accent border-t-transparent animate-spin" /></div>}>
+                            <Suspense fallback={<SettingsTabSkeleton />}>
                                 <AnimatePresence mode="wait" initial={false}>
                                     <m.div
                                         key={activeTab}
                                         initial={{ opacity: 0, y: 16 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -14 }}
+                                        exit={{ opacity: 0, transition: { duration: 0.08 } }}
                                         transition={tabContentSpring}
                                     >
                                         {activeTab === "appearance"  && <AppearanceTab control={control} />}
@@ -583,20 +597,20 @@ function SettingsPage() {
                         exit={{ opacity: 0, y: 50, x: "-50%" }}
                         transition={saveBarSpring}
                         className={cn(
-                            "fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-50",
+                            "fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-8 left-1/2 -translate-x-1/2 z-50",
                             "flex items-center gap-4 sm:gap-6",
                             "sectionbar sectionbar-strong rounded-full px-5 py-2.5",
                             "max-w-[calc(100vw-2rem)] w-max",
-                            isSaveSuccess && "border-emerald-500/40 bg-zinc-950/80 shadow-[inset_0_1px_1px_0_rgba(52,211,153,0.3),0_12px_36px_-6px_rgba(0,0,0,0.85)]"
+                            isSaveSuccess && "border-status-success/40 shadow-[inset_0_1px_1px_0_rgba(var(--status-success-rgb),0.3),0_12px_36px_-6px_rgba(0,0,0,0.85)]"
                         )}
                     >
                         <div className="flex items-center gap-2.5 pl-1">
                             {isSaveSuccess ? (
                                 <>
                                     <span className="relative flex h-2 w-2">
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-status-success shadow-[0_0_8px_rgba(var(--status-success-rgb),0.8)]" />
                                     </span>
-                                    <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider animate-text-swap-in">
+                                    <span className="text-xs font-mono font-bold text-status-success uppercase tracking-wider animate-text-swap-in">
                                         Ajustes sincronizados
                                     </span>
                                 </>
@@ -617,7 +631,7 @@ function SettingsPage() {
                                 <button
                                     type="button"
                                     onClick={handleDiscard}
-                                    className="text-xs font-semibold text-on-surface-variant hover:text-white transition-[color,background-color,transform] duration-fast ease-smooth-out px-3.5 py-1.5 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer min-h-[36px]"
+                                    className="text-xs font-semibold text-on-surface-variant hover:text-white transition-[color,background-color,transform] duration-fast ease-smooth-out px-3.5 py-1.5 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer min-h-[44px]"
                                 >
                                     Descartar
                                 </button>
@@ -627,10 +641,10 @@ function SettingsPage() {
                                 form="settings-form"
                                 disabled={isSaving || isSaveSuccess}
                                 className={cn(
-                                    "flex items-center gap-2 px-5 py-2 min-h-[36px] rounded-full text-xs font-black select-none cursor-pointer uppercase tracking-wider",
+                                    "flex items-center gap-2 px-5 py-2 min-h-[44px] rounded-full text-xs font-black select-none cursor-pointer uppercase tracking-wider",
                                     "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),opacity_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
                                     isSaveSuccess
-                                        ? "bg-emerald-400 text-black animate-success-pop"
+                                        ? "bg-status-success text-black animate-success-pop"
                                         : "bg-white text-black hover:bg-white/90 hover:scale-102 active:scale-95 disabled:opacity-50"
                                 )}
                             >

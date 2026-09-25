@@ -29,6 +29,7 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.GET("/missing-episodes", h.HandleGetMissingEpisodes)
 	v1Library.GET("/upcoming-episodes", h.HandleGetUpcomingEpisodes)
 	v1Library.GET("/episode-file", h.HandleGetLibraryEpisodeFile)
+	v1Library.GET("/chronology-episode-files", h.HandleGetChronologyEpisodeFiles)
 
 	v1Library.GET("/anime-entry/:id", h.HandleGetAnimeEntry)
 	v1Library.GET("/anime-entry/:id/sagas", h.HandleGetSeriesSagas)

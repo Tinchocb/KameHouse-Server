@@ -108,7 +108,8 @@ export function FloatingPillNav() {
                         alt="KameHouse"
                         className="w-5 h-5 object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]"
                     />
-                    <span className="font-display font-black tracking-widest text-xs uppercase text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    {/* Entre md y lg no entra todo en una fila: el logo queda sin texto */}
+                    <span className="sr-only lg:not-sr-only font-display font-black tracking-widest text-xs uppercase text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                         KAMEHOUSE
                     </span>
                 </Link>
@@ -136,9 +137,10 @@ export function FloatingPillNav() {
                                     key={item.id}
                                     to={item.to}
                                     aria-current={isPillActive ? "page" : undefined}
+                                    title={item.label}
                                     onClick={() => playSound("category", 0.3)}
                                     className={cn(
-                                        "relative px-4 py-1.5 min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 flex items-center gap-1.5 cursor-pointer select-none",
+                                        "relative px-3 lg:px-4 py-1.5 min-h-[36px] lg:min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 flex items-center gap-1.5 cursor-pointer select-none",
                                         isPillActive ? "text-black font-bold" : "text-on-surface-variant hover:text-white hover:bg-white/10"
                                     )}
                                 >
@@ -150,7 +152,8 @@ export function FloatingPillNav() {
                                     )}
                                     <span className="relative z-10 flex items-center gap-1.5">
                                         {item.icon}
-                                        <span>{item.label}</span>
+                                        {/* Entre md y lg, solo ícono (el texto queda para lectores de pantalla) */}
+                                        <span className="sr-only lg:not-sr-only">{item.label}</span>
                                     </span>
                                 </Link>
                             )
@@ -167,7 +170,7 @@ export function FloatingPillNav() {
                             aria-pressed={globalQueueOpen}
                             title="Mi Lista / Cola"
                             className={cn(
-                                "relative px-4 py-1.5 min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 flex items-center gap-1.5 cursor-pointer select-none",
+                                "relative px-3 lg:px-4 py-1.5 min-h-[36px] lg:min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 flex items-center gap-1.5 cursor-pointer select-none",
                                 globalQueueOpen ? "text-black font-bold" : "text-on-surface-variant hover:text-white hover:bg-white/10"
                             )}
                         >
@@ -179,7 +182,7 @@ export function FloatingPillNav() {
                             )}
                             <span className="relative z-10 flex items-center gap-1.5">
                                 <IconNavigationLayers className="w-3.5 h-3.5" />
-                                <span>Mi Lista</span>
+                                <span className="sr-only lg:not-sr-only">Mi Lista</span>
                                 {playlistQueue.length > 0 && (
                                     <span className={cn(
                                         "text-3xs font-black px-1.5 py-px rounded-full min-w-[17px] text-center shadow-sm",

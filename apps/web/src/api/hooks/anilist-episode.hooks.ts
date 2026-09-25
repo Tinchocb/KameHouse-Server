@@ -19,6 +19,7 @@ export interface AniListEpisodeThumbnailResponse {
 export function useGetAniListEpisodeThumbnail(
     anilistId: number | undefined | null,
     absoluteEpisode: number | undefined | null,
+    options: { enabled?: boolean } = {},
 ) {
     const valid = typeof anilistId === "number" && anilistId > 0 && typeof absoluteEpisode === "number" && absoluteEpisode > 0
 
@@ -28,7 +29,7 @@ export function useGetAniListEpisodeThumbnail(
             .replace(":absolute", String(absoluteEpisode)),
         method: API_ENDPOINTS.ANILIST.AniListEpisodeThumbnail.methods[0],
         queryKey: [API_ENDPOINTS.ANILIST.AniListEpisodeThumbnail.key, anilistId, absoluteEpisode],
-        enabled: Boolean(valid),
+        enabled: Boolean(valid) && options.enabled !== false,
         staleTime: 24 * 60 * 60 * 1000, // 24h caché
         muteError: true,
     })

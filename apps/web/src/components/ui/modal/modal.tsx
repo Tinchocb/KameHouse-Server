@@ -13,7 +13,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const ModalAnatomy = defineStyleAnatomy({
     overlay: cva([
         "UI-Modal__overlay",
-        "fixed inset-0 z-overlay bg-[color:color-mix(in_srgb,var(--md-sys-color-surface)_60%,transparent)] backdrop-blur-overlay-xl transition-all duration-base",
+        "fixed inset-0 z-overlay bg-[color:color-mix(in_srgb,var(--md-sys-color-surface)_60%,transparent)] backdrop-blur-overlay-xl transition duration-base",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // "overflow-y-auto p-0 md:p-4 grid place-items-center",
@@ -27,6 +27,8 @@ export const ModalAnatomy = defineStyleAnatomy({
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        // Entra con ease-out fuerte; al cerrar responde más rápido de lo que abrió.
+        "ease-out-strong data-[state=closed]:duration-fast",
     ]),
     close: cva([
         "UI-Modal__close",

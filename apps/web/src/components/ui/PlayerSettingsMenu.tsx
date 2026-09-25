@@ -177,10 +177,18 @@ export function PlayerSettingsMenu({
         ? subtitleTracks.find(t => t.index === activeSubtitleIndex)
         : null
 
+    // Resumen de la fila "Reproducción": Maratón fuerza todos los saltos, así que
+    // manda; si no, se listan los saltos activos (incluido relleno) y la velocidad.
     const autoSkipLabel = [
         autoSkipIntro ? "Intro" : null,
         autoSkipOutro ? "Outro" : null,
-    ].filter(Boolean).join("+") || "Apagado"
+        autoSkipFiller ? "Relleno" : null,
+    ].filter(Boolean).join("+")
+    const isMovieFormat = mediaFormat?.toUpperCase() === "MOVIE"
+    const rateLabel = Math.abs(playbackRate - 1) < 0.001 ? null : `${playbackRate}x`
+    const playbackSummary = (!isMovieFormat && marathonMode)
+        ? ["Maratón", rateLabel].filter(Boolean).join(" · ")
+        : [!isMovieFormat && autoSkipLabel ? `Salto auto: ${autoSkipLabel}` : null, rateLabel].filter(Boolean).join(" · ") || "Normal"
 
     const hasQualityOptions = hlsLevels.length > 0 || sources.length > 0
     const qualityValue = hlsLevels.length > 0
@@ -223,7 +231,7 @@ export function PlayerSettingsMenu({
                     <MenuButton
                         icon={<IconMediaForward className="w-4 h-4" />}
                         label="Reproducción"
-                        value={autoSkipLabel === "Apagado" ? "Normal" : `Salto auto: ${autoSkipLabel}`}
+                        value={playbackSummary}
                         onClick={() => setView("playback")}
                     />
                 </SettingsLayout>

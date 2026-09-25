@@ -1,5 +1,4 @@
 import React, { useState, memo } from 'react';
-import { m, AnimatePresence } from 'framer-motion';
 import {
   Hourglass,
   Swords,
@@ -16,28 +15,29 @@ import type { VolumeData } from './types';
 import { DRAGON_BALL_MOVIES_LORE } from '@/lib/config/dragonball_movies_lore';
 import { DRAGON_BALL_STORY_SPANS } from '@/lib/config/dragonball_story_spans';
 import { sounds } from './utils/audio';
-import { useReducedMotion } from '@/components/ui/kinetics/hooks';
+import { SmartLoreText } from '@/components/ui/smart-lore-text';
 
 export interface InterludeDividerProps {
   interlude: ChronologyInterlude;
-  /** Lapso destino: sirve la línea "Al empezar el siguiente lapso". Null en el epílogo. */
   toVolume?: VolumeData | null;
   accentHex?: string;
+  isCentered?: boolean;
 }
 
 const KIND_ICON: Record<ChronologyInterlude['kind'], React.ReactNode> = {
-  'time-jump': <Hourglass className="w-3 h-3" />,
-  training: <Swords className="w-3 h-3" />,
-  'cosmic-event': <Sparkles className="w-3 h-3" />,
-  paradox: <Zap className="w-3 h-3" />,
-  context: <Info className="w-3 h-3" />,
-  transition: <ArrowRight className="w-3 h-3" />,
+  'time-jump': <Hourglass className="w-3.5 h-3.5" />,
+  training: <Swords className="w-3.5 h-3.5" />,
+  'cosmic-event': <Sparkles className="w-3.5 h-3.5" />,
+  paradox: <Zap className="w-3.5 h-3.5" />,
+  context: <Info className="w-3.5 h-3.5" />,
+  transition: <ArrowRight className="w-3.5 h-3.5" />,
 };
 
 export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
   ({ interlude, toVolume, accentHex }) => {
-    const reduceMotion = useReducedMotion();
     const [isExpanded, setIsExpanded] = useState(false);
+    // El cuerpo se monta al abrirlo por primera vez y queda montado para que el cierre anime.
+    const [hasOpened, setHasOpened] = useState(false);
     const isEpilogue = interlude.toVolumeId === null;
 
     const isYears = interlude.gap.scale === 'anios';
@@ -48,63 +48,63 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
       .map((id) => DRAGON_BALL_MOVIES_LORE[id])
       .filter(Boolean);
 
-    // Villanos activos del lapso destino (worldStateAtStart del span canónico).
     const destSpan = toVolume
       ? DRAGON_BALL_STORY_SPANS.find((s) => s.id === toVolume.id)
       : undefined;
     const destVillains = destSpan?.worldStateAtStart.activeVillains ?? [];
-    const destThreat =
-      toVolume?.threatLevel ?? destSpan?.worldStateAtStart.threatLevel;
-    const destBalls =
-      toVolume?.dragonBallsStatus ?? destSpan?.worldStateAtStart.dragonBallsStatus;
+    const destThreat = toVolume?.threatLevel ?? destSpan?.worldStateAtStart.threatLevel;
+    const destBalls = toVolume?.dragonBallsStatus ?? destSpan?.worldStateAtStart.dragonBallsStatus;
 
     return (
       <div
         id={`interlude-${interlude.id}`}
-        className="relative pl-6 sm:pl-10 select-none"
+        className="relative w-full my-6 z-20 flex flex-col items-start lg:items-center pl-8 lg:pl-0"
       >
-        {/* Nodo sobre la columna vertical */}
+        {/* Mobile spine node (hidden on md+ since the pill is centered on the central spine) */}
         <div
           aria-hidden="true"
-          className="absolute -left-[23px] sm:-left-[31px] top-3.5 w-6 h-6 rounded-full border flex items-center justify-center z-10 shadow-sm bg-bg-primary"
+          className="lg:hidden absolute left-3 -translate-x-1/2 top-2.5 w-6 h-6 rounded-full border flex items-center justify-center z-10 shadow-sm bg-zinc-950"
           style={{
-            borderColor: isYears ? `${accent}80` : 'rgba(255,255,255,0.15)',
+            borderColor: isYears ? `${accent}80` : 'rgba(255,255,255,0.2)',
             color: isYears ? accent : 'var(--color-on-surface-variant, #a1a1aa)',
           }}
         >
           {KIND_ICON[interlude.kind]}
         </div>
 
+        {/* Centered pill on md+, full width on mobile */}
         <div
-          className={`w-full rounded-2xl border transition-colors duration-200 overflow-hidden ${
+          className={`w-full lg:w-auto lg:max-w-xl rounded-2xl border transition duration-200 overflow-hidden shadow-elevation-1 ${
             isContinuo
-              ? 'border-dashed border-white/10 bg-bg-primary/30'
+              ? 'border-dashed border-white/15 bg-zinc-950/70'
               : isYears
-                ? 'bg-bg-primary/70 shadow-elevation-1'
-                : 'border-dashed border-white/15 bg-bg-primary/40'
+                ? 'bg-zinc-950/90'
+                : 'border-dashed border-white/20 bg-zinc-950/80'
           }`}
-          style={isYears ? { borderColor: `${accent}45` } : undefined}
+          style={isYears ? { borderColor: `${accent}60` } : undefined}
         >
-          {/* Cabecera expandible (botón propio, independiente de las filas) */}
+          {/* Header pill button */}
           <button
             type="button"
             aria-expanded={isExpanded}
             aria-controls={`interlude-body-${interlude.id}`}
             onClick={() => {
               sounds.playSelect();
+              setHasOpened(true);
               setIsExpanded((v) => !v);
             }}
-            className="w-full flex items-center gap-2 sm:gap-2.5 px-3 py-2 text-left cursor-pointer min-h-[44px] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent select-none"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-left cursor-pointer min-h-[44px] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent select-none active:scale-[0.99] transition-transform"
           >
+            {/* Kind & Gap Badge */}
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-3xs sm:text-2xs font-bold border shrink-0 tabular-nums ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-mono text-xs font-bold border shrink-0 tabular-nums ${
                 isYears ? '' : 'bg-brand-accent/15 border-brand-accent/30 text-brand-accent'
               }`}
               style={
                 isYears
                   ? {
-                      backgroundColor: `${accent}20`,
-                      borderColor: `${accent}50`,
+                      backgroundColor: `${accent}25`,
+                      borderColor: `${accent}55`,
                       color: accent,
                     }
                   : undefined
@@ -114,16 +114,16 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
               <span>{interlude.gap.label}</span>
             </span>
 
-            <span className="min-w-0 flex-1">
-              <span className="block font-display font-bold text-2xs sm:text-xs text-white uppercase tracking-wide truncate">
+            <div className="min-w-0 flex-1">
+              <span className="block font-display font-bold text-xs text-white uppercase tracking-wide truncate">
                 {interlude.title}
               </span>
               {!isExpanded && (
-                <span className="block text-2xs font-mono text-on-surface-variant truncate">
+                <span className="block text-3xs font-mono text-on-surface-variant truncate">
                   {interlude.summary}
                 </span>
               )}
-            </span>
+            </div>
 
             {isEpilogue && (
               <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-3xs font-mono font-bold bg-white/[0.04] border border-white/10 text-on-surface-variant shrink-0">
@@ -138,23 +138,24 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
             />
           </button>
 
-          <AnimatePresence initial={false}>
-            {isExpanded && (
-              <m.div
-                id={`interlude-body-${interlude.id}`}
-                initial={reduceMotion ? { opacity: 1 } : { height: 0, opacity: 0 }}
-                animate={reduceMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
-                exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: 'easeOut' }}
-                className="overflow-hidden border-t border-white/10"
-              >
-                <div className="px-3 sm:px-4 py-3 flex flex-col gap-3">
-                  <p className="text-xs sm:text-sm text-on-surface/90 leading-relaxed text-pretty">
-                    {interlude.summary}
+          {/* Cajón: acordeón en CSS (grid-rows 0fr → 1fr) */}
+          <div
+            id={`interlude-body-${interlude.id}`}
+            inert={!isExpanded}
+            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+              isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+            }`}
+          >
+            <div className="min-h-0 overflow-hidden">
+              {hasOpened && (
+                <div className="border-t border-white/10 p-3.5 sm:p-4 flex flex-col gap-3 text-xs">
+                  <p className="text-on-surface/90 leading-relaxed text-pretty font-sans">
+                    <SmartLoreText text={interlude.summary} />
                   </p>
 
+                  {/* Offscreen Events */}
                   {interlude.offscreen && interlude.offscreen.length > 0 && (
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5 pt-1">
                       <span className="text-2xs font-mono font-bold uppercase tracking-wider text-brand-accent">
                         Mientras tanto…
                       </span>
@@ -166,26 +167,29 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
                           >
                             <span
                               aria-hidden="true"
-                              className="mt-1.5 w-1 h-1 rounded-full shrink-0 bg-white/40"
+                              className="mt-1.5 w-1 h-1 rounded-full shrink-0 bg-brand-accent/70"
                             />
-                            <span>{fact}</span>
+                            <span>
+                              <SmartLoreText text={fact} />
+                            </span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
 
+                  {/* Movies in this gap */}
                   {movies.length > 0 && (
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5 pt-1">
                       <span className="text-2xs font-mono font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1.5">
-                        <Clapperboard className="w-3.5 h-3.5" />
-                        {movies.length === 1 ? 'Película en este hueco' : 'Películas en este hueco'}
+                        <Clapperboard className="w-3.5 h-3.5 text-blue-400" />
+                        <span>{movies.length === 1 ? 'Película en este hueco' : 'Películas en este hueco'}</span>
                       </span>
                       <div className="flex flex-col gap-2">
                         {movies.map((movie) => (
                           <div
                             key={movie.id}
-                            className="rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2 flex flex-col gap-1"
+                            className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5 flex flex-col gap-1"
                           >
                             <div className="flex items-center gap-2 flex-wrap">
                               <Play className="w-3 h-3 text-brand-accent fill-current shrink-0" />
@@ -207,8 +211,9 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
                     </div>
                   )}
 
+                  {/* World state transition into next span */}
                   {toVolume && (destThreat || destVillains.length > 0 || destBalls) && (
-                    <div className="rounded-xl border border-white/10 bg-black/30 px-2.5 py-2 flex flex-col gap-1">
+                    <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 flex flex-col gap-1">
                       <span className="text-2xs font-mono font-bold uppercase tracking-wider text-cyan-300">
                         Al empezar el siguiente lapso
                       </span>
@@ -233,9 +238,9 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
                     </div>
                   )}
                 </div>
-              </m.div>
-            )}
-          </AnimatePresence>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

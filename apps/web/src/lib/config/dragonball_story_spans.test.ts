@@ -79,4 +79,25 @@ describe("Dragon Ball Story Spans Dataset", () => {
     expect(vegetaSpan).toBeDefined()
     expect(vegetaSpan?.id).toBe("dbz-buu-majin-vegeta")
   })
+
+  it("should have all milestone episodes within the span range, and valid mm:ss format when time is present", () => {
+    const timeRegex = /^\d{1,3}:[0-5]\d$/
+    let milestonesWithTimeCount = 0
+
+    for (const span of DRAGON_BALL_STORY_SPANS) {
+      for (const milestone of span.milestones) {
+        // Episode must be within span's startEpisode and endEpisode
+        expect(milestone.episode).toBeGreaterThanOrEqual(span.startEpisode)
+        expect(milestone.episode).toBeLessThanOrEqual(span.endEpisode)
+
+        // When time is defined, it must match mm:ss format
+        if (milestone.time !== undefined) {
+          expect(milestone.time).toMatch(timeRegex)
+          milestonesWithTimeCount++
+        }
+      }
+    }
+
+    expect(milestonesWithTimeCount).toBeGreaterThan(0)
+  })
 })

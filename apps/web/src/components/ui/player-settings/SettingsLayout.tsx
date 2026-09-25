@@ -31,7 +31,7 @@ export function SettingsLayout({ title, onBack, onClose, children }: SettingsLay
                         <button
                             onClick={onBack}
                             aria-label="Volver"
-                            className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-colors duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                            className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-[color,background-color,border-color,transform] duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                         >
                             <IconNavigationChevronLeft className="w-4 h-4" />
                         </button>
@@ -43,7 +43,7 @@ export function SettingsLayout({ title, onBack, onClose, children }: SettingsLay
                 <button
                     onClick={onClose}
                     aria-label="Cerrar menú"
-                    className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-colors duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                    className="w-9 h-9 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-[color,background-color,border-color,transform] duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                 >
                     <IconUiClose className="w-4 h-4" />
                 </button>

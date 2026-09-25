@@ -217,8 +217,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		Level: 5,
 		Skipper: func(c echo.Context) bool {
 			path := c.Request().URL.Path
+			// Images and video are already compressed: gzip only burns CPU on them.
 			return strings.HasPrefix(path, "/api/v1/mediastream") ||
 				strings.HasPrefix(path, "/api/v1/drive/play") ||
+				strings.HasPrefix(path, "/api/v1/video-thumbnail") ||
 				strings.HasPrefix(path, "/api/v1/image-proxy") ||
 				strings.HasPrefix(path, "/api/v1/proxy") ||
 				strings.HasPrefix(path, "/api/v1/events") ||
@@ -342,7 +344,10 @@ func (h *Handler) RegisterIntelligenceRoutes(v1 *echo.Group) {
 	intel := v1.Group("/intelligence")
 	intel.GET("/best-source", h.HandleGetBestSource)
 	intel.GET("/stats", h.HandleGetIntelligenceStats)
-	intel.GET("/chronology", h.HandleGetChronologyTimeline)
+	intel.GET("/chronology", h.HandleGetChronologyProgress)
+	intel.POST("/chronology/overrides", h.HandleSaveChronologySpanOverrides)
+	intel.GET("/chronology/moment-times", h.HandleGetChronologyMomentTimes)
+	intel.POST("/chronology/moment-times", h.HandleSaveChronologyMomentTime)
 	intel.GET("/search", h.HandleSemanticSearch)
 }
 

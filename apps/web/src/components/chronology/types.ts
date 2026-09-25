@@ -128,6 +128,10 @@ export interface ChapterMilestone {
   tmdbEpisode?: number;
   /** Número absoluto dentro de la serie (1-based). Si se omite se parsea de `episode`. */
   absoluteEpisode?: number;
+  /** Segundo de inicio del momento (segundos exactos dentro del episodio). */
+  startSec?: number;
+  /** Clave estable del momento (`${span.id}:${episode}:${index}`) para correcciones y player. */
+  momentKey?: string;
 }
 
 export interface StoryBattle {
@@ -143,6 +147,29 @@ export interface DetailedStoryNarrative {
   aftermath: string;
   keyBattles: StoryBattle[];
   episodeMilestones: ChapterMilestone[];
+}
+
+/** Lo que pasa en paralelo o fuera de cámara dentro de un lapso. */
+export interface InterChapterEntry {
+  title: string;
+  /** Momento dentro de la historia, p. ej. "Año 761–762". */
+  when?: string;
+  summary: string;
+  /** Obra y saga donde se cuenta; sin páginas ni capítulos sin verificar. */
+  source: string;
+}
+
+/** Dato puntual del lapso para leer de un vistazo («Técnica decisiva: Makankōsappō»). */
+export interface KeyFact {
+  label: string;
+  value: string;
+}
+
+/** Nota de producción: cómo se hizo la obra, no lo que pasa en ella. */
+export interface BehindTheScenesNote {
+  title: string;
+  text: string;
+  source: string;
 }
 
 export interface VolumeData {
@@ -177,9 +204,6 @@ export interface VolumeData {
   mediaId?: number;
   tmdbId?: number;
   canonStatus?: string;
-  importance?: string;
-  isWatched?: boolean;
-  watchedPercent?: number;
   posterUrl?: string;
   backdropUrl?: string;
   previouslyOn?: string;
@@ -191,9 +215,12 @@ export interface VolumeData {
   dragonBallsStatus?: string;
   /** Nivel de amenaza al inicio del lapso (lapsos derivados de spans). */
   threatLevel?: string;
-  isMovie?: boolean;
-  mediaType?: 'SHOW' | 'MOVIE' | 'SPECIAL';
-  isCanonMovie?: boolean;
+  /** Hilos paralelos del lapso («Entre caps»); solo en lapsos con datos verificados. */
+  interChapter?: InterChapterEntry[];
+  /** Datos clave verificados del lapso. */
+  keyFacts?: KeyFact[];
+  /** Notas de producción verificadas del lapso. */
+  behindTheScenes?: BehindTheScenesNote[];
 }
 
 export interface GlossaryTerm {

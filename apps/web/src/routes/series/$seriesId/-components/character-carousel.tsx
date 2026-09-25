@@ -4,6 +4,7 @@ import { CharacterAvatar } from "./character-avatar"
 
 interface CharacterCarouselProps {
   characters: CharacterDTO[]
+  sagaId?: string
   onSelect?: (name: string) => void
 }
 
@@ -12,15 +13,17 @@ interface CharacterCarouselProps {
 const ENTER_STAGGER_CAP = 8
 const ENTER_STAGGER_MS = 40
 
-export const CharacterCarousel = memo(function CharacterCarousel({ characters, onSelect }: CharacterCarouselProps) {
+export const CharacterCarousel = memo(function CharacterCarousel({ characters, sagaId, onSelect }: CharacterCarouselProps) {
   if (!characters || characters.length === 0) return null
+
+  const carouselKey = sagaId ?? (characters.map(c => c.name).slice(0, 4).join("-") || "characters")
 
   return (
     <div className="w-full py-6">
       <h3 className="font-display text-2xl tracking-widest text-on-surface/95 uppercase mb-4">Personajes Clave</h3>
 
       <div
-        key={characters[0]?.name ?? "characters"}
+        key={carouselKey}
         className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x"
       >
         {characters.map((char, idx) => (

@@ -105,7 +105,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                         useQueueStore.getState().removeFromQueue(idx)
                                     }}
                                     aria-label={`Eliminar ${item.title} de la cola`}
-                                    className="w-9 h-9 shrink-0 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 rounded-full transition-colors duration-150 cursor-pointer active:scale-90"
+                                    className="w-9 h-9 shrink-0 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 rounded-full transition-[color,background-color,border-color,transform] duration-150 cursor-pointer active:scale-90"
                                     title="Eliminar de la cola"
                                 >
                                     <IconUiClose className="w-4 h-4" />

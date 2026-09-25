@@ -313,10 +313,6 @@ export function mergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
     }
 }
 
-export function useMergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
-    return useMemo(() => mergeRefs(...refs), [refs])
-}
-
 function callAllHandlers<T extends (...args: unknown[]) => unknown>(
     ...fns: (T | undefined)[]
 ) {

@@ -14,6 +14,8 @@ import { ErrorBanner, EmptyState } from "./home.components"
 import { MediaSpotlight } from "@/components/ui/media-spotlight"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 
+import { m, AnimatePresence } from "framer-motion"
+
 export const Route = createFileRoute("/home/")({
     // prefetch (no ensureQueryData): nunca lanza, así un backend que aún arranca
     // no tumba la ruta; el componente muestra HomeSkeleton hasta tener datos.
@@ -78,22 +80,40 @@ function HomeClient() {
     )
 
     if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
-    // Anti-flash: skeleton mientras no haya colección (cubre isLoading y
-    // restauración IDB). Nunca EmptyState transitorio: solo si ya hay colección.
-    if (!collection) return <HomeSkeleton />
-    if (isLoading && allEntries.length === 0) return <HomeSkeleton />
-    if (allEntries.length === 0) return <EmptyState />
+    if (collection && allEntries.length === 0) return <EmptyState />
+
+    const isReady = !!collection && (!isLoading || allEntries.length > 0)
 
     return (
         <div className="relative min-h-screen text-on-surface overflow-x-hidden">
-            <div className="relative z-10 flex flex-col">
-                {spotlightItems.length > 0 && (
+            <AnimatePresence>
+                {!isReady && (
+                    <m.div
+                        key="home-skeleton"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        className="absolute inset-0 z-20 pointer-events-none"
+                    >
+                        <HomeSkeleton />
+                    </m.div>
+                )}
+            </AnimatePresence>
+
+            {isReady && spotlightItems.length > 0 && (
+                <m.div
+                    key="home-content"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
+                    className="relative z-10 flex flex-col"
+                >
                     <MediaSpotlight
                         items={spotlightItems}
                         onNavigate={handleSpotlightNavigate}
                     />
-                )}
-            </div>
+                </m.div>
+            )}
         </div>
     )
 }

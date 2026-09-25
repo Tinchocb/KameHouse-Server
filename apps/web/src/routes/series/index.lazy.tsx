@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/api/generated/endpoints';
 import { fetchAnimeEntry } from '@/api/hooks/anime_entries.hooks';
 import { SeriesCard, getVhsColor, type SeriesItem } from './-SeriesCard';
+import { SeriesSpineRow } from './-SeriesSpineRow';
 import { getMediumResImage, getLowResImage, prewarmImages } from '@/lib/helpers/images';
 import { DeferredImage } from '@/components/shared/deferred-image';
 import { IconUiCheckCircle2, IconNavigationLayers } from "@/components/ui/icons";
@@ -38,9 +39,9 @@ const SERIES_TABS: SeriesTabItem[] = [
     { id: 'etapas', label: 'Portadas' },
 ];
 
-/** Delay de stagger por card, en ms. */
-const ENTRY_STAGGER_MS = 45;
-const ENTRY_STAGGER_MAX_ITEMS = 16;
+/** Delay de stagger por card, en ms (tope acotado para fluidez). */
+const ENTRY_STAGGER_MS = 40;
+const ENTRY_STAGGER_MAX_ITEMS = 12;
 
 /** Transform compartido por los dos halos de fondo (exterior + interior del shelf). */
 function getGlowTransform(selectedIndex: number, total: number, offsetPx: number) {
@@ -226,13 +227,13 @@ const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
     }, [queryClient, item.id]);
 
     const entranceSpring = useSpringPreset('entrance');
-    const shouldAnimate = index < 8;
+    const shouldAnimate = index < 12;
 
     return (
         <m.article
             initial={shouldAnimate ? { opacity: 0, y: 16 } : false}
             animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
-            transition={shouldAnimate ? { ...entranceSpring, delay: index * 0.04 } : undefined}
+            transition={shouldAnimate ? { ...entranceSpring, delay: Math.min(index, 12) * 0.04 } : undefined}
             className="group relative select-none"
         >
             <button
@@ -260,7 +261,7 @@ const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
                     </div>
                 )}
                 <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent opacity-80 transition-opacity duration-base group-hover:opacity-90" />
-                <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/15 to-transparent z-10 pointer-events-none" />
+                <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-none group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/15 to-transparent z-10 pointer-events-none" />
 
                 <div className="absolute top-2.5 left-2.5 rounded-full border border-white/15 bg-black/75 px-2.5 py-1 font-mono text-3xs font-bold uppercase tracking-widest text-white shadow-sm">
                     {volLabel}
@@ -285,11 +286,11 @@ const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
                     </p>
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-white/15">
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-white/15 overflow-hidden">
                     <div
-                        className="h-full rounded-full"
+                        className="h-full w-full rounded-full origin-left transition-transform duration-300 ease-out"
                         style={{
-                            width: `${item.progress}%`,
+                            transform: `scaleX(${Math.min(Math.max(item.progress, 0), 100) / 100})`,
                             background: getSeriesEraAccent(item.seriesId),
                         }}
                     />
@@ -322,6 +323,18 @@ function SeriesFullscreenIndex() {
 
     const handleNavigate = useCallback((id: string) => {
         navigate({ to: '/series/$seriesId', params: { seriesId: id } });
+    }, [navigate]);
+
+    // Estantería móvil: una sola cinta abierta. `undefined` = todavía sin tocar,
+    // se abre sola la primera serie a medio ver.
+    const [openSpineId, setOpenSpineId] = useState<number | null | undefined>(undefined);
+
+    const handlePlayEpisode = useCallback((id: number, episode: number) => {
+        navigate({
+            to: '/series/$seriesId',
+            params: { seriesId: String(id) },
+            search: { saga: '', autoplay: String(episode) },
+        });
     }, [navigate]);
 
     const handleViewChange = useCallback((nextView: SeriesViewMode) => {
@@ -395,6 +408,7 @@ function SeriesFullscreenIndex() {
                 year: yearVal,
                 yearNum: yearVal === 'N/A' ? 9999 : Number(yearVal),
                 progress: progressPercent,
+                watched: totalEps > 0 ? Math.min(watched, totalEps) : watched,
                 img: getMediumResImage(bannerImg),
                 poster: getMediumResImage(posterImg),
                 desc,
@@ -459,6 +473,20 @@ function SeriesFullscreenIndex() {
         prewarmImages(targets);
     }, [selectedIndex, displayedList]);
 
+    const defaultOpenSpineId = useMemo(
+        () => displayedList.find(s => s.progress > 0 && s.progress < 100)?.id ?? null,
+        [displayedList]
+    );
+    const activeSpineId = openSpineId === undefined ? defaultOpenSpineId : openSpineId;
+
+    const handleToggleSpine = useCallback((id: number) => {
+        setOpenSpineId(id === activeSpineId ? null : id);
+        if (id !== activeSpineId) {
+            playSound('series', 0.1);
+            setSelectedId(id);
+        }
+    }, [activeSpineId, playSound]);
+
     const handleSelectSeries = useCallback((id: number) => {
         if (id !== effectiveSelectedId) playSound('series', 0.1);
         setSelectedId(id);
@@ -519,25 +547,16 @@ function SeriesFullscreenIndex() {
             {/* ── Ambient Aura Background (mismo tamaño que Home / Películas) ── */}
             <div className={cn(HERO_AURA_CLASS, "[contain:paint]")}>
                 <AmbientAura src={lowAuraSrc} allowGlowFx={allowGlowFx} />
-                {/* Orbe de color de era (sin esto el wash queda gris: el color lo pone el accent) */}
-                {selectedItem && (allowGlowFx ? (
-                    <m.div
-                        animate={{ scale: [1, 1.08, 1], opacity: [0.25, 0.4, 0.25] }}
-                        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full pointer-events-none transform-gpu"
-                        style={{
-                            background: `radial-gradient(ellipse, color-mix(in srgb, ${selectedAccent} 50%, transparent) 0%, transparent 70%)`,
-                        }}
-                    />
-                ) : (
+                {/* Tinte de la era sobre todo el hero (sin esto el wash queda gris). Antes era
+                    un orbe que respiraba arriba a la izquierda; ahora es un velo sin forma visible. */}
+                {selectedItem && (
                     <div
-                        className="absolute -top-[10%] -left-[5%] w-[50%] h-[70%] rounded-full pointer-events-none"
+                        className="absolute inset-0 pointer-events-none transition-[background] duration-500"
                         style={{
-                            background: `radial-gradient(ellipse, color-mix(in srgb, ${selectedAccent} 50%, transparent) 0%, transparent 70%)`,
-                            opacity: 0.35,
+                            background: `radial-gradient(ellipse 80% 60% at 30% 30%, color-mix(in srgb, ${selectedAccent} 16%, transparent) 0%, transparent 70%)`,
                         }}
                     />
-                ))}
+                )}
             </div>
 
             {/* ── CRT scanlines (solo vista Portadas; el shelf tiene el suyo recortado) ── */}
@@ -587,6 +606,9 @@ function SeriesFullscreenIndex() {
                                     style={{
                                         background: `radial-gradient(circle, ${selectedAccent} 0%, transparent 60%)`,
                                         transform: getGlowTransform(selectedIndex, displayedList.length, 250),
+                                        // Framer solo anima la opacidad: el halo sigue a la
+                                        // cinta elegida por CSS, igual que la variante balanced.
+                                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1)',
                                     }}
                                 />
                             ) : (
@@ -636,7 +658,7 @@ function SeriesFullscreenIndex() {
                                     showUnwatchedCount={ts.themeShowAnimeUnwatchedCount}
                                     onNavigate={handleNavigate}
                                     onSelect={handleSelectSeries}
-                                    entryDelayMs={i < ENTRY_STAGGER_MAX_ITEMS ? i * ENTRY_STAGGER_MS : 0}
+                                    entryDelayMs={!reduceMotion && i < ENTRY_STAGGER_MAX_ITEMS ? i * ENTRY_STAGGER_MS : 0}
                                 />
                             ))
                         )}
@@ -661,10 +683,28 @@ function SeriesFullscreenIndex() {
                     <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
                 </div>
                 </div>
+            ) : view === 'shelf' && isMobile && displayedList.length > 0 ? (
+                /* ═══════════════════════ VISTA ESTANTERÍA MÓVIL (cintas apiladas) ═══════════════════════ */
+                <div className="w-full max-w-2xl mx-auto pt-1 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
+                    <ul aria-label="Colección de series" className="flex flex-col gap-2">
+                        {displayedList.map((item, i) => (
+                            <SeriesSpineRow
+                                key={item.id}
+                                item={item}
+                                index={i}
+                                watched={item.watched}
+                                isOpen={item.id === activeSpineId}
+                                onToggle={handleToggleSpine}
+                                onNavigate={handleNavigate}
+                                onPlay={handlePlayEpisode}
+                            />
+                        ))}
+                    </ul>
+                </div>
             ) : (
                 /* ═══════════════════════ VISTA PORTADAS (grid / mobile) ═══════════════════════ */
                 <div className="flex-1 overflow-y-auto no-scrollbar transform-gpu [contain:paint]">
-                    <div className="w-full page-container py-7 pb-32 space-y-6 min-h-full">
+                    <div className="w-full page-container py-7 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] space-y-6 min-h-full">
                         {isLoading && displayedList.length === 0 ? (
                             <PosterGridSkeleton count={12} />
                         ) : displayedList.length === 0 ? (

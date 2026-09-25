@@ -88,7 +88,8 @@
         {
           "episode": 1,
           "title": "El Encuentro",
-          "description": "Bulma atropella a Goku y comienza la búsqueda de las 7 Esferas."
+          "description": "Bulma atropella a Goku y comienza la búsqueda de las 7 Esferas.",
+          "time": "05:15"
         },
         {
           "episode": 2,
@@ -103,17 +104,20 @@
         {
           "episode": 8,
           "title": "El Primer Kamehameha",
-          "description": "El Maestro Roshi apaga la Montaña de Fuego con su técnica destructiva."
+          "description": "El Maestro Roshi apaga la Montaña de Fuego con su técnica destructiva.",
+          "time": "11:20"
         },
         {
           "episode": 9,
           "title": "Capturados por Pilaf",
-          "description": "El grupo cae en la trampa del castillo de Pilaf y Oolong arruina el deseo de dominación mundial."
+          "description": "El grupo cae en la trampa del castillo de Pilaf y Oolong arruina el deseo de dominación mundial.",
+          "time": "14:32"
         },
         {
           "episode": 12,
           "title": "Invocación de Shenlong y Oozaru",
-          "description": "Oolong arruina el deseo de Pilaf; Goku se transforma en simio gigante destruyendo el castillo."
+          "description": "Oolong arruina el deseo de Pilaf; Goku se transforma en simio gigante destruyendo el castillo.",
+          "time": "16:45"
         }
       ],
       "hasFiller": false,
@@ -159,7 +163,8 @@
         {
           "episode": 14,
           "title": "Llegada de Krilin",
-          "description": "Krilin se une a Goku como aspirante a discípulo en Kame House."
+          "description": "Krilin se une a Goku como aspirante a discípulo en Kame House.",
+          "time": "08:20"
         },
         {
           "episode": 15,
@@ -184,7 +189,8 @@
         {
           "episode": 28,
           "title": "La Gran Final: Goku vs Jackie Chun",
-          "description": "Roshi destruye la Luna y vence a Goku por ventaja física en un final dramático."
+          "description": "Roshi destruye la Luna y vence a Goku por ventaja física en un final dramático.",
+          "time": "15:40"
         }
       ],
       "hasFiller": false,
@@ -233,7 +239,8 @@
         {
           "episode": 35,
           "title": "Torre de la Fuerza y General White",
-          "description": "Goku asciende la torre derrotando al General White y liberando al Androide 8."
+          "description": "Goku asciende la torre derrotando al General White y liberando al Androide 8.",
+          "time": "04:35"
         },
         {
           "episode": 38,
@@ -253,7 +260,8 @@
         {
           "episode": 58,
           "title": "La Crueldad de Tao Pai Pai",
-          "description": "El mercenario asesina a Bora y vence a Goku con el Dodonpa."
+          "description": "El mercenario asesina a Bora y vence a Goku con el Dodonpa.",
+          "time": "12:45"
         },
         {
           "episode": 62,
@@ -263,7 +271,8 @@
         {
           "episode": 68,
           "title": "Caída de la Patrulla Roja",
-          "description": "Goku destruye el cuartel general y aniquila al robot del Oficial Black."
+          "description": "Goku destruye el cuartel general y aniquila al robot del Oficial Black.",
+          "time": "17:16"
         }
       ],
       "hasFiller": true,
@@ -316,7 +325,8 @@
         {
           "episode": 71,
           "title": "Los Cinco Guerreros",
-          "description": "Comienza el torneo en el Palacio de Baba para localizar la última esfera."
+          "description": "Comienza el torneo en el Palacio de Baba para localizar la última esfera.",
+          "time": "05:23"
         },
         {
           "episode": 72,
@@ -341,7 +351,8 @@
         {
           "episode": 77,
           "title": "Resurrección de Bora",
-          "description": "Shenlong es invocado y Bora vuelve a la vida."
+          "description": "Shenlong es invocado y Bora vuelve a la vida.",
+          "time": "16:49"
         }
       ],
       "hasFiller": true,
@@ -392,7 +403,8 @@
         {
           "episode": 86,
           "title": "Inicio del 22° Torneo",
-          "description": "Rivalidad abierta entre la Escuela Tortuga de Roshi y la Escuela Grulla de Tsuru."
+          "description": "Rivalidad abierta entre la Escuela Tortuga de Roshi y la Escuela Grulla de Tsuru.",
+          "time": "06:38"
         },
         {
           "episode": 88,
@@ -417,7 +429,8 @@
         {
           "episode": 101,
           "title": "La Gran Final Tenshinhan vs Goku",
-          "description": "Tenshinhan gana por caída fortuita; renuncia al mal y forja una alianza con Goku."
+          "description": "Tenshinhan gana por caída fortuita; renuncia al mal y forja una alianza con Goku.",
+          "time": "15:37"
         }
       ],
       "hasFiller": false,
@@ -466,7 +479,8 @@
         {
           "episode": 102,
           "title": "La Muerte de Krilin",
-          "description": "El tono de la serie cambia a tragedia con el hallazgo del cadáver de Krilin."
+          "description": "El tono de la serie cambia a tragedia con el hallazgo del cadáver de Krilin.",
+          "time": "18:30"
         },
         {
           "episode": 104,
@@ -496,7 +510,8 @@
         {
           "episode": 122,
           "title": "El Golpe del Mono",
-          "description": "Goku atraviesa el pecho de Piccolo Daimaoh; Piccolo engendra a Piccolo Jr. antes de explotar."
+          "description": "Goku atraviesa el pecho de Piccolo Daimaoh; Piccolo engendra a Piccolo Jr. antes de explotar.",
+          "time": "15:10"
         }
       ],
       "hasFiller": false,
@@ -542,7 +557,8 @@
         {
           "episode": 125,
           "title": "Dios de la Tierra",
-          "description": "Goku conoce a Kami-sama y descubre el origen dual del bien y el mal."
+          "description": "Goku conoce a Kami-sama y descubre el origen dual del bien y el mal.",
+          "time": "10:05"
         },
         {
           "episode": 126,
@@ -572,7 +588,8 @@
         {
           "episode": 148,
           "title": "La Gran Final: Goku vs Piccolo Jr",
-          "description": "Batalla brutal de proporciones épicas; Goku gana volando por primera vez."
+          "description": "Batalla brutal de proporciones épicas; Goku gana volando por primera vez.",
+          "time": "12:00"
         }
       ],
       "hasFiller": true,
@@ -632,7 +649,8 @@
         {
           "episode": 1,
           "title": "Llegada de Raditz",
-          "description": "Se revela la herencia Saiyajin y el secuestro de Gohan."
+          "description": "Se revela la herencia Saiyajin y el secuestro de Gohan.",
+          "time": "04:30"
         },
         {
           "episode": 3,
@@ -642,7 +660,8 @@
         {
           "episode": 5,
           "title": "Muerte de Goku",
-          "description": "Piccolo mata a Goku y Raditz con el Makankosappo; aviso de la invasión en 1 año."
+          "description": "Piccolo mata a Goku y Raditz con el Makankosappo; aviso de la invasión en 1 año.",
+          "time": "14:25"
         },
         {
           "episode": 6,
@@ -657,7 +676,8 @@
         {
           "episode": 20,
           "title": "Técnicas de Kaio-sama",
-          "description": "Goku domina el Kaio-ken y la Genkidama en el planeta de gravedad x10."
+          "description": "Goku domina el Kaio-ken y la Genkidama en el planeta de gravedad x10.",
+          "time": "14:40"
         }
       ],
       "hasFiller": true,
@@ -714,7 +734,8 @@
         {
           "episode": 22,
           "title": "Muerte de Yamcha",
-          "description": "Un Saibamán se autodestruye en el pecho de Yamcha."
+          "description": "Un Saibamán se autodestruye en el pecho de Yamcha.",
+          "time": "05:46"
         },
         {
           "episode": 23,
@@ -734,7 +755,8 @@
         {
           "episode": 30,
           "title": "Choque de Titanes",
-          "description": "Kamehameha Kaio-ken x4 vs Galick Gun de Vegeta."
+          "description": "Kamehameha Kaio-ken x4 vs Galick Gun de Vegeta.",
+          "time": "13:40"
         },
         {
           "episode": 32,
@@ -749,7 +771,8 @@
         {
           "episode": 35,
           "title": "El Perdón de Goku",
-          "description": "Goku detiene a Krilin y permite el escape de Vegeta en su nave."
+          "description": "Goku detiene a Krilin y permite el escape de Vegeta en su nave.",
+          "time": "14:55"
         }
       ],
       "hasFiller": false,
@@ -798,7 +821,8 @@
         {
           "episode": 37,
           "title": "Llegada a Namek y aldeas masacradas",
-          "description": "Bulma, Krilin y Gohan descubren el genocidio de Freezer en Namek."
+          "description": "Bulma, Krilin y Gohan descubren el genocidio de Freezer en Namek.",
+          "time": "06:01"
         },
         {
           "episode": 44,
@@ -828,7 +852,8 @@
         {
           "episode": 67,
           "title": "Llegada de Goku a Namek",
-          "description": "Goku aterriza en Namek cuando Recoome está por matar a Gohan."
+          "description": "Goku aterriza en Namek cuando Recoome está por matar a Gohan.",
+          "time": "16:59"
         }
       ],
       "hasFiller": true,
@@ -882,7 +907,8 @@
         {
           "episode": 69,
           "title": "Goku vs Recoome (Un golpe)",
-          "description": "Goku derrota a Recoome de un solo golpe en el estómago, sorprendiendo a todos."
+          "description": "Goku derrota a Recoome de un solo golpe en el estómago, sorprendiendo a todos.",
+          "time": "10:57"
         },
         {
           "episode": 71,
@@ -910,9 +936,10 @@
           "description": "Freezer transforma empalando a Krilin y abrumando a Piccolo fusionado con Nail."
         },
         {
-          "episode": 83,
-          "title": "La Forma Final de Freezer",
-          "description": "Freezer revela su aspecto original blanco y liso."
+          "episode": 82,
+          "title": "Tercera Forma de Freezer",
+          "description": "Freezer desata su tercera transformación de aspecto aterrador.",
+          "time": "17:31"
         }
       ],
       "hasFiller": false,
@@ -958,7 +985,8 @@
         {
           "episode": 86,
           "title": "Muerte de Vegeta",
-          "description": "Vegeta llora ante Goku y es asesinado por un rayo de Freezer."
+          "description": "Vegeta llora ante Goku y es asesinado por un rayo de Freezer.",
+          "time": "06:38"
         },
         {
           "episode": 88,
@@ -973,7 +1001,8 @@
         {
           "episode": 95,
           "title": "El Super Saiyajin Nace",
-          "description": "Krilin muere; Goku se transforma por primera vez en Super Saiyajin."
+          "description": "Krilin muere; Goku se transforma por primera vez en Super Saiyajin.",
+          "time": "15:20"
         },
         {
           "episode": 96,
@@ -988,7 +1017,8 @@
         {
           "episode": 106,
           "title": "Explosión de Namek",
-          "description": "Freezer cae ante su propia arrogancia y Namek se desintegra."
+          "description": "Freezer cae ante su propia arrogancia y Namek se desintegra.",
+          "time": "15:02"
         }
       ],
       "hasFiller": false,
@@ -1034,7 +1064,8 @@
         {
           "episode": 108,
           "title": "El Escape de Garlic Jr.",
-          "description": "La Neblina del Mal infecta el mundo."
+          "description": "La Neblina del Mal infecta el mundo.",
+          "time": "07:24"
         },
         {
           "episode": 110,
@@ -1049,7 +1080,8 @@
         {
           "episode": 117,
           "title": "Destrucción de la Estrella Makyo",
-          "description": "Gohan sella a Garlic Jr. en la Zona Muerta."
+          "description": "Gohan sella a Garlic Jr. en la Zona Muerta.",
+          "time": "16:09"
         }
       ],
       "hasFiller": true,
@@ -1111,7 +1143,8 @@
         {
           "episode": 119,
           "title": "Trunks el Super Saiyajin",
-          "description": "Trunks descuartiza a Mecha Freezer con su espada."
+          "description": "Trunks descuartiza a Mecha Freezer con su espada.",
+          "time": "13:30"
         },
         {
           "episode": 121,
@@ -1141,7 +1174,8 @@
         {
           "episode": 138,
           "title": "Piccolo sube al Templo Sagrado",
-          "description": "Piccolo decide fusionarse con Kami-sama para enfrentar la amenaza."
+          "description": "Piccolo decide fusionarse con Kami-sama para enfrentar la amenaza.",
+          "time": "17:06"
         }
       ],
       "hasFiller": true,
@@ -1189,7 +1223,8 @@
         {
           "episode": 141,
           "title": "Nace el Super Namekiano",
-          "description": "Piccolo y Kami-sama se vuelven uno solo para enfrentar a Cell."
+          "description": "Piccolo y Kami-sama se vuelven uno solo para enfrentar a Cell.",
+          "time": "05:33"
         },
         {
           "episode": 143,
@@ -1219,7 +1254,8 @@
         {
           "episode": 160,
           "title": "Cell Perfecto",
-          "description": "Cell absorbe a N°18 y alcanza su forma definitiva invencible."
+          "description": "Cell absorbe a N°18 y alcanza su forma definitiva invencible.",
+          "time": "14:20"
         }
       ],
       "hasFiller": false,
@@ -1266,7 +1302,8 @@
         {
           "episode": 168,
           "title": "Mr. Satán y su ridículo en los Juegos",
-          "description": "Mr. Satán rompe ladrillos y es enviado volando por Cell con un golpe suave."
+          "description": "Mr. Satán rompe ladrillos y es enviado volando por Cell con un golpe suave.",
+          "time": "04:24"
         },
         {
           "episode": 174,
@@ -1286,7 +1323,8 @@
         {
           "episode": 184,
           "title": "Despertar del SSJ2",
-          "description": "Cell aplasta a N°16; Gohan despierta el Super Saiyajin 2."
+          "description": "Cell aplasta a N°16; Gohan despierta el Super Saiyajin 2.",
+          "time": "14:00"
         },
         {
           "episode": 187,
@@ -1301,7 +1339,8 @@
         {
           "episode": 191,
           "title": "Kamehameha Padre e Hijo",
-          "description": "Gohan desintegra a Cell con la guía del espíritu de Goku."
+          "description": "Gohan desintegra a Cell con la guía del espíritu de Goku.",
+          "time": "16:50"
         }
       ],
       "hasFiller": true,
@@ -1350,7 +1389,8 @@
         {
           "episode": 195,
           "title": "Torneo del Más Allá",
-          "description": "Goku conoce a los mejores luchadores fallecidos del cosmos."
+          "description": "Goku conoce a los mejores luchadores fallecidos del cosmos.",
+          "time": "10:15"
         },
         {
           "episode": 196,
@@ -1365,7 +1405,8 @@
         {
           "episode": 199,
           "title": "Goku vs Paikuhan",
-          "description": "Goku utiliza el Super Kaio-ken en la final del torneo."
+          "description": "Goku utiliza el Super Kaio-ken en la final del torneo.",
+          "time": "18:23"
         }
       ],
       "hasFiller": true,
@@ -1420,7 +1461,8 @@
         {
           "episode": 200,
           "title": "Gohan va a la Preparatoria",
-          "description": "Inicio de la vida civil de Gohan y debut del Gran Saiyaman."
+          "description": "Inicio de la vida civil de Gohan y debut del Gran Saiyaman.",
+          "time": "08:20"
         },
         {
           "episode": 203,
@@ -1450,12 +1492,14 @@
         {
           "episode": 229,
           "title": "Goku vs Majin Vegeta SSJ2",
-          "description": "Duelo brutal entre rivales; la energía despierta a Majin Buu Gordo."
+          "description": "Duelo brutal entre rivales; la energía despierta a Majin Buu Gordo.",
+          "time": "11:30"
         },
         {
           "episode": 232,
           "title": "La Explosión Final",
-          "description": "Vegeta abraza a Trunks y se autodestruye para intentar destruir a Buu."
+          "description": "Vegeta abraza a Trunks y se autodestruye para intentar destruir a Buu.",
+          "time": "16:44"
         }
       ],
       "hasFiller": true,
@@ -1507,7 +1551,8 @@
         {
           "episode": 235,
           "title": "Babidi y Buu destruyen ciudades",
-          "description": "Ola de terror global; Buu convierte humanos en chocolate y los come."
+          "description": "Ola de terror global; Buu convierte humanos en chocolate y los come.",
+          "time": "08:55"
         },
         {
           "episode": 238,
@@ -1537,7 +1582,8 @@
         {
           "episode": 253,
           "title": "Nace Super Buu",
-          "description": "Evil Buu devora a Buu Gordo; nace el sanguinario Super Buu."
+          "description": "Evil Buu devora a Buu Gordo; nace el sanguinario Super Buu.",
+          "time": "17:41"
         }
       ],
       "hasFiller": false,
@@ -1585,7 +1631,8 @@
         {
           "episode": 255,
           "title": "El Ataque de Extinción Humana",
-          "description": "Super Buu aniquila la población mundial de un solo ataque."
+          "description": "Super Buu aniquila la población mundial de un solo ataque.",
+          "time": "07:15"
         },
         {
           "episode": 256,
@@ -1618,9 +1665,26 @@
           "description": "Gohan con poder desbloqueado domina a Buu sin transformarse en Super Saiyajin."
         },
         {
+          "episode": 268,
+          "title": "Nace Vegetto",
+          "description": "Fusión Pothala de Goku y Vegeta.",
+          "time": "06:04"
+        },
+        {
           "episode": 270,
           "title": "Buu absorbe a Gohan Definitivo",
-          "description": "Tras absorber a Gotenks y Piccolo, Buu engaña y absorbe también a Gohan."
+          "description": "Tras absorber a Gotenks y Piccolo, Buu engaña y absorbe también a Gohan.",
+          "time": "14:30"
+        },
+        {
+          "episode": 271,
+          "title": "Anciano Kaioshin da su vida por Goku",
+          "description": "El Anciano Kaioshin muere para revivir a Goku y le entrega los Pendientes Pothala."
+        },
+        {
+          "episode": 274,
+          "title": "Vegetto SSJ humilla a Super Buu",
+          "description": "La fusión Pothala juega con Buu convertido en caramelo pero sigue combatiendo."
         }
       ],
       "hasFiller": false,
@@ -1664,19 +1728,10 @@
       ],
       "milestones": [
         {
-          "episode": 268,
-          "title": "Nace Vegetto",
-          "description": "Fusión Pothala de Goku y Vegeta."
-        },
-        {
-          "episode": 271,
-          "title": "Anciano Kaioshin da su vida por Goku",
-          "description": "El Anciano Kaioshin muere para revivir a Goku y le entrega los Pendientes Pothala."
-        },
-        {
-          "episode": 274,
-          "title": "Vegetto SSJ humilla a Super Buu",
-          "description": "La fusión Pothala juega con Buu convertido en caramelo pero sigue combatiendo."
+          "episode": 276,
+          "title": "Separación de Vegetto",
+          "description": "Goku y Vegeta entran al interior de Buu para rescatar a sus hijos y la fusión se anula.",
+          "time": "08:45"
         },
         {
           "episode": 277,
@@ -1696,7 +1751,8 @@
         {
           "episode": 286,
           "title": "La Genkidama Universal",
-          "description": "Goku erradica a Kid Buu deseando que reencarne como un hombre bueno."
+          "description": "Goku erradica a Kid Buu deseando que reencarne como un hombre bueno.",
+          "time": "16:10"
         },
         {
           "episode": 288,
@@ -1706,7 +1762,8 @@
         {
           "episode": 291,
           "title": "El Adiós de Goku",
-          "description": "Goku se marcha con Uub en el 28° Torneo de Artes Marciales."
+          "description": "Goku se marcha con Uub en el 28° Torneo de Artes Marciales.",
+          "time": "15:27"
         }
       ],
       "hasFiller": true,
@@ -1755,12 +1812,14 @@
         {
           "episode": 2,
           "title": "Bills despierta de su sueño premonitorio",
-          "description": "Bills sueña con el Super Saiyajin Dios y busca al Saiyajin que lo derrotó."
+          "description": "Bills sueña con el Super Saiyajin Dios y busca al Saiyajin que lo derrotó.",
+          "time": "06:26"
         },
         {
           "episode": 5,
           "title": "Bills vs Goku SSJ3",
-          "description": "Bills derrota a Goku de un golpe en el cuello en el planeta Kaio."
+          "description": "Bills derrota a Goku de un golpe en el cuello en el planeta Kaio.",
+          "time": "13:15"
         },
         {
           "episode": 6,
@@ -1785,7 +1844,8 @@
         {
           "episode": 14,
           "title": "La Batalla de los Dioses",
-          "description": "Bills reconoce el valor de Goku y le perdona la vida a la Tierra."
+          "description": "Bills reconoce el valor de Goku y le perdona la vida a la Tierra.",
+          "time": "18:58"
         }
       ],
       "hasFiller": false,
@@ -1833,7 +1893,8 @@
         {
           "episode": 16,
           "title": "Sorbet revive a Freezer en trozos",
-          "description": "Los restos de Freezer son regenerados en una cámara médica del ejército."
+          "description": "Los restos de Freezer son regenerados en una cámara médica del ejército.",
+          "time": "06:28"
         },
         {
           "episode": 18,
@@ -1863,7 +1924,8 @@
         {
           "episode": 27,
           "title": "El Retroceso Temporal de Whis",
-          "description": "Whis revierte la destrucción de la Tierra y Goku remata a Freezer."
+          "description": "Whis revierte la destrucción de la Tierra y Goku remata a Freezer.",
+          "time": "16:39"
         }
       ],
       "hasFiller": false,
@@ -1910,7 +1972,8 @@
         {
           "episode": 30,
           "title": "Goku vs Botamo (Golpes inútiles)",
-          "description": "Botamo absorbe el daño; Goku lo saca del ring por la fuerza bruta."
+          "description": "Botamo absorbe el daño; Goku lo saca del ring por la fuerza bruta.",
+          "time": "06:30"
         },
         {
           "episode": 33,
@@ -1940,7 +2003,8 @@
         {
           "episode": 41,
           "title": "Invocación de Super Shenlong",
-          "description": "El dragón dorado planetario concede el deseo de Bills."
+          "description": "El dragón dorado planetario concede el deseo de Bills.",
+          "time": "15:37"
         }
       ],
       "hasFiller": true,
@@ -1993,7 +2057,8 @@
         {
           "episode": 42,
           "title": "La Celebración y Monaka",
-          "description": "Fiesta de victoria tras el Torneo U6; Monaka es celebrado como el héroe secreto."
+          "description": "Fiesta de victoria tras el Torneo U6; Monaka es celebrado como el héroe secreto.",
+          "time": "04:06"
         },
         {
           "episode": 44,
@@ -2008,7 +2073,8 @@
         {
           "episode": 46,
           "title": "La Destrucción de Commeson",
-          "description": "Vegeta recupera su existencia tras destruir el núcleo del agua milagrosa."
+          "description": "Vegeta recupera su existencia tras destruir el núcleo del agua milagrosa.",
+          "time": "15:02"
         }
       ],
       "hasFiller": true,
@@ -2062,7 +2128,8 @@
         {
           "episode": 47,
           "title": "Llegada de Trunks del Futuro",
-          "description": "Debut del terror de Goku Black en el futuro destruido."
+          "description": "Debut del terror de Goku Black en el futuro destruido.",
+          "time": "08:30"
         },
         {
           "episode": 49,
@@ -2097,12 +2164,14 @@
         {
           "episode": 66,
           "title": "Vegetto Blue y la Espada de Trunks",
-          "description": "Combate de Vegetto Blue y corte final de Trunks a Zamasu."
+          "description": "Combate de Vegetto Blue y corte final de Trunks a Zamasu.",
+          "time": "14:45"
         },
         {
           "episode": 67,
           "title": "Zeno-sama Borra el Universo",
-          "description": "Zeno borra la línea temporal corrupta."
+          "description": "Zeno borra la línea temporal corrupta.",
+          "time": "16:59"
         }
       ],
       "hasFiller": true,
@@ -2157,7 +2226,8 @@
         {
           "episode": 77,
           "title": "La Petición de Goku a Zeno-sama",
-          "description": "Inicio de los preparativos para el Torneo entre los 12 Universos."
+          "description": "Inicio de los preparativos para el Torneo entre los 12 Universos.",
+          "time": "04:41"
         },
         {
           "episode": 78,
@@ -2172,7 +2242,8 @@
         {
           "episode": 81,
           "title": "Goku vs. Bergamo y la Aparición de Toppo",
-          "description": "Goku derrota a Bergamo y Toppo desafía a Goku advirtiéndole sobre Jiren."
+          "description": "Goku derrota a Bergamo y Toppo desafía a Goku advirtiéndole sobre Jiren.",
+          "time": "15:57"
         }
       ],
       "hasFiller": false,
@@ -2218,7 +2289,8 @@
         {
           "episode": 82,
           "title": "Gohan recupera su instinto marcial",
-          "description": "Piccolo entrena duramente a Gohan quien despierta su poder Definitivo de nuevo."
+          "description": "Piccolo entrena duramente a Gohan quien despierta su poder Definitivo de nuevo.",
+          "time": "09:46"
         },
         {
           "episode": 86,
@@ -2238,7 +2310,8 @@
         {
           "episode": 95,
           "title": "Pacto con Freezer",
-          "description": "Goku recluta a Freezer por 24 horas desde el infierno."
+          "description": "Goku recluta a Freezer por 24 horas desde el infierno.",
+          "time": "14:55"
         }
       ],
       "hasFiller": false,
@@ -2286,7 +2359,8 @@
         {
           "episode": 98,
           "title": "Inicio del Battle Royale (80 guerreros)",
-          "description": "48 minutos en el Reino de la Nada; Universos 9 y 10 borrados temprano."
+          "description": "48 minutos en el Reino de la Nada; Universos 9 y 10 borrados temprano.",
+          "time": "04:14"
         },
         {
           "episode": 103,
@@ -2326,12 +2400,14 @@
         {
           "episode": 130,
           "title": "Goku Ultra Instinto Completo vs Jiren",
-          "description": "Cabello plateado; Goku supera a Jiren pero su cuerpo colapsa por el calor."
+          "description": "Cabello plateado; Goku supera a Jiren pero su cuerpo colapsa por el calor.",
+          "time": "13:20"
         },
         {
           "episode": 131,
           "title": "La Alianza Final y el Deseo de 17",
-          "description": "Goku y Freezer derrotan a Jiren; 17 restaura el multiverso."
+          "description": "Goku y Freezer derrotan a Jiren; 17 restaura el multiverso.",
+          "time": "14:50"
         }
       ],
       "hasFiller": false,
@@ -2379,7 +2455,8 @@
         {
           "episode": 1,
           "title": "La Maldición de Gomah",
-          "description": "Goku y sus amigos son transformados en niños por Shenlong."
+          "description": "Goku y sus amigos son transformados en niños por Shenlong.",
+          "time": "06:40"
         },
         {
           "episode": 2,
@@ -2409,7 +2486,8 @@
         {
           "episode": 10,
           "title": "Degesu revela la conspiración completa",
-          "description": "El plan de Gomah y el origen de las esferas en el Reino Demoníaco."
+          "description": "El plan de Gomah y el origen de las esferas en el Reino Demoníaco.",
+          "time": "14:50"
         }
       ],
       "hasFiller": false,
@@ -2456,7 +2534,8 @@
         {
           "episode": 12,
           "title": "Segundo Mundo Demoníaco y trampa de Arinsu",
-          "description": "La Dra. Arinsu manipula desde las sombras; Goku y Panzy avanzan."
+          "description": "La Dra. Arinsu manipula desde las sombras; Goku y Panzy avanzan.",
+          "time": "09:36"
         },
         {
           "episode": 14,
@@ -2486,7 +2565,8 @@
         {
           "episode": 20,
           "title": "Regreso a la Normalidad",
-          "description": "Restauración de las edades y despedida del Reino Demoníaco."
+          "description": "Restauración de las edades y despedida del Reino Demoníaco.",
+          "time": "15:10"
         }
       ],
       "hasFiller": false,
@@ -2534,7 +2614,8 @@
         {
           "episode": 1,
           "title": "Goku Vuelve a Ser Niño",
-          "description": "El deseo de Pilaf y la revelación de la maldición de las esferas negras."
+          "description": "El deseo de Pilaf y la revelación de la maldición de las esferas negras.",
+          "time": "05:13"
         },
         {
           "episode": 3,
@@ -2564,7 +2645,8 @@
         {
           "episode": 16,
           "title": "Llegada al Planeta M2",
-          "description": "Descubrimiento de la conspiración de los mutantes mecánicos."
+          "description": "Descubrimiento de la conspiración de los mutantes mecánicos.",
+          "time": "15:32"
         }
       ],
       "hasFiller": false,
@@ -2611,7 +2693,8 @@
         {
           "episode": 19,
           "title": "Baby infecta a Goten y Gohan",
-          "description": "Parásitos toman control de los hijos de Goku antes de llegar a Vegeta."
+          "description": "Parásitos toman control de los hijos de Goku antes de llegar a Vegeta.",
+          "time": "09:07"
         },
         {
           "episode": 22,
@@ -2651,7 +2734,8 @@
         {
           "episode": 40,
           "title": "El Adiós de Piccolo",
-          "description": "Piccolo muere en la explosión de la Tierra despidiéndose de Gohan."
+          "description": "Piccolo muere en la explosión de la Tierra despidiéndose de Gohan.",
+          "time": "14:20"
         }
       ],
       "hasFiller": false,
@@ -2701,7 +2785,8 @@
         {
           "episode": 42,
           "title": "La Brecha del Infierno",
-          "description": "Los muertos escapan a la Tierra; Goku queda atrapado."
+          "description": "Los muertos escapan a la Tierra; Goku queda atrapado.",
+          "time": "04:06"
         },
         {
           "episode": 43,
@@ -2726,7 +2811,8 @@
         {
           "episode": 47,
           "title": "El Puño del Dragón",
-          "description": "A18 y Goku coordinan el ataque que destruye a Super 17."
+          "description": "A18 y Goku coordinan el ataque que destruye a Super 17.",
+          "time": "16:19"
         }
       ],
       "hasFiller": false,
@@ -2773,7 +2859,8 @@
         {
           "episode": 48,
           "title": "Nacen los Dragones Malignos",
-          "description": "Humo negro y nacimiento de las 7 sombras corrompidas."
+          "description": "Humo negro y nacimiento de las 7 sombras corrompidas.",
+          "time": "10:24"
         },
         {
           "episode": 50,
@@ -2798,7 +2885,8 @@
         {
           "episode": 60,
           "title": "Gogeta Super Saiyajin 4",
-          "description": "Fusión de Goku y Vegeta SSJ4 con el Big Bang Kamehameha x100."
+          "description": "Fusión de Goku y Vegeta SSJ4 con el Big Bang Kamehameha x100.",
+          "time": "11:10"
         },
         {
           "episode": 62,
@@ -2813,7 +2901,8 @@
         {
           "episode": 64,
           "title": "El Adiós de Goku",
-          "description": "Goku se marcha sobre el lomo de Shenlong concluyendo la era GT."
+          "description": "Goku se marcha sobre el lomo de Shenlong concluyendo la era GT.",
+          "time": "17:15"
         }
       ],
       "hasFiller": false,

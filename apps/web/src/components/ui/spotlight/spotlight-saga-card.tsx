@@ -6,6 +6,7 @@ import { DeferredImage } from "@/components/shared/deferred-image"
 import type { SagaDefinition } from "@/lib/config/dragonball_sagas"
 import type { ERA_COLOR_MAP, EraId } from "@/lib/config/eras"
 import { spotlightCardItemVariants } from "./spotlight-movie-card"
+import { useMotionTier, cardMotionProps } from "@/components/ui/kinetics"
 
 export interface SpotlightSagaCardProps {
     saga: SagaDefinition
@@ -33,12 +34,18 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
     const isFiller = saga.title.toLowerCase().includes("relleno")
     const cleanTitle = saga.title.replace(/\s*\([Rr]elleno\)\s*/g, "").trim()
 
+    const detectedTier = useMotionTier()
+    const motionProps = cardMotionProps(detectedTier)
+    const isFullTier = detectedTier === "full"
+    const isSubtleTier = detectedTier === "subtle"
+
     return (
-        // Mismo tratamiento que SpotlightMovieCard: hover CSS, sin will-change
-        // permanente, sin backdrop-blur por badge, sin springs por tarjeta.
+        // Mismo tratamiento canónico que MoviePosterCard: tier full asume spring hover/tap
+        // y subtle retiene la transición CSS nativa ligera, sin conflicto de transform.
         <m.div
             variants={spotlightCardItemVariants}
             custom={index}
+            {...motionProps}
             onClick={() => onNavigateSaga(seriesId, saga.id)}
             // Activable con teclado; Enter sobre el botón "Reproducir" interno no navega.
             role="button"
@@ -55,7 +62,11 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
             onMouseEnter={onHover}
             className={cn(
                 "group relative w-full aspect-[16/9] rounded-2xl overflow-hidden cursor-pointer border border-[var(--glass-border-side)] select-none shrink-0 bg-[var(--md-sys-color-surface-container)] transform-gpu",
-                "transition-[transform,border-color,box-shadow] duration-base ease-smooth-out hover:-translate-y-1 hover:scale-[1.015] active:scale-95",
+                isFullTier
+                    ? "transition-[border-color,box-shadow] duration-base ease-smooth-out"
+                    : isSubtleTier
+                    ? "transition-[transform,border-color,box-shadow] duration-base ease-smooth-out hover:-translate-y-1 hover:scale-[1.015] active:scale-95"
+                    : "transition-[border-color,box-shadow] duration-base ease-smooth-out",
                 "hover:z-10 hover:shadow-[0_15px_35px_rgba(0,0,0,0.9)]"
             )}
             style={{
@@ -69,7 +80,7 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
                 alt={cleanTitle}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             />
-            <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-10 pointer-events-none" />
+            <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-none group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-10 pointer-events-none" />
 
             {/* Top Badges (Ep Range & Filler/Arcs) — fondo opaco sin blur por rendimiento */}
             <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 z-20 pointer-events-none">

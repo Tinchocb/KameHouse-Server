@@ -218,7 +218,7 @@ export function PlaybackSettings({
                                 key={rate}
                                 onClick={() => onPlaybackRateChange(rate)}
                                 className={cn(
-                                    "px-2.5 py-1.5 rounded-full text-xs font-medium tabular-nums transition-all duration-base active:scale-95",
+                                    "px-2.5 py-1.5 rounded-full text-xs font-medium tabular-nums transition duration-base active:scale-95",
                                     "focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
                                     isActive
                                         ? "bg-white/95 text-black"
@@ -234,7 +234,12 @@ export function PlaybackSettings({
 
             <ToggleRow label="Repetir (loop)" enabled={loopEnabled} onChange={onLoopEnabledChange} />
             <ToggleRow label="Ocultar subtítulos si está doblado" enabled={autoDisableSubtitlesWhenDubbed} onChange={onAutoDisableSubtitlesWhenDubbedChange} />
-            <ToggleRow label="Modo Ambiente (efecto de luz)" enabled={ambientModeEnabled} onChange={onAmbientModeEnabledChange} />
+            <ToggleRow
+                label="Bordes difuminados"
+                enabled={ambientModeEnabled}
+                onChange={onAmbientModeEnabledChange}
+                subtext="Rellena las franjas de los costados con el color del video. Apagado: bordes negros"
+            />
             <ToggleRow label="Mapa de Calor (timeline)" enabled={showHeatmap} onChange={onShowHeatmapChange} />
             {!isMovie && onMarathonModeChange && (
                 <ToggleRow
@@ -280,7 +285,7 @@ export function PlaybackSettings({
                             <span className="text-sm font-bold text-white tabular-nums">{skipStepSeconds}s</span>
                             <div className="w-full h-1.5 bg-white/10 rounded-full relative">
                                 <div
-                                    className="absolute left-0 h-full bg-brand-accent rounded-full transition-all"
+                                    className="absolute left-0 h-full bg-brand-accent rounded-full transition-[width]"
                                     style={{ width: `${Math.min(100, Math.max(0, ((skipStepSeconds - 5) / 175) * 100))}%` }}
                                 />
                                 <input

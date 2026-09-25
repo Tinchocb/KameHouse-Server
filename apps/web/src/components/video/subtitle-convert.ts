@@ -80,3 +80,50 @@ export function convertToAss(content: string, codec: string | undefined): string
 
     return ASS_HEADER + dialogues.join("\n") + "\n"
 }
+
+// Campos de estilo que definen el tamaño visible del texto. Se escalan juntos para
+// que el contorno y la sombra mantengan la proporción con la letra.
+const SCALED_STYLE_FIELDS = ["fontsize", "outline", "shadow"]
+
+// scaleAssStyles multiplica Fontsize/Outline/Shadow de cada `Style:` del documento
+// ASS por `factor`. Es lo que implementa el "Tamaño de subtítulos" del reproductor:
+// el prescaleFactor de JASSUB solo cambia la resolución del canvas, no el tamaño.
+// Las columnas se ubican por la línea `Format:` de la sección de estilos, así que
+// funciona tanto con [V4+ Styles] como con [V4 Styles] (SSA).
+export function scaleAssStyles(content: string, factor: number): string {
+    if (!Number.isFinite(factor) || factor <= 0 || Math.abs(factor - 1) < 0.001) return content
+
+    const lines = content.split(/(\r?\n)/)
+    let inStyles = false
+    let fieldIdx: number[] = []
+
+    for (let i = 0; i < lines.length; i += 2) {
+        const line = lines[i]
+        const trimmed = line.trim()
+        if (trimmed.startsWith("[")) {
+            inStyles = /^\[v4\+? styles\]$/i.test(trimmed)
+            fieldIdx = []
+            continue
+        }
+        if (!inStyles) continue
+
+        const format = trimmed.match(/^format\s*:(.*)$/i)
+        if (format) {
+            const names = format[1].split(",").map(n => n.trim().toLowerCase())
+            fieldIdx = SCALED_STYLE_FIELDS.map(f => names.indexOf(f)).filter(idx => idx >= 0)
+            continue
+        }
+
+        const style = line.match(/^(\s*style\s*:\s*)(.*)$/i)
+        if (!style || fieldIdx.length === 0) continue
+        const values = style[2].split(",")
+        for (const idx of fieldIdx) {
+            const n = parseFloat(values[idx])
+            if (!Number.isFinite(n)) continue
+            values[idx] = String(Math.round(n * factor * 100) / 100)
+        }
+        lines[i] = style[1] + values.join(",")
+    }
+
+    return lines.join("")
+}

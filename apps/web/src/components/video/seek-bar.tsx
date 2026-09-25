@@ -161,7 +161,7 @@ export const SeekBar = React.memo(function SeekBar({
                 )}
 
                 {/* Track Background */}
-                <div className="w-full h-[3px] group-hover/seek:h-[5px] transition-[height] duration-fast bg-white/25 rounded-full relative flex items-center overflow-visible">
+                <div className="w-full h-[3px] group-hover/seek:h-[5px] group-focus-within/seek:h-[5px] transition-[height] duration-fast bg-white/25 rounded-full relative flex items-center overflow-visible">
                     {/* Skip OP Marker */}
                     {duration > 0 && skipTimesOp && (
                         <div
@@ -217,7 +217,7 @@ export const SeekBar = React.memo(function SeekBar({
                     {/* Thumb Indicator */}
                     <div
                         ref={thumbRef}
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-brand-accent pointer-events-none scale-0 group-hover/seek:scale-100 transition-transform duration-fast"
+                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-brand-accent pointer-events-none scale-50 opacity-0 group-hover/seek:scale-100 group-hover/seek:opacity-100 group-focus-within/seek:scale-100 group-focus-within/seek:opacity-100 transition-[transform,opacity] duration-fast ease-out-strong"
                         style={{ left: "0%" }}
                     />
                 </div>

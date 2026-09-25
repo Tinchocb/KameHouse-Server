@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"kamehouse/internal/mediastream/videofile"
+	"kamehouse/internal/util/httprange"
 	"kamehouse/internal/util/result"
 	"os"
 	"path/filepath"
@@ -440,6 +441,12 @@ func (p *PlaybackManager) buildMediaContainer(filePath string, hash string, stre
 // a subsequent request can retry. priority=false routes the work through the global
 // attachmentSemaphore (preloads), priority=true bypasses it (the episode being played).
 func (p *PlaybackManager) startAttachmentExtraction(filePath string, hash string, mediaInfo *videofile.MediaInfo, priority bool) {
+	// Fuentes remotas (Drive por loopback): ffmpeg tendría que descargar el archivo
+	// completo para volcar subtítulos y fuentes. No se extraen; el handler no expone
+	// esas pistas para estas fuentes, así que nadie queda esperando la extracción.
+	if httprange.IsRemote(filePath) {
+		return
+	}
 	ch := make(chan struct{})
 	actual, loaded := p.extractionJobs.LoadOrStore(hash, ch)
 	if loaded {

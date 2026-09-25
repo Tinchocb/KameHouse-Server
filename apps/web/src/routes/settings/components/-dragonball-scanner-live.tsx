@@ -264,10 +264,10 @@ export function DragonBallScannerLive() {
                                     {(isComplete || isPartial) && (
                                         <span
                                             className={cn(
-                                                "absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full font-bold font-mono shadow-sm",
+                                                "absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full font-bold font-mono shadow-elevation-1",
                                                 isComplete
-                                                    ? "size-5 bg-emerald-500 text-black"
-                                                    : "px-1.5 py-0.5 text-4xs bg-black/70 text-amber-300 border border-amber-400/40 backdrop-blur-sm",
+                                                    ? "size-5 bg-status-success text-black"
+                                                    : "px-1.5 py-0.5 text-4xs bg-black/80 text-status-warning border border-status-warning/40",
                                             )}
                                             aria-label={isComplete ? "Completa" : `${percentage}% detectado`}
                                         >
@@ -297,7 +297,7 @@ export function DragonBallScannerLive() {
                                             <span
                                                 className={cn(
                                                     "inline-flex items-center gap-0.5 tabular-nums shrink-0",
-                                                    detectedMoviesInSeries === seriesMovies.length ? "text-emerald-300/90" : "text-on-surface-variant/60",
+                                                    detectedMoviesInSeries === seriesMovies.length ? "text-status-success/90" : "text-on-surface-variant/60",
                                                 )}
                                                 title={`${detectedMoviesInSeries} de ${seriesMovies.length} películas`}
                                             >
@@ -313,7 +313,7 @@ export function DragonBallScannerLive() {
                                             className={cn(
                                                 "h-full transition-[width,background-color] duration-slow ease-smooth-out rounded-full",
                                                 isComplete
-                                                    ? "bg-emerald-400"
+                                                    ? "bg-status-success"
                                                     : count > 0
                                                     ? "bg-brand-accent"
                                                     : "bg-transparent"
@@ -333,7 +333,7 @@ export function DragonBallScannerLive() {
             {typeof document !== "undefined" && createPortal(
             <AnimatePresence>
                 {selectedSeries && (
-                    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+                    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-overlay-md animate-in fade-in duration-150">
                         <m.div
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -346,7 +346,7 @@ export function DragonBallScannerLive() {
                                     <img
                                         src={selectedSeries.officialPoster}
                                         alt={selectedSeries.title}
-                                        className="w-14 h-20 object-cover rounded-xl shadow-md border border-white/10 shrink-0"
+                                        className="w-14 h-20 object-cover rounded-xl shadow-elevation-2 border border-white/10 shrink-0"
                                     />
                                     <div>
                                         <span className="text-3xs font-mono font-bold text-brand-accent uppercase tracking-wider block">
@@ -382,7 +382,7 @@ export function DragonBallScannerLive() {
                                         className={cn(
                                             "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color] duration-fast ease-smooth-out cursor-pointer",
                                             modalTab === "sagas"
-                                                ? "bg-white/15 text-white shadow-sm"
+                                                ? "bg-white/15 text-white shadow-elevation-1"
                                                 : "text-on-surface-variant hover:text-white"
                                         )}
                                     >
@@ -394,7 +394,7 @@ export function DragonBallScannerLive() {
                                         className={cn(
                                             "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color] duration-fast ease-smooth-out cursor-pointer",
                                             modalTab === "movies"
-                                                ? "bg-white/15 text-white shadow-sm"
+                                                ? "bg-white/15 text-white shadow-elevation-1"
                                                 : "text-on-surface-variant hover:text-white"
                                         )}
                                     >
@@ -450,9 +450,9 @@ export function DragonBallScannerLive() {
                                                     className={cn(
                                                         "px-2.5 py-0.5 rounded-full text-3xs font-bold font-mono tracking-wider shrink-0",
                                                         sagaCompleted
-                                                            ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                                            ? "bg-status-success/15 text-status-success border border-status-success/30"
                                                             : sagaFound > 0
-                                                            ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                                                            ? "bg-status-warning/15 text-status-warning border border-status-warning/30"
                                                             : "bg-white/5 text-on-surface-variant/60"
                                                     )}
                                                 >
@@ -503,13 +503,13 @@ export function DragonBallScannerLive() {
                                                     className={cn(
                                                         "px-2.5 py-1 rounded-full text-3xs font-bold font-mono tracking-wider shrink-0 flex items-center gap-1",
                                                         isDetected
-                                                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                                            ? "bg-status-success/20 text-status-success border border-status-success/40"
                                                             : "bg-surface-container-lowest text-on-surface-variant/60 border border-white/5"
                                                     )}
                                                 >
                                                     {isDetected ? (
                                                         <>
-                                                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                                            <CheckCircle2 className="w-3 h-3 text-status-success" />
                                                             DETECTADA
                                                         </>
                                                     ) : (

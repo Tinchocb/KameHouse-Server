@@ -68,6 +68,7 @@
      profundidad generada únicamente mediante niveles de negro, contraste,
      bordes, elevación y luz blanca. 90% negro/carbón + 10% blanco. */
   --bg-primary: #08080A;
+  --scrim-hero-base: var(--bg-primary);
   /* Canvas base — negro casi neutro, apenas frío */
   --bg-secondary: #0D0D10;
   /* Elevated surface — un escalón sobre el canvas */
@@ -157,39 +158,39 @@
   /* Paleta vibrante propia del spotlight (gradiente primary + ambient glows del
      ERA_COLOR_MAP). Distinta del tinte de era de arriba — se conserva a propósito
      (ver /code-review: se eligió tokenizar sin cambiar color). */
-  --spotlight-db-vivid: #FF7A29;
-  --spotlight-db-vivid-2: #FFA34D;
-  --spotlight-dbz-vivid: #E6B43C;
-  --spotlight-dbz-vivid-2: #FBBF24;
-  --spotlight-dbgt-vivid: #D23859;
-  --spotlight-dbgt-vivid-2: #E85D77;
-  --spotlight-dbkai-vivid: #278DC5;
-  --spotlight-dbkai-vivid-2: #38BDF8;
-  --spotlight-dbs-vivid: #2C9FC7;
-  --spotlight-dbs-vivid-2: #38BDF8;
-  --spotlight-daima-vivid: #9564C8;
-  --spotlight-daima-vivid-2: #A78FC6;
+  --spotlight-db-vivid: #F2762E;
+  --spotlight-db-vivid-2: #F7A06E;
+  --spotlight-dbz-vivid: #F5C242;
+  --spotlight-dbz-vivid-2: #F9D77F;
+  --spotlight-dbgt-vivid: #E23A55;
+  --spotlight-dbgt-vivid-2: #EC7589;
+  --spotlight-dbkai-vivid: #2EC4B6;
+  --spotlight-dbkai-vivid-2: #72D8CE;
+  --spotlight-dbs-vivid: #3D8BFF;
+  --spotlight-dbs-vivid-2: #7DB1FF;
+  --spotlight-daima-vivid: #A56EF0;
+  --spotlight-daima-vivid-2: #C39EF5;
 
   /* ─── Era Colors — Dragon Ball (HSL para Tailwind/shadcn) ─────────────── */
-  --era-db-hsl: 25 80% 52%;
-  /* E67322 - Naranja Terracota Aventura (mantenido para compatibilidad) */
-  --era-dbz-hsl: 38 85% 52%;
-  /* E6B43C - Oro Super Saiian (separado del warning #F59E0B) */
-  --era-dbgt-hsl: 350 75% 55%;
-  /* D23859 - Escarlata SSJ4 (separado del rojo warning) */
-  --era-dbkai-hsl: 199 89% 48%;
-  /* 0284C7 - Azul Eléctrico Kai */
-  --era-dbs-hsl: 200 75% 58%;
-  /* 2C9FC7 - Cian Divino SSGSS */
-  --era-daima-hsl: 265 75% 52%;
-  /* 9564C8 - Púrpura Demon Realm (verde solo como detalle) */
+  --era-db-hsl: 22 88% 56%;
+  /* F2762E - Naranja gi de Goku */
+  --era-dbz-hsl: 43 90% 61%;
+  /* F5C242 - Dorado Super Saiyajin */
+  --era-dbgt-hsl: 350 74% 56%;
+  /* E23A55 - Carmesí Super Saiyajin 4 */
+  --era-dbkai-hsl: 174 62% 47%;
+  /* 2EC4B6 - Turquesa remaster (separado del azul de Super) */
+  --era-dbs-hsl: 216 100% 62%;
+  /* 3D8BFF - Azul Super Saiyajin Blue */
+  --era-daima-hsl: 265 81% 69%;
+  /* A56EF0 - Violeta Reino Demoníaco */
 
-  --era-db-hex: #E67322;
-  --era-dbz-hex: #E6B43C;
-  --era-dbgt-hex: #D23859;
-  --era-dbkai-hex: #278DC5;
-  --era-dbs-hex: #2C9FC7;
-  --era-daima-hex: #9564C8;
+  --era-db-hex: #F2762E;
+  --era-dbz-hex: #F5C242;
+  --era-dbgt-hex: #E23A55;
+  --era-dbkai-hex: #2EC4B6;
+  --era-dbs-hex: #3D8BFF;
+  --era-daima-hex: #A56EF0;
 
   /* Glows por Era (RGBA) — sincronizados con los hex de arriba */
   --glow-db: color-mix(in srgb, var(--era-db-hex) 40%, transparent);
@@ -281,26 +282,8 @@
   --glass-rim-cool: rgba(200, 220, 255, 0.06);
   --glass-rim-warm: rgba(255, 200, 150, 0.06);
 
-  /* ─── SectionBar — Bordes y fondos (sincronizado con shadows.css) ─────────
-     Clásico: separadores muy sutiles, 7–9% blanco máximo. */
-  --sectionbar-border: rgba(255, 255, 255, 0.07);
-  --sectionbar-border-top: rgba(255, 255, 255, 0.13);
-  --sectionbar-border-bottom: rgba(255, 255, 255, 0.05);
-  --sectionbar-bg: rgba(16, 16, 19, 0.55);
-  --sectionbar-border-strong: rgba(255, 255, 255, 0.13);
-  --sectionbar-border-top-strong: rgba(255, 255, 255, 0.20);
-  --sectionbar-bg-strong: rgba(27, 27, 32, 0.60);
-
-  /* Flat mode overrides */
-  [data-flat="true"] {
-    --sectionbar-border: rgba(255, 255, 255, 0.12);
-    --sectionbar-border-top: rgba(255, 255, 255, 0.20);
-    --sectionbar-border-bottom: rgba(255, 255, 255, 0.08);
-    --sectionbar-bg: var(--bg-secondary);
-    --sectionbar-border-strong: rgba(255, 255, 255, 0.16);
-    --sectionbar-border-top-strong: rgba(255, 255, 255, 0.28);
-    --sectionbar-bg-strong: var(--bg-tertiary);
-  }
+  /* SectionBar (--sectionbar-*): fuente única en shadows.css, con los
+     overrides de Clásico y Flat. */
 
   /* ─── Compatibilidad shadcn / Tailwind (HSL format) ─────────────────────
      Sincronizado con la escala Black Cinema (#08080A → #1B1B20). */
@@ -416,14 +399,33 @@
   --sidebar-bg: rgba(4, 4, 6, 0.92);
 }
 
+/* ─── Escala tonal del acento (100 = más claro, 900 = más oscuro, 500 = base) ───
+   Se declara en :root y en cada [data-theme] para que se recalcule también en los
+   contenedores con tema local (fichas de serie y película). oklab mantiene el tono
+   al aclarar u oscurecer, sin virar a gris. */
+:root,
+[data-theme] {
+  --brand-accent-100: color-mix(in oklab, var(--brand-accent-hex) 18%, white);
+  --brand-accent-200: color-mix(in oklab, var(--brand-accent-hex) 40%, white);
+  --brand-accent-300: color-mix(in oklab, var(--brand-accent-hex) 65%, white);
+  --brand-accent-400: color-mix(in oklab, var(--brand-accent-hex) 85%, white);
+  --brand-accent-500: var(--brand-accent-hex);
+  --brand-accent-600: color-mix(in oklab, var(--brand-accent-hex) 82%, black);
+  --brand-accent-700: color-mix(in oklab, var(--brand-accent-hex) 64%, black);
+  --brand-accent-800: color-mix(in oklab, var(--brand-accent-hex) 45%, black);
+  --brand-accent-900: color-mix(in oklab, var(--brand-accent-hex) 28%, black);
+}
+
 [data-theme="era-db"] {
-  /* ─── Primario UI: Naranja Terracota ─── */
-  --brand-accent: 25 80% 52%;
-  --brand-accent-hex: #E87A2D;
-  --brand-glow: color-mix(in srgb, #E87A2D 25%, transparent);
-  --primary-foreground: 0 0% 100%;
+  /* ─── Primario: Naranja gi de Goku (#F2762E). Tonos 100–900 en la escala de arriba ─── */
+  --brand-accent: 22 88% 56%;
+  --brand-accent-hex: #F2762E;
+  --brand-glow: color-mix(in srgb, #F2762E 25%, transparent);
+  /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
+  --primary-foreground: 240 10% 4%;
+  --md-sys-color-on-primary: #0A0A0B;
+  --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
-  /* Texto claro sobre base oscura */
   --md-sys-color-on-surface: #F2F0ED;
   /* ─── Secundario: Azul Báculo/Cinta ─── */
   --brand-secondary: 213 79% 55%;
@@ -436,25 +438,28 @@
   --bg-secondary: #100D0A;
   --bg-tertiary: #17120D;
   --bg-quaternary: #211A12;
-  --glass-bg: color-mix(in srgb, #E87A2D 3%, rgba(255, 255, 255, 0.03));
+  --glass-bg: color-mix(in srgb, #F2762E 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón Reproducir ─── */
-  --era-btn-from: #E87A2D;
-  --era-btn-to: #DF8A41;
-  --era-btn-hover-from: #DF8A41;
-  --era-btn-hover-to: #F0A065;
+  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
+  --era-btn-from: var(--brand-accent-500);
+  --era-btn-to: var(--brand-accent-600);
+  --era-btn-hover-from: var(--brand-accent-400);
+  --era-btn-hover-to: var(--brand-accent-300);
   /* ─── Shimmer título ─── */
-  --era-shimmer-1: #E87A2D;
+  --era-shimmer-1: #F2762E;
   --era-shimmer-2: #FCD34D;
-  --era-shimmer-3: #E87A2D;
+  --era-shimmer-3: #F2762E;
 }
 
 [data-theme="era-dbz"] {
-  /* ─── Primario UI: Oro Super Saiyan ─── */
-  --brand-accent: 38 85% 52%;
-  --brand-accent-hex: #E6B43C;
-  --brand-glow: color-mix(in srgb, #E6B43C 25%, transparent);
-  --primary-foreground: 0 0% 10%;
+  /* ─── Primario: Dorado Super Saiyajin (#F5C242). Tonos 100–900 en la escala de arriba ─── */
+  --brand-accent: 43 90% 61%;
+  --brand-accent-hex: #F5C242;
+  --brand-glow: color-mix(in srgb, #F5C242 25%, transparent);
+  /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
+  --primary-foreground: 240 10% 4%;
+  --md-sys-color-on-primary: #0A0A0B;
+  --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
   --md-sys-color-on-surface: #F6F4EE;
   /* ─── Secundario: Azul Cobalto Gi ─── */
@@ -468,25 +473,28 @@
   --bg-secondary: #0D1119;
   --bg-tertiary: #121722;
   --bg-quaternary: #1A2230;
-  --glass-bg: color-mix(in srgb, #E6B43C 3%, rgba(255, 255, 255, 0.03));
+  --glass-bg: color-mix(in srgb, #F5C242 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón ─── */
-  --era-btn-from: #E6B43C;
-  --era-btn-to: #F59F1B;
-  --era-btn-hover-from: #F59F1B;
-  --era-btn-hover-to: #FBBF24;
-  /* ─── Shimmer ─── */
-  --era-shimmer-1: #E6B43C;
+  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
+  --era-btn-from: var(--brand-accent-500);
+  --era-btn-to: var(--brand-accent-600);
+  --era-btn-hover-from: var(--brand-accent-400);
+  --era-btn-hover-to: var(--brand-accent-300);
+  /* ─── Shimmer título ─── */
+  --era-shimmer-1: #F5C242;
   --era-shimmer-2: #FEF08A;
-  --era-shimmer-3: #1D4ED8;
+  --era-shimmer-3: #F5C242;
 }
 
 [data-theme="era-dbgt"] {
-  /* ─── Primario UI: Escarlata SSJ4 ─── */
-  --brand-accent: 350 75% 55%;
-  --brand-accent-hex: #D23859;
-  --brand-glow: color-mix(in srgb, #D23859 25%, transparent);
-  --primary-foreground: 0 0% 100%;
+  /* ─── Primario: Carmesí Super Saiyajin 4 (#E23A55). Tonos 100–900 en la escala de arriba ─── */
+  --brand-accent: 350 74% 56%;
+  --brand-accent-hex: #E23A55;
+  --brand-glow: color-mix(in srgb, #E23A55 25%, transparent);
+  /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
+  --primary-foreground: 240 10% 4%;
+  --md-sys-color-on-primary: #0A0A0B;
+  --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
   --md-sys-color-on-surface: #F5EEF0;
   /* ─── Secundario: Violeta Espacial ─── */
@@ -500,59 +508,65 @@
   --bg-secondary: #140B16;
   --bg-tertiary: #1B101D;
   --bg-quaternary: #27172A;
-  --glass-bg: color-mix(in srgb, #D23859 3%, rgba(255, 255, 255, 0.03));
+  --glass-bg: color-mix(in srgb, #E23A55 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón ─── */
-  --era-btn-from: #D23859;
-  --era-btn-to: #C42A49;
-  --era-btn-hover-from: #C42A49;
-  --era-btn-hover-to: #E85D77;
-  /* ─── Shimmer ─── */
-  --era-shimmer-1: #D23859;
+  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
+  --era-btn-from: var(--brand-accent-500);
+  --era-btn-to: var(--brand-accent-600);
+  --era-btn-hover-from: var(--brand-accent-400);
+  --era-btn-hover-to: var(--brand-accent-300);
+  /* ─── Shimmer título ─── */
+  --era-shimmer-1: #E23A55;
   --era-shimmer-2: #FDE047;
-  --era-shimmer-3: #7C3AED;
+  --era-shimmer-3: #E23A55;
 }
 
 [data-theme="era-dbkai"] {
-  /* ─── Primario UI: Azul Eléctrico Kai ─── */
-  --brand-accent: 199 89% 48%;
-  --brand-accent-hex: #278DC5;
-  --brand-glow: color-mix(in srgb, #278DC5 25%, transparent);
-  --primary-foreground: 0 0% 100%;
+  /* ─── Primario: Turquesa remaster (#2EC4B6). Tonos 100–900 en la escala de arriba ─── */
+  --brand-accent: 174 62% 47%;
+  --brand-accent-hex: #2EC4B6;
+  --brand-glow: color-mix(in srgb, #2EC4B6 25%, transparent);
+  /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
+  --primary-foreground: 240 10% 4%;
+  --md-sys-color-on-primary: #0A0A0B;
+  --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
-  --md-sys-color-on-surface: #EEF4F8;
-  /* ─── Secundario: Cyan Kamehameha ─── */
-  --brand-secondary: 205 78% 58%;
-  --brand-secondary-hex: #4BB8D1;
+  --md-sys-color-on-surface: #EEF8F6;
+  /* ─── Secundario: Naranja gi (misma historia que Z) ─── */
+  --brand-secondary: 26 79% 57%;
+  --brand-secondary-hex: #E8843A;
   /* ─── Terciario: Blanco Manga Pura ─── */
   --brand-tertiary: 210 40% 98%;
   --brand-tertiary-hex: #E4E9EE;
-  /* ─── Fondos Temáticos de Era (Cobalto HD Nítido) ─── */
-  --bg-primary: #060A0E;
-  --bg-secondary: #09111A;
-  --bg-tertiary: #0E1822;
-  --bg-quaternary: #162533;
-  --glass-bg: color-mix(in srgb, #278DC5 3%, rgba(255, 255, 255, 0.03));
+  /* ─── Fondos Temáticos de Era (Verde Azulado HD) ─── */
+  --bg-primary: #050B0B;
+  --bg-secondary: #081211;
+  --bg-tertiary: #0C1918;
+  --bg-quaternary: #132422;
+  --glass-bg: color-mix(in srgb, #2EC4B6 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón ─── */
-  --era-btn-from: #278DC5;
-  --era-btn-to: #1D58A0;
-  --era-btn-hover-from: #1D58A0;
-  --era-btn-hover-to: #38BDF8;
-  /* ─── Shimmer ─── */
-  --era-shimmer-1: #278DC5;
-  --era-shimmer-2: #38BDF8;
-  --era-shimmer-3: #67E8F9;
+  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
+  --era-btn-from: var(--brand-accent-500);
+  --era-btn-to: var(--brand-accent-600);
+  --era-btn-hover-from: var(--brand-accent-400);
+  --era-btn-hover-to: var(--brand-accent-300);
+  /* ─── Shimmer título ─── */
+  --era-shimmer-1: #2EC4B6;
+  --era-shimmer-2: #A7F3EC;
+  --era-shimmer-3: #2EC4B6;
 }
 
 [data-theme="era-dbs"] {
-  /* ─── Primario UI: Cian Divino SSGSS ─── */
-  --brand-accent: 200 75% 58%;
-  --brand-accent-hex: #2C9FC7;
-  --brand-glow: color-mix(in srgb, #2C9FC7 25%, transparent);
-  --primary-foreground: 0 0% 100%;
+  /* ─── Primario: Azul Super Saiyajin Blue (#3D8BFF). Tonos 100–900 en la escala de arriba ─── */
+  --brand-accent: 216 100% 62%;
+  --brand-accent-hex: #3D8BFF;
+  --brand-glow: color-mix(in srgb, #3D8BFF 25%, transparent);
+  /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
+  --primary-foreground: 240 10% 4%;
+  --md-sys-color-on-primary: #0A0A0B;
+  --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
-  --md-sys-color-on-surface: #EDF6FA;
+  --md-sys-color-on-surface: #EDF3FA;
   /* ─── Secundario: Púrpura Dios Destructor ─── */
   --brand-secondary: 275 75% 55%;
   --brand-secondary-hex: #7653B5;
@@ -564,27 +578,30 @@
   --bg-secondary: #09101A;
   --bg-tertiary: #0D1520;
   --bg-quaternary: #162438;
-  --glass-bg: color-mix(in srgb, #2C9FC7 3%, rgba(255, 255, 255, 0.03));
+  --glass-bg: color-mix(in srgb, #3D8BFF 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón ─── */
-  --era-btn-from: #2C9FC7;
-  --era-btn-to: #1D58A0;
-  --era-btn-hover-from: #1D58A0;
-  --era-btn-hover-to: #38BDF8;
-  /* ─── Shimmer ─── */
-  --era-shimmer-1: #2C9FC7;
+  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
+  --era-btn-from: var(--brand-accent-500);
+  --era-btn-to: var(--brand-accent-600);
+  --era-btn-hover-from: var(--brand-accent-400);
+  --era-btn-hover-to: var(--brand-accent-300);
+  /* ─── Shimmer título ─── */
+  --era-shimmer-1: #3D8BFF;
   --era-shimmer-2: #C9D0DA;
-  --era-shimmer-3: #9333EA;
+  --era-shimmer-3: #3D8BFF;
 }
 
 [data-theme="era-daima"] {
-  /* ─── Primario UI: Púrpura Demon Realm ─── */
-  --brand-accent: 265 75% 52%;
-  --brand-accent-hex: #9564C8;
-  --brand-glow: color-mix(in srgb, #9564C8 25%, transparent);
-  --primary-foreground: 0 0% 100%;
+  /* ─── Primario: Violeta Reino Demoníaco (#A56EF0). Tonos 100–900 en la escala de arriba ─── */
+  --brand-accent: 265 81% 69%;
+  --brand-accent-hex: #A56EF0;
+  --brand-glow: color-mix(in srgb, #A56EF0 25%, transparent);
+  /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
+  --primary-foreground: 240 10% 4%;
+  --md-sys-color-on-primary: #0A0A0B;
+  --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
-  --md-sys-color-on-surface: #EEF8F3;
+  --md-sys-color-on-surface: #F3EEF8;
   /* ─── Secundario: Dorado Demonio ─── */
   --brand-secondary: 45 85% 60%;
   --brand-secondary-hex: #D59A45;
@@ -596,17 +613,17 @@
   --bg-secondary: #120D16;
   --bg-tertiary: #18111C;
   --bg-quaternary: #231A28;
-  --glass-bg: color-mix(in srgb, #9564C8 3%, rgba(255, 255, 255, 0.03));
+  --glass-bg: color-mix(in srgb, #A56EF0 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón ─── */
-  --era-btn-from: #9564C8;
-  --era-btn-to: #7C5A9A;
-  --era-btn-hover-from: #7C5A9A;
-  --era-btn-hover-to: #A78FC6;
-  /* ─── Shimmer ─── */
-  --era-shimmer-1: #9564C8;
-  --era-shimmer-2: #8B5CF6;
-  --era-shimmer-3: #35947C;
+  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
+  --era-btn-from: var(--brand-accent-500);
+  --era-btn-to: var(--brand-accent-600);
+  --era-btn-hover-from: var(--brand-accent-400);
+  --era-btn-hover-to: var(--brand-accent-300);
+  /* ─── Shimmer título ─── */
+  --era-shimmer-1: #A56EF0;
+  --era-shimmer-2: #D8B4FE;
+  --era-shimmer-3: #A56EF0;
 }
 
 [data-theme="era-universe"] {
@@ -721,14 +738,8 @@
   --sidebar-accent-gradient: none;
   --sidebar-active-border: rgba(255, 255, 255, 0.30);
 
-  /* SectionBar en Clásico: fondos #101013–#1B1B20, bordes 7–13% */
-  --sectionbar-border: rgba(255, 255, 255, 0.07);
-  --sectionbar-border-top: rgba(255, 255, 255, 0.13);
-  --sectionbar-border-bottom: rgba(255, 255, 255, 0.05);
-  --sectionbar-bg: rgba(16, 16, 19, 0.55);
-  --sectionbar-border-strong: rgba(255, 255, 255, 0.13);
-  --sectionbar-border-top-strong: rgba(255, 255, 255, 0.20);
-  --sectionbar-bg-strong: rgba(27, 27, 32, 0.60);
+  /* SectionBar en Clásico: vive en shadows.css (acá quedaba pisado por su
+     :root, que carga después con igual especificidad). */
 }
 
 

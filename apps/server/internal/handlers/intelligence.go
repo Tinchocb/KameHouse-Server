@@ -63,16 +63,6 @@ func (h *Handler) HandleGetIntelligenceStats(c echo.Context) error {
 	return h.RespondWithData(c, stats)
 }
 
-// HandleGetChronologyTimeline returns the Dragon Ball in-universe canonical timeline with user progress.
-//
-//	@summary get Dragon Ball canon timeline.
-//	@desc Returns full historical timeline order with user progress.
-//	@returns intelligence.ChronologyResponse
-//	@route /api/v1/intelligence/chronology [GET]
-func (h *Handler) HandleGetChronologyTimeline(c echo.Context) error {
-	timeline := intelligence.BuildChronologyResponse(h.App.Database)
-	return h.RespondWithData(c, timeline)
-}
 
 // HandleSemanticSearch returns lore entities and smart recommendations for a query.
 //

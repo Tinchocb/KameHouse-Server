@@ -10,7 +10,7 @@ import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { useImagePalette } from "@/hooks/use-image-palette"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 
-const MEDIA_HERO_TITLE_CLASS = "font-sans font-extrabold leading-[1.08] tracking-tight text-on-surface text-edge-glow uppercase text-balance break-words max-w-5xl";
+const MEDIA_HERO_TITLE_CLASS = "font-display font-extrabold text-hero-title tracking-tight text-on-surface text-edge-glow uppercase text-balance break-words max-w-5xl";
 
 export interface MediaHeroProps {
     /** El contenedor principal (`div`) para aplicar parallax al hacer scroll */
@@ -198,7 +198,7 @@ export function MediaHero({
             {/* ── Base 16:9 blur-fill: rellena sin recorte/zoom ───────────────────
                 Blur reducido para no lavar el fondo; solo rellena el vacío. */}
             {art && backdropTreatment !== "hide" && (
-                <div className="absolute inset-0 overflow-hidden bg-black z-0" aria-hidden="true">
+                <div className="absolute inset-0 overflow-hidden bg-black z-hero-base" aria-hidden="true">
                     <div
                         className="absolute -inset-6"
                         style={{
@@ -220,19 +220,14 @@ export function MediaHero({
                 inset-0 + cover a toda la altura del hero; el fade inferior
                 (74%→100%) llega hasta el contenido y funde con el blur-fill
                 sin dejar pozo negro. Parallax conservado sobre esta capa. */}
-            <div className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
+            <div className="absolute inset-0 z-hero-visual overflow-hidden pointer-events-none">
                 {art && backdropTreatment !== "hide" && (
+                    // Atajo de puntero sobre el arte; por teclado/lector ya está la
+                    // PlayCta del hero, así que no se duplica como botón ni tab stop.
                     <div
                         ref={backdropRef}
-                        role="button"
-                        tabIndex={onBackdropClick ? 0 : -1}
+                        aria-hidden="true"
                         onClick={onBackdropClick}
-                        onKeyDown={(e) => {
-                            if ((e.key === "Enter" || e.key === " ") && onBackdropClick) {
-                                e.preventDefault()
-                                onBackdropClick()
-                            }
-                        }}
                         className={cn(
                             "relative w-full h-full overflow-hidden will-change-transform group/backdrop mx-auto",
                             onBackdropClick && "cursor-pointer pointer-events-auto"
@@ -258,7 +253,7 @@ export function MediaHero({
                                 backdropTreatment === "dim" && "opacity-40",
                                 backdropTreatment === "blur"
                                     ? "blur-[var(--filter-blur-hero)]"
-                                    : "filter saturate-[115%] contrast-[108%] brightness-[0.95]"
+                                    : "hero-image-filter"
                             )}
                         />
                         {/* Velo ligero sin blur para no lavar la portada */}
@@ -269,13 +264,13 @@ export function MediaHero({
             {/* Scrim cinematográfico único, teñido con la paleta del arte */}
             <div
                 aria-hidden="true"
-                className="absolute inset-0 z-10 pointer-events-none"
+                className="absolute inset-0 z-hero-scrim pointer-events-none"
                 style={{ background: scrim }}
             />
 
             {/* Side Panel Overlay — visible solo en desktop (lg+) */}
             {sidePanel && (
-                <div className="hidden lg:flex absolute right-0 top-0 bottom-0 z-30 w-72 xl:w-80 pointer-events-auto">
+                <div className="hidden lg:flex absolute right-0 top-0 bottom-0 z-hero-controls w-72 xl:w-80 pointer-events-auto">
                     {/* Gradiente de fusión lateral: difumina el panel hacia el backdrop */}
                     <div className="absolute inset-y-0 -left-16 w-16 bg-gradient-to-r from-transparent to-black/60 pointer-events-none z-10" />
                     <div className="flex-1 bg-surface/70 backdrop-blur-overlay-xl border-l border-border-subtle overflow-hidden flex flex-col">
@@ -286,7 +281,7 @@ export function MediaHero({
 
             {/* Content Container */}
             <div className={cn(
-                "relative z-20 w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10 flex",
+                "relative z-hero-content w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10 flex",
                 showPosterColumn ? "flex-col sm:flex-row items-start sm:items-end gap-6 md:gap-10 lg:gap-14" : "flex-col pointer-events-none"
             )}>
                 {showPosterColumn && posterUrl && (
@@ -335,7 +330,6 @@ export function MediaHero({
                                             MEDIA_HERO_TITLE_CLASS,
                                             "group-hover/title:text-brand-secondary transition-colors duration-slow"
                                         )} 
-                                        style={{ fontSize: "max(1.6rem, min(4.2vw, 3.25rem))" }}
                                     >
                                         {title}
                                     </h1>
@@ -343,7 +337,6 @@ export function MediaHero({
                             ) : (
                                 <h1 
                                     className={MEDIA_HERO_TITLE_CLASS} 
-                                    style={{ fontSize: "max(1.6rem, min(4.2vw, 3.25rem))" }}
                                 >
                                     {title}
                                 </h1>

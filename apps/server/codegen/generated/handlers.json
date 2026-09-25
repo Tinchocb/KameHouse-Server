@@ -1045,6 +1045,180 @@
     }
   },
   {
+    "name": "HandleGetChronologyEpisodeFiles",
+    "trimmedName": "GetChronologyEpisodeFiles",
+    "comments": [
+      "HandleGetChronologyEpisodeFiles resolves every library episode of the given TMDB series in one call.",
+      "The chronology used to ask /library/episode-file once per moment thumbnail (hundreds of requests on open).",
+      "",
+      "\t@summary get local episode files for all chronology thumbnails",
+      "\t@desc Same resolution as /library/episode-file, for every episode of the given TMDB IDs (comma separated). Episodes without image or local file are omitted.",
+      "\t@route /api/v1/library/chronology-episode-files [GET]",
+      "\t@returns []handlers.ChronologyEpisodeFile",
+      ""
+    ],
+    "filepath": "internal/handlers/chronology_frames.go",
+    "filename": "chronology_frames.go",
+    "api": {
+      "summary": "get local episode files for all chronology thumbnails",
+      "descriptions": [
+        "Same resolution as /library/episode-file, for every episode of the given TMDB IDs (comma separated). Episodes without image or local file are omitted."
+      ],
+      "endpoint": "/api/v1/library/chronology-episode-files",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "[]handlers.ChronologyEpisodeFile",
+      "returnGoType": "handlers.ChronologyEpisodeFile",
+      "returnTypescriptType": "Array\u003cChronologyEpisodeFile\u003e"
+    }
+  },
+  {
+    "name": "isValidMomentKey",
+    "trimmedName": "isValidMomentKey",
+    "comments": [
+      "isValidMomentKey verifies that the key conforms to spanId:episode:index format.",
+      ""
+    ],
+    "filepath": "internal/handlers/chronology_moments.go",
+    "filename": "chronology_moments.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleGetChronologyMomentTimes",
+    "trimmedName": "GetChronologyMomentTimes",
+    "comments": [
+      "HandleGetChronologyMomentTimes returns custom start times for chronology moments.",
+      "",
+      "\t@summary get custom start times for chronology moments.",
+      "\t@desc Returns map of momentKey to seconds for manually calibrated moments.",
+      "\t@returns map[string]int",
+      "\t@route /api/v1/intelligence/chronology/moment-times [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/chronology_moments.go",
+    "filename": "chronology_moments.go",
+    "api": {
+      "summary": "get custom start times for chronology moments.",
+      "descriptions": [
+        "Returns map of momentKey to seconds for manually calibrated moments."
+      ],
+      "endpoint": "/api/v1/intelligence/chronology/moment-times",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "map[string]int",
+      "returnGoType": "int",
+      "returnTypescriptType": "Record\u003cstring, number\u003e"
+    }
+  },
+  {
+    "name": "HandleSaveChronologyMomentTime",
+    "trimmedName": "SaveChronologyMomentTime",
+    "comments": [
+      "HandleSaveChronologyMomentTime updates or deletes a custom start second for a chronology moment.",
+      "",
+      "\t@summary update or remove custom start time for a chronology moment.",
+      "\t@desc Upserts custom start second correction for a chronology moment, or deletes if seconds \u003c 0 or omitted.",
+      "\t@param body ChronologyMomentTimePayload true \"Moment time payload\"",
+      "\t@returns bool",
+      "\t@route /api/v1/intelligence/chronology/moment-times [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/chronology_moments.go",
+    "filename": "chronology_moments.go",
+    "api": {
+      "summary": "update or remove custom start time for a chronology moment.",
+      "descriptions": [
+        "Upserts custom start second correction for a chronology moment, or deletes if seconds \u003c 0 or omitted."
+      ],
+      "endpoint": "/api/v1/intelligence/chronology/moment-times",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleGetChronologyProgress",
+    "trimmedName": "GetChronologyProgress",
+    "comments": [
+      "HandleGetChronologyProgress returns the chronology progress for the current account.",
+      "",
+      "\t@summary get Dragon Ball chronology progress.",
+      "\t@desc Returns watched episodes per Dragon Ball series and the manual per-span overrides.",
+      "\t@returns intelligence.ChronologyProgressResponse",
+      "\t@route /api/v1/intelligence/chronology [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/chronology_progress.go",
+    "filename": "chronology_progress.go",
+    "api": {
+      "summary": "get Dragon Ball chronology progress.",
+      "descriptions": [
+        "Returns watched episodes per Dragon Ball series and the manual per-span overrides."
+      ],
+      "endpoint": "/api/v1/intelligence/chronology",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "intelligence.ChronologyProgressResponse",
+      "returnGoType": "intelligence.ChronologyProgressResponse",
+      "returnTypescriptType": "ChronologyProgressResponse"
+    }
+  },
+  {
+    "name": "HandleSaveChronologySpanOverrides",
+    "trimmedName": "SaveChronologySpanOverrides",
+    "comments": [
+      "HandleSaveChronologySpanOverrides sets or clears manual watched marks for chronology spans.",
+      "",
+      "\t@summary set or clear manual watched marks for chronology spans.",
+      "\t@desc Upserts each spanId -\u003e watched mark; a null value removes the mark so the span follows watch history again.",
+      "\t@param body ChronologySpanOverridesPayload true \"Span overrides payload\"",
+      "\t@returns bool",
+      "\t@route /api/v1/intelligence/chronology/overrides [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/chronology_progress.go",
+    "filename": "chronology_progress.go",
+    "api": {
+      "summary": "set or clear manual watched marks for chronology spans.",
+      "descriptions": [
+        "Upserts each spanId -\u003e watched mark; a null value removes the mark so the span follows watch history again."
+      ],
+      "endpoint": "/api/v1/intelligence/chronology/overrides",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleGetConfigMetadata",
     "trimmedName": "GetConfigMetadata",
     "comments": [
@@ -1393,6 +1567,185 @@
       "methods": [
         "POST"
       ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isDriveInternalRequest",
+    "trimmedName": "isDriveInternalRequest",
+    "comments": [
+      "isDriveInternalRequest valida el token interno de un pedido a /drive/play.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveLoopbackBase",
+    "trimmedName": "driveLoopbackBase",
+    "comments": [
+      "driveLoopbackBase devuelve scheme://host:port para llegar al propio servidor.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "configureDriveLoopbackClient",
+    "trimmedName": "configureDriveLoopbackClient",
+    "comments": [
+      "configureDriveLoopbackClient hace que el lector de Cues (cassette) confíe en el",
+      "certificado autofirmado del servidor cuando TLS está activo, en vez de",
+      "desactivar la verificación.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveInternalURL",
+    "trimmedName": "driveInternalURL",
+    "comments": [
+      "driveInternalURL arma la URL de loopback con la que ffprobe/ffmpeg leen el",
+      "archivo de Drive. `ext` le dice al pipeline qué contenedor es (la ruta no la tiene).",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "parseDrivePath",
+    "trimmedName": "parseDrivePath",
+    "comments": [
+      "parseDrivePath separa \"gdrive://\u003cfileId\u003e/\u003cruta relativa\u003e\" en id y nombre.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "publicDriveContainer",
+    "trimmedName": "publicDriveContainer",
+    "comments": [
+      "publicDriveContainer adapta un container construido sobre la URL interna para",
+      "devolverlo al cliente: no expone la URL con el token interno y quita subtítulos",
+      "y fuentes embebidos, que en Drive no se extraen (requeriría bajar el archivo entero).",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "requestDriveMediaContainer",
+    "trimmedName": "requestDriveMediaContainer",
+    "comments": [
+      "requestDriveMediaContainer resuelve la reproducción de un archivo de Google Drive.",
+      "  - Direct: el navegador lee /drive/play; ffprobe (vía loopback, cacheado) aporta",
+      "    las pistas de audio y capítulos reales para el menú del reproductor.",
+      "  - Transcode: el transcoder usa la URL de loopback como entrada, lo que permite",
+      "    cambiar de pista de audio (el navegador no puede hacerlo en un MKV directo).",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "persistDriveAudioStreams",
+    "trimmedName": "persistDriveAudioStreams",
+    "comments": [
+      "persistDriveAudioStreams guarda en el local_file las pistas de audio detectadas,",
+      "para que el resto de la app (idiomas disponibles, selector de origen) las conozca",
+      "sin volver a sondear Drive.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -1788,36 +2141,6 @@
       "returns": "map",
       "returnGoType": "map",
       "returnTypescriptType": "map"
-    }
-  },
-  {
-    "name": "HandleGetChronologyTimeline",
-    "trimmedName": "GetChronologyTimeline",
-    "comments": [
-      "HandleGetChronologyTimeline returns the Dragon Ball in-universe canonical timeline with user progress.",
-      "",
-      "\t@summary get Dragon Ball canon timeline.",
-      "\t@desc Returns full historical timeline order with user progress.",
-      "\t@returns intelligence.ChronologyResponse",
-      "\t@route /api/v1/intelligence/chronology [GET]",
-      ""
-    ],
-    "filepath": "internal/handlers/intelligence.go",
-    "filename": "intelligence.go",
-    "api": {
-      "summary": "get Dragon Ball canon timeline.",
-      "descriptions": [
-        "Returns full historical timeline order with user progress."
-      ],
-      "endpoint": "/api/v1/intelligence/chronology",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "intelligence.ChronologyResponse",
-      "returnGoType": "intelligence.ChronologyResponse",
-      "returnTypescriptType": "ChronologyResponse"
     }
   },
   {
@@ -5810,6 +6133,49 @@
     }
   },
   {
+    "name": "thumbnailHash",
+    "trimmedName": "thumbnailHash",
+    "comments": [
+      "thumbnailHash identifies one extracted frame: source path, mtime, size and optional offset.",
+      "The disk file, the memory LRU entry and the ETag all derive from it.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail.go",
+    "filename": "thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "etagMatches",
+    "trimmedName": "etagMatches",
+    "comments": [
+      "etagMatches reports whether an If-None-Match header lists etag (weak or strong).",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail.go",
+    "filename": "thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleGetVideoThumbnail",
     "trimmedName": "GetVideoThumbnail",
     "comments": [
@@ -5866,6 +6232,71 @@
     "trimmedName": "EnsureThumbnailWithContext",
     "comments": [
       "EnsureThumbnailWithContext generates or returns the cached thumbnail path with context cancellation support.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail.go",
+    "filename": "thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "EnsureThumbnailWithOffset",
+    "trimmedName": "EnsureThumbnailWithOffset",
+    "comments": [
+      "EnsureThumbnailWithOffset generates or returns the cached thumbnail path at an optional second offset.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail.go",
+    "filename": "thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "ensureThumbnailFile",
+    "trimmedName": "ensureThumbnailFile",
+    "comments": [
+      "ensureThumbnailFile returns the disk path of the thumbnail identified by hash, extracting",
+      "it with ffmpeg when missing. parentCtx only bounds how long the caller waits: the",
+      "extraction itself is shared and keeps running if that caller goes away.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail.go",
+    "filename": "thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "clearThumbnailFailures",
+    "trimmedName": "clearThumbnailFailures",
+    "comments": [
+      "clearThumbnailFailures forgets failed extractions, e.g. after a manual cache purge.",
       ""
     ],
     "filepath": "internal/handlers/thumbnail.go",

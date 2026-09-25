@@ -249,7 +249,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.96 }}
                         className={cn(
-                            "group relative flex items-center rounded-2xl transition-all duration-300 w-full outline-none overflow-hidden",
+                            "group relative flex items-center rounded-2xl transition-[width,height,padding,gap,background-color,border-color,color,box-shadow,transform] duration-300 w-full outline-none overflow-hidden",
                             "border shadow-elevation-2",
                             sidebarOpen ? "h-16 px-4 justify-start gap-3.5" : "h-14 md:w-14 w-full justify-center px-0",
                             tvMode || showPicker
@@ -265,13 +265,13 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
 
                         {/* Active vertical bar indicator */}
                         <div className={cn(
-                            "absolute left-0 w-1.5 h-8 bg-brand-accent rounded-r-full transition-all duration-300 hidden md:block",
+                            "absolute left-0 w-1.5 h-8 bg-brand-accent rounded-r-full transition duration-300 hidden md:block",
                             (tvMode || showPicker) ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                         )} />
                         
                         {/* Icon with glowing badge */}
                         <div className={cn(
-                            "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition-all duration-300",
+                            "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition duration-300",
                             sidebarOpen ? "w-10 h-10" : "w-10 h-10",
                             (tvMode || showPicker)
                                 ? "bg-brand-accent text-on-primary shadow-brand-primary scale-105"
@@ -291,7 +291,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                         
                         {/* Text Label */}
                         <div className={cn(
-                            "z-10 flex flex-col text-left transition-all duration-300 whitespace-nowrap overflow-hidden",
+                            "z-10 flex flex-col text-left transition duration-300 whitespace-nowrap overflow-hidden",
                             sidebarOpen ? "block" : "hidden md:hidden"
                         )}>
                             <span className="uppercase tracking-ultra text-label-md font-black text-on-surface leading-tight">
@@ -372,7 +372,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                         e.stopPropagation()
                                         setShowPicker(false)
                                     }}
-                                    className="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant hover:text-on-surface transition-all duration-200 active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-glass-highlight-md"
+                                    className="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant hover:text-on-surface transition duration-200 active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-glass-highlight-md"
                                     title="Cerrar (ESC)"
                                 >
                                     <IconUiClose className="w-5 h-5" />
@@ -392,7 +392,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     whileHover={{ y: -4, scale: 1.02 }}
                                     whileTap={{ scale: 0.97 }}
                                     className={cn(
-                                        "group relative flex flex-col p-6 rounded-2xl text-left transition-all duration-300 outline-none pointer-events-auto cursor-pointer",
+                                        "group relative flex flex-col p-6 rounded-2xl text-left transition duration-300 outline-none pointer-events-auto cursor-pointer",
                                         "bg-surface-container-lowest/60 hover:bg-surface-container-high/70 border border-white/15 border-t-white/35",
                                         "shadow-glass-highlight-md hover:shadow-brand-accent/15",
                                         isLoading === "episode" && "opacity-75 pointer-events-none"
@@ -437,7 +437,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     whileHover={{ y: -4, scale: 1.02 }}
                                     whileTap={{ scale: 0.97 }}
                                     className={cn(
-                                        "group relative flex flex-col p-6 rounded-2xl text-left transition-all duration-300 outline-none pointer-events-auto cursor-pointer",
+                                        "group relative flex flex-col p-6 rounded-2xl text-left transition duration-300 outline-none pointer-events-auto cursor-pointer",
                                         "bg-surface-container-lowest/60 hover:bg-surface-container-high/70 border border-white/15 hover:border-brand-secondary/60 border-t-white/35",
                                         "shadow-glass-highlight-md hover:shadow-brand-secondary/15",
                                         isLoading === "movie" && "opacity-75 pointer-events-none"

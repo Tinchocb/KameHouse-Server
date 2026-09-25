@@ -225,6 +225,23 @@ func (r *Repository) TranscoderStats() (cassette.GovernorStats, bool) {
 // ffprobe. GetInfo is cache-aware (30-day disk TTL keyed by path hash), so
 // already-warmed files are near-free. Best-effort: failures are logged at debug
 // and never block. Safe to call from a goroutine; overlapping calls are skipped.
+// GetMediaInfo devuelve la media info (ffprobe, cacheada por hash) de una ruta
+// local o de una URL remota. La usan las fuentes que no pasan por el playback
+// manager, como la reproducción directa de Google Drive.
+func (r *Repository) GetMediaInfo(path string) (*videofile.MediaInfo, error) {
+	if !r.IsInitialized() {
+		return nil, errors.New("module not initialized")
+	}
+	r.settingsMu.RLock()
+	if !r.settings.IsPresent() {
+		r.settingsMu.RUnlock()
+		return nil, errors.New("mediastream settings not loaded")
+	}
+	ffprobePath := r.settings.MustGet().FfprobePath
+	r.settingsMu.RUnlock()
+	return r.mediaInfoExtractor.GetInfo(ffprobePath, path)
+}
+
 func (r *Repository) WarmMediaInfo(paths []string) {
 	if !r.IsInitialized() || len(paths) == 0 {
 		return

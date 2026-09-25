@@ -20,6 +20,7 @@ export interface TMDBEpisodeStillResponse {
 export function useGetTMDBEpisodeStill(
     tvId: number | undefined | null,
     absoluteEpisode: number | undefined | null,
+    options: { enabled?: boolean } = {},
 ) {
     const valid = typeof tvId === "number" && tvId > 0 && typeof absoluteEpisode === "number" && absoluteEpisode > 0
 
@@ -29,7 +30,7 @@ export function useGetTMDBEpisodeStill(
             .replace(":absolute", String(absoluteEpisode)),
         method: API_ENDPOINTS.TMDB.TMDBEpisodeStill.methods[0],
         queryKey: [API_ENDPOINTS.TMDB.TMDBEpisodeStill.key, tvId, absoluteEpisode],
-        enabled: Boolean(valid),
+        enabled: Boolean(valid) && options.enabled !== false,
         staleTime: 24 * 60 * 60 * 1000, // 24h caché
         muteError: true,
     })

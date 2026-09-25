@@ -240,7 +240,7 @@ export function SagaSelector({
                   !mainListIsAtBottom && "[-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]"
                 )}
               >
-                {sagas.map((saga, _index) => {
+                {sagas.map((saga, index) => {
                   const isActive = saga.id === activeSagaId
                   const localSaga = localSagas?.find(s => s.id === saga.id)
                   const rawTitle = localSaga?.title || saga.name
@@ -276,6 +276,7 @@ export function SagaSelector({
                     <ArcCinematicCard
                       key={saga.id}
                       layoutId="activeSagaCard"
+                      index={index}
                       topLeft={episodeRangeText}
                       topRight={subSagasCount > 0 ? `${subSagasCount} ${subSagasCount === 1 ? "ARCO" : "ARCOS"}` : (isFiller ? "RELLENO" : undefined)}
                       title={sagaTitle}
@@ -343,7 +344,7 @@ export function SagaSelector({
                   !subListIsAtBottom && "[-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]"
                 )}
               >
-                {(activeSaga?.subSagas || []).map((sub) => {
+                {(activeSaga?.subSagas || []).map((sub, index) => {
                   const isActive = sub.id === activeSubSagaId
                   const localSub = localSagas?.find(s => s.id === activeSaga?.id)?.subSagas?.find(ss => ss.id === sub.id)
                   const { clean: subTitle, isFiller } = splitFillerSuffix(localSub?.title || sub.name)
@@ -356,6 +357,7 @@ export function SagaSelector({
                     <ArcCinematicCard
                       key={sub.id}
                       layoutId="activeSubSagaCard"
+                      index={index}
                       topLeft={episodeRangeText}
                       topRight={isFiller ? "RELLENO" : undefined}
                       title={subTitle}

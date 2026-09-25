@@ -10,17 +10,8 @@
 //   mpv:progress { currentTime, duration, paused, mediaId, episodeNumber }
 //   mpv:exited   { currentTime, duration, mediaId, episodeNumber }
 //
-// BINARY PROTOCOL: The reader task uses a compact binary protocol (bincode)
-// instead of JSON text parsing. This eliminates ~60 JSON parses/second during
-// playback, reducing CPU usage by 60-80% and memory allocation pressure.
-//
-// Binary event format (little-endian):
-//   u8  event_type    // 0=progress, 1=exited
-//   f64 current_time
-//   f64 duration
-//   u8  paused        // 0=false, 1=true
-//   i64 media_id
-//   i64 episode_number
+// The reader task parses mpv's JSON IPC events with serde_json::from_slice
+// directly on the raw line bytes (no intermediate String allocation).
 
 use std::sync::Arc;
 use std::time::Duration;

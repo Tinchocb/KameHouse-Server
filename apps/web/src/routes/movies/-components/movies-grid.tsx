@@ -65,6 +65,27 @@ export const MoviesGrid = memo(function MoviesGrid({
     // overflow-y:auto), no en window: el virtualizador debe escuchar a ese elemento.
     const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null)
 
+    // Control de animación de entrada del grid:
+    // Solo las primeras N (12) tarjetas se animan en cascada en el primer render
+    // o tras cambiar de filtro/búsqueda. Las filas subsecuentes o montadas por scroll
+    // se montan con initial={false} para evitar retrasos de varios segundos.
+    const [filterKey, setFilterKey] = useState(0)
+    const [isInitialEntranceDone, setIsInitialEntranceDone] = useState(false)
+    const prevFilteredRef = useRef(filteredSorted)
+
+    if (prevFilteredRef.current !== filteredSorted) {
+        prevFilteredRef.current = filteredSorted
+        setFilterKey(k => k + 1)
+        setIsInitialEntranceDone(false)
+    }
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsInitialEntranceDone(true)
+        }, 800)
+        return () => clearTimeout(timer)
+    }, [filterKey])
+
     // Callback ref, not a mount effect: the grid mounts only once data arrives
     // (the skeleton renders first), so an effect with [] deps would find a null
     // ref, bail, and never re-run.
@@ -134,7 +155,12 @@ export const MoviesGrid = memo(function MoviesGrid({
             {isLoading && allMoviesLength === 0 ? (
                 <PosterGridSkeleton count={18} />
             ) : filteredSorted.length === 0 ? (
-                <m.div initial={false} animate={{ opacity: 1 }} className="py-32">
+                <m.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    className="py-32"
+                >
                     <EmptyState
                         title="Sin películas"
                         message="No hay películas que coincidan con este filtro."
@@ -170,18 +196,25 @@ export const MoviesGrid = memo(function MoviesGrid({
                                     transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
                                 }}
                             >
-                                {rowItems.filter(e => e != null).map((entry, idx) => (
-                                    <div key={entry?.mediaId ?? `idx-${idx}`} className="h-full [content-visibility:auto] [contain-intrinsic-size:280px]">
-                                        <MovieCard
-                                            entry={entry}
-                                            era={entry.era}
-                                            eraId={entry.eraId}
-                                            watchHistoryItem={entry.mediaId == null ? undefined : watchHistory?.[entry.mediaId]}
-                                            onClick={handleMovieClick}
-                                            onHoverCard={handleHoverCard}
-                                        />
-                                    </div>
-                                ))}
+                                {rowItems.filter(e => e != null).map((entry, idx) => {
+                                    const itemIndex = virtualRow.index * columns + idx
+                                    const shouldAnimateEntrance = !isInitialEntranceDone && itemIndex < 12
+
+                                    return (
+                                        <div key={entry?.mediaId ?? `idx-${idx}`} className="h-full [content-visibility:auto] [contain-intrinsic-size:280px]">
+                                            <MovieCard
+                                                entry={entry}
+                                                era={entry.era}
+                                                eraId={entry.eraId}
+                                                watchHistoryItem={entry.mediaId == null ? undefined : watchHistory?.[entry.mediaId]}
+                                                index={shouldAnimateEntrance ? itemIndex : undefined}
+                                                initial={shouldAnimateEntrance ? "hidden" : false}
+                                                onClick={handleMovieClick}
+                                                onHoverCard={handleHoverCard}
+                                            />
+                                        </div>
+                                    )
+                                })}
                             </div>
                         )
                     })}

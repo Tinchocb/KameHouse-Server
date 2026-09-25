@@ -1,22 +1,23 @@
 import * as React from 'react';
 import { m } from 'framer-motion';
-import { EraFilter, MovieFilterOption } from './types';
-import { ChronologyEraNav } from './ChronologyEraNav';
+import { EraFilter } from './types';
+import { ChronologyEraNav, type EraProgress } from './ChronologyEraNav';
 import { ERA_COLOR_MAP } from '@/lib/config/eras';
 import { IconNavigationSearch, IconUiClose } from '@/components/ui/icons';
-import { Sparkles, Tv, Film } from 'lucide-react';
-import { MagneticIndicator } from '@/components/ui/kinetics/magnetic-indicator';
-import { useReducedMotion } from '@/components/ui/kinetics/hooks';
+import { BookOpen } from 'lucide-react';
+import { ElasticCounter } from '@/components/ui/kinetics/elastic-counter';
+
+export type StatusFilter = 'all' | 'pending' | 'watched';
 
 interface HeaderProps {
   currentEraFilter: EraFilter;
   onSelectEraFilter: (era: EraFilter) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  volumeCountsByEra: Record<EraFilter, number>;
-  movieFilter: MovieFilterOption;
-  onSelectMovieFilter: (filter: MovieFilterOption) => void;
-  movieCounts: { none: number; canon: number; all: number };
+  eraProgress: Record<EraFilter, EraProgress>;
+  onOpenEncyclopedia?: () => void;
+  /** Controles extra junto a la enciclopedia (p. ej. el menú de vista). */
+  actions?: React.ReactNode;
 }
 
 function getEraAccent(eraFilter: EraFilter): string {
@@ -36,12 +37,10 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectEraFilter,
   searchQuery,
   onSearchChange,
-  volumeCountsByEra,
-  movieFilter,
-  onSelectMovieFilter,
-  movieCounts,
+  eraProgress,
+  onOpenEncyclopedia,
+  actions,
 }) => {
-  const reduceMotion = useReducedMotion();
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const eraAccent = getEraAccent(currentEraFilter);
 
@@ -62,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <section className="relative w-full px-4 sm:px-6 md:px-8 xl:px-12 2xl:px-16 pt-4 md:pt-12 pb-4 space-y-4 select-none shrink-0">
+    <section className="relative w-full pt-3 md:pt-[4.75rem] pb-1 select-none shrink-0">
       {/* Ambient Aura Background (matches MediaSpotlight pattern: subtle radial gradient at z-0) */}
       <div
         aria-hidden="true"
@@ -81,109 +80,82 @@ export const Header: React.FC<HeaderProps> = ({
         />
       </div>
 
-      {/* Row 1: Cinematic Brand Title & Quick Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Title area */}
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 p-[2px] shadow-[0_0_24px_rgba(245,158,11,0.45)] shrink-0">
-            <div className="w-full h-full bg-amber-950/80 rounded-lg flex items-center justify-center border border-amber-400/30">
-              <span className="font-kanji font-black text-amber-300 text-xl leading-none drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]">亀</span>
+      <div className="page-container relative z-10 space-y-3">
+        {/* Fila 1: título a la izquierda; búsqueda y enciclopedia a la derecha */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-300 p-[2px] shadow-[0_0_24px_rgba(245,158,11,0.35)] shrink-0">
+              <div className="w-full h-full bg-amber-950/85 rounded-[10px] flex items-center justify-center border border-amber-400/30">
+                <span className="font-kanji font-black text-amber-300 text-xl leading-none">亀</span>
+              </div>
             </div>
-          </div>
 
-          <div className="min-w-0 space-y-0.5">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="font-display text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-none text-balance">
-                DRAGON BALL <span className="text-brand-accent">LÍNEA DE TIEMPO</span>
+            <div className="min-w-0">
+              <p className="font-mono text-2xs uppercase tracking-[0.18em] sm:tracking-[0.3em] text-on-surface-variant tabular-nums">
+                Dragon Ball · <span className="whitespace-nowrap">Año 749–790</span>{' '}
+                <span className="whitespace-nowrap">
+                  · <ElasticCounter value={eraProgress.all.read} className="align-bottom" />/{eraProgress.all.count} vistos
+                </span>
+              </p>
+              <h1 className="mt-0.5 font-display text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-none text-balance">
+                Línea de tiempo
               </h1>
-              <span className="inline-flex items-center gap-1 text-3xs font-mono uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-brand-accent/15 border border-brand-accent/30 text-brand-accent font-bold shrink-0">
-                <Sparkles className="w-2.5 h-2.5 text-brand-accent" /> Canon Oficial
-              </span>
             </div>
-            <p className="text-xs sm:text-sm text-on-surface-variant font-mono truncate">
-              Ordenada por el año dentro de la historia
-            </p>
           </div>
-        </div>
 
-        {/* Search input matching MoviesFilterBar style with '/' focus and IconUiClose */}
-        <div className="relative w-full sm:w-72 md:w-80 shrink-0">
-          <IconNavigationSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 w-4 h-4 text-on-surface-variant/50 pointer-events-none" />
-          <input
-            ref={searchInputRef}
-            id="input-search-volumes"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar lapsos, sagas... (/)"
-            className="w-full bg-white/[0.04] border border-white/15 border-t-white/30 border-b-white/5 rounded-full py-2 pl-9 pr-9 text-xs font-medium text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/40 transition-colors duration-200 backdrop-blur-overlay-xl shadow-glass-highlight-md"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchChange('')}
-              aria-label="Limpiar búsqueda"
-              className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full text-on-surface-variant hover:text-white transition-colors cursor-pointer"
-            >
-              <IconUiClose className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Row 2: ChronologyEraNav & Movie Filter */}
-      <div className="pt-1 flex flex-col gap-3">
-        <ChronologyEraNav
-          activeEraId={currentEraFilter}
-          onSelectEra={onSelectEraFilter}
-          volumeCountsByEra={volumeCountsByEra}
-        />
-
-        {/* Películas y Especiales Selector Pill */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-0.5">
-          <div role="radiogroup" aria-label="Formato" className="flex items-center gap-1.5 p-1 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-overlay-md text-xs font-mono">
-            <span className="text-2xs uppercase tracking-wider text-on-surface-variant font-bold px-2.5 py-0.5 hidden sm:inline">
-              Formato:
-            </span>
-            {(
-              [
-                { key: 'none', label: 'Solo Series', icon: <Tv className="w-3.5 h-3.5" /> },
-                { key: 'canon', label: '+ Especiales Canónicos', icon: <Sparkles className="w-3.5 h-3.5" /> },
-                { key: 'all', label: 'Todas las Películas (Multiverso Z)', icon: <Film className="w-3.5 h-3.5" /> },
-              ] as const
-            ).map((opt) => {
-              const isSelected = movieFilter === opt.key;
-              const count = movieCounts[opt.key];
-              return (
-                <button
-                  key={opt.key}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  onClick={() => onSelectMovieFilter(opt.key)}
-                  className={`relative min-h-11 px-3.5 rounded-full text-xs font-mono font-medium transition-[color,background-color,transform] duration-base cursor-pointer select-none active:scale-95 flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
-                    isSelected
-                      ? 'text-zinc-950 font-bold'
-                      : 'text-on-surface-variant hover:text-white hover:bg-white/[0.04]'
-                  }`}
+          <div className="flex items-center gap-2 w-full lg:w-auto">
+            <div className="relative flex-1 lg:flex-none lg:w-72">
+              <IconNavigationSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 w-4 h-4 text-on-surface-variant/60 pointer-events-none" />
+              <input
+                ref={searchInputRef}
+                id="input-search-volumes"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Buscar lapso o saga…"
+                aria-keyshortcuts="/"
+                className="w-full min-h-[44px] bg-white/[0.04] border border-white/15 border-t-white/25 border-b-white/5 rounded-full pl-10 pr-10 text-xs font-medium text-white placeholder:text-on-surface-variant/55 focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/40 transition-colors duration-200"
+              />
+              {!searchQuery && (
+                <kbd
+                  aria-hidden="true"
+                  className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 h-5 min-w-[20px] items-center justify-center rounded-md border border-white/15 bg-white/[0.06] px-1.5 font-mono text-3xs text-on-surface-variant pointer-events-none"
                 >
-                  <MagneticIndicator
-                    layoutId="chronoMovieFilter"
-                    active={isSelected}
-                    disableAnimation={!!reduceMotion}
-                    className="bg-brand-accent"
-                  />
-                  <span className="relative z-10 flex items-center gap-1.5">
-                    {opt.icon}
-                    <span>{opt.label}</span>
-                    <span className={`text-2xs tabular-nums ${isSelected ? 'opacity-85' : 'opacity-60'}`}>
-                      ({count})
-                    </span>
-                  </span>
+                  /
+                </kbd>
+              )}
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-full text-on-surface-variant hover:text-white transition-colors cursor-pointer"
+                >
+                  <IconUiClose className="w-3.5 h-3.5" />
                 </button>
-              );
-            })}
+              )}
+            </div>
+
+            {onOpenEncyclopedia && (
+              <button
+                type="button"
+                onClick={onOpenEncyclopedia}
+                title="Artefactos, líneas temporales y glosario"
+                aria-label="Enciclopedia"
+                className="min-h-[44px] min-w-[44px] px-3 min-[400px]:px-4 rounded-full inline-flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-400/50 text-amber-200 text-xs font-semibold shrink-0 transition-[color,background-color,border-color,transform] cursor-pointer active:scale-95"
+              >
+                <BookOpen className="w-4 h-4 text-amber-400" aria-hidden="true" />
+                {/* En pantallas muy angostas queda solo el ícono para que el buscador tenga lugar */}
+                <span className="hidden min-[400px]:inline">Enciclopedia</span>
+              </button>
+            )}
+            {actions}
           </div>
+        </div>
+
+        {/* Fila 2: eras (el filtro de estado vive en la barra de progreso) */}
+        <div className="min-w-0">
+          <ChronologyEraNav activeEraId={currentEraFilter} onSelectEra={onSelectEraFilter} eraProgress={eraProgress} />
         </div>
       </div>
     </section>

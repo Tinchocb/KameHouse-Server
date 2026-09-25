@@ -63,14 +63,16 @@ const UI_MODES = [
 ]
 
 // ── Presets por Era ────────────────────────────────────────────────────────────
+// Swatches con los tokens de era (única excepción de hex de la guía). "Universo"
+// no tiene token global propio: su violeta solo existe dentro de su tema.
 const THEME_PRESETS = [
     { id: "era-universe", themeEra: "era-universe", name: "Universo DB", subtitle: "Modo Adaptativo", desc: "Adapta la paleta a cada saga; nebulosa cósmica en Home", accent: "#805AC2", bg: "from-violet-950/40 via-purple-950/25 to-teal-950/20" },
-    { id: "era-db", themeEra: "era-db", name: "Dragon Ball", subtitle: "1986 Original", desc: "Naranja terracota cálido y verde Shenron", accent: "#E87A2D", bg: "from-amber-950/40 to-orange-950/20" },
-    { id: "era-dbz", themeEra: "era-dbz", name: "Dragon Ball Z", subtitle: "1989 Era Dorada", desc: "Oro Super Saiyan brillante y azul cobalto", accent: "#E6B43C", bg: "from-amber-950/40 via-yellow-950/25 to-blue-950/20" },
-    { id: "era-dbgt", themeEra: "era-dbgt", name: "Dragon Ball GT", subtitle: "1996 Grand Tour", desc: "Rojo escarlata SSJ4 y violeta cósmico", accent: "#D23859", bg: "from-rose-950/40 to-purple-950/20" },
-    { id: "era-dbkai", themeEra: "era-dbkai", name: "Dragon Ball Kai", subtitle: "2009 HD Manga", desc: "Azul eléctrico de alta definición y cyan", accent: "#278DC5", bg: "from-sky-950/40 to-blue-950/20" },
-    { id: "era-dbs", themeEra: "era-dbs", name: "Dragon Ball Super", subtitle: "2015 Divino", desc: "Cian divino SSGSS y púrpura destructor", accent: "#2C9FC7", bg: "from-cyan-950/40 to-purple-950/20" },
-    { id: "era-daima", themeEra: "era-daima", name: "Dragon Ball Daima", subtitle: "2024 Demoníaco", desc: "Púrpura Demon Realm con verde detalle", accent: "#9564C8", bg: "from-violet-950/40 to-violet-950/20" },
+    { id: "era-db", themeEra: "era-db", name: "Dragon Ball", subtitle: "1986 Original", desc: "Naranja terracota cálido y verde Shenron", accent: "var(--era-db-hex)", bg: "from-amber-950/40 to-orange-950/20" },
+    { id: "era-dbz", themeEra: "era-dbz", name: "Dragon Ball Z", subtitle: "1989 Era Dorada", desc: "Oro Super Saiyan brillante y azul cobalto", accent: "var(--era-dbz-hex)", bg: "from-amber-950/40 via-yellow-950/25 to-blue-950/20" },
+    { id: "era-dbgt", themeEra: "era-dbgt", name: "Dragon Ball GT", subtitle: "1996 Grand Tour", desc: "Rojo escarlata SSJ4 y violeta cósmico", accent: "var(--era-dbgt-hex)", bg: "from-rose-950/40 to-purple-950/20" },
+    { id: "era-dbkai", themeEra: "era-dbkai", name: "Dragon Ball Kai", subtitle: "2009 HD Manga", desc: "Azul eléctrico de alta definición y cyan", accent: "var(--era-dbkai-hex)", bg: "from-sky-950/40 to-blue-950/20" },
+    { id: "era-dbs", themeEra: "era-dbs", name: "Dragon Ball Super", subtitle: "2015 Divino", desc: "Cian divino SSGSS y púrpura destructor", accent: "var(--era-dbs-hex)", bg: "from-cyan-950/40 to-purple-950/20" },
+    { id: "era-daima", themeEra: "era-daima", name: "Dragon Ball Daima", subtitle: "2024 Demoníaco", desc: "Púrpura Demon Realm con verde detalle", accent: "var(--era-daima-hex)", bg: "from-violet-950/40 to-violet-950/20" },
 ]
 
 export const AppearanceTab = React.memo(function AppearanceTab({ control }: AppearanceTabProps) {
