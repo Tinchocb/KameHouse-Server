@@ -52,7 +52,7 @@ export const SwitchAnatomy = defineStyleAnatomy({
     }),
     thumb: cva([
         "UI-Switch__thumb",
-        "pointer-events-none block rounded-full data-[state=checked]:bg-white shadow-lg ring-0 transition-transform duration-200 ease-bounce-spring",
+        "pointer-events-none block rounded-full data-[state=checked]:bg-white shadow-elevation-2 ring-0 transition-transform duration-200 ease-bounce-spring",
         "data-[state=unchecked]:translate-x-1 data-[state=unchecked]:bg-white/50",
     ], {
         variants: {

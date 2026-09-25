@@ -114,9 +114,9 @@ export function LoadingOverlayWithLogo({
                     {!showFailure && (
                         <div className="flex flex-col items-center gap-3.5 animate-in fade-in duration-300">
                             <div className="flex items-center gap-3 h-8">
-                                <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.32s]" />
-                                <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.16s]" />
-                                <span className="w-3.5 h-3.5 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce" />
+                                <span className="w-3.5 h-3.5 dragonball-orb animate-bounce [animation-delay:-0.32s]" />
+                                <span className="w-3.5 h-3.5 dragonball-orb animate-bounce [animation-delay:-0.16s]" />
+                                <span className="w-3.5 h-3.5 dragonball-orb animate-bounce" />
                             </div>
                             <p className="text-caption font-mono tracking-ultra text-on-surface-variant uppercase transition-all duration-300">
                                 {statusMessage}

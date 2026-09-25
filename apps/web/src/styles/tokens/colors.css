@@ -4,6 +4,12 @@
    ╚════════════════════════════════════════════════════════════════════════╝ */
 
 :root {
+  /* Esfera del dragón (pantallas de carga): color de marca fijo, no sigue la era */
+  --dragonball-orb-light: #fde68a;
+  --dragonball-orb-mid:   #f59e0b;
+  --dragonball-orb-dark:  #b45309;
+  --dragonball-orb-glow:  rgba(245, 158, 11, 0.65);
+
   /* ─── MD3 Core Color Roles (Dark Theme) — Dinámicos via brand-accent ─── */
   --md-sys-color-primary: hsl(var(--brand-accent));
   --md-sys-color-on-primary: #FFFFFF;

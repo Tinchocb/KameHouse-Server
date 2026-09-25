@@ -26,9 +26,9 @@ export function AppLoadingScreen() {
                     transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
                     className="relative flex items-center gap-4"
                 >
-                    <span className="w-6 h-6 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.32s]" />
-                    <span className="w-6 h-6 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce [animation-delay:-0.16s]" />
-                    <span className="w-6 h-6 rounded-full bg-[radial-gradient(circle_at_35%_35%,#fde68a,#f59e0b_60%,#b45309_100%)] shadow-[0_0_16px_rgba(245,158,11,0.65)] animate-bounce" />
+                    <span className="w-6 h-6 dragonball-orb animate-bounce [animation-delay:-0.32s]" />
+                    <span className="w-6 h-6 dragonball-orb animate-bounce [animation-delay:-0.16s]" />
+                    <span className="w-6 h-6 dragonball-orb animate-bounce" />
                 </m.div>
 
                 <m.div

@@ -274,7 +274,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition-all duration-300",
                             sidebarOpen ? "w-10 h-10" : "w-10 h-10",
                             (tvMode || showPicker)
-                                ? "bg-brand-accent text-on-primary shadow-lg shadow-brand-accent/40 scale-105"
+                                ? "bg-brand-accent text-on-primary shadow-brand-primary scale-105"
                                 : "bg-white/[0.06] group-hover:bg-brand-accent/20 group-hover:text-brand-accent text-on-surface-variant"
                         )}>
                             {isLoading ? (
@@ -347,7 +347,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             {/* Header */}
                             <div className="relative flex items-center justify-between p-6 md:p-8 pb-4">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-3.5 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent shadow-lg shadow-brand-primary">
+                                    <div className="p-3.5 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent shadow-brand-primary">
                                         <IconNavigationTv className="w-7 h-7" />
                                     </div>
                                     <div>
