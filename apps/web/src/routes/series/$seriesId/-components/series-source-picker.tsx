@@ -73,6 +73,7 @@ export function SeriesSourcePicker({ mediaId, className }: { mediaId: number | u
                             type="button"
                             role="radio"
                             aria-checked={checked}
+                            aria-label={`${opt.label}, ${opt.detail}`}
                             disabled={opt.disabled || isPending}
                             onClick={() => !checked && setSource({ mediaId, source: opt.value })}
                             className={cn(
