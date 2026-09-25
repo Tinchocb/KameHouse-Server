@@ -45,11 +45,7 @@ func (h *Handler) HandlePlaybackSync(c echo.Context) error {
 	}
 
 	if h.App.ContinuityManager != nil && h.App.ContinuityManager.TelemetryManager != nil {
-		accountID := uint(0)
-		if acc, err := h.App.Database.GetAccount(); err == nil && acc != nil {
-			accountID = acc.ID
-		}
-		h.App.ContinuityManager.TelemetryManager.UpdateProgress(accountID, b.MediaID, b.EpisodeNumber, b.CurrentTime, b.Duration)
+		h.App.ContinuityManager.TelemetryManager.UpdateProgress(currentAccountID(c), b.MediaID, b.EpisodeNumber, b.CurrentTime, b.Duration)
 	}
 
 	return h.RespondWithData(c, true)
@@ -102,12 +98,8 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 					continue
 				}
 
-				accountID := uint(0)
-				if acc, err := h.App.Database.GetAccount(); err == nil && acc != nil {
-					accountID = acc.ID
-				}
-
-				h.App.ContinuityManager.TelemetryManager.UpdateProgress(accountID, heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration)
+				// Los eventos WS no traen contexto HTTP: cuenta local.
+				h.App.ContinuityManager.TelemetryManager.UpdateProgress(localAccountID, heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration)
 			}
 		}
 	}()

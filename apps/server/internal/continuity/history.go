@@ -136,9 +136,16 @@ func (m *Manager) GetWatchHistory() WatchHistory {
 		return nil
 	}
 
+	// Hay una clave por media+episodio: quedarse con el más reciente de cada
+	// media. Pisar sin comparar dependía del orden de iteración del map.
 	ret := make(WatchHistory)
 	for _, item := range items {
-		ret[item.MediaID] = item
+		if item == nil {
+			continue
+		}
+		if prev, ok := ret[item.MediaID]; !ok || item.TimeUpdated.After(prev.TimeUpdated) {
+			ret[item.MediaID] = item
+		}
 	}
 
 	return ret

@@ -366,6 +366,14 @@ func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID ui
 		return nil, err
 	}
 
+	return s.ContinueWatchingFromHistory(ctx, history)
+}
+
+// ContinueWatchingFromHistory arma los ítems de "Continuar viendo" a partir de
+// entradas de historial ya resueltas (una por media, ordenadas de más reciente
+// a más antigua). Permite que el handler use la misma fuente que
+// /continuity/history en lugar de la tabla watch_histories.
+func (s *IntelligenceService) ContinueWatchingFromHistory(_ context.Context, history []models.WatchHistory) ([]dto.ContinueWatchingItem, error) {
 	if len(history) == 0 {
 		return []dto.ContinueWatchingItem{}, nil
 	}

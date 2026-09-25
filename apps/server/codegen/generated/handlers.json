@@ -1620,6 +1620,34 @@
     "trimmedName": "GetContinueWatching",
     "comments": [
       "HandleGetContinueWatching returns the \"Continue Watching\" items for the user.",
+      "",
+      "Fuente de verdad: el filecache de continuidad (el mismo que sirve",
+      "/continuity/history y consume la página de serie). watch_histories en DB es",
+      "solo un espejo asíncrono del TelemetryManager y puede ir hasta un flush atrás.",
+      "El filecache no distingue cuentas: válido mientras la instalación sea",
+      "single-user (ver currentAccountID).",
+      ""
+    ],
+    "filepath": "internal/handlers/home.go",
+    "filename": "home.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "continueWatchingHistory",
+    "trimmedName": "continueWatchingHistory",
+    "comments": [
+      "continueWatchingHistory convierte el historial del filecache (ya reducido a",
+      "la entrada más reciente por media) en filas ordenadas por recencia.",
       ""
     ],
     "filepath": "internal/handlers/home.go",
@@ -1668,6 +1696,28 @@
     ],
     "filepath": "internal/handlers/honesty_test.go",
     "filename": "honesty_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "currentAccountID",
+    "trimmedName": "currentAccountID",
+    "comments": [
+      "currentAccountID devuelve la cuenta del request: el user_id inyectado por un",
+      "middleware de auth si existe (futuro multi-usuario), si no la cuenta local.",
+      ""
+    ],
+    "filepath": "internal/handlers/identity.go",
+    "filename": "identity.go",
     "api": {
       "summary": "",
       "descriptions": [],

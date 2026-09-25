@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"kamehouse/internal/api/metadata_provider"
+	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
+	"sort"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -29,6 +31,12 @@ func (h *Handler) HandleGetHomeCurated(c echo.Context) error {
 }
 
 // HandleGetContinueWatching returns the "Continue Watching" items for the user.
+//
+// Fuente de verdad: el filecache de continuidad (el mismo que sirve
+// /continuity/history y consume la página de serie). watch_histories en DB es
+// solo un espejo asíncrono del TelemetryManager y puede ir hasta un flush atrás.
+// El filecache no distingue cuentas: válido mientras la instalación sea
+// single-user (ver currentAccountID).
 func (h *Handler) HandleGetContinueWatching(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -36,30 +44,66 @@ func (h *Handler) HandleGetContinueWatching(c echo.Context) error {
 		return h.JSON(c, 500, NewErrorResponse(errors.New("database not initialized")))
 	}
 
-	// Require an authenticated user_id — do NOT fall back to userID=1 (admin)
-	// to prevent guests from seeing the admin's private watch history.
-	userID := uint(0)
-	if val := c.Get("user_id"); val != nil {
-		if id, ok := val.(uint); ok {
-			userID = id
-		}
+	empty := make([]dto.ContinueWatchingItem, 0)
+	cm := h.App.ContinuityManager
+	if cm == nil {
+		return h.JSON(c, 200, NewDataResponse(empty))
 	}
-	if userID == 0 {
-		return h.JSON(c, 200, NewDataResponse(make([]dto.ContinueWatchingItem, 0)))
+	if st := cm.GetSettings(); st == nil || !st.WatchContinuityEnabled {
+		return h.JSON(c, 200, NewDataResponse(empty))
 	}
 
+	history := continueWatchingHistory(cm.GetWatchHistory(), currentAccountID(c))
+
 	svc := anime.NewIntelligenceService(h.App.Database, nil, h.App.Logger)
-	resp, err := svc.GetContinueWatching(ctx, userID)
+	resp, err := svc.ContinueWatchingFromHistory(ctx, history)
 	if err != nil {
 		return h.JSON(c, 500, NewErrorResponse(err))
 	}
 
 	if resp == nil {
-		resp = make([]dto.ContinueWatchingItem, 0)
+		resp = empty
 	}
 
 	return h.JSON(c, 200, NewDataResponse(resp))
 }
+
+// continueWatchingMaxItems replica el LIMIT de la consulta histórica en DB.
+const continueWatchingMaxItems = 20
+
+// continueWatchingHistory convierte el historial del filecache (ya reducido a
+// la entrada más reciente por media) en filas ordenadas por recencia.
+func continueWatchingHistory(wh continuity.WatchHistory, accountID uint) []models.WatchHistory {
+	items := make([]*continuity.WatchHistoryItem, 0, len(wh))
+	for _, it := range wh {
+		if it == nil || !validPlaybackBeat(it.MediaID, it.EpisodeNumber, it.CurrentTime, it.Duration) {
+			continue
+		}
+		items = append(items, it)
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if !items[i].TimeUpdated.Equal(items[j].TimeUpdated) {
+			return items[i].TimeUpdated.After(items[j].TimeUpdated)
+		}
+		return items[i].MediaID < items[j].MediaID
+	})
+	if len(items) > continueWatchingMaxItems {
+		items = items[:continueWatchingMaxItems]
+	}
+
+	out := make([]models.WatchHistory, 0, len(items))
+	for _, it := range items {
+		out = append(out, models.WatchHistory{
+			AccountID:     accountID,
+			MediaID:       it.MediaID,
+			EpisodeNumber: it.EpisodeNumber,
+			CurrentTime:   it.CurrentTime,
+			Duration:      it.Duration,
+		})
+	}
+	return out
+}
+
 // HandleRetagEpisodes re-runs IntelligenceTagger on all LibraryEpisode records
 // using the titles and descriptions already stored in the DB — no TMDB API needed.
 // Trigger this via POST /api/v1/home/retag after adding new tag rules.
