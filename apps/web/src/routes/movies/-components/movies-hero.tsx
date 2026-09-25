@@ -314,7 +314,7 @@ export function MoviesHero({
                     </div>
                 ) : (
                     <div
-                        className={`w-full relative rounded-3xl overflow-hidden ${HERO_STAGE_CLASS} flex flex-col justify-end border border-outline-variant shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] bg-black transition-colors duration-700`}
+                        className={`w-full relative rounded-3xl overflow-hidden ${HERO_STAGE_CLASS} flex flex-col justify-end border border-outline-variant shadow-hero bg-black transition-colors duration-700`}
                         style={{
                             borderColor: `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
                         }}

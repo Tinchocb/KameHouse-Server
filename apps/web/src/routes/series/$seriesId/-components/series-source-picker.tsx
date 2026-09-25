@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router"
 import { useGetAnimeEntrySource, useSetAnimeEntrySource, type MediaSourceChoice } from "@/api/hooks/anime_entries.hooks"
 import { IconNavigationLayers } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
+import { MagneticIndicator } from "@/components/ui/kinetics/magnetic-indicator"
+import { useReducedMotion } from "@/components/ui/kinetics/hooks"
 
 interface SourceOption {
     value: MediaSourceChoice
@@ -19,6 +21,7 @@ interface SourceOption {
 export function SeriesSourcePicker({ mediaId, className }: { mediaId: number | undefined; className?: string }) {
     const { data: info } = useGetAnimeEntrySource(mediaId)
     const { mutate: setSource, isPending } = useSetAnimeEntrySource(mediaId)
+    const reduceMotion = useReducedMotion()
 
     if (!info || !mediaId || info.localFiles === 0 || info.cloudFiles === 0) return null
 
@@ -60,13 +63,15 @@ export function SeriesSourcePicker({ mediaId, className }: { mediaId: number | u
                 )}
             </div>
 
+            {/* Segmented control (§5.3): pill activa con layoutId + spring del sistema */}
             <div
                 role="radiogroup"
                 aria-label="Origen de reproducción"
-                className="inline-flex rounded-xl border border-white/10 bg-white/[0.03] p-1"
+                className="flex w-fit items-center gap-1 rounded-full border border-white/20 border-t-white/40 border-b-white/10 bg-zinc-950/40 p-1.5"
             >
                 {options.map(opt => {
                     const checked = info.preference === opt.value
+                    const count = opt.value === "local" ? info.localFiles : opt.value === "cloud" ? info.cloudFiles : null
                     return (
                         <button
                             key={opt.value}
@@ -74,19 +79,26 @@ export function SeriesSourcePicker({ mediaId, className }: { mediaId: number | u
                             role="radio"
                             aria-checked={checked}
                             aria-label={`${opt.label}, ${opt.detail}`}
+                            title={opt.detail}
                             disabled={opt.disabled || isPending}
                             onClick={() => !checked && setSource({ mediaId, source: opt.value })}
                             className={cn(
-                                "flex min-w-[6.5rem] flex-col items-start rounded-lg px-3 py-1.5 text-left transition-colors",
+                                "relative flex min-h-11 items-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-colors duration-base",
                                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
-                                checked
-                                    ? "bg-white/10 text-on-surface"
-                                    : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface",
-                                (opt.disabled || isPending) && "cursor-not-allowed opacity-50 hover:bg-transparent",
+                                checked ? "text-zinc-950 font-bold" : "text-on-surface-variant hover:text-on-surface",
+                                (opt.disabled || isPending) && "cursor-not-allowed opacity-50 hover:text-on-surface-variant",
                             )}
                         >
-                            <span className="text-sm font-medium">{opt.label}</span>
-                            <span className="text-3xs font-mono opacity-80">{opt.detail}</span>
+                            <MagneticIndicator
+                                layoutId={`seriesSource-${mediaId}`}
+                                active={checked}
+                                disableAnimation={!!reduceMotion}
+                                className="bg-white/95 shadow-[0_2px_14px_rgba(255,255,255,0.4),inset_0_1px_1px_rgba(255,255,255,1)]"
+                            />
+                            <span className="relative z-10">{opt.label}</span>
+                            {count != null && opt.disabled === false && (
+                                <span className="relative z-10 font-mono text-3xs tabular-nums opacity-70">{count}</span>
+                            )}
                         </button>
                     )
                 })}

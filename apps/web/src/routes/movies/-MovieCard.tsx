@@ -232,7 +232,7 @@ export const MovieCard = memo(function MovieCard({
                             {hasLocalFiles && (
                                 <button
                                     onClick={handleQuickQueue}
-                                    className="w-11 h-11 rounded-full flex items-center justify-center bg-zinc-950/70 backdrop-blur-md text-white ring-1 ring-white/30 border border-white/10 shadow-[shadow:0_2px_12px_rgba(0,0,0,0.5),var(--glass-highlight-md)] hover:scale-110 active:scale-90 transition-transform cursor-pointer"
+                                    className="w-11 h-11 rounded-full flex items-center justify-center bg-zinc-950/80 text-white ring-1 ring-white/30 border border-white/10 shadow-[shadow:0_2px_12px_rgba(0,0,0,0.5),var(--glass-highlight-md)] hover:scale-110 active:scale-90 transition-transform cursor-pointer"
                                     aria-label="Añadir a la cola"
                                     title="Añadir a la cola"
                                 >

@@ -420,7 +420,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
 
                             {/* Badge de "VISTO" si ya fue reproducido */}
                             {ep.isWatched && (
-                                <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-emerald-500/30 text-3xs font-mono font-bold text-emerald-400 flex items-center gap-1 shadow-sm">
+                                <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/85 border border-emerald-500/30 text-3xs font-mono font-bold text-emerald-400 flex items-center gap-1 shadow-sm">
                                     <svg className="w-3 h-3 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>

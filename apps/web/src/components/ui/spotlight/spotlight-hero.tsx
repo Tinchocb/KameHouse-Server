@@ -200,7 +200,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                 dragElastic={0.2}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                    "group w-full relative z-10 rounded-3xl overflow-hidden flex flex-col justify-end border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] bg-black transition-colors duration-700",
+                    "group w-full relative z-10 rounded-3xl overflow-hidden flex flex-col justify-end border border-white/10 shadow-hero bg-black transition-colors duration-700",
                     HERO_STAGE_CLASS
                 )}
                 style={{

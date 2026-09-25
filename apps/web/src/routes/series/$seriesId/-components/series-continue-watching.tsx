@@ -96,13 +96,13 @@ export function SeriesContinueWatching({
 
                     {/* Play button hover indicator */}
                     <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 group-hover/continue:bg-brand-accent backdrop-blur-md border border-white/20 group-hover/continue:border-brand-accent flex items-center justify-center text-white group-hover/continue:text-on-primary transition-all duration-200 shadow-lg group-hover/continue:scale-110">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/70 group-hover/continue:bg-brand-accent border border-white/20 group-hover/continue:border-brand-accent flex items-center justify-center text-white group-hover/continue:text-on-primary transition-[transform,background-color,border-color,color] duration-base ease-smooth-out shadow-elevation-3 group-hover/continue:scale-110">
                             <IconMediaPlay className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-0.5 fill-current" />
                         </div>
                     </div>
 
                     {/* Badge EP */}
-                    <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 z-20 px-1.5 sm:px-2 py-0.5 rounded-md bg-black/85 backdrop-blur-md border border-white/15 text-4xs sm:text-3xs font-mono font-bold text-white shadow-sm">
+                    <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 z-20 px-1.5 sm:px-2 py-0.5 rounded-md bg-black/85 border border-white/15 text-4xs sm:text-3xs font-mono font-bold text-white shadow-sm">
                         EP {continueWatching.episodeNumber}
                     </div>
                 </div>
