@@ -1120,6 +1120,23 @@ export type GPUStats = {
 }
 
 /**
+ * - Filepath: internal/handlers/media_source.go
+ * - Filename: media_source.go
+ * - Package: handlers
+ * @description
+ *  MediaSourceInfo describe los orígenes disponibles de una serie y cuál aplica.
+ */
+export type MediaSourceInfo = {
+    mediaId: number
+    preference: string
+    effective: string
+    localFiles: number
+    cloudFiles: number
+    localEnabled: boolean
+    cloudEnabled: boolean
+}
+
+/**
  * - Filepath: internal/handlers/status.go
  * - Filename: status.go
  * - Package: handlers
@@ -2087,6 +2104,7 @@ export type Models_LibrarySettings = {
     scannerStrictStructure: boolean
     scannerProvider: string
     disableLocalScanning: boolean
+    disableCloudSource: boolean
     scannerUseLegacyMatching: boolean
     lastScanAt: string
     autoScan: boolean

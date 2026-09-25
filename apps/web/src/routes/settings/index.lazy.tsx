@@ -173,6 +173,7 @@ function getEffectiveSettings(server: Partial<SettingsFormValues> | null | undef
             scannerStrictStructure: base.library?.scannerStrictStructure ?? false,
             scannerUseLegacyMatching: base.library?.scannerUseLegacyMatching ?? false,
             disableLocalScanning: base.library?.disableLocalScanning ?? false,
+            disableCloudSource: base.library?.disableCloudSource ?? false,
             preferredAudioProfile: base.library?.preferredAudioProfile || appState.preferredAudioProfile || "latino",
             autoSkipIntro: base.library?.autoSkipIntro ?? appState.autoSkipIntro ?? false,
             autoSkipOutro: base.library?.autoSkipOutro ?? appState.autoSkipOutro ?? false,

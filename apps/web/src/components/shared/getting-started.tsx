@@ -841,6 +841,7 @@ export function GettingStarted({
                                 seriesPaths: initialSeriesPaths,
                                 moviePaths: initialMoviePaths,
                                 disableLocalScanning: currentSettings?.library?.disableLocalScanning ?? false,
+                                disableCloudSource: currentSettings?.library?.disableCloudSource ?? false,
                                 tmdbApiKey: currentSettings?.library?.tmdbApiKey || "",
                                 scannerProvider: currentSettings?.library?.scannerProvider || "tmdb",
                                 primaryMetadataProvider: currentSettings?.library?.primaryMetadataProvider || "tmdb",

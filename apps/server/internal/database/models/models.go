@@ -71,6 +71,9 @@ type LibrarySettings struct {
 	ScannerStrictStructure   bool      `gorm:"column:scanner_strict_structure" json:"scannerStrictStructure"`
 	ScannerProvider          string    `gorm:"column:scanner_provider" json:"scannerProvider"`
 	DisableLocalScanning     bool      `gorm:"column:disable_local_scanning" json:"disableLocalScanning"`
+	// DisableCloudSource pausa Google Drive como origen sin desconectar la cuenta:
+	// los archivos gdrive:// se ocultan de la biblioteca y vuelven al reactivar.
+	DisableCloudSource bool `gorm:"column:disable_cloud_source" json:"disableCloudSource"`
 	ScannerUseLegacyMatching bool      `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
 	LastScanAt               time.Time `gorm:"column:last_scan_at" json:"lastScanAt"`
 	AutoScan                 bool      `gorm:"column:auto_scan" json:"autoScan"`
@@ -347,6 +350,14 @@ type MediaMetadataParent struct {
 	MediaID       int `gorm:"column:media_id;uniqueIndex" json:"mediaId"`
 	ParentID      int `json:"parentId"`
 	SpecialOffset int `json:"specialOffset"`
+}
+
+// MediaSourcePreference fija de qué origen se reproduce una serie.
+// Sin fila = automático (local primero, luego nube).
+type MediaSourcePreference struct {
+	MediaID   int       `gorm:"primaryKey;autoIncrement:false" json:"mediaId"`
+	Source    string    `gorm:"not null" json:"source"` // "local" | "cloud"
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type SilencedMediaEntry struct {

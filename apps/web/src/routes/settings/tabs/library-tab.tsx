@@ -3,7 +3,7 @@ import { type Control, Controller, useFormContext, useWatch } from "react-hook-f
 import { type SettingsFormValues } from "../index"
 import { PathList, OsToggle, OsSelect } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
-import { IconStatusFolder, IconNavigationTv, IconNavigationFilm, IconStatusRadar, IconStatusZap, IconUiSpinner, IconStatusDatabase, IconUiTag } from "@/components/ui/icons";
+import { IconStatusFolder, IconNavigationTv, IconNavigationFilm, IconStatusRadar, IconStatusZap, IconUiSpinner, IconStatusDatabase, IconUiTag, IconNavigationLayers } from "@/components/ui/icons";
 import { toast } from "sonner"
 import { buildSeaQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -72,6 +72,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
         | "library.scannerStrictStructure"
         | "library.scannerUseLegacyMatching"
         | "library.disableLocalScanning"
+        | "library.disableCloudSource"
 
     const applyLibraryToggle = (name: LibraryBoolField, value: boolean) => {
         const prev = getValues(name)
@@ -79,14 +80,16 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
         void patchLibraryNow({ [name.replace("library.", "")]: value }, () =>
             setValue(name, prev, { shouldDirty: false })
         ).then(() => {
-            // Desconectar el disco cambia qué archivos devuelve la biblioteca.
-            if (name !== "library.disableLocalScanning") return
+            // Apagar un origen cambia qué archivos devuelve la biblioteca.
+            if (name !== "library.disableLocalScanning" && name !== "library.disableCloudSource") return
             void queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
             void queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
+            void queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.MEDIA_SOURCE.GetAnimeEntrySource.key] })
         }, () => {})
     }
 
     const localDisconnected = Boolean(useWatch({ control, name: "library.disableLocalScanning" }))
+    const cloudPaused = Boolean(useWatch({ control, name: "library.disableCloudSource" }))
 
     const triggerLibraryScan = () => {
         scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false })
@@ -119,7 +122,54 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
             </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                2. DISCO LOCAL (carpetas + conexión)
+                2. ORÍGENES (de dónde se reproduce: disco local y/o Google Drive)
+               ═══════════════════════════════════════════════════════════════════ */}
+            <SectionBar
+                id="library-sources"
+                label="Orígenes"
+                description="Elegí de dónde se reproduce tu biblioteca. Cada serie puede fijar su propio origen desde su página."
+                icon={IconNavigationLayers}
+                collapsible
+                defaultOpen={true}
+                badge={localDisconnected && cloudPaused ? (
+                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/25">
+                        Sin orígenes
+                    </span>
+                ) : undefined}
+            >
+                <Controller
+                    control={control}
+                    name="library.disableLocalScanning"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Usar Disco Local"
+                            description="Al apagarlo no se escanea ni se vigila el disco y los archivos locales se ocultan de la biblioteca. No se borran: vuelven al encenderlo."
+                            checked={!field.value}
+                            onChange={(v) => applyLibraryToggle("library.disableLocalScanning", !v)}
+                        />
+                    )}
+                />
+                <Controller
+                    control={control}
+                    name="library.disableCloudSource"
+                    render={({ field }) => (
+                        <OsToggle
+                            label="Usar Google Drive"
+                            description="Al apagarlo los archivos de Drive se ocultan de la biblioteca sin desconectar la cuenta. Vuelven al encenderlo."
+                            checked={!field.value}
+                            onChange={(v) => applyLibraryToggle("library.disableCloudSource", !v)}
+                        />
+                    )}
+                />
+                {localDisconnected && cloudPaused && (
+                    <p className="px-1 text-xs text-amber-300">
+                        Con los dos orígenes apagados la biblioteca queda vacía.
+                    </p>
+                )}
+            </SectionBar>
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                3. DISCO LOCAL (carpetas)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
                 id="media-directories"
@@ -134,20 +184,6 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     </span>
                 ) : undefined}
             >
-                <Controller
-                    control={control}
-                    name="library.disableLocalScanning"
-                    render={({ field }) => (
-                        <OsToggle
-                            label="Desconectar Disco Local"
-                            description="Usa solo Google Drive: no se escanea ni se vigila el disco y los archivos locales se ocultan de la biblioteca (no se borran; vuelven al reconectar)."
-                            checked={Boolean(field.value)}
-                            onChange={(v) => applyLibraryToggle("library.disableLocalScanning", v)}
-                            variant="warning"
-                        />
-                    )}
-                />
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Controller
                         control={control}
@@ -254,7 +290,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
             </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                3. GOOGLE DRIVE
+                4. GOOGLE DRIVE
                ═══════════════════════════════════════════════════════════════════ */}
             <React.Suspense
                 fallback={
@@ -268,7 +304,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
             </React.Suspense>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                4. ESCANEO AUTOMÁTICO (cuándo se actualiza la biblioteca)
+                5. ESCANEO AUTOMÁTICO (cuándo se actualiza la biblioteca)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
                 id="scanner-automation"
@@ -324,7 +360,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
             </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                5. IDENTIFICACIÓN Y METADATOS (cómo se reconocen los archivos)
+                6. IDENTIFICACIÓN Y METADATOS (cómo se reconocen los archivos)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
                 id="scanner-identification"
@@ -429,7 +465,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
             </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                6. MATCH MANUAL (archivos sin vincular)
+                7. MATCH MANUAL (archivos sin vincular)
                ═══════════════════════════════════════════════════════════════════ */}
             <React.Suspense
                 fallback={

@@ -1,9 +1,10 @@
 import { useServerMutation, useServerQuery, buildSeaQuery } from "@/api/client/requests"
 import {
+    SetAnimeEntrySource_Variables,
     UpdateAnimeEntryProgress_Variables,
 } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { Anime_Entry, Anime_LocalFile, Nullish } from "@/api/generated/types"
+import { Anime_Entry, Anime_LocalFile, MediaSourceInfo, Nullish } from "@/api/generated/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
@@ -79,3 +80,33 @@ export function useUpdateAnimeEntryProgress(id: Nullish<string | number>, episod
     })
 }
 
+
+// ── Origen de reproducción por serie ─────────────────────────────────────────
+
+export type MediaSourceChoice = "auto" | "local" | "cloud"
+
+export function useGetAnimeEntrySource(id: Nullish<string | number>) {
+    return useServerQuery<MediaSourceInfo>({
+        endpoint: API_ENDPOINTS.MEDIA_SOURCE.GetAnimeEntrySource.endpoint.replace("{id}", String(id)),
+        method: API_ENDPOINTS.MEDIA_SOURCE.GetAnimeEntrySource.methods[0],
+        queryKey: [API_ENDPOINTS.MEDIA_SOURCE.GetAnimeEntrySource.key, String(id)],
+        enabled: !!id,
+        staleTime: 30000,
+    })
+}
+
+export function useSetAnimeEntrySource(id: Nullish<string | number>) {
+    const queryClient = useQueryClient()
+
+    return useServerMutation<MediaSourceInfo, SetAnimeEntrySource_Variables>({
+        endpoint: API_ENDPOINTS.MEDIA_SOURCE.SetAnimeEntrySource.endpoint,
+        method: API_ENDPOINTS.MEDIA_SOURCE.SetAnimeEntrySource.methods[0],
+        mutationKey: [API_ENDPOINTS.MEDIA_SOURCE.SetAnimeEntrySource.key, id],
+        onSuccess: (info) => {
+            queryClient.setQueryData([API_ENDPOINTS.MEDIA_SOURCE.GetAnimeEntrySource.key, String(id)], info)
+            // Cambia qué archivos (y qué copia) devuelve la serie y la biblioteca.
+            void queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(id)] })
+            void queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
+        },
+    })
+}

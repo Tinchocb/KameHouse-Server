@@ -2323,51 +2323,6 @@
     }
   },
   {
-    "name": "localDiskDisconnected",
-    "trimmedName": "localDiskDisconnected",
-    "comments": [
-      "localDiskDisconnected indica si el usuario desconectó el disco local",
-      "(library.disableLocalScanning): la biblioteca pasa a ser solo Google Drive.",
-      ""
-    ],
-    "filepath": "internal/handlers/local_disk.go",
-    "filename": "local_disk.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "visibleLocalFiles",
-    "trimmedName": "visibleLocalFiles",
-    "comments": [
-      "visibleLocalFiles oculta los archivos del disco local cuando está desconectado.",
-      "Solo filtra la vista: las filas siguen en la base y vuelven al reconectar. No usar",
-      "el resultado para escribir con InsertLocalFiles, que borra lo que no recibe.",
-      ""
-    ],
-    "filepath": "internal/handlers/local_disk.go",
-    "filename": "local_disk.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "resolveLibraryMediaID",
     "trimmedName": "resolveLibraryMediaID",
     "comments": [
@@ -2786,6 +2741,164 @@
       "returns": "handlers.DragonballLore",
       "returnGoType": "handlers.DragonballLore",
       "returnTypescriptType": "DragonballLore"
+    }
+  },
+  {
+    "name": "effective",
+    "trimmedName": "effective",
+    "comments": [
+      "effective devuelve el origen que realmente aplica a la serie.",
+      ""
+    ],
+    "filepath": "internal/handlers/media_source.go",
+    "filename": "media_source.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "localDiskDisconnected",
+    "trimmedName": "localDiskDisconnected",
+    "comments": [
+      "localDiskDisconnected indica si el usuario desconectó el disco local",
+      "(library.disableLocalScanning): no se escanea ni se vigila el disco.",
+      ""
+    ],
+    "filepath": "internal/handlers/media_source.go",
+    "filename": "media_source.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "visibleLocalFiles",
+    "trimmedName": "visibleLocalFiles",
+    "comments": [
+      "visibleLocalFiles aplica los orígenes globales y por serie a una lista de",
+      "archivos. Solo filtra la vista: no usar el resultado para escribir con",
+      "InsertLocalFiles, que borra lo que no recibe.",
+      ""
+    ],
+    "filepath": "internal/handlers/media_source.go",
+    "filename": "media_source.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleGetAnimeEntrySource",
+    "trimmedName": "GetAnimeEntrySource",
+    "comments": [
+      "HandleGetAnimeEntrySource returns the playback source settings of a series.",
+      "",
+      "\t@summary returns the playback source of a series.",
+      "\t@desc Includes how many files the series has in each source and which one applies.",
+      "\t@route /api/v1/library/anime-entry/{id}/source [GET]",
+      "\t@param id - int - true - \"Anime media ID\"",
+      "\t@returns handlers.MediaSourceInfo",
+      ""
+    ],
+    "filepath": "internal/handlers/media_source.go",
+    "filename": "media_source.go",
+    "api": {
+      "summary": "returns the playback source of a series.",
+      "descriptions": [
+        "Includes how many files the series has in each source and which one applies."
+      ],
+      "endpoint": "/api/v1/library/anime-entry/{id}/source",
+      "methods": [
+        "GET"
+      ],
+      "params": [
+        {
+          "name": "id",
+          "jsonName": "id",
+          "goType": "int",
+          "usedStructType": "",
+          "typescriptType": "number",
+          "required": true,
+          "descriptions": [
+            "Anime media ID"
+          ]
+        }
+      ],
+      "bodyFields": [],
+      "returns": "handlers.MediaSourceInfo",
+      "returnGoType": "handlers.MediaSourceInfo",
+      "returnTypescriptType": "MediaSourceInfo"
+    }
+  },
+  {
+    "name": "HandleSetAnimeEntrySource",
+    "trimmedName": "SetAnimeEntrySource",
+    "comments": [
+      "HandleSetAnimeEntrySource sets the playback source of a series.",
+      "",
+      "\t@summary sets the playback source of a series.",
+      "\t@desc \"auto\" plays local first and falls back to the cloud; \"local\" and \"cloud\" show only that source.",
+      "\t@route /api/v1/library/anime-entry/source [POST]",
+      "\t@returns handlers.MediaSourceInfo",
+      ""
+    ],
+    "filepath": "internal/handlers/media_source.go",
+    "filename": "media_source.go",
+    "api": {
+      "summary": "sets the playback source of a series.",
+      "descriptions": [
+        "\"auto\" plays local first and falls back to the cloud; \"local\" and \"cloud\" show only that source."
+      ],
+      "endpoint": "/api/v1/library/anime-entry/source",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [
+        {
+          "name": "MediaID",
+          "jsonName": "mediaId",
+          "goType": "int",
+          "usedStructType": "",
+          "typescriptType": "number",
+          "required": true,
+          "descriptions": []
+        },
+        {
+          "name": "Source",
+          "jsonName": "source",
+          "goType": "string",
+          "usedStructType": "",
+          "typescriptType": "string",
+          "required": true,
+          "descriptions": []
+        }
+      ],
+      "returns": "handlers.MediaSourceInfo",
+      "returnGoType": "handlers.MediaSourceInfo",
+      "returnTypescriptType": "MediaSourceInfo"
     }
   },
   {

@@ -590,6 +590,28 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/lore/dragonball",
         },
     },
+    MEDIA_SOURCE: {
+        /**
+         *  @description
+         *  Route returns the playback source of a series.
+         *  Includes how many files the series has in each source and which one applies.
+         */
+        GetAnimeEntrySource: {
+            key: "MEDIA-SOURCE-get-anime-entry-source",
+            methods: ["GET"],
+            endpoint: "/api/v1/library/anime-entry/{id}/source",
+        },
+        /**
+         *  @description
+         *  Route sets the playback source of a series.
+         *  "auto" plays local first and falls back to the cloud; "local" and "cloud" show only that source.
+         */
+        SetAnimeEntrySource: {
+            key: "MEDIA-SOURCE-set-anime-entry-source",
+            methods: ["POST"],
+            endpoint: "/api/v1/library/anime-entry/source",
+        },
+    },
     MEDIASTREAM: {
         /**
          *  @description

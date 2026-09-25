@@ -26,6 +26,7 @@ export const settingsSchema = z.object({
         scannerStrictStructure: z.boolean().default(false),
         scannerProvider: z.string().default("anilist"),
         disableLocalScanning: z.boolean().default(false),
+        disableCloudSource: z.boolean().default(false),
         primaryMetadataProvider: z.string().default("anilist"),
         lastScanAt: z.unknown().optional(),
         preferredAudioProfile: z.enum(["latino", "castellano", "japanese", "english", "auto"]).default("latino"),
@@ -136,6 +137,7 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>, e
             scannerStrictStructure: existingSettings?.library?.scannerStrictStructure ?? false,
             scannerProvider: libraryData.scannerProvider || existingSettings?.library?.scannerProvider || "anilist",
             disableLocalScanning: libraryData.disableLocalScanning ?? existingSettings?.library?.disableLocalScanning ?? false,
+            disableCloudSource: libraryData.disableCloudSource ?? existingSettings?.library?.disableCloudSource ?? false,
             primaryMetadataProvider: libraryData.primaryMetadataProvider || existingSettings?.library?.primaryMetadataProvider || "anilist",
             // Anti-wipe: el wizard no pide key/idioma; si vienen vacios se
             // conserva lo guardado en vez de pisarlo con "".

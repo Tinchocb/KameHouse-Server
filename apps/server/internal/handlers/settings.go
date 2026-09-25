@@ -279,6 +279,9 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		if _, ok := rawLibrary["disableLocalScanning"]; ok {
 			merged.Library.DisableLocalScanning = b.Library.DisableLocalScanning
 		}
+		if _, ok := rawLibrary["disableCloudSource"]; ok {
+			merged.Library.DisableCloudSource = b.Library.DisableCloudSource
+		}
 		if _, ok := rawLibrary["preferredAudioProfile"]; ok && b.Library.PreferredAudioProfile != "" {
 			merged.Library.PreferredAudioProfile = b.Library.PreferredAudioProfile
 		}

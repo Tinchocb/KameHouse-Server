@@ -299,6 +299,7 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 		&models.ScanSummary{},
 
 		&models.SilencedMediaEntry{},
+		&models.MediaSourcePreference{},
 		&models.Theme{},
 
 		&models.MediastreamSettings{},

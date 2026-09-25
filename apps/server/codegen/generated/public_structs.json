@@ -11870,6 +11870,15 @@
         "comments": []
       },
       {
+        "name": "DisableCloudSource",
+        "jsonName": "disableCloudSource",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
         "name": "ScannerUseLegacyMatching",
         "jsonName": "scannerUseLegacyMatching",
         "goType": "bool",
@@ -12814,6 +12823,49 @@
     "comments": [],
     "embeddedStructNames": [
       "models.BaseModel"
+    ]
+  },
+  {
+    "filepath": "../internal/database/models/models.go",
+    "filename": "models.go",
+    "name": "MediaSourcePreference",
+    "formattedName": "Models_MediaSourcePreference",
+    "package": "models",
+    "fields": [
+      {
+        "name": "MediaID",
+        "jsonName": "mediaId",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Source",
+        "jsonName": "source",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": [
+          " \"local\" | \"cloud\""
+        ]
+      },
+      {
+        "name": "UpdatedAt",
+        "jsonName": "updatedAt",
+        "goType": "time.Time",
+        "typescriptType": "string",
+        "usedStructName": "time.Time",
+        "required": false,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " MediaSourcePreference fija de qué origen se reproduce una serie.",
+      " Sin fila = automático (local primero, luego nube)."
     ]
   },
   {
@@ -15504,6 +15556,81 @@
       }
     ],
     "comments": []
+  },
+  {
+    "filepath": "../internal/handlers/media_source.go",
+    "filename": "media_source.go",
+    "name": "MediaSourceInfo",
+    "formattedName": "MediaSourceInfo",
+    "package": "handlers",
+    "fields": [
+      {
+        "name": "MediaID",
+        "jsonName": "mediaId",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Preference",
+        "jsonName": "preference",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Effective",
+        "jsonName": "effective",
+        "goType": "string",
+        "typescriptType": "string",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "LocalFiles",
+        "jsonName": "localFiles",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "CloudFiles",
+        "jsonName": "cloudFiles",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "LocalEnabled",
+        "jsonName": "localEnabled",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "CloudEnabled",
+        "jsonName": "cloudEnabled",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": true,
+        "comments": []
+      }
+    ],
+    "comments": [
+      " MediaSourceInfo describe los orígenes disponibles de una serie y cuál aplica."
+    ]
   },
   {
     "filepath": "../internal/handlers/music.go",

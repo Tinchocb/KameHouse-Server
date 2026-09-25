@@ -28,6 +28,7 @@ import { Vaul, VaulContent } from "@/components/vaul"
 import { IconNavigationChevronLeft, IconNavigationLayers, IconUiClose } from "@/components/ui/icons"
 import { PlayerFallback } from "@/components/video/player-fallback"
 import { SeriesContinueWatching } from "./-components/series-continue-watching"
+import { SeriesSourcePicker } from "./-components/series-source-picker"
 
 // ── Custom hooks ──────────────────────────────────────────────────────────────
 import { useSeriesData } from "./-hooks/use-series-data"
@@ -328,6 +329,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                             onGoToEpisode={handleGoToEpisode}
                         />
                     )}
+
+                    <SeriesSourcePicker mediaId={entry.mediaId ?? Number(seriesId)} />
 
                     <SeriesEpisodesTab
                         sagas={sagas}
