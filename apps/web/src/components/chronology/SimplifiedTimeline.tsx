@@ -302,7 +302,7 @@ export const SimplifiedTimeline: React.FC<SimplifiedTimelineProps> = ({
                   >
                     {/* Encabezado de era: kanji, nombre de la serie, rango de años, "x/y vistos" con mini barra (no sticky) */}
                     <div
-                      className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border bg-bg-primary/60 backdrop-blur-overlay-md text-left shadow-elevation-1"
+                      className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border bg-bg-primary/70 text-left shadow-elevation-1"
                       style={{ borderColor: `${era.accentHex}40` }}
                     >
                       <div className="flex items-center gap-3 min-w-0">

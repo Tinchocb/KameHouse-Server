@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { RadioCardGroup } from "@/components/settings/radio-card-group"
 import { SectionBar } from "@/components/ui/sectionbar/sectionbar"
 import { OsToggle, DirtyOsSelect, DirtyOsInput, DirtyPill } from "../components"
+import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 
 interface PerformanceTabProps {
     control: Control<SettingsFormValues>
@@ -102,6 +103,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
     }
 
     const effectiveTier = getEffectiveTier()
+    const cardSpring = useSpringPreset("cardHover")
 
     return (
         <div className="w-full space-y-7 animate-in fade-in duration-base pb-8">
@@ -134,9 +136,9 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                 <div className="p-5 md:p-6 space-y-5">
                     {/* Tarjetas de Telemetría */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-0.5">
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
                             <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">GPU</span>
-                            <p className="text-xs font-bold text-on-surface truncate" title={hardwareSpecs?.gpuRenderer || "GPU"}>
+                            <p className="text-xs font-bold text-on-surface truncate tabular-nums" title={hardwareSpecs?.gpuRenderer || "GPU"}>
                                 {hardwareSpecs?.gpuRenderer || "Predeterminada"}
                             </p>
                             <span className="text-4xs font-mono text-emerald-400">
@@ -144,25 +146,25 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             </span>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-0.5">
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
                             <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">CPU</span>
-                            <p className="text-xs font-bold text-on-surface truncate">
+                            <p className="text-xs font-bold text-on-surface truncate tabular-nums">
                                 {hardwareSpecs?.cpuCores ? `${hardwareSpecs.cpuCores} Núcleos` : "Compatible"}
                             </p>
                             <span className="text-4xs font-mono text-cyan-400">Hilos: Auto</span>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-0.5">
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
                             <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">RAM</span>
-                            <p className="text-xs font-bold text-on-surface truncate">
+                            <p className="text-xs font-bold text-on-surface truncate tabular-nums">
                                 {hardwareSpecs?.deviceMemoryGB ? `${hardwareSpecs.deviceMemoryGB} GB` : "RAM OK"}
                             </p>
                             <span className="text-4xs font-mono text-purple-400">Buffer Dinámico</span>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-0.5">
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
                             <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">Modo Activo</span>
-                            <p className="text-xs font-bold text-on-surface uppercase truncate">
+                            <p key={performanceProfile} className="text-xs font-bold text-on-surface uppercase truncate animate-text-swap-in">
                                 {performanceProfile}
                             </p>
                             <span className="text-4xs font-mono text-amber-400">Acelerado</span>
@@ -186,13 +188,13 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                                 type="button"
                                                 whileHover={{ scale: 1.025, y: -2 }}
                                                 whileTap={{ scale: 0.97 }}
-                                                transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                                                transition={cardSpring}
                                                 onClick={() => {
                                                     field.onChange(p.id)
                                                     setPerformanceProfile(p.id)
                                                 }}
                                                 className={cn(
-                                                    "flex flex-col p-3.5 rounded-xl border text-left transition-colors duration-200",
+                                                    "flex flex-col p-3.5 rounded-xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                                     isSelected
                                                         ? "bg-brand-accent/10 border-brand-accent shadow-[0_0_16px_hsl(var(--brand-accent)/0.25)] ring-1 ring-brand-accent/40"
                                                         : "bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
@@ -200,8 +202,8 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                             >
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div className={cn(
-                                                        "w-7 h-7 rounded-lg flex items-center justify-center border transition-all",
-                                                        isSelected ? "bg-brand-accent/20 border-brand-accent/40 text-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.3)]" : "bg-white/5 border-white/10 text-on-surface-variant"
+                                                        "w-7 h-7 rounded-lg flex items-center justify-center border transition-[background-color,border-color,color,box-shadow] duration-fast ease-smooth-out",
+                                                        isSelected ? "bg-brand-accent/20 border-brand-accent/40 text-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.3)]" : "bg-white/5 border-white/10 text-on-surface-variant group-hover:scale-105"
                                                     )}>
                                                         <ProfileIcon className="w-3.5 h-3.5" />
                                                     </div>
@@ -366,6 +368,7 @@ function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormValues
     const { setValue } = useFormContext<SettingsFormValues>()
     const mediastream = useWatch({ control, name: "mediastream" })
     const current = policyOf(mediastream)
+    const cardSpring = useSpringPreset("cardHover")
 
     const setPolicy = (policy: PlaybackPolicy) => {
         const flags = {
@@ -384,12 +387,15 @@ function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormValues
             {POLICY_OPTIONS.map((opt) => {
                 const isSelected = current === opt.value
                 return (
-                    <button
+                    <m.button
                         key={opt.value}
                         type="button"
+                        whileHover={{ scale: 1.015, y: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={cardSpring}
                         onClick={() => setPolicy(opt.value)}
                         className={cn(
-                            "flex flex-col p-4 rounded-xl border text-left transition-all active:scale-[0.99]",
+                            "flex flex-col p-4 rounded-xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                             isSelected
                                 ? "bg-brand-accent/10 border-brand-accent shadow-[0_0_15px_hsl(var(--brand-accent)/0.2)] ring-1 ring-brand-accent/40"
                                 : "bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
@@ -397,12 +403,17 @@ function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormValues
                     >
                         <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-bold text-on-surface">{opt.label}</span>
-                            <span className="text-4xs font-mono px-1.5 py-0.5 rounded bg-white/5 text-on-surface-variant border border-white/10">
+                            <span className={cn(
+                                "text-4xs font-mono px-1.5 py-0.5 rounded border transition-[background-color,color,border-color] duration-fast ease-smooth-out",
+                                isSelected
+                                    ? "bg-brand-accent text-white border-brand-accent"
+                                    : "bg-white/5 text-on-surface-variant border-white/10"
+                            )}>
                                 {opt.badge}
                             </span>
                         </div>
                         <p className="text-2xs text-on-surface-variant/80 line-clamp-3 leading-snug">{opt.desc}</p>
-                    </button>
+                    </m.button>
                 )
             })}
         </div>

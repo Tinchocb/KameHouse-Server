@@ -178,6 +178,7 @@ const config: Config = {
                 "brand-success": "var(--shadow-brand-success)",
                 "brand-magic": "var(--shadow-brand-magic)",
                 "brand-focus": "var(--shadow-brand-focus)",
+                "glow-tip": "var(--shadow-glow-tip)",
                 "modal": "var(--shadow-modal, var(--elevation-3))",
                 "player": "var(--shadow-player, var(--elevation-4))",
                 "overlay": "var(--shadow-overlay, var(--elevation-3))",

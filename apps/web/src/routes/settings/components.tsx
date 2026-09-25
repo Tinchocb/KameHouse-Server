@@ -1,5 +1,5 @@
 ﻿import React from "react"
-import { m } from "framer-motion"
+import { m, AnimatePresence } from "framer-motion"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { cn } from "@/components/ui/core/styling"
 import { IconNavigationChevronDown, IconUiEyeOff, IconUiEye, IconUiDelete, IconUiPlus, IconUiCheck, IconUiAlertTriangle } from "@/components/ui/icons";
@@ -14,11 +14,21 @@ import { get } from "react-hook-form"
 // Los controles dual-write (efecto inmediato) NO deben usarlo.
 
 export function DirtyPill({ show }: { show?: boolean }) {
-    if (!show) return null
+    const popSpring = useSpringPreset("press")
     return (
-        <span className="text-4xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0">
-            Requiere Guardar
-        </span>
+        <AnimatePresence initial={false}>
+            {show && (
+                <m.span
+                    initial={{ opacity: 0, scale: 0.6 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.6 }}
+                    transition={popSpring}
+                    className="text-4xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0"
+                >
+                    Requiere Guardar
+                </m.span>
+            )}
+        </AnimatePresence>
     )
 }
 
@@ -120,9 +130,9 @@ export const OsToggle = React.memo(function OsToggle({
             onPointerUp={() => setIsRowPressing(false)}
             onPointerLeave={() => setIsRowPressing(false)}
             className={cn(
-                "flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 min-h-[44px] transition-colors duration-base ease-smooth-out gap-4 select-none group outline-none",
+                "flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 min-h-[44px] transition-[background-color,transform] duration-fast ease-smooth-out gap-4 select-none group outline-none",
                 "focus-visible:ring-2 focus-visible:ring-brand-accent/40 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-950",
-                disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-white/[0.03] active:bg-white/[0.05]",
+                disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-white/[0.03] active:bg-white/[0.05] active:scale-[0.995]",
                 className
             )}
         >
@@ -213,7 +223,7 @@ export const OsSelect = React.memo(function OsSelect({
     }
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3 hover:bg-white/[0.04] transition-colors duration-base ease-smooth-out">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3 hover:bg-white/[0.04] transition-colors duration-fast ease-smooth-out">
             <div className="flex items-center gap-3 min-w-0 flex-1">
                 {Icon && (
                     <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/20 border-t-white/30 flex items-center justify-center text-on-surface-variant shrink-0">
@@ -241,7 +251,7 @@ export const OsSelect = React.memo(function OsSelect({
                         "rounded-full bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10",
                         "pl-4 pr-1.5 py-1.5 text-left outline-none select-none cursor-pointer",
                         "shadow-glass-highlight-sm",
-                        "transition-colors duration-base ease-smooth-out hover:border-white/30 hover:bg-white/[0.06] active:scale-[0.98]",
+                        "transition-[border-color,background-color,box-shadow,transform] duration-fast ease-smooth-out hover:border-white/30 hover:bg-white/[0.06] active:scale-[0.98]",
                         "focus-visible:ring-2 focus-visible:ring-white/40",
                         "data-[state=open]:border-white/35 data-[state=open]:bg-white/[0.07] data-[state=open]:shadow-[shadow:var(--glass-highlight-lg),0_0_16px_rgba(255,255,255,0.12)]",
                         "data-[disabled]:opacity-40 data-[disabled]:cursor-not-allowed",
@@ -269,7 +279,7 @@ export const OsSelect = React.memo(function OsSelect({
                         transition={chevronSpring}
                         className={cn(
                             "w-6 h-6 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center text-on-surface-variant shrink-0",
-                            "transition-colors duration-base ease-smooth-out group-hover:bg-white/[0.12] group-hover:text-white group-data-[state=open]:bg-white group-data-[state=open]:text-black group-data-[state=open]:border-white"
+                            "transition-[background-color,color,border-color] duration-fast ease-smooth-out group-hover:bg-white/[0.12] group-hover:text-white group-data-[state=open]:bg-white group-data-[state=open]:text-black group-data-[state=open]:border-white"
                         )}
                     >
                         <IconNavigationChevronDown className="w-3.5 h-3.5" />
@@ -304,7 +314,7 @@ export const OsSelect = React.memo(function OsSelect({
                                         style={{ animationDelay: `${Math.min(idx, 6) * 40}ms` }}
                                         className={cn(
                                             "relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 outline-none cursor-pointer select-none min-h-[38px]",
-                                            "transition-colors duration-base ease-smooth-out active:scale-[0.98]",
+                                            "transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-[0.98]",
                                             "data-[highlighted]:bg-white/[0.08] data-[highlighted]:text-white",
                                             "data-[state=checked]:bg-white/[0.08]",
                                             "data-[disabled]:opacity-40 data-[disabled]:pointer-events-none",
@@ -314,7 +324,7 @@ export const OsSelect = React.memo(function OsSelect({
                                         )}
                                     >
                                         <span className={cn(
-                                            "w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-all duration-base ease-bounce-spring",
+                                            "w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-[background-color,border-color,color,transform,box-shadow] duration-fast ease-bounce",
                                             isActive
                                                 ? "bg-white border-white text-black shadow-[0_0_10px_rgba(255,255,255,0.5)] scale-100"
                                                 : "border-white/25 bg-transparent text-transparent scale-90"
@@ -382,9 +392,10 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
     ...props
 }, ref) => {
     const [showSecure, setShowSecure] = React.useState(false)
+    const iconSwapSpring = useSpringPreset("press")
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3 hover:bg-white/[0.04] transition-colors min-h-[44px]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3 hover:bg-white/[0.04] transition-colors duration-fast ease-smooth-out min-h-[44px]">
             <div className="flex items-center gap-3 min-w-0 flex-1">
                 {Icon && (
                     <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/20 border-t-white/30 flex items-center justify-center text-on-surface-variant shrink-0">
@@ -399,7 +410,7 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
             </div>
 
             <div className={cn(
-                "flex items-center gap-2 bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 rounded-full pl-4 pr-3 py-2 w-full sm:w-64 lg:w-72 transition-all relative",
+                "flex items-center gap-2 bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 rounded-full pl-4 pr-3 py-2 w-full sm:w-64 lg:w-72 transition-[border-color,background-color,box-shadow] duration-fast ease-smooth-out relative",
                 "shadow-glass-highlight-sm",
                 "focus-within:border-white/35 focus-within:bg-white/[0.06] focus-within:shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.1)] hover:border-white/30",
                 error && "border-red-500/50 focus-within:border-red-500 focus-within:shadow-[inset_0_1px_1px_0_rgba(239,68,68,0.2),0_0_16px_rgba(239,68,68,0.2)] animate-error-shake",
@@ -422,9 +433,20 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                         type="button"
                         onClick={() => setShowSecure(!showSecure)}
                         aria-label={showSecure ? "Ocultar contenido" : "Mostrar contenido"}
-                        className="absolute right-3 text-on-surface-variant/70 hover:text-on-surface transition-all duration-fast p-1 active:scale-90"
+                        className="absolute right-3 text-on-surface-variant/70 hover:text-on-surface transition-[color,transform,background-color] duration-fast ease-smooth-out p-1 active:scale-90 rounded-full hover:bg-white/10"
                     >
-                        {showSecure ? <IconUiEyeOff className="w-3.5 h-3.5" /> : <IconUiEye className="w-3.5 h-3.5" />}
+                        <AnimatePresence mode="wait" initial={false}>
+                            <m.span
+                                key={showSecure ? "hide" : "show"}
+                                initial={{ opacity: 0, scale: 0.6 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.6 }}
+                                transition={iconSwapSpring}
+                                className="flex"
+                            >
+                                {showSecure ? <IconUiEyeOff className="w-3.5 h-3.5" /> : <IconUiEye className="w-3.5 h-3.5" />}
+                            </m.span>
+                        </AnimatePresence>
                     </button>
                 )}
             </div>
@@ -459,12 +481,19 @@ export function DirtyOsInput<T extends FieldValues>({ control, name, ...props }:
  *  (unidad desconectada o movida), la causa típica de "archivo no encontrado". */
 function PathRow({ dir, showFullPath, onRemove }: { dir: string, showFullPath: boolean, onRemove: (path: string) => void }) {
     const { data } = useDirectorySelector(dir)
+    const rowSpring = useSpringPreset("entrance")
     const missing = data?.exists === false
     const displayPath = showFullPath ? dir : (dir.replace(/[\\/]+$/, "").split(/[/\\]/).filter(Boolean).pop() || dir)
 
     return (
-        <div className={cn(
-            "flex items-center justify-between gap-2 bg-white/[0.03] border rounded-xl px-3.5 py-2 group/path transition-colors",
+        <m.div
+            layout
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={rowSpring}
+            className={cn(
+            "flex items-center justify-between gap-2 bg-white/[0.03] border rounded-xl px-3.5 py-2 group/path transition-[border-color,background-color] duration-fast ease-smooth-out",
             missing ? "border-amber-400/30 hover:border-amber-400/50" : "border-white/10 hover:border-white/20",
         )}>
             <span className="text-xs text-on-surface-variant font-mono truncate" title={dir}>{displayPath}</span>
@@ -481,14 +510,14 @@ function PathRow({ dir, showFullPath, onRemove }: { dir: string, showFullPath: b
                 <button
                     type="button"
                     onClick={() => onRemove(dir)}
-                    className="text-on-surface-variant/70 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-500/10"
+                    className="text-on-surface-variant/70 hover:text-red-400 transition-[color,background-color,transform] duration-fast ease-smooth-out p-1 rounded-lg hover:bg-red-500/10 active:scale-90"
                     title="Eliminar ruta"
                     aria-label={`Eliminar ruta ${dir}`}
                 >
                     <IconUiDelete className="w-3.5 h-3.5" />
                 </button>
             </div>
-        </div>
+        </m.div>
     )
 }
 
@@ -526,24 +555,33 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                         {Icon && <Icon className="w-4 h-4 text-brand-accent shrink-0" />}
                         <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider truncate">{label}</h4>
                     </div>
-                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-white/5 text-on-surface-variant border border-white/10 shrink-0">
+                    <span key={directories.length} className="text-3xs font-mono px-2 py-0.5 rounded-full bg-white/5 text-on-surface-variant border border-white/10 shrink-0 tabular-nums animate-number-pop-in">
                         {directories.length} {directories.length === 1 ? "ruta" : "rutas"}
                     </span>
                 </div>
 
+                <AnimatePresence initial={false} mode="popLayout">
                 {directories.length > 0 ? (
-                    <div className="space-y-2">
+                    <m.div key="list" layout className="space-y-2">
                         {directories.map((dir) => (
                             <PathRow key={dir} dir={dir} showFullPath={showFullPath} onRemove={onRemove} />
                         ))}
-                    </div>
+                    </m.div>
                 ) : (
-                    <div className="p-3 rounded-xl border border-dashed border-white/10 text-center">
-                        <p className="text-2xs text-on-surface-variant/50 font-medium">
+                    <m.div
+                        key="empty"
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ type: "tween", duration: 0.15 }}
+                        className="p-3 rounded-xl border border-dashed border-white/10 text-center"
+                    >
+                        <p className="text-2xs text-on-surface-variant/50 font-medium animate-text-swap-in">
                             Sin carpetas añadidas
                         </p>
-                    </div>
+                    </m.div>
                 )}
+                </AnimatePresence>
             </div>
 
             <div
@@ -561,7 +599,7 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                             onClick={handleAdd}
                             disabled={!selectedPath.trim()}
                             title={selectedPath.trim() ? `Agregar ${selectedPath.trim()}` : "Escribe o explora una carpeta"}
-                            className="h-9 pl-3.5 pr-4 rounded-full text-xs font-bold shrink-0 flex items-center gap-1.5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 bg-brand-accent text-white shadow-brand-primary hover:brightness-110 disabled:bg-white/[0.07] disabled:text-on-surface-variant/50 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:brightness-100"
+                            className="h-9 pl-3.5 pr-4 rounded-full text-xs font-bold shrink-0 flex items-center gap-1.5 transition-[background-color,color,box-shadow,transform,filter] duration-fast ease-smooth-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 bg-brand-accent text-white shadow-brand-primary hover:brightness-110 disabled:bg-white/[0.07] disabled:text-on-surface-variant/50 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:brightness-100"
                         >
                             <IconUiPlus className="w-3.5 h-3.5" />
                             <span>Agregar</span>

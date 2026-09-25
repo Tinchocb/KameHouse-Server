@@ -119,7 +119,7 @@ export function TmdbMatchManual() {
                                     type="button"
                                     onClick={() => setSelectedPath(f.path)}
                                     className={cn(
-                                        "w-full text-left p-3 rounded-xl border transition-all text-xs",
+                                        "w-full text-left p-3 rounded-xl border transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out text-xs",
                                         selectedPath === f.path
                                             ? "border-brand-accent bg-brand-accent/10 text-white"
                                             : "border-white/10 bg-white/[0.02] text-on-surface hover:border-white/25"

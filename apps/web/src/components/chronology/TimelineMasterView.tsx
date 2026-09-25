@@ -9,6 +9,7 @@ import { sounds } from './utils/audio';
 import { SectionBar } from '@/components/ui/sectionbar';
 import { Modal } from '@/components/ui/modal';
 import { useReducedMotion } from '@/components/ui/kinetics/hooks';
+import { MagneticIndicator } from '@/components/ui/kinetics/magnetic-indicator';
 import {
   Clock,
   GitBranch,
@@ -249,55 +250,45 @@ export const TimelineMasterView: React.FC<TimelineMasterViewProps> = ({
                 )}
               </button>
 
-              {/* Timeline View Tabs */}
-              <div className="flex items-center bg-surface-container-low p-1 rounded-xl border border-white/10">
-                <button
-                  id="btn-view-panoramic"
-                  onClick={() => {
-                    sounds.playSelect();
-                    setTimelineMode('panoramic');
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors duration-150 active:scale-95 cursor-pointer ${
-                    timelineMode === 'panoramic'
-                      ? 'bg-brand-accent text-neutral-950 shadow-sm'
-                      : 'text-on-surface-variant hover:text-white'
-                  }`}
-                >
-                  <Compass className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Panorámica</span>
-                </button>
-
-                <button
-                  id="btn-view-vertical"
-                  onClick={() => {
-                    sounds.playSelect();
-                    setTimelineMode('vertical');
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors duration-150 active:scale-95 cursor-pointer ${
-                    timelineMode === 'vertical'
-                      ? 'bg-brand-accent text-neutral-950 shadow-sm'
-                      : 'text-on-surface-variant hover:text-white'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Crónica Vertical</span>
-                </button>
-
-                <button
-                  id="btn-view-branches"
-                  onClick={() => {
-                    sounds.playSelect();
-                    setTimelineMode('branches');
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors duration-150 active:scale-95 cursor-pointer ${
-                    timelineMode === 'branches'
-                      ? 'bg-teal-400 text-neutral-950 shadow-sm'
-                      : 'text-on-surface-variant hover:text-white'
-                  }`}
-                >
-                  <GitBranch className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Paradojas de Trunks</span>
-                </button>
+              {/* Timeline View Tabs — segmented control (§5.3) con indicador layoutId */}
+              <div
+                role="tablist"
+                aria-label="Vista de la cronología"
+                className="flex items-center gap-1 rounded-full border border-white/20 border-t-white/40 border-b-white/10 bg-zinc-950/40 p-1.5"
+              >
+                {([
+                  { mode: 'panoramic', id: 'btn-view-panoramic', label: 'Panorámica', Icon: Compass, pill: 'bg-brand-accent' },
+                  { mode: 'vertical', id: 'btn-view-vertical', label: 'Crónica Vertical', Icon: Layers, pill: 'bg-brand-accent' },
+                  { mode: 'branches', id: 'btn-view-branches', label: 'Paradojas de Trunks', Icon: GitBranch, pill: 'bg-teal-400' },
+                ] as const).map(({ mode, id, label, Icon, pill }) => {
+                  const isActive = timelineMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      id={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-label={label}
+                      onClick={() => {
+                        sounds.playSelect();
+                        setTimelineMode(mode);
+                      }}
+                      className={`relative flex min-h-11 min-w-11 items-center justify-center gap-1.5 px-3 rounded-full text-xs font-mono font-bold transition-colors duration-base active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+                        isActive ? 'text-neutral-950' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'
+                      }`}
+                    >
+                      <MagneticIndicator
+                        layoutId="chronoTimelineMode"
+                        active={isActive}
+                        disableAnimation={!!reduceMotion}
+                        className={pill}
+                      />
+                      <Icon className="relative z-10 w-3.5 h-3.5" />
+                      <span className="relative z-10 hidden sm:inline">{label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -946,9 +937,10 @@ export const TimelineMasterView: React.FC<TimelineMasterViewProps> = ({
                     sounds.playSelect();
                     setSelectedBranchId(branch.id);
                   }}
-                  className={`flex flex-col text-left p-3.5 rounded-xl border transition-all ${
+                  aria-pressed={isActive}
+                  className={`flex flex-col text-left p-3.5 rounded-xl border transition-[border-color,background-color,box-shadow] duration-base ease-smooth-out ${
                     isActive
-                      ? 'bg-teal-950/80 border-teal-400 shadow-[0_0_20px_rgba(20,184,166,0.3)]'
+                      ? 'bg-teal-950/80 border-teal-400 shadow-elevation-2'
                       : 'bg-bg-quaternary/60 border-white/10 hover:border-white/20'
                   }`}
                 >

@@ -234,7 +234,7 @@ export function DragonBallScannerLive() {
                                     setModalTab(series.type === "MOVIES" ? "movies" : "sagas")
                                 }}
                                 className={cn(
-                                    "group relative flex flex-col rounded-xl overflow-hidden cursor-pointer border transition-all duration-200 bg-white/[0.02]",
+                                    "group relative flex flex-col rounded-xl overflow-hidden cursor-pointer border transition-[border-color,box-shadow,opacity,transform] duration-fast ease-smooth-out bg-white/[0.02]",
                                     (count > 0 || detectedMoviesInSeries > 0)
                                         ? "border-white/15 hover:border-brand-accent/60 hover:shadow-[0_4px_20px_rgba(0,0,0,0.5),0_0_14px_hsl(var(--brand-accent)/0.2)]"
                                         : "border-white/10 opacity-75 hover:opacity-100 hover:border-white/20"
@@ -251,7 +251,7 @@ export function DragonBallScannerLive() {
                                             }
                                         }}
                                         className={cn(
-                                            "w-full h-full object-cover transition-transform duration-300 group-hover:scale-105",
+                                            "w-full h-full object-cover transition-transform duration-slow ease-smooth-out group-hover:scale-105",
                                             count === 0 && detectedMoviesInSeries === 0 && "grayscale-[40%] opacity-80"
                                         )}
                                         loading="lazy"
@@ -311,7 +311,7 @@ export function DragonBallScannerLive() {
                                     <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
                                         <div
                                             className={cn(
-                                                "h-full transition-all duration-300 rounded-full",
+                                                "h-full transition-[width,background-color] duration-slow ease-smooth-out rounded-full",
                                                 isComplete
                                                     ? "bg-emerald-400"
                                                     : count > 0
@@ -380,7 +380,7 @@ export function DragonBallScannerLive() {
                                         type="button"
                                         onClick={() => setModalTab("sagas")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all cursor-pointer",
+                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color] duration-fast ease-smooth-out cursor-pointer",
                                             modalTab === "sagas"
                                                 ? "bg-white/15 text-white shadow-sm"
                                                 : "text-on-surface-variant hover:text-white"
@@ -392,7 +392,7 @@ export function DragonBallScannerLive() {
                                         type="button"
                                         onClick={() => setModalTab("movies")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-all cursor-pointer",
+                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color] duration-fast ease-smooth-out cursor-pointer",
                                             modalTab === "movies"
                                                 ? "bg-white/15 text-white shadow-sm"
                                                 : "text-on-surface-variant hover:text-white"
@@ -421,7 +421,7 @@ export function DragonBallScannerLive() {
                                         return (
                                             <div
                                                 key={saga.id}
-                                                className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/15 transition-all gap-4 overflow-hidden"
+                                                className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/15 transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden"
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     {/* Saga Artwork Thumbnail */}
@@ -470,7 +470,7 @@ export function DragonBallScannerLive() {
                                             <div
                                                 key={movie.id}
                                                 className={cn(
-                                                    "flex items-center justify-between p-3 rounded-xl border transition-all gap-4 overflow-hidden",
+                                                    "flex items-center justify-between p-3 rounded-xl border transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden",
                                                     isDetected
                                                         ? "bg-white/[0.03] border-white/15"
                                                         : "bg-white/[0.01] border-white/5 opacity-60"

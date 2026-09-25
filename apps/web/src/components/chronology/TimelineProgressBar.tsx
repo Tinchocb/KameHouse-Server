@@ -126,7 +126,7 @@ export const TimelineProgressBar: React.FC<TimelineProgressBarProps> = ({
           <div className="h-full bg-gradient-to-r from-brand-accent via-brand-secondary to-brand-secondary transition-all duration-500 rounded-full relative" style={{ width: `${percentage}%` }}>
             {/* Indicator at the tip */}
             {percentage > 0 && percentage < 100 && (
-              <span className="absolute right-0 top-0 bottom-0 w-3 bg-white/80 rounded-full shadow-[0_0_12px_#ffffff]" />
+              <span className="absolute right-0 top-0 bottom-0 w-3 bg-white/80 rounded-full shadow-glow-tip" />
             )}
           </div>
         </div>

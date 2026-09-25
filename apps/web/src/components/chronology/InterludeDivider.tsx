@@ -80,7 +80,7 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
             isContinuo
               ? 'border-dashed border-white/10 bg-bg-primary/30'
               : isYears
-                ? 'bg-bg-primary/60 backdrop-blur-overlay-md shadow-elevation-1'
+                ? 'bg-bg-primary/70 shadow-elevation-1'
                 : 'border-dashed border-white/15 bg-bg-primary/40'
           }`}
           style={isYears ? { borderColor: `${accent}45` } : undefined}

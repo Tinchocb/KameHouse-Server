@@ -334,7 +334,7 @@ export function GoogleDriveCard() {
                             <button
                                 type="button"
                                 onClick={() => openInBrowser(manualAuthUrl)}
-                                className="px-3.5 py-1.5 rounded-lg bg-brand-accent hover:brightness-110 text-on-primary font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                                className="px-3.5 py-1.5 rounded-lg bg-brand-accent hover:brightness-110 text-on-primary font-bold text-xs flex items-center gap-1.5 transition-[filter,transform,opacity] duration-fast ease-smooth-out shadow-sm active:scale-95"
                             >
                                 <ExternalLink className="w-3.5 h-3.5" />
                                 Abrir en el Navegador
@@ -345,7 +345,7 @@ export function GoogleDriveCard() {
                                     navigator.clipboard.writeText(manualAuthUrl)
                                     toast.success("Enlace copiado al portapapeles")
                                 }}
-                                className="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium text-xs flex items-center gap-1.5 transition-all border border-white/15 active:scale-95"
+                                className="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium text-xs flex items-center gap-1.5 transition-[background-color,transform] duration-fast ease-smooth-out border border-white/15 active:scale-95"
                             >
                                 <Copy className="w-3.5 h-3.5" />
                                 Copiar Enlace
@@ -361,7 +361,7 @@ export function GoogleDriveCard() {
                             type="button"
                             onClick={handleConnect}
                             disabled={isConnecting || !clientId.trim() || !clientSecret.trim()}
-                            className="px-5 py-2.5 rounded-xl bg-brand-accent hover:brightness-110 text-on-primary font-bold text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-5 py-2.5 rounded-xl bg-brand-accent hover:brightness-110 text-on-primary font-bold text-xs flex items-center gap-2 transition-[filter,transform,opacity] duration-fast ease-smooth-out shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isConnecting ? (
                                 <IconUiSpinner className="w-4 h-4 animate-spin" />

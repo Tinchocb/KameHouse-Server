@@ -509,17 +509,38 @@ function SettingsPage() {
             <main className="flex-1 flex flex-col h-full overflow-hidden">
                 {/* Content header */}
                 <header className="shrink-0 px-6 sm:px-8 lg:px-10 pt-5 md:pt-20 pb-5 border-b border-white/[0.06] sectionbar sectionbar-minimal">
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <div className="w-7 h-7 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-center">
-                            {React.createElement(activePillar.icon, { className: "h-3.5 w-3.5 text-brand-accent" })}
-                        </div>
-                        <span className="text-label-sm uppercase tracking-widest text-on-surface-variant font-mono">
-                            {activePillar.shortLabel}
-                        </span>
-                    </div>
-                    <h2 className="text-2xl md:text-3xl font-display tracking-wider text-on-surface leading-tight uppercase">
-                        {activePillar.label}
-                    </h2>
+                    <AnimatePresence mode="wait" initial={false}>
+                        <m.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={tabContentSpring}
+                        >
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <div className="w-7 h-7 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+                                    <AnimatePresence mode="wait" initial={false}>
+                                        <m.span
+                                            key={activeTab + "-icon"}
+                                            initial={{ opacity: 0, scale: 0.6 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.6 }}
+                                            transition={desktopIndicatorSpring}
+                                            className="flex"
+                                        >
+                                            {React.createElement(activePillar.icon, { className: "h-3.5 w-3.5 text-brand-accent" })}
+                                        </m.span>
+                                    </AnimatePresence>
+                                </div>
+                                <span key={activeTab + "-short"} className="text-label-sm uppercase tracking-wider text-on-surface-variant font-mono animate-text-swap-in">
+                                    {activePillar.shortLabel}
+                                </span>
+                            </div>
+                            <h2 className="text-2xl md:text-3xl font-display tracking-wider text-on-surface leading-tight uppercase text-balance">
+                                {activePillar.label}
+                            </h2>
+                        </m.div>
+                    </AnimatePresence>
                     <div className="h-[2px] w-12 bg-gradient-to-r from-white/40 to-transparent rounded-full mt-3" />
                 </header>
 
@@ -596,7 +617,7 @@ function SettingsPage() {
                                 <button
                                     type="button"
                                     onClick={handleDiscard}
-                                    className="text-xs font-semibold text-on-surface-variant hover:text-white transition-all px-3.5 py-1.5 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer min-h-[36px]"
+                                    className="text-xs font-semibold text-on-surface-variant hover:text-white transition-[color,background-color,transform] duration-fast ease-smooth-out px-3.5 py-1.5 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer min-h-[36px]"
                                 >
                                     Descartar
                                 </button>
@@ -620,7 +641,7 @@ function SettingsPage() {
                                     </>
                                 ) : isSaveSuccess ? (
                                     <>
-                                        <IconUiCheck className="w-3.5 h-3.5" strokeWidth={3} />
+                                        <IconUiCheck className="w-3.5 h-3.5 animate-success-check" strokeWidth={3} />
                                         <span className="animate-text-swap-in">¡Guardado!</span>
                                     </>
                                 ) : (

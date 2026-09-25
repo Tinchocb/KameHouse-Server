@@ -155,17 +155,17 @@ return (
                                 transition={cardSpring}
                                 onClick={() => setMode(mode.id)}
                                 className={cn(
-                                    "flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-all duration-200 cursor-pointer",
+                                    "flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                     isActive
                                         ? "bg-surface-container-high/80 border-white/30 border-t-white/50 shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
                                         : "bg-surface-container-lowest/60 border-white/10 border-t-white/25 hover:border-white/20 hover:bg-white/[0.04] shadow-glass-highlight-sm"
                                 )}
                             >
                                 <div className={cn(
-                                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-all",
+                                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-smooth-out",
                                     isActive
                                         ? "bg-white text-black border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] font-black"
-                                        : "bg-white/5 border-white/10 text-on-surface-variant"
+                                        : "bg-white/5 border-white/10 text-on-surface-variant group-hover:scale-105"
                                 )}>
                                     <ModeIcon className="w-4 h-4" />
                                 </div>
@@ -214,7 +214,7 @@ return (
                                                 transition={cardSpring}
                                                 onClick={() => handlePresetClick(preset)}
                                                 className={cn(
-                                                    "relative flex flex-col p-3 rounded-xl border text-left transition-colors duration-200 bg-gradient-to-br",
+                                                    "relative flex flex-col p-3 rounded-xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out bg-gradient-to-br",
                                                     preset.bg,
                                                     isActive
                                                         ? "border-brand-accent bg-white/[0.08] shadow-[0_0_15px_hsl(var(--brand-accent)/0.35)] ring-1 ring-brand-accent/50"
@@ -224,7 +224,7 @@ return (
                                                 <div className="flex items-center justify-between mb-1">
                                                     <div className="w-2.5 h-2.5 rounded-full border border-white/30" style={{ backgroundColor: preset.accent }} />
                                                     {isActive && (
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))]" />
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))] animate-success-pop" />
                                                     )}
                                                 </div>
                                                 <p className="text-xs font-bold text-on-surface truncate">{preset.name}</p>

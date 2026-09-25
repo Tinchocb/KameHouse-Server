@@ -77,10 +77,10 @@ function LibrarySkipScanRow() {
                     onClick={handleScan}
                     disabled={running}
                     className={cn(
-                        "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all",
+                        "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-[background-color,border-color,color,filter,transform] duration-fast ease-smooth-out active:scale-95",
                         running
                             ? "bg-brand-accent/10 border border-brand-accent/20 text-brand-accent cursor-not-allowed"
-                            : "bg-brand-accent hover:brightness-110 text-on-primary shadow-sm active:scale-95"
+                            : "bg-brand-accent hover:brightness-110 text-on-primary shadow-sm"
                     )}
                 >
                     {running ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconMediaWand className="w-3.5 h-3.5" />}
@@ -90,7 +90,7 @@ function LibrarySkipScanRow() {
             {running && (
                 <div className="w-full h-1.5 bg-white/10 rounded-full relative overflow-hidden">
                     <div
-                        className="absolute left-0 h-full bg-brand-accent rounded-full transition-all duration-300"
+                        className="absolute left-0 h-full bg-brand-accent rounded-full transition-[width] duration-slow ease-smooth-out"
                         style={{ width: `${Math.min(100, Math.max(2, percent))}%` }}
                     />
                 </div>
@@ -247,7 +247,7 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                                                 setPreferredAudioProfile(p.id)
                                             }}
                                             className={cn(
-                                                "flex flex-col p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer",
+                                                "flex flex-col p-3.5 rounded-2xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                                 isSelected
                                                     ? "bg-surface-container-high/80 border-white/30 border-t-white/50 shadow-[shadow:var(--glass-highlight-lg),0_8px_20px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
                                                     : "bg-surface-container-lowest/60 border-white/10 border-t-white/20 hover:border-white/25 hover:bg-white/[0.04] shadow-glass-highlight-sm"
@@ -255,7 +255,7 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                                         >
                                             <div className="flex items-center justify-between mb-1.5">
                                                 <span className="text-xl select-none">{p.flag}</span>
-                                                {isSelected && <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />}
+                                                {isSelected && <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] animate-success-pop" />}
                                             </div>
                                             <span className={cn("text-xs font-bold truncate", isSelected ? "text-white font-black" : "text-on-surface")}>
                                                 {p.title}

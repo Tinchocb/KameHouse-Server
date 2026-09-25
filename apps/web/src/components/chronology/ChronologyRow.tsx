@@ -7,6 +7,7 @@ import { getSagaBadgeConfig } from './utils/sagaBadge';
 import { getSagaFallbackImages } from './data/sagaImages';
 import { sounds } from './utils/audio';
 import { useReducedMotion } from '@/components/ui/kinetics/hooks';
+import { MagneticIndicator } from '@/components/ui/kinetics/magnetic-indicator';
 import {
   CheckCircle2,
   Circle,
@@ -102,7 +103,7 @@ export const ChronologyRow: React.FC<ChronologyRowProps> = memo(({
 
       {/* Row container: dark-first glass */}
       <div
-        className={`w-full rounded-2xl border transition-[background-color,border-color] duration-200 bg-bg-primary/40 backdrop-blur-overlay-md ${
+        className={`w-full rounded-2xl border transition-[background-color,border-color] duration-200 bg-bg-primary/60 ${
           isExpanded
             ? 'border-white/25 bg-bg-quaternary/60 shadow-elevation-2'
             : 'border-white/10 hover:border-white/25 bg-white/[0.02] hover:bg-white/[0.04]'
@@ -262,27 +263,41 @@ export const ChronologyRow: React.FC<ChronologyRowProps> = memo(({
             >
               <div className="p-3 sm:p-4 flex flex-col gap-4">
                 {/* Tabs bar: Hitos · Conflicto · Clímax · Lore */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-white/10 pb-2">
+                {/* Segmented control (§5.3): indicador layoutId único por volumen,
+                    si no la pill saltaría entre filas expandidas a la vez. */}
+                <div
+                  role="tablist"
+                  aria-label="Secciones del volumen"
+                  className="flex w-fit max-w-full items-center gap-1 overflow-x-auto no-scrollbar rounded-full border border-white/20 border-t-white/40 border-b-white/10 bg-zinc-950/40 p-1.5"
+                >
                   {(['hitos', 'conflicto', 'climax', 'lore'] as RowTab[]).map((tab) => {
                     const isActive = activeTab === tab;
                     return (
                       <button
                         key={tab}
                         type="button"
+                        role="tab"
+                        aria-selected={isActive}
                         onClick={() => {
                           sounds.playSelect();
                           setActiveTab(tab);
                         }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-mono uppercase font-bold tracking-wider transition-colors cursor-pointer select-none min-h-[36px] flex items-center gap-1 ${
-                          isActive
-                            ? 'bg-brand-accent/20 border border-brand-accent/40 text-brand-accent'
-                            : 'bg-bg-quaternary/60 hover:bg-white/10 border border-white/10 text-on-surface-variant hover:text-white'
+                        className={`relative min-h-11 min-w-11 px-3 rounded-full text-xs font-mono uppercase font-bold tracking-wider transition-colors duration-base cursor-pointer select-none flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+                          isActive ? 'text-brand-accent' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'
                         }`}
                       >
-                        {tab === 'hitos' && 'Hitos'}
-                        {tab === 'conflicto' && 'Conflicto'}
-                        {tab === 'climax' && 'Clímax'}
-                        {tab === 'lore' && 'Lore'}
+                        <MagneticIndicator
+                          layoutId={`chronoRowTab-${volume.id}`}
+                          active={isActive}
+                          disableAnimation={!!reduceMotion}
+                          className="bg-brand-accent/20 border border-brand-accent/40"
+                        />
+                        <span className="relative z-10">
+                          {tab === 'hitos' && 'Hitos'}
+                          {tab === 'conflicto' && 'Conflicto'}
+                          {tab === 'climax' && 'Clímax'}
+                          {tab === 'lore' && 'Lore'}
+                        </span>
                       </button>
                     );
                   })}
@@ -314,7 +329,7 @@ export const ChronologyRow: React.FC<ChronologyRowProps> = memo(({
                                 onPlayVolume(volume, epNum);
                               }
                             }}
-                            className={`rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col group/ep shadow-sm transition-all duration-200 ${
+                            className={`rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col group/ep shadow-sm transition-[transform,border-color,background-color] duration-base ease-smooth-out ${
                               onPlayVolume
                                 ? 'cursor-pointer hover:border-brand-accent/40 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent'
                                 : ''
