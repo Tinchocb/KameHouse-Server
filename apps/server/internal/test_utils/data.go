@@ -84,12 +84,6 @@ func InitTestProvider(t *testing.T, args ...FlagFunc) {
 	}
 }
 
-func SetTestConfigPath(path string) {
-	err := os.Setenv("TEST_CONFIG_PATH", path)
-	if err != nil {
-		log.Fatalf("couldn't set TEST_CONFIG_PATH: %s", err)
-	}
-}
 func SetTwoLevelDeep() {
 	ConfigPath = TwoLevelDeepTestConfigPath
 	TestDataPath = TwoLevelDeepTestDataPath

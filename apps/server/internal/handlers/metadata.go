@@ -230,4 +230,3 @@ func (h *Handler) HandleDeleteMediaMetadataParent(c echo.Context) error {
 
 	return h.RespondWithData(c, true)
 }
-

@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"errors"
+	"io/fs"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -15,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/ziflex/lecho/v3"
 	"golang.org/x/time/rate"
+	"gorm.io/gorm"
 	"kamehouse/internal/api/dragonball"
 	"kamehouse/internal/core"
 	"kamehouse/internal/database/models"
@@ -32,11 +35,21 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-var (
-	authLimiter    = rate.NewLimiter(10, 20)   // 10 req/s, burst 20
-	generalLimiter = rate.NewLimiter(50, 100) // 50 req/s, burst 100
+// Límites por IP del socket (e.IPExtractor = ExtractIPDirect: no se puede
+// falsificar con X-Forwarded-For). No por la cookie KameHouse-Client-Id: quien
+// no la manda recibe un ID nuevo en cada request y nunca llegaría al límite.
+const (
+	// Login: ráfaga de 5 intentos y después 1 cada 5 s por IP.
+	authRateLimit = rate.Limit(0.2)
+	authRateBurst = 5
+	// Resto de la API desde otra máquina (TV, celular): holgado para grillas de
+	// imágenes y segmentos HLS, pero con techo.
+	apiRateLimit = rate.Limit(100)
+	apiRateBurst = 300
+)
 
-	limiterMu      sync.Mutex
+var (
+	limiterMu        sync.Mutex
 	limitersCache, _ = lru.New[string, *rate.Limiter](1000)
 )
 
@@ -54,76 +67,41 @@ func getLimiter(key string, r rate.Limit, b int) *rate.Limiter {
 	return l
 }
 
+func tooManyRequests(c echo.Context) error {
+	c.Response().Header().Set("Retry-After", "1")
+	return c.JSON(http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
+}
+
+// rateLimitMiddleware pone techo a toda la API para clientes remotos. La app
+// de escritorio habla por loopback con su propio servidor y queda exenta.
 func rateLimitMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		path := c.Request().URL.Path
 
-		// Skip health endpoint
-		if path == "/api/health" {
+		// Auth tiene su propio límite (authRateLimitMiddleware); health se cachea.
+		if path == "/api/health" || strings.HasPrefix(path, "/api/v1/auth/") || isLoopbackRequest(c) {
 			return next(c)
 		}
 
-		// Skip non-public endpoints (auth endpoints handled by authRateLimitMiddleware)
-		if strings.HasPrefix(path, "/api/v1/auth/") {
-			return next(c)
-		}
-
-		// Public endpoints: /api/v1/status, /api/v1/image-proxy, /api/v1/ws, /api/v1/events
-		isPublic := path == "/api/v1/status" ||
-			strings.HasPrefix(path, "/api/v1/image-proxy") ||
-			path == "/api/v1/ws" ||
-			path == "/api/v1/events"
-
-		if !isPublic {
-			return next(c)
-		}
-
-		// Use client ID or IP as key
-		clientID := getClientID(c)
-		if clientID == "" {
-			clientID = c.RealIP()
-		}
-
-		limiter := getLimiter(clientID, 50, 100)
-		if !limiter.Allow() {
-			c.Response().Header().Set("Retry-After", "1")
-			return c.JSON(http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
+		if !getLimiter("api:"+c.RealIP(), apiRateLimit, apiRateBurst).Allow() {
+			return tooManyRequests(c)
 		}
 		return next(c)
 	}
 }
 
+// authRateLimitMiddleware limita los intentos de login por IP, incluso desde
+// loopback (un proceso local tampoco debería poder probar contraseñas a ritmo libre).
 func authRateLimitMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		path := c.Request().URL.Path
-
-		// Only apply to auth endpoints
-		if !strings.HasPrefix(path, "/api/v1/auth/") {
+		if !strings.HasPrefix(c.Request().URL.Path, "/api/v1/auth/") {
 			return next(c)
 		}
-
-		// Use client ID or IP as key
-		clientID := getClientID(c)
-		if clientID == "" {
-			clientID = c.RealIP()
-		}
-
-		limiter := getLimiter("auth:"+clientID, 10, 20)
-		if !limiter.Allow() {
-			c.Response().Header().Set("Retry-After", "1")
-			return c.JSON(http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
+		if !getLimiter("auth:"+c.RealIP(), authRateLimit, authRateBurst).Allow() {
+			return tooManyRequests(c)
 		}
 		return next(c)
 	}
-}
-
-func getClientID(c echo.Context) string {
-	if v := c.Get("KameHouse-Client-Id"); v != nil {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-	return ""
 }
 
 type Handler struct {
@@ -245,11 +223,11 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 				newCookie := new(http.Cookie)
 				newCookie.Name = "KameHouse-Client-Id"
 				newCookie.Value = u
-				newCookie.HttpOnly = true // prevent JS access
+				newCookie.HttpOnly = true                               // prevent JS access
 				newCookie.Expires = time.Now().Add(30 * 24 * time.Hour) // 30 days
 				newCookie.Path = "/"
 				newCookie.Domain = ""
-				newCookie.SameSite = http.SameSiteLaxMode // Lax: sent with top-level navigations, safe for CSRF
+				newCookie.SameSite = http.SameSiteLaxMode                                                          // Lax: sent with top-level navigations, safe for CSRF
 				newCookie.Secure = c.Scheme() == "https" || c.Request().Header.Get("X-Forwarded-Proto") == "https" // only over TLS
 				c.SetCookie(newCookie)
 				c.Set("KameHouse-Client-Id", u)
@@ -294,6 +272,9 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		CacheDir: filepath.Join(app.Config.Cache.Dir, "images"),
 	}
 	v1.GET("/image-proxy", imageProxy.ProxyImage)
+	// Imágenes de la estantería al disco local (el front las pide por el proxy).
+	shelfImageProxy = imageProxy
+	h.prewarmShelfImages(8 * time.Second)
 	v1.GET("/proxy", h.VideoProxy)
 	v1.HEAD("/proxy", h.VideoProxy)
 	v1.GET("/status", h.HandleGetStatus)
@@ -367,8 +348,12 @@ func (h *Handler) RespondWithData(c echo.Context, data interface{}) error {
 }
 
 func (h *Handler) RespondWithError(c echo.Context, err error) error {
-	// Mapeo mínimo para no devolver 500 en errores de validación.
-	// Los call-sites específicos deben migrar a RespondWithCodeError(400/404/403).
+	if code, ok := errorStatusCode(err); ok {
+		return c.JSON(code, NewErrorResponse(err))
+	}
+
+	// Fallback por texto para errores sin tipo (fmt.Errorf/errors.New sin
+	// envolver). Los call-sites específicos deben migrar a RespondWithCodeError.
 	msg := ""
 	if err != nil {
 		msg = strings.ToLower(err.Error())
@@ -385,6 +370,26 @@ func (h *Handler) RespondWithError(c echo.Context, err error) error {
 	default:
 		return c.JSON(500, NewErrorResponse(err))
 	}
+}
+
+// errorStatusCode mapea errores tipados (envueltos con %w) a su status HTTP.
+// Va antes del matcheo por texto: "no rows" o "invalid" dentro de un mensaje
+// ajeno ya no decide el status si el error tiene tipo.
+func errorStatusCode(err error) (int, bool) {
+	var httpErr *echo.HTTPError
+	switch {
+	case err == nil:
+		return 0, false
+	case errors.As(err, &httpErr):
+		return httpErr.Code, true
+	case errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, fs.ErrNotExist):
+		return 404, true
+	case errors.Is(err, fs.ErrPermission):
+		return 403, true
+	case errors.Is(err, context.DeadlineExceeded):
+		return 504, true
+	}
+	return 0, false
 }
 
 func (h *Handler) RespondWithCodeError(c echo.Context, code int, err error) error {

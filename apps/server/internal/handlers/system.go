@@ -90,6 +90,11 @@ func (h *Handler) HandleGetDiagnosticsReport(c echo.Context) error {
 		zipWriter := zip.NewWriter(pw)
 		var writeErr error
 		defer func() {
+			// Un panic armando el zip cortaba el servidor entero; ahora corta
+			// solo la descarga (el pipe se cierra con error).
+			if r := recover(); r != nil {
+				writeErr = fmt.Errorf("backup: panic generando el zip: %v", r)
+			}
 			if writeErr != nil {
 				_ = pw.CloseWithError(writeErr)
 			} else {
@@ -125,6 +130,8 @@ func (h *Handler) HandleGetDiagnosticsReport(c echo.Context) error {
 				return s
 			}
 			settingsCopy.Library.TmdbApiKey = redact(settingsCopy.Library.TmdbApiKey)
+			settingsCopy.GoogleDrive.ClientSecret = redact(settingsCopy.GoogleDrive.ClientSecret)
+			settingsCopy.GoogleDrive.RefreshToken = redact(settingsCopy.GoogleDrive.RefreshToken)
 
 			if settingsJSON, err := json.MarshalIndent(&settingsCopy, "", "  "); err == nil {
 				if f, err := zipWriter.Create("settings.json"); err == nil && f != nil {

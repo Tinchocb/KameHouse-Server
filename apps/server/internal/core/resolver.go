@@ -55,7 +55,7 @@ func NewUnifiedResolver(database *db.Database, logger *zerolog.Logger) *UnifiedR
 func (r *UnifiedResolver) ResolveUnifiedMedia(ctx context.Context, mediaID string, episode int, mediaType string) (*UnifiedResolutionResponse, error) {
 	id, err := strconv.Atoi(mediaID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid mediaID: %v", err)
+		return nil, fmt.Errorf("invalid mediaID: %w", err)
 	}
 
 	// Local Files only

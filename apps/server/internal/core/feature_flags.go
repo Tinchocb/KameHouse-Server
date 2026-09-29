@@ -1,6 +1,8 @@
 package core
 
 import (
+	"sync"
+
 	"kamehouse/internal/database/models"
 
 	"github.com/rs/zerolog"
@@ -9,6 +11,10 @@ import (
 type (
 	FeatureKey     string
 	FeatureManager struct {
+		// mu protege disabledFeatures y DisabledFeatures: UpdateFromSettings corre
+		// al refrescar los módulos mientras los handlers llaman a IsDisabled, y un
+		// map leído y escrito a la vez tumba el proceso.
+		mu               sync.RWMutex
 		disabledFeatures map[FeatureKey]bool
 		DisabledFeatures []FeatureKey
 		logger           *zerolog.Logger
@@ -72,22 +78,27 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 	return ret
 }
 
-func (m *FeatureManager) IsEnabled(key FeatureKey) bool {
-	_, ok := m.disabledFeatures[key]
-	return !ok
-}
-
 func (m *FeatureManager) IsDisabled(key FeatureKey) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	_, ok := m.disabledFeatures[key]
 	return ok
 }
 
 func (m *FeatureManager) HasDisabledFeatures() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return len(m.DisabledFeatures) > 0
 }
 
-func (m *FeatureManager) GetDisabledFeatureMap() map[FeatureKey]bool {
-	return m.disabledFeatures
+// GetDisabledFeatures devuelve una copia de la lista, segura de leer mientras
+// UpdateFromSettings la reconstruye.
+func (m *FeatureManager) GetDisabledFeatures() []FeatureKey {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make([]FeatureKey, len(m.DisabledFeatures))
+	copy(out, m.DisabledFeatures)
+	return out
 }
 
 // UpdateFromSettings updates the disabled features based on the user's library settings.
@@ -100,6 +111,8 @@ func (m *FeatureManager) UpdateFromSettings(library *models.LibrarySettings) {
 	// DisableLocalScanning ya no apaga features: bloqueaba /api/v1/mediastream, que
 	// también reproduce Google Drive. El escaneo lo cortan el AutoScanner, el watcher
 	// y HandleScanLocalFiles; la vista oculta los archivos locales (visibleLocalFiles).
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	delete(m.disabledFeatures, ManageLocalAnimeLibrary)
 	delete(m.disabledFeatures, WatchingLocalAnime)
 

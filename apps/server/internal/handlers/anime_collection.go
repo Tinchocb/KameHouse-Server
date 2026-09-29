@@ -170,4 +170,3 @@ func (h *Handler) HandleAddUnknownMedia(c echo.Context) error {
 	ClearLibraryCollectionCache()
 	return h.RespondWithData(c, animeCollection)
 }
-

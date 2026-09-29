@@ -40,7 +40,6 @@ import (
 	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/ffmpegutil"
 	"kamehouse/internal/util/filecache"
-	"kamehouse/internal/videocore"
 )
 
 type (
@@ -62,7 +61,6 @@ type (
 
 	StreamingServices struct {
 		MediastreamRepository *mediastream.Repository
-		VideoCore             *videocore.VideoCore
 		SkipDetector          *skipdetect.Detector
 		DriveService          *drive.Service
 	}
@@ -128,17 +126,6 @@ type (
 	App = KameHouse
 )
 
-type AppOption func(*KameHouse)
-
-func WithConfig(cfg *Config) AppOption            { return func(a *KameHouse) { a.Config = cfg } }
-func WithLogger(logger *zerolog.Logger) AppOption { return func(a *KameHouse) { a.Logger = logger } }
-func WithDatabase(database *db.Database) AppOption {
-	return func(a *KameHouse) { a.Database = database }
-}
-func WithWSEventManager(ws *events.WSEventManager) AppOption {
-	return func(a *KameHouse) { a.WSEventManager = ws }
-}
-
 // NewKameHouse crea una nueva instancia del servidor.
 func NewKameHouse(configOpts *ConfigOptions) *App {
 	logger := initLogger()
@@ -191,7 +178,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 
 	continuityManager := initContinuityManager(fileCacher, logger, database)
 
-	videoCore := initVideoCore(wsEventManager, logger, dynamicProvider, continuityManager, dynamicPlatform, isOffline)
 	thumbnailCache := initThumbnailCache(cfg, logger)
 
 	app := &KameHouse{
@@ -205,7 +191,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			FFmpegManager:  ffmpegutil.NewManager(cfg.Cache.Dir, logger),
 		},
 		StreamingServices: StreamingServices{
-			VideoCore:             videoCore,
 			MediastreamRepository: nil,
 			DriveService:          drive.NewService(logger),
 		},
@@ -377,7 +362,6 @@ func initDatabase(cfg *Config, logger *zerolog.Logger) *db.Database {
 	return database
 }
 
-
 func initAppDatabaseEntries(database *db.Database, logger *zerolog.Logger) {
 	HandleNewDatabaseEntries(database, logger)
 	database.RunDatabaseCleanup()
@@ -480,17 +464,6 @@ func initContinuityManager(fileCacher *filecache.Cacher, logger *zerolog.Logger,
 		FileCacher: fileCacher,
 		Logger:     logger,
 		Database:   database,
-	})
-}
-
-func initVideoCore(wsEventManager *events.WSEventManager, logger *zerolog.Logger, dynamicProvider *metadata_provider.DynamicProvider, continuityManager *continuity.Manager, dynamicPlatform *platform.DynamicPlatform, isOffline *atomic.Bool) *videocore.VideoCore {
-	return videocore.New(videocore.NewVideoCoreOptions{
-		WsEventManager:    wsEventManager,
-		Logger:            logger,
-		DynamicProvider:   dynamicProvider,
-		ContinuityManager: continuityManager,
-		DynamicPlatform:   dynamicPlatform,
-		IsOffline:         isOffline,
 	})
 }
 

@@ -11,15 +11,15 @@ type DragonballLore struct {
 }
 
 type DragonballLoreCharacter struct {
-	Name            string                       `json:"name"`
-	Alias           []string                     `json:"alias,omitempty"`
-	Race            string                       `json:"race,omitempty"`
-	Origin          string                       `json:"origin,omitempty"`
-	HeightCm        float64                      `json:"height_cm,omitempty"`
-	WeightKg        float64                      `json:"weight_kg,omitempty"`
-	Biography       string                       `json:"biography,omitempty"`
-	Personality     string                       `json:"personality,omitempty"`
-	Techniques      []string                     `json:"techniques,omitempty"`
+	Name            string                         `json:"name"`
+	Alias           []string                       `json:"alias,omitempty"`
+	Race            string                         `json:"race,omitempty"`
+	Origin          string                         `json:"origin,omitempty"`
+	HeightCm        float64                        `json:"height_cm,omitempty"`
+	WeightKg        float64                        `json:"weight_kg,omitempty"`
+	Biography       string                         `json:"biography,omitempty"`
+	Personality     string                         `json:"personality,omitempty"`
+	Techniques      []string                       `json:"techniques,omitempty"`
 	Transformations []DragonballLoreTransformation `json:"transformations,omitempty"`
 }
 
@@ -222,39 +222,39 @@ func (h *Handler) HandleGetDragonballLore(c echo.Context) error {
 			},
 		},
 		{
-			Name:        "Glorio",
-			Alias:       []string{"Glorio del Reino Demonio"},
-			Race:        "Habitante del Reino Demoniaco",
-			Origin:      "Tercer Mundo Demoníaco",
-			HeightCm:    178,
-			WeightKg:    68,
-			Biography:   "Misterioso piloto y pistolero que guía a Goku y sus amigos a través de los mundos demoníacos en Dragon Ball Daima.",
-			Personality: "Serio, pragmático, observador y leal a su propia agenda en el Reino Demonio.",
-			Techniques:  []string{"Magia Demoníaca", "Disparo Preciso", "Pilotaje Interdimensional"},
+			Name:            "Glorio",
+			Alias:           []string{"Glorio del Reino Demonio"},
+			Race:            "Habitante del Reino Demoniaco",
+			Origin:          "Tercer Mundo Demoníaco",
+			HeightCm:        178,
+			WeightKg:        68,
+			Biography:       "Misterioso piloto y pistolero que guía a Goku y sus amigos a través de los mundos demoníacos en Dragon Ball Daima.",
+			Personality:     "Serio, pragmático, observador y leal a su propia agenda en el Reino Demonio.",
+			Techniques:      []string{"Magia Demoníaca", "Disparo Preciso", "Pilotaje Interdimensional"},
 			Transformations: []DragonballLoreTransformation{},
 		},
 		{
-			Name:        "Panzy",
-			Alias:       []string{"Princesa Panzy"},
-			Race:        "Habitante del Reino Demoniaco",
-			Origin:      "Tercer Mundo Demoníaco",
-			HeightCm:    135,
-			WeightKg:    32,
-			Biography:   "Joven aventurera demoníaca del Tercer Mundo que se une a la tripulación de Goku en Daima para desafiar el régimen de Gomah.",
-			Personality: "Enérgica, curiosa, valiente y defensora de los oprimidos.",
-			Techniques:  []string{"Artes Marciales Demoníacas", "Mecánica Demoníaca"},
+			Name:            "Panzy",
+			Alias:           []string{"Princesa Panzy"},
+			Race:            "Habitante del Reino Demoniaco",
+			Origin:          "Tercer Mundo Demoníaco",
+			HeightCm:        135,
+			WeightKg:        32,
+			Biography:       "Joven aventurera demoníaca del Tercer Mundo que se une a la tripulación de Goku en Daima para desafiar el régimen de Gomah.",
+			Personality:     "Enérgica, curiosa, valiente y defensora de los oprimidos.",
+			Techniques:      []string{"Artes Marciales Demoníacas", "Mecánica Demoníaca"},
 			Transformations: []DragonballLoreTransformation{},
 		},
 		{
-			Name:        "Rey Gomah",
-			Alias:       []string{"Gomah", "Nuevo Rey del Reino Demonio"},
-			Race:        "Demonio Supremo",
-			Origin:      "Palacio del Reino Demoniaco",
-			HeightCm:    165,
-			WeightKg:    75,
-			Biography:   "Soberano supremo del Reino Demonio tras la caída de Dabura. Utilizó las Esferas del Dragón de la Tierra para convertir a los Guerreros Z en niños.",
-			Personality: "Ambicioso, temeroso del poder de los Saiyajin y conspirador.",
-			Techniques:  []string{"Ojo Demoníaco de Vigilancia", "Magia Oscura Real"},
+			Name:            "Rey Gomah",
+			Alias:           []string{"Gomah", "Nuevo Rey del Reino Demonio"},
+			Race:            "Demonio Supremo",
+			Origin:          "Palacio del Reino Demoniaco",
+			HeightCm:        165,
+			WeightKg:        75,
+			Biography:       "Soberano supremo del Reino Demonio tras la caída de Dabura. Utilizó las Esferas del Dragón de la Tierra para convertir a los Guerreros Z en niños.",
+			Personality:     "Ambicioso, temeroso del poder de los Saiyajin y conspirador.",
+			Techniques:      []string{"Ojo Demoníaco de Vigilancia", "Magia Oscura Real"},
 			Transformations: []DragonballLoreTransformation{},
 		},
 	}

@@ -10,4 +10,3 @@ import (
 func (h *Handler) HandleGetConfigMetadata(c echo.Context) error {
 	return h.RespondWithCodeError(c, 501, errors.New("config metadata not implemented"))
 }
-

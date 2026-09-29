@@ -17,8 +17,21 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// proxyPassthroughHeaders son las únicas cabeceras del upstream que VideoProxy
+// reenvía al cliente.
+var proxyPassthroughHeaders = []string{
+	"Content-Type",
+	"Content-Range",
+	"Accept-Ranges",
+	"ETag",
+	"Last-Modified",
+	"Cache-Control",
+}
+
 var videoProxyClient2 = req.C().
 	SetTimeout(60 * time.Second).
+	// El dialer rechaza IPs internas en cada conexión (redirects, DNS rebinding).
+	SetDial(util.ProxySafeDialContext).
 	ImpersonateChrome()
 
 func (h *Handler) VideoProxy(c echo.Context) (err error) {
@@ -38,6 +51,9 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 			h.App.Logger.Error().Err(err).Msg("proxy: Error unmarshalling headers")
 			return echo.NewHTTPError(http.StatusInternalServerError)
 		}
+		// Solo cabeceras de la allowlist; el mapa filtrado es también el que se
+		// propaga a las URLs reescritas del playlist.
+		headerMap = util.FilterProxyRequestHeaders(headerMap)
 		for key, value := range headerMap {
 			r.SetHeader(key, value)
 		}
@@ -57,21 +73,22 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 	}
 	defer resp.Body.Close()
 
-	// Copy response headers
-	for k, vs := range resp.Header {
-		for _, v := range vs {
-			if !strings.EqualFold(k, "Content-Length") { // Skip Content-Length header, fixes net::ERR_CONTENT_LENGTH_MISMATCH
-				c.Response().Header().Set(k, v)
-			}
+	// Solo cabeceras de contenido: copiar todas dejaba que un upstream
+	// arbitrario inyectara Set-Cookie, CORS o Location bajo nuestro origen.
+	// Content-Length se omite (net::ERR_CONTENT_LENGTH_MISMATCH).
+	for _, k := range proxyPassthroughHeaders {
+		if v := resp.Header.Get(k); v != "" {
+			c.Response().Header().Set(k, v)
 		}
 	}
 
 	// Vary: Origin for correct caching with credentials (handled by global middleware).
 	c.Response().Header().Set("Vary", "Origin")
 
-	// For HEAD requests, return only headers
+	// For HEAD requests, return only headers (with the upstream status: a 404
+	// upstream must not look like an available resource).
 	if c.Request().Method == http.MethodHead {
-		return c.NoContent(http.StatusOK)
+		return c.NoContent(resp.StatusCode)
 	}
 
 	isHlsPlaylist := strings.HasSuffix(url, ".m3u8") || strings.Contains(strings.ToLower(resp.Header.Get("Content-Type")), "mpegurl")
@@ -211,9 +228,10 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 		c.Response().Header().Set("Cache-Control", "no-cache")
 	}
 	h.App.Logger.Debug().Bool("rewritten", needsRewrite).Str("url", url).Msg("proxy: Sending modified HLS playlist")
-	c.Response().WriteHeader(resp.StatusCode)
 
-	return c.Blob(http.StatusOK, c.Response().Header().Get("Content-Type"), modifiedPlaylistBytes)
+	// Un solo WriteHeader: antes se escribía el status del upstream y luego
+	// c.Blob(200) intentaba otro ("response already committed").
+	return c.Blob(resp.StatusCode, contentType, modifiedPlaylistBytes)
 }
 
 // rewriteURI rewrites a URI pointer if needed, returns true if modified

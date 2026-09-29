@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"kamehouse/internal/core"
 
@@ -16,6 +15,7 @@ import (
 //
 // @summary  Resolve all playback sources for an episode
 // @desc     Returns a list of ResolvedSource objects. Only local files
+//
 //	are supported in this architecture.
 //
 // @returns  []core.ResolvedSource
@@ -66,20 +66,6 @@ func (h *Handler) HandleResolveStreams(c echo.Context) error {
 			Int("episode", episode).
 			Msg("resolver: handler error")
 		return h.RespondWithError(c, err)
-	}
-
-	if unifiedResponse != nil && h.App.Config != nil && h.App.Config.Server.Password != "" {
-		if token, tokenErr := h.App.GetServerPasswordHMACAuth().GenerateToken("*"); tokenErr == nil {
-			for i := range unifiedResponse.Sources {
-				if strings.HasPrefix(unifiedResponse.Sources[i].URLPath, "/") {
-					sep := "?"
-					if strings.Contains(unifiedResponse.Sources[i].URLPath, "?") {
-						sep = "&"
-					}
-					unifiedResponse.Sources[i].URLPath += sep + "token=" + token
-				}
-			}
-		}
 	}
 
 	return h.RespondWithData(c, unifiedResponse)

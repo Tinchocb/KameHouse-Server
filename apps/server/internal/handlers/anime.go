@@ -14,14 +14,13 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-
 func (h *Handler) getAnimeEpisodeCollection(c echo.Context, mID int) (*anime.EpisodeCollection, error) {
 	// For TMDB-only media (negative IDs), build episode collection from local LibraryEpisode data
 	if mID <= 0 {
 		return h.getTMDBEpisodeCollection(mID)
 	}
 
-completeAnime, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), mID)
+	completeAnime, err := h.App.Metadata.Platform.GetAnime(c.Request().Context(), mID)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +142,3 @@ func (h *Handler) HandleGetAnimeEpisodeCollection(c echo.Context) error {
 
 	return h.RespondWithData(c, ec)
 }
-
-
-
-

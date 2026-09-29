@@ -10,17 +10,17 @@ import (
 // HandlePlatformListAnime bridges legacy Platform list-anime calls to the active platform
 func (h *Handler) HandlePlatformListAnime(c echo.Context) error {
 	type body struct {
-		Page                *int                  `json:"page"`
-		Search              *string               `json:"search"`
-		PerPage             *int                  `json:"perPage"`
-		Sort                []platform.MediaSort  `json:"sort"`
+		Page                *int                   `json:"page"`
+		Search              *string                `json:"search"`
+		PerPage             *int                   `json:"perPage"`
+		Sort                []platform.MediaSort   `json:"sort"`
 		Status              []platform.MediaStatus `json:"status"`
-		Genres              []string              `json:"genres"`
-		AverageScoreGreater *int                  `json:"averageScoreGreater"`
-		Season              *platform.MediaSeason `json:"season"`
-		SeasonYear          *int                  `json:"seasonYear"`
-		Format              *platform.MediaFormat `json:"format"`
-		IsAdult             *bool                 `json:"isAdult"`
+		Genres              []string               `json:"genres"`
+		AverageScoreGreater *int                   `json:"averageScoreGreater"`
+		Season              *platform.MediaSeason  `json:"season"`
+		SeasonYear          *int                   `json:"seasonYear"`
+		Format              *platform.MediaFormat  `json:"format"`
+		IsAdult             *bool                  `json:"isAdult"`
 	}
 
 	var b body

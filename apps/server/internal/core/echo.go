@@ -19,6 +19,10 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	e.HidePort = true
 	e.Debug = false
 	e.JSONSerializer = &CustomJSONSerializer{}
+	// No hay reverse proxy delante: la IP del cliente es la del socket. Sin
+	// esto c.RealIP() lee X-Forwarded-For y el rate limit y los chequeos de
+	// loopback se evaden con una cabecera.
+	e.IPExtractor = echo.ExtractIPDirect()
 	// Errores internos de net/http (TLS, conexiones rotas…) al log de la app,
 	// para que lleguen a los archivos de log y al informe de diagnóstico.
 	e.StdLogger = log.New(app.Logger.With().Str("module", "http").Logger(), "", 0)

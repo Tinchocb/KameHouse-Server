@@ -35,7 +35,7 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 		isAuthed := h.isCorrectPasswordToken(token)
 		if !isAuthed && token != "" {
 			hmacAuth := h.App.GetServerPasswordHMACAuth()
-			if _, errHmac := hmacAuth.ValidateToken(token, c.Request().URL.Path); errHmac == nil {
+			if claims, errHmac := hmacAuth.ValidateToken(token, c.Request().URL.Path); errHmac == nil && claims.Endpoint != "*" { // el token comodín de streaming no abre el WebSocket
 				isAuthed = true
 			}
 		}

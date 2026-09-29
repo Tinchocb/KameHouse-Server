@@ -3,7 +3,6 @@ module kamehouse
 go 1.26.3
 
 require (
-	github.com/5rahim/go-astisub v0.2.1
 	github.com/5rahim/habari v0.1.12
 	github.com/5rahim/hls-m3u8 v0.1.0
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -22,7 +21,6 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/mileusna/useragent v1.3.5
-	github.com/nssteinbrenner/anitogo v1.0.0
 	github.com/rs/zerolog v1.34.0
 	github.com/samber/lo v1.53.0
 	github.com/samber/mo v1.16.0
@@ -65,8 +63,6 @@ require (
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
-	github.com/asticode/go-astikit v0.20.0 // indirect
-	github.com/asticode/go-astits v1.8.0 // indirect
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4 // indirect

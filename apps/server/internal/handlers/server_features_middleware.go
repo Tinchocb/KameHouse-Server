@@ -43,7 +43,7 @@ var staticPathFeatureRules = []pathFeatureRule{
 	{"/api/v1/library/anime-entry/update-progress", core.ManageLists, updateMethodsMap, nil},
 	{"/api/v1/library/anime-entry/update-repeat", core.ManageLists, updateMethodsMap, nil},
 	{"/api/v1/library/scan", core.RefreshMetadata, updateMethodsMap, map[string]struct{}{
-		"/api/v1/library/scan":            {},
+		"/api/v1/library/scan":           {},
 		"/api/v1/library/scan-summaries": {},
 	}},
 	// playback
@@ -115,4 +115,3 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		return next(c)
 	}
 }
-

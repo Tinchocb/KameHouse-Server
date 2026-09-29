@@ -17,7 +17,6 @@ type WSEventManagerInterface interface {
 	SendEventTo(clientID string, t string, payload interface{}, noLog ...bool)
 	SubscribeToClientEvents(id string) *ClientEventSubscriber
 	SubscribeToClientNativePlayerEvents(id string) *ClientEventSubscriber
-	SubscribeToClientVideoCoreEvents(id string) *ClientEventSubscriber
 
 	UnsubscribeFromClientEvents(id string)
 }
@@ -51,7 +50,6 @@ type (
 
 		clientEventSubscribers             *result.Map[string, *ClientEventSubscriber]
 		clientNativePlayerEventSubscribers *result.Map[string, *ClientEventSubscriber]
-		clientVideoCoreEventSubscribers    *result.Map[string, *ClientEventSubscriber]
 
 		dispatcher Dispatcher
 	}
@@ -90,7 +88,6 @@ func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher, shutdownCt
 		ShutdownSignal:                     make(chan struct{}, 1),
 		clientEventSubscribers:             result.NewMap[string, *ClientEventSubscriber](),
 		clientNativePlayerEventSubscribers: result.NewMap[string, *ClientEventSubscriber](),
-		clientVideoCoreEventSubscribers:    result.NewMap[string, *ClientEventSubscriber](),
 		dispatcher:                         dispatcher,
 		shutdownCtx:                        shutdownCtx,
 	}
@@ -204,17 +201,6 @@ func (m *WSEventManager) AddConn(id string, conn *websocket.Conn) {
 	if oldConn != nil {
 		_ = oldConn.Conn.Close()
 	}
-}
-
-// GetConnIDs returns a snapshot of the IDs of all currently connected clients.
-func (m *WSEventManager) GetConnIDs() []string {
-	m.connsMu.RLock()
-	defer m.connsMu.RUnlock()
-	ids := make([]string, 0, len(m.Conns))
-	for _, conn := range m.Conns {
-		ids = append(ids, conn.ID)
-	}
-	return ids
 }
 
 // RemoveConn removes a websocket connection by ID and cleans up its subscribers.
@@ -381,27 +367,6 @@ func (m *WSEventManager) SendEventTo(clientID string, t string, payload interfac
 	}
 }
 
-func (m *WSEventManager) SendStringTo(clientID string, s string) {
-	m.connsMu.RLock()
-	var targetConn *WSConn
-	for _, conn := range m.Conns {
-		if conn.ID == clientID {
-			targetConn = conn
-			break
-		}
-	}
-	m.connsMu.RUnlock()
-
-	if targetConn != nil {
-		targetConn.writeMu.Lock()
-		_ = targetConn.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-		if err := targetConn.Conn.WriteMessage(websocket.TextMessage, []byte(s)); err != nil {
-			go m.RemoveConn(clientID)
-		}
-		targetConn.writeMu.Unlock()
-	}
-}
-
 func (m *WSEventManager) OnClientEvent(event *WebsocketClientEvent) {
 	m.eventMu.RLock()
 	defer m.eventMu.RUnlock()
@@ -423,8 +388,6 @@ func (m *WSEventManager) OnClientEvent(event *WebsocketClientEvent) {
 	switch event.Type {
 	case NativePlayerEventType:
 		m.clientNativePlayerEventSubscribers.Range(onEvent)
-	case VideoCoreEventType:
-		m.clientVideoCoreEventSubscribers.Range(onEvent)
 	default:
 		m.clientEventSubscribers.Range(onEvent)
 	}
@@ -445,15 +408,6 @@ func (m *WSEventManager) SubscribeToClientNativePlayerEvents(id string) *ClientE
 	m.clientNativePlayerEventSubscribers.Set(id, subscriber)
 	return subscriber
 }
-
-func (m *WSEventManager) SubscribeToClientVideoCoreEvents(id string) *ClientEventSubscriber {
-	subscriber := &ClientEventSubscriber{
-		Channel: make(chan *WebsocketClientEvent, 100),
-	}
-	m.clientVideoCoreEventSubscribers.Set(id, subscriber)
-	return subscriber
-}
-
 
 func (m *WSEventManager) UnsubscribeFromClientEvents(id string) {
 	m.eventMu.Lock()
@@ -476,11 +430,6 @@ func (m *WSEventManager) UnsubscribeFromClientEvents(id string) {
 		m.clientNativePlayerEventSubscribers.Delete(id)
 		toClose = append(toClose, s)
 	}
-	if s, found := m.clientVideoCoreEventSubscribers.Get(id); found {
-		m.clientVideoCoreEventSubscribers.Delete(id)
-		toClose = append(toClose, s)
-	}
-
 
 	for _, subscriber := range toClose {
 		subscriber.mu.Lock()

@@ -10,7 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-
 // HandleGetBestSource retorna el mejor archivo para un título/episodio.
 //
 //	@summary get best source for playback.
@@ -62,7 +61,6 @@ func (h *Handler) HandleGetIntelligenceStats(c echo.Context) error {
 	}
 	return h.RespondWithData(c, stats)
 }
-
 
 // HandleSemanticSearch returns lore entities and smart recommendations for a query.
 //

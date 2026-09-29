@@ -9,7 +9,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-
 // HandleSetOfflineMode ...
 //
 //	@summary sets the offline mode.
@@ -154,7 +153,6 @@ func (h *Handler) HandleLocalSyncData(c echo.Context) error {
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
-
 
 	return h.RespondWithData(c, true)
 }

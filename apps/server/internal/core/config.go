@@ -81,16 +81,6 @@ type ConfigOptions struct {
 	EmbeddedLogo    []byte
 }
 
-// ProvideConfig acts as a Dependency Injection (e.g. Wire) provider.
-// Enforces a fail-fast pattern by panicking synchronously upon failure.
-func ProvideConfig(opts *ConfigOptions, logger *zerolog.Logger) *Config {
-	cfg, _, err := NewConfig(opts, logger)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Configuration validation failed during startup sequence")
-	}
-	return cfg
-}
-
 // NewConfig initializes the configuration and returns the config and the viper instance for hot-reload support.
 func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, *viper.Viper, error) {
 	flags := options.Flags
@@ -176,7 +166,16 @@ func NewConfig(options *ConfigOptions, logger *zerolog.Logger) (*Config, *viper.
 		}
 		cfg.Version = constants.Version
 		v.Set("version", constants.Version)
-		_ = v.WriteConfig() // Best-effort save on version progression
+		// Best-effort save on version progression. Se escribe con una instancia aparte
+		// que solo lee el archivo: v.WriteConfig() volcaba también los overrides de
+		// flags (-password, -host, -port) y los defaults al config.toml en texto plano.
+		w := viper.New()
+		w.SetConfigFile(configPath)
+		w.SetConfigType("toml")
+		if err := w.ReadInConfig(); err == nil {
+			w.Set("version", constants.Version)
+			_ = w.WriteConfig()
+		}
 	}
 
 	go loadLogo(options.EmbeddedLogo, dataDir)
@@ -354,30 +353,6 @@ func loadLogo(logo []byte, dataDir string) {
 	}
 }
 
-// GetServerAddr returns the binding address safely.
-func (cfg *Config) GetServerAddr() string {
-	return fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-}
-
-// GetServerURI returns the full web URL.
-func (cfg *Config) GetServerURI(df ...string) string {
-	scheme := "http"
-	if cfg.Server.TLS.Enabled {
-		scheme = "https"
-	}
-	if cfg.Server.Host == "" || cfg.Server.Host == "0.0.0.0" {
-		host := ""
-		if len(df) > 0 {
-			host = df[0]
-		}
-		if host != "" {
-			return fmt.Sprintf("%s://%s:%d", scheme, host, cfg.Server.Port)
-		}
-		return fmt.Sprintf(":%d", cfg.Server.Port)
-	}
-	return fmt.Sprintf("%s://%s:%d", scheme, cfg.Server.Host, cfg.Server.Port)
-}
-
 const defaultConfigTemplate = `# KameHouse Configuration
 version = "%s"
 
@@ -468,8 +443,6 @@ func resolveCorsOrigins(cfg *Config) {
 			}
 		}
 	}
-
-
 
 	// Always add the server's own address (with port) so that direct-browser access
 	// (without a frontend dev proxy) is accepted by both the CORS middleware and

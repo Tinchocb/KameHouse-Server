@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/util/filecache"
 	"kamehouse/internal/util/ffmpegutil"
+	"kamehouse/internal/util/filecache"
 	httputil "kamehouse/internal/util/http"
 
 	"github.com/goccy/go-json"
@@ -17,15 +18,30 @@ import (
 )
 
 type HealthCheckResult struct {
-	Status     string `json:"status"`
-	LatencyMs  int64  `json:"latency_ms"`
-	Message    string `json:"message,omitempty"`
-	Details    any    `json:"details,omitempty"`
+	Status    string `json:"status"`
+	LatencyMs int64  `json:"latency_ms"`
+	Message   string `json:"message,omitempty"`
+	Details   any    `json:"details,omitempty"`
 }
 
 type HealthResponse struct {
-	Status string                    `json:"status"`
+	Status string                       `json:"status"`
 	Checks map[string]HealthCheckResult `json:"checks"`
+}
+
+// /api/health es anónimo y sin rate limit: cada llamada consultaba la DB y la
+// API de TMDB. Se reutiliza el último resultado un rato; el mutex hace que una
+// ráfaga concurrente espere al único cálculo en curso en vez de repetirlo.
+const (
+	healthCacheTTL         = 30 * time.Second
+	healthCacheTTLDegraded = 5 * time.Second
+)
+
+var healthCache struct {
+	mu        sync.Mutex
+	body      []byte
+	status    int
+	expiresAt time.Time
 }
 
 func (h *Handler) HandleHealth(c echo.Context) error {
@@ -37,7 +53,15 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 		return c.NoContent(200)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	healthCache.mu.Lock()
+	defer healthCache.mu.Unlock()
+	if healthCache.body != nil && time.Now().Before(healthCache.expiresAt) {
+		return c.JSONBlob(healthCache.status, healthCache.body)
+	}
+
+	// No el ctx del request: el resultado se comparte y se cachea, y un cliente
+	// que corta no debe dejar cacheado un "down" falso.
+	ctx, cancel := context.WithTimeout(h.App.ShutdownCtx(), 5*time.Second)
 	defer cancel()
 
 	checks := make(map[string]HealthCheckResult)
@@ -105,6 +129,11 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 	}
 
 	body, _ := json.Marshal(response)
+	ttl := healthCacheTTL
+	if overallStatus != "ok" {
+		ttl = healthCacheTTLDegraded
+	}
+	healthCache.body, healthCache.status, healthCache.expiresAt = body, statusCode, time.Now().Add(ttl)
 	return c.JSONBlob(statusCode, body)
 }
 
@@ -352,10 +381,10 @@ func checkFFmpeg(ctx context.Context, manager *ffmpegutil.Manager, cacheDir stri
 	result.LatencyMs = time.Since(start).Milliseconds()
 	result.Message = "ffmpeg and ffprobe available"
 	result.Details = map[string]any{
-		"ffmpeg_path":       status.FFmpegPath,
-		"ffprobe_path":      status.FFprobePath,
-		"ffmpeg_version":    status.FFmpegVersion,
-		"ffprobe_version":   status.FFprobeVersion,
+		"ffmpeg_path":     status.FFmpegPath,
+		"ffprobe_path":    status.FFprobePath,
+		"ffmpeg_version":  status.FFmpegVersion,
+		"ffprobe_version": status.FFprobeVersion,
 	}
 	return result
 }

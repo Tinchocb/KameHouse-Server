@@ -83,7 +83,6 @@ func (h *Handler) HandleGetLibraryExplorerFileTree(c echo.Context) error {
 	return h.RespondWithData(c, paginatedTree)
 }
 
-
 // HandleRefreshLibraryExplorerFileTree ...
 //
 //	@summary refreshes the file tree structure of the library directories.

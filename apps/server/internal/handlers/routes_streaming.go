@@ -25,7 +25,7 @@ func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
 	v1Mediastream.GET("/hls/*", h.HandleMediastreamServeOptimizedStatic)
 	v1Mediastream.GET("/subs", h.HandleMediastreamGetSubtitles)
 	v1Mediastream.GET("/subs/pgs", h.HandleMediastreamGetPGSEvents)
-	v1Mediastream.GET("/subtitles", h.HandleMediastreamGetSubtitles) // alias matching frontend requests
+	v1Mediastream.GET("/subtitles", h.HandleMediastreamGetSubtitles)     // alias matching frontend requests
 	v1Mediastream.GET("/subtitles/pgs", h.HandleMediastreamGetPGSEvents) // alias matching frontend requests
 	v1Mediastream.GET("/att/*", h.HandleMediastreamGetAttachments)
 	v1Mediastream.GET("/file", h.HandleMediastreamFile)
@@ -37,9 +37,6 @@ func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
 
 	// Video Thumbnail
 	v1.GET("/video-thumbnail", h.HandleGetVideoThumbnail)
-
-	// VideoCore insights
-	v1.GET("/videocore/insights/:episodeId", h.HandleGetVideoInsights)
 
 	// Playback telemetry
 	v1.POST("/playback/sync", h.HandlePlaybackSync)

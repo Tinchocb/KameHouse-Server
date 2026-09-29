@@ -12,11 +12,6 @@ type (
 		Logger                 *zerolog.Logger
 		ClientEventSubscribers *result.Map[string, *ClientEventSubscriber]
 	}
-
-	MockWSEvent struct {
-		Type    string      `json:"type"`
-		Payload interface{} `json:"payload"`
-	}
 )
 
 func NewMockWSEventManager(logger *zerolog.Logger) *MockWSEventManager {
@@ -45,14 +40,6 @@ func (m *MockWSEventManager) SubscribeToClientEvents(id string) *ClientEventSubs
 	return subscriber
 }
 
-func (m *MockWSEventManager) SubscribeToClientVideoCoreEvents(id string) *ClientEventSubscriber {
-	subscriber := &ClientEventSubscriber{
-		Channel: make(chan *WebsocketClientEvent),
-	}
-	m.ClientEventSubscribers.Set(id, subscriber)
-	return subscriber
-}
-
 func (m *MockWSEventManager) SubscribeToClientNativePlayerEvents(id string) *ClientEventSubscriber {
 	subscriber := &ClientEventSubscriber{
 		Channel: make(chan *WebsocketClientEvent),
@@ -61,19 +48,6 @@ func (m *MockWSEventManager) SubscribeToClientNativePlayerEvents(id string) *Cli
 	return subscriber
 }
 
-
-
-
-
 func (m *MockWSEventManager) UnsubscribeFromClientEvents(id string) {
 	m.ClientEventSubscribers.Delete(id)
-}
-
-////
-
-func (m *MockWSEventManager) MockSendClientEvent(event *WebsocketClientEvent) {
-	m.ClientEventSubscribers.Range(func(key string, subscriber *ClientEventSubscriber) bool {
-		subscriber.Channel <- event
-		return true
-	})
 }

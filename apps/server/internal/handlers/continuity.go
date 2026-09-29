@@ -9,7 +9,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-
 // HandleUpdateContinuityWatchHistoryItem updates the watch history item.
 //
 //	@summary Updates watch history item.

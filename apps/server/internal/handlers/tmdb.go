@@ -249,7 +249,7 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	} else {
 		provider = librarymetadata.NewJikanProvider(h.App.Database, h.App.Logger)
 	}
-	
+
 	lookUpID := strconv.Itoa(b.TmdbID)
 	if token != "" && b.MediaType == "movie" {
 		lookUpID = strconv.Itoa(b.TmdbID + constants.MovieIDOffset)
@@ -315,7 +315,7 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 		if found {
 			lf.MediaID = b.TmdbID
 			lf.LibraryMediaId = savedMedia.ID
-			lf.Locked = true   // Lock it to prevent scanner from changing it
+			lf.Locked = true // Lock it to prevent scanner from changing it
 			lf.Ignored = false
 		}
 	}
@@ -408,5 +408,3 @@ func (h *Handler) HandleTMDBImages(c echo.Context) error {
 
 	return h.RespondWithData(c, resp)
 }
-
-

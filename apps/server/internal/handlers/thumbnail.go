@@ -52,6 +52,19 @@ func thumbnailGenConcurrency() int {
 
 // thumbnailHash identifies one extracted frame: source path, mtime, size and optional offset.
 // The disk file, the memory LRU entry and the ETag all derive from it.
+// isLexicallyUnder reports whether path is inside dir by path syntax alone,
+// without touching the filesystem.
+func isLexicallyUnder(dir, path string) bool {
+	if !filepath.IsAbs(path) || !filepath.IsAbs(dir) {
+		return false
+	}
+	rel, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(path))
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
+}
+
 func thumbnailHash(videoPath string, videoStat os.FileInfo, offsetSec *int) string {
 	key := fmt.Sprintf("%s:%d:%d", videoPath, videoStat.ModTime().UnixNano(), videoStat.Size())
 	if offsetSec != nil {
@@ -109,24 +122,19 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 		return h.serveDriveThumbnail(c, videoPath)
 	}
 
-	// Validate the file exists
-	videoStat, err := os.Stat(videoPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("video file not found"))
-		}
-		return h.RespondWithCodeError(c, http.StatusInternalServerError, err)
-	}
-
 	// Prevent path traversal: ensure the path belongs to one of the configured library paths
 	libraryPaths, err := h.App.Database.GetAllLibraryPathsFromSettings()
 	if err != nil {
 		return h.RespondWithCodeError(c, http.StatusInternalServerError, errors.New("failed to retrieve library paths"))
 	}
 
+	// La allowlist va antes de cualquier acceso al disco: si no, el 404/403
+	// revelaba qué rutas existen, y una ruta UNC (\\host\share) disparaba un
+	// acceso SMB. isLexicallyUnder no toca el filesystem; IsFileUnderDir sí
+	// (resuelve symlinks), por eso va segundo.
 	isPathAllowed := false
 	for _, libPath := range libraryPaths {
-		if util.IsFileUnderDir(libPath, videoPath) {
+		if isLexicallyUnder(libPath, videoPath) && util.IsFileUnderDir(libPath, videoPath) {
 			isPathAllowed = true
 			break
 		}
@@ -134,6 +142,14 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 
 	if !isPathAllowed {
 		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied to the requested file path"))
+	}
+
+	videoStat, err := os.Stat(videoPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("video file not found"))
+		}
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, err)
 	}
 
 	var offsetSec *int
@@ -189,11 +205,6 @@ func (h *Handler) HandleGetVideoThumbnail(c echo.Context) error {
 	h.App.ThumbnailCache.Set(hash, imgBytes)
 	setCacheHeaders()
 	return c.Blob(http.StatusOK, "image/jpeg", imgBytes)
-}
-
-// EnsureThumbnail generates or returns the cached thumbnail path for a given video file.
-func (h *Handler) EnsureThumbnail(videoPath string) (string, error) {
-	return h.EnsureThumbnailWithOffset(context.Background(), videoPath, nil)
 }
 
 // EnsureThumbnailWithContext generates or returns the cached thumbnail path with context cancellation support.

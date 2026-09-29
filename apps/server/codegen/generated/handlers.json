@@ -376,6 +376,31 @@
     }
   },
   {
+    "name": "entryForResponse",
+    "trimmedName": "entryForResponse",
+    "comments": [
+      "entryForResponse devuelve una copia superficial de la entrada sin",
+      "Episode.BaseAnime: repite entry.Media en cada episodio (~250 KB de los",
+      "~750 KB de una serie de 153 episodios) y ningún cliente lo lee. Pesaba en la",
+      "red, en el parseo y en la caché persistida del front (IndexedDB). La entrada",
+      "original no se toca: puede venir de una caché compartida del servidor.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_entries.go",
+    "filename": "anime_entries.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleGetAnimeEntryLocalFiles",
     "trimmedName": "GetAnimeEntryLocalFiles",
     "comments": [
@@ -964,7 +989,8 @@
     "trimmedName": "ClearSystemCache",
     "comments": [
       "HandleClearSystemCache clears disk caches and memory caches according to target.",
-      "Supports target: \"thumbnails\", \"videofiles\", \"keyframes\", \"fingerprints\", \"images\", \"metadata\", or \"all\" (default).",
+      "Supports target: \"thumbnails\", \"videofiles\", \"keyframes\", \"fingerprints\", \"images\", \"metadata\", \"drive\" or \"all\" (default).",
+      "\"all\" does not clear the Drive block cache (\"drive\"): refilling it spends Drive's daily download quota.",
       "",
       "\t@summary clears system and thumbnail caches",
       "\t@route /api/v1/system/cache/clear [POST]",
@@ -1538,6 +1564,93 @@
     "filename": "drive.go",
     "api": {
       "summary": "proxies media bytes from Google Drive with Range header support.",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveBlockCache",
+    "trimmedName": "driveBlockCache",
+    "comments": [
+      "driveBlockCache abre (una vez) la caché de bloques en \u003ccache\u003e/drive-blocks.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "validateDriveCache",
+    "trimmedName": "validateDriveCache",
+    "comments": [
+      "validateDriveCache compara, una vez por archivo y arranque, el tamaño en",
+      "Drive (metadata: no gasta cuota de descarga) con el cacheado, en segundo",
+      "plano para no demorar la reproducción.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "parseSingleByteRange",
+    "trimmedName": "parseSingleByteRange",
+    "comments": [
+      "parseSingleByteRange parses \"bytes=S-E\" / \"bytes=S-\" (end -1). An empty header",
+      "is the whole file (hasRange=false). simple=false for suffix or multi-ranges.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "forwardDriveRange",
+    "trimmedName": "forwardDriveRange",
+    "comments": [
+      "forwardDriveRange proxies a Range header to Drive as-is (single upstream request).",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "",
       "descriptions": [],
       "endpoint": "",
       "methods": null,
@@ -3445,6 +3558,21 @@
           "typescriptType": "string",
           "required": true,
           "descriptions": []
+        },
+        {
+          "name": "WarmOnly",
+          "jsonName": "warmOnly",
+          "goType": "bool",
+          "usedStructType": "",
+          "typescriptType": "boolean",
+          "required": true,
+          "descriptions": [
+            "Only prepare the transcode session (media info + keyframes) of the file",
+            "being played, without encoding or queueing a pre-transcode.",
+            "",
+            "Only prepare the transcode session (media info + keyframes) of the file",
+            "being played, without encoding or queueing a pre-transcode."
+          ]
         }
       ],
       "returns": "bool",
@@ -4750,6 +4878,7 @@
       "",
       "@summary  Resolve all playback sources for an episode",
       "@desc     Returns a list of ResolvedSource objects. Only local files",
+      "",
       "\tare supported in this architecture.",
       "",
       "@returns  []core.ResolvedSource",
@@ -4784,27 +4913,6 @@
     "trimmedName": "JSONSuccess",
     "comments": [
       "JSONSuccess serialises data as 200 OK inside APIResponse.Data.",
-      ""
-    ],
-    "filepath": "internal/handlers/response.go",
-    "filename": "response.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "JSONError",
-    "trimmedName": "JSONError",
-    "comments": [
-      "JSONError serialises err as the given HTTP status inside APIResponse.Error.",
       ""
     ],
     "filepath": "internal/handlers/response.go",
@@ -4864,6 +4972,50 @@
     }
   },
   {
+    "name": "rateLimitMiddleware",
+    "trimmedName": "rateLimitMiddleware",
+    "comments": [
+      "rateLimitMiddleware pone techo a toda la API para clientes remotos. La app",
+      "de escritorio habla por loopback con su propio servidor y queda exenta.",
+      ""
+    ],
+    "filepath": "internal/handlers/routes.go",
+    "filename": "routes.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "authRateLimitMiddleware",
+    "trimmedName": "authRateLimitMiddleware",
+    "comments": [
+      "authRateLimitMiddleware limita los intentos de login por IP, incluso desde",
+      "loopback (un proceso local tampoco debería poder probar contraseñas a ritmo libre).",
+      ""
+    ],
+    "filepath": "internal/handlers/routes.go",
+    "filename": "routes.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "RegisterIntelligenceRoutes",
     "trimmedName": "RegisterIntelligenceRoutes",
     "comments": [
@@ -4889,6 +5041,29 @@
     "trimmedName": "RegisterAdminRoutes",
     "comments": [
       "RegisterAdminRoutes registra las rutas de administración.",
+      ""
+    ],
+    "filepath": "internal/handlers/routes.go",
+    "filename": "routes.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "errorStatusCode",
+    "trimmedName": "errorStatusCode",
+    "comments": [
+      "errorStatusCode mapea errores tipados (envueltos con %w) a su status HTTP.",
+      "Va antes del matcheo por texto: \"no rows\" o \"invalid\" dentro de un mensaje",
+      "ajeno ya no decide el status si el error tiene tipo.",
       ""
     ],
     "filepath": "internal/handlers/routes.go",
@@ -5562,6 +5737,76 @@
     }
   },
   {
+    "name": "shelfImageURLs",
+    "trimmedName": "shelfImageURLs",
+    "comments": [
+      "shelfImageURLs devuelve las imágenes que dibuja la estantería de /series para",
+      "las series de la biblioteca: póster y banner en w342 (nítido) y w185 (fondo",
+      "desenfocado), igual que shelfImageUrls en el front; y el póster w342 de las",
+      "películas, igual que moviePosterUrls.",
+      ""
+    ],
+    "filepath": "internal/handlers/shelf_images.go",
+    "filename": "shelf_images.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "prewarmShelfImages",
+    "trimmedName": "prewarmShelfImages",
+    "comments": [
+      "prewarmShelfImages baja al disco del proxy local las imágenes de la",
+      "estantería. El front las pide a través de /image-proxy: así cargan en",
+      "milisegundos desde la primera apertura y también sin conexión.",
+      ""
+    ],
+    "filepath": "internal/handlers/shelf_images.go",
+    "filename": "shelf_images.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestShelfImageURLsCoincideConElFront",
+    "trimmedName": "TestShelfImageURLsCoincideConElFront",
+    "comments": [
+      "Las URLs esperadas son las mismas que fija el test del front",
+      "(apps/web/src/lib/helpers/series-images.test.ts): la URL exacta es la clave",
+      "de la caché del proxy local.",
+      ""
+    ],
+    "filepath": "internal/handlers/shelf_images_test.go",
+    "filename": "shelf_images_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "NewStatus",
     "trimmedName": "NewStatus",
     "comments": [
@@ -6133,11 +6378,13 @@
     }
   },
   {
-    "name": "thumbnailHash",
-    "trimmedName": "thumbnailHash",
+    "name": "isLexicallyUnder",
+    "trimmedName": "isLexicallyUnder",
     "comments": [
       "thumbnailHash identifies one extracted frame: source path, mtime, size and optional offset.",
       "The disk file, the memory LRU entry and the ETag all derive from it.",
+      "isLexicallyUnder reports whether path is inside dir by path syntax alone,",
+      "without touching the filesystem.",
       ""
     ],
     "filepath": "internal/handlers/thumbnail.go",
@@ -6199,27 +6446,6 @@
       "methods": [
         "GET"
       ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "EnsureThumbnail",
-    "trimmedName": "EnsureThumbnail",
-    "comments": [
-      "EnsureThumbnail generates or returns the cached thumbnail path for a given video file.",
-      ""
-    ],
-    "filepath": "internal/handlers/thumbnail.go",
-    "filename": "thumbnail.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -6660,58 +6886,6 @@
       "returns": "bool",
       "returnGoType": "bool",
       "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetVideoInsights",
-    "trimmedName": "GetVideoInsights",
-    "comments": [
-      "HandleGetVideoInsights returns video insights (heatmap).",
-      "",
-      "\t@summary returns video insights (heatmap)",
-      "\t@param episodeId - string - true - \"The Episode ID or string seed\"",
-      "\t@param duration - float - false - \"The total duration of the video in seconds\"",
-      "\t@returns []videocore.InsightNode",
-      "\t@route /api/v1/videocore/insights/{episodeId} [GET]",
-      ""
-    ],
-    "filepath": "internal/handlers/videocore.go",
-    "filename": "videocore.go",
-    "api": {
-      "summary": "returns video insights (heatmap)",
-      "descriptions": [],
-      "endpoint": "/api/v1/videocore/insights/{episodeId}",
-      "methods": [
-        "GET"
-      ],
-      "params": [
-        {
-          "name": "episodeId",
-          "jsonName": "episodeId",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": true,
-          "descriptions": [
-            "The Episode ID or string seed"
-          ]
-        },
-        {
-          "name": "duration",
-          "jsonName": "duration",
-          "goType": "float",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": [
-            "The total duration of the video in seconds"
-          ]
-        }
-      ],
-      "bodyFields": [],
-      "returns": "[]videocore.InsightNode",
-      "returnGoType": "videocore.InsightNode",
-      "returnTypescriptType": "Array\u003cVideoCore_InsightNode\u003e"
     }
   },
   {

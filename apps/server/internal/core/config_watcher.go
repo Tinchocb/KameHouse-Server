@@ -127,10 +127,3 @@ func (cw *ConfigWatcher) reload() {
 	cw.logger.Info().Msg("config reloaded successfully")
 }
 
-func (cw *ConfigWatcher) GetCallbacks() []func(*Config) {
-	cw.mu.RLock()
-	defer cw.mu.RUnlock()
-	callbacks := make([]func(*Config), len(cw.callbacks))
-	copy(callbacks, cw.callbacks)
-	return callbacks
-}

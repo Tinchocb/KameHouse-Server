@@ -58,6 +58,11 @@ type CacheStatsResponse struct {
 		DiskSizeBytes int64 `json:"diskSizeBytes"`
 		DiskItemCount int   `json:"diskItemCount"`
 	} `json:"images"`
+	// DriveBlocks: bloques de archivos de Google Drive guardados en disco.
+	DriveBlocks struct {
+		DiskSizeBytes int64 `json:"diskSizeBytes"`
+		DiskItemCount int   `json:"diskItemCount"`
+	} `json:"driveBlocks"`
 	TotalDiskSizeBytes int64           `json:"totalDiskSizeBytes"`
 	IsWarming          bool            `json:"isWarming"`
 	WarmingProgress    WarmingProgress `json:"warmingProgress"`
@@ -143,7 +148,12 @@ func (h *Handler) HandleGetCacheStats(c echo.Context) error {
 	imgDir := filepath.Join(h.App.Config.Cache.Dir, "images")
 	resp.Images.DiskSizeBytes, resp.Images.DiskItemCount = calcDirStats(imgDir)
 
-	resp.TotalDiskSizeBytes = resp.Thumbnails.DiskSizeBytes + resp.Videofiles.DiskSizeBytes + resp.Keyframes.DiskSizeBytes + resp.Fingerprints.DiskSizeBytes + resp.Images.DiskSizeBytes
+	// 7. Drive block cache
+	if cache := h.driveBlockCache(); cache != nil {
+		resp.DriveBlocks.DiskSizeBytes, resp.DriveBlocks.DiskItemCount = cache.Stats()
+	}
+
+	resp.TotalDiskSizeBytes = resp.Thumbnails.DiskSizeBytes + resp.Videofiles.DiskSizeBytes + resp.Keyframes.DiskSizeBytes + resp.Fingerprints.DiskSizeBytes + resp.Images.DiskSizeBytes + resp.DriveBlocks.DiskSizeBytes
 	resp.IsWarming = isThumbnailWarming.Load()
 	resp.WarmingProgress = WarmingProgress{
 		Total:     warmingTotal.Load(),
@@ -156,7 +166,8 @@ func (h *Handler) HandleGetCacheStats(c echo.Context) error {
 }
 
 // HandleClearSystemCache clears disk caches and memory caches according to target.
-// Supports target: "thumbnails", "videofiles", "keyframes", "fingerprints", "images", "metadata", or "all" (default).
+// Supports target: "thumbnails", "videofiles", "keyframes", "fingerprints", "images", "metadata", "drive" or "all" (default).
+// "all" does not clear the Drive block cache ("drive"): refilling it spends Drive's daily download quota.
 //
 //	@summary clears system and thumbnail caches
 //	@route /api/v1/system/cache/clear [POST]
@@ -219,6 +230,16 @@ func (h *Handler) HandleClearSystemCache(c echo.Context) error {
 		freedCount += fc
 	}
 
+	// 4c. Bloques de Drive: solo a pedido explícito ("all" no los toca). Volver
+	// a llenarla gasta la cuota diaria de descarga de Drive que la caché cuida.
+	if target == "drive" {
+		if cache := h.driveBlockCache(); cache != nil {
+			fb, fc := cache.Clear()
+			freedBytes += fb
+			freedCount += fc
+		}
+	}
+
 	// 5. Metadata
 	if target == "all" || target == "metadata" {
 		if h.App.Database != nil && h.App.Database.Gorm() != nil {
@@ -259,7 +280,9 @@ func (h *Handler) HandleWarmThumbnailCache(c echo.Context) error {
 		var req struct {
 			Action string `json:"action"`
 		}
-		_ = c.Bind(&req)
+		if err := c.Bind(&req); err != nil {
+			return h.RespondWithCodeError(c, 400, err)
+		}
 		action = req.Action
 	}
 
@@ -362,8 +385,20 @@ func (h *Handler) HandleWarmThumbnailCache(c echo.Context) error {
 						continue
 					}
 
-					// Cold thumbnail: generate with cancellation context
-					_, err = h.EnsureThumbnailWithContext(ctx, videoPath)
+					// Cold thumbnail: generate with cancellation context.
+					// El recover va por archivo: un archivo que hace fallar a ffmpeg
+					// no debe matar al worker (si caían todos, el productor quedaba
+					// bloqueado enviando a jobs) ni al servidor.
+					err = func() (err error) {
+						defer func() {
+							if r := recover(); r != nil {
+								h.App.Logger.Error().Interface("panic", r).Str("path", videoPath).Msg("cache: panic generating thumbnail")
+								err = fmt.Errorf("panic: %v", r)
+							}
+						}()
+						_, err = h.EnsureThumbnailWithContext(ctx, videoPath)
+						return err
+					}()
 					warmingProcessed.Add(1)
 					if err != nil {
 						warmingSkipped.Add(1)

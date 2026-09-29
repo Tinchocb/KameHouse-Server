@@ -6,8 +6,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"kamehouse/internal/api/jikan"
 	"kamehouse/internal/api/tmdb"
@@ -20,48 +18,6 @@ import (
 
 	"github.com/rs/zerolog"
 )
-
-// SettingsCache provides in-memory caching for application settings to reduce repeated database calls.
-// It stores the settings and can be invalidated when settings are updated.
-type SettingsCache struct {
-	settingsMutex sync.RWMutex
-	settings     *models.Settings
-	settingsTime time.Time
-}
-
-func (c *SettingsCache) GetSettings(database *db.Database) (*models.Settings, error) {
-	c.settingsMutex.RLock()
-	if c.settings != nil {
-		c.settingsMutex.RUnlock()
-		return c.settings, nil
-	}
-	c.settingsMutex.RUnlock()
-
-	c.settingsMutex.Lock()
-	defer c.settingsMutex.Unlock()
-
-	if c.settings != nil {
-		return c.settings, nil
-	}
-
-	var settings models.Settings
-	err := database.Gorm().Where("id = ?", 1).First(&settings).Error
-	if err != nil {
-		return nil, err
-	}
-	c.settings = &settings
-	c.settingsTime = time.Now()
-	return &settings, nil
-}
-
-func (c *SettingsCache) Invalidate() {
-	c.settingsMutex.Lock()
-	defer c.settingsMutex.Unlock()
-	c.settings = nil
-}
-
-// GlobalSettingsCache is the centralized instance for application settings.
-var GlobalSettingsCache = &SettingsCache{}
 
 func getActiveProvider(settings *models.Settings, dbInstance *db.Database, logger *zerolog.Logger) librarymetadata.Provider {
 	var useTMDB bool
@@ -372,8 +328,7 @@ func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry, s
 		strings.EqualFold(entry.Media.TitleSpanish, "Dragon Ball Serie") ||
 		strings.EqualFold(entry.Media.TitleSpanish, "Dragon Ball Series")
 
-	isEnglishDescription := entry.Media.Description != "" && (
-		strings.HasPrefix(strings.ToLower(entry.Media.Description), "five years after") ||
+	isEnglishDescription := entry.Media.Description != "" && (strings.HasPrefix(strings.ToLower(entry.Media.Description), "five years after") ||
 		strings.HasPrefix(strings.ToLower(entry.Media.Description), "the ") ||
 		strings.HasPrefix(strings.ToLower(entry.Media.Description), "after ") ||
 		strings.HasPrefix(strings.ToLower(entry.Media.Description), "during ") ||

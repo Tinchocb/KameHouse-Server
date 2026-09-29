@@ -87,6 +87,64 @@ func TestOptionalAuthMiddleware_SensitiveEndpointsRestricted(t *testing.T) {
 	if recLocal.Code != http.StatusOK {
 		t.Errorf("expected 200 for localhost request when password is empty, got %d", recLocal.Code)
 	}
+
+	// 3. Remote request spoofing loopback via X-Forwarded-For / X-Real-IP -> 403
+	reqSpoof := httptest.NewRequest(http.MethodGet, "/api/v1/memory/profile", nil)
+	reqSpoof.RemoteAddr = "203.0.113.7:12345"
+	reqSpoof.Header.Set("X-Forwarded-For", "127.0.0.1")
+	reqSpoof.Header.Set("X-Real-IP", "127.0.0.1")
+	recSpoof := httptest.NewRecorder()
+	cSpoof := e.NewContext(reqSpoof, recSpoof)
+
+	err = mw(cSpoof)
+	if err != nil {
+		e.HTTPErrorHandler(err, cSpoof)
+	}
+	if recSpoof.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for remote request spoofing X-Forwarded-For, got %d", recSpoof.Code)
+	}
+}
+
+// Sin contraseña, un equipo de la LAN puede reportar progreso o iniciar una
+// reproducción, pero no disparar escaneos, borrar notificaciones ni tocar la
+// cronología: solo localhost.
+func TestOptionalAuthMiddleware_LANWritesRestricted(t *testing.T) {
+	app, _ := setupTestApp(t)
+	h := &Handler{App: app}
+	e := echo.New()
+	e.HTTPErrorHandler = CustomHTTPErrorHandler
+
+	mw := h.OptionalAuthMiddleware(func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	cases := []struct {
+		name, method, path, remote string
+		want                       int
+	}{
+		{"LAN reporta progreso", http.MethodPost, "/api/v1/progress", "192.168.1.50:1", http.StatusOK},
+		{"LAN inicia streaming", http.MethodPost, "/api/v1/mediastream/request", "192.168.1.50:1", http.StatusOK},
+		{"LAN lee la biblioteca", http.MethodGet, "/api/v1/library/local-files", "192.168.1.50:1", http.StatusOK},
+		{"LAN no dispara escaneo", http.MethodPost, "/api/v1/library/scan", "192.168.1.50:1", http.StatusForbidden},
+		{"LAN no toca la cronología", http.MethodPost, "/api/v1/intelligence/chronology/overrides", "192.168.1.50:1", http.StatusForbidden},
+		{"LAN no borra notificaciones", http.MethodDelete, "/api/v1/notifications", "192.168.1.50:1", http.StatusForbidden},
+		{"LAN no calienta miniaturas", http.MethodPost, "/api/v1/cache/thumbnails/warm", "192.168.1.50:1", http.StatusForbidden},
+		{"localhost sí escanea", http.MethodPost, "/api/v1/library/scan", "127.0.0.1:1", http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			req.RemoteAddr = tc.remote
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			if err := mw(c); err != nil {
+				e.HTTPErrorHandler(err, c)
+			}
+			if rec.Code != tc.want {
+				t.Errorf("%s %s desde %s: esperaba %d, obtuve %d", tc.method, tc.path, tc.remote, tc.want, rec.Code)
+			}
+		})
+	}
 }
 
 func TestHandleOpenInExplorer_Confinement(t *testing.T) {

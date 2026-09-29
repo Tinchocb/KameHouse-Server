@@ -37,7 +37,7 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	if err := c.Bind(&b); err != nil {
 		return h.RespondWithError(c, err)
 	}
-	
+
 	// Default to fast mode if not provided
 	if b.Mode == "" {
 		b.Mode = "fast"
@@ -85,7 +85,9 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 	// For deep scans: clear lastScanAt so the walker traverses all directories
 	if b.Mode == "deep" && h.App.Database != nil {
-		if s, err := h.App.Database.GetSettings(); err == nil && s != nil {
+		if cached, err := h.App.Database.GetStoredSettings(); err == nil && cached != nil {
+			updated := *cached // copia: no mutar el puntero cacheado y compartido
+			s := &updated
 			s.Library.LastScanAt = time.Time{}
 			// CRITICAL: Reset all media IDs in local_files to force the matcher to re-run
 			if err := h.App.Database.ResetLocalFilesMediaIds(); err != nil {
@@ -227,12 +229,13 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		// Post-scan maintenance tasks executed under scanCtx before clearing scan lock
 		ClearLibraryCollectionCache()
 		anime.InvalidateCuratedHomeCache()
+		h.prewarmShelfImages(0) // series nuevas: sus fondos al disco local
 		if h.App.Metadata.Platform != nil {
 			_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(scanCtx)
 		}
 	}()
 
-	// Respond immediately (202 Accepted logic). 
+	// Respond immediately (202 Accepted logic).
 	// Sending an empty array `[]` avoids React TypeScript schema mismatches on the Frontend.
 	return h.RespondWithData(c, make([]interface{}, 0))
 
@@ -262,12 +265,13 @@ func (h *Handler) HandleGetScanStatus(c echo.Context) error {
 	// Return the most recent summary (GetScanSummaries returns them in insertion order).
 	latest := summaries[len(summaries)-1]
 	return h.RespondWithData(c, map[string]any{
-		"status":      "done",
-		"lastScanAt":  latest.CreatedAt,
-		"summary":     latest.ScanSummary,
-		"engine":      "Antigravity-v2",
+		"status":     "done",
+		"lastScanAt": latest.CreatedAt,
+		"summary":    latest.ScanSummary,
+		"engine":     "Antigravity-v2",
 	})
 }
+
 // HandleGetUnlinkedFiles ...
 //
 //	@summary returns all files the scanner failed to identify.

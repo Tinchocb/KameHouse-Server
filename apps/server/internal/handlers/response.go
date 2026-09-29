@@ -30,15 +30,6 @@ func JSONSuccess[T any](c echo.Context, data T) error {
 	return c.JSON(http.StatusOK, APIResponse[T]{Data: data})
 }
 
-// JSONError serialises err as the given HTTP status inside APIResponse.Error.
-func JSONError(c echo.Context, err error, statusCode int) error {
-	msg := "internal server error"
-	if err != nil {
-		msg = err.Error()
-	}
-	return c.JSON(statusCode, APIResponse[any]{Error: msg})
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // CustomHTTPErrorHandler — Echo global error handler.
 //

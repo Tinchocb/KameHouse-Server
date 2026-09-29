@@ -47,8 +47,10 @@ func (a *App) initModulesOnce() {
 	status := a.FFmpegManager.GetStatus(customFfmpeg, customFfprobe)
 	if !status.FFmpegAvailable || !status.FFprobeAvailable {
 		go func() {
+			defer util.HandlePanicInModuleThen("core/ffmpegAutoDownload", func() {})
 			a.Logger.Info().Msg("ffmpegutil: Binarios de FFmpeg/FFprobe no detectados, iniciando descarga automática en segundo plano...")
-			if err := a.FFmpegManager.EnsureBinaries(context.Background(), nil); err != nil {
+			// Atado al apagado de la app: cerrar KameHouse corta la descarga.
+			if err := a.FFmpegManager.EnsureBinaries(a.ShutdownCtx(), nil); err != nil {
 				a.Logger.Warn().Err(err).Msg("ffmpegutil: No se pudo auto-descargar FFmpeg en el arranque (se puede reintentar desde Ajustes)")
 			} else {
 				a.Logger.Info().Msg("ffmpegutil: FFmpeg y FFprobe descargados y listos")
@@ -166,6 +168,23 @@ func HandleNewDatabaseEntries(database *db.Database, logger *zerolog.Logger) {
 	}
 }
 
+// applyEnvSettingsOverrides pisa, sobre la copia que recibe, los ajustes que se
+// definen por variables de entorno (Docker/dev). Nunca se guarda en la base.
+func applyEnvSettingsOverrides(s *models.Settings) {
+	if envSeries := os.Getenv("KAMEHOUSE_SERIES_PATHS"); envSeries != "" {
+		s.Library.SeriesPaths = strings.Split(envSeries, ",")
+	}
+	if envMovies := os.Getenv("KAMEHOUSE_MOVIE_PATHS"); envMovies != "" {
+		s.Library.MoviePaths = strings.Split(envMovies, ",")
+	}
+	if envTmdb, _ := tmdb.ResolveTokenFromEnv(); envTmdb != "" {
+		s.Library.TmdbApiKey = envTmdb
+	}
+	if envTmdbLang := os.Getenv("KAMEHOUSE_TMDB_LANGUAGE"); envTmdbLang != "" {
+		s.Library.TmdbLanguage = envTmdbLang
+	}
+}
+
 // InitOrRefreshModules will initialize or refresh modules that depend on settings.
 func (a *App) InitOrRefreshModules() {
 	a.moduleMu.Lock()
@@ -177,6 +196,13 @@ func (a *App) InitOrRefreshModules() {
 		a.Watcher.StopWatching()
 	}
 
+	// Los overrides de entorno se aplican a una copia (GetSettings); lo guardado en
+	// la base no los ve, así que guardar ajustes no los persiste.
+	a.Database.SetSettingsOverride(applyEnvSettingsOverrides)
+	if tok, reason := tmdb.ResolveTokenFromEnv(); tok == "" && reason == "placeholder" {
+		a.Logger.Warn().Msg("app: KAMEHOUSE_TMDB_TOKEN/KAMEHOUSE_TMDB_API_KEY looks like an unreplaced placeholder - ignoring env override")
+	}
+
 	settings, err := a.Database.GetSettings()
 	if err != nil || settings == nil {
 		a.Logger.Warn().Msg("app: Did not initialize modules, no settings found")
@@ -184,21 +210,6 @@ func (a *App) InitOrRefreshModules() {
 	}
 
 	a.Settings = settings
-
-	if envSeries := os.Getenv("KAMEHOUSE_SERIES_PATHS"); envSeries != "" {
-		settings.Library.SeriesPaths = strings.Split(envSeries, ",")
-	}
-	if envMovies := os.Getenv("KAMEHOUSE_MOVIE_PATHS"); envMovies != "" {
-		settings.Library.MoviePaths = strings.Split(envMovies, ",")
-	}
-	if envTmdb, envReason := tmdb.ResolveTokenFromEnv(); envTmdb != "" {
-		settings.Library.TmdbApiKey = envTmdb
-	} else if envReason == "placeholder" {
-		a.Logger.Warn().Msg("app: KAMEHOUSE_TMDB_TOKEN/KAMEHOUSE_TMDB_API_KEY looks like an unreplaced placeholder - ignoring env override")
-	}
-	if envTmdbLang := os.Getenv("KAMEHOUSE_TMDB_LANGUAGE"); envTmdbLang != "" {
-		settings.Library.TmdbLanguage = envTmdbLang
-	}
 
 	allPaths := settings.GetLibrary().GetAllPaths()
 	if len(allPaths) > 0 {
@@ -294,8 +305,11 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 	// Solo las filas legacy sin valor migran a "auto". "disabled" es un modo
 	// válido (solo-CPU, libx264) elegido explícitamente por el usuario.
 	if settings.TranscodeHwAccel == "" || settings.TranscodeHwAccel == "none" {
-		settings.TranscodeHwAccel = "auto"
-		updatedSettings, err := a.Database.UpsertMediastreamSettings(settings)
+		// Copia: settings es el valor cacheado y compartido; si el guardado falla
+		// no debe quedar modificado en memoria.
+		migrated := *settings
+		migrated.TranscodeHwAccel = "auto"
+		updatedSettings, err := a.Database.UpsertMediastreamSettings(&migrated)
 		if err != nil {
 			a.Logger.Error().Err(err).Msg("app: Failed to update mediastream hardware acceleration settings")
 		} else {
@@ -344,7 +358,8 @@ func (a *App) performActionsOnce() {
 	}()
 }
 
-// cleanupTranscodeDirs removes transcode directories older than 1 hour.
+// cleanupTranscodeDirs removes leftover transcode directories older than 1 hour
+// (not the ones managed by cassette).
 func cleanupTranscodeDirs(logger *zerolog.Logger, transcodeBaseDir string) {
 	if transcodeBaseDir == "" {
 		transcodeBaseDir = filepath.Join(os.TempDir(), "kamehouse", "transcodes")
@@ -363,6 +378,13 @@ func cleanupTranscodeDirs(logger *zerolog.Logger, transcodeBaseDir string) {
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
+			continue
+		}
+		// Los gestiona cassette: cada sesión borra su carpeta en Destroy y New()
+		// limpia lo que quedó de una ejecución anterior; keyframes es caché
+		// persistente. Su mtime solo cambia al crear/borrar hijos, así que con una
+		// sola reproducción larga (>1 h) se borraban los segmentos en uso.
+		if entry.Name() == "streams" || entry.Name() == "keyframes" {
 			continue
 		}
 

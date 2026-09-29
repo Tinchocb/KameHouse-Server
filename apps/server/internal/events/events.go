@@ -4,10 +4,7 @@ type WebsocketClientEventType string
 
 const (
 	NativePlayerEventType WebsocketClientEventType = "native-player"
-	VideoCoreEventType    WebsocketClientEventType = "videocore"
-	PluginEvent           WebsocketClientEventType = "plugin"
 )
-
 
 type WebsocketClientEvent struct {
 	ClientID string                   `json:"clientID"`
@@ -18,61 +15,26 @@ type WebsocketClientEvent struct {
 const (
 	ServerReady = "server-ready" // The platform data has been loaded
 
-	EventScanProgress               = "scan-progress"                      // Progress of the scan
-	EventScanProgressDetailed       = "scan-progress-detailed"             // Optional detailed scan progress (structured payload)
-	EventScanStatus                 = "scan-status"                        // Status text of the scan
-	RefreshedAnimeCollection = "refreshed-anime-collection" // The anime collection has been refreshed
+	EventScanProgress         = "scan-progress"              // Progress of the scan
+	EventScanProgressDetailed = "scan-progress-detailed"     // Optional detailed scan progress (structured payload)
+	EventScanStatus           = "scan-status"                // Status text of the scan
+	RefreshedAnimeCollection  = "refreshed-anime-collection" // The anime collection has been refreshed
 
-	LibraryWatcherFileAdded         = "library-watcher-file-added"         // A new file has been added to the library
-	LibraryWatcherFileRemoved       = "library-watcher-file-removed"       // A file has been removed from the library
+	LibraryWatcherFileAdded   = "library-watcher-file-added"   // A new file has been added to the library
+	LibraryWatcherFileRemoved = "library-watcher-file-removed" // A file has been removed from the library
 
-	AutoScanStarted   = "auto-scan-started"   // The auto scan has started
 	AutoScanCompleted = "auto-scan-completed" // The auto scan has stopped
 
-	PlaybackManagerProgressTrackingStarted     = "playback-manager-progress-tracking-started"      // The video progress tracking has started
-	PlaybackManagerProgressTrackingStopped     = "playback-manager-progress-tracking-stopped"      // The video progress tracking has stopped
-	PlaybackManagerProgressVideoCompleted      = "playback-manager-progress-video-completed"       // The video progress has been completed
-	PlaybackManagerProgressPlaybackState       = "playback-manager-progress-playback-state"        // Dispatches the current playback state
-	PlaybackManagerProgressUpdated             = "playback-manager-progress-updated"               // Signals that the progress has been updated
-	PlaybackManagerRealTimePulse               = "playback-manager-realtime-pulse"                 // Optimistic sync broadcast for zero-latency handoff
+	PlaybackManagerProgressPlaybackState = "playback-manager-progress-playback-state" // Dispatches the current playback state
 
-	PlaybackManagerManualTrackingPlaybackState = "playback-manager-manual-tracking-playback-state" // Dispatches the current playback state
-	PlaybackManagerManualTrackingStopped       = "playback-manager-manual-tracking-stopped"        // The manual tracking has been stopped
-
-	ExternalPlayerOpenURL = "external-player-open-url" // Open a URL to send media to an external media player
-
-	InfoToast    = "info-toast"
 	ErrorToast   = "error-toast"
-	WarningToast = "warning-toast"
 	SuccessToast = "success-toast"
 
 	NotificationReceived = "notification-received" // A new in-app notification was created (payload: models.Notification)
-
-	CheckForUpdates       = "check-for-updates"
-	CheckForAnnouncements = "check-for-announcements"
-
-
-	OfflineSnapshotCreated      = "offline-snapshot-created"
 
 	MediastreamShutdownStream = "mediastream-shutdown-stream"
 
 	PlaybackHeartbeatProgress = "playback-heartbeat-progress" // 5-second WS heartbeat for real-time progress sync
 
-	ExtensionsReloaded    = "extensions-reloaded"
-	ExtensionUpdatesFound = "extension-updates-found"
-	PluginUnloaded        = "plugin-unloaded"
-	PluginLoaded          = "plugin-loaded"
-
-	SyncLocalQueueState = "sync-local-queue-state"
-	SyncLocalFinished   = "sync-local-finished"
-	SyncPlatformFinished = "sync-platform-finished"
-
 	InvalidateQueries = "invalidate-queries"
-	ConsoleLog        = "console-log"
-	ConsoleWarn       = "console-warn"
-
-	ShowIndefiniteLoader = "show-indefinite-loader"
-	HideIndefiniteLoader = "hide-indefinite-loader"
-
 )
-

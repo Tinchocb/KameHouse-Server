@@ -30,8 +30,6 @@ var (
 	skipTimesCacheTTL = 5 * time.Minute
 )
 
-
-
 var (
 	jikanHTTPClient = &http.Client{
 		Timeout: 10 * time.Second,
@@ -43,8 +41,6 @@ var (
 	}
 	jikanSingleFlight singleflight.Group
 )
-
-
 
 // HandleGetMediastreamSettings returns the mediastream settings.
 //
@@ -139,11 +135,8 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 		return h.requestDriveMediaContainer(c, b.Path, b.StreamType, b.ClientID, b.Force, b.ClientCapabilities)
 	}
 
-	if _, err := os.Stat(b.Path); os.IsNotExist(err) {
-		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media file not found"))
-	}
-
 	// Prevent path traversal: ensure the file is within configured library directories
+	// (antes que el Stat: un 404 vs 403 delataría qué rutas existen fuera de la biblioteca).
 	// Deny-by-default: si no hay librerías o falla la DB, denegar (antes fail-open).
 	libPaths, libErr := h.App.Database.GetAllLibraryPathsFromSettings()
 	if libErr != nil || len(libPaths) == 0 {
@@ -158,6 +151,9 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	}
 	if !allowed {
 		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied: file is not within configured library folders"))
+	}
+	if _, err := os.Stat(b.Path); os.IsNotExist(err) {
+		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media file not found"))
 	}
 
 	var mediaContainer *mediastream.MediaContainer
@@ -212,6 +208,9 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 		StreamType         mediastream.StreamType `json:"streamType"`         // The type of stream to request.
 		AudioStreamIndex   int                    `json:"audioStreamIndex"`   // The audio stream index to use.
 		PreferredAudioLang string                 `json:"preferredAudioLang"` // The preferred audio language.
+		// Only prepare the transcode session (media info + keyframes) of the file
+		// being played, without encoding or queueing a pre-transcode.
+		WarmOnly bool `json:"warmOnly"`
 	}
 
 	var b body
@@ -226,13 +225,17 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("remote URLs are not allowed for local playback"))
 	}
 	if strings.HasPrefix(b.Path, "gdrive://") {
+		// Drive: the keyframe index is read over HTTP Range, the slowest cold
+		// start of all, so warming is worth it; a full preload is not.
+		if b.WarmOnly {
+			if err := h.App.MediastreamRepository.WarmTranscodeSession(b.Path); err != nil {
+				return h.RespondWithError(c, err)
+			}
+		}
 		return h.RespondWithData(c, true)
 	}
-	if _, err := os.Stat(b.Path); os.IsNotExist(err) {
-		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media file not found"))
-	}
-
 	// Prevent path traversal: ensure the file is within configured library directories
+	// (antes que el Stat, para no delatar qué rutas existen fuera de la biblioteca).
 	libPaths, libErr := h.App.Database.GetAllLibraryPathsFromSettings()
 	if libErr != nil || len(libPaths) == 0 {
 		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("library not available"))
@@ -247,7 +250,16 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 	if !allowed {
 		return h.RespondWithCodeError(c, http.StatusForbidden, errors.New("access denied: file is not within configured library folders"))
 	}
+	if _, err := os.Stat(b.Path); os.IsNotExist(err) {
+		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media file not found"))
+	}
 
+	if b.WarmOnly {
+		if err := h.App.MediastreamRepository.WarmTranscodeSession(b.Path); err != nil {
+			return h.RespondWithError(c, err)
+		}
+		return h.RespondWithData(c, true)
+	}
 
 	var err error
 
@@ -608,6 +620,11 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 
 	// Propagate if requested
 	episodesUpdated := 0
+	// appliedToSeason refleja lo que pasó, no lo que se pidió: la propagación
+	// puede saltearse (fuente heurística) o fallar sin invalidar el guardado
+	// del episodio actual, que sí se hizo.
+	appliedToSeason := false
+	seasonError := ""
 	// D4/D7: Solo propagar si la confianza es alta o la fuente es 100% segura.
 	// No propagar "heuristic" que ensucia los demás episodios.
 	if b.ApplyToSeason && b.Source != "heuristic" && b.Confidence > 0 {
@@ -636,20 +653,29 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 					DoUpdates: clause.AssignmentColumns([]string{"op_start", "op_end", "ed_offset", "ed_end", "source", "confidence"}),
 				}).Create(&skipTimes).Error; err != nil {
 					h.App.Logger.Error().Err(err).Msg("mediastream: failed to propagate skip times to season")
+					seasonError = "no se pudieron propagar los tiempos al resto de la temporada"
 				} else {
 					episodesUpdated = len(skipTimes)
+					appliedToSeason = true
 				}
+			} else {
+				appliedToSeason = true
 			}
 		} else {
 			h.App.Logger.Warn().Err(err).Int("mediaID", mediaID).Msg("mediastream: failed to query episodes for season propagation")
+			seasonError = "no se pudieron leer los episodios de la temporada"
 		}
 	}
 
-	return h.RespondWithData(c, map[string]interface{}{
+	resp := map[string]interface{}{
 		"saved":           true,
 		"episodesUpdated": episodesUpdated,
-		"appliedToSeason": b.ApplyToSeason,
-	})
+		"appliedToSeason": appliedToSeason,
+	}
+	if seasonError != "" {
+		resp["seasonError"] = seasonError
+	}
+	return h.RespondWithData(c, resp)
 }
 
 // autoDetectSkipTimesEnabled indica si el scan oportunista de skip times está
@@ -727,7 +753,9 @@ func (h *Handler) HandleScanAllSkipTimes(c echo.Context) error {
 		return h.RespondWithError(c, fmt.Errorf("skip detector is not initialized yet"))
 	}
 	if detector.IsLibraryScanning() {
-		return h.RespondWithError(c, fmt.Errorf("a library-wide scan is already in progress"))
+		// 409 (como el escaneo por serie): el front lo muestra como "en curso"
+		// y sigue su progreso, en vez de un error genérico.
+		return h.RespondWithCodeError(c, http.StatusConflict, fmt.Errorf("a library-wide scan is already in progress"))
 	}
 
 	// Async y sin timeout global: una biblioteca grande puede tardar horas; cada
@@ -805,7 +833,10 @@ func (h *Handler) HandleResolveMAL(c echo.Context) error {
 	if searchTitle != "" {
 		res, sfErr, _ := jikanSingleFlight.Do(searchTitle, func() (interface{}, error) {
 			reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&limit=1", url.QueryEscape(searchTitle))
-			req, err := http.NewRequestWithContext(c.Request().Context(), http.MethodGet, reqUrl, nil)
+			// No el ctx del request: singleflight comparte esta llamada con todos
+			// los que esperan y cancelar al primero los cancelaría a todos.
+			// jikanHTTPClient ya acota la duración con su Timeout.
+			req, err := http.NewRequestWithContext(h.App.ShutdownCtx(), http.MethodGet, reqUrl, nil)
 			if err != nil {
 				return 0, err
 			}
@@ -832,7 +863,6 @@ func (h *Handler) HandleResolveMAL(c echo.Context) error {
 			}
 		}
 	}
-
 
 	return h.RespondWithData(c, map[string]interface{}{"malId": nil})
 }

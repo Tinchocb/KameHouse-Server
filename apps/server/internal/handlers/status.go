@@ -26,7 +26,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-
 var (
 	cpuProfileMu       sync.Mutex
 	cpuProfilingActive bool
@@ -35,34 +34,35 @@ var (
 // Status is a struct containing the user data, settings, and OS.
 // It is used by the client in various places to access necessary information.
 type Status struct {
-	OS                    string                        `json:"os"`
-	ClientDevice          string                        `json:"clientDevice"`
-	ClientPlatform        string                        `json:"clientPlatform"`
-	ClientUserAgent       string                        `json:"clientUserAgent"`
-	DataDir               string                        `json:"dataDir"`
-	User                  *user.User                    `json:"user"`
-	Settings              *models.Settings              `json:"settings"`
-	Version               string                        `json:"version"`
-	VersionName           string                        `json:"versionName"`
-	ThemeSettings         *models.Theme                 `json:"themeSettings"`
-	IsOffline             bool                          `json:"isOffline"`
-	MediastreamSettings   *models.MediastreamSettings   `json:"mediastreamSettings"`
+	OS                  string                      `json:"os"`
+	ClientDevice        string                      `json:"clientDevice"`
+	ClientPlatform      string                      `json:"clientPlatform"`
+	ClientUserAgent     string                      `json:"clientUserAgent"`
+	DataDir             string                      `json:"dataDir"`
+	User                *user.User                  `json:"user"`
+	Settings            *models.Settings            `json:"settings"`
+	Version             string                      `json:"version"`
+	VersionName         string                      `json:"versionName"`
+	ThemeSettings       *models.Theme               `json:"themeSettings"`
+	IsOffline           bool                        `json:"isOffline"`
+	MediastreamSettings *models.MediastreamSettings `json:"mediastreamSettings"`
 	// PlatformClientID       string                        `json:"PlatformClientId"`
-	Updating              bool                          `json:"updating"`         // If true, a new screen will be displayed
-	IsDesktopSidecar      bool                          `json:"isDesktopSidecar"` // The server is running as a desktop sidecar
-	FeatureFlags          core.FeatureFlags             `json:"featureFlags"`
-	DisabledFeatures      []core.FeatureKey             `json:"disabledFeatures"`
-	ServerReady           bool                          `json:"serverReady"`
-	ServerHasPassword     bool                          `json:"serverHasPassword"`
-	ShowChangelogTour     string                        `json:"showChangelogTour"`
-	ServerIPs             []string                      `json:"serverIPs"`
-	ServerPort            int                           `json:"serverPort"`
-	Pid                   int                           `json:"pid"` // OS process id of the server; used by the desktop sidecar to reap orphans
-	TMDBDegraded          bool                          `json:"tmdbDegraded"`       // True when no usable TMDB token is configured (placeholder/missing)
-	TMDBDegradedReason    string                        `json:"tmdbDegradedReason"` // "", "missing" or "placeholder"
+	Updating           bool              `json:"updating"`         // If true, a new screen will be displayed
+	IsDesktopSidecar   bool              `json:"isDesktopSidecar"` // The server is running as a desktop sidecar
+	FeatureFlags       core.FeatureFlags `json:"featureFlags"`
+	DisabledFeatures   []core.FeatureKey `json:"disabledFeatures"`
+	ServerReady        bool              `json:"serverReady"`
+	ServerHasPassword  bool              `json:"serverHasPassword"`
+	ShowChangelogTour  string            `json:"showChangelogTour"`
+	ServerIPs          []string          `json:"serverIPs"`
+	ServerPort         int               `json:"serverPort"`
+	Pid                int               `json:"pid"`                // OS process id of the server; used by the desktop sidecar to reap orphans
+	TMDBDegraded       bool              `json:"tmdbDegraded"`       // True when no usable TMDB token is configured (placeholder/missing)
+	TMDBDegradedReason string            `json:"tmdbDegradedReason"` // "", "missing" or "placeholder"
 }
 
-var clientInfoCache = result.NewMap[string, util.ClientInfo]()
+// Acotada: /status es pública y la key (User-Agent) la elige el cliente.
+var clientInfoCache = result.NewBoundedCache[string, util.ClientInfo](256)
 
 // NewStatus returns a new Status struct.
 // It uses the RouteCtx to get the App instance containing the Database instance.
@@ -100,29 +100,29 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 	}
 
 	status := &Status{
-		OS:                    runtime.GOOS,
-		ClientDevice:          clientInfo.Device,
-		ClientPlatform:        clientInfo.Platform,
-		DataDir:               h.App.Config.Data.AppDataDir,
-		ClientUserAgent:       c.Request().UserAgent(),
-		User:                  currentUser,
-		Settings:              settings,
-		Version:               h.App.Version,
-		VersionName:           constants.VersionName,
-		ThemeSettings:         theme,
-		IsOffline:             h.App.IsOffline(),
-		MediastreamSettings:   h.App.SecondarySettings.Mediastream,
+		OS:                  runtime.GOOS,
+		ClientDevice:        clientInfo.Device,
+		ClientPlatform:      clientInfo.Platform,
+		DataDir:             h.App.Config.Data.AppDataDir,
+		ClientUserAgent:     c.Request().UserAgent(),
+		User:                currentUser,
+		Settings:            settings.Redacted(),
+		Version:             h.App.Version,
+		VersionName:         constants.VersionName,
+		ThemeSettings:       theme,
+		IsOffline:           h.App.IsOffline(),
+		MediastreamSettings: h.App.SecondarySettings.Mediastream,
 		// PlatformClientID:       h.App.Config.Platform.ClientID,
-		Updating:              false,
-		IsDesktopSidecar:      h.App.IsDesktopSidecar,
-		FeatureFlags:          h.App.FeatureFlags,
-		ServerReady:           h.App.ServerReady,
-		ServerHasPassword:     h.App.Config.Server.Password != "",
-		DisabledFeatures:      h.App.FeatureManager.DisabledFeatures,
-		ShowChangelogTour:     h.App.ShowTour,
-		ServerIPs:             util.GetLocalIPv4Addresses(),
-		ServerPort:            h.App.Config.Server.Port,
-		Pid:                   os.Getpid(),
+		Updating:          false,
+		IsDesktopSidecar:  h.App.IsDesktopSidecar,
+		FeatureFlags:      h.App.FeatureFlags,
+		ServerReady:       h.App.ServerReady,
+		ServerHasPassword: h.App.Config.Server.Password != "",
+		DisabledFeatures:  h.App.FeatureManager.GetDisabledFeatures(),
+		ShowChangelogTour: h.App.ShowTour,
+		ServerIPs:         util.GetLocalIPv4Addresses(),
+		ServerPort:        h.App.Config.Server.Port,
+		Pid:               os.Getpid(),
 	}
 
 	if tmdbDegraded, tmdbReason := tmdb.DegradedState(settings.Library.TmdbApiKey, h.App.Config.Metadata.TMDBApiKey); tmdbDegraded {
@@ -201,7 +201,6 @@ func (h *Handler) HandleGetLogContent(c echo.Context) error {
 
 	return h.RespondWithData(c, content)
 }
-
 
 // HandleGetLogFilenames lists the log files, newest first.
 //
@@ -371,7 +370,6 @@ func mapMemStats(m runtime.MemStats) MemoryStatsResponse {
 	}
 }
 
-
 // HandleGetMemoryStats ...
 //
 //	@summary returns current memory statistics.
@@ -509,6 +507,9 @@ func (h *Handler) HandleGetCPUProfile(c echo.Context) error {
 	// Start CPU profiling
 	if err := pprof.StartCPUProfile(c.Response().Writer); err != nil {
 		h.App.Logger.Error().Err(err).Msg("handlers: Failed to start CPU profile")
+		// Nada escrito todavía: que el error no llegue como descarga .pprof.
+		c.Response().Header().Del("Content-Disposition")
+		c.Response().Header().Del("Content-Type")
 		return h.RespondWithError(c, err)
 	}
 
@@ -607,4 +608,3 @@ func (h *Handler) HandleShutdown(c echo.Context) error {
 
 	return h.RespondWithData(c, map[string]string{"status": "shutting_down"})
 }
-

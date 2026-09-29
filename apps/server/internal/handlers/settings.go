@@ -9,6 +9,7 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/drive"
 	"kamehouse/internal/util"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,10 +26,14 @@ import (
 //	@returns models.Settings
 func (h *Handler) HandleGetSettings(c echo.Context) error {
 
-	settings, err := h.App.Database.GetSettings()
+	cached, err := h.App.Database.GetSettings()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+	// Copia: los campos de abajo se completan para esta respuesta; no deben
+	// quedar en el puntero cacheado y compartido.
+	view := *cached
+	settings := &view
 
 	// Attach separate-table sub-settings for the full settings view
 	settings.Mediastream, _ = h.App.Database.GetMediastreamSettings()
@@ -42,7 +47,7 @@ func (h *Handler) HandleGetSettings(c echo.Context) error {
 		settings.Mediastream.PerformanceProfile = "auto"
 	}
 
-	return h.RespondWithData(c, settings)
+	return h.RespondWithData(c, settings.Redacted())
 }
 
 // HandleGettingStarted implements the initial setup, saving base settings on first run.
@@ -55,9 +60,9 @@ func (h *Handler) HandleGetSettings(c echo.Context) error {
 func (h *Handler) HandleGettingStarted(c echo.Context) error {
 
 	type body struct {
-		Library                models.LibrarySettings      `json:"library"`
-		MediaPlayer            models.MediaPlayerSettings  `json:"mediaPlayer"`
-		EnableTranscode        bool                        `json:"enableTranscode"`
+		Library         models.LibrarySettings     `json:"library"`
+		MediaPlayer     models.MediaPlayerSettings `json:"mediaPlayer"`
+		EnableTranscode bool                       `json:"enableTranscode"`
 	}
 
 	var b body
@@ -72,11 +77,26 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		b.Library.MoviePaths = []string{}
 	}
 
-	settings, err := h.App.Database.UpsertSettings(&models.Settings{
-		BaseModel:     models.BaseModel{ID: 1, UpdatedAt: time.Now()},
-		Library:       b.Library,
-		MediaPlayer:   b.MediaPlayer,
-	})
+	// El asistente precarga la configuración actual, que llega con los secretos
+	// enmascarados: se conserva la key guardada en vez de guardar la máscara.
+	// Lo que el asistente no edita (credenciales de Drive, notificaciones…)
+	// tampoco se pisa con valores vacíos.
+	next := models.Settings{}
+	if prev, err := h.App.Database.GetStoredSettings(); err == nil && prev != nil {
+		next = *prev
+	}
+	if models.IsMaskedSecret(b.Library.TmdbApiKey) {
+		b.Library.TmdbApiKey = next.Library.TmdbApiKey
+	}
+	next.BaseModel = models.BaseModel{ID: 1, UpdatedAt: time.Now()}
+	// LastScanAt lo maneja el servidor: el asistente no lo envía y reejecutarlo lo
+	// dejaba en cero, forzando un escaneo completo del disco.
+	lastScanAt := next.Library.LastScanAt
+	next.Library = b.Library
+	next.Library.LastScanAt = lastScanAt
+	next.MediaPlayer = b.MediaPlayer
+
+	settings, err := h.App.Database.UpsertSettings(&next)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -84,15 +104,18 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	if b.EnableTranscode {
 		go func() {
 			defer util.HandlePanicThen(func() {})
-			if prev, found := h.App.Database.GetMediastreamSettings(); found {
-				prev.TranscodeEnabled = true
-				_, _ = h.App.Database.UpsertMediastreamSettings(prev)
+			if prev, found := h.App.Database.GetMediastreamSettings(); found && prev != nil {
+				ms := *prev // copia: prev es el valor cacheado y compartido
+				ms.TranscodeEnabled = true
+				if _, err := h.App.Database.UpsertMediastreamSettings(&ms); err != nil {
+					h.App.Logger.Error().Err(err).Msg("settings: no se pudo habilitar el transcoder")
+				}
 			}
 		}()
 	}
 
 	h.invalidateSettingsCache()
-	h.App.WSEventManager.SendEvent("settings", settings)
+	h.App.WSEventManager.SendEvent("settings", settings.Redacted())
 	h.App.InitOrRefreshModules()
 
 	return h.RespondWithData(c, h.NewStatus(c))
@@ -109,17 +132,18 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 //	@returns handlers.Status
 func (h *Handler) HandleSaveSettings(c echo.Context) error {
 
-	bodyBytes, err := io.ReadAll(c.Request().Body)
+	// Mismo tope que CustomJSONSerializer: leerlo entero antes de Bind lo saltaría.
+	bodyBytes, err := io.ReadAll(http.MaxBytesReader(c.Response().Writer, c.Request().Body, 15<<20))
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 	c.Request().Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	type body struct {
-		Library       *models.LibrarySettings       `json:"library"`
-		MediaPlayer   *models.MediaPlayerSettings   `json:"mediaPlayer"`
-		Mediastream   *models.MediastreamSettings   `json:"mediastream"`
-		Theme         *models.Theme                 `json:"theme"`
+		Library       *models.LibrarySettings      `json:"library"`
+		MediaPlayer   *models.MediaPlayerSettings  `json:"mediaPlayer"`
+		Mediastream   *models.MediastreamSettings  `json:"mediastream"`
+		Theme         *models.Theme                `json:"theme"`
 		Notifications *models.NotificationSettings `json:"notifications"`
 		Platform      *models.PlatformSettings     `json:"platform"`
 		GoogleDrive   *models.GoogleDriveSettings  `json:"googleDrive"`
@@ -151,12 +175,16 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	}
 
 	// ── 1. Fetch current settings ─────────────────────────────────────────────
-	prev, err := h.App.Database.GetSettings()
+	prev, err := h.App.Database.GetStoredSettings()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	merged := prev
+	// Copia: GetSettings devuelve el puntero cacheado y compartido. Mutarlo acá
+	// dejaba la caché con cambios sin guardar si una validación posterior o el
+	// upsert fallaban (y los demás handlers leyéndola a la vez).
+	current := *prev
+	merged := &current
 	merged.ID = 1
 	merged.UpdatedAt = time.Now()
 
@@ -264,7 +292,8 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		if _, ok := rawLibrary["scannerProvider"]; ok && b.Library.ScannerProvider != "" {
 			merged.Library.ScannerProvider = b.Library.ScannerProvider
 		}
-		if _, ok := rawLibrary["tmdbApiKey"]; ok {
+		// Un secreto enmascarado es el mismo que devolvió GET /settings: se conserva.
+		if _, ok := rawLibrary["tmdbApiKey"]; ok && !models.IsMaskedSecret(b.Library.TmdbApiKey) {
 			merged.Library.TmdbApiKey = b.Library.TmdbApiKey
 		}
 		if _, ok := rawLibrary["tmdbLanguage"]; ok && b.Library.TmdbLanguage != "" {
@@ -342,10 +371,10 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		if _, ok := rawGoogleDrive["clientId"]; ok {
 			merged.GoogleDrive.ClientID = b.GoogleDrive.ClientID
 		}
-		if _, ok := rawGoogleDrive["clientSecret"]; ok {
+		if _, ok := rawGoogleDrive["clientSecret"]; ok && !models.IsMaskedSecret(b.GoogleDrive.ClientSecret) {
 			merged.GoogleDrive.ClientSecret = b.GoogleDrive.ClientSecret
 		}
-		if _, ok := rawGoogleDrive["refreshToken"]; ok {
+		if _, ok := rawGoogleDrive["refreshToken"]; ok && !models.IsMaskedSecret(b.GoogleDrive.RefreshToken) {
 			merged.GoogleDrive.RefreshToken = b.GoogleDrive.RefreshToken
 		}
 		if _, ok := rawGoogleDrive["folderId"]; ok {
@@ -431,7 +460,10 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 			}
 		}
 		mergedMs.UpdatedAt = time.Now()
-		_, _ = h.App.Database.UpsertMediastreamSettings(mergedMs)
+		if _, err := h.App.Database.UpsertMediastreamSettings(mergedMs); err != nil {
+			h.invalidateSettingsCache() // lo anterior sí se guardó
+			return h.RespondWithError(c, fmt.Errorf("no se pudieron guardar los ajustes de streaming: %w", err))
+		}
 		mediastreamSaved = true
 	}
 
@@ -441,7 +473,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		mergedTheme := b.Theme
 		if prevTheme != nil {
 			prevBytes, _ := json.Marshal(prevTheme)
-			var prevMap map[string]json.RawMessage
+			prevMap := map[string]json.RawMessage{}
 			_ = json.Unmarshal(prevBytes, &prevMap)
 			for k, v := range rawTheme {
 				prevMap[k] = v
@@ -450,7 +482,13 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 			_ = json.Unmarshal(mergedBytes, mergedTheme)
 		}
 		mergedTheme.ID = 1
-		_, _ = h.App.Database.UpsertTheme(mergedTheme)
+		if _, err := h.App.Database.UpsertTheme(mergedTheme); err != nil {
+			h.invalidateSettingsCache()
+			if mediastreamSaved {
+				h.App.InitOrRefreshMediastreamSettings()
+			}
+			return h.RespondWithError(c, fmt.Errorf("no se pudo guardar el tema: %w", err))
+		}
 	}
 
 	// ── 7. Invalidate settings cache ──────────────────────────────────────────
@@ -465,13 +503,11 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	}
 
 	// ── 8. Broadcast & refresh ────────────────────────────────────────────────
-	h.App.WSEventManager.SendEvent("settings", saved)
+	h.App.WSEventManager.SendEvent("settings", saved.Redacted())
 	h.App.InitOrRefreshModules()
 
 	return h.RespondWithData(c, h.NewStatus(c))
 }
-
-
 
 // HandleSaveMediaPlayerSettings updates the media player settings.
 //
@@ -490,7 +526,7 @@ func (h *Handler) HandleSaveMediaPlayerSettings(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	currSettings, err := h.App.Database.GetSettings()
+	cached, err := h.App.Database.GetStoredSettings()
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -499,6 +535,9 @@ func (h *Handler) HandleSaveMediaPlayerSettings(c echo.Context) error {
 		return h.RespondWithError(c, errors.New("mediaPlayer is required"))
 	}
 
+	// Copia: mutar el puntero cacheado dejaba cambios sin guardar si el upsert fallaba.
+	updated := *cached
+	currSettings := &updated
 	currSettings.MediaPlayer = *b.MediaPlayer
 	currSettings.BaseModel = models.BaseModel{
 		ID:        1,
@@ -511,9 +550,8 @@ func (h *Handler) HandleSaveMediaPlayerSettings(c echo.Context) error {
 	}
 
 	h.invalidateSettingsCache()
-	h.App.WSEventManager.SendEvent("settings", currSettings)
+	h.App.WSEventManager.SendEvent("settings", currSettings.Redacted())
 	h.App.InitOrRefreshModules()
 
 	return h.RespondWithData(c, true)
 }
-

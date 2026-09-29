@@ -71,7 +71,6 @@ const (
 	GetTranscodeStatsEndpoint                          = "ADMIN-get-transcode-stats"
 	GetUnlinkedFilesEndpoint                           = "SCAN-get-unlinked-files"
 	GetUpcomingEpisodesEndpoint                        = "ANIME-ENTRIES-get-upcoming-episodes"
-	GetVideoInsightsEndpoint                           = "VIDEOCORE-get-video-insights"
 	GetVideoThumbnailEndpoint                          = "THUMBNAIL-get-video-thumbnail"
 	GettingStartedEndpoint                             = "SETTINGS-getting-started"
 	ImportLocalFilesEndpoint                           = "LOCALFILES-import-local-files"

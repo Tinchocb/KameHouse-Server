@@ -169,11 +169,11 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 	}
 
 	type mediaRetagItem struct {
-		ID            uint
-		Format        string
-		TitleRomaji   string
-		TitleEnglish  string
-		Description   string
+		ID           uint
+		Format       string
+		TitleRomaji  string
+		TitleEnglish string
+		Description  string
 	}
 	var allMedia []mediaRetagItem
 	if err := gdb.Model(&models.LibraryMedia{}).
@@ -212,8 +212,6 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 			return c.JSON(500, NewErrorResponse(err))
 		}
 	}
-
-
 
 	h.App.Logger.Info().Int("updated", updated).Int("total", len(episodes)).Msg("retag: Complete")
 

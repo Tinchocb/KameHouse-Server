@@ -18,8 +18,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"time"
 	"sync"
+	"time"
 
 	"kamehouse/internal/database/models"
 
@@ -54,6 +54,13 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mID int) (
 		if _, loading := fillerFetchAttempts.LoadOrStore(mID, true); !loading {
 			go func(mediaID int, media *models.LibraryMedia) {
 				defer fillerFetchAttempts.Delete(mediaID)
+				// Parsea datos externos fuera del request: sin recover, un panic
+				// acá tiraba el servidor (el middleware Recover no lo ve).
+				defer func() {
+					if r := recover(); r != nil {
+						h.App.Logger.Error().Interface("panic", r).Int("mediaId", mediaID).Msg("filler: panic fetching filler data")
+					}
+				}()
 				if media == nil {
 					return
 				}
@@ -81,11 +88,6 @@ func (h *Handler) getAnimeEntry(c echo.Context, lfs []*dto.LocalFile, mID int) (
 	return entry, nil
 }
 
-
-
-
-
-
 // HandleGetAnimeEntry returns a media entry for the given anime media id.
 //
 //	@summary return a media entry for the given anime media id.
@@ -112,7 +114,35 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	return h.RespondWithData(c, entry)
+	return h.RespondWithData(c, entryForResponse(entry))
+}
+
+// entryForResponse devuelve una copia superficial de la entrada sin
+// Episode.BaseAnime: repite entry.Media en cada episodio (~250 KB de los
+// ~750 KB de una serie de 153 episodios) y ningún cliente lo lee. Pesaba en la
+// red, en el parseo y en la caché persistida del front (IndexedDB). La entrada
+// original no se toca: puede venir de una caché compartida del servidor.
+func entryForResponse(e *anime.Entry) *anime.Entry {
+	if e == nil {
+		return nil
+	}
+	out := *e
+	strip := func(ep *anime.Episode) *anime.Episode {
+		if ep == nil || ep.BaseAnime == nil {
+			return ep
+		}
+		cp := *ep
+		cp.BaseAnime = nil
+		return &cp
+	}
+	if len(e.Episodes) > 0 {
+		out.Episodes = make([]*anime.Episode, len(e.Episodes))
+		for i, ep := range e.Episodes {
+			out.Episodes[i] = strip(ep)
+		}
+	}
+	out.NextEpisode = strip(e.NextEpisode)
+	return &out
 }
 
 // HandleGetAnimeEntryLocalFiles returns only the local files for the given anime media id.
@@ -295,7 +325,6 @@ func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
 
-
 	return h.RespondWithData(c, true)
 }
 
@@ -332,7 +361,6 @@ func (h *Handler) HandleUpdateAnimeEntryRepeat(c echo.Context) error {
 
 	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
-
 
 	return h.RespondWithData(c, true)
 }
@@ -447,12 +475,8 @@ func (h *Handler) HandleAnimeEntryUnmatch(c echo.Context) error {
 	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
 
-
-
 	return h.RespondWithData(c, true)
 }
-
-
 
 // HandleGetMissingEpisodes returns a list of missing episodes.
 //
@@ -654,4 +678,3 @@ func (h *Handler) HandleToggleAnimeEntrySilenceStatus(c echo.Context) error {
 		"silenced": newStatus,
 	})
 }
-
