@@ -18,7 +18,7 @@ if "%CI%"=="" start "" /min powershell -NoProfile -ExecutionPolicy Bypass -Windo
 
 echo.
 echo  ========================================================
-echo    KameHouse Desktop - Desarrollo (Optimizado)
+echo    KameHouse Desktop - Desarrollo
 echo  ========================================================
 echo.
 

@@ -26,7 +26,7 @@ pub fn run() {
     if std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").is_err() {
         std::env::set_var(
             "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-            "--enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --disable-frame-rate-limit",
+            "--enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --disable-frame-rate-limit --enable-blink-features=AudioVideoTracks",
         );
     }
 
@@ -98,7 +98,9 @@ pub fn run() {
             // rendering), not the Go sidecar — the sidecar does not render anything.
             #[cfg(target_os = "windows")]
             {
-                let mut webview_args: Vec<&str> = Vec::new();
+                // AudioVideoTracks expone `video.audioTracks`: el player cambia de pista
+                // de audio en direct play sin pasar al transcode (cambio instantáneo).
+                let mut webview_args: Vec<&str> = vec!["--enable-blink-features=AudioVideoTracks"];
                 if settings.disable_hardware_acceleration {
                     webview_args.push("--disable-gpu");
                     webview_args.push("--disable-gpu-compositing");
