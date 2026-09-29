@@ -56,10 +56,6 @@ func NewCrashLogger() *CrashLogger {
 	}
 }
 
-func (c *CrashLogger) SetLogDir(dir string) {
-	c.logDir = mo.Some(dir)
-}
-
 // InitArea creates a new CrashLoggerArea instance.
 // This instance can be used to log crashes in a specific area.
 func (c *CrashLogger) InitArea(area string) *CrashLoggerArea {
@@ -97,14 +93,6 @@ func (c *CrashLogger) InitArea(area string) *CrashLoggerArea {
 //		cmd.Stdout = crashLogger.Stdout()
 func (a *CrashLoggerArea) Stdout() io.Writer {
 	return a.logBuffer
-}
-
-func (a *CrashLoggerArea) LogError(msg string) {
-	a.logger.Error().Msg(msg)
-}
-
-func (a *CrashLoggerArea) LogErrorf(format string, args ...interface{}) {
-	a.logger.Error().Msgf(format, args...)
 }
 
 func (a *CrashLoggerArea) LogInfof(format string, args ...interface{}) {

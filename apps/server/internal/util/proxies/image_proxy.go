@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/imroc/req/v3"
@@ -24,7 +25,8 @@ const imageProxyTouchMinAge = 24 * time.Hour
 
 var (
 	// Shared so upstream connections (TLS, keep-alive) are reused across images.
-	imageProxyClient = req.C().SetTimeout(30 * time.Second)
+	// El dialer rechaza IPs internas en cada conexión (redirects, DNS rebinding).
+	imageProxyClient = req.C().SetTimeout(30 * time.Second).SetDial(util.ProxySafeDialContext)
 	// Collapses concurrent cold fetches of the same URL into one download.
 	imageProxyFlights singleflight.Group
 )
@@ -93,6 +95,12 @@ func (ip *ImageProxy) fetchImage(url string, cachePath string, headers map[strin
 	}
 	defer resp.Body.Close()
 
+	// Solo se cachea una imagen real: antes un 404/5xx del origen (página de
+	// error) quedaba guardado en disco como si fuera la imagen, para siempre.
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, "", fmt.Errorf("image proxy: upstream returned %d for %s", resp.StatusCode, url)
+	}
+
 	const maxImageSize = 25 * 1024 * 1024 // 25 MB limit
 	lr := io.LimitReader(resp.Body, maxImageSize+1)
 	body, err := io.ReadAll(lr)
@@ -158,6 +166,7 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 	headersJSON := c.QueryParam("headers")
 	if headersJSON != "" {
 		_ = json.Unmarshal([]byte(headersJSON), &headers)
+		headers = util.FilterProxyRequestHeaders(headers)
 	}
 
 	imageBuffer, contentType, err := ip.GetImage(url, headers)
@@ -167,4 +176,48 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 
 	ip.setHeaders(c, contentType)
 	return c.Blob(http.StatusOK, contentType, imageBuffer)
+}
+
+// prewarmURLValid es la validación SSRF de Prewarm (reemplazable en tests,
+// donde el origen falso vive en 127.0.0.1).
+var prewarmURLValid = util.IsValidProxyURL
+
+// Prewarm baja al disco las URLs que todavía no están cacheadas, con
+// concurrencia limitada. No devuelve error: las que fallan se piden de nuevo
+// cuando la interfaz las necesite. Devuelve cuántas se descargaron.
+func (ip *ImageProxy) Prewarm(urls []string, concurrency int) int {
+	if concurrency <= 0 {
+		concurrency = 3
+	}
+	sem := make(chan struct{}, concurrency)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	fetched := 0
+	seen := make(map[string]struct{}, len(urls))
+	for _, u := range urls {
+		if u == "" || !prewarmURLValid(u) {
+			continue
+		}
+		if _, dup := seen[u]; dup {
+			continue
+		}
+		seen[u] = struct{}{}
+		if info, err := os.Stat(ip.getCachePath(u)); err == nil && info.Size() > 0 {
+			continue
+		}
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(u string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			defer func() { _ = recover() }()
+			if _, _, err := ip.GetImage(u, nil); err == nil {
+				mu.Lock()
+				fetched++
+				mu.Unlock()
+			}
+		}(u)
+	}
+	wg.Wait()
+	return fetched
 }

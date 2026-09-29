@@ -52,7 +52,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 	}
 
 	if path == "master.m3u8" {
-		ret, err := tc.GetMaster(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientID, "")
+		ret, err := tc.GetMaster(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientID, "", mediaContainer.VideoPassthrough)
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Msg("mediastream: GetMaster failed")
 			return err

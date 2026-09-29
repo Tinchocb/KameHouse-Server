@@ -161,7 +161,3 @@ func (c *Cache[T]) Size() int {
 	return len(c.entries)
 }
 
-func (c *Cache[T]) Capacity() int {
-	return c.maxItems
-}
-

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -204,6 +205,9 @@ func getOrExtractKeyframes(
 	ki.ready.Wait()
 	return ki, ki.GetError()
 }
+// keyframeExtractionTimeout bounds the ffprobe packet scan of a single file.
+const keyframeExtractionTimeout = 20 * time.Minute
+
 // extractKeyframes probes the file for keyframes
 func extractKeyframes(
 	ffprobePath string,
@@ -232,8 +236,11 @@ func extractKeyframes(
 		probeBin = "ffprobe"
 	}
 
-	// Optimize keyframe extraction by reading packet headers (avoids decoding the video)
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	// Optimize keyframe extraction by reading packet headers (avoids decoding the video).
+	// The budget has to cover a full pass over heavy files (a 50 GB 4K remux takes
+	// minutes): segments are served as soon as the first batch lands, so a long
+	// extraction doesn't delay playback, while a short cap truncated the movie.
+	ctx, cancel := context.WithTimeout(context.Background(), keyframeExtractionTimeout)
 	defer cancel()
 
 	cmd := util.NewCmdCtx(
@@ -311,6 +318,12 @@ func extractKeyframes(
 		logger.Error().Err(err).Msg("cassette: scanner error during keyframe extraction")
 		return err
 	}
+	// A killed ffprobe (timeout) just closes stdout: without this check the
+	// partial list was marked done and cached, so the playlist ended mid-movie.
+	if err := ctx.Err(); err != nil {
+		logger.Error().Err(err).Int32("keyframes", flushed).Msg("cassette: keyframe extraction timed out")
+		return fmt.Errorf("keyframe extraction: %w", err)
+	}
 
 	// Handle files with <=1 keyframe
 	if flushed == 0 && len(buf) < 2 {
@@ -367,20 +380,26 @@ func extractKeyframesFromMatroska(path string, ki *KeyframeIndex, unblock func()
 		file = f
 	}
 
-	demuxer, err := matroska.NewDemuxer(file)
+	// Solo info, pistas y Cues: tags, capítulos y adjuntos (fuentes de varios MB)
+	// no hacen falta y, en fuentes remotas, cuestan pedidos extra.
+	demuxer, err := matroska.NewDemuxer(file, matroska.IDSegmentInfo, matroska.IDTracks, matroska.IDCues)
 	if err != nil {
 		return err
 	}
 	defer demuxer.Close()
 
-	cues := demuxer.GetCues()
-	if len(cues) == 0 {
-		return fmt.Errorf("no cues found in matroska file")
+	videoTracks := map[uint8]bool{}
+	if n, err := demuxer.GetNumTracks(); err == nil {
+		for i := uint(0); i < n; i++ {
+			if ti, err := demuxer.GetTrackInfo(i); err == nil && ti != nil && ti.Type == matroska.TypeVideo {
+				videoTracks[ti.Number] = true
+			}
+		}
 	}
 
-	buf := make([]float64, len(cues))
-	for i, cue := range cues {
-		buf[i] = float64(cue.Time) / 1e9
+	buf := keyframesFromCues(demuxer.GetCues(), videoTracks)
+	if len(buf) == 0 {
+		return fmt.Errorf("no cues found in matroska file")
 	}
 
 	ki.append(buf)
@@ -388,8 +407,31 @@ func extractKeyframesFromMatroska(path string, ki *KeyframeIndex, unblock func()
 	ki.SetDone()
 
 	logger.Info().
-		Int("keyframes", len(cues)).
+		Int("keyframes", len(buf)).
 		Dur("elapsed", time.Since(start)).
 		Msg("cassette: keyframes extracted successfully using Go matroska parser")
 	return nil
+}
+
+// keyframesFromCues convierte los Cues en tiempos de keyframe (segundos),
+// ordenados y sin repetir. mkvmerge también indexa pistas de audio y
+// subtítulos: sus tiempos no son keyframes de video y, usados como cortes de
+// segmento, desalinean el HLS (sobre todo con -c:v copy, que solo corta en
+// keyframes reales). Si no se conoce la pista de video, se usan todos.
+func keyframesFromCues(cues []*matroska.Cue, videoTracks map[uint8]bool) []float64 {
+	out := make([]float64, 0, len(cues))
+	for _, cue := range cues {
+		if cue == nil || (len(videoTracks) > 0 && !videoTracks[cue.Track]) {
+			continue
+		}
+		out = append(out, float64(cue.Time)/1e9)
+	}
+	sort.Float64s(out)
+	dedup := out[:0]
+	for _, v := range out {
+		if len(dedup) == 0 || v != dedup[len(dedup)-1] {
+			dedup = append(dedup, v)
+		}
+	}
+	return dedup
 }

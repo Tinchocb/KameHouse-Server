@@ -8,10 +8,23 @@ import (
 	"testing"
 )
 
-func TestFfprobeGetInfo_1(t *testing.T) {
-	t.Skip()
+// testVideoPath devuelve el video de prueba de KAMEHOUSE_TEST_VIDEO (un .mkv
+// con adjuntos, p. ej. fuentes) o saltea el test: no hay video en el repo y
+// hace falta ffprobe en el PATH.
+func testVideoPath(t *testing.T) string {
+	t.Helper()
+	p := os.Getenv("KAMEHOUSE_TEST_VIDEO")
+	if p == "" {
+		t.Skip("KAMEHOUSE_TEST_VIDEO no definido: test de integración con ffprobe")
+	}
+	if _, err := os.Stat(p); err != nil {
+		t.Skipf("KAMEHOUSE_TEST_VIDEO=%q no accesible: %v", p, err)
+	}
+	return p
+}
 
-	testFilePath := ""
+func TestFfprobeGetInfo_1(t *testing.T) {
+	testFilePath := testVideoPath(t)
 
 	mi, err := FfprobeGetInfo("", testFilePath, "1")
 	if err != nil {
@@ -22,9 +35,7 @@ func TestFfprobeGetInfo_1(t *testing.T) {
 }
 
 func TestExtractAttachment(t *testing.T) {
-	t.Skip()
-
-	testFilePath := ""
+	testFilePath := testVideoPath(t)
 
 	testDir := t.TempDir()
 

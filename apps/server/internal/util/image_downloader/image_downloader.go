@@ -132,43 +132,6 @@ func (id *ImageDownloader) DownloadImages(urls []string) (err error) {
 	return
 }
 
-func (id *ImageDownloader) DeleteDownloads() {
-	id.actionMu.Lock()
-	defer id.actionMu.Unlock()
-
-	id.registryMu.Lock()
-	defer id.registryMu.Unlock()
-
-	_ = os.RemoveAll(id.downloadDir)
-	id.registry.content = &RegistryContent{}
-}
-
-// CancelDownload cancels the download process.
-func (id *ImageDownloader) CancelDownload() {
-	close(id.cancelChannel)
-}
-
-func (id *ImageDownloader) GetImageFilenameByUrl(url string) (filename string, ok bool) {
-	id.actionMu.Lock()
-	defer id.actionMu.Unlock()
-
-	id.registryMu.Lock()
-	defer id.registryMu.Unlock()
-
-	if err := id.registry.setup(); err != nil {
-		return
-	}
-
-	var imgID string
-	imgID, ok = id.registry.content.UrlToId[url]
-	if !ok {
-		return
-	}
-
-	filename = imgID + "." + id.registry.content.IdToExt[imgID]
-	return
-}
-
 // GetImageFilenamesByUrls returns a map of URLs to image filenames.
 //
 //	e.g., {"url1": "filename1.png", "url2": "filename2.jpg"}
@@ -192,35 +155,6 @@ func (id *ImageDownloader) GetImageFilenamesByUrls(urls []string) (ret map[strin
 		}
 
 		ret[url] = imgID + "." + id.registry.content.IdToExt[imgID]
-	}
-	return
-}
-
-func (id *ImageDownloader) DeleteImagesByUrls(urls []string) (err error) {
-	id.actionMu.Lock()
-	defer id.actionMu.Unlock()
-
-	id.registryMu.Lock()
-	defer id.registryMu.Unlock()
-
-	if err = id.registry.setup(); err != nil {
-		return
-	}
-
-	for _, url := range urls {
-		imgID, ok := id.registry.content.UrlToId[url]
-		if !ok {
-			continue
-		}
-
-		err = os.Remove(filepath.Join(id.downloadDir, imgID+"."+id.registry.content.IdToExt[imgID]))
-		if err != nil {
-			continue
-		}
-
-		delete(id.registry.content.UrlToId, url)
-		delete(id.registry.content.IdToUrl, imgID)
-		delete(id.registry.content.IdToExt, imgID)
 	}
 	return
 }

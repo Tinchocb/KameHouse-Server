@@ -4,10 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -30,11 +27,6 @@ const (
 	colorDarkGray = 90
 )
 
-// Stores logs from all loggers. Used to write logs to a file when WriteGlobalLogBufferToFile is called.
-// It is reset after writing to a file.
-var logBuffer bytes.Buffer
-var logBufferMutex = &sync.Mutex{}
-
 func NewLogger() *zerolog.Logger {
 
 	timeFormat := time.DateTime
@@ -44,11 +36,8 @@ func NewLogger() *zerolog.Logger {
 	// Detect TTY and NO_COLOR for portable ANSI handling
 	noColor := os.Getenv("NO_COLOR") != "" || !isatty.IsTerminal(os.Stdout.Fd())
 
-	// Dual writer: console + in-memory buffer (for crash dumps / signal handler)
-	mw := zerolog.MultiLevelWriter(os.Stdout, &logBuffer)
-
 	consoleOutput := zerolog.ConsoleWriter{
-		Out:           mw,
+		Out:           os.Stdout,
 		TimeFormat:    timeFormat,
 		FormatLevel:   ZerologFormatLevelPretty,
 		FormatMessage: ZerologFormatMessagePretty,
@@ -62,57 +51,12 @@ func NewLogger() *zerolog.Logger {
 	return &logger
 }
 
-func WriteGlobalLogBufferToFile(file *os.File) {
-	defer HandlePanicInModuleThen("util/WriteGlobalLogBufferToFile", func() {})
-
-	if file == nil {
-		return
-	}
-	logBufferMutex.Lock()
-	defer logBufferMutex.Unlock()
-	if _, err := logBuffer.WriteTo(file); err != nil {
-		fmt.Print("Failed to write log buffer to file")
-	}
-	logBuffer.Reset()
-}
-
-func SetupLoggerSignalHandling(file *os.File) {
-	if file == nil {
-		return
-	}
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		sig := <-sigChan
-		log.Trace().Msgf("Received signal: %s", sig)
-		// Flush log buffer to the log file when the app exits
-		WriteGlobalLogBufferToFile(file)
-		_ = file.Close()
-		os.Exit(0)
-	}()
-}
-
 func ZerologFormatMessagePretty(i interface{}) string {
 	if msg, ok := i.(string); ok {
 		if bytes.ContainsRune([]byte(msg), ':') {
 			parts := strings.SplitN(msg, ":", 2)
 			if len(parts) > 1 {
 				return colorizeb(parts[0], colorCyan) + colorizeb(" >", colorDarkGray) + parts[1]
-			}
-		}
-		return msg
-	}
-	return ""
-}
-
-func ZerologFormatMessageSimple(i interface{}) string {
-	if msg, ok := i.(string); ok {
-		if bytes.ContainsRune([]byte(msg), ':') {
-			parts := strings.SplitN(msg, ":", 2)
-			if len(parts) > 1 {
-				return parts[0] + " >" + parts[1]
 			}
 		}
 		return msg

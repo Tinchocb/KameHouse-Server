@@ -2,6 +2,7 @@ package parallel
 
 import (
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,10 +18,13 @@ func fakeAPICall(id int) (int, error) {
 
 func TestEachTask(t *testing.T) {
 	ids := []int{1, 2, 3, 4, 5}
-	var count int
+	var count atomic.Int64 // the callback runs on one goroutine per item
 	EachTask(ids, func(item int, index int) {
-		count += item
+		count.Add(int64(item))
 	})
+	if got := count.Load(); got != 15 {
+		t.Fatalf("sum = %d, want 15", got)
+	}
 }
 
 func TestConc(t *testing.T) {

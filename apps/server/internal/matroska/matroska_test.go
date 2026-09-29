@@ -377,40 +377,58 @@ func TestNewDemuxer(t *testing.T) {
 
 	t.Run("Invalid reader - empty", func(t *testing.T) {
 		reader := bytes.NewReader([]byte{})
-		_, err := NewDemuxer(reader)
-		if err == nil {
-			t.Skip("Expected error for empty reader, but got nil")
+		d, err := NewDemuxer(reader)
+		if err != nil {
+			t.Fatalf("expected cluster-only fallback, got error: %v", err)
 		}
+		assertNoTracks(t, d)
 	})
 
 	t.Run("Invalid reader - non-Matroska format", func(t *testing.T) {
 		// Create some random data that's not a valid Matroska file
 		invalidData := []byte("This is not a Matroska file")
 		reader := bytes.NewReader(invalidData)
-		_, err := NewDemuxer(reader)
-		if err == nil {
-			t.Skip("Expected error for non-Matroska format, but got nil")
+		d, err := NewDemuxer(reader)
+		if err != nil {
+			t.Fatalf("expected cluster-only fallback, got error: %v", err)
 		}
+		assertNoTracks(t, d)
 	})
+}
+
+// The demuxer does not reject non-Matroska input: NewMatroskaParser falls back
+// to cluster-only parsing (it may be positioned mid-stream), so garbage input
+// yields a demuxer with no tracks rather than an error.
+func assertNoTracks(t *testing.T, d *Demuxer) {
+	t.Helper()
+	n, err := d.GetNumTracks()
+	if err != nil {
+		t.Fatalf("GetNumTracks: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("fallback demuxer has %d tracks, want 0", n)
+	}
 }
 
 // TestNewStreamingDemuxer_EdgeCases tests edge cases for NewStreamingDemuxer.
 func TestNewStreamingDemuxer_EdgeCases(t *testing.T) {
 	t.Run("Empty stream", func(t *testing.T) {
 		reader := &nonSeekableReader{r: bytes.NewReader([]byte{})}
-		_, err := NewStreamingDemuxer(reader)
-		if err == nil {
-			t.Skip("Expected error for empty stream, but got nil")
+		d, err := NewStreamingDemuxer(reader)
+		if err != nil {
+			t.Fatalf("expected cluster-only fallback, got error: %v", err)
 		}
+		assertNoTracks(t, d)
 	})
 
 	t.Run("Invalid stream data", func(t *testing.T) {
 		invalidData := []byte("Invalid stream data")
 		reader := &nonSeekableReader{r: bytes.NewReader(invalidData)}
-		_, err := NewStreamingDemuxer(reader)
-		if err == nil {
-			t.Skip("Expected error for invalid stream data, but got nil")
+		d, err := NewStreamingDemuxer(reader)
+		if err != nil {
+			t.Fatalf("expected cluster-only fallback, got error: %v", err)
 		}
+		assertNoTracks(t, d)
 	})
 }
 

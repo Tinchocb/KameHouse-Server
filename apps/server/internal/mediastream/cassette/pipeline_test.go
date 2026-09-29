@@ -116,17 +116,28 @@ func TestPipeline_GetSegment_Concurrent_ThreadSafety(t *testing.T) {
 	// Mark segment 0 as ready so WaitFor returns immediately without spawning process/waiting
 	p.segments.MarkReady(0, 0)
 
+	want := p.segmentPath(0)
+	paths := make([]string, 20)
+	errs := make([]error, 20)
 	var wg sync.WaitGroup
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
-		go func() {
+		go func(i int) {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
-			_, _ = p.GetSegment(ctx, 0)
-		}()
+			paths[i], errs[i] = p.GetSegment(ctx, 0)
+		}(i)
 	}
 	wg.Wait()
+
+	for i := range paths {
+		if errs[i] != nil {
+			t.Errorf("GetSegment #%d: %v", i, errs[i])
+		} else if paths[i] != want {
+			t.Errorf("GetSegment #%d = %q, want %q", i, paths[i], want)
+		}
+	}
 }
 
 func TestPipeline_Heads_SlotReuse(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"kamehouse/internal/mediastream/cassette"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util/httprange"
 	"kamehouse/internal/util/result"
@@ -64,16 +65,16 @@ type (
 		extractionJobs sync.Map // hash -> chan struct{}
 	}
 
-	PlaybackState struct {
-		MediaID int `json:"mediaId"` // The media ID
-	}
-
 	MediaContainer struct {
 		Filepath   string               `json:"filePath"`
 		Hash       string               `json:"hash"`
 		StreamType StreamType           `json:"streamType"` // Tells the frontend how to play the media.
 		StreamURL  string               `json:"streamUrl"`  // The relative endpoint to stream the media.
 		MediaInfo  *videofile.MediaInfo `json:"mediaInfo"`
+		// VideoPassthrough: this client decodes the source video codec, so the
+		// transcode master offers only the video-copy tier (audio still → AAC).
+		// Per client (containers are cloned before setting it), never serialized.
+		VideoPassthrough bool `json:"-"`
 		//Metadata  *Metadata       `json:"metadata"`
 		// todo: add more fields (e.g. metadata)
 	}
@@ -85,16 +86,6 @@ func NewPlaybackManager(repository *Repository) *PlaybackManager {
 		repository:            repository,
 		mediaContainers:       result.NewMap[string, *MediaContainer](),
 		clientMediaContainers: result.NewMap[string, *MediaContainer](),
-	}
-}
-
-func (p *PlaybackManager) KillPlayback() {
-	p.logger.Debug().Msg("mediastream: Killing playback")
-	p.stateMu.Lock()
-	defer p.stateMu.Unlock()
-	if p.currentMediaContainer.IsPresent() {
-		p.currentMediaContainer = mo.None[*MediaContainer]()
-		p.logger.Trace().Msg("mediastream: Removed current media container")
 	}
 }
 
@@ -143,7 +134,7 @@ func (p *PlaybackManager) RequestPlayback(filepath string, streamType StreamType
 
 	if err != nil {
 		p.logger.Error().Err(err).Msg("mediastream: Failed to create media container")
-		return nil, fmt.Errorf("failed to create media container: %v", err)
+		return nil, fmt.Errorf("failed to create media container: %w", err)
 	}
 
 	// Bind the session: stream endpoints (segments, ranges, subtitles) resolve the
@@ -169,7 +160,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 	if err != nil {
 		p.logger.Error().Err(err).Msg("mediastream: Failed to create media container")
-		return nil, fmt.Errorf("failed to create media container: %v", err)
+		return nil, fmt.Errorf("failed to create media container: %w", err)
 	}
 
 	// A preload means the user is likely to watch this file next. If it needs a live
@@ -216,65 +207,11 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 			p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Pre-transcoding video segments for zero-latency start")
 			for i := 0; i < preloadSegments; i++ {
-				_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, "original", int32(i), preloadClientID)
+				_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, cassette.StartQuality(ret.MediaInfo), int32(i), preloadClientID)
 			}
 
 			if len(ret.MediaInfo.Audios) > 0 {
-				defaultAudioIdx := int32(0)
-				foundPreferred := false
-				if preferredAudioLang != "" {
-					prefLang := strings.ToLower(preferredAudioLang)
-					// First pass: try exact match or prefix match (e.g. "spa-lat" matches a track tagged "spa" or title containing "latino" / "lat")
-					for _, aud := range ret.MediaInfo.Audios {
-						audLang := ""
-						if aud.Language != nil {
-							audLang = strings.ToLower(*aud.Language)
-						}
-						audTitle := ""
-						if aud.Title != nil {
-							audTitle = strings.ToLower(*aud.Title)
-						}
-
-						if prefLang == "spa-lat" {
-							if (audLang == "spa" || audLang == "es") && (strings.Contains(audTitle, "lat") || strings.Contains(audTitle, "latino")) {
-								defaultAudioIdx = int32(aud.Index)
-								foundPreferred = true
-								break
-							}
-						} else {
-							if audLang == prefLang || (prefLang == "spa" && audLang == "es") || (prefLang == "es" && audLang == "spa") {
-								defaultAudioIdx = int32(aud.Index)
-								foundPreferred = true
-								break
-							}
-						}
-					}
-
-					// Second pass: if we wanted "spa-lat" but didn't find specific latino title, fallback to any Spanish/es track
-					if !foundPreferred && prefLang == "spa-lat" {
-						for _, aud := range ret.MediaInfo.Audios {
-							audLang := ""
-							if aud.Language != nil {
-								audLang = strings.ToLower(*aud.Language)
-							}
-							if audLang == "spa" || audLang == "es" {
-								defaultAudioIdx = int32(aud.Index)
-								foundPreferred = true
-								break
-							}
-						}
-					}
-				}
-
-				// Fallback to default if no preferred audio match was found
-				if !foundPreferred {
-					for _, aud := range ret.MediaInfo.Audios {
-						if aud.IsDefault {
-							defaultAudioIdx = int32(aud.Index)
-							break
-						}
-					}
-				}
+				defaultAudioIdx := pickPreloadAudio(ret.MediaInfo.Audios, preferredAudioLang)
 
 				p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Int32("audioIndex", defaultAudioIdx).Msg("mediastream: Pre-transcoding audio segments for zero-latency start")
 				for i := 0; i < preloadSegments; i++ {
@@ -418,9 +355,6 @@ func (p *PlaybackManager) buildMediaContainer(filePath string, hash string, stre
 			streamURL = "/api/v1/mediastream/transcode/master.m3u8"
 		}
 	}
-
-	// TODO: Add metadata to the media container.
-	// ...
 
 	if streamURL == "" {
 		return nil, errors.New("invalid stream type")
@@ -637,4 +571,80 @@ func isAudioCodecSupported(codec string, caps *ClientCapabilities) bool {
 		return caps != nil && caps.Dts
 	}
 	return false
+}
+
+// pickPreloadAudio elige la pista a pre-transcodificar con el mismo criterio que
+// el player (track-selection.ts): el idioma preferido (latino primero si se pidió
+// "spa-lat") y, entre las que coinciden, la de mejor calidad; si solo hay una
+// versión peor, esa. Sin coincidencia → la pista por defecto del archivo.
+func pickPreloadAudio(audios []videofile.Audio, preferredLang string) int32 {
+	lower := func(p *string) string {
+		if p == nil {
+			return ""
+		}
+		return strings.ToLower(*p)
+	}
+	isSpanish := func(lang string) bool {
+		return lang == "spa" || lang == "es" || strings.HasPrefix(lang, "es-") || strings.HasPrefix(lang, "spa-")
+	}
+	best := func(pred func(a videofile.Audio) bool) (int32, bool) {
+		idx, score, found := int32(0), -1, false
+		for _, a := range audios {
+			if s := audioQualityScore(a); pred(a) && s > score {
+				idx, score, found = int32(a.Index), s, true
+			}
+		}
+		return idx, found
+	}
+
+	pref := strings.ToLower(preferredLang)
+	if pref != "" && pref != "und" {
+		if pref == "spa-lat" || pref == "es-419" || pref == "es-la" {
+			if idx, ok := best(func(a videofile.Audio) bool {
+				lang, title := lower(a.Language), lower(a.Title)
+				return lang == "es-419" || lang == "es-la" || lang == "spa-lat" ||
+					(isSpanish(lang) && (strings.Contains(title, "lat") || strings.Contains(title, "hispano") || strings.Contains(title, "mexico")))
+			}); ok {
+				return idx
+			}
+			if idx, ok := best(func(a videofile.Audio) bool {
+				title := lower(a.Title)
+				return isSpanish(lower(a.Language)) && !strings.Contains(title, "castellano") && !strings.Contains(title, "spain")
+			}); ok {
+				return idx
+			}
+		} else if idx, ok := best(func(a videofile.Audio) bool {
+			lang := lower(a.Language)
+			return lang == pref || (isSpanish(pref) && isSpanish(lang))
+		}); ok {
+			return idx
+		}
+	}
+
+	for _, a := range audios {
+		if a.IsDefault {
+			return int32(a.Index)
+		}
+	}
+	return 0
+}
+
+// audioQualityScore: codec sin pérdida > surround con pérdida > estéreo
+// comprimido, y a igual codec más canales. Espejo de audioQualityScore en web.
+func audioQualityScore(a videofile.Audio) int {
+	codec := strings.ToLower(a.Codec)
+	score := 1
+	switch {
+	case codec == "flac" || codec == "truehd" || codec == "mlp" || codec == "alac" || strings.HasPrefix(codec, "pcm"):
+		score = 4
+	case codec == "eac3" || codec == "ac3" || codec == "dts" || codec == "opus":
+		score = 3
+	case codec == "aac" || codec == "vorbis":
+		score = 2
+	}
+	ch := int(a.Channels)
+	if ch == 0 {
+		ch = 2
+	}
+	return score*100 + ch
 }

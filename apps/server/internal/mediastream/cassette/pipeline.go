@@ -6,14 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"kamehouse/internal/notifier"
+	"kamehouse/internal/util"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"kamehouse/internal/notifier"
-	"kamehouse/internal/util"
 	"strings"
 	"sync"
 	"time"
@@ -77,13 +77,20 @@ func (b *LimitedBuffer) String() string {
 
 // head represents an ffmpeg process encoding segments
 type head struct {
-	segment     int32              // Current segment (updated as ffmpeg writes segments).
-	end         int32              // First segment NOT included in this head's work.
-	cmd         *exec.Cmd          // The ffmpeg process.
-	stdin       io.WriteCloser     // Used to gracefully quit ffmpeg via "q".
-	cancel      context.CancelFunc // Cancels the head's soft-close goroutine.
-	release     func()             // Governor slot release function.
-	released    *sync.Once         // Ensures release is called at most once (early kill or natural exit).
+	segment  int32              // Current segment (updated as ffmpeg writes segments).
+	end      int32              // First segment NOT included in this head's work.
+	cmd      *exec.Cmd          // The ffmpeg process.
+	stdin    io.WriteCloser     // Used to gracefully quit ffmpeg via "q".
+	cancel   context.CancelFunc // Cancels the head's soft-close goroutine.
+	release  func()             // Governor slot release function.
+	released *sync.Once         // Ensures release is called at most once (early kill or natural exit).
+	// gen identifies the runHead call that owns this slot. readSegments, reapProcess
+	// and runHead's failure path only touch the slot while it is still theirs.
+	gen uint64
+	// dying: killed but its owner has not finished yet (ffmpeg still exiting, or
+	// runHead still starting). The slot must not be reused meanwhile: the output
+	// path is outPathFmt(encoderID), so two ffmpeg would write the same files.
+	dying bool
 }
 
 var deletedHead = head{segment: -1, end: -1}
@@ -104,6 +111,7 @@ type Pipeline struct {
 	// heads tracks all in-flight encoder processes.
 	headsMu       sync.RWMutex
 	heads         []head
+	nextHeadGen   uint64 // guarded by headsMu
 	activeHeadsWg sync.WaitGroup
 
 	// killCh is recreated each time a segment is requested. Closing it
@@ -372,15 +380,14 @@ func (p *Pipeline) killHeadLocked(id int) {
 	if h.released != nil && h.release != nil {
 		h.released.Do(h.release)
 	}
-	if h.segment == -1 || h.cmd == nil {
-		p.heads[id].segment = -1
-		p.heads[id].end = -1
-		return
+	if h.segment == -1 && h.end == -1 {
+		return // free slot, or already dying
 	}
 	cmd := h.cmd
 	p.heads[id].cmd = nil
 	p.heads[id].segment = -1
 	p.heads[id].end = -1
+	p.heads[id].dying = true // freed by its owner (reapProcess / runHead failure)
 
 	// Use util.KillCmd to guarantee tree termination across platforms asynchronously
 	// so taskkill on Windows doesn't block headsMu/videosMu during seek.
@@ -389,6 +396,19 @@ func (p *Pipeline) killHeadLocked(id int) {
 			_ = util.KillCmd(c)
 		}(cmd)
 	}
+}
+
+// claimHeadSlotLocked stores h in the first free slot (never a dying one) and
+// returns its encoderID. Caller holds headsMu.
+func (p *Pipeline) claimHeadSlotLocked(h head) int {
+	for i, cur := range p.heads {
+		if cur.segment == -1 && cur.end == -1 && !cur.dying {
+			p.heads[i] = h
+			return i
+		}
+	}
+	p.heads = append(p.heads, h)
+	return len(p.heads) - 1
 }
 
 // killAllHeads kills all active heads in the pipeline
@@ -510,6 +530,7 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 	headCtx, headCancel := context.WithCancel(p.ctx)
 	success := false
 	encoderID := -1
+	var gen uint64
 	defer func() {
 		if success {
 			return
@@ -522,13 +543,14 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		// those paths.
 		if encoderID >= 0 {
 			p.headsMu.Lock()
-			if encoderID < len(p.heads) && p.heads[encoderID].cmd == nil {
+			if p.heads[encoderID].gen == gen {
 				p.heads[encoderID] = deletedHead
 			}
 			p.headsMu.Unlock()
+			p.activeHeadsWg.Done()
 		}
 	}()
-	
+
 	headProfile := p.settings.GetHwAccel()
 	var nvencRelease func()
 	if headProfile.Name == "nvidia" {
@@ -541,7 +563,7 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		}
 	}
 
-	combinedRelease := func() { 
+	combinedRelease := func() {
 		if nvencRelease != nil {
 			nvencRelease()
 		}
@@ -559,20 +581,18 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 	// fast. release/released are intentionally left nil until the process exists, so
 	// killHeadLocked does not release a governor slot the head hasn't taken ownership
 	// of yet (the pre-Start failure paths release it via combinedRelease()).
-	reserved := head{segment: start, end: end, cancel: headCancel}
 	p.headsMu.Lock()
-	for i, h := range p.heads {
-		if h.segment == -1 && h.end == -1 {
-			encoderID = i
-			break
-		}
+	// Checked under headsMu: Kill() cancels p.ctx before taking the lock, so either
+	// we see the cancellation here or our wg.Add happens before Kill's Wait.
+	if p.ctx.Err() != nil {
+		p.headsMu.Unlock()
+		combinedRelease()
+		return fmt.Errorf("cassette: pipeline cancelled")
 	}
-	if encoderID == -1 {
-		encoderID = len(p.heads)
-		p.heads = append(p.heads, reserved)
-	} else {
-		p.heads[encoderID] = reserved
-	}
+	p.nextHeadGen++
+	gen = p.nextHeadGen
+	encoderID = p.claimHeadSlotLocked(head{segment: start, end: end, cancel: headCancel, gen: gen})
+	p.activeHeadsWg.Add(1) // Done in reapProcess, or in the failure defer above
 	p.headsMu.Unlock()
 
 	// build ffmpeg arguments
@@ -664,8 +684,6 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		"-muxdelay", "0",
 	)
 
-
-
 	// -force_key_frames (encode path, inside buildArgs) is evaluated against the
 	// output timeline, which -copyts keeps absolute, so it receives the absolute
 	// keyframe times.
@@ -729,17 +747,23 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 	}
 
 	p.headsMu.Lock()
-	p.heads[encoderID] = head{
-		segment: start, end: end, cancel: headCancel,
-		release: combinedRelease, released: once,
-		cmd: cmd, stdin: stdin,
+	if p.heads[encoderID].dying {
+		// Killed while starting: headCtx is already cancelled, so the listener
+		// below makes ffmpeg quit; reapProcess frees the slot. Stay "dying".
+		p.heads[encoderID].cmd = cmd
+		p.heads[encoderID].release = combinedRelease
+		p.heads[encoderID].released = once
+	} else {
+		p.heads[encoderID] = head{
+			segment: start, end: end, cancel: headCancel,
+			release: combinedRelease, released: once,
+			cmd: cmd, stdin: stdin, gen: gen,
+		}
 	}
 	p.headsMu.Unlock()
 
-	p.activeHeadsWg.Add(1)
-
 	// read segment list from stdout
-	go p.readSegments(encoderID, start, end, stdout, stdin)
+	go p.readSegments(encoderID, gen, start, end, stdout, stdin)
 
 	// cancel listener, propagates context cancellation to ffmpeg
 	go func(ctx context.Context) {
@@ -751,7 +775,7 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 	// Goroutine: reap process and release governor slot.
 	// reapProcess uses once.Do(combinedRelease) so the slot is freed exactly once,
 	// even if killHeadLocked already released it early.
-	go p.reapProcess(headCtx, encoderID, cmd, stderr, once, combinedRelease, headCancel, headProfile)
+	go p.reapProcess(headCtx, encoderID, gen, cmd, stderr, once, combinedRelease, headCancel, headProfile)
 
 	success = true
 	return nil
@@ -761,6 +785,7 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 // As each segment is ready, it marks it as ready in the segments map.
 func (p *Pipeline) readSegments(
 	encoderID int,
+	gen uint64,
 	start, end int32,
 	stdout io.ReadCloser,
 	stdin io.WriteCloser,
@@ -778,7 +803,9 @@ func (p *Pipeline) readSegments(
 		}
 
 		p.headsMu.Lock()
-		p.heads[encoderID].segment = seg
+		if h := &p.heads[encoderID]; h.gen == gen && !h.dying {
+			h.segment = seg
+		}
 		p.headsMu.Unlock()
 
 		drainAndQuit := func() {
@@ -828,10 +855,10 @@ func (p *Pipeline) readSegments(
 // reapProcess waits for the ffmpeg process to exit, marks its head as deleted,
 // and releases the governor slot. If a hardware acceleration failure is
 // detected, it logs actionable guidance.
-func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, cmd *exec.Cmd, stderr *LimitedBuffer, once *sync.Once, combinedRelease func(), headCancel context.CancelFunc, headProfile HwAccelProfile) {
-	defer p.activeHeadsWg.Done() // Signal that this head has completely exited
+func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, gen uint64, cmd *exec.Cmd, stderr *LimitedBuffer, once *sync.Once, combinedRelease func(), headCancel context.CancelFunc, headProfile HwAccelProfile) {
+	defer p.activeHeadsWg.Done()   // Signal that this head has completely exited
 	defer once.Do(combinedRelease) // Always release the governor slot exactly once
-	defer headCancel()           // Cancel the head context to free the soft-close goroutine
+	defer headCancel()             // Cancel the head context to free the soft-close goroutine
 
 	err := cmd.Wait()
 
@@ -897,7 +924,9 @@ func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, cmd *exec.Cmd
 
 	p.headsMu.Lock()
 	defer p.headsMu.Unlock()
-	p.heads[encoderID] = deletedHead
+	if p.heads[encoderID].gen == gen {
+		p.heads[encoderID] = deletedHead
+	}
 }
 
 // helpers

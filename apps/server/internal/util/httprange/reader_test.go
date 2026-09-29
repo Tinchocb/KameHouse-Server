@@ -112,3 +112,48 @@ func TestParseContentRangeTotal(t *testing.T) {
 		t.Fatal("se esperaba error con total desconocido")
 	}
 }
+
+// Un 5xx pasajero se reintenta; un 4xx (p. ej. cuota de Drive agotada) no.
+func TestReaderRetriesTransientErrors(t *testing.T) {
+	old := retryDelays
+	retryDelays = []time.Duration{time.Millisecond, time.Millisecond}
+	defer func() { retryDelays = old }()
+
+	data := payload(1000)
+	for _, tc := range []struct {
+		status    int
+		wantOK    bool
+		wantCalls int
+	}{
+		{http.StatusServiceUnavailable, true, 2},
+		{http.StatusForbidden, false, 1},
+	} {
+		calls := 0
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				calls++
+				if calls == 1 {
+					w.WriteHeader(tc.status)
+					return
+				}
+			}
+			http.ServeContent(w, r, "file.mkv", time.Time{}, bytes.NewReader(data))
+		}))
+
+		r, err := Open(context.Background(), srv.Client(), srv.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := io.ReadAll(r)
+		srv.Close()
+		if tc.wantOK && (err != nil || !bytes.Equal(got, data)) {
+			t.Fatalf("status %d: se esperaba reintento exitoso, err=%v", tc.status, err)
+		}
+		if !tc.wantOK && err == nil {
+			t.Fatalf("status %d: se esperaba error sin reintento", tc.status)
+		}
+		if calls != tc.wantCalls {
+			t.Fatalf("status %d: pedidos = %d, want %d", tc.status, calls, tc.wantCalls)
+		}
+	}
+}

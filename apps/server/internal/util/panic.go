@@ -61,12 +61,6 @@ func HandlePanicInModuleThenS(module string, f func(stackTrace string)) {
 	}
 }
 
-func Recover() {
-	if r := recover(); r != nil {
-		printRuntimeError(r, "")
-	}
-}
-
 func RecoverInModule(module string) {
 	if r := recover(); r != nil {
 		printRuntimeError(r, module)

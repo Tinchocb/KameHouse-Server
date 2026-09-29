@@ -529,37 +529,6 @@ func (d *PgsDecoder) GetCurrentComposition() *PgsComposition {
 	return d.currentComposition
 }
 
-// GetWindow returns the window definition for a given window ID
-func (d *PgsDecoder) GetWindow(windowID uint8) *WindowDefinition {
-	return d.windows[windowID]
-}
-
-// GetObject returns a stored object by its ID
-func (d *PgsDecoder) GetObject(objectID uint16) *PgsObject {
-	return d.objects[objectID]
-}
-
-// GetPgsSegmentTypeName returns the name of a PGS segment type for logging
-func GetPgsSegmentTypeName(data []byte) string {
-	if len(data) < 1 {
-		return "UNKNOWN"
-	}
-	switch data[0] {
-	case SegPDS:
-		return "PDS (Palette Definition)"
-	case SegODS:
-		return "ODS (Object Definition)"
-	case SegPCS:
-		return "PCS (Presentation Composition)"
-	case SegWDS:
-		return "WDS (Window Definition)"
-	case SegEND:
-		return "END (End of Display Set)"
-	default:
-		return fmt.Sprintf("UNKNOWN (0x%02X)", data[0])
-	}
-}
-
 // ListPgsSegments returns a list of all segment types in a PGS packet
 func ListPgsSegments(packet []byte) []string {
 	var segments []string
@@ -629,16 +598,3 @@ func (d *PgsDecoder) IsClearCommand() bool {
 	return false
 }
 
-// GetCompositionState returns the current composition state, or -1 if no composition exists
-func (d *PgsDecoder) GetCompositionState() int {
-	if d.currentComposition == nil {
-		return -1
-	}
-	return int(d.currentComposition.CompositionState)
-}
-
-// ClearCompositionState clears the current composition and associated state
-// This should be called when a new display set begins
-func (d *PgsDecoder) ClearCompositionState() {
-	d.currentComposition = nil
-}

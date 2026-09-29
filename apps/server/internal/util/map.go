@@ -28,20 +28,6 @@ func (m *RWMutexMap) Store(key, value interface{}) {
 	m.mu.Unlock()
 }
 
-func (m *RWMutexMap) LoadOrStore(key, value interface{}) (actual interface{}, loaded bool) {
-	m.mu.Lock()
-	actual, loaded = m.dirty[key]
-	if !loaded {
-		actual = value
-		if m.dirty == nil {
-			m.dirty = make(map[interface{}]interface{})
-		}
-		m.dirty[key] = value
-	}
-	m.mu.Unlock()
-	return actual, loaded
-}
-
 func (m *RWMutexMap) LoadAndDelete(key interface{}) (value interface{}, loaded bool) {
 	m.mu.Lock()
 	value, loaded = m.dirty[key]
@@ -77,18 +63,4 @@ func (m *RWMutexMap) Range(f func(key, value interface{}) (shouldContinue bool))
 			break
 		}
 	}
-}
-
-// MapInterface is the interface Map implements.
-type MapInterface interface {
-	Load(interface{}) (interface{}, bool)
-	Store(key, value interface{})
-	LoadOrStore(key, value interface{}) (actual interface{}, loaded bool)
-	LoadAndDelete(key interface{}) (value interface{}, loaded bool)
-	Delete(interface{})
-	Range(func(key, value interface{}) (shouldContinue bool))
-}
-
-func NewRWMutexMap() MapInterface {
-	return &RWMutexMap{}
 }

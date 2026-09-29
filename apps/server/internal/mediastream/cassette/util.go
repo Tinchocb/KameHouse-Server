@@ -43,7 +43,7 @@ func saveInfo[T any](savePath string, value *T) error {
 		return err
 	}
 	_ = os.MkdirAll(filepath.Dir(savePath), 0755)
-	return os.WriteFile(savePath, data, 0666)
+	return os.WriteFile(savePath, data, 0644)
 }
 
 // printExecTime logs elapsed time for an operation

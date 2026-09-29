@@ -91,11 +91,6 @@ func New(opts *NewCassetteOptions) (*Cassette, error) {
 	return c, nil
 }
 
-// GetSettings returns the current settings.
-func (c *Cassette) GetSettings() *Settings {
-	return &c.settings
-}
-
 // GovernorStats returns the resource governor metrics.
 func (c *Cassette) GovernorStats() GovernorStats {
 	return c.governor.Stats()
@@ -217,6 +212,14 @@ func (c *Cassette) sendClientInfo(info ClientInfo) {
 	}
 }
 
+// WarmSession builds the session for a file (keyframe index included) without
+// encoding anything, so a later switch to HLS finds everything ready. It blocks
+// until the keyframes are available or ctx is done.
+func (c *Cassette) WarmSession(ctx context.Context, filePath, hash string, mediaInfo *videofile.MediaInfo) error {
+	_, err := c.getSession(ctx, filePath, hash, mediaInfo)
+	return err
+}
+
 // GetMaster returns the hls master playlist
 func (c *Cassette) GetMaster(
 	ctx context.Context,
@@ -224,6 +227,7 @@ func (c *Cassette) GetMaster(
 	mediaInfo *videofile.MediaInfo,
 	client string,
 	token string,
+	passthrough bool,
 ) (string, error) {
 	start := time.Now()
 	s, err := c.getSession(ctx, filePath, hash, mediaInfo)
@@ -235,7 +239,7 @@ func (c *Cassette) GetMaster(
 		Quality: nil, Audio: -1, Head: -1,
 	})
 	c.logger.Trace().Dur("elapsed", time.Since(start)).Msg("cassette: GetMaster")
-	return s.GetMaster(token), nil
+	return s.GetMaster(token, passthrough), nil
 }
 
 // GetVideoIndex returns the hls variant playlist for video quality.

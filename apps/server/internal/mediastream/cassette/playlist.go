@@ -30,7 +30,7 @@ func GenerateMasterPlaylist(info *videofile.MediaInfo, ladder []QualityLadderEnt
 	for _, entry := range ladder {
 		b.WriteString("#EXT-X-STREAM-INF:")
 
-		if entry.Quality == Original {
+		if entry.Quality == Original || entry.Quality == Source {
 			// use actual source properties
 			avg, peak := EffectiveBitrate(Original, info.Video.Bitrate)
 			fmt.Fprintf(&b, "AVERAGE-BANDWIDTH=%d,", avg)

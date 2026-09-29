@@ -237,50 +237,6 @@ func (c *Cacher) Delete(bucket Bucket, key string) error {
 	return store.saveToFile()
 }
 
-func DeleteIf[T any](c *Cacher, bucket Bucket, cond func(key string, value T) bool) error {
-	store, err := c.getStore(bucket.name)
-	if err != nil {
-		return err
-	}
-	store.mu.Lock()
-	deleted := false
-	for key, item := range store.data {
-		itemVal, err := json.Marshal(item.Value)
-		if err != nil {
-			store.mu.Unlock()
-			return err
-		}
-		var out T
-		err = json.Unmarshal(itemVal, &out)
-		if err != nil {
-			store.mu.Unlock()
-			return err
-		}
-		if cond(key, out) {
-			delete(store.data, key)
-			deleted = true
-		}
-	}
-	store.mu.Unlock()
-
-	if deleted {
-		return store.saveToFile()
-	}
-	return nil
-}
-
-// Empty empties the given bucket.
-func (c *Cacher) Empty(bucket Bucket) error {
-	store, err := c.getStore(bucket.name)
-	if err != nil {
-		return err
-	}
-	store.mu.Lock()
-	store.data = make(map[string]*cacheItem)
-	store.mu.Unlock()
-	return store.saveToFile()
-}
-
 // Remove removes the given bucket.
 func (c *Cacher) Remove(bucketName string) error {
 	c.mu.Lock()

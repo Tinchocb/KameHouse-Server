@@ -292,7 +292,7 @@ func (d *Detector) ScanSeries(ctx context.Context, mediaID int) error {
 		}
 	}
 
-	d.ws.SendEvent("invalidate-queries", map[string]any{"queryKeys": []string{"skip-times"}})
+	d.ws.SendEvent(events.InvalidateQueries, map[string]any{"queryKeys": []string{"skip-times"}})
 	d.emit(mediaID, "done", fmt.Sprintf("Escaneo completado. Se detectaron marcas para %d episodios.", len(rows)), 100)
 	return nil
 }

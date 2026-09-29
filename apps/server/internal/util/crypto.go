@@ -4,11 +4,8 @@ package util
 import (
 	"crypto/md5"
 	"crypto/rand"
-	"crypto/subtle"
 	"encoding/base64"
-	"errors"
 	"fmt"
-	"strings"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -47,51 +44,6 @@ func HashPasswordArgon2(password string) (string, error) {
 		argon2.Version, params.Memory, params.Iterations, params.Parallelism, b64Salt, b64Hash)
 
 	return encoded, nil
-}
-
-// VerifyPasswordArgon2 compara una contraseña en texto plano contra un hash codificado de Argon2id.
-func VerifyPasswordArgon2(password, encodedHash string) (bool, error) {
-	parts := strings.Split(encodedHash, "$")
-	if len(parts) != 6 {
-		return false, errors.New("invalid hash format")
-	}
-
-	var version int
-	_, err := fmt.Sscanf(parts[2], "v=%d", &version)
-	if err != nil {
-		return false, err
-	}
-	if version != argon2.Version {
-		return false, errors.New("incompatible version")
-	}
-
-	params := Argon2Params{}
-	var parallelism uint8
-	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &params.Memory, &params.Iterations, &parallelism)
-	if err != nil {
-		return false, err
-	}
-	params.Parallelism = parallelism
-
-	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
-	if err != nil {
-		return false, err
-	}
-
-	decodedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
-	if err != nil {
-		return false, err
-	}
-
-	params.KeyLength = uint32(len(decodedHash))
-
-	compHash := argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
-
-	if subtle.ConstantTimeCompare(decodedHash, compHash) == 1 {
-		return true, nil
-	}
-
-	return false, nil
 }
 
 // CreateMD5 returns the lowercase hex-encoded MD5 hash of the given string.

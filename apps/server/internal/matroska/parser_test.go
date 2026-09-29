@@ -8,7 +8,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
@@ -202,23 +201,45 @@ func TestParseSimpleBlock(t *testing.T) {
 	}
 }
 
+// NewMatroskaParser does not fail on a bad header/segment: it may be positioned
+// at a cluster offset mid-stream, so it falls back to defaults and no tracks.
+func assertClusterOnlyFallback(t *testing.T, p *MatroskaParser, err error) {
+	t.Helper()
+	assertNoParsedTracks(t, p, err)
+	if p.header == nil || p.header.DocType != "matroska" {
+		t.Errorf("fallback header = %+v, want default DocType matroska", p.header)
+	}
+	if p.fileInfo == nil || p.fileInfo.TimecodeScale != 1000000 {
+		t.Errorf("fallback fileInfo = %+v, want TimecodeScale 1000000", p.fileInfo)
+	}
+}
+
+func assertNoParsedTracks(t *testing.T, p *MatroskaParser, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("expected tolerant parse, got error: %v", err)
+	}
+	if p == nil {
+		t.Fatal("parser is nil")
+	}
+	if len(p.tracks) != 0 {
+		t.Errorf("parsed %d tracks from invalid input, want 0", len(p.tracks))
+	}
+}
+
 // TestNewMatroskaParser_EdgeCases tests edge cases for NewMatroskaParser.
 func TestNewMatroskaParser_EdgeCases(t *testing.T) {
 	t.Run("Invalid reader - empty", func(t *testing.T) {
 		reader := bytes.NewReader([]byte{})
-		_, err := NewMatroskaParser(reader, false)
-		if err == nil {
-			t.Skip("Expected error for empty reader, but got nil (fallback behavior)")
-		}
+		p, err := NewMatroskaParser(reader, false)
+		assertClusterOnlyFallback(t, p, err)
 	})
 
 	t.Run("Invalid reader - non-EBML format", func(t *testing.T) {
 		invalidData := []byte("This is not an EBML file")
 		reader := bytes.NewReader(invalidData)
-		_, err := NewMatroskaParser(reader, false)
-		if err == nil {
-			t.Skip("Expected error for non-EBML format, but got nil (fallback behavior)")
-		}
+		p, err := NewMatroskaParser(reader, false)
+		assertClusterOnlyFallback(t, p, err)
 	})
 
 	t.Run("Parser with noSeeking=true", func(t *testing.T) {
@@ -308,13 +329,8 @@ func TestNewMatroskaParser_EdgeCases(t *testing.T) {
 		invalidHeader := []byte{0x1A, 0x45, 0xDF, 0xA3, 0x01} // Incomplete EBML header
 		reader := bytes.NewReader(invalidHeader)
 
-		_, err := NewMatroskaParser(reader, false)
-		if err == nil {
-			t.Skip("Expected parseHeader error, got nil (fallback behavior)")
-		}
-		if !strings.Contains(err.Error(), "failed to parse header") {
-			t.Errorf("Expected 'failed to parse header' error, got: %v", err)
-		}
+		p, err := NewMatroskaParser(reader, false)
+		assertClusterOnlyFallback(t, p, err)
 	})
 
 	t.Run("Parser with parseSegment error", func(t *testing.T) {
@@ -329,13 +345,8 @@ func TestNewMatroskaParser_EdgeCases(t *testing.T) {
 		buf.Write([]byte{0x18, 0x53, 0x80, 0x67, 0x01}) // Segment ID + incomplete size
 
 		reader := bytes.NewReader(buf.Bytes())
-		_, err := NewMatroskaParser(reader, false)
-		if err == nil {
-			t.Skip("Expected parseSegment error, got nil (fallback behavior)")
-		}
-		if !strings.Contains(err.Error(), "failed to parse segment") {
-			t.Errorf("Expected 'failed to parse segment' error, got: %v", err)
-		}
+		p, err := NewMatroskaParser(reader, false)
+		assertClusterOnlyFallback(t, p, err)
 	})
 
 	t.Run("Parser with restore position error", func(t *testing.T) {
@@ -4459,11 +4470,9 @@ func TestParseSegmentChildren_ErrorHandling(t *testing.T) {
 		buf.Write(segmentData.Bytes())
 		// Don't write the extra 1000 bytes
 
-		// This should result in an error when trying to parse
-		_, err := NewMatroskaParser(bytes.NewReader(buf.Bytes()), false)
-		if err == nil {
-			t.Skip("Expected error for truncated segment, got nil (parser handled gracefully)")
-		}
+		// Truncated input is tolerated (the file may still be downloading).
+		p, err := NewMatroskaParser(bytes.NewReader(buf.Bytes()), false)
+		assertNoParsedTracks(t, p, err)
 	})
 
 	t.Run("Invalid element in segment", func(t *testing.T) {
@@ -4485,11 +4494,8 @@ func TestParseSegmentChildren_ErrorHandling(t *testing.T) {
 		buf.Write(vintEncode(uint64(segmentData.Len())))
 		buf.Write(segmentData.Bytes())
 
-		// This should result in an error
-		_, err := NewMatroskaParser(bytes.NewReader(buf.Bytes()), false)
-		if err == nil {
-			t.Skip("Expected error for invalid segment element, got nil (parser handled gracefully)")
-		}
+		p, err := NewMatroskaParser(bytes.NewReader(buf.Bytes()), false)
+		assertNoParsedTracks(t, p, err)
 	})
 }
 

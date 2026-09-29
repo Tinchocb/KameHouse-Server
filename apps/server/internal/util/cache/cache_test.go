@@ -46,8 +46,6 @@ func TestCacheMaxItemsBound(t *testing.T) {
 	c := NewCache[int](1*time.Hour, capacity)
 	defer c.Close()
 
-	assert.Equal(t, capacity, c.Capacity())
-
 	// Insert 50 items
 	for i := 0; i < 50; i++ {
 		c.Set(fmt.Sprintf("key_%d", i), i)

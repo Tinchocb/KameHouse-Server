@@ -15,7 +15,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 )
@@ -41,15 +40,6 @@ type SubtitleEvent struct {
 	HeadPos int64 `json:"-"` // Position in the stream
 }
 
-// GetSubtitleEventKey stringifies the subtitle event to serve as a key
-func GetSubtitleEventKey(se *SubtitleEvent) string {
-	marshaled, err := json.Marshal(se)
-	if err != nil {
-		return ""
-	}
-	return string(marshaled)
-}
-
 // MetadataParser parses Matroska metadata from a file.
 type MetadataParser struct {
 	reader       io.ReadSeeker
@@ -73,14 +63,6 @@ func NewMetadataParser(reader io.ReadSeeker, logger *zerolog.Logger) *MetadataPa
 		logger:            logger,
 		realLogger:        logger,
 		extractedMetadata: nil,
-	}
-}
-
-func (mp *MetadataParser) SetLoggerEnabled(enabled bool) {
-	if !enabled {
-		mp.logger = lo.ToPtr(zerolog.Nop())
-	} else {
-		mp.logger = mp.realLogger
 	}
 }
 

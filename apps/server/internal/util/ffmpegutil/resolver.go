@@ -111,19 +111,6 @@ func ResolveFFprobePath(cacheDir, customPath string) string {
 	return "ffprobe"
 }
 
-// IsBinaryExecutable checks if the binary exists and can execute `-version`.
-func IsBinaryExecutable(binPath string) bool {
-	if binPath == "" {
-		return false
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, binPath, "-version")
-	err := cmd.Run()
-	return err == nil
-}
-
 // GetBinaryVersion returns the first line of `<bin> -version` or empty string if not executable.
 func GetBinaryVersion(binPath string) string {
 	if binPath == "" {

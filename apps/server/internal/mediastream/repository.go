@@ -2,6 +2,7 @@
 package mediastream
 
 import (
+	"context"
 	"errors"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -409,13 +410,102 @@ func (r *Repository) RequestTranscodeStream(filepath string, clientID string, fo
 
 	// force means the caller needs HLS specifically (audio-track switch): withhold caps
 	// so the playback manager can't undo that by switching back to Direct Play.
+	clientCaps := caps
 	if force {
 		caps = nil
 	}
 
 	ret, err = r.playbackManager.RequestPlayback(filepath, StreamTypeTranscode, clientID, caps)
+	if err != nil {
+		return
+	}
+	ret = r.applyVideoPassthrough(ret, clientCaps, clientID)
 
 	return
+}
+
+// applyVideoPassthrough: when a transcode stream goes to a client that decodes
+// the source video (typically HEVC on an audio-track switch from direct play, or
+// a direct play rejected only for its audio codec), copy the video and re-encode
+// only the audio instead of a full re-encode a heavy 4K file can't sustain in
+// real time. The container is cloned: cached containers are shared by clients.
+func (r *Repository) applyVideoPassthrough(ret *MediaContainer, caps *ClientCapabilities, clientID string) *MediaContainer {
+	if ret == nil || ret.StreamType != StreamTypeTranscode || !canPassthroughVideo(ret.MediaInfo, caps) {
+		return ret
+	}
+	c := *ret
+	c.VideoPassthrough = true
+	if clientID != "" {
+		r.playbackManager.clientMediaContainers.Set(clientID, &c)
+	}
+	r.logger.Info().Str("filepath", c.Filepath).Msg("mediastream: Client decodes source video, copying it (audio-only transcode)")
+	return &c
+}
+
+// canPassthroughVideo reports whether the source video can be copied into the
+// HLS stream for this client. H.264 is already copied by the regular ladder;
+// this covers HEVC, which hls.js demuxes from MPEG-TS but only plays when the
+// client's decoder supports it. VP9/AV1 can't be carried in MPEG-TS.
+func canPassthroughVideo(info *videofile.MediaInfo, caps *ClientCapabilities) bool {
+	if caps == nil || info == nil || info.Video == nil {
+		return false
+	}
+	switch strings.ToLower(info.Video.Codec) {
+	case "hevc", "h265":
+		highBitDepth := strings.Contains(info.Video.PixFmt, "10") || strings.Contains(info.Video.PixFmt, "12")
+		return caps.Hevc && (!highBitDepth || caps.Hevc10Bit)
+	}
+	return false
+}
+
+// WarmTranscodeSession prepares, in the background, the transcode session of a
+// file being played in direct play: media info and keyframe index (the cold
+// part: over a minute for a heavy Drive file). Nothing is encoded and no full
+// pre-transcode is queued, so it doesn't compete with playback; if the viewer
+// then switches to an audio track the client can't decode, HLS starts at once.
+func (r *Repository) WarmTranscodeSession(filepath string) error {
+	if !r.IsInitialized() {
+		return errors.New("module not initialized")
+	}
+
+	// Same as an audio-track switch: that switch forces the transcoder on even
+	// when the global toggle is off, so warming it must too.
+	if _, ok := r.getTranscoder(); !ok {
+		r.reqMu.Lock()
+		if _, ok := r.getTranscoder(); !ok {
+			if ok := r.initializeTranscoder(r.GetSettings(), true); !ok {
+				r.reqMu.Unlock()
+				return errors.New("real-time transcoder not initialized, check your settings")
+			}
+		}
+		r.reqMu.Unlock()
+	}
+
+	go func() {
+		defer func() {
+			if rec := recover(); rec != nil {
+				r.logger.Warn().Interface("panic", rec).Msg("mediastream: panic warming transcode session")
+			}
+		}()
+		container, err := r.playbackManager.newMediaContainer(filepath, StreamTypeTranscode, nil, false)
+		if err != nil {
+			r.logger.Debug().Err(err).Str("filepath", filepath).Msg("mediastream: Could not warm transcode session")
+			return
+		}
+		tc, ok := r.getTranscoder()
+		if !ok {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
+		defer cancel()
+		start := time.Now()
+		if err := tc.WarmSession(ctx, container.Filepath, container.Hash, container.MediaInfo); err != nil {
+			r.logger.Debug().Err(err).Str("filepath", filepath).Msg("mediastream: Could not warm transcode session")
+			return
+		}
+		r.logger.Debug().Str("filepath", filepath).Dur("elapsed", time.Since(start)).Msg("mediastream: Transcode session warmed")
+	}()
+	return nil
 }
 
 func (r *Repository) RequestPreloadTranscodeStream(filepath string, preferredAudioLang string) (err error) {
@@ -475,6 +565,7 @@ func (r *Repository) RequestDirectPlay(filepath string, clientID string, caps *C
 		}
 		r.reqMu.Unlock()
 	}
+	ret = r.applyVideoPassthrough(ret, caps, clientID)
 
 	return
 }

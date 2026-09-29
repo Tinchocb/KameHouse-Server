@@ -182,6 +182,7 @@ func (e *MediaInfoExtractor) GetInfo(ffprobePath, path string) (mi *MediaInfo, e
 	// Look in the cache
 	if found, _ := e.fileCacher.Get(bucket, hash, &mi); found {
 		e.logger.Debug().Str("hash", hash).Msg("mediastream: Media information cache HIT [MediaInfoExtractor]")
+		repairLegacyHevcMime(mi)
 		return mi, nil
 	}
 
@@ -394,6 +395,45 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 	return mi, nil
 }
 
+// repairLegacyHevcMime rewrites HEVC codec strings cached before the fix in
+// streamToMimeCodec ("hvc1.1.4.L96.BO": level in hex, letter O, Main 10 never
+// detected). MSE rejects them, so an HLS video-copy variant carrying one was
+// dropped by hls.js. The cache lives 30 days; repairing on read avoids
+// re-probing every file (slow for Drive sources).
+func repairLegacyHevcMime(mi *MediaInfo) {
+	if mi == nil {
+		return
+	}
+	fix := func(v *Video) {
+		if v == nil || v.MimeCodec == nil {
+			return
+		}
+		old := *v.MimeCodec
+		if !strings.HasPrefix(old, "hvc1.") || !strings.HasSuffix(old, ".BO") {
+			return
+		}
+		i := strings.LastIndex(old, ".L")
+		level, err := strconv.ParseInt(strings.TrimSuffix(old[i+2:], ".BO"), 16, 32)
+		if i < 0 || err != nil {
+			return
+		}
+		profile := ".1.6"
+		if strings.Contains(v.PixFmt, "10") {
+			profile = ".2.4"
+		}
+		fixed := fmt.Sprintf("hvc1%s.L%d.B0", profile, level)
+		v.MimeCodec = &fixed
+		if mi.MimeCodec != nil {
+			repl := strings.ReplaceAll(*mi.MimeCodec, old, fixed)
+			mi.MimeCodec = &repl
+		}
+	}
+	fix(mi.Video)
+	for i := range mi.Videos {
+		fix(&mi.Videos[i])
+	}
+}
+
 func nullIfZero[T comparable](v T) *T {
 	var zero T
 	if v != zero {
@@ -447,13 +487,16 @@ func streamToMimeCodec(stream *ffprobe.Stream) *string {
 		// FORMAT: [codecTag].[profile].[constraint?].L[level * 30].[UNKNOWN]
 		ret := "hvc1"
 
-		if stream.Profile == "main 10" {
+		// ffprobe reports "Main 10"; the level is already level*30 (153 = 5.1)
+		// and goes in decimal. Same strings the web client probes (client-capabilities.ts),
+		// so MSE accepts the HLS variant when copying HEVC.
+		if strings.EqualFold(stream.Profile, "main 10") {
 			ret += ".2.4"
 		} else {
-			ret += ".1.4"
+			ret += ".1.6"
 		}
 
-		ret += fmt.Sprintf(".L%02X.BO", stream.Level)
+		ret += fmt.Sprintf(".L%d.B0", stream.Level)
 		return &ret
 
 	case "av1":

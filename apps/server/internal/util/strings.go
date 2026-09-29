@@ -24,14 +24,6 @@ func Bytes(size uint64) string {
 	}
 }
 
-func Decode(s string) string {
-	decoded, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		return ""
-	}
-	return string(decoded)
-}
-
 func IsMostlyLatinString(str string) bool {
 	if len(str) <= 0 {
 		return false
@@ -51,7 +43,6 @@ func IsMostlyLatinString(str string) bool {
 func isLatinRune(r rune) bool {
 	return unicode.In(r, unicode.Latin)
 }
-
 
 // NormalizePath normalizes a path by converting it to lowercase and replacing backslashes with forward slashes
 // Warning: Do not use the returned string for anything filesystem related, only for comparison
@@ -100,14 +91,6 @@ func IsBase64(s string) bool {
 	// 6. Try to decode - this is the final verification
 	_, err := base64.StdEncoding.DecodeString(s)
 	return err == nil
-}
-
-func FileExt(str string) string {
-	lastDotIndex := strings.LastIndex(str, ".")
-	if lastDotIndex == -1 {
-		return ""
-	}
-	return str[lastDotIndex:]
 }
 
 func ReplaceExtension(path, newExt string) string {

@@ -351,9 +351,14 @@ func TestEBMLReader_ReadEBMLHeader(t *testing.T) {
 		r := bytes.NewReader(buf.Bytes())
 		reader := NewEBMLReader(r)
 
-		_, err := reader.ReadEBMLHeader()
-		if err == nil {
-			t.Skip("Expected error for corrupted child element, but got nil")
+		// Unknown/invalid children are skipped (EBML allows unknown elements);
+		// the valid ones before them must still be read.
+		header, err := reader.ReadEBMLHeader()
+		if err != nil {
+			t.Fatalf("corrupted child should be skipped, got error: %v", err)
+		}
+		if header.Version != 1 {
+			t.Errorf("EBMLVersion = %d, want 1", header.Version)
 		}
 	})
 }

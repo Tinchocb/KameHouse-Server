@@ -152,13 +152,6 @@ func (s *Service) GetProgress() *ScanProgress {
 	return s.progress.Clone()
 }
 
-// IsScanning returns true if a Drive scan is in progress.
-func (s *Service) IsScanning() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.isScanning
-}
-
 // GetStatus checks Google Drive connectivity and returns the current status.
 func (s *Service) GetStatus(ctx context.Context, indexedEpisodes int) *DriveStatus {
 	s.mu.RLock()

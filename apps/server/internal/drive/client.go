@@ -414,6 +414,9 @@ func (c *Client) GetFile(ctx context.Context, fileID string) (*DriveFile, error)
 // GetMediaStream streams media bytes directly from Google Drive, forwarding HTTP Range headers.
 // The caller is responsible for closing the returned Response.Body.
 func (c *Client) GetMediaStream(ctx context.Context, fileID string, rangeHeader string) (*http.Response, error) {
+	if !safeFileID(fileID) {
+		return nil, fmt.Errorf("invalid drive file id %q", fileID)
+	}
 	streamURL := c.api(fmt.Sprintf("/files/%s?alt=media&supportsAllDrives=true", fileID))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, streamURL, nil)
@@ -441,16 +444,42 @@ func (c *Client) GetMediaStream(ctx context.Context, fileID string, rangeHeader 
 				return c.GetMediaStream(ctx, target.ID, rangeHeader)
 			}
 		}
-		return nil, fmt.Errorf("drive stream returned error status %d: %s", resp.StatusCode, bodyStr)
+		return nil, &StreamStatusError{Status: resp.StatusCode, Body: bodyStr}
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
 		body, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("drive stream returned error status %d: %s", resp.StatusCode, string(body))
+		return nil, &StreamStatusError{Status: resp.StatusCode, Body: string(body)}
 	}
 
 	return resp, nil
+}
+
+// ErrDownloadQuotaExceeded marks a 403 "downloadQuotaExceeded": Google capped
+// the file's downloads for the day. While capped, Drive rejects a random share
+// of range requests, so some retries still succeed.
+var ErrDownloadQuotaExceeded = errors.New("drive: download quota exceeded for this file")
+
+// StreamStatusError is a non-2xx answer from the Drive media endpoint.
+type StreamStatusError struct {
+	Status int
+	Body   string
+}
+
+func (e *StreamStatusError) Error() string {
+	return fmt.Sprintf("drive stream returned error status %d: %s", e.Status, e.Body)
+}
+
+// Is lets errors.Is(err, ErrDownloadQuotaExceeded) match the quota answer.
+func (e *StreamStatusError) Is(target error) bool {
+	return target == ErrDownloadQuotaExceeded && e.Status == http.StatusForbidden &&
+		strings.Contains(e.Body, "downloadQuotaExceeded")
+}
+
+// Transient reports whether retrying the same request may succeed.
+func (e *StreamStatusError) Transient() bool {
+	return e.Status == http.StatusTooManyRequests || e.Status >= 500 || e.Is(ErrDownloadQuotaExceeded)
 }
 
 // GetUserInfo returns profile information of the authenticated user to verify credentials.

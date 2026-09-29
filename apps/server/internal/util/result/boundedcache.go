@@ -87,20 +87,6 @@ func (c *BoundedCache[K, V]) Get(key K) (V, bool) {
 	return item.value, true
 }
 
-// Has checks if a key exists in the cache without updating access time
-func (c *BoundedCache[K, V]) Has(key K) bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	elem, exists := c.items[key]
-	if !exists {
-		return false
-	}
-
-	item := elem.Value.(*boundedCacheItem[K, V])
-	return !time.Now().After(item.expiration)
-}
-
 // Delete removes an item from the cache
 func (c *BoundedCache[K, V]) Delete(key K) {
 	c.mu.Lock()
@@ -125,35 +111,11 @@ func (c *BoundedCache[K, V]) Clear() {
 	c.order.Init()
 }
 
-// GetOrSet retrieves an item or creates it if it doesn't exist
-func (c *BoundedCache[K, V]) GetOrSet(key K, createFunc func() (V, error)) (V, error) {
-	// Try to get the value first
-	value, ok := c.Get(key)
-	if ok {
-		return value, nil
-	}
-
-	// Create new value
-	newValue, err := createFunc()
-	if err != nil {
-		return newValue, err
-	}
-
-	// Set the new value
-	c.Set(key, newValue)
-	return newValue, nil
-}
-
 // Size returns the current number of items in the cache
 func (c *BoundedCache[K, V]) Size() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.items)
-}
-
-// Capacity returns the maximum capacity of the cache
-func (c *BoundedCache[K, V]) Capacity() int {
-	return c.capacity
 }
 
 // evictOldest removes the least recently used item (assumes lock is held)
@@ -169,21 +131,3 @@ func (c *BoundedCache[K, V]) evictOldest() {
 	}
 }
 
-// Range iterates over all items in the cache
-func (c *BoundedCache[K, V]) Range(callback func(key K, value V) bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	for elem := c.order.Front(); elem != nil; elem = elem.Next() {
-		item := elem.Value.(*boundedCacheItem[K, V])
-
-		// Skip expired items
-		if time.Now().After(item.expiration) {
-			continue
-		}
-
-		if !callback(item.key, item.value) {
-			break
-		}
-	}
-}

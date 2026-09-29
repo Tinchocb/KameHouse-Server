@@ -85,34 +85,4 @@ type Metadata struct {
 	Error          error               `json:"-"`
 }
 
-func (m *Metadata) GetTrackByNumber(num int64) *TrackInfo {
-	for _, track := range m.Tracks {
-		if track.Number == num {
-			return track
-		}
-	}
-	return nil
-}
-
-func (m *Metadata) GetAttachmentByName(name string) (*AttachmentInfo, bool) {
-	for _, attachment := range m.Attachments {
-		if attachment.Filename == name {
-			return attachment, true
-		}
-	}
-	return nil, false
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////
-
-func (t *TrackInfo) IsAudioTrack() bool {
-	return t.Type == TrackTypeAudio
-}
-
-func (t *TrackInfo) IsVideoTrack() bool {
-	return t.Type == TrackTypeVideo
-}
-
-func (t *TrackInfo) IsSubtitleTrack() bool {
-	return t.Type == TrackTypeSubtitle
-}

@@ -72,15 +72,6 @@ func IsSubdirectory(parent, child string) bool {
 	return rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
-func IsSubdirectoryOfAny(dirs []string, child string) bool {
-	for _, dir := range dirs {
-		if IsSubdirectory(dir, child) {
-			return true
-		}
-	}
-	return false
-}
-
 func IsSameDir(dir1, dir2 string) bool {
 	realDir1, err := filepath.EvalSymlinks(dir1)
 	if err != nil {

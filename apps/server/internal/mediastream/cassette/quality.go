@@ -23,6 +23,10 @@ const (
 	P4k      Quality = "4k"
 	P8k      Quality = "8k"
 	Original Quality = "original"
+	// Source copies the video stream whatever its codec (e.g. HEVC). It's only
+	// offered to clients that reported they can decode the source codec, so an
+	// audio-track switch on a heavy file re-encodes just the audio.
+	Source Quality = "source"
 )
 
 var Qualities = []Quality{P240, P360, P480, P720, P1080, P1440, P4k, P8k}
@@ -31,22 +35,15 @@ func QualityFromString(s string) (Quality, error) {
 	if s == string(Original) {
 		return Original, nil
 	}
+	if s == string(Source) {
+		return Source, nil
+	}
 	for _, q := range Qualities {
 		if string(q) == s {
 			return q, nil
 		}
 	}
 	return Original, errors.New("cassette: invalid quality string")
-}
-
-// QualityFromHeight returns the smallest quality tier whose height is >= given value
-func QualityFromHeight(height uint32) Quality {
-	for _, q := range Qualities {
-		if q.Height() >= height {
-			return q
-		}
-	}
-	return P240
 }
 
 // Height returns the vertical resolution in pixels.
@@ -159,49 +156,83 @@ func BuildQualityLadder(info *videofile.MediaInfo) []QualityLadderEntry {
 	// h264 baseline/main/high at standard levels is universally playable
 	canTransmux := isTransmuxableVideo(info.Video)
 
-	var ladder []QualityLadderEntry
-
-	// include the "original" tier first
-	ladder = append(ladder, QualityLadderEntry{
-		Quality:             Original,
-		Width:               int32(srcWidth),
-		Height:              int32(srcHeight),
-		NeedsTranscode:      !canTransmux,
-		OriginalCanTransmux: canTransmux,
-	})
-
-	// If the video can be transmuxed directly (copy), do not offer lower transcoded qualities
-	// to prevent the player from requesting them in parallel and locking the backend.
+	// Transmuxable source: the only tier is a stream copy (no encode at all).
+	// No lower tiers, to prevent the player from requesting them in parallel
+	// and locking the backend.
 	if canTransmux {
-		return ladder
+		return []QualityLadderEntry{{
+			Quality:             Original,
+			Width:               int32(srcWidth),
+			Height:              int32(srcHeight),
+			OriginalCanTransmux: true,
+		}}
 	}
 
-	// add downscale tiers that make sense
-	for _, q := range Qualities {
+	// Source needs a real encode (HEVC, 10-bit, AV1…). Encoding at the source
+	// resolution/bitrate of a heavy movie (4K HEVC at 40+ Mbps) can't keep up in
+	// real time on most machines: the first segment took ages and playback
+	// stalled (black screen after an audio switch). Cap encodes at 1080p and
+	// list tiers highest-first so hls.js starts on the best tier that still
+	// encodes in real time (hls.js starts on the first variant of the master).
+	maxHeight := srcHeight
+	if maxHeight > MaxTranscodeHeight {
+		maxHeight = MaxTranscodeHeight
+	}
+
+	var ladder []QualityLadderEntry
+	for i := len(Qualities) - 1; i >= 0; i-- {
+		q := Qualities[i]
 		h := q.Height()
 
-		// skip tiers above source resolution, upscaling is pointless
-		if h > srcHeight {
+		// skip tiers above source resolution (upscaling is pointless) or above the cap
+		if h > maxHeight {
 			continue
 		}
 
 		// skip tiers whose average bitrate exceeds the source bitrate
-		// e.g. skip a 720p tier at 2.4 Mbps when the source is a low bitrate 1080p at 1.5 Mbps
-		if srcBitrate > 0 && q.AverageBitrate() >= srcBitrate {
+		// e.g. skip a 720p tier at 2.4 Mbps when the source is a low bitrate 1080p at 1.5 Mbps.
+		// The top tier is always kept when the source is above the cap, so a heavy
+		// file never drops below 1080p just because of a bitrate heuristic.
+		topTier := len(ladder) == 0 && srcHeight > MaxTranscodeHeight
+		if !topTier && srcBitrate > 0 && q.AverageBitrate() >= srcBitrate {
 			continue
 		}
 
-		w := util.ClosestEven(int32(float64(h) * aspectRatio))
-
 		ladder = append(ladder, QualityLadderEntry{
 			Quality:        q,
-			Width:          w,
+			Width:          util.ClosestEven(int32(float64(h) * aspectRatio)),
 			Height:         int32(h),
 			NeedsTranscode: true,
 		})
 	}
 
+	// Source at or below the cap whose native resolution isn't covered by a tier
+	// (low bitrate, or odd height like 800p): offer the source-resolution encode
+	// first so quality doesn't drop to the next tier down.
+	if srcHeight <= MaxTranscodeHeight && (len(ladder) == 0 || uint32(ladder[0].Height) < srcHeight) {
+		ladder = append([]QualityLadderEntry{{
+			Quality:        Original,
+			Width:          int32(srcWidth),
+			Height:         int32(srcHeight),
+			NeedsTranscode: true,
+		}}, ladder...)
+	}
+
 	return ladder
+}
+
+// MaxTranscodeHeight is the highest resolution the transcoder encodes to. Above
+// it a live encode is rarely real-time, so heavy sources get downscaled.
+const MaxTranscodeHeight = 1080
+
+// StartQuality is the tier playback starts on (and the one worth pre-warming):
+// the first entry of the ladder, i.e. the first variant of the master playlist.
+func StartQuality(info *videofile.MediaInfo) Quality {
+	ladder := BuildQualityLadder(info)
+	if len(ladder) == 0 {
+		return Original
+	}
+	return ladder[0].Quality
 }
 
 // isTransmuxableVideo returns true if the codec can be directly copied

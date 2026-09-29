@@ -131,6 +131,15 @@ func (m *Manager) Stop() {
 	m.cancelMu.Unlock()
 }
 
+func (m *Manager) stopped() bool {
+	select {
+	case <-m.stopCh:
+		return true
+	default:
+		return false
+	}
+}
+
 // OutputDirFor returns the directory holding a file's pre-transcoded HLS.
 func (m *Manager) OutputDirFor(hash string) string {
 	return filepath.Join(m.opts.OutputDir, hash)
@@ -254,6 +263,10 @@ func (m *Manager) worker() {
 		case <-m.stopCh:
 			return
 		case job := <-m.queue:
+			// With stopCh closed and jobs queued, select picks either case at random.
+			if m.stopped() {
+				return
+			}
 			// Cancel() may have marked it failed while it sat in the queue.
 			m.mu.RLock()
 			skip := job.Status != StatusQueued
@@ -271,6 +284,11 @@ func (m *Manager) run(job *PreTranscodeJob) {
 
 	m.cancelMu.Lock()
 	m.cancels[job.Hash] = cancel
+	// Stop() closes stopCh before walking cancels under cancelMu: if it already
+	// walked them, it missed this job, so cancel it here.
+	if m.stopped() {
+		cancel()
+	}
 	m.cancelMu.Unlock()
 
 	defer func() {

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -156,39 +157,22 @@ func (r *Reader) chunk(idx int64) ([]byte, error) {
 		end = r.size - 1
 	}
 
-	req, err := http.NewRequestWithContext(r.ctx, http.MethodGet, r.url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
-	r.Requests++
-	resp, err := r.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	switch resp.StatusCode {
-	case http.StatusPartialContent:
-	case http.StatusOK:
-		// El servidor ignoró el Range: solo sirve si pedíamos desde el inicio, y
-		// aun así se lee únicamente el bloque para no bajar el archivo completo.
-		if start != 0 {
-			return nil, fmt.Errorf("httprange: el servidor ignoró el Range (HTTP 200 en offset %d)", start)
+	var buf []byte
+	var err error
+	for attempt := 0; ; attempt++ {
+		var retry bool
+		buf, retry, err = r.fetch(start, end)
+		if err == nil || !retry || attempt >= len(retryDelays) {
+			break
 		}
-	default:
-		return nil, fmt.Errorf("httprange: HTTP %d al leer bytes %d-%d", resp.StatusCode, start, end)
+		select {
+		case <-r.ctx.Done():
+			return nil, r.ctx.Err()
+		case <-time.After(retryDelays[attempt]):
+		}
 	}
-
-	want := end - start + 1
-	buf := make([]byte, want)
-	n, err := io.ReadFull(resp.Body, buf)
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
+	if err != nil {
 		return nil, err
-	}
-	buf = buf[:n]
-	if n == 0 {
-		return nil, io.ErrUnexpectedEOF
 	}
 
 	if len(r.order) >= r.maxChunks {
@@ -199,6 +183,50 @@ func (r *Reader) chunk(idx int64) ([]byte, error) {
 	r.chunks[idx] = buf
 	r.order = append(r.order, idx)
 	return buf, nil
+}
+
+// retryDelays son las esperas entre reintentos de un bloque. Drive devuelve
+// 5xx y cortes de conexión esporádicos; sin reintento, un solo fallo hacía que
+// el parser de MKV cayera al camino lento (cientos de pedidos o ffprobe).
+var retryDelays = []time.Duration{250 * time.Millisecond, 750 * time.Millisecond}
+
+// fetch pide un bloque. retry indica si el error es pasajero (red, 429, 5xx).
+func (r *Reader) fetch(start, end int64) (buf []byte, retry bool, err error) {
+	req, err := http.NewRequestWithContext(r.ctx, http.MethodGet, r.url, nil)
+	if err != nil {
+		return nil, false, err
+	}
+	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
+	r.Requests++
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return nil, r.ctx.Err() == nil, err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusPartialContent:
+	case http.StatusOK:
+		// El servidor ignoró el Range: solo sirve si pedíamos desde el inicio, y
+		// aun así se lee únicamente el bloque para no bajar el archivo completo.
+		if start != 0 {
+			return nil, false, fmt.Errorf("httprange: el servidor ignoró el Range (HTTP 200 en offset %d)", start)
+		}
+	default:
+		transient := resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500
+		return nil, transient, fmt.Errorf("httprange: HTTP %d al leer bytes %d-%d", resp.StatusCode, start, end)
+	}
+
+	want := end - start + 1
+	buf = make([]byte, want)
+	n, err := io.ReadFull(resp.Body, buf)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return nil, r.ctx.Err() == nil, err
+	}
+	if n == 0 {
+		return nil, true, io.ErrUnexpectedEOF
+	}
+	return buf[:n], false, nil
 }
 
 // Close libera los bloques en memoria. Las conexiones las administra el client.

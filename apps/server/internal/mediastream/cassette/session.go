@@ -92,8 +92,17 @@ func (s *Session) WaitReady(ctx context.Context) error {
 
 // master / index / segment accessors
 
-// GetMaster returns the hls master playlist
-func (s *Session) GetMaster(token string) string {
+// GetMaster returns the hls master playlist. passthrough offers only the
+// video-copy tier (the client decodes the source codec natively).
+func (s *Session) GetMaster(token string, passthrough bool) string {
+	if passthrough && s.Info.Video != nil {
+		return GenerateMasterPlaylist(s.Info, []QualityLadderEntry{{
+			Quality:             Source,
+			Width:               int32(s.Info.Video.Width),
+			Height:              int32(s.Info.Video.Height),
+			OriginalCanTransmux: true,
+		}}, token)
+	}
 	return GenerateMasterPlaylist(s.Info, s.Ladder, token)
 }
 
@@ -138,7 +147,7 @@ func (s *Session) getVideoPipeline(q Quality) *Pipeline {
 		Msg("cassette: creating video pipeline")
 
 	// Check if this quality can transmux.
-	canTransmux := false
+	canTransmux := q == Source
 	if q == Original {
 		for _, entry := range s.Ladder {
 			if entry.Quality == Original {
@@ -331,11 +340,6 @@ func (s *Session) KillAllPipelineHeads() {
 		p.killAllHeads()
 	}
 	s.audiosMu.Unlock()
-}
-
-// KillAllPipelines kills all running encode pipelines across video and audio.
-func (s *Session) KillAllPipelines() {
-	s.killAllPipelines()
 }
 
 // Kill stops all running encode pipelines
