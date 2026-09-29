@@ -65,7 +65,10 @@ export function useImagePalette(src: string | null | undefined): ImagePalette | 
         // cacheada sin CORS. En local (same-origin) es inocuo.
         img.crossOrigin = "anonymous"
         img.decoding = "async"
-        img.onload = () => {
+        // decode() y no onload: onload llega antes de decodificar y drawImage
+        // decodificaba de golpe en el hilo principal (~20 ms con los fondos de
+        // 1920 px, en cada rotación del carrusel). decode() lo hace aparte.
+        const draw = () => {
             try {
                 const canvas = document.createElement("canvas")
                 canvas.width = PALETTE_W
@@ -89,6 +92,9 @@ export function useImagePalette(src: string | null | undefined): ImagePalette | 
             }
         }
         img.src = getPixelSampleImage(src)
+        img.decode().then(draw).catch(() => {
+            // Error de carga: el llamador usa su fallback.
+        })
         return () => {
             cancelled = true
         }

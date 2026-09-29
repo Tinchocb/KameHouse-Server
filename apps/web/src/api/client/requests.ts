@@ -1,4 +1,5 @@
 import { getServerBaseUrl } from "@/api/client/server-url"
+import { isFeatureDisabledError, translateServerError } from "@/api/client/error-messages"
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { useNavigate } from "@tanstack/react-router"
@@ -32,7 +33,6 @@ type SeaQuery<D> = {
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
     data?: D
     params?: D
-    password?: string
     signal?: AbortSignal
     /** Deja que la petición sobreviva al cierre de la pestaña (pagehide). */
     keepalive?: boolean
@@ -46,7 +46,6 @@ export async function buildSeaQuery<T, D = void>(
         method,
         data,
         params,
-        password,
         signal,
         keepalive,
     }: SeaQuery<D>): Promise<T | undefined> {
@@ -87,10 +86,6 @@ export async function buildSeaQuery<T, D = void>(
 
     if (data !== undefined) {
         headers["Content-Type"] = "application/json"
-    }
-
-    if (password) {
-        headers["Authorization"] = `Bearer ${password}`
     }
 
     // Solo reintentar automáticamente métodos idempotentes seguros (GET)
@@ -188,9 +183,10 @@ export function useServerMutation<R = void, V = void, C = unknown>(
 
     const navigate = useNavigate()
 
-    const password = undefined
-
     return useMutation<R | undefined, ApiError, V, C>({
+        ...options,
+        // Un onError propio reemplaza el toast genérico (continuity/chronology lo
+        // necesitan), pero el 401 se maneja siempre aquí.
         onError: (...args) => {
             const [error] = args;
             const isUnauth = error.status === 401 ||
@@ -199,27 +195,23 @@ export function useServerMutation<R = void, V = void, C = unknown>(
             if (isUnauth) {
                 toast.error("Sesión no autorizada o expirada", { id: "mutation-err-unauth" })
                 navigate({ to: "/settings", search: { tab: "system" }, replace: true }).catch(() => {})
-            } else {
+            } else if (!options.onError) {
                 const errorMsg = _handleSeaError(error.data)
-                if (errorMsg.includes("feature disabled")) {
-                    toast.warning("This feature is disabled")
+                if (errorMsg === FEATURE_DISABLED_MESSAGE) {
+                    toast.warning(errorMsg)
                 } else {
                     toast.error(errorMsg)
                 }
             }
-            if (options.onError) {
-                options.onError(...args)
-            }
+            return options.onError?.(...args)
         },
         mutationFn: async (variables) => {
             return buildSeaQuery<R, V>({
                 endpoint: endpoint,
                 method: method,
                 data: variables,
-                password: password,
             })
         },
-        ...options,
     })
 }
 
@@ -270,7 +262,7 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
                 return
             }
             const errorMsg = _handleSeaError(props.error.data || props.error.message)
-            if (errorMsg.includes("feature disabled")) {
+            if (errorMsg === FEATURE_DISABLED_MESSAGE) {
                 return
             }
             if (!!errorMsg) {
@@ -284,32 +276,41 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
 
 //----------------------------------------------------------------------------------------------------------------------
 
-function _handleSeaError(data: unknown): string {
-    if (typeof data === "string") return "Server Error: " + data
+const FEATURE_DISABLED_MESSAGE = "Esta función está desactivada en la configuración."
 
-    if (typeof data !== "object" || data === null) return "Unknown error"
+function _handleSeaError(data: unknown): string {
+    if (typeof data === "string") {
+        return isFeatureDisabledError(data) ? FEATURE_DISABLED_MESSAGE : translateServerError(data)
+    }
+
+    if (typeof data !== "object" || data === null) return "Error desconocido"
 
     const err = "error" in data && typeof (data as Record<string, unknown>).error === "string"
         ? (data as Record<string, unknown>).error as string
         : undefined
 
-    if (!err) return "Unknown error"
+    if (!err) return "Error desconocido"
+
+    if (err === "ENDPOINT_RESTRICTED_TO_LOCALHOST")
+        return "Esta acción solo se puede hacer desde el equipo donde corre KameHouse (o configurá una contraseña del servidor)."
+
+    if (isFeatureDisabledError(err)) return FEATURE_DISABLED_MESSAGE
 
     if (err.includes("Too many requests"))
-        return "Platform: Too many requests, please wait a moment and try again."
+        return translateServerError(err)
 
     try {
         const graphqlErr = JSON.parse(err) as { graphqlErrors?: Array<{ message?: string }> }
         if (graphqlErr.graphqlErrors && graphqlErr.graphqlErrors.length > 0 && !!graphqlErr.graphqlErrors[0]?.message) {
-            return "Platform error: " + graphqlErr.graphqlErrors[0]?.message
+            return "Error de la plataforma: " + graphqlErr.graphqlErrors[0]?.message
         }
-        return "Platform error"
+        return "Error de la plataforma"
     }
     catch {
         if (err.includes("no cached data") || err.includes("cache lookup failed")) {
             return ""
         }
-        return "Error: " + err
+        return translateServerError(err)
     }
 }
 

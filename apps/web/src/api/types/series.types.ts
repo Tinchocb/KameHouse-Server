@@ -38,8 +38,6 @@ export interface SagaDetailSearchParams {
   chrono?: string
 }
 
-import type { EpisodeTag } from "@/lib/helpers/synopsis-tagger"
-
 export interface PremiumEpisode {
   id: string
   title: string
@@ -59,5 +57,4 @@ export interface PremiumEpisode {
   sagaId?: string
   sagaName?: string
   tags?: string[]
-  detailedTags?: EpisodeTag[]
 }

@@ -3,19 +3,6 @@ import { useThemeSettings } from "./theme-hooks"
 import { useAppStore } from "@/lib/store"
 import { usePerformanceStore, selectEffectiveTier } from "@/lib/hardware/performance-store"
 
-function supportsLiquidRefraction(): boolean {
-    // Liquid Glass es backdrop-filter + rims especulares: funciona en cualquier
-    // navegador moderno con backdrop-filter (Chrome, Edge, Firefox, Safari).
-    // El gate antiguo solo aceptaba Chromium y lo apagaba en silencio en el resto.
-    try {
-        const css = (globalThis as unknown as { CSS?: { supports?: (p: string, v: string) => boolean } }).CSS
-        if (css?.supports?.("backdrop-filter", "blur(1px)") || css?.supports?.("-webkit-backdrop-filter", "blur(1px)")) return true
-    } catch { /* fallback a UA */ }
-    const brands = (navigator as Navigator & { userAgentData?: { brands?: { brand: string }[] } }).userAgentData?.brands
-    if (brands?.some(b => /Chromium/i.test(b.brand))) return true
-    const ua = navigator.userAgent
-    return /Chrome\/\d{2,}|Firefox\/\d+|Safari\/\d+/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua)
-}
 
 /** Converts a "#rrggbb" hex color into the "H S% L%" triplet format used by
  *  this design system's HSL custom properties (consumed as hsl(var(--x))). */
@@ -92,21 +79,15 @@ export function useApplyCustomTheme() {
             setDatasetProp(html, "mode", mode)
 
             // 1. Efectos por modo — el toggle de blur manda en Clásico y en Era
+            // 1. Efectos por modo — el toggle de blur manda en Clásico y en Era
             // (en Clásico la intensidad la suavizan los tokens de [data-mode]).
             // En modo Eco / Ahorro o Throttled se fuerza flatOn = true para 0% costo de GPU.
             const flatOn = tvMode || isEcoMode || ts.themeEnableBlurringEffects === false
-            const liquidOn =
-                !isEcoMode &&
-                !tvMode &&
-                !flatOn &&
-                ts.themeEnableLiquidGlass &&
-                supportsLiquidRefraction()
-            const sidebarGradientOn = ts.themeEnableSidebarGradient === true
 
             setDatasetProp(html, "flat", flatOn ? "true" : undefined)
-            setDatasetProp(html, "liquid", (liquidOn && !flatOn) ? "true" : undefined)
-            setDatasetProp(html, "sidebarGradient", sidebarGradientOn ? "true" : undefined)
-            setDatasetProp(html, "grain", ts.themeEnableCinematicGrain ? "true" : undefined)
+
+            const liquidOn = !flatOn && Boolean(ts.themeEnableLiquidGlass)
+            setDatasetProp(html, "liquid", liquidOn ? "true" : undefined)
 
             // 2. Paleta — Clásico soporta presets clásicos o color personalizado;
             // Por Era aplica la era elegida + overrides del preset Personalizado.
@@ -161,8 +142,6 @@ export function useApplyCustomTheme() {
         ts.themeEra,
         ts.themeEnableBlurringEffects,
         ts.themeEnableLiquidGlass,
-        ts.themeEnableSidebarGradient,
-        ts.themeEnableCinematicGrain,
         ts.enableColorSettings,
         ts.hasEraTheme,
         ts.hasCustomBackground,

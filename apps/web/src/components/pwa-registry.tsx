@@ -21,9 +21,14 @@ export function PwaRegistry() {
         }
 
         let refreshing = false
+        // Sin controlador al abrir = primera instalación: el SW toma control
+        // (clientsClaim) con la misma versión que ya está cargada. Recargar ahí
+        // mostraba el splash dos veces y bajaba todo de nuevo.
+        const hadController = Boolean(navigator.serviceWorker.controller)
 
         // Al activarse el nuevo SW que toma control, recargamos la página una sola vez
         navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (!hadController) return
             if (!refreshing) {
                 refreshing = true
                 window.location.reload()

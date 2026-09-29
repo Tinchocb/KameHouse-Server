@@ -103,6 +103,10 @@ const spineThemes: Record<string, SpineTheme> = {
     }
 };
 
+/** Arte de la estantería de /series (sin repetidos): se precalienta en idle
+ *  para que al entrar las figuras ya estén decodificadas y no aparezcan tarde. */
+export const SPINE_ART_URLS: readonly string[] = [...new Set(Object.values(spineThemes).map((t) => t.rawImg))]
+
 export const getSpineConfig = (seriesId: string, id: number, fallbackTitle?: string): SpineTheme => {
     const theme = spineThemes[seriesId];
     if (theme) return theme;

@@ -138,3 +138,17 @@ describe("series helper", () => {
         })
     })
 })
+
+describe("shortSagaTitle", () => {
+    it("quita el prefijo y el artículo, con mayúscula inicial", async () => {
+        const { shortSagaTitle } = await import("./series")
+        expect(shortSagaTitle("Saga del Emperador Pilaf")).toBe("Emperador Pilaf")
+        expect(shortSagaTitle("Saga de la Patrulla Roja")).toBe("Patrulla Roja")
+        expect(shortSagaTitle("Saga de las Esferas")).toBe("Esferas")
+        expect(shortSagaTitle("Saga de los Saiyajin")).toBe("Saiyajin")
+        expect(shortSagaTitle("Saga de Freezer")).toBe("Freezer")
+        expect(shortSagaTitle("Arco de Namek")).toBe("Namek")
+        expect(shortSagaTitle("21º Torneo de Artes Marciales")).toBe("21º Torneo de Artes Marciales")
+        expect(shortSagaTitle("saga Uranai Baba")).toBe("Uranai Baba")
+    })
+})

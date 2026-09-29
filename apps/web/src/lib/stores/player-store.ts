@@ -2,7 +2,6 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
-import { useShallow } from "zustand/react/shallow"
 import { persistLibraryPatch } from "@/lib/server/persist-settings"
 
 export interface PlaylistItem {
@@ -42,10 +41,6 @@ export interface PlayerState {
     setSubtitlesEnabled: (enabled: boolean) => void
     filterFillers: boolean
     setFilterFillers: (enabled: boolean) => void
-    autoSkipFiller: boolean
-    setAutoSkipFiller: (enabled: boolean) => void
-    showHeatmap: boolean
-    setShowHeatmap: (show: boolean) => void
     aspectRatio: "contain" | "fill" | "cover" | "16/9" | "21/9"
     setAspectRatio: (ratio: "contain" | "fill" | "cover" | "16/9" | "21/9") => void
     aspectRatioBySeries: Record<number, "contain" | "fill" | "cover" | "16/9" | "21/9">
@@ -61,8 +56,6 @@ export interface PlayerState {
     tvMode: boolean
     setTvMode: (enabled: boolean) => void
     tvModePrevPrefs: { autoSkipIntro: boolean; autoSkipOutro: boolean; marathonMode: boolean } | null
-    ambientModeEnabled: boolean
-    setAmbientModeEnabled: (enabled: boolean) => void
 }
 
 export const usePlayerStore = create<PlayerState>()(
@@ -96,10 +89,6 @@ export const usePlayerStore = create<PlayerState>()(
                     setSubtitlesEnabled: (subtitlesEnabled) => set({ subtitlesEnabled }),
                     filterFillers: false,
                     setFilterFillers: (filterFillers) => set({ filterFillers }),
-                    autoSkipFiller: false,
-                    setAutoSkipFiller: (autoSkipFiller) => set({ autoSkipFiller }),
-                    showHeatmap: true,
-                    setShowHeatmap: (showHeatmap) => set({ showHeatmap }),
                     aspectRatio: "contain",
                     setAspectRatio: (aspectRatio) => set({ aspectRatio }),
                     aspectRatioBySeries: {},
@@ -151,8 +140,6 @@ export const usePlayerStore = create<PlayerState>()(
                             marathonMode: s.marathonMode,
                         })
                     },
-                    ambientModeEnabled: true,
-                    setAmbientModeEnabled: (ambientModeEnabled) => set({ ambientModeEnabled }),
                 }),
                 {
                     name: "kamehouse-player-settings",
@@ -168,80 +155,19 @@ export const usePlayerStore = create<PlayerState>()(
                         preferredSubtitleLang: state.preferredSubtitleLang,
                         subtitlesEnabled: state.subtitlesEnabled,
                         autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
-                        showHeatmap: state.showHeatmap,
                         aspectRatio: state.aspectRatio,
                         aspectRatioBySeries: state.aspectRatioBySeries,
                         subtitleSize: state.subtitleSize,
                         loopEnabled: state.loopEnabled,
                         marathonMode: state.marathonMode,
                         tvMode: state.tvMode,
+                        // Sin esto, tras recargar con el modo TV activo, al apagarlo se
+                        // restauraban los valores por defecto y no los del usuario.
+                        tvModePrevPrefs: state.tvModePrevPrefs,
                         filterFillers: state.filterFillers,
-                        autoSkipFiller: state.autoSkipFiller,
-                        ambientModeEnabled: state.ambientModeEnabled,
                     }),
                 }
             )
         )
     )
 )
-
-// Shallow selectors for object/array state to prevent unnecessary re-renders
-export const usePlayerAudioState = () => usePlayerStore(useShallow((state) => ({
-    playerVolume: state.playerVolume,
-    playbackRate: state.playbackRate,
-    setPlayerVolume: state.setPlayerVolume,
-    setPlaybackRate: state.setPlaybackRate,
-    preferredAudioProfile: state.preferredAudioProfile,
-    setPreferredAudioProfile: state.setPreferredAudioProfile,
-    preferredAudioLang: state.preferredAudioLang,
-    setPreferredAudioLang: state.setPreferredAudioLang,
-    preferredAudioTrackIndex: state.preferredAudioTrackIndex,
-    setPreferredAudioTrackIndex: state.setPreferredAudioTrackIndex,
-    preferredSubtitleLang: state.preferredSubtitleLang,
-    setPreferredSubtitleLang: state.setPreferredSubtitleLang,
-    subtitlesEnabled: state.subtitlesEnabled,
-    setSubtitlesEnabled: state.setSubtitlesEnabled,
-    autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
-    setAutoDisableSubtitlesWhenDubbed: state.setAutoDisableSubtitlesWhenDubbed,
-})))
-
-export const usePlayerSkipState = () => usePlayerStore(useShallow((state) => ({
-    autoSkipIntro: state.autoSkipIntro,
-    autoSkipOutro: state.autoSkipOutro,
-    autoSkipFiller: state.autoSkipFiller,
-    filterFillers: state.filterFillers,
-    setAutoSkipIntro: state.setAutoSkipIntro,
-    setAutoSkipOutro: state.setAutoSkipOutro,
-    setAutoSkipFiller: state.setAutoSkipFiller,
-    setFilterFillers: state.setFilterFillers,
-})))
-
-export const usePlayerDisplayState = () => usePlayerStore(useShallow((state) => ({
-    isFullscreen: state.isFullscreen,
-    showHeatmap: state.showHeatmap,
-    aspectRatio: state.aspectRatio,
-    aspectRatioBySeries: state.aspectRatioBySeries,
-    subtitleSize: state.subtitleSize,
-    loopEnabled: state.loopEnabled,
-    ambientModeEnabled: state.ambientModeEnabled,
-    setFullscreen: state.setFullscreen,
-    setShowHeatmap: state.setShowHeatmap,
-    setAspectRatio: state.setAspectRatio,
-    setAspectRatioForSeries: state.setAspectRatioForSeries,
-    setSubtitleSize: state.setSubtitleSize,
-    setLoopEnabled: state.setLoopEnabled,
-    setAmbientModeEnabled: state.setAmbientModeEnabled,
-})))
-
-export const usePlayerModeState = () => usePlayerStore(useShallow((state) => ({
-    marathonMode: state.marathonMode,
-    tvMode: state.tvMode,
-    tvModePrevPrefs: state.tvModePrevPrefs,
-    setMarathonMode: state.setMarathonMode,
-    setTvMode: state.setTvMode,
-})))
-
-export const usePlayerStepState = () => usePlayerStore(useShallow((state) => ({
-    skipStepSeconds: state.skipStepSeconds,
-    setSkipStepSeconds: state.setSkipStepSeconds,
-})))

@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useServerMutation, useServerQuery } from "@/api/client/requests"
@@ -45,7 +46,7 @@ export function useDeleteLogs() {
             toast.success("Logs eliminados")
         },
         onError: (err) => {
-            toast.error(err instanceof Error ? err.message : "No se pudieron eliminar los logs")
+            toast.error(errorText(err, "No se pudieron eliminar los logs"))
         },
     })
 }
@@ -75,7 +76,7 @@ export function useDownloadDiagnosticsReport() {
             setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
             toast.success("Reporte descargado")
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "No se pudo descargar el reporte")
+            toast.error(errorText(err, "No se pudo descargar el reporte"))
         } finally {
             setIsDownloading(false)
         }

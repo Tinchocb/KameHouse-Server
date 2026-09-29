@@ -5,6 +5,17 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { IntelligentEntry } from "@/api/types/intelligence.types"
 import { useState, useMemo, useEffect } from "react"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
+import type { VolumeData } from "@/components/chronology/types"
+
+// Los volúmenes de la Cronología (historias, lore y spans: ~300 KB) se cargan
+// recién cuando se usa el buscador. Importados arriba viajaban en el JS inicial
+// de TODAS las pantallas, porque el buscador vive en la barra de navegación.
+let volumesCache: VolumeData[] | null = null
+let volumesPromise: Promise<VolumeData[]> | null = null
+function loadVolumes(): Promise<VolumeData[]> {
+    volumesPromise ??= import("@/components/chronology/data/volumes").then((m) => (volumesCache = m.VOLUMES_DATA))
+    return volumesPromise
+}
 
 interface SemanticSearchResult {
     entity: {
@@ -29,6 +40,7 @@ export type GlobalSearchResultItem =
           mediaId: string | number
           isUnlinked?: false
           isSemantic?: false
+          isChronology?: false
           semanticData?: never
           badgeLabel?: string
           path?: string
@@ -50,6 +62,7 @@ export type GlobalSearchResultItem =
           mediaId: string
           isUnlinked: true
           isSemantic?: false
+          isChronology?: false
           semanticData?: never
           badgeLabel?: string
           path: string
@@ -71,6 +84,7 @@ export type GlobalSearchResultItem =
           mediaId: string
           isSemantic: true
           isUnlinked?: false
+          isChronology?: false
           semanticData: SemanticSearchResult["entity"]
           media: {
               titleRomaji: string
@@ -85,6 +99,26 @@ export type GlobalSearchResultItem =
           badgeLabel: string
           [key: string]: unknown
       }
+    | {
+          mediaId: string
+          isChronology: true
+          isUnlinked?: false
+          isSemantic?: false
+          volumeId: string
+          era?: string
+          badgeLabel: "CRONOLOGÍA"
+          media: {
+              titleRomaji: string
+              titleEnglish: string
+              titleOriginal: string
+              titleSpanish: string
+              year: string
+              format: "CRONOLOGÍA"
+              posterImage: string
+              description?: string
+          }
+          [key: string]: unknown
+      }
 
 export function useGlobalSearch(enabled = true) {
     const [query, setQuery] = useState("")
@@ -97,6 +131,14 @@ export function useGlobalSearch(enabled = true) {
         const t = setTimeout(() => setDebouncedQuery(query), 300)
         return () => clearTimeout(t)
     }, [query])
+
+    const [volumes, setVolumes] = useState<VolumeData[] | null>(volumesCache)
+    useEffect(() => {
+        if (!enabled || volumes) return
+        let cancelled = false
+        loadVolumes().then((v) => { if (!cancelled) setVolumes(v) }).catch(() => {})
+        return () => { cancelled = true }
+    }, [enabled, volumes])
 
     const isSearchActive = debouncedQuery.length >= 2
     // La paleta usa prefijo ">" para comandos: no disparar búsqueda semántica.
@@ -147,6 +189,66 @@ export function useGlobalSearch(enabled = true) {
         }
 
         const q = debouncedQuery.toLowerCase().trim()
+
+        const chronologyMatches: GlobalSearchResultItem[] = []
+        if (isSearchActive) {
+            const directMatches: GlobalSearchResultItem[] = []
+            const secondaryMatches: GlobalSearchResultItem[] = []
+
+            for (const vol of volumes ?? []) {
+                const title = vol.title.toLowerCase()
+                const subtitle = (vol.subtitle ?? "").toLowerCase()
+                const sagaLabel = (vol.sagaLabel ?? "").toLowerCase()
+                const sagaId = (vol.sagaId ?? "").toLowerCase()
+                const volNum = vol.volumeNumber.toLowerCase()
+                const seriesTag = vol.seriesTag.toLowerCase()
+                const inYears = (vol.officialYear ?? "").toLowerCase()
+
+                const isDirect =
+                    title.includes(q) ||
+                    subtitle.includes(q) ||
+                    sagaLabel.includes(q) ||
+                    sagaId.includes(q) ||
+                    volNum.includes(q) ||
+                    seriesTag.includes(q) ||
+                    inYears.includes(q)
+
+                const isSecondary =
+                    !isDirect &&
+                    (vol.characters?.some((c) => c.toLowerCase().includes(q)) ||
+                        vol.narrative?.climax?.decisiveBattle?.toLowerCase().includes(q) ||
+                        vol.narrative?.detonante?.title?.toLowerCase().includes(q))
+
+                if (isDirect || isSecondary) {
+                    const item: GlobalSearchResultItem = {
+                        mediaId: `chrono-${vol.id}`,
+                        isChronology: true,
+                        isUnlinked: false,
+                        isSemantic: false,
+                        volumeId: vol.id,
+                        era: vol.seriesTag,
+                        badgeLabel: "CRONOLOGÍA",
+                        media: {
+                            titleRomaji: vol.title,
+                            titleSpanish: vol.title,
+                            titleEnglish: vol.subtitle || vol.sagaLabel,
+                            titleOriginal: vol.volumeNumber,
+                            year: vol.officialYear,
+                            format: "CRONOLOGÍA",
+                            posterImage: vol.posterUrl || "",
+                            description: vol.subtitle || `${vol.seriesTag} • ${vol.episodesRange}`,
+                        },
+                    }
+                    if (isDirect) {
+                        directMatches.push(item)
+                    } else {
+                        secondaryMatches.push(item)
+                    }
+                }
+            }
+
+            chronologyMatches.push(...directMatches, ...secondaryMatches)
+        }
         
         const semanticConverted: GlobalSearchResultItem[] = (semanticResults || []).map(sr => {
             const ent = sr.entity
@@ -179,15 +281,16 @@ export function useGlobalSearch(enabled = true) {
             return title.includes(q)
         })
 
-        // Combine: Semantic lore entities first, then matching library media entries, then unlinked
+        // Combine: Chronology spans, Semantic lore entities, matching library media entries, unlinked
         const combined: GlobalSearchResultItem[] = [
+            ...chronologyMatches.slice(0, 4),
             ...semanticConverted,
             ...filteredEntries,
             ...syntheticUnlinked.filter(u => (u.media?.titleRomaji?.toLowerCase() ?? "").includes(q))
         ]
 
         return combined.slice(0, 12)
-    }, [allEntries, syntheticUnlinked, semanticResults, debouncedQuery, isSearchActive])
+    }, [allEntries, syntheticUnlinked, semanticResults, debouncedQuery, isSearchActive, volumes])
 
     return {
         query,

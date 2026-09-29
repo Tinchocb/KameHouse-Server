@@ -44,6 +44,24 @@ export interface HeroArt {
     safeTop?: number
     /** Ancho/alto real si no es 16:9 (póster de último recurso: 2/3). */
     aspect?: number
+    /**
+     * Ancho real del mejor archivo disponible, solo si es chico (< `HERO_COMPACT_MAX_WIDTH`).
+     * En escritorio ese arte se ve blando a tamaño completo: `<HeroBackdrop wide="right">`
+     * lo muestra más chico a la derecha, flotando sobre la base oscura.
+     */
+    sourceWidth?: number
+    /**
+     * `false`: en modo `right` no se refleja el borde izquierdo (queda la base
+     * oscura). Para arte cuyo borde es un destello o un fondo plano que, espejado,
+     * ensucia la zona del texto.
+     */
+    reflect?: boolean
+    /**
+     * Fracción (0–1) del lado izquierdo que se oculta en modo `right`, sin
+     * agrandar la imagen: para arte con un destello o relleno en ese borde.
+     * Implica `reflect: false`.
+     */
+    cropLeft?: number
 }
 
 /** Encuadre por defecto para arte sin curar: sujeto típico a la derecha. */
@@ -55,6 +73,8 @@ export const POSTER_FOCAL: HeroFocal = { x: 50, y: 25 }
 export const DEFAULT_SAFE_TOP = 10
 /** Proporción del arte de hero (siempre 16:9, ver cabecera). */
 export const HERO_ART_ASPECT = 16 / 9
+/** Por debajo de este ancho de origen el arte se muestra compacto en escritorio. */
+export const HERO_COMPACT_MAX_WIDTH = 1600
 
 const local = (id: string, art: Omit<HeroArt, "src" | "lowRes">): HeroArt => ({
     src: `/backdrops/${id}.webp`,
@@ -93,7 +113,7 @@ const SERIES_TMDB_TO_ERA: Record<number, EraId> = {
 // (bordes a resolución completa vs. a la mitad): muchos de TMDB son capturas SD
 // reescaladas que en el hero se ven blandas; se prefieren ilustraciones oficiales. Cada uno con su encuadre curado: el genérico cortaba cabezas en el
 // stage panorámico (≈2.4:1) y fundía a negro personajes que estaban a la izquierda.
-type MovieFraming = Pick<HeroArt, "focal" | "subject"> & Partial<Pick<HeroArt, "safeTop" | "tone">>
+type MovieFraming = Pick<HeroArt, "focal" | "subject"> & Partial<Pick<HeroArt, "safeTop" | "tone" | "sourceWidth" | "reflect" | "cropLeft">>
 
 const tmdb = (path: string, framing: MovieFraming): HeroArt => ({
     src: `https://image.tmdb.org/t/p/w1280${path}`,
@@ -101,36 +121,44 @@ const tmdb = (path: string, framing: MovieFraming): HeroArt => ({
 })
 
 // Dragon Ball Clásico
-const DB_TRAFFIC = tmdb("/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg", { focal: { x: 55, y: 45 }, subject: "group", safeTop: 3, tone: "light" })
-const DB_M1 = tmdb("/lY0mkwtMZTDwXSKtcTLi0EQxxPk.jpg", { focal: { x: 72, y: 40 }, subject: "right", safeTop: 15, tone: "dark" })
-const DB_M2 = tmdb("/o8laRnRa6BLMNsMi4nqeSMx3zRV.jpg", { focal: { x: 55, y: 35 }, subject: "group", safeTop: 0 })
-const DB_M3 = tmdb("/xvq3BaNgmAkdmdoz7isqX68XS40.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 0, tone: "light" })
-const DB_M4 = tmdb("/1R9xxxweS2se0pbcLToYZPXVbtv.jpg", { focal: { x: 45, y: 10 }, subject: "group", safeTop: 0 })
+// Seguridad Vial: TMDB solo tiene esta captura (1326 px), no hay alternativa sin texto.
+const DB_TRAFFIC = tmdb("/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg", { focal: { x: 55, y: 45 }, subject: "group", safeTop: 3, tone: "light", sourceWidth: 1326 })
+// Bomberos: no existe en TMDB; ilustración oficial de Goku niño (3840 px).
+const DB_FIRE = tmdb("/tZuNziXpjmOsDlmiT6adFPmmSKT.jpg", { focal: { x: 58, y: 35 }, subject: "center", safeTop: 5, tone: "light" })
+const DB_M1 = tmdb("/trUoQPnQy3cAXDx5TknzuBTFiWX.jpg", { focal: { x: 45, y: 40 }, subject: "group", safeTop: 0, tone: "dark" })
+const DB_M2 = tmdb("/a7yu3kFNsKuDdXlpcElBvBvaoIk.jpg", { focal: { x: 50, y: 40 }, subject: "group", safeTop: 0 })
+const DB_M3 = tmdb("/mhwqI7dKEjVwhTbILHM3tZyarTD.jpg", { focal: { x: 50, y: 40 }, subject: "group", safeTop: 0, tone: "light" })
+const DB_M4 = tmdb("/cJ2CNxc1AQh5raZgxeQreGKxale.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 5 })
 // Dragon Ball Z
-const DBZ_M1 = tmdb("/vrO39EtblVpFNExJO5bitJiAwXI.jpg", { focal: { x: 50, y: 45 }, subject: "group", safeTop: 3 })
+const DBZ_M1 = tmdb("/6SFrBoiuioqljN42pbTmyRKccTp.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 0 })
 const DBZ_M2 = tmdb("/pLuoFuzygOdWBRJhLQWSbKeoZ0s.jpg", { focal: { x: 50, y: 35 }, subject: "group", safeTop: 3 })
 const DBZ_M3 = tmdb("/9mZGGJJP04RBmrzh9XVSfqRXl0d.jpg", { focal: { x: 55, y: 35 }, subject: "group", safeTop: 2, tone: "light" })
-const DBZ_M4 = tmdb("/jznY4TwOaVWZJoXA3D5FkvX3cUc.jpg", { focal: { x: 45, y: 0 }, subject: "group", safeTop: 0, tone: "light" })
-const DBZ_M5 = tmdb("/8bBwrxTwj4MVoy2ivYCqNLCxRcf.jpg", { focal: { x: 60, y: 0 }, subject: "group", safeTop: 0, tone: "light" })
+const DBZ_M4 = tmdb("/kjFK0THgM7ahFyliRmCB1FDdUs2.jpg", { focal: { x: 62, y: 50 }, subject: "right", safeTop: 5, tone: "dark" })
+const DBZ_M5 = tmdb("/16rQGkdxGNdEooRxSyNhGnqfnNb.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 0, tone: "light" })
 const DBZ_M6 = tmdb("/vBfE5L6p3iTrYxjokCHdwNRJ3HM.jpg", { focal: { x: 65, y: 45 }, subject: "right", safeTop: 0 })
 const DBZ_M7 = tmdb("/br9p5Liij0JVXUtrvZPUZQTy9Tt.jpg", { focal: { x: 65, y: 35 }, subject: "right", safeTop: 0 })
 const DBZ_M8 = tmdb("/Gsno5VK24rIMR1yVkfv6rDSl6E.jpg", { focal: { x: 65, y: 40 }, subject: "right", safeTop: 5 })
-const DBZ_M9 = tmdb("/h5Rvh7TUOLqmY2AOebwSEnHolwB.jpg", { focal: { x: 58, y: 60 }, subject: "group", safeTop: 15 })
-const DBZ_M10 = tmdb("/2WTjYoswcKZTQrokeUOhY3Xb3mZ.jpg", { focal: { x: 52, y: 40 }, subject: "center", safeTop: 5, tone: "light" })
-const DBZ_M11 = tmdb("/w4AwSd8igVyAE1A1KsR4waa1KAW.jpg", { focal: { x: 72, y: 45 }, subject: "right", safeTop: 5 })
-const DBZ_M12 = tmdb("/t9z8Wm8c0HnxfPN9YvXgmueG6De.jpg", { focal: { x: 50, y: 45 }, subject: "center", safeTop: 5 })
+const DBZ_M9 = tmdb("/k5ypSoY4Ze0Gfi8zkijhr6lV3yx.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 0, sourceWidth: 1280 })
+const DBZ_M10 = tmdb("/2WTjYoswcKZTQrokeUOhY3Xb3mZ.jpg", { focal: { x: 52, y: 40 }, subject: "center", safeTop: 5, tone: "light", reflect: false })
+const DBZ_M11 = tmdb("/w4AwSd8igVyAE1A1KsR4waa1KAW.jpg", { focal: { x: 72, y: 45 }, subject: "right", safeTop: 5, cropLeft: 0.44 })
+const DBZ_M12 = tmdb("/t9z8Wm8c0HnxfPN9YvXgmueG6De.jpg", { focal: { x: 50, y: 40 }, subject: "group", safeTop: 0, tone: "light" })
 const DBZ_M13 = tmdb("/orROcqUdNe3rdepse6nskbxovXJ.jpg", { focal: { x: 70, y: 40 }, subject: "right", safeTop: 0 })
 const DBZ_BARDOCK = tmdb("/yzAwIa8poIxtLB8MCuhs9jFQY9C.jpg", { focal: { x: 68, y: 40 }, subject: "right", safeTop: 8, tone: "dark" })
 const DBZ_TRUNKS = tmdb("/eoeHNfUCLsq12rIgTOHZ93cOOsR.jpg", { focal: { x: 62, y: 40 }, subject: "group", safeTop: 5, tone: "light" })
-const DBZ_YO_GOKU = tmdb("/hk9nHD5SuV3iGbYBubgxx9ZC9jf.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 3, tone: "light" })
+// ¡Hola! Son Goku: todos los backdrops de TMDB son de 1280 px.
+const DBZ_YO_GOKU = tmdb("/wMQTjoScCPYttzRx04gQtZreWg.jpg", { focal: { x: 72, y: 40 }, subject: "right", safeTop: 3, tone: "light", sourceWidth: 1280 })
+// ¡Todos reunidos! El mundo de Gokú (OVA 1992): único backdrop, 1280 px.
+const DBZ_GOKU_WORLD = tmdb("/cyL9OsDazviewaDbXtJJBynrRTw.jpg", { focal: { x: 55, y: 35 }, subject: "group", safeTop: 2, tone: "light", sourceWidth: 1280 })
+// Especial colaboración Toriko × One Piece × DBZ (2013)
+const DBZ_CROSSOVER = tmdb("/tZ1QM1D68g2KuqnBukigxU8rHzd.jpg", { focal: { x: 50, y: 35 }, subject: "group", safeTop: 3, tone: "light" })
 const DBZ_BARDOCK_OVA = tmdb("/kaLaBjygarZpRg8YzYu2mZqr952.jpg", { focal: { x: 50, y: 35 }, subject: "group", safeTop: 0 })
 const DBZ_PLAN = tmdb("/au3nAjeEjip1JWIzG8MdNtaGFF7.jpg", { focal: { x: 50, y: 45 }, subject: "center", safeTop: 20, tone: "dark" })
 // Dragon Ball GT
-const DBGT_100 = tmdb("/f3CFFYE91RhtqbRtclFHlfhXxhT.jpg", { focal: { x: 75, y: 40 }, subject: "right", safeTop: 0, tone: "light" })
+const DBGT_100 = tmdb("/4l2f1JESuT9EE2En3TZ6qK3Tl69.jpg", { focal: { x: 70, y: 40 }, subject: "right", safeTop: 0, sourceWidth: 1440 })
 // Dragon Ball Super
-const DBS_M1 = tmdb("/ju9RXuzdeXTLF9mmvPcqQopmeSj.jpg", { focal: { x: 60, y: 35 }, subject: "group", safeTop: 5 })
+const DBS_M1 = tmdb("/felXFRjJXF40NPzK1IPib8ojF2X.jpg", { focal: { x: 60, y: 35 }, subject: "group", safeTop: 5 })
 const DBS_M2 = tmdb("/usrUizny0dLNJTrrJSxsvu5V0z0.jpg", { focal: { x: 80, y: 30 }, subject: "right", safeTop: 0, tone: "dark" })
-const DBS_M3 = tmdb("/8Tpq06iKw3Kpwz79yz6m5k36Mfl.jpg", { focal: { x: 50, y: 35 }, subject: "group", safeTop: 0, tone: "dark" })
+const DBS_M3 = tmdb("/6OTRuxpwUUGbmCX3MKP25dOmo59.jpg", { focal: { x: 65, y: 45 }, subject: "right", safeTop: 5, tone: "dark" })
 const DBS_M4 = tmdb("/iItouOLw880qlICIffMYF664HkH.jpg", { focal: { x: 56, y: 40 }, subject: "group", safeTop: 5 })
 
 export const MOVIE_HERO_ART: Record<number, HeroArt> = {
@@ -138,6 +166,8 @@ export const MOVIE_HERO_ART: Record<number, HeroArt> = {
     // Corto educativo: Seguridad Vial de Goku (1988; TMDB real 1259215)
     39322: DB_TRAFFIC,
     1259215: DB_TRAFFIC,
+    // Corto educativo: El Cuerpo de Bomberos de Goku (1988)
+    39321: DB_FIRE,
     // M1: La Leyenda de Shenlong (1986)
     39144: DB_M1,
     33499: DB_M1,
@@ -199,6 +229,10 @@ export const MOVIE_HERO_ART: Record<number, HeroArt> = {
     39324: DBZ_TRUNKS,
     // OVA 2008: ¡Hola! Son Goku y sus Amigos
     38594: DBZ_YO_GOKU,
+    // OVA 1992: ¡Todos reunidos! El mundo de Gokú
+    299963: DBZ_GOKU_WORLD,
+    // Especial 2013: Toriko × One Piece × Dragon Ball Z
+    188070: DBZ_CROSSOVER,
     // OVA 2011: El Episodio de Bardock
     120475: DBZ_BARDOCK_OVA,
     // OVA 2010: Plan para Erradicar a los Saiyajin (y el original de 1993)

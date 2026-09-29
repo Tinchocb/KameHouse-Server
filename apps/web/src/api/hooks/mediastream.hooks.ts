@@ -14,7 +14,10 @@ export function useRequestMediastreamMediaContainer(variables: Partial<RequestMe
     return useServerQuery<Mediastream_MediaContainer, RequestMediastreamMediaContainer_Variables>({
         endpoint: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.endpoint,
         method: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.methods[0],
-        queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, variables?.path, variables?.streamType],
+        // force va en la key: si se pidió "transcode", el servidor devolvió direct y
+        // el direct falla, el reintento con force:true tiene la misma path/streamType;
+        // sin force en la key, staleTime Infinity serviría la respuesta vieja.
+        queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, variables?.path, variables?.streamType, !!variables?.force],
         data: variables as RequestMediastreamMediaContainer_Variables,
         enabled: !!variables.path && !!variables.streamType && enabled,
         refetchOnWindowFocus: false,
@@ -37,8 +40,11 @@ export function useRequestMediastreamMediaContainer(variables: Partial<RequestMe
     })
 }
 
+// warmOnly es opcional para el cliente: el bool de Go vale false si no viene.
+type PreloadMediastreamVariables = Omit<PreloadMediastreamMediaContainer_Variables, "warmOnly"> & { warmOnly?: boolean }
+
 export function usePreloadMediastreamMediaContainer() {
-    return useServerMutation<boolean, PreloadMediastreamMediaContainer_Variables>({
+    return useServerMutation<boolean, PreloadMediastreamVariables>({
         endpoint: API_ENDPOINTS.MEDIASTREAM.PreloadMediastreamMediaContainer.endpoint,
         method: API_ENDPOINTS.MEDIASTREAM.PreloadMediastreamMediaContainer.methods[0],
         mutationKey: [API_ENDPOINTS.MEDIASTREAM.PreloadMediastreamMediaContainer.key],

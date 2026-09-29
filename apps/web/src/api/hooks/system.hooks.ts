@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import { useState } from "react"
 import { useServerMutation } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -44,7 +45,7 @@ export function useDownloadDatabaseBackup() {
             setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
             toast.success("Respaldo descargado")
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "No se pudo descargar el respaldo")
+            toast.error(errorText(err, "No se pudo descargar el respaldo"))
         } finally {
             setIsDownloading(false)
         }

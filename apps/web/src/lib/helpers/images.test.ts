@@ -4,11 +4,11 @@ import {
     getMediumResImage,
     getLowResImage,
     getLargeResImage,
-    isImagePrewarmed,
     markImageLoaded,
     isImageLoaded,
     getPixelSampleImage,
     buildVideoThumbnailUrl,
+    localImage,
 } from "./images"
 
 describe("images helper", () => {
@@ -90,11 +90,6 @@ describe("images helper", () => {
             }
             expect(isImageLoaded("https://example.com/loaded_209.jpg")).toBe(true)
         })
-
-        it("checks prewarmed status correctly", () => {
-            expect(isImagePrewarmed(null)).toBe(false)
-            expect(isImagePrewarmed("https://not-prewarmed.com/test.jpg")).toBe(false)
-        })
     })
 
     describe("getPixelSampleImage", () => {
@@ -126,5 +121,21 @@ describe("images helper", () => {
             expect(buildVideoThumbnailUrl({ path: "/a.mkv" }, { base, startSec: -1 }))
                 .toBe(`${base}/api/v1/video-thumbnail?path=%2Fa.mkv`)
         })
+    })
+})
+
+describe("localImage", () => {
+    it("pasa las imágenes de TMDB por el proxy local con la URL exacta", () => {
+        const url = "https://image.tmdb.org/t/p/w342/p.jpg"
+        const out = localImage(url)
+        expect(out).toMatch(/\/api\/v1\/image-proxy\?url=/)
+        expect(new URL(out, "http://local").searchParams.get("url")).toBe(url)
+    })
+
+    it("deja igual las rutas locales, otros hosts y los vacíos", () => {
+        expect(localImage("/sagas/original/busqueda-esferas.webp")).toBe("/sagas/original/busqueda-esferas.webp")
+        expect(localImage("https://example.com/a.jpg")).toBe("https://example.com/a.jpg")
+        expect(localImage(null)).toBe("")
+        expect(localImage("")).toBe("")
     })
 })

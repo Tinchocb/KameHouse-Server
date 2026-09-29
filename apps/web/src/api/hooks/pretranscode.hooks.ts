@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { buildSeaQuery, useServerMutation, useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -31,7 +32,7 @@ export function useEnqueuePreTranscode() {
             toast.success("Pre-transcode encolado")
         },
         onError: (err) => {
-            toast.error(err instanceof Error ? err.message : "No se pudo encolar el pre-transcode")
+            toast.error(errorText(err, "No se pudo encolar el pre-transcode"))
         },
     })
 }
@@ -51,7 +52,7 @@ export function useCancelPreTranscode() {
             toast.success("Pre-transcode cancelado")
         },
         onError: (err) => {
-            toast.error(err instanceof Error ? err.message : "No se pudo cancelar el pre-transcode")
+            toast.error(errorText(err, "No se pudo cancelar el pre-transcode"))
         },
     })
 }

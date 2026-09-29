@@ -5,7 +5,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClient } from "@tanstack/react-query"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { queryPersistOptions } from "@/lib/query-persister"
-import { LazyMotion, MotionConfig, domMax } from "framer-motion"
+import { LazyMotion, MotionConfig } from "framer-motion"
+import { loadMotionFeatures } from "@/lib/motion-features-loader"
 
 import React, { useEffect } from "react"
 import { CookiesProvider } from "react-cookie"
@@ -52,7 +53,8 @@ export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) =>
 
     return (
         <MotionConfig reducedMotion="user">
-            <LazyMotion features={domMax} strict>
+            {/* Funciones de animación en un chunk aparte (ver motion-features-loader). */}
+            <LazyMotion features={loadMotionFeatures} strict>
                 <CookiesProvider>
                     <PersistQueryClientProvider
                         client={queryClient}

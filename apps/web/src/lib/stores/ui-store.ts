@@ -52,6 +52,7 @@ export interface UIState {
     seriesSoundtrackMode: boolean
     themeVisual: ThemeVisualPatch
     hideAudienceScore: boolean | undefined
+    scrollBlurEnabled: boolean
     setSidebarOpen: (open: boolean) => void
     setSidebarMode: (mode: "expanded" | "collapsed" | "hidden") => void
     setSearchQuery: (query: string) => void
@@ -65,6 +66,7 @@ export interface UIState {
     setGlobalQueueOpen: (open: boolean) => void
     setDynamicBackdropEnabled: (enabled: boolean) => void
     setDynamicBackdropMotionEnabled: (enabled: boolean) => void
+    setScrollBlurEnabled: (enabled: boolean) => void
     setEraOpeningPlaying: (playing: boolean) => void
     setShowInitialSetup: (show: boolean) => void
     setActiveSeriesContext: (context: string | null) => void
@@ -92,6 +94,7 @@ export const useUIStore = create<UIState>()(
                     globalQueueOpen: false,
                     dynamicBackdropEnabled: true,
                     dynamicBackdropMotionEnabled: true,
+                    scrollBlurEnabled: true,
                     eraOpeningPlaying: false,
                     showInitialSetup: false,
                     activeSeriesContext: null,
@@ -111,6 +114,7 @@ export const useUIStore = create<UIState>()(
                     setGlobalQueueOpen: (open) => set({ globalQueueOpen: open }),
                     setDynamicBackdropEnabled: (enabled) => set({ dynamicBackdropEnabled: enabled }),
                     setDynamicBackdropMotionEnabled: (enabled) => set({ dynamicBackdropMotionEnabled: enabled }),
+                    setScrollBlurEnabled: (enabled) => set({ scrollBlurEnabled: enabled }),
                     setEraOpeningPlaying: (playing) => set({ eraOpeningPlaying: playing }),
                     setShowInitialSetup: (show) => set({ showInitialSetup: show }),
                     setActiveSeriesContext: (context) => set((state) => (state.activeSeriesContext === context ? state : { activeSeriesContext: context })),
@@ -131,6 +135,7 @@ export const useUIStore = create<UIState>()(
                         seriesSoundtrackMode: state.seriesSoundtrackMode,
                         dynamicBackdropEnabled: state.dynamicBackdropEnabled,
                         dynamicBackdropMotionEnabled: state.dynamicBackdropMotionEnabled,
+                        scrollBlurEnabled: state.scrollBlurEnabled,
                         themeVisual: state.themeVisual,
                         hideAudienceScore: state.hideAudienceScore,
                     }),

@@ -92,7 +92,6 @@ export const useAppStore = create<CombinedState>()(
                         preferredSubtitleLang: state.preferredSubtitleLang,
                         subtitlesEnabled: state.subtitlesEnabled,
                         autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
-                        showHeatmap: state.showHeatmap,
                         aspectRatio: state.aspectRatio,
                         aspectRatioBySeries: state.aspectRatioBySeries,
                         subtitleSize: state.subtitleSize,
@@ -100,8 +99,6 @@ export const useAppStore = create<CombinedState>()(
                         marathonMode: state.marathonMode,
                         tvMode: state.tvMode,
                         filterFillers: state.filterFillers,
-                        autoSkipFiller: state.autoSkipFiller,
-                        ambientModeEnabled: state.ambientModeEnabled,
                         // Queue state
                         playlistQueue: Array.isArray(state.playlistQueue) ? state.playlistQueue.slice(0, 50) : [],
                         currentQueueIndex: typeof state.currentQueueIndex === 'number' ? Math.min(state.currentQueueIndex, 49) : -1,

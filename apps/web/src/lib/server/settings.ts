@@ -155,3 +155,22 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>, e
         enableTranscode: data.enableTranscode ?? existingSettings?.mediastream?.transcodeEnabled ?? false,
     } as GettingStarted_Variables
 }
+
+/**
+ * El servidor solo acepta binarios de FFmpeg/FFprobe "seguros" (carpeta bin de
+ * KameHouse o el del PATH del sistema) y reemplaza el resto en silencio por el
+ * detectado. Devuelve las rutas que el usuario escribió y no quedaron, para
+ * avisarle en vez de mostrar "guardado" como si nada.
+ */
+export function findIgnoredBinaryPaths(
+    sent: { ffmpegPath?: string | null; ffprobePath?: string | null } | null | undefined,
+    stored: { ffmpegPath?: string | null; ffprobePath?: string | null } | null | undefined,
+): { label: "FFmpeg" | "FFprobe"; wanted: string; used: string }[] {
+    const out: { label: "FFmpeg" | "FFprobe"; wanted: string; used: string }[] = []
+    for (const [key, label] of [["ffmpegPath", "FFmpeg"], ["ffprobePath", "FFprobe"]] as const) {
+        const wanted = (sent?.[key] ?? "").trim()
+        const used = (stored?.[key] ?? "").trim()
+        if (wanted && used && wanted !== used) out.push({ label, wanted, used })
+    }
+    return out
+}

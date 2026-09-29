@@ -1239,12 +1239,5 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/tmdb/images/:type/:id",
         },
     },
-    VIDEOCORE: {
-        GetVideoInsights: {
-            key: "VIDEOCORE-get-video-insights",
-            methods: ["GET"],
-            endpoint: "/api/v1/videocore/insights/{episodeId}",
-        },
-    },
 } satisfies ApiEndpoints
 

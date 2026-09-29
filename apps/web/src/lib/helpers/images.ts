@@ -6,6 +6,18 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
  * TMDB often provides 'w500' or 'w780' by default, which can look blurry on high-PPI displays.
  */
 
+/** URL de imagen de TMDB (con segmento de tamaño `/t/p/<size>/`). */
+export function isTmdbImageUrl(url: string): boolean {
+    return url.includes("tmdb.org") || url.includes("themoviedb.org")
+}
+
+const TMDB_SIZE_SEGMENT = /\/t\/p\/(?:original|w\d+)/
+
+/** Cambia el tamaño de una URL de TMDB (`w185`, `w780`, `original`…). */
+export function withTmdbSize(url: string, size: string): string {
+    return url.replace(TMDB_SIZE_SEGMENT, `/t/p/${size}`)
+}
+
 const cacheMap = new Map<string, string>()
 const MAX_CACHE_SIZE = 500
 
@@ -31,8 +43,8 @@ export const getHighResImage = (url: string | null | undefined): string => {
     return getCachedOrResolve(`high:${url}`, () => {
         // TMDB high-res replacement: w780 provides crystal-clear 4K crispness (~120KB)
         // avoiding the disastrous 10MB-15MB payload and multi-second latency of /original.
-        if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
-            return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w780")
+        if (isTmdbImageUrl(url)) {
+            return withTmdbSize(url, "w780")
         }
         return url
     })
@@ -43,8 +55,8 @@ export const getMediumResImage = (url: string | null | undefined): string => {
 
     return getCachedOrResolve(`medium:${url}`, () => {
         // TMDB medium-res: w342 is crisp on 160-240px cards and Retina (2x) without the 4x payload of w780
-        if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
-            return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w342")
+        if (isTmdbImageUrl(url)) {
+            return withTmdbSize(url, "w342")
         }
         return url
     })
@@ -55,11 +67,28 @@ export const getLowResImage = (url: string | null | undefined): string => {
 
     return getCachedOrResolve(`low:${url}`, () => {
         // TMDB low-res replacement (w185 is perfect for blurred background glows / placeholders)
-        if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
-            return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w185")
+        if (isTmdbImageUrl(url)) {
+            return withTmdbSize(url, "w185")
         }
         return url
     })
+}
+
+/**
+ * Imagen de TMDB servida por el proxy local (/api/v1/image-proxy): el servidor
+ * la guarda en disco la primera vez (y precalienta las de la estantería al
+ * arrancar), así carga en milisegundos, también sin conexión. Aplicar al
+ * final, sobre la URL ya dimensionada: codificada, getLowResImage y compañía
+ * ya no la reconocen.
+ */
+export const localImage = (url: string | null | undefined): string => {
+    if (!url) return ""
+    if (!/^https?:\/\/image\.tmdb\.org\//.test(url)) return url
+    // La base va en la clave: en escritorio la UI pinta antes de que Tauri
+    // resuelva el puerto del sidecar, y una URL cacheada con la base previa
+    // quedaría apuntando al puerto equivocado para siempre.
+    const base = getServerBaseUrl()
+    return getCachedOrResolve(`local:${base}|${url}`, () => `${base}/api/v1/image-proxy?url=${encodeURIComponent(url)}`)
 }
 
 export const getLargeResImage = (url: string | null | undefined): string => {
@@ -67,8 +96,8 @@ export const getLargeResImage = (url: string | null | undefined): string => {
 
     return getCachedOrResolve(`large:${url}`, () => {
         // TMDB large-res replacement (w1280 is sharp on large display panels without the raw overhead of 'original')
-        if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
-            return url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w1280")
+        if (isTmdbImageUrl(url)) {
+            return withTmdbSize(url, "w1280")
         }
         return url
     })
@@ -87,8 +116,8 @@ export const getPixelSampleImage = (url: string | null | undefined): string => {
     if (!url) return ""
 
     return getCachedOrResolve(`sample:${url}`, () => {
-        if (url.includes("tmdb.org") || url.includes("themoviedb.org")) {
-            const resized = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w300")
+        if (isTmdbImageUrl(url)) {
+            const resized = withTmdbSize(url, "w300")
             return `${resized}${resized.includes("?") ? "&" : "?"}kh-cors=1`
         }
         return url
@@ -127,11 +156,6 @@ export const buildVideoThumbnailUrl = (
 const MAX_PREWARMED_URLS = 200
 const prewarmedUrls = new Set<string>()
 
-export const isImagePrewarmed = (url: string | null | undefined): boolean => {
-    if (!url) return false
-    return prewarmedUrls.has(url)
-}
-
 // URLs cuya descarga ya terminó (onLoad real): sirven para no flashear
 // el skeleton al rotar a una era cuya imagen ya vimos o ya se prewarmeó.
 const loadedUrls = new Set<string>()
@@ -155,6 +179,37 @@ export const isImageLoaded = (url: string | null | undefined): boolean => {
  * Precarga imágenes predictivamente en segundo plano en idle time
  * usando HTMLImageElement sin bloquear el hilo principal.
  */
+// Pocas a la vez: con HTTP/1.1 el navegador abre ~6 conexiones por host, y
+// cientos de pósters en vuelo encolaban detrás las llamadas reales a la API.
+const PREWARM_CONCURRENCY = 4
+const prewarmQueue: string[] = []
+let prewarmInFlight = 0
+
+const pumpPrewarmQueue = () => {
+    while (prewarmInFlight < PREWARM_CONCURRENCY && prewarmQueue.length > 0) {
+        const url = prewarmQueue.shift()
+        if (!url) break
+        prewarmInFlight++
+        const img = new Image()
+        img.decoding = 'async'
+        if ('fetchPriority' in img) {
+            (img as { fetchPriority: string }).fetchPriority = 'low'
+        }
+        const done = () => {
+            prewarmInFlight--
+            pumpPrewarmQueue()
+        }
+        img.onload = () => {
+            markImageLoaded(url)
+            // Decodificada de antemano: el primer pintado no espera el bitmap.
+            if (img.decode) void img.decode().catch(() => {}).finally(done)
+            else done()
+        }
+        img.onerror = done
+        img.src = url
+    }
+}
+
 export const prewarmImages = (urls: (string | null | undefined)[]) => {
     if (typeof window === "undefined") return
 
@@ -167,14 +222,9 @@ export const prewarmImages = (urls: (string | null | undefined)[]) => {
                 if (first) prewarmedUrls.delete(first)
             }
             prewarmedUrls.add(url)
-            const img = new Image()
-            img.decoding = 'async'
-            if ('fetchPriority' in img) {
-                (img as { fetchPriority: string }).fetchPriority = 'low'
-            }
-            img.onload = () => markImageLoaded(url)
-            img.src = url
+            prewarmQueue.push(url)
         })
+        pumpPrewarmQueue()
     }, { timeout: 2000 })
 }
 

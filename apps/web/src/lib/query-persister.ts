@@ -19,6 +19,9 @@ const EXCLUDED_KEY_PATTERNS = [
     "pretranscode",
     "notifications",
     "google-drive-status",
+    // Models_Settings trae tmdbApiKey y el clientSecret/refreshToken de Drive:
+    // no se dejan en claro en IndexedDB.
+    "settings",
 ]
 
 /**
@@ -41,18 +44,67 @@ export function shouldDehydrateQuery(query: Query): boolean {
     return true
 }
 
+/** Espera mínima entre escrituras de la caché completa en IndexedDB. */
+export const PERSIST_THROTTLE_MS = 1000
+
+function runWhenIdle(fn: () => void) {
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        window.requestIdleCallback(() => fn(), { timeout: 2000 })
+    } else {
+        setTimeout(fn, 0)
+    }
+}
+
 /**
  * Persister de React Query respaldado por IndexedDB mediante idb-keyval.
  * Protegido contra caídas silenciosas en modos privados/incógnito.
+ *
+ * React Query llama a persistClient en CADA evento de la caché y cada llamada
+ * clona la caché entera (store.put hace structured clone): al entrar a una
+ * ruta con varias queries eran ~220 ms de hilo principal bloqueado (medido en
+ * /chronology). Se guarda solo el último estado, como mucho una vez por
+ * throttleMs y en tiempo ocioso; al ocultar la ventana se escribe enseguida.
  */
-export function createIDBPersister(idbKey: string = IDB_KEY): Persister {
+export function createIDBPersister(idbKey: string = IDB_KEY, throttleMs: number = PERSIST_THROTTLE_MS): Persister {
+    let pending: PersistedClient | null = null
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const write = async () => {
+        const client = pending
+        pending = null
+        if (!client) return
+        try {
+            await set(idbKey, client)
+        } catch (err) {
+            console.warn("[QueryPersist] Error guardando caché en IndexedDB:", err)
+        }
+    }
+
+    const flushNow = () => {
+        if (timer) {
+            clearTimeout(timer)
+            timer = null
+        }
+        return write()
+    }
+
+    if (typeof document !== "undefined") {
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "hidden") void flushNow()
+        })
+    }
+    if (typeof window !== "undefined") {
+        window.addEventListener("pagehide", () => void flushNow())
+    }
+
     return {
         persistClient: async (client: PersistedClient) => {
-            try {
-                await set(idbKey, client)
-            } catch (err) {
-                console.warn("[QueryPersist] Error guardando caché en IndexedDB:", err)
-            }
+            pending = client
+            if (timer) return
+            timer = setTimeout(() => {
+                timer = null
+                runWhenIdle(() => void write())
+            }, throttleMs)
         },
         restoreClient: async () => {
             try {
@@ -63,6 +115,11 @@ export function createIDBPersister(idbKey: string = IDB_KEY): Persister {
             }
         },
         removeClient: async () => {
+            pending = null
+            if (timer) {
+                clearTimeout(timer)
+                timer = null
+            }
             try {
                 await del(idbKey)
             } catch (err) {

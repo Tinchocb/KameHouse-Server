@@ -48,7 +48,7 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
             { id: "uranai-baba", name: "Saga de Uranai Baba", startEp: 69, endEp: 82, image: "/sagas/uranai-baba.webp" },
             { id: "torneo-22", name: "22º Torneo de Artes Marciales", startEp: 83, endEp: 101, image: "/sagas/torneo-22.webp" },
             { id: "piccolo", name: "Saga de Piccolo Daimaoh", startEp: 102, endEp: 122, image: "/sagas/piccolo-daimaku.webp" },
-            { id: "piccolo-jr", name: "23º Torneo (Piccolo Jr.)", startEp: 123, endEp: 153, image: "/sagas/piccolo-jr.webp" },
+            { id: "piccolo-jr", name: "23º Torneo (Piccolo Jr.)", startEp: 123, endEp: 153, image: "/sagas/original/goku-vs-piccolo-jr.webp" },
         ],
         movies: [
             { id: "db-m1", tmdbId: 39144, title: "La Leyenda de Shenlong", year: 1986, type: "MOVIE" },
@@ -76,7 +76,7 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
             { id: "androides", name: "Saga de los Androides", startEp: 118, endEp: 139, image: "/sagas/trunks-androides-cell.webp" },
             { id: "cell", name: "Saga de Cell", startEp: 140, endEp: 194, image: "/sagas/z/cell-games-saga.webp" },
             { id: "torneo-otro-mundo", name: "Torneo del Otro Mundo", startEp: 195, endEp: 199, image: "/sagas/z/other-world-saga.webp" },
-            { id: "gran-saiyaman", name: "Saga del Gran Saiyaman", startEp: 200, endEp: 209, image: "/sagas/gran-saiyaman-torneo25.webp" },
+            { id: "gran-saiyaman", name: "Saga del Gran Saiyaman", startEp: 200, endEp: 209, image: "/sagas/majin-buu.webp" },
             { id: "majin-buu", name: "Saga de Majin Buu", startEp: 210, endEp: 291, image: "/sagas/majin-buu.webp" },
         ],
         movies: [
@@ -113,8 +113,8 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         sagas: [
             { id: "black-star", name: "Saga del Gran Viaje", startEp: 1, endEp: 16, image: "/sagas/black-star.webp" },
             { id: "baby", name: "Saga de Baby", startEp: 1, endEp: 40, image: "/sagas/baby.webp" },
-            { id: "super-17", name: "Saga de Super-17", startEp: 41, endEp: 47, image: "/sagas/super-17.webp" },
-            { id: "shadow-dragons", name: "Saga de los Dragones Malignos", startEp: 48, endEp: 64, image: "/sagas/shadow-dragons.webp" },
+            { id: "super-17", name: "Saga de Super-17", startEp: 41, endEp: 47, image: "/sagas/gt/super-17-batalla.webp" },
+            { id: "shadow-dragons", name: "Saga de los Dragones Malignos", startEp: 48, endEp: 64, image: "/sagas/gt/omega-shenron.webp" },
         ],
         movies: [
             { id: "dbgt-sp1", tmdbId: 18095, title: "Especial: 100 Años Después (Goku Jr.)", year: 1997, type: "SPECIAL" },
@@ -153,12 +153,12 @@ export const DRAGON_BALL_SCANNER_SERIES: DBFranchiseSeries[] = [
         sagas: [
             { id: "batalla-dioses", name: "Saga Batalla de los Dioses", startEp: 1, endEp: 14, image: "/sagas/batalla-dioses.webp" },
             { id: "resurreccion-f", name: "Saga Resurrección de 'F'", startEp: 15, endEp: 27, image: "/sagas/resurreccion-f.webp" },
-            { id: "universo-6", name: "Saga Torneo Universo 6", startEp: 28, endEp: 41, image: "/sagas/universo-6.webp" },
+            { id: "universo-6", name: "Saga Torneo Universo 6", startEp: 28, endEp: 41, image: "/sagas/super/torneo-u6.webp" },
             { id: "copy-vegeta", name: "Saga del Agua Sobrenatural", startEp: 42, endEp: 46, image: "/sagas/super/copy-vegeta.webp" },
             { id: "trunks-futuro", name: "Saga de Trunks del Futuro (Goku Black)", startEp: 47, endEp: 76, image: "/sagas/trunks-futuro.webp" },
-            { id: "exhibicion-zen", name: "Saga de Exhibición Zen", startEp: 77, endEp: 81, image: "/sagas/supervivencia-universal.webp" },
-            { id: "reclutamiento-u7", name: "Saga de Reclutamiento", startEp: 82, endEp: 96, image: "/sagas/supervivencia-universal.webp" },
-            { id: "torneo-poder", name: "Saga del Torneo del Poder", startEp: 97, endEp: 131, image: "/sagas/supervivencia-universal.webp" },
+            { id: "exhibicion-zen", name: "Saga de Exhibición Zen", startEp: 77, endEp: 81, image: "/sagas/super/ultra-instinto-completo-victoria.webp" },
+            { id: "reclutamiento-u7", name: "Saga de Reclutamiento", startEp: 82, endEp: 96, image: "/sagas/super/reclutamiento-u7.webp" },
+            { id: "torneo-poder", name: "Saga del Torneo del Poder", startEp: 97, endEp: 131, image: "/sagas/super/ultra-instinto-completo-victoria.webp" },
         ],
         movies: [
             { id: "dbs-m1", tmdbId: 126963, title: "La Batalla de los Dioses", year: 2013, type: "MOVIE" },

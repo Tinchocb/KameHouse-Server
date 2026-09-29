@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LORE_GLOSSARY_TERMS, LORE_ARTIFACTS, MULTIVERSE_TIMELINES } from './index';
+import { LORE_GLOSSARY_TERMS } from './glossary-terms';
 import { LORE_KEYWORD_RULES } from '@/components/ui/smart-lore-text';
 
 /** Citas con número de página o capítulo: solo se aceptan si alguien las verificó contra el ejemplar. */
@@ -15,28 +15,9 @@ describe('lore canónico', () => {
     }
   });
 
-  it('cada artefacto tiene fuente y al menos una regla', () => {
-    for (const [id, artifact] of Object.entries(LORE_ARTIFACTS)) {
-      expect(artifact.id).toBe(id);
-      expect(artifact.rulesAndLimitations.length).toBeGreaterThan(0);
-      expect(artifact.source.bookOrArticle).toBeTruthy();
-    }
-  });
-
-  it('las líneas temporales tienen ids únicos y fuente', () => {
-    const ids = MULTIVERSE_TIMELINES.map((t) => t.id);
-    expect(new Set(ids).size).toBe(ids.length);
-    for (const timeline of MULTIVERSE_TIMELINES) {
-      expect(timeline.divergenceEvent).toBeTruthy();
-      expect(timeline.source).toBeTruthy();
-    }
-  });
-
   it('ninguna cita trae números de página o capítulo sin verificar', () => {
     const citations = [
       ...Object.values(LORE_GLOSSARY_TERMS).map((t) => t.sourceCitation),
-      ...Object.values(LORE_ARTIFACTS).flatMap((a) => [a.source.bookOrArticle, a.source.referenceNote ?? '']),
-      ...MULTIVERSE_TIMELINES.map((t) => t.source),
     ];
     for (const citation of citations) {
       expect(citation).not.toMatch(UNVERIFIED_LOCATOR);

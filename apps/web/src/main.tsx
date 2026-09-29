@@ -7,6 +7,12 @@ import { createRouter, RouterProvider } from "@tanstack/react-router"
 import React from "react"
 import ReactDOM from "react-dom/client"
 import { routeTree } from "./routeTree.gen"
+import { loadMotionFeatures } from "@/lib/motion-features-loader"
+import { RoutePending } from "@/components/shared/route-pending"
+
+// Pedir ya el chunk de animaciones, en paralelo con el arranque: el splash lo
+// espera antes de retirarse (routes/__root.tsx).
+void loadMotionFeatures()
 import "@fontsource-variable/outfit/wght.css"
 import "@fontsource/space-mono/400.css"
 import "@fontsource/space-mono/700.css"
@@ -20,6 +26,8 @@ const router = createRouter({
     // y no forzar duración mínima larga del skeleton.
     defaultPendingMs: 800,
     defaultPendingMinMs: 200,
+    // Sin esto, pasados los 800ms la zona de contenido queda en blanco.
+    defaultPendingComponent: RoutePending,
     context: {
         queryClient,
     },

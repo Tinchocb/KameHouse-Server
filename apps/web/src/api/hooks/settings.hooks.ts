@@ -11,8 +11,10 @@ export function useGetStatus(options?: { enabled?: boolean }) {
         queryKey: [API_ENDPOINTS.STATUS.GetStatus.key],
         enabled: options?.enabled ?? true,
         muteError: true,
-        retry: (failureCount) => failureCount < 40,
-        retryDelay: (attemptIndex) => Math.min(600 * (attemptIndex + 1), 1500),
+        // Pocos reintentos: si el backend no responde, el root pasa a
+        // LoadingOverlayWithLogo, que sigue sondeando y ofrece reintentar.
+        retry: (failureCount) => failureCount < 3,
+        retryDelay: (attemptIndex) => Math.min(500 * 2 ** attemptIndex, 2000),
     })
 }
 

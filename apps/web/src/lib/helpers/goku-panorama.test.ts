@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { getSpineConfig } from "./goku-panorama"
+import { getSpineConfig, SPINE_ART_URLS } from "./goku-panorama"
 
 describe("goku-panorama helper", () => {
     describe("getSpineConfig", () => {
@@ -33,5 +33,13 @@ describe("goku-panorama helper", () => {
             const fallbackTheme = getSpineConfig("unlisted", 0)
             expect(fallbackTheme.subtitle).toBe("SERIE")
         })
+    })
+})
+
+describe("SPINE_ART_URLS", () => {
+    it("lista cada imagen de la estantería una sola vez", () => {
+        expect(SPINE_ART_URLS).toContain("/icons/series-icons/goku-raw-db.webp")
+        expect(new Set(SPINE_ART_URLS).size).toBe(SPINE_ART_URLS.length)
+        expect(SPINE_ART_URLS.length).toBe(5) // Z y Kai comparten figura
     })
 })

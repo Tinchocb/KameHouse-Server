@@ -15,28 +15,3 @@ export const logger = (prefix: string, silence?: boolean) => {
         },
     }
 }
-
-const isDev = import.meta.env.MODE !== "production"
-
-/**
- * Logger compartido sin prefijo. `debug` solo existe en dev (en prod es
- * no-op); warn/error siempre registran porque son diagnósticos útiles
- * en reportes de reproducción y red.
- */
-export const log = {
-    debug: (...data: unknown[]) => {
-        if (isDev) console.log(...data)
-    },
-    info: (...data: unknown[]) => {
-        console.info(...data)
-    },
-    warn: (...data: unknown[]) => {
-        console.warn(...data)
-    },
-    error: (...data: unknown[]) => {
-        console.error(...data)
-    },
-}
-
-
-

@@ -51,7 +51,7 @@ export function getSeriesEraAccent(seriesId?: string | null, fallback = "var(--s
     return eraId ? ERA_COLOR_MAP[eraId].accent : fallback
 }
 
-// Póster oficial vertical de Daima (TMDB 2:3). El asset local /sagas/daima.jpg
+// Póster oficial vertical de Daima (TMDB 2:3). El asset local /sagas/daima.webp
 // es apaisado y se ve recortado en los contenedores verticales de Series y Scanner.
 export const DAIMA_VERTICAL_POSTER = "https://image.tmdb.org/t/p/w500/lMULbSFZNXUC87MqOZQ4SSV9DXI.jpg"
 
@@ -101,7 +101,7 @@ export const DRAGON_BALL_SERIES_INFO: Record<string, {
         episodes: 131,
         description: "Tras la derrota de Majin Buu, Goku y sus amigos despiertan los poderes de los dioses enfrentando a Bills, Goku Black y el Torneo del Poder.",
         poster: "/sagas/batalla-dioses.webp",
-        banner: "/sagas/supervivencia-universal.webp",
+        banner: "/sagas/super/ultra-instinto-completo-victoria.webp",
     },
     "dragon_ball_daima": {
         year: 2024,
@@ -179,4 +179,18 @@ export const getSeriesYear = (title: string, mediaYear?: number, startDate?: str
     }
 
     return 'N/A'
+}
+
+/**
+ * Nombre corto de una saga para chips: "Saga del Emperador Pilaf" → "Emperador Pilaf",
+ * "Saga de la Patrulla Roja" → "Patrulla Roja", "Arco de Namek" → "Namek".
+ * Quita también el artículo ("de la", "de las") para que todos los chips queden
+ * iguales (antes "de la" sobrevivía como "la Patrulla Roja", en minúscula).
+ */
+export function shortSagaTitle(title: string): string {
+    const short = title
+        .trim()
+        .replace(/^Saga\s+(?:de\s+las?\s+|de\s+los\s+|del\s+|de\s+)?/i, "")
+        .replace(/^Arco\s+de\s+/i, "")
+    return short ? short.charAt(0).toLocaleUpperCase("es") + short.slice(1) : title
 }

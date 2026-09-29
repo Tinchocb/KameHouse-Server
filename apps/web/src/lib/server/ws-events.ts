@@ -23,7 +23,6 @@ export const WSEvents = {
     SETTINGS: "settings",
     ERROR_TOAST: "error-toast",
     SUCCESS_TOAST: "success-toast",
-    VIDEOCORE: "videocore",
     MEDIASHUTDOWN: "mediastream-shutdown-stream",
     DRIVE_SCAN_PROGRESS: "drive_scan_progress",
     DRIVE_SCAN_COMPLETED: "drive_scan_completed",
@@ -108,7 +107,6 @@ export type WebSocketMessage =
     | { type: typeof WSEvents.SETTINGS; payload: unknown }
     | { type: typeof WSEvents.ERROR_TOAST; payload: string }
     | { type: typeof WSEvents.SUCCESS_TOAST; payload: string }
-    | { type: typeof WSEvents.VIDEOCORE; payload: { type: string; payload?: unknown; clientID?: string } }
     | { type: typeof WSEvents.MEDIASHUTDOWN; payload: string | null }
     | { type: typeof WSEvents.LIBRARY_WATCHER_FILE_ADDED; payload: string }
     | { type: typeof WSEvents.LIBRARY_WATCHER_FILE_REMOVED; payload: string }
@@ -119,3 +117,11 @@ export type WebSocketMessage =
     | { type: typeof WSEvents.DRIVE_SCAN_PROGRESS; payload: DriveScanProgress }
     | { type: typeof WSEvents.DRIVE_SCAN_COMPLETED; payload?: { count?: number; pruned?: number; error?: string } }
     | { type: typeof WSEvents.LIBRARY_UPDATED; payload?: { source?: string; count?: number } }
+
+const KNOWN_WS_TYPES = new Set<string>(Object.values(WSEvents))
+
+export function isWebSocketMessage(value: unknown): value is WebSocketMessage {
+    if (typeof value !== "object" || value === null) return false
+    const v = value as Record<string, unknown>
+    return typeof v.type === "string" && KNOWN_WS_TYPES.has(v.type) && "payload" in v
+}

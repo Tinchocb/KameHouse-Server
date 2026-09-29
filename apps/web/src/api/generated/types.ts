@@ -966,9 +966,22 @@ export type CacheStatsResponse = {
     keyframes: CacheStatsResponse_Keyframes
     fingerprints: CacheStatsResponse_Fingerprints
     images: CacheStatsResponse_Images
+    driveBlocks: CacheStatsResponse_DriveBlocks
     totalDiskSizeBytes: number
     isWarming: boolean
     warmingProgress: WarmingProgress
+}
+
+/**
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
+ * - Package: handlers
+ * @description
+ *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
+ */
+export type CacheStatsResponse_DriveBlocks = {
+    diskSizeBytes: number
+    diskItemCount: number
 }
 
 /**
@@ -1605,102 +1618,6 @@ export type Metadata_EpisodeMetadata = {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * - Filepath: internal/mkvparser/metadata.go
- * - Filename: metadata.go
- * - Package: mkvparser
- * @description
- *  AttachmentInfo holds extracted information about an attachment.
- */
-export type MKVParser_AttachmentInfo = {
-    uid: number
-    filename: string
-    mimetype: string
-    size: number
-    description?: string
-    type?: MKVParser_AttachmentType
-}
-
-/**
- * - Filepath: internal/mkvparser/metadata.go
- * - Filename: metadata.go
- * - Package: mkvparser
- */
-export type MKVParser_AttachmentType = "font" | "subtitle" | "other"
-
-/**
- * - Filepath: internal/mkvparser/structs.go
- * - Filename: structs.go
- * - Package: mkvparser
- * @description
- *  AudioTrack contains audio-specific track data
- */
-export type MKVParser_AudioTrack = {
-    SamplingFrequency: number
-    Channels: number
-    BitDepth: number
-}
-
-/**
- * - Filepath: internal/mkvparser/metadata.go
- * - Filename: metadata.go
- * - Package: mkvparser
- * @description
- *  ChapterInfo holds extracted information about a chapter.
- */
-export type MKVParser_ChapterInfo = {
-    uid: number
-    /**
-     * Start time in seconds
-     */
-    start: number
-    /**
-     * End time in seconds
-     */
-    end?: number
-    text?: string
-    /**
-     * Legacy 3-letter language codes
-     */
-    languages?: Array<string>
-    /**
-     * IETF language tags
-     */
-    languagesIETF?: Array<string>
-}
-
-/**
- * - Filepath: internal/mkvparser/metadata.go
- * - Filename: metadata.go
- * - Package: mkvparser
- * @description
- *  Metadata holds all extracted metadata.
- */
-export type MKVParser_Metadata = {
-    title?: string
-    /**
-     * Duration in seconds
-     */
-    duration: number
-    /**
-     * Original timecode scale from Info
-     */
-    timecodeScale: number
-    muxingApp?: string
-    writingApp?: string
-    tracks: Array<MKVParser_TrackInfo> | null
-    videoTracks: Array<MKVParser_TrackInfo> | null
-    audioTracks: Array<MKVParser_TrackInfo> | null
-    subtitleTracks: Array<MKVParser_TrackInfo> | null
-    chapters: Array<MKVParser_ChapterInfo> | null
-    attachments: Array<MKVParser_AttachmentInfo> | null
-    tags?: Record<string, Array<string>>
-    /**
-     * RFC 6381 codec string
-     */
-    mimeCodec?: string
-}
-
-/**
  * - Filepath: internal/mkvparser/mkvparser.go
  * - Filename: mkvparser.go
  * - Package: mkvparser
@@ -1726,68 +1643,6 @@ export type MKVParser_SubtitleEvent = {
      */
     codecID: string
     extraData?: Record<string, string>
-}
-
-/**
- * - Filepath: internal/mkvparser/metadata.go
- * - Filename: metadata.go
- * - Package: mkvparser
- * @description
- *  TrackInfo holds extracted information about a media track.
- */
-export type MKVParser_TrackInfo = {
-    number: number
-    uid: number
-    /**
-     * "video", "audio", "subtitle", etc.
-     */
-    type: MKVParser_TrackType
-    codecID: string
-    name?: string
-    /**
-     * Best effort language code
-     */
-    language?: string
-    /**
-     * IETF language code
-     */
-    languageIETF?: string
-    default: boolean
-    forced: boolean
-    enabled: boolean
-    /**
-     * Raw CodecPrivate data, often used for subtitle headers (e.g., ASS/SSA styles)
-     */
-    codecPrivate?: string
-    video?: MKVParser_VideoTrack
-    audio?: MKVParser_AudioTrack
-}
-
-/**
- * - Filepath: internal/mkvparser/metadata.go
- * - Filename: metadata.go
- * - Package: mkvparser
- * @description
- *  TrackType represents the type of a Matroska track.
- */
-export type MKVParser_TrackType = "video" |
-    "audio" |
-    "subtitle" |
-    "logo" |
-    "buttons" |
-    "complex" |
-    "unknown"
-
-/**
- * - Filepath: internal/mkvparser/structs.go
- * - Filename: structs.go
- * - Package: mkvparser
- * @description
- *  VideoTrack contains video-specific track data
- */
-export type MKVParser_VideoTrack = {
-    PixelWidth: number
-    PixelHeight: number
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2513,135 +2368,6 @@ export type User = {
     viewer: PlatformUser | null
     token: string
     isSimulated: boolean
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Videocore
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- */
-export type VideoCore_ClientEventType = "video-loaded" |
-    "video-loaded-metadata" |
-    "video-can-play" |
-    "video-paused" |
-    "video-resumed" |
-    "video-status" |
-    "video-completed" |
-    "video-fullscreen" |
-    "video-pip" |
-    "video-subtitle-track" |
-    "video-media-caption-track" |
-    "video-subtitle-track-content" |
-    "video-anime-4k" |
-    "video-audio-track" |
-    "video-ended" |
-    "video-seeked" |
-    "video-error" |
-    "video-terminated" |
-    "video-playback-state" |
-    "subtitle-file-uploaded" |
-    "video-text-tracks" |
-    "translate-text" |
-    "translate-subtitle-file-track"
-
-/**
- * - Filepath: internal/videocore/insight.go
- * - Filename: insight.go
- * - Package: videocore
- */
-export type VideoCore_InsightNode = {
-    timestamp: number
-    intensity: number
-}
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- */
-export type VideoCore_PlaybackState = {
-    clientID: string
-    playerType: VideoCore_PlayerType
-    playbackInfo: VideoCore_VideoPlaybackInfo | null
-}
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- * @description
- *  PlaybackType is the playback method.
- */
-export type VideoCore_PlaybackType = "localfile" | "onlinestream"
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- */
-export type VideoCore_PlayerType = "native" | "web"
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- */
-export type VideoCore_ServerEvent = "pause" |
-    "resume" |
-    "seek" |
-    "seek-to" |
-    "set-fullscreen" |
-    "set-pip" |
-    "set-subtitle-track" |
-    "add-subtitle-track" |
-    "add-external-subtitle-track" |
-    "set-media-caption-track" |
-    "add-media-caption-track" |
-    "set-audio-track" |
-    "terminate" |
-    "start-onlinestream-watch-party" |
-    "get-status" |
-    "show-message" |
-    "get-text-tracks" |
-    "request-play-episode" |
-    "translated-text" |
-    "in-sight-data" |
-    "get-fullscreen" |
-    "get-pip" |
-    "get-anime-4k" |
-    "get-subtitle-track" |
-    "get-subtitle-track-content" |
-    "get-audio-track" |
-    "get-media-caption-track" |
-    "get-playback-state"
-
-/**
- * - Filepath: internal/videocore/types.go
- * - Filename: types.go
- * - Package: videocore
- * @description
- *  VideoPlaybackInfo contains detailed information about the currently played media.
- *  It is filled by the client, passed to the player and sent to the server during playback.
- */
-export type VideoCore_VideoPlaybackInfo = {
-    id: string
-    playbackType: VideoCore_PlaybackType
-    streamUrl: string
-    /**
-     * e.g. /anime/episode 01.mkv
-     */
-    streamPath?: string
-    /**
-     * NativePlayer only
-     */
-    mkvMetadata: MKVParser_Metadata | null
-    localFile: LocalFile | null
-    media: any
-    episode: Anime_Episode | null
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -38,6 +38,43 @@
     @apply text-[var(--md-sys-color-on-surface)] font-sans antialiased;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
+    /* Sin inflado de fuentes al girar el celular a horizontal. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Tap inmediato: sin la espera de doble toque (zoom) antes del click. */
+  button, a, [role="button"], summary, label {
+    touch-action: manipulation;
+  }
+
+  /* Feedback de presión casi imperceptible para todo lo presionable.
+     Usa la propiedad `scale` (no `transform`): se compone con los translate de
+     Tailwind y con el transform inline de framer-motion en vez de pisarlos.
+     :where() deja la especificidad en 0, así cualquier utilidad
+     (transition-*, active:scale-*) gana sin pelear. */
+  @media (prefers-reduced-motion: no-preference) {
+    :where(button, [role="button"], [role="checkbox"], [role="radio"], [role="combobox"], a[href]):where(:not(:disabled, [aria-disabled="true"], .tv-focusable, [class*="active:scale"])) {
+      transition: scale var(--duration-quick) var(--ease-out);
+    }
+    :where(button, [role="button"], a[href]):where(:not(:disabled, [aria-disabled="true"], .tv-focusable, [class*="active:scale"])):active {
+      scale: var(--scale-tiny);
+    }
+    /* Controles de formulario: un poco más marcado, son el objetivo del toque. */
+    :where([role="checkbox"], [role="radio"], [role="combobox"]):where(:not(:disabled, [aria-disabled="true"], .tv-focusable, [class*="active:scale"])):active {
+      scale: var(--scale-small);
+    }
+  }
+
+  /* iOS hace zoom (y no lo deshace) al enfocar un campo de menos de 16 px.
+     Solo en punteros gruesos: en desktop los campos conservan su tamaño.
+     !important porque las utilidades de tamaño (text-sm) ganan por especificidad. */
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select {
+      font-size: max(16px, 1em) !important;
+    }
   }
 
   /* Inputs y textareas sí permiten selección */
@@ -191,8 +228,6 @@ select:focus-visible,
   .badge-success   { background: hsl(var(--brand-success) / 0.15); color: hsl(var(--brand-success)); border-color: hsl(var(--brand-success) / 0.30); }
   .badge-warning   { background: hsl(var(--brand-warning) / 0.15); color: hsl(var(--brand-warning)); border-color: hsl(var(--brand-warning) / 0.30); }
   .badge-muted     { background: var(--glass-bg); color: var(--md-sys-color-on-surface-variant); border-color: var(--glass-border-top); }
-  .badge-subtle    { background: rgba(255, 255, 255, 0.06); color: var(--md-sys-color-on-surface-variant); border-color: rgba(255, 255, 255, 0.10); }
-  .badge-brand     { background: hsl(var(--brand-accent) / 0.25); color: #fff; border-color: hsl(var(--brand-accent) / 0.50); }
 }
 
 /* ─── TV Mode / Spatial Navigation ───────────────────────────────────── */
@@ -386,4 +421,4 @@ media-time-range {
   );
 }
 
-
+

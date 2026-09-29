@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { buildSeaQuery } from "@/api/client/requests"
@@ -47,7 +48,7 @@ export function useTriggerDriveScan() {
         mutationFn: () => buildSeaQuery({ endpoint: API_ENDPOINTS.DRIVE.DriveScan.endpoint, method: API_ENDPOINTS.DRIVE.DriveScan.methods[0] }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: DRIVE_STATUS_QUERY_KEY }),
         onError: (err: unknown) => {
-            toast.error(err instanceof Error ? err.message : "No se pudo iniciar el escaneo de Drive")
+            toast.error(errorText(err, "No se pudo iniciar el escaneo de Drive"))
         },
     })
 }
