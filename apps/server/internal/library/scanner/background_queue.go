@@ -129,7 +129,7 @@ func (bq *BackgroundQueue) processFile(prober *FileProber, lf *dto.LocalFile) {
 				"technicalInfo": lf.TechnicalInfo,
 			})
 			// Invalidate client queries to refresh metadata views
-			bq.wsEventManager.SendEvent("invalidate-queries", nil)
+			bq.wsEventManager.SendEvent(events.InvalidateQueries, nil)
 		}
 	}
 }

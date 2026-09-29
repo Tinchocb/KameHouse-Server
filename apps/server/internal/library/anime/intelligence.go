@@ -7,7 +7,6 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"strings"
-	"sync"
 
 	"github.com/rs/zerolog"
 )
@@ -36,12 +35,6 @@ type EpisodeIntelligence struct {
 	ArcName  ArcName    `json:"arcName"` // Empty string when unknown
 	Tag      ContentTag `json:"tag"`
 	Vibes    []string   `json:"vibes"` // Emotional or thematic tags (e.g., "EPIC", "CHILL", "TEARS")
-}
-
-// SmartMetadataResult wraps episode metadata enriched with intelligence data.
-type SmartMetadataResult struct {
-	*EpisodeMetadata
-	Intelligence *EpisodeIntelligence `json:"intelligence"`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,9 +146,6 @@ type IntelligenceService struct {
 	db     *db.Database
 	fm     FillerChecker // may be nil when filler data is not yet loaded
 	logger *zerolog.Logger
-	// cache stores *EpisodeIntelligence keyed by "mediaID:episodeNum".
-	// sync.Map gives lock-free reads — critical for the < 10 ms SLA.
-	cache sync.Map
 }
 
 // NewIntelligenceService constructs the service.
@@ -166,38 +156,6 @@ func NewIntelligenceService(database *db.Database, fm FillerChecker, logger *zer
 		fm:     fm,
 		logger: logger,
 	}
-}
-
-// cacheKey produces a deterministic string key for the in-memory cache.
-func cacheKey(mediaID, episodeNum int) string { return fmt.Sprintf("%d:%d", mediaID, episodeNum) }
-
-// GetSmartMetadata returns episode metadata enriched with intelligence data.
-// Cache hit path is a single sync.Map.Load — O(1) and well under 10 ms.
-// On any external data failure, it falls back to TagCanon without panicking.
-func (s *IntelligenceService) GetSmartMetadata(
-	_ context.Context,
-	mediaID int,
-	episodeNum int,
-	base *EpisodeMetadata,
-) (*SmartMetadataResult, error) {
-	key := cacheKey(mediaID, episodeNum)
-
-	// ── Fast path: cache hit ──────────────────────────────────────────
-	if v, ok := s.cache.Load(key); ok {
-		return &SmartMetadataResult{
-			EpisodeMetadata: base,
-			Intelligence:    v.(*EpisodeIntelligence),
-		}, nil
-	}
-
-	// ── Slow path: compute, always succeeds ──────────────────────────
-	intel := s.computeIntelligence(mediaID, episodeNum, base)
-	s.cache.Store(key, intel)
-
-	return &SmartMetadataResult{
-		EpisodeMetadata: base,
-		Intelligence:    intel,
-	}, nil
 }
 
 // computeIntelligence derives EpisodeIntelligence from available data.
@@ -305,29 +263,6 @@ func (s *IntelligenceService) DeriveSeriesVibes(media *models.LibraryMedia) []st
 	return vibes
 }
 
-// deriveVibes categorizes the "feel" of an episode based on genres, score, and tags.
-func (s *IntelligenceService) deriveVibes(mediaID, _ int, _ *EpisodeMetadata, _ *EpisodeIntelligence) []string {
-	var media models.LibraryMedia
-	if err := s.db.Gorm().Where("id = ?", mediaID).First(&media).Error; err != nil {
-		return make([]string, 0)
-	}
-	return s.DeriveSeriesVibes(&media)
-}
-
-// InvalidateCache removes all cached intelligence for a given media.
-// Call this after filler data is refreshed for that media entry.
-func (s *IntelligenceService) InvalidateCache(mediaID int) {
-	s.cache.Range(func(k, _ any) bool {
-		if key, ok := k.(string); ok {
-			prefix := fmt.Sprintf("%d:", mediaID)
-			if len(key) >= len(prefix) && key[:len(prefix)] == prefix {
-				s.cache.Delete(k)
-			}
-		}
-		return true
-	})
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Curated swimlane types & response
 // ─────────────────────────────────────────────────────────────────────────────
@@ -343,30 +278,6 @@ type CuratedSwimlane struct {
 // CuratedHomeResponse is returned by GetCuratedSwimlanes.
 type CuratedHomeResponse struct {
 	Swimlanes []*CuratedSwimlane `json:"swimlanes"`
-}
-
-// GetContinueWatching returns a list of media the user is currently watching,
-// suggesting the next episode if the current one is almost finished.
-func (s *IntelligenceService) GetContinueWatching(ctx context.Context, userID uint) ([]dto.ContinueWatchingItem, error) {
-	var history []models.WatchHistory
-
-	subQuery := s.db.Gorm().
-		Select("media_id, MAX(updated_at) as latest").
-		Table("watch_histories").
-		Where("account_id = ?", userID).
-		Group("media_id")
-
-	if err := s.db.Gorm().
-		Table("watch_histories").
-		Joins("JOIN (?) as latest_history ON watch_histories.media_id = latest_history.media_id AND watch_histories.updated_at = latest_history.latest", subQuery).
-		Where("account_id = ?", userID).
-		Order("updated_at DESC").
-		Limit(20).
-		Find(&history).Error; err != nil {
-		return nil, err
-	}
-
-	return s.ContinueWatchingFromHistory(ctx, history)
 }
 
 // ContinueWatchingFromHistory arma los ítems de "Continuar viendo" a partir de

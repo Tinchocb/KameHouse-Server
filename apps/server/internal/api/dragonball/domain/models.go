@@ -59,11 +59,6 @@ func (e Episode) Covers(number int) bool {
 	return number >= e.NumberStart && number <= e.NumberEnd
 }
 
-// IsRange indica si la entrada agrupa más de un episodio.
-func (e Episode) IsRange() bool {
-	return e.NumberEnd > e.NumberStart
-}
-
 // Villain representa a un antagonista dentro del catálogo, categorizado por la
 // serie y saga donde aparece por primera vez / de forma más relevante.
 type Villain struct {

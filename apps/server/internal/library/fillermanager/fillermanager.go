@@ -6,7 +6,6 @@ import (
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/util"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -14,18 +13,6 @@ import (
 )
 
 type (
-	Interface interface {
-		// RefetchFillerData re-fetches the fillers for the given media IDs
-		RefetchFillerData() error
-		// HasFillerFetched checks if the fillers for the given media ID have been fetched
-		HasFillerFetched(mediaID int) bool
-		// FetchAndStoreFillerData fetches the filler data for the given media ID
-		FetchAndStoreFillerData(mediaID int, titles []string) error
-		// RemoveFillerData removes the filler data for the given media ID
-		RemoveFillerData(mediaID int) error
-		// IsEpisodeFiller checks if the given episode number is a filler for the given media ID
-		IsEpisodeFiller(mediaID int, episodeNumber int) bool
-	}
 
 	FillerManager struct {
 		db        *db.Database
@@ -47,51 +34,6 @@ func New(opts *NewFillerManagerOptions) *FillerManager {
 	}
 }
 
-func (fm *FillerManager) RefetchFillerData() error {
-
-	defer util.HandlePanicInModuleThen("library/fillermanager/RefetchFillerData", func() {
-		fm.logger.Error().Msg("fillermanager: Failed to re-fetch filler data")
-	})
-
-	wg := sync.WaitGroup{}
-
-	fm.logger.Debug().Msg("fillermanager: Re-fetching filler data")
-
-	mediaFillers, err := fm.db.GetCachedMediaFillers()
-	if err != nil {
-		return err
-	}
-
-	for _, mf := range mediaFillers {
-		wg.Add(1)
-		go func(*db.MediaFillerItem) {
-			defer wg.Done()
-			// Fetch the db data
-
-			// Fetch the filler data
-			fillerData, err := fm.fillerApi.FindFillerData(mf.Slug)
-			if err != nil {
-				fm.logger.Error().Err(err).Int("mediaID", mf.MediaID).Msg("fillermanager: Failed to fetch filler data")
-				return
-			}
-
-			// Update the filler data
-			mf.FillerEpisodes = fillerData.FillerEpisodes
-
-		}(mf)
-	}
-	wg.Wait()
-
-	err = fm.db.SaveCachedMediaFillerItems()
-	if err != nil {
-		return err
-	}
-
-	fm.logger.Debug().Msg("fillermanager: Re-fetched filler data")
-
-	return nil
-}
-
 func (fm *FillerManager) HasFillerFetched(mediaID int) bool {
 
 	defer util.HandlePanicInModuleThen("library/fillermanager/HasFillerFetched", func() {
@@ -99,19 +41,6 @@ func (fm *FillerManager) HasFillerFetched(mediaID int) bool {
 
 	_, ok := fm.db.GetMediaFillerItem(mediaID)
 	return ok
-}
-
-func (fm *FillerManager) GetFillerEpisodes(mediaID int) ([]string, bool) {
-
-	defer util.HandlePanicInModuleThen("library/fillermanager/GetFillerEpisodes", func() {
-	})
-
-	fillerItem, ok := fm.db.GetMediaFillerItem(mediaID)
-	if !ok {
-		return nil, false
-	}
-
-	return fillerItem.FillerEpisodes, true
 }
 
 func (fm *FillerManager) FetchAndStoreFillerData(mediaID int, titles []string) error {
@@ -157,20 +86,6 @@ func (fm *FillerManager) fetchAndStoreFillerDataFromSlug(mediaID int, slug strin
 	return nil
 }
 
-func (fm *FillerManager) StoreFillerData(source string, slug string, mediaID int, fillerEpisodes []string) error {
-
-	defer util.HandlePanicInModuleThen("library/fillermanager/StoreFillerDataForMedia", func() {
-	})
-
-	return fm.db.InsertMediaFiller(
-		source,
-		mediaID,
-		slug,
-		time.Now(),
-		fillerEpisodes,
-	)
-}
-
 func (fm *FillerManager) RemoveFillerData(mediaID int) error {
 
 	defer util.HandlePanicInModuleThen("library/fillermanager/RemoveFillerData", func() {
@@ -212,7 +127,6 @@ func (fm *FillerManager) HydrateFillerData(e *anime.Entry) {
 		return
 	}
 
-
 	// Check if the filler data has been fetched
 	if !fm.HasFillerFetched(int(e.Media.ID)) {
 		return
@@ -226,13 +140,10 @@ func (fm *FillerManager) HydrateFillerData(e *anime.Entry) {
 	})
 }
 
-
-
 func (fm *FillerManager) HydrateEpisodeFillerData(mID int, episodes []*anime.Episode) {
 	if fm == nil || len(episodes) == 0 {
 		return
 	}
-
 
 	// Check if the filler data has been fetched
 	if !fm.HasFillerFetched(mID) {

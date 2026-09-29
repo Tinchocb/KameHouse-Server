@@ -37,7 +37,27 @@ type JikanProviderImpl struct {
 	// unavailableUntil corta todas las consultas cuando Jikan entero está
 	// caído: así tampoco espera la primera apertura de las demás series.
 	unavailableUntil time.Time
+	// inflight deduplica consultas en curso por ID (ver GetAnimeMetadata).
+	inflight map[int]*jikanCall
+	// fetchFn reemplaza getAnimeMetadata en tests.
+	fetchFn func(id int) (*apiMetadata.AnimeMetadata, error)
 }
+
+type jikanCall struct {
+	start time.Time
+	done  chan struct{}
+	res  *apiMetadata.AnimeMetadata
+	err  error
+}
+
+// jikanInlineWait es cuánto espera una apertura a Jikan antes de seguir sin sus
+// datos. Con Jikan sano responde antes; caído (504) cada intento tarda ~1 s más
+// el backoff, y la primera apertura tras arrancar el server esperaba ~3 s. La
+// consulta sigue en segundo plano y su resultado (o su fallo) queda en caché.
+var jikanInlineWait = 1500 * time.Millisecond
+
+// errJikanSlow indica que Jikan no respondió dentro de jikanInlineWait.
+var errJikanSlow = errors.New("jikan_provider: sin respuesta a tiempo, se sigue sin sus datos")
 
 type jikanCachedEntry struct {
 	data      *apiMetadata.AnimeMetadata
@@ -57,6 +77,7 @@ func NewJikanProviderImpl(client *jikan.Client, database *db.Database, logger *z
 		tmdbClient:  tmdbClient,
 		cache:       make(map[int]*jikanCachedEntry),
 		failedUntil: make(map[int]time.Time),
+		inflight:    make(map[int]*jikanCall),
 	}
 }
 
@@ -70,18 +91,54 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 		p.mu.Unlock()
 		return nil, fmt.Errorf("jikan_provider: consulta para ID %d falló recientemente, se reintenta más tarde", id)
 	}
+	call, ok := p.inflight[id]
+	if !ok {
+		if p.inflight == nil {
+			p.inflight = make(map[int]*jikanCall)
+		}
+		call = &jikanCall{start: time.Now(), done: make(chan struct{})}
+		p.inflight[id] = call
+		go p.runCall(id, call)
+	}
 	p.mu.Unlock()
 
-	result, err := p.getAnimeMetadata(id)
-	if err != nil {
-		p.mu.Lock()
+	// El plazo corre desde que empezó la consulta compartida: quien se suma a
+	// una que ya lo agotó no vuelve a esperar.
+	timer := time.NewTimer(max(0, jikanInlineWait-time.Since(call.start)))
+	defer timer.Stop()
+	select {
+	case <-call.done:
+		return call.res, call.err
+	case <-timer.C:
+		return nil, errJikanSlow
+	}
+}
+
+func (p *JikanProviderImpl) runCall(id int, call *jikanCall) {
+	fetch := p.fetchFn
+	if fetch == nil {
+		fetch = p.getAnimeMetadata
+	}
+	func() {
+		// Corre fuera del goroutine del request: sin este recover, un panic acá
+		// tiraba el servidor entero (el middleware Recover de Echo no lo ve).
+		defer func() {
+			if r := recover(); r != nil {
+				call.res, call.err = nil, fmt.Errorf("jikan_provider: panic consultando ID %d: %v", id, r)
+			}
+		}()
+		call.res, call.err = fetch(id)
+	}()
+	p.mu.Lock()
+	delete(p.inflight, id)
+	if call.err != nil {
 		p.failedUntil[id] = time.Now().Add(jikanFailureTTL)
-		if errors.Is(err, jikan.ErrUnavailable) {
+		if errors.Is(call.err, jikan.ErrUnavailable) {
 			p.unavailableUntil = time.Now().Add(jikanFailureTTL)
 		}
-		p.mu.Unlock()
 	}
-	return result, err
+	p.mu.Unlock()
+	close(call.done)
 }
 
 func (p *JikanProviderImpl) getAnimeMetadata(id int) (*apiMetadata.AnimeMetadata, error) {

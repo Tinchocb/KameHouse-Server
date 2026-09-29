@@ -3,7 +3,6 @@ package scanner
 import (
 	"encoding/xml"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -18,7 +17,10 @@ type NfoUniqueID struct {
 // NfoFile represents the root of a Kodi/Standard NFO file.
 // Supports tvshow, movie, anime, and episodedetails roots.
 type NfoFile struct {
-	XMLName       xml.Name      `xml:"tvshow"`
+	// Sin nombre en el tag: acepta cualquier raíz (tvshow, movie, anime,
+	// episodedetails) y deja en XMLName.Local cuál era. Con `xml:"tvshow"` los
+	// NFO de película/anime/episodio fallaban siempre al parsear.
+	XMLName       xml.Name
 	UniqueIDs     []NfoUniqueID `xml:"uniqueid"`      // Jellyfin/Kodi-style: <uniqueid type="tmdb">603</uniqueid>
 	ID            int           `xml:"id"`            // Fallback / TMDB ID usually
 	TmdbID        int           `xml:"tmdbid"`        // TMDB ID
@@ -55,15 +57,6 @@ func ParseNfoFile(path string) (*NfoFile, error) {
 		return nil, err
 	}
 
-	for _, rootName := range []string{"tvshow", "movie", "anime", "episodedetails"} {
-		var nfo NfoFile
-		nfo.XMLName = xml.Name{Local: rootName}
-		if err := xml.Unmarshal(data, &nfo); err == nil {
-			return &nfo, nil
-		}
-	}
-
-	// Last resort: try raw unmarshal (lets xml package pick the root)
 	var nfo NfoFile
 	if err := xml.Unmarshal(data, &nfo); err != nil {
 		return nil, err
@@ -93,37 +86,3 @@ func (n *NfoFile) GetTmdbID() int {
 	return n.ID
 }
 
-// ParseNfoProviderID is a helper to get a provider ID string from the UniqueIDs slice.
-func (n *NfoFile) ParseNfoProviderID(providerType string) string {
-	for _, uid := range n.UniqueIDs {
-		if strings.EqualFold(uid.Type, providerType) && uid.Value != "" {
-			return uid.Value
-		}
-	}
-	return ""
-}
-
-// GetAnilistID returns the best available AniList ID from an NfoFile.
-func (n *NfoFile) GetAnilistID() int {
-	if idStr := n.ParseNfoProviderID("anilist"); idStr != "" {
-		if id, err := strconv.Atoi(idStr); err == nil {
-			return id
-		}
-	}
-	return n.AnilistId
-}
-
-// GetMalID returns the best available MyAnimeList ID from an NfoFile.
-func (n *NfoFile) GetMalID() int {
-	if idStr := n.ParseNfoProviderID("myanimelist"); idStr != "" {
-		if id, err := strconv.Atoi(idStr); err == nil {
-			return id
-		}
-	}
-	if idStr := n.ParseNfoProviderID("mal"); idStr != "" {
-		if id, err := strconv.Atoi(idStr); err == nil {
-			return id
-		}
-	}
-	return n.MalId
-}

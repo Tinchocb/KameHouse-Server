@@ -45,56 +45,6 @@ func NewBufferedWriter(db *gorm.DB, logger *zerolog.Logger, maxBatch int, flushI
 	return bw
 }
 
-// Enqueue adds a write operation to the RingBuffer. It returns immediately (non-blocking).
-// If the system is shutting down, it executes the operation synchronously under flushMu to prevent race with Close.
-func (bw *BufferedWriter) Enqueue(op DbWriteOperation) {
-	bw.mu.Lock()
-	if bw.isClosed {
-		bw.mu.Unlock()
-		bw.logger.Warn().Msg("db/buffered_writer: Enqueue called after database writer is closed, ignoring operation")
-		return
-	}
-	if bw.isShuttingDown {
-		bw.mu.Unlock()
-		bw.logger.Warn().Msg("db/buffered_writer: Enqueue called while shutting down, executing synchronously under flushMu")
-		bw.flushMu.Lock()
-		defer bw.flushMu.Unlock()
-		bw.mu.Lock()
-		if bw.isClosed {
-			bw.mu.Unlock()
-			return
-		}
-		bw.mu.Unlock()
-		if err := bw.db.Transaction(op); err != nil {
-			bw.logger.Error().Err(err).Msg("db/buffered_writer: Synchronous shutdown write failed")
-			if bw.OnError != nil {
-				bw.OnError(err)
-			}
-		}
-		return
-	}
-
-	// Backpressure: si la cola excede 2000 elementos, ejecutar un flush forzado para evitar OOM
-	if len(bw.queue) >= 2000 {
-		bw.mu.Unlock()
-		bw.logger.Warn().Msg("db/buffered_writer: Queue reached 2000 operations, applying backpressure flush")
-		if errs := bw.Flush(); len(errs) > 0 {
-			bw.logger.Error().Int("failed", len(errs)).Msg("db/buffered_writer: Backpressure flush had failures")
-		}
-		bw.mu.Lock()
-	}
-
-	bw.queue = append(bw.queue, op)
-
-	// Fast flush if batch size is reached
-	shouldFlush := len(bw.queue) >= bw.maxBatch
-	bw.mu.Unlock()
-
-	if shouldFlush {
-		bw.Flush()
-	}
-}
-
 // Flush explicitly forces all pending operations to execute immediately.
 // Returns the per-operation errors (empty slice when all succeeded or no ops). The batch shares
 // one transaction for speed, but a failing op no longer reports success: it is

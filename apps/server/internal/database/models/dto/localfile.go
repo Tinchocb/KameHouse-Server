@@ -2,13 +2,11 @@ package dto
 
 import (
 	"encoding/json"
-	"kamehouse/internal/database/models"
 	"kamehouse/internal/library/filesystem"
 	"strconv"
 	"time"
 
 	"github.com/5rahim/habari"
-	"github.com/nssteinbrenner/anitogo"
 )
 
 const (
@@ -155,7 +153,6 @@ func (fti *FileTechnicalInfo) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-
 // NewLocalFileS creates and returns a reference to a new LocalFile struct.
 // It will parse the file's name and its directory names to extract necessary information.
 //   - opath: The full path to the file.
@@ -208,45 +205,6 @@ func newLocalFile(opath string, info *filesystem.SeparatedFilePath) *LocalFile {
 	return localFile
 }
 
-// NewLocalFileFromModel converts a database model to a DTO.
-func NewLocalFileFromModel(m *models.LocalFile) *LocalFile {
-	if m == nil {
-		return nil
-	}
-
-	lf := &LocalFile{
-		Path:           m.Path,
-		Name:           m.Name,
-		FileHash:       m.FileHash,
-		FileSize:       m.FileSize,
-		FileModTime:    m.FileModTime,
-		Locked:         m.Locked,
-		Ignored:        m.Ignored,
-		LibraryMediaId: m.LibraryMediaId,
-		MediaID:        m.MediaID,
-		DriveFileID:    m.DriveFileID,
-	}
-
-	// Unmarshal JSON fields
-	if len(m.ParsedData) > 0 {
-		_ = json.Unmarshal(m.ParsedData, &lf.ParsedData)
-	}
-	if len(m.ParsedFolderData) > 0 {
-		_ = json.Unmarshal(m.ParsedFolderData, &lf.ParsedFolderData)
-	}
-	if len(m.EmbeddedMetadata) > 0 {
-		_ = json.Unmarshal(m.EmbeddedMetadata, &lf.EmbeddedMetadata)
-	}
-	if len(m.Metadata) > 0 {
-		_ = json.Unmarshal(m.Metadata, &lf.Metadata)
-	}
-	if len(m.TechnicalInfo) > 0 {
-		_ = json.Unmarshal(m.TechnicalInfo, &lf.TechnicalInfo)
-	}
-
-	return lf
-}
-
 // NewLocalFileParsedData Converts habari.Metadata into LocalFileParsedData, which is more suitable.
 func NewLocalFileParsedData(original string, elements *habari.Metadata) *LocalFileParsedData {
 	i := new(LocalFileParsedData)
@@ -283,15 +241,6 @@ func NewLocalFileParsedData(original string, elements *habari.Metadata) *LocalFi
 	return i
 }
 
-// GetAnitogoParsedTitle returns the parsed anime title using anitogo parser
-func GetAnitogoParsedTitle(filename string) string {
-	parsed := anitogoParse(filename)
-	if parsed == nil {
-		return ""
-	}
-	return parsed.AnimeTitle
-}
-
 // GetSeasonNumber parses the season number or returns 1 as default.
 func (lf *LocalFile) GetSeasonNumber() int {
 	if lf.ParsedData != nil && lf.ParsedData.Season != "" {
@@ -310,31 +259,3 @@ func (lf *LocalFile) GetSeasonNumber() int {
 	return 1
 }
 
-func anitogoParse(filename string) *anitogoElements {
-	elements := anitogo.Parse(filename, anitogo.DefaultOptions)
-	if elements == nil {
-		return nil
-	}
-	return &anitogoElements{
-		AnimeTitle:      elements.AnimeTitle,
-		AnimeYear:       elements.AnimeYear,
-		EpisodeNumber:   getFirstOrEmpty(elements.EpisodeNumber),
-		ReleaseGroup:    elements.ReleaseGroup,
-		VideoResolution: elements.VideoResolution,
-	}
-}
-
-type anitogoElements struct {
-	AnimeTitle      string
-	AnimeYear       string
-	EpisodeNumber   string
-	ReleaseGroup    string
-	VideoResolution string
-}
-
-func getFirstOrEmpty(slice []string) string {
-	if len(slice) > 0 {
-		return slice[0]
-	}
-	return ""
-}

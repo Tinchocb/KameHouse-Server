@@ -40,9 +40,3 @@ type SelectionResult struct {
 	Reason        string           `json:"reason"`
 }
 
-// SelectionRequest solicitud de selección desde el frontend.
-type SelectionRequest struct {
-	TMDBID         int      `json:"tmdbId"`
-	EpisodeNumber  int      `json:"episodeNumber"`
-	PreferredLangs []string `json:"preferredLangs"` // ["spa", "eng"]
-}

@@ -19,10 +19,3 @@ func (e *Episode) IsMain() bool {
 	}
 	return e.LocalFile.IsMain()
 }
-
-func (e *Episode) GetLocalFile() *LocalFile {
-	if e == nil {
-		return nil
-	}
-	return e.LocalFile
-}

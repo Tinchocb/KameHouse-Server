@@ -42,7 +42,6 @@ type (
 		logsDir             string
 		scanning            atomic.Bool
 		onRefreshCollection func()
-		animeCollection     *platform.UnifiedCollection
 		eventDispatcher     events.Dispatcher
 		pendingPaths        []string
 		backgroundQueue     *scanner.BackgroundQueue
@@ -99,10 +98,6 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		backgroundQueue:     opts.BackgroundQueue,
 		shutdownCtx:         shutdownCtx,
 	}
-}
-
-func (as *AutoScanner) SetAnimeCollection(ac *platform.UnifiedCollection) {
-	as.animeCollection = ac
 }
 
 // Notify is used to notify the AutoScanner that a file action has occurred.
@@ -192,11 +187,10 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		return
 	}
 
-	if as.scanning.Load() {
+	// Un solo paso atómico: Load + Store dejaba entrar dos escaneos a la vez.
+	if !as.scanning.CompareAndSwap(false, true) {
 		return
 	}
-
-	as.scanning.Store(true)
 	defer as.scanning.Store(false)
 
 	as.logger.Info().Msg("autoscanner: Triggering library scan")
@@ -278,11 +272,13 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 	as.logger.Info().Msg("autoscanner: Library scan completed")
 
 	if len(targets) > 0 {
-		noun := "archivos nuevos"
+		// targets son carpetas con cambios, no archivos nuevos: contarlas como
+		// "archivos" mostraba "1 archivo nuevo" aunque se hubieran agregado varios.
+		noun := "carpetas"
 		if len(targets) == 1 {
-			noun = "archivo nuevo"
+			noun = "carpeta"
 		}
-		notifier.Global().Notify(notifier.TypeScanner, "Escaneo completado", fmt.Sprintf("Se agregaron %d %s a la biblioteca.", len(targets), noun))
+		notifier.Global().Notify(notifier.TypeScanner, "Escaneo completado", fmt.Sprintf("Se actualizó la biblioteca (%d %s con cambios).", len(targets), noun))
 	} else {
 		notifier.Global().Notify(notifier.TypeScanner, "Escaneo completado", fmt.Sprintf("Biblioteca actualizada (%d archivos).", len(allLfs)))
 	}
@@ -290,7 +286,7 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 	// Avisar por WS para que el frontend invalide la biblioteca sin depender
 	// solo del watcher o de la notificación.
 	if as.wsEventManager != nil {
-		as.wsEventManager.SendEvent("auto-scan-completed", nil)
+		as.wsEventManager.SendEvent(events.AutoScanCompleted, nil)
 	}
 
 	// Refresh the collection
@@ -322,8 +318,4 @@ func (as *AutoScanner) SetSettings(settings models.LibrarySettings) {
 	as.mu.Lock()
 	defer as.mu.Unlock()
 	as.settings = settings
-}
-
-func (as *AutoScanner) GetScannedCh() chan struct{} {
-	return as.scannedCh
 }

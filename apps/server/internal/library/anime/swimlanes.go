@@ -123,7 +123,6 @@ func (s *IntelligenceService) buildEpisodeSwimlanesBatch(laneDefs []EpisodeLaneD
 		return nil
 	}
 
-
 	// Group episodes by lane name (max 20 per lane)
 	episodesByLane := make(map[string][]models.LibraryEpisode)
 	mediaIDMap := make(map[uint]struct{})
@@ -205,14 +204,6 @@ func (s *IntelligenceService) buildEpisodeSwimlanesBatch(laneDefs []EpisodeLaneD
 	}
 
 	return resultLanes
-}
-
-func (s *IntelligenceService) buildEpisodeSwimlaneByName(id, name string) *CuratedSwimlane {
-	lanes := s.buildEpisodeSwimlanesBatch([]EpisodeLaneDef{{ID: id, Name: name}})
-	if len(lanes) > 0 {
-		return lanes[0]
-	}
-	return nil
 }
 
 func (s *IntelligenceService) buildLocalLibraryLane() *CuratedSwimlane {

@@ -133,85 +133,12 @@ func (l *ScanSummaryLogger) GenerateSummary() *dto.ScanSummary {
 	return summary
 }
 
-func (l *ScanSummaryLogger) LogComparison(lf *dto.LocalFile, algo string, bestTitle string, ratingType string, rating string) {
-	if l == nil {
-		return
-	}
-
-	msg := fmt.Sprintf("Comparison using %s. Best title: \"%s\". %s: %s", algo, bestTitle, ratingType, rating)
-	l.logType(LogComparison, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogSuccessfullyMatched(lf *dto.LocalFile, mediaID int) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Successfully matched to media %d", mediaID)
-	l.logType(LogSuccessfullyMatched, lf, msg)
-}
-
 func (l *ScanSummaryLogger) LogPanic(lf *dto.LocalFile, stackTrace string) {
 	if l == nil {
 		return
 	}
 	//msg := fmt.Sprintf("Panic occurred, please report this issue on the GitHub repository with the stack trace printed in the terminal")
 	l.logType(LogPanic, lf, "PANIC! "+stackTrace)
-}
-
-func (l *ScanSummaryLogger) LogFailedMatch(lf *dto.LocalFile, reason string) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Failed to match: %s", reason)
-	l.logType(LogFailedMatch, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogMatchValidated(lf *dto.LocalFile, mediaID int) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Match validated for media %d", mediaID)
-	l.logType(LogMatchValidated, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogUnmatched(lf *dto.LocalFile, reason string) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Unmatched: %s", reason)
-	l.logType(LogUnmatched, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogFileNotMatched(lf *dto.LocalFile, reason string) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Not matched: %s", reason)
-	l.logType(LogFileNotMatched, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogMetadataMediaTreeFetched(lf *dto.LocalFile, ms int64, branches int) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Media tree fetched in %dms. Branches: %d", ms, branches)
-	l.logType(LogMetadataMediaTreeFetched, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogMetadataMediaTreeFetchFailed(lf *dto.LocalFile, err error, ms int64) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Could not fetch media tree: %s. Took %dms", err.Error(), ms)
-	l.logType(LogMetadataMediaTreeFetchFailed, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogMetadataEpisodeNormalized(lf *dto.LocalFile, mediaID int, episode int, newEpisode int, newMediaId int, aniDBEpisode string) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Episode %d normalized to %d. New media ID: %d. AniDB episode: %s", episode, newEpisode, newMediaId, aniDBEpisode)
-	l.logType(LogMetadataEpisodeNormalized, lf, msg)
 }
 
 func (l *ScanSummaryLogger) LogMetadataEpisodeNormalizationFailed(lf *dto.LocalFile, err error, episode int, aniDBEpisode string) {
@@ -252,21 +179,6 @@ func (l *ScanSummaryLogger) LogMetadataEpisodeZero(lf *dto.LocalFile, episode in
 	}
 	msg := fmt.Sprintf("Marked as main episode. Episode %d. AniDB episode set to %s assuming AniDB does not include episode 0 in the episode count.", episode, aniDBEpisode)
 	l.logType(LogMetadataEpisodeZero, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogMetadataHydrated(lf *dto.LocalFile, mediaID int) {
-	if l == nil {
-		return
-	}
-	msg := fmt.Sprintf("Metadata hydrated for media %d", mediaID)
-	l.logType(LogMetadataHydrated, lf, msg)
-}
-
-func (l *ScanSummaryLogger) LogDebug(lf *dto.LocalFile, message string) {
-	if l == nil {
-		return
-	}
-	l.log(lf, "info", message)
 }
 
 func (l *ScanSummaryLogger) logType(logType LogType, lf *dto.LocalFile, message string) {

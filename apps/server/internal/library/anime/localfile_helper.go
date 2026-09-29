@@ -11,26 +11,6 @@ import (
 	lop "github.com/samber/lo/parallel"
 )
 
-// GetUniqueAnimeTitlesFromLocalFiles returns all parsed anime titles without duplicates, from a slice of LocalFile's.
-func GetUniqueAnimeTitlesFromLocalFiles(lfs []*dto.LocalFile) []string {
-	// Concurrently get title from each local file
-	titles := lop.Map(lfs, func(file *dto.LocalFile, index int) string {
-		title := file.GetParsedTitle()
-		// Some rudimentary exclusions
-		for _, i := range []string{"SPECIALS", "SPECIAL", "EXTRA", "NC", "OP", "MOVIE", "MOVIES"} {
-			if strings.ToUpper(title) == i {
-				return ""
-			}
-		}
-		return title
-	})
-	// Keep unique title and filter out empty ones
-	titles = lo.Filter(lo.Uniq(titles), func(item string, index int) bool {
-		return len(item) > 0
-	})
-	return titles
-}
-
 // GetMediaIdsFromLocalFiles returns all media ids from a slice of LocalFile's.
 func GetMediaIdsFromLocalFiles(lfs []*dto.LocalFile) []int {
 

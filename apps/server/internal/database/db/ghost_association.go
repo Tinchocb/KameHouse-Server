@@ -51,11 +51,6 @@ func (db *Database) UpsertGhostAssociation(association *models.GhostAssociatedMe
 	}
 }
 
-// Ensure interface compliance
-func (db *Database) DeleteGhostAssociation(path string) error {
-	return db.gormdb.Where("path = ?", path).Delete(&models.GhostAssociatedMedia{}).Error
-}
-
 // GetAllGhostAssociations returns all unresolved ghost file associations.
 func (db *Database) GetAllGhostAssociations() ([]*models.GhostAssociatedMedia, error) {
 	var associations []*models.GhostAssociatedMedia

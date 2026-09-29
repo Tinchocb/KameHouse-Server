@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"context"
 	"math"
 	"regexp"
 	"strconv"
@@ -34,16 +33,6 @@ type Matcher struct { // Keep struct name 'Matcher' for backwards compatibility
 	StrictStructure   bool
 }
 
-func NewMatcher(localFiles []*dto.LocalFile, mediaContainer *MediaContainer, logger *zerolog.Logger, db *db.Database) *Matcher {
-	return &Matcher{
-		LocalFiles:     localFiles,
-		MediaContainer: mediaContainer,
-		Logger:         logger,
-		Database:       db,
-		Threshold:      0.70, // Optimized threshold for movies and Spanish titles
-	}
-}
-
 // MatchLocalFilesWithMedia orchestrates the Thinking Workers that will probabilistically evaluate all files.
 func (m *Matcher) MatchLocalFilesWithMedia() error {
 	m.Logger.Info().Msg("AgentMatcher: Initiating Bayesian Identity Resolution...")
@@ -55,28 +44,6 @@ func (m *Matcher) MatchLocalFilesWithMedia() error {
 	})
 
 	m.Logger.Info().Msgf("AgentMatcher: Completed Bayesian Pass on %d files in %v", len(m.LocalFiles), time.Since(start))
-
-	return nil
-}
-
-// MatchBatch processes an asynchronous batch of paths coming from the queue
-func (m *Matcher) MatchBatch(ctx context.Context, batchPaths []string) error {
-	m.Logger.Info().Int("count", len(batchPaths)).Msg("AgentMatcher: Processing async batch from queue")
-
-	localFiles := make([]*dto.LocalFile, len(batchPaths))
-	for i, path := range batchPaths {
-		localFiles[i] = dto.NewLocalFileS(path, nil)
-		ingestLocalFileEmbeddedMetadata(ctx, localFiles[i], m.Logger)
-	}
-
-	parallel.EachTask(localFiles, func(lf *dto.LocalFile, _ int) {
-		if ctx.Err() != nil {
-			return
-		}
-		m.BayesianResolve(lf)
-	})
-
-	// Add batch insertion logic here if needed, decoupled from scanner UI thread
 
 	return nil
 }

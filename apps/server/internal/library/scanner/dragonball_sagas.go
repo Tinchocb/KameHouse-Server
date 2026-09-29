@@ -2,10 +2,6 @@
 
 package scanner
 
-import (
-	"context"
-)
-
 // GetDragonBallSagas returns the saga/volume grouping for a given Dragon Ball TMDB ID.
 // Used at scan-time to tag episodes with saga IDs. Simpler than GetDragonBallSagaInfo (no sub-sagas).
 func GetDragonBallSagas(tmdbID int) []sagaResolution {
@@ -61,15 +57,6 @@ func GetDragonBallSagas(tmdbID int) []sagaResolution {
 		}
 	}
 	return nil
-}
-
-// InterceptSagas check if we should use local saga definitions instead of TMDB groups
-func (scn *Scanner) InterceptSagas(ctx context.Context, tmdbID int) []sagaResolution {
-	localSagas := GetDragonBallSagas(tmdbID)
-	if len(localSagas) > 0 {
-		return localSagas
-	}
-	return scn.resolveSagasForMediaSync(ctx, tmdbID)
 }
 
 // SagaInfo is the exported view of a saga, for consumers outside the scanner

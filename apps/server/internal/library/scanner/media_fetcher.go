@@ -421,7 +421,3 @@ func newMediaFetcherTMDB(ctx context.Context, opts *MediaFetcherOptions) (*Media
 
 	return mf, nil
 }
-
-func (mf *MediaFetcher) GetCollectionMediaIds() []int {
-	return mf.CollectionMediaIds
-}

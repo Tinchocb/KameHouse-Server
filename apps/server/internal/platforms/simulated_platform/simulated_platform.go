@@ -20,7 +20,6 @@ func NewSimulatedPlatform(logger *zerolog.Logger, db *db.Database) *SimulatedPla
 	}
 }
 
-func (p *SimulatedPlatform) GetID() string   { return "simulated" }
 func (p *SimulatedPlatform) GetName() string { return "Simulated" }
 
 func (p *SimulatedPlatform) GetAnimeCollection(ctx context.Context, bypassCache bool) (interface{}, error) {

@@ -6,16 +6,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func (db *Database) GetSilencedMediaEntries() ([]*models.SilencedMediaEntry, error) {
-	var res []*models.SilencedMediaEntry
-	err := db.gormdb.Find(&res).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
 // GetSilencedMediaEntryIds returns the ids of all silenced media entries.
 // It returns an empty slice if there is an error.
 func (db *Database) GetSilencedMediaEntryIds() ([]int, error) {

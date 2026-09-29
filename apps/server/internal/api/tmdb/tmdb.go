@@ -18,6 +18,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// maxRetryWait es lo máximo que se espera entre reintentos, aunque el servidor
+// pida más con Retry-After.
+const maxRetryWait = 10 * time.Second
+
 // Cache defines the interface for persistent caching of TMDb API responses.
 type Cache interface {
 	Get(key string, out interface{}) (bool, error)
@@ -121,11 +125,6 @@ func (c *Client) GetBearerToken() string {
 	return c.bearerToken
 }
 
-// GetClient returns the client instance itself (provided for compatibility/easier access)
-func (c *Client) GetClient() *Client {
-	return c
-}
-
 func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*T, error) {
 	client := c.httpClient
 	if client == nil {
@@ -181,6 +180,10 @@ func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*
 			} else {
 				waitTime = time.Duration(math.Pow(2, float64(attempt))) * time.Second
 			}
+
+			// Un Retry-After enorme dejaría colgados a todos los que comparten esta
+			// consulta (dedupe la desliga de la cancelación de quien la inició).
+			waitTime = min(waitTime, maxRetryWait)
 
 			if !sleepWithContext(ctx, waitTime) {
 				return nil, ctx.Err()

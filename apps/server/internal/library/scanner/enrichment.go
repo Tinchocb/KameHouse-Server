@@ -274,32 +274,3 @@ func (scn *Scanner) enrichSingleMedia(
 	return enrichWorkerResult{seasons: seasons, episodes: episodes}
 }
 
-func (scn *Scanner) resolveSagasForMediaSync(ctx context.Context, tvID int) []sagaResolution {
-	if scn.TMDBClient == nil {
-		return nil
-	}
-
-	tmdbGroups, err := scn.TMDBClient.GetEpisodeGroups(ctx, tvID)
-	if err != nil || len(tmdbGroups) == 0 {
-		return nil
-	}
-
-	sagas := make([]sagaResolution, 0, len(tmdbGroups))
-	accumulated := 0
-
-	for _, g := range tmdbGroups {
-		startEp := accumulated + 1
-		endEp := accumulated + g.Episodes
-		accumulated += g.Episodes
-
-		sagas = append(sagas, sagaResolution{
-			id:      g.ID,
-			name:    g.Name,
-			startEp: startEp,
-			endEp:   endEp,
-		})
-	}
-
-	return sagas
-}
-

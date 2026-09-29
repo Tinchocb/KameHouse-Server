@@ -25,16 +25,8 @@ func (d *Database) SaveSettings(settings *models.Settings) error {
 	return nil
 }
 
-func (d *Database) UpdateSettings(settings *models.Settings) error {
-	return nil
-}
-
 func (d *Database) GetTrackedMedia(mediaID int, provider string) (bool, bool) {
 	return false, true
-}
-
-func (d *Database) SetTrackedMedia(mediaID int, provider string, tracked bool) error {
-	return nil
 }
 
 func (d *Database) GetLocalAnimeCollection() (*platform.UnifiedCollection, bool) {
@@ -42,14 +34,6 @@ func (d *Database) GetLocalAnimeCollection() (*platform.UnifiedCollection, bool)
 }
 
 func (d *Database) SaveAnimeCollection(collection *platform.UnifiedCollection) error {
-	return nil
-}
-
-func (d *Database) GetTrackedAnimeCollection() (*platform.UnifiedCollection, bool) {
-	return nil, true
-}
-
-func (d *Database) SetTrackedAnimeCollection(collection *platform.UnifiedCollection) error {
 	return nil
 }
 

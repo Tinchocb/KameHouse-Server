@@ -88,21 +88,6 @@ func (m *LibraryMedia) AfterFind(tx *gorm.DB) (err error) {
 	return nil
 }
 
-// IsMovieOrSingleEpisode returns true if the media is a movie or a single episode special
-func (m *LibraryMedia) IsMovieOrSingleEpisode() bool {
-	if m == nil {
-		return false
-	}
-	return m.Format == "MOVIE" || m.Format == "SPECIAL" || m.Format == "MUSIC"
-}
-
-func (m *LibraryMedia) GetID() int {
-	if m == nil {
-		return 0
-	}
-	return int(m.ID)
-}
-
 func (m *LibraryMedia) GetPreferredTitle() string {
 	if m == nil {
 		return ""
@@ -117,48 +102,6 @@ func (m *LibraryMedia) GetPreferredTitle() string {
 		return m.TitleRomaji
 	}
 	return m.TitleOriginal
-}
-
-func (m *LibraryMedia) GetCoverImageSafe() string {
-	if m == nil {
-		return ""
-	}
-	return m.PosterImage
-}
-
-func (m *LibraryMedia) IsMovie() bool {
-	if m == nil {
-		return false
-	}
-	return m.Format == "MOVIE"
-}
-
-func (m *LibraryMedia) GetCurrentEpisodeCountOrNil() *int {
-	if m == nil || m.TotalEpisodes == 0 {
-		return nil
-	}
-	return &m.TotalEpisodes
-}
-
-func (m *LibraryMedia) GetCurrentEpisodeCount() int {
-	if m == nil {
-		return 0
-	}
-	return m.TotalEpisodes
-}
-
-func (m *LibraryMedia) GetTotalEpisodeCount() int {
-	if m == nil {
-		return 0
-	}
-	return m.TotalEpisodes
-}
-
-func (m *LibraryMedia) Episodes() *int {
-	if m == nil || m.TotalEpisodes == 0 {
-		return nil
-	}
-	return &m.TotalEpisodes
 }
 
 // LibraryEpisode represents a single episode of a LibraryMedia.

@@ -23,14 +23,6 @@ type SearchResult struct {
 	VoteAverage      float64  `json:"vote_average"`
 }
 
-// SearchResponse is the paginated response from TMDb search.
-type SearchResponse struct {
-	Page         int            `json:"page"`
-	Results      []SearchResult `json:"results"`
-	TotalPages   int            `json:"total_pages"`
-	TotalResults int            `json:"total_results"`
-}
-
 // AlternativeTitle represents an alternative title for a show.
 type AlternativeTitle struct {
 	ISO31661 string `json:"iso_3166_1"`
@@ -91,30 +83,6 @@ type TVSeasonDetails struct {
 	Episodes     []TVEpisode `json:"episodes"`
 }
 
-// EpisodeGroup represents a story arc (saga) within a TV show.
-type EpisodeGroup struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Type           string `json:"type"`
-	Description    string `json:"description"`
-	GroupCount     int    `json:"group_count"`
-	Episodes       int    `json:"episodes_count"`
-	FreeGroupCount int    `json:"free_group_count"`
-}
-
-// EpisodeGroupResponse is the response from /tv/{id}/episode_groups.
-type EpisodeGroupResponse struct {
-	ID     int            `json:"id"`
-	Name   string         `json:"name"`
-	Groups []EpisodeGroup `json:"groups"`
-}
-
-// ExternalIDs represents the external IDs associated with a media (TV/Movie).
-type ExternalIDs struct {
-	TvdbID string `json:"tvdb_id"`
-	ImdbID string `json:"imdb_id"`
-}
-
 // MovieDetails is the detailed response for a single movie from /movie/{id}.
 type MovieDetails struct {
 	ID                  int                       `json:"id"`
@@ -139,27 +107,6 @@ type MovieBelongsToCollection struct {
 	Name string `json:"name"`
 }
 
-// CollectionPart is one movie within a TMDB franchise/saga collection.
-type CollectionPart struct {
-	ID            int    `json:"id"`
-	Title         string `json:"title"`
-	OriginalTitle string `json:"original_title"`
-	Overview      string `json:"overview"`
-	ReleaseDate   string `json:"release_date"`
-	PosterPath    string `json:"poster_path"`
-	BackdropPath  string `json:"backdrop_path"`
-}
-
-// CollectionDetails is the response from /collection/{id}.
-type CollectionDetails struct {
-	ID           int              `json:"id"`
-	Name         string           `json:"name"`
-	Overview     string           `json:"overview"`
-	PosterPath   string           `json:"poster_path"`
-	BackdropPath string           `json:"backdrop_path"`
-	Parts        []CollectionPart `json:"parts"`
-}
-
 // ExternalIDSource represents the type of external ID source for cross-referencing.
 type ExternalIDSource string
 
@@ -167,12 +114,6 @@ const (
 	ExternalSourceTvdb ExternalIDSource = "tvdb_id"
 	ExternalSourceImdb ExternalIDSource = "imdb_id"
 )
-
-// FindResponse is the response from TMDb's /find endpoint.
-type FindResponse struct {
-	TVResults    []SearchResult `json:"tv_results"`
-	MovieResults []SearchResult `json:"movie_results"`
-}
 
 // TMDBImage represents a backdrop, poster, or logo from TMDb.
 type TMDBImage struct {

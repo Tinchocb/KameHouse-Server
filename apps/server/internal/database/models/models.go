@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -164,32 +163,6 @@ func (o StringSlice) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return strings.Join(o, ","), nil
-}
-
-type IntSlice []int
-
-func (o *IntSlice) Scan(src interface{}) error {
-	str, ok := src.(string)
-	if !ok {
-		return errors.New("src value cannot cast to string")
-	}
-	ids := strings.Split(str, ",")
-	*o = make(IntSlice, len(ids))
-	for i, id := range ids {
-		(*o)[i], _ = strconv.Atoi(id)
-	}
-	return nil
-}
-
-func (o IntSlice) Value() (driver.Value, error) {
-	if len(o) == 0 {
-		return nil, nil
-	}
-	strs := make([]string, len(o))
-	for i, id := range o {
-		strs[i] = strconv.Itoa(id)
-	}
-	return strings.Join(strs, ","), nil
 }
 
 type BgMusicTrack struct {
@@ -430,5 +403,4 @@ type ChronologySpanOverride struct {
 	SpanID    string `gorm:"column:span_id;uniqueIndex:idx_chronology_span_account;not null" json:"spanId"`
 	Watched   bool   `gorm:"column:watched;not null" json:"watched"`
 }
-
 

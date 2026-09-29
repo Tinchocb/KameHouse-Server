@@ -1,10 +1,7 @@
 package platform
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
-	"sync"
 )
 
 type MediaFormat string
@@ -55,25 +52,6 @@ type FuzzyDate struct {
 	Year  *int `json:"year,omitempty"`
 	Month *int `json:"month,omitempty"`
 	Day   *int `json:"day,omitempty"`
-}
-
-func (f *FuzzyDate) ToTMDBString() string {
-	if f == nil {
-		return ""
-	}
-	y, m, d := "", "01", "01"
-	if f.Year != nil {
-		y = strconv.Itoa(*f.Year)
-	} else {
-		return ""
-	}
-	if f.Month != nil {
-		m = fmt.Sprintf("%02d", *f.Month)
-	}
-	if f.Day != nil {
-		d = fmt.Sprintf("%02d", *f.Day)
-	}
-	return fmt.Sprintf("%s-%s-%s", y, m, d)
 }
 
 type NextAiringEpisode struct {
@@ -144,16 +122,6 @@ type UnifiedMediaRelation struct {
 	Media        *UnifiedMedia     `json:"media"`
 }
 
-type UnifiedAnimeRelationTree struct {
-	sync.Map
-}
-
-func (t *UnifiedAnimeRelationTree) Range(f func(key int, value *UnifiedMedia) bool) {
-	t.Map.Range(func(key, value any) bool {
-		return f(key.(int), value.(*UnifiedMedia))
-	})
-}
-
 func (m *UnifiedMedia) IsMovie() bool {
 	return m.Format == MediaFormatMovie
 }
@@ -177,25 +145,6 @@ func (m *UnifiedMedia) GetTitleSafe() string {
 	return ""
 }
 
-func (m *UnifiedMedia) GetPreferredTitle() string {
-	return m.GetTitleSafe()
-}
-
-func (m *UnifiedMedia) IsMovieOrSingleEpisode() bool {
-	return m.Format == MediaFormatMovie || (m.Episodes != nil && *m.Episodes == 1)
-}
-
-func (m *UnifiedMedia) GetID() int {
-	return m.ID
-}
-
-func (m *UnifiedMedia) GetRomajiTitleSafe() string {
-	if m.Title != nil && m.Title.Romaji != nil {
-		return *m.Title.Romaji
-	}
-	return m.GetTitleSafe()
-}
-
 type PlatformUser struct {
 	ID          int     `json:"id"`
 	Name        string  `json:"name"`
@@ -217,20 +166,6 @@ func (m *UnifiedMedia) GetCoverImageSafe() string {
 		return *m.CoverImage.Medium
 	}
 	return ""
-}
-
-func (m *UnifiedMedia) GetBannerImageSafe() string {
-	if m.BannerImage == nil {
-		return ""
-	}
-	return *m.BannerImage
-}
-
-func (m *UnifiedMedia) GetTotalEpisodeCount() int {
-	if m.Episodes == nil {
-		return 0
-	}
-	return *m.Episodes
 }
 
 type UnifiedCollectionEntry struct {
@@ -277,21 +212,6 @@ func (c *UnifiedCollection) GetAllAnime() []*UnifiedMedia {
 	return res
 }
 
-func (c *UnifiedCollection) GetAllMedia() []*UnifiedMedia {
-	if c == nil {
-		return nil
-	}
-	var res []*UnifiedMedia
-	for _, l := range c.Lists {
-		for _, e := range l.Entries {
-			if e.Media != nil {
-				res = append(res, e.Media)
-			}
-		}
-	}
-	return res
-}
-
 type UnifiedCollectionList struct {
 	Name         string                    `json:"name"`
 	Status       MediaListStatus           `json:"status"`
@@ -322,30 +242,7 @@ type UnifiedAiringSchedule struct {
 	Media []*UnifiedMedia `json:"media"`
 }
 
-type UnifiedViewer struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-}
-
 type UnifiedViewerStats struct {
 	AnimeCount int `json:"animeCount"`
 }
 
-type UnifiedMediaListEntry struct {
-	ID       int             `json:"id"`
-	Media    *UnifiedMedia   `json:"media"`
-	Status   MediaListStatus `json:"status"`
-	Progress int             `json:"progress"`
-	Score    float64         `json:"score"`
-}
-
-type FuzzyDateInput struct {
-	Year  *int `json:"year,omitempty"`
-	Month *int `json:"month,omitempty"`
-	Day   *int `json:"day,omitempty"`
-}
-
-type UnifiedStudioDetails struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-}

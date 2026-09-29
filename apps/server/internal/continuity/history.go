@@ -4,10 +4,8 @@ import (
 	"fmt"
 
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
-	"strings"
 	"time"
 )
 
@@ -60,69 +58,9 @@ type (
 		Kind          Kind    `json:"kind"`
 	}
 
-	BingeWatcherProbability struct {
-		MediaID        int
-		Probability    float64
-		IsBingeCooling bool
-	}
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// CalculateBingeProbability evaluates if a user is aggressively watching episodes of a MediaID.
-// A score of >= 0.70 means pre-caching should aggressively be fired.
-func (m *Manager) CalculateBingeProbability(mediaID int) BingeWatcherProbability {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	items, err := filecache.GetAll[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket)
-	if err != nil {
-		return BingeWatcherProbability{MediaID: mediaID, Probability: 0, IsBingeCooling: true}
-	}
-
-	var i *WatchHistoryItem
-	for _, item := range items {
-		if item.MediaID == mediaID {
-			if i == nil || item.TimeUpdated.After(i.TimeUpdated) {
-				i = item
-			}
-		}
-	}
-
-	if i == nil {
-		return BingeWatcherProbability{MediaID: mediaID, Probability: 0, IsBingeCooling: true}
-	}
-
-	// Simple heuristic: if the item was updated less than 24 hours ago, and they are deep into the episode
-	timeSinceLastUpdate := time.Since(i.TimeUpdated)
-
-	if timeSinceLastUpdate > 24*time.Hour {
-		return BingeWatcherProbability{MediaID: mediaID, Probability: 0.1, IsBingeCooling: true}
-	}
-
-	completionRatio := 0.0
-	if i.Duration > 0 {
-		completionRatio = i.CurrentTime / i.Duration
-	}
-
-	// If recently updated and they've watched more than 50%
-	probability := 0.2
-	if timeSinceLastUpdate < 6*time.Hour {
-		probability += 0.3
-	}
-	if timeSinceLastUpdate < 2*time.Hour {
-		probability += 0.3
-	}
-	if completionRatio > 0.5 {
-		probability += 0.2
-	}
-
-	return BingeWatcherProbability{
-		MediaID:        mediaID,
-		Probability:    probability,
-		IsBingeCooling: probability < 0.5,
-	}
-}
 
 func (m *Manager) GetWatchHistory() WatchHistory {
 	defer util.HandlePanicInModuleThen("continuity/GetWatchHistory", func() {})
@@ -165,7 +103,7 @@ func (m *Manager) GetWatchHistoryItem(mediaID int) *WatchHistoryItemResponse {
 
 	var latestItem *WatchHistoryItem
 	for _, item := range items {
-		if item.MediaID == mediaID {
+		if item != nil && item.MediaID == mediaID {
 			if latestItem == nil || item.TimeUpdated.After(latestItem.TimeUpdated) {
 				latestItem = item
 			}
@@ -235,187 +173,7 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 	return nil
 }
 
-func (m *Manager) DeleteWatchHistoryItem(mediaID int) (err error) {
-	defer util.HandlePanicInModuleWithError("continuity/DeleteWatchHistoryItem", &err)
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Delete any items matching the mediaID (since key format is mediaID_episodeNumber)
-	prefix := fmt.Sprintf("%d_", mediaID)
-	err = filecache.DeleteIf[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket, func(key string, val *WatchHistoryItem) bool {
-		return strings.HasPrefix(key, prefix)
-	})
-	if err != nil {
-		return fmt.Errorf("continuity: Failed to delete watch history item: %w", err)
-	}
-
-	return nil
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// GetExternalPlayerEpisodeWatchHistoryItem is called before launching the external player to get the last known position.
-// Unlike GetWatchHistoryItem, this checks if the episode numbers match.
-func (m *Manager) GetExternalPlayerEpisodeWatchHistoryItem(path string, isStream bool, episode, mediaID int) (ret *WatchHistoryItemResponse) {
-	defer util.HandlePanicInModuleThen("continuity/GetExternalPlayerEpisodeWatchHistoryItem", func() {})
-
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	if !m.settings.WatchContinuityEnabled {
-		return &WatchHistoryItemResponse{
-			Item:  nil,
-			Found: false,
-		}
-	}
-
-	ret = &WatchHistoryItemResponse{
-		Item:  nil,
-		Found: false,
-	}
-
-	m.logger.Debug().
-		Str("path", path).
-		Bool("isStream", isStream).
-		Int("episode", episode).
-		Int("mediaID", mediaID).
-		Msg("continuity: Retrieving watch history item")
-
-	// Normalize path
-	path = util.NormalizePath(path)
-
-	if isStream {
-
-
-		if episode == 0 || mediaID == 0 {
-			m.logger.Debug().
-				Int("episode", episode).
-				Int("mediaID", mediaID).
-				Msg("continuity: No episode or media provided")
-			return
-		}
-
-		i, found := m.getWatchHistory(mediaID, episode)
-		if !found || i.EpisodeNumber != episode {
-			m.logger.Trace().
-				Interface("item", i).
-				Msg("continuity: No watch history item found or episode number does not match")
-			return
-		}
-
-		m.logger.Debug().
-			Interface("item", i).
-			Msg("continuity: Watch history item found")
-
-		return &WatchHistoryItemResponse{
-			Item:  i,
-			Found: found,
-		}
-
-	} else {
-		// Find the local file from the path
-		lfs, _, err := db.GetLocalFiles(m.db)
-		if err != nil {
-			return ret
-		}
-
-
-		var lf *dto.LocalFile
-		// Find the local file from the path
-		for _, l := range lfs {
-			if l.GetNormalizedPath() == path {
-				lf = l
-				m.logger.Trace().Msg("continuity: Local file found from path")
-				break
-			}
-		}
-		// If the local file is not found, the path might be a filename (in the case of VLC)
-		if lf == nil {
-			for _, l := range lfs {
-				if strings.ToLower(l.Name) == path {
-					lf = l
-					m.logger.Trace().Msg("continuity: Local file found from filename")
-					break
-				}
-			}
-		}
-
-		if lf == nil || lf.MediaID == 0 || !lf.IsMain() {
-			m.logger.Trace().Msg("continuity: Local file not found or not main")
-			return
-		}
-
-		i, found := m.getWatchHistory(lf.MediaID, lf.GetEpisodeNumber())
-		if !found || i.EpisodeNumber != lf.GetEpisodeNumber() {
-			m.logger.Trace().
-				Interface("item", i).
-				Msg("continuity: No watch history item found or episode number does not match")
-			return
-		}
-
-		m.logger.Debug().
-			Interface("item", i).
-			Msg("continuity: Watch history item found")
-
-		return &WatchHistoryItemResponse{
-			Item:  i,
-			Found: found,
-		}
-	}
-}
-
-func (m *Manager) UpdateExternalPlayerEpisodeWatchHistoryItem(currentTime, duration float64) {
-	defer util.HandlePanicInModuleThen("continuity/UpdateWatchHistoryItem", func() {})
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if !m.settings.WatchContinuityEnabled {
-		return
-	}
-
-	if m.externalPlayerEpisodeDetails.IsAbsent() {
-		return
-	}
-
-	added := false
-
-	opts, ok := m.externalPlayerEpisodeDetails.Get()
-	if !ok {
-		return
-	}
-
-	// Get the current history
-	i, found := m.getWatchHistory(opts.MediaID, opts.EpisodeNumber)
-	if !found {
-		added = true
-		i = &WatchHistoryItem{
-			Kind:          ExternalPlayerKind,
-			Filepath:      opts.Filepath,
-			MediaID:       opts.MediaID,
-			EpisodeNumber: opts.EpisodeNumber,
-			CurrentTime:   currentTime,
-			Duration:      duration,
-			TimeAdded:     time.Now(),
-			TimeUpdated:   time.Now(),
-		}
-	} else {
-		i.Kind = ExternalPlayerKind
-		i.EpisodeNumber = opts.EpisodeNumber
-		i.CurrentTime = currentTime
-		i.Duration = duration
-		i.TimeUpdated = time.Now()
-	}
-
-	// Save the i
-	_ = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, fmt.Sprintf("%d_%d", opts.MediaID, opts.EpisodeNumber), i)
-
-	// If the item was added, check if we need to remove the oldest item
-	if added {
-		_ = m.trimWatchHistoryItems()
-	}
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -459,8 +217,12 @@ func (m *Manager) trimWatchHistoryItems() error {
 	// If there are too many items, remove the oldest one
 	if len(items) > MaxWatchHistoryItems {
 		var oldestKey string
-		for key := range items {
-			if oldestKey == "" || items[key].TimeUpdated.Before(items[oldestKey].TimeUpdated) {
+		for key, item := range items {
+			if item == nil { // entrada corrupta: es la primera en irse
+				oldestKey = key
+				break
+			}
+			if oldestKey == "" || item.TimeUpdated.Before(items[oldestKey].TimeUpdated) {
 				oldestKey = key
 			}
 		}

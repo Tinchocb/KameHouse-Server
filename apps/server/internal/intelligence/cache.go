@@ -66,20 +66,6 @@ func (c *ResultCache) Set(key string, result *SelectionResult) {
 	}
 }
 
-// Delete elimina una entrada de la caché.
-func (c *ResultCache) Delete(key string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.entries, key)
-}
-
-// Clear limpia toda la caché.
-func (c *ResultCache) Clear() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.entries = make(map[string]*cacheEntry)
-}
-
 // evictOldest elimina la entrada más antigua de la caché.
 func (c *ResultCache) evictOldest() {
 	var oldestKey string

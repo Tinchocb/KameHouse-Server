@@ -6,13 +6,6 @@ import (
 	"time"
 )
 
-func (s *Settings) GetMediaPlayer() *MediaPlayerSettings {
-	if s == nil {
-		return &MediaPlayerSettings{}
-	}
-	return &s.MediaPlayer
-}
-
 func (s *Settings) GetLibrary() *LibrarySettings {
 	if s == nil {
 		return &LibrarySettings{}
@@ -21,13 +14,6 @@ func (s *Settings) GetLibrary() *LibrarySettings {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func (s *Settings) GetSensitiveValues() []string {
-	if s == nil {
-		return []string{}
-	}
-	return []string{}
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -90,29 +76,6 @@ func ToLibraryMedia(m *platform.UnifiedMedia) *LibraryMedia {
 		}
 	}
 	return lm
-}
-
-func ToMediaEntryListData(e *platform.UnifiedCollectionEntry) *MediaEntryListData {
-	if e == nil {
-		return nil
-	}
-	res := &MediaEntryListData{
-		BaseModel: BaseModel{
-			ID: uint(e.ID),
-		},
-		LibraryMediaID: uint(e.Media.ID),
-		Status:         string(e.Status),
-	}
-	if e.Progress != nil {
-		res.Progress = *e.Progress
-	}
-	if e.Score != nil {
-		res.Score = *e.Score
-	}
-	if e.Repeat != nil {
-		res.Repeat = *e.Repeat
-	}
-	return res
 }
 
 func loValue[T any](v *T, fallback T) T {

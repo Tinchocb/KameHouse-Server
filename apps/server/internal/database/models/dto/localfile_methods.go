@@ -3,8 +3,6 @@ package dto
 import (
 	"bytes"
 	"cmp"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/comparison"
@@ -42,34 +40,11 @@ func (f *LocalFile) GetEpisodeNumber() int {
 	return f.Metadata.Episodes[0]
 }
 
-// GetEpisodeNumbers returns all episode numbers from the metadata.
-func (f *LocalFile) GetEpisodeNumbers() []int {
-	if f.Metadata == nil {
-		return nil
-	}
-	if len(f.Metadata.Episodes) == 0 && f.Metadata.Episode > 0 {
-		return []int{f.Metadata.Episode}
-	}
-	return f.Metadata.Episodes
-}
-
 func (f *LocalFile) GetParsedEpisodeTitle() string {
 	if f.ParsedData == nil {
 		return ""
 	}
 	return f.ParsedData.EpisodeTitle
-}
-
-// HasBeenWatched returns whether the episode has been watched.
-// This only applies to main episodes.
-func (f *LocalFile) HasBeenWatched(progress int) bool {
-	if f.Metadata == nil {
-		return false
-	}
-	if f.GetEpisodeNumber() == 0 && progress == 0 {
-		return false
-	}
-	return progress >= f.GetEpisodeNumber()
 }
 
 // GetType returns the metadata type.
@@ -98,15 +73,6 @@ func (f *LocalFile) GetMetadata() *LocalFileMetadata {
 	return f.Metadata
 }
 
-// GetAniDBEpisode returns the metadata AniDB episode number.
-// This requires the LocalFile to be hydrated.
-func (f *LocalFile) GetAniDBEpisode() string {
-	if f == nil || f.Metadata == nil {
-		return ""
-	}
-	return f.Metadata.AniDBEpisode
-}
-
 func (f *LocalFile) IsLocked() bool {
 	return f.Locked
 }
@@ -123,15 +89,6 @@ func (f *LocalFile) GetNormalizedPath() string {
 
 func (f *LocalFile) GetPath() string {
 	return f.Path
-}
-
-// GetStableID returns a deterministic, short SHA-256-based ID derived from the
-// normalized path. It is safe to embed in URLs and remains stable across
-// server restarts as long as the file path does not change.
-// Format: first 16 hex chars of SHA-256(normalizedPath) — collision probability ~1 in 10^19.
-func (f *LocalFile) GetStableID() string {
-	h := sha256.Sum256([]byte(f.GetNormalizedPath()))
-	return hex.EncodeToString(h[:])[:16]
 }
 
 func (f *LocalFile) HasSamePath(path string) bool {
@@ -153,19 +110,6 @@ func (f *LocalFile) IsAtRootOf(dirPath string) bool {
 	return filepath.ToSlash(path.Dir(f.GetNormalizedPath())) == dirPath
 }
 
-func (f *LocalFile) Equals(lf *LocalFile) bool {
-	return util.NormalizePath(f.Path) == util.NormalizePath(lf.Path)
-}
-
-func (f *LocalFile) IsIncluded(lfs []*LocalFile) bool {
-	for _, lf := range lfs {
-		if f.Equals(lf) {
-			return true
-		}
-	}
-	return false
-}
-
 // getRegexCompFilename returns a normalized filename without words that could mess up regex comparisons
 func (f *LocalFile) getRegexCompFilename() (ret string) {
 	ret = f.ParsedData.Original
@@ -184,10 +128,6 @@ func (f *LocalFile) IsProbablyNC() bool {
 
 func (f *LocalFile) IsProbablySpecial() bool {
 	return comparison.ValueContainsSpecial(f.getRegexCompFilename())
-}
-
-func (f *LocalFile) GetParsedData() *LocalFileParsedData {
-	return f.ParsedData
 }
 
 // GetParsedTitle returns the parsed title of the LocalFile. Falls back to the folder title if the file title is empty.

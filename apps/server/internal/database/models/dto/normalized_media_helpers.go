@@ -1,11 +1,5 @@
 package dto
 
-import (
-	"kamehouse/internal/util/comparison"
-
-	"github.com/samber/lo"
-)
-
 // Helper methods
 
 func GetTitleSafe(m *NormalizedMedia) string {
@@ -27,18 +21,6 @@ func GetTitleSafe(m *NormalizedMedia) string {
 	return ""
 }
 
-func HasRomajiTitle(m *NormalizedMedia) bool {
-	return m.Title != nil && m.Title.Romaji != nil
-}
-
-func HasEnglishTitle(m *NormalizedMedia) bool {
-	return m.Title != nil && m.Title.English != nil
-}
-
-func HasSynonyms(m *NormalizedMedia) bool {
-	return len(m.Synonyms) > 0
-}
-
 func GetAllTitles(m *NormalizedMedia) []*string {
 	titles := make([]*string, 0)
 	if m.Title == nil {
@@ -58,23 +40,6 @@ func GetAllTitles(m *NormalizedMedia) []*string {
 	}
 	titles = append(titles, m.Synonyms...)
 	return titles
-}
-
-// GetPossibleSeasonNumber returns the possible season number for that media and -1 if it doesn't have one.
-// It looks at the synonyms and returns the highest season number found.
-func GetPossibleSeasonNumber(m *NormalizedMedia) int {
-	if m == nil || len(m.Synonyms) == 0 {
-		return -1
-	}
-	titles := lo.Filter(m.Synonyms, func(s *string, i int) bool { return comparison.ValueContainsSeason(*s) })
-	if HasEnglishTitle(m) {
-		titles = append(titles, m.Title.English)
-	}
-	if HasRomajiTitle(m) {
-		titles = append(titles, m.Title.Romaji)
-	}
-	seasons := lo.Map(titles, func(s *string, i int) int { return comparison.ExtractSeasonNumber(*s) })
-	return lo.Max(seasons)
 }
 
 // GetCurrentEpisodeCount returns the current episode number for that media and -1 if it doesn't have one.

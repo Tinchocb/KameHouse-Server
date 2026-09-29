@@ -183,7 +183,7 @@ func (p *AniDBProvider) loadTitlesFromCache() ([]anidb.AnimeT, error) {
 }
 
 func (p *AniDBProvider) saveTitlesToCache(titles []anidb.AnimeT) error {
-	if err := os.MkdirAll(filepath.Dir(p.cachePath), 0777); err != nil {
+	if err := os.MkdirAll(filepath.Dir(p.cachePath), 0755); err != nil {
 		return err
 	}
 	f, err := os.Create(p.cachePath)

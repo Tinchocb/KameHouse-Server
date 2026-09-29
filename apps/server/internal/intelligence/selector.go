@@ -210,8 +210,6 @@ func (s *Selector) buildCandidateFromDb(path string, fileSize int64, technicalIn
 	return candidate
 }
 
-
-
 // scoreAndRank evalúa y ordena los candidatos.
 func (s *Selector) scoreAndRank(candidates []*MediaCandidate, preferredLangs []string) *SelectionResult {
 	type scoredCandidate struct {
@@ -344,12 +342,3 @@ func inferAudioLangsFromFilename(filename string) []string {
 	return langs
 }
 
-
-
-// ParseHeightFromResolution convierte una cadena de resolución a altura en píxeles.
-func ParseHeightFromResolution(res string) int {
-	res = strings.TrimSuffix(res, "p")
-	res = strings.TrimSuffix(res, "P")
-	height, _ := strconv.Atoi(res)
-	return height
-}

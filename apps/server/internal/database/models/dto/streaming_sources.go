@@ -10,23 +10,3 @@ const (
 	SourceTypeLocal SourceType = "local"
 )
 
-// EpisodeSource is the canonical, transport-agnostic descriptor for a single
-// playable source. It is the immutable JSON contract between the backend
-// decision engine and frontend player components.
-type EpisodeSource struct {
-	Type     SourceType `json:"type"`            // "local"
-	URL      string     `json:"url,omitempty"`   // direct-play HTTP path
-	Path     string     `json:"path,omitempty"`  // Absolute filesystem path (local sources only)
-	Quality  string     `json:"quality"`         // e.g. "1080p", "4K", "unknown"
-	Priority int        `json:"priority"`        // PriorityLocal
-	Title    string     `json:"title,omitempty"` // Human-readable label shown in the UI badge
-}
-
-// EpisodeSourcesResponse is the top-level DTO returned by the episode sources endpoint.
-// PlaySource indicates which source type the player should auto-select.
-type EpisodeSourcesResponse struct {
-	EpisodeNumber int             `json:"episodeNumber"`
-	Title         string          `json:"title,omitempty"`
-	Sources       []EpisodeSource `json:"sources"`
-	PlaySource    SourceType      `json:"playSource"`
-}

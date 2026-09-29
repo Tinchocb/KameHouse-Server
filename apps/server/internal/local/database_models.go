@@ -17,23 +17,9 @@ type BaseModel struct {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type Settings struct {
-	BaseModel
-	// Flag to determine if there are local changes that need to be synced with Platform.
-	Updated bool `gorm:"column:updated" json:"updated"`
-}
-
 // +---------------------+
 // |      Offline        |
 // +---------------------+
-
-// LocalCollection is an Platform collection that is stored locally for offline use.
-// It is meant to be kept in sync with the real Platform collection when online.
-type LocalCollection struct {
-	BaseModel
-	Type  string `gorm:"column:type" json:"type"`   // "anime"
-	Value []byte `gorm:"column:value" json:"value"` // Marshalled struct
-}
 
 // TrackedMedia tracks media that should be stored locally.
 type TrackedMedia struct {
@@ -52,19 +38,6 @@ type AnimeSnapshot struct {
 	EpisodeImagePaths StringMap          `gorm:"column:episode_image_paths" json:"episodeImagePaths"`
 	// ReferenceKey is used to compare the snapshot with the current data.
 	ReferenceKey string `gorm:"column:reference_key" json:"referenceKey"`
-}
-
-
-
-// +---------------------+
-// |      Simulated      |
-// +---------------------+
-
-// SimulatedCollection is used for users without an account.
-type SimulatedCollection struct {
-	BaseModel
-	Type  string `gorm:"column:type" json:"type"`   // "anime"
-	Value []byte `gorm:"column:value" json:"value"` // Marshalled struct
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,8 +83,6 @@ func (o *LocalAnimeMetadata) Scan(src interface{}) error {
 func (o LocalAnimeMetadata) Value() (driver.Value, error) {
 	return json.Marshal(o)
 }
-
-
 
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 

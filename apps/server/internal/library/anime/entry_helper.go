@@ -62,24 +62,6 @@ func (e *Entry) FindLatestEpisode() (*Episode, bool) {
 	return latest, true
 }
 
-// FindLatestLocalFile returns the *main* local file with the highest episode number.
-// Returns false if there are no local files.
-func (e *Entry) FindLatestLocalFile() (*LocalFile, bool) {
-	lfs, ok := e.FindMainLocalFiles()
-	// If there are no local files, return nil
-	if !ok {
-		return nil, false
-	}
-	// Get the local file with the highest episode number
-	latest := lfs[0]
-	for _, lf := range lfs {
-		if lf.GetEpisodeNumber() > latest.GetEpisodeNumber() {
-			latest = lf
-		}
-	}
-	return latest, true
-}
-
 //----------------------------------------------------------------------------------------------------------------------
 
 // GetCurrentProgress returns the progress number.
@@ -90,15 +72,6 @@ func (e *Entry) GetCurrentProgress() int {
 		return 0
 	}
 	return listData.Progress
-}
-
-// FindEpisodes returns the episodes.
-// Returns false if there are no episodes.
-func (e *Entry) FindEpisodes() ([]*Episode, bool) {
-	if e.Episodes == nil {
-		return nil, false
-	}
-	return e.Episodes, true
 }
 
 // FindMainEpisodes returns the main episodes.
@@ -116,51 +89,11 @@ func (e *Entry) FindMainEpisodes() ([]*Episode, bool) {
 	return eps, true
 }
 
-// FindLocalFiles returns the local files.
-// Returns false if there are no local files.
-func (e *Entry) FindLocalFiles() ([]*LocalFile, bool) {
-	if !e.IsDownloaded() {
-		return nil, false
-	}
-	return e.LocalFiles, true
-}
-
-// FindMainLocalFiles returns *main* local files.
-// Returns false if there are no local files.
-func (e *Entry) FindMainLocalFiles() ([]*LocalFile, bool) {
-	if !e.IsDownloaded() {
-		return nil, false
-	}
-	lfs := make([]*LocalFile, 0)
-	for _, lf := range e.LocalFiles {
-		if lf.IsMain() {
-			lfs = append(lfs, lf)
-		}
-	}
-	if len(lfs) == 0 {
-		return nil, false
-	}
-	return lfs, true
-}
-
-// IsDownloaded returns true if there are local files.
-func (e *Entry) IsDownloaded() bool {
-	if e.LocalFiles == nil {
-		return false
-	}
-	return len(e.LocalFiles) > 0
-}
-
 func (e *Entry) FindListData() (*EntryListData, bool) {
 	if e.EntryListData == nil {
 		return nil, false
 	}
 	return e.EntryListData, true
-}
-
-func (e *Entry) IsInAnimeCollection() bool {
-	_, ok := e.FindListData()
-	return ok
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -200,57 +133,6 @@ func (e *SimpleEntry) FindNextEpisode() (*Episode, bool) {
 	return ep, true
 }
 
-func (e *SimpleEntry) FindLatestEpisode() (*Episode, bool) {
-	// If there are no episodes, return nil
-	eps, ok := e.FindMainEpisodes()
-	if !ok {
-		return nil, false
-	}
-	// Get the episode with the highest progress number
-	latest := eps[0]
-	for _, ep := range eps {
-		if ep.GetProgressNumber() > latest.GetProgressNumber() {
-			latest = ep
-		}
-	}
-	return latest, true
-}
-
-func (e *SimpleEntry) FindLatestLocalFile() (*LocalFile, bool) {
-	lfs, ok := e.FindMainLocalFiles()
-	// If there are no local files, return nil
-	if !ok {
-		return nil, false
-	}
-	// Get the local file with the highest episode number
-	latest := lfs[0]
-	for _, lf := range lfs {
-		if lf.GetEpisodeNumber() > latest.GetEpisodeNumber() {
-			latest = lf
-		}
-	}
-	return latest, true
-}
-
-func (e *SimpleEntry) FindMainLocalFiles() ([]*LocalFile, bool) {
-	if e.LocalFiles == nil {
-		return nil, false
-	}
-	if len(e.LocalFiles) == 0 {
-		return nil, false
-	}
-	lfs := make([]*LocalFile, 0)
-	for _, lf := range e.LocalFiles {
-		if lf.IsMain() {
-			lfs = append(lfs, lf)
-		}
-	}
-	if len(lfs) == 0 {
-		return nil, false
-	}
-	return lfs, true
-}
-
 func (e *SimpleEntry) FindListData() (*EntryListData, bool) {
 	if e.EntryListData == nil {
 		return nil, false
@@ -258,7 +140,3 @@ func (e *SimpleEntry) FindListData() (*EntryListData, bool) {
 	return e.EntryListData, true
 }
 
-func (e *SimpleEntry) IsInAnimeCollection() bool {
-	_, ok := e.FindListData()
-	return ok
-}

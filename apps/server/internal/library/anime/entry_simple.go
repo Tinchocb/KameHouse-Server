@@ -31,14 +31,6 @@ type (
 		IntelligenceSvc     *IntelligenceService `json:"-"`
 	}
 
-	SimpleEntryListData struct {
-		Progress    int     `json:"progress,omitempty"`
-		Score       float64 `json:"score,omitempty"`
-		Status      string  `json:"status,omitempty"`
-		StartedAt   string  `json:"startedAt,omitempty"`
-		CompletedAt string  `json:"completedAt,omitempty"`
-	}
-
 	NewSimpleAnimeEntryOptions struct {
 		MediaID             int
 		LocalFiles          []*LocalFile // All local files
@@ -268,41 +260,4 @@ func NewAnimeMetadataFromEntry(media *models.LibraryMedia, episodes []*Episode) 
 
 	return animeMetadata
 }
-
-func NewAnimeMetadataFromEpisodeCount(media *models.LibraryMedia, episodes []int) *metadata.AnimeMetadata {
-	animeMetadata := &metadata.AnimeMetadata{
-		Titles:       make(map[string]string),
-		Episodes:     make(map[string]*metadata.EpisodeMetadata),
-		EpisodeCount: 0,
-		Mappings: &metadata.AnimeMappings{
-			ThemoviedbId: strconv.Itoa(int(media.ID)), // Generic media ID marker
-		},
-	}
-	animeMetadata.Titles["en"] = media.TitleEnglish
-	animeMetadata.Titles["x-jat"] = media.TitleRomaji
-
-	// Hydrate episodes
-	for _, episode := range episodes {
-		animeMetadata.Episodes[strconv.Itoa(episode)] = &metadata.EpisodeMetadata{
-			AnidbId:               0,
-			TvdbId:                0,
-			Title:                 media.TitleEnglish,
-			Image:                 media.BannerImage,
-			AirDate:               "",
-			Length:                0,
-			Summary:               "",
-			Overview:              "",
-			EpisodeNumber:         episode,
-			Episode:               strconv.Itoa(episode),
-			SeasonNumber:          0,
-			AbsoluteEpisodeNumber: episode,
-			AnidbEid:              0,
-			HasImage:              true,
-		}
-		animeMetadata.EpisodeCount++
-	}
-
-	return animeMetadata
-}
-
 

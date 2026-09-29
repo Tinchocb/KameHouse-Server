@@ -37,11 +37,16 @@ type Database struct {
 	cancelWal               context.CancelFunc
 	currSettings            atomic.Pointer[models.Settings]
 	currMediastreamSettings atomic.Pointer[models.MediastreamSettings]
+	// settingsOverride aplica overrides de entorno a una copia de los ajustes
+	// guardados (ver GetSettings). effSettings cachea el resultado.
+	settingsOverride atomic.Pointer[SettingsOverride]
+	effSettings      atomic.Pointer[effectiveSettings]
 
 	// Migration status tracking
 	migrationMu       sync.RWMutex
 	migrationComplete bool
 	migrationError    error
+	migrationsDone    chan struct{} // closed when the background data migrations return
 }
 
 func (db *Database) SetOnError(f func(error)) {
@@ -179,18 +184,6 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	return database, nil
 }
 
-// EnqueueWrite añade una operación de escritura asíncrona al ring buffer.
-func (db *Database) EnqueueWrite(op DbWriteOperation) {
-	if db.bufferedWriter != nil {
-		db.bufferedWriter.Enqueue(op)
-	} else {
-		// Fallback inmediato si no hay buffered writer inicializado
-		if err := db.gormdb.Transaction(op); err != nil {
-			db.Logger.Error().Err(err).Msg("db: Synchronous fallback write failed")
-		}
-	}
-}
-
 // Shutdown detiene el buffered writer y asegura que todas las escrituras
 // pendientes se vuelquen antes de que el proceso termine.
 func (db *Database) Shutdown() {
@@ -216,6 +209,15 @@ func (db *Database) Close() error {
 	if db.cancelWal != nil {
 		db.cancelWal()
 	}
+	// Cerrar con las migraciones en curso las cortaba a la mitad ("database is
+	// closed") y, en Windows, dejaban el archivo abierto.
+	if db.migrationsDone != nil {
+		select {
+		case <-db.migrationsDone:
+		case <-time.After(30 * time.Second):
+			db.Logger.Warn().Msg("db: cerrando sin esperar a que terminen las migraciones de datos")
+		}
+	}
 	sqlDB, err := db.gormdb.DB()
 	if err != nil {
 		return err
@@ -227,7 +229,9 @@ func (db *Database) Close() error {
 // El servidor puede responder peticiones mientras se completan; /api/health
 // reporta "degraded" hasta que MigrationStatus() sea complete.
 func (db *Database) startDataMigrations(ctx context.Context) {
+	db.migrationsDone = make(chan struct{})
 	go func() {
+		defer close(db.migrationsDone)
 		defer func() {
 			if r := recover(); r != nil {
 				db.Logger.Error().Interface("panic", r).Msg("db: panic en runDataMigrations")
@@ -671,9 +675,13 @@ func healDragonBallKai(d *Database, logger *zerolog.Logger) {
 		return
 	}
 
+	// Si algún paso falla no se marca la migración, para reintentarla al próximo arranque.
+	failed := false
+
 	// 1. Asegurar 167 episodios en library_media para Dragon Ball Kai
 	resMedia := d.gormdb.Exec("UPDATE library_media SET total_episodes = 167 WHERE tmdb_id IN (61709, 42705) AND (total_episodes IS NULL OR total_episodes < 167)")
 	if resMedia.Error != nil {
+		failed = true
 		logger.Warn().Err(resMedia.Error).Msg("db: error actualizando total_episodes de Dragon Ball Kai")
 	} else if resMedia.RowsAffected > 0 {
 		logger.Info().Int64("rows", resMedia.RowsAffected).Msg("db: total_episodes de Dragon Ball Kai actualizado a 167")
@@ -682,7 +690,10 @@ func healDragonBallKai(d *Database, logger *zerolog.Logger) {
 	// 2. Corregir cualquier local_file de Kai que haya sido clasificado erróneamente como 'special'
 	// Bulk fetch + batch update instead of per-row Update()
 	var kaiFiles []*models.LocalFile
-	if err := d.gormdb.Where("media_id IN (61709, 42705)").Find(&kaiFiles).Error; err == nil {
+	if err := d.gormdb.Where("media_id IN (61709, 42705)").Find(&kaiFiles).Error; err != nil {
+		failed = true
+		logger.Warn().Err(err).Msg("db: error leyendo archivos de Dragon Ball Kai")
+	} else {
 		type fixItem struct {
 			id      uint
 			meta    []byte
@@ -731,6 +742,7 @@ func healDragonBallKai(d *Database, logger *zerolog.Logger) {
 				return nil
 			})
 			if err != nil {
+				failed = true
 				logger.Error().Err(err).Msg("db: fallo en batch heal Kai files")
 				continue
 			}
@@ -742,6 +754,9 @@ func healDragonBallKai(d *Database, logger *zerolog.Logger) {
 		}
 	}
 
+	if failed {
+		return
+	}
 	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
 		logger.Error().Err(err).Msg("db: no se pudo marcar heal_dragonball_kai_v1 como completado")
 	}
@@ -754,6 +769,9 @@ func healDragonBallMoviesAndSpecials(d *Database, logger *zerolog.Logger) {
 	if migrationDone(d, logger, migrationKey) {
 		return
 	}
+
+	// Si algún paso falla no se marca la migración, para reintentarla al próximo arranque.
+	failed := false
 
 	// 1. Corregir colisión Dark Nature -> Dragon Ball: Seguridad Vial de Goku
 	resDarkNature := d.gormdb.Exec(`
@@ -771,18 +789,22 @@ func healDragonBallMoviesAndSpecials(d *Database, logger *zerolog.Logger) {
 		"https://image.tmdb.org/t/p/original/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg",
 	)
 	if resDarkNature.Error != nil {
+		failed = true
 		logger.Warn().Err(resDarkNature.Error).Msg("db: error corrigiendo colisión Dark Nature")
 	} else if resDarkNature.RowsAffected > 0 {
 		logger.Info().Int64("rows", resDarkNature.RowsAffected).Msg("db: colisión Dark Nature reparada a Dragon Ball: Seguridad Vial")
 	}
 
 	// 2. Eliminar entradas huérfanas de Dragon Ball Serie sin póster que no tengan archivos locales asociados
-	d.gormdb.Exec(`
+	if err := d.gormdb.Exec(`
 		DELETE FROM library_media
 		WHERE (title_spanish = 'Dragon Ball Serie' OR title_spanish = 'Dragon Ball Series')
 		  AND (poster_image IS NULL OR poster_image = '')
 		  AND id NOT IN (SELECT DISTINCT library_media_id FROM local_file WHERE library_media_id IS NOT NULL AND library_media_id != 0)
-	`)
+	`).Error; err != nil {
+		failed = true
+		logger.Warn().Err(err).Msg("db: error eliminando Dragon Ball Serie huérfanas")
+	}
 
 	// 3. Para las que sí tengan archivos locales o coincidan con los IDs de los 6 especiales, hidratar correctamente
 	type specUpdate struct {
@@ -859,13 +881,19 @@ func healDragonBallMoviesAndSpecials(d *Database, logger *zerolog.Logger) {
 	}
 
 	for _, sp := range specials {
-		d.gormdb.Exec(`
+		if err := d.gormdb.Exec(`
 			UPDATE library_media
 			SET title_spanish = ?, title_english = ?, title_romaji = ?, description = ?, poster_image = ?, banner_image = ?, year = ?, format = 'MOVIE', type = 'MOVIE'
 			WHERE (tmdb_id = ? OR id = ? OR id = ?) AND (poster_image IS NULL OR poster_image = '' OR title_spanish = 'Dragon Ball Serie' OR title_spanish = 'Dragon Ball Series')
-		`, sp.spanish, sp.english, sp.romaji, sp.desc, sp.poster, sp.banner, sp.year, sp.tmdbId, sp.tmdbId, sp.tmdbId+1000000)
+		`, sp.spanish, sp.english, sp.romaji, sp.desc, sp.poster, sp.banner, sp.year, sp.tmdbId, sp.tmdbId, sp.tmdbId+1000000).Error; err != nil {
+			failed = true
+			logger.Warn().Err(err).Int("tmdbId", sp.tmdbId).Msg("db: error hidratando especial de Dragon Ball")
+		}
 	}
 
+	if failed {
+		return
+	}
 	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
 		logger.Error().Err(err).Msg("db: no se pudo marcar heal_dragonball_movies_and_specials_v2 como completado")
 	}

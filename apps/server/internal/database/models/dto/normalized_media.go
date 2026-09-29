@@ -1,9 +1,5 @@
 package dto
 
-import (
-	"kamehouse/internal/util/result"
-)
-
 type NormalizedMedia struct {
 	ID                int
 	TmdbID            *int
@@ -25,8 +21,6 @@ type NormalizedMedia struct {
 	MetadataStatus    *string // "COMPLETE", "MISSING", "LOCAL"
 	Description       *string
 	Relations         []*NormalizedMediaRelation
-	// Whether it was fetched from TMDB
-	fetched bool
 
 	// FanArt.tv enrichment (filled in Stage 4 if FanArt API key is configured)
 	LogoImage     *string // HD transparent logo (hdtvlogo / hdmovielogo)
@@ -77,58 +71,4 @@ type NormalizedMediaNextAiringEpisode struct {
 type NormalizedMediaRelation struct {
 	RelationType string
 	Media        *NormalizedMedia
-}
-
-type NormalizedMediaCache struct {
-	*result.Cache[int, *NormalizedMedia]
-}
-
-func IsNormalizedMediaFetched(m *NormalizedMedia) bool {
-	if m == nil {
-		return false
-	}
-	return m.fetched
-}
-
-func SetNormalizedMediaFetched(m *NormalizedMedia, fetched bool) {
-	if m != nil {
-		m.fetched = fetched
-	}
-}
-
-// NewNormalizedMediaFromOfflineDB creates a NormalizedMedia from the anime-offline-database.
-// The media is marked as not fetched (fetched=false) since it lacks some TMDB-specific data.
-func NewNormalizedMediaFromOfflineDB(
-	id int,
-	tmdbID *int,
-	tvdbId *int,
-	title *NormalizedMediaTitle,
-	synonyms []*string,
-	format *MediaFormat,
-	status *MediaStatus,
-	season *MediaSeason,
-	year *int,
-	startDate *NormalizedMediaDate,
-	episodes *int,
-	coverImage *NormalizedMediaCoverImage,
-) *NormalizedMedia {
-	return &NormalizedMedia{
-		ID:         id,
-		TmdbID:     tmdbID,
-		TvdbId:     tvdbId,
-		Title:      title,
-		Synonyms:   synonyms,
-		Format:     format,
-		Status:     status,
-		Season:     season,
-		Year:       year,
-		StartDate:  startDate,
-		Episodes:   episodes,
-		CoverImage: coverImage,
-		fetched:    false,
-	}
-}
-
-func NewNormalizedMediaCache() *NormalizedMediaCache {
-	return &NormalizedMediaCache{result.NewCache[int, *NormalizedMedia]()}
 }

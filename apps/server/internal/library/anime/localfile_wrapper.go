@@ -1,10 +1,5 @@
 package anime
 
-import (
-	"cmp"
-	"slices"
-)
-
 type (
 	// LocalFileWrapper takes a slice of LocalFiles and provides helper methods.
 	LocalFileWrapper struct {
@@ -93,29 +88,6 @@ func (e *LocalFileWrapperEntry) GetUnwatchedLocalFiles(progress int) []*LocalFil
 	return ret
 }
 
-// GetFirstUnwatchedLocalFiles is like GetUnwatchedLocalFiles but returns local file with the lowest episode number.
-func (e *LocalFileWrapperEntry) GetFirstUnwatchedLocalFiles(progress int) (*LocalFile, bool) {
-	lfs := e.GetUnwatchedLocalFiles(progress)
-	if len(lfs) == 0 {
-		return nil, false
-	}
-	// Sort local files by episode number
-	slices.SortStableFunc(lfs, func(a, b *LocalFile) int {
-		return cmp.Compare(a.GetEpisodeNumber(), b.GetEpisodeNumber())
-	})
-	return lfs[0], true
-}
-
-// HasMainLocalFiles returns true if there are any *main* local files.
-func (e *LocalFileWrapperEntry) HasMainLocalFiles() bool {
-	for _, lf := range e.LocalFiles {
-		if lf.IsMain() {
-			return true
-		}
-	}
-	return false
-}
-
 // FindLocalFileWithEpisodeNumber returns the *main* local file with the given episode number.
 func (e *LocalFileWrapperEntry) FindLocalFileWithEpisodeNumber(ep int) (*LocalFile, bool) {
 	for _, lf := range e.LocalFiles {
@@ -186,20 +158,8 @@ func (e *LocalFileWrapperEntry) GetProgressNumber(lf *LocalFile) int {
 	return lf.GetEpisodeNumber()
 }
 
-func (lfw *LocalFileWrapper) GetUnmatchedLocalFiles() []*LocalFile {
-	return lfw.UnmatchedLocalFiles
-}
-
 func (lfw *LocalFileWrapper) GetLocalEntries() []*LocalFileWrapperEntry {
 	return lfw.LocalEntries
-}
-
-func (lfw *LocalFileWrapper) GetLocalFiles() []*LocalFile {
-	return lfw.LocalFiles
-}
-
-func (e *LocalFileWrapperEntry) GetLocalFiles() []*LocalFile {
-	return e.LocalFiles
 }
 
 func (e *LocalFileWrapperEntry) GetMediaId() int {

@@ -46,8 +46,6 @@ type (
 		ListData             map[int]*EntryListData `json:"listData"`
 	}
 
-	LibraryCollectionListType string
-
 	LibraryCollectionStats struct {
 		TotalEntries  int    `json:"totalEntries"`
 		TotalFiles    int    `json:"totalFiles"`
@@ -106,7 +104,6 @@ func NewLibraryCollection(ctx context.Context, opts *NewLibraryCollectionOptions
 	defer util.HandlePanicInModuleWithError("entities/collection/NewLibraryCollection", &err)
 	lc = new(LibraryCollection)
 
-
 	// Create lists using local SQLite DB
 	lc.hydrateCollectionLists(opts)
 
@@ -134,7 +131,6 @@ func NewLibraryCollection(ctx context.Context, opts *NewLibraryCollectionOptions
 	})
 
 	lc.hydrateUnmatchedGroups()
-
 
 	return
 }

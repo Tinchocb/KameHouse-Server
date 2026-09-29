@@ -10,7 +10,6 @@ import (
 	"kamehouse/internal/util/image_downloader"
 	"path/filepath"
 
-	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
 )
@@ -115,41 +114,3 @@ func DownloadAnimeImages(logger *zerolog.Logger, assetsDir string, entry *platfo
 	return bannerImage, coverImage, episodeImagePaths, true
 }
 
-func UnifiedMediaDeepCopy(media *platform.UnifiedMedia) *platform.UnifiedMedia {
-	bytes, err := json.Marshal(media)
-	if err != nil {
-		return nil
-	}
-
-	deepCopy := &platform.UnifiedMedia{}
-	err = json.Unmarshal(bytes, deepCopy)
-	if err != nil {
-		return nil
-	}
-
-	deepCopy.NextAiringEpisode = nil
-
-	return deepCopy
-}
-
-func ToNewPointer[A any](a *A) *A {
-	if a == nil {
-		return nil
-	}
-	t := *a
-	return &t
-}
-
-func IntPointerValue[A int](a *A) A {
-	if a == nil {
-		return 0
-	}
-	return *a
-}
-
-func Float64PointerValue[A float64](a *A) A {
-	if a == nil {
-		return 0
-	}
-	return *a
-}

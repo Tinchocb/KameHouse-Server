@@ -80,8 +80,6 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	entry.MediaID = opts.MediaID
 	entry.IntelligenceSvc = opts.IntelligenceSvc
 
-
-
 	if opts.Database == nil || opts.PlatformRef == nil {
 		return nil, errors.New("missing arguments when creating media entry")
 	}
@@ -471,17 +469,6 @@ func (e *Entry) hydrateEntryEpisodeData(
 		e.NextEpisode = nextEp
 	}
 
-}
-
-func NewEntryListData(listData *models.MediaEntryListData) *EntryListData {
-	return &EntryListData{
-		Progress:    listData.Progress,
-		Score:       listData.Score,
-		Status:      listData.Status,
-		Repeat:      listData.Repeat,
-		StartedAt:   listData.StartedAt,
-		CompletedAt: listData.CompletedAt,
-	}
 }
 
 //----------------------------------------------------------------------------------------------------------------------

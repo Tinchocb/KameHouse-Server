@@ -54,15 +54,6 @@ func cacheKey(title string) string {
 	return strings.ToLower(strings.TrimSpace(title))
 }
 
-// Lookup attempts to retrieve a cached result, returning (entry, true) if found.
-func (c *metadataFetchCache) Lookup(title string) (*dto.NormalizedMedia, bool) {
-	v, ok := c.cache.Load(cacheKey(title))
-	if !ok {
-		return nil, false
-	}
-	return v.(*dto.NormalizedMedia), true
-}
-
 // FetchOnce ensures exactly ONE outbound provider call is made per unique title
 // across all concurrently running workers.
 //
@@ -211,15 +202,6 @@ func (c *metadataFetchCache) FetchOnce(
 		return nil, nil
 	}
 	return v.(*dto.NormalizedMedia), nil
-}
-
-// Clear releases all cached entries. Call after the scan pipeline completes to
-// allow GC to reclaim the cached NormalizedMedia structs.
-func (c *metadataFetchCache) Clear() {
-	c.cache.Range(func(k, _ any) bool {
-		c.cache.Delete(k)
-		return true
-	})
 }
 
 var providerOrder = []string{"tmdb", "jikan", "anidb"}

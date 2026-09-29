@@ -2,13 +2,10 @@
 
 import (
 	"cmp"
-	"context"
 	"fmt"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util/result"
 	"slices"
 	"strconv"
@@ -83,7 +80,6 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 			err = nil
 		}
 	}
-
 
 	ec = &EpisodeCollection{
 		HasMappingError: false,
@@ -165,117 +161,3 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 
 	return ec, nil
 }
-
-/////////
-
-type NewEpisodeCollectionFromLocalFilesOptions struct {
-	LocalFiles          []*LocalFile
-	Media               *models.LibraryMedia
-	Database            *db.Database
-	PlatformRef         platform.Platform
-	MetadataProviderRef metadata_provider.Provider
-	Logger              *zerolog.Logger
-}
-
-func NewEpisodeCollectionFromLocalFiles(ctx context.Context, opts NewEpisodeCollectionFromLocalFilesOptions) (*EpisodeCollection, error) {
-	if opts.Logger == nil {
-		opts.Logger = lo.ToPtr(zerolog.Nop())
-	}
-
-	// Make sure to keep the local files from the media only
-	opts.LocalFiles = lo.Filter(opts.LocalFiles, func(lf *LocalFile, i int) bool {
-		return lf.MediaID == int(opts.Media.ID)
-	})
-
-	// Create a new media entry
-	entry, err := NewEntry(ctx, &NewEntryOptions{
-		MediaID:             int(opts.Media.ID),
-		LocalFiles:          opts.LocalFiles,
-		Database:            opts.Database,
-		PlatformRef:         opts.PlatformRef,
-		MetadataProviderRef: opts.MetadataProviderRef,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("cannot play local file, could not create entry: %w", err)
-	}
-
-	// Should be cached if it exists
-	animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(int(opts.Media.ID))
-	if err != nil {
-		animeMetadata = &metadata.AnimeMetadata{
-			Titles:       make(map[string]string),
-			Episodes:     make(map[string]*metadata.EpisodeMetadata),
-			EpisodeCount: 0,
-			Mappings: &metadata.AnimeMappings{
-				ThemoviedbId: strconv.Itoa(int(opts.Media.ID)),
-			},
-		}
-		animeMetadata.Titles["en"] = opts.Media.TitleEnglish
-		animeMetadata.Titles["x-jat"] = opts.Media.TitleRomaji
-		err = nil
-	}
-
-	ec := &EpisodeCollection{
-		HasMappingError: false,
-		Episodes:        entry.Episodes,
-		Metadata:        animeMetadata,
-	}
-
-	return ec, nil
-}
-
-/////////
-
-func (ec *EpisodeCollection) FindEpisodeByNumber(episodeNumber int) (*Episode, bool) {
-	for _, episode := range ec.Episodes {
-		if episode.EpisodeNumber == episodeNumber {
-			return episode, true
-		}
-	}
-	return nil, false
-}
-
-func (ec *EpisodeCollection) FindEpisodeByAniDB(anidbEpisode string) (*Episode, bool) {
-	for _, episode := range ec.Episodes {
-		if episode.AniDBEpisode == anidbEpisode {
-			return episode, true
-		}
-	}
-	return nil, false
-}
-
-// GetMainLocalFiles returns the *main* local files.
-func (ec *EpisodeCollection) GetMainLocalFiles() ([]*Episode, bool) {
-	ret := make([]*Episode, 0)
-	for _, episode := range ec.Episodes {
-		if episode.LocalFile == nil || episode.LocalFile.IsMain() {
-			ret = append(ret, episode)
-		}
-	}
-	if len(ret) == 0 {
-		return nil, false
-	}
-	return ret, true
-}
-
-// FindNextEpisode returns the *main* local file whose episode number is after the given local file.
-func (ec *EpisodeCollection) FindNextEpisode(current *Episode) (*Episode, bool) {
-	episodes, ok := ec.GetMainLocalFiles()
-	if !ok {
-		return nil, false
-	}
-	// Get the local file whose episode number is after the given local file
-	var next *Episode
-	for _, e := range episodes {
-		if e.GetEpisodeNumber() == current.GetEpisodeNumber()+1 {
-			next = e
-			break
-		}
-	}
-	if next == nil {
-		return nil, false
-	}
-	return next, true
-}
-
-

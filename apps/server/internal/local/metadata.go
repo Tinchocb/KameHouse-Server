@@ -79,10 +79,6 @@ func (mp *OfflineMetadataProvider) GetAnimeMetadata(mID int) (*metadata.AnimeMet
 	return nil, errors.New("anime metadata not found")
 }
 
-func (mp *OfflineMetadataProvider) GetCache() *result.BoundedCache[string, *metadata.AnimeMetadata] {
-	return mp.animeMetadataCache
-}
-
 func (mp *OfflineMetadataProvider) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, metadata *metadata.AnimeMetadata) metadata_provider.AnimeMetadataWrapper {
 	return &OfflineAnimeMetadataWrapper{
 		anime:    baseAnime,

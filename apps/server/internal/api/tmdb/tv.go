@@ -117,41 +117,6 @@ func (c *Client) GetTVAlternativeTitles(ctx context.Context, tvID int) ([]Altern
 	return resp.Results, nil
 }
 
-// GetTVExternalIDs fetches the external IDs (TVDB, IMDb, etc.) for a TV show.
-func (c *Client) GetTVExternalIDs(ctx context.Context, tvID int) (*ExternalIDs, error) {
-	cacheKey := fmt.Sprintf("tv_external_ids:%d", tvID)
-	if cached, ok := GetCached[*ExternalIDs](c, cacheKey); ok {
-		return cached, nil
-	}
-
-	resp, err := executeWithRetry[ExternalIDs](ctx, c, fmt.Sprintf("/tv/%d/external_ids", tvID))
-	if err != nil {
-		return nil, fmt.Errorf("tmdb get tv external ids: %w", err)
-	}
-
-	SetCached(c, cacheKey, resp, 7*24*time.Hour)
-	return resp, nil
-}
-
-// GetEpisodeGroups fetches the episode groups (story arcs/sagas) for a TV show.
-func (c *Client) GetEpisodeGroups(ctx context.Context, tvID int) ([]EpisodeGroup, error) {
-	cacheKey := fmt.Sprintf("episode_groups:%d:%s", tvID, c.language)
-	if cached, ok := GetCached[[]EpisodeGroup](c, cacheKey); ok {
-		return cached, nil
-	}
-
-	params := url.Values{}
-	params.Set("language", c.language)
-
-	resp, err := executeWithRetry[EpisodeGroupResponse](ctx, c, fmt.Sprintf("/tv/%d/episode_groups?%s", tvID, params.Encode()))
-	if err != nil {
-		return nil, fmt.Errorf("tmdb get episode groups: %w", err)
-	}
-
-	SetCached(c, cacheKey, resp.Groups, 7*24*time.Hour)
-	return resp.Groups, nil
-}
-
 // fetchTVDetails fetches full TV details from TMDB
 func (c *Client) fetchTVDetails(ctx context.Context, tvID int) (TVDetails, error) {
 	cacheKey := fmt.Sprintf("tv_full:%d:%s", tvID, c.language)

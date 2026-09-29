@@ -215,7 +215,6 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 			return err
 		}
 
-
 		// Cleanup
 		return tx.Exec("DROP TABLE sync_paths").Error
 	})
@@ -240,36 +239,45 @@ func SyncPartialLocalFilesRelational(d *Database, files []*dto.LocalFile, target
 		return err
 	}
 
-	newPaths := make([]string, len(files))
-	for i, f := range files {
-		newPaths[i] = f.Path
+	keep := make(map[string]struct{}, len(files))
+	for _, f := range files {
+		keep[f.Path] = struct{}{}
 	}
 
-	// Create a query to delete files that belong to targetPaths but were not found in this scan
-	// Chunk NOT IN to avoid SQLite variable limit (999).
-	if len(newPaths) == 0 {
-		return nil
+	// Archivos guardados dentro de los targetPaths que este escaneo no encontró.
+	// Se calcula la diferencia en Go: un `NOT IN` partido en bloques borraba, en
+	// cada bloque, todo lo que estaba en los demás (con más de 500 archivos se
+	// perdía la biblioteca entera del target).
+	// Por carpeta, no por prefijo de texto: "D:/Anime" no debe alcanzar "D:/Anime2/...".
+	// Se admiten ambos separadores porque los targets pueden venir con / o con \.
+	const underDir = "path = ? OR path LIKE ? ESCAPE '\\' OR path LIKE ? ESCAPE '\\'"
+	dirArgs := func(target string) (string, string, string) {
+		t := strings.TrimRight(target, `/\`)
+		return t, escapeLikePattern(t) + "/%", escapeLikePattern(t) + escapeLikePattern(`\`) + "%"
 	}
-	chunkSize := 500
+	a, b, c := dirArgs(targetPaths[0])
+	pathGroup := d.gormdb.Where(underDir, a, b, c)
+	for _, target := range targetPaths[1:] {
+		a, b, c := dirArgs(target)
+		pathGroup = pathGroup.Or(underDir, a, b, c)
+	}
+	var existing []string
+	if err := d.gormdb.Model(&models.LocalFile{}).Where(pathGroup).Pluck("path", &existing).Error; err != nil {
+		return err
+	}
+	stale := make([]string, 0)
+	for _, p := range existing {
+		if _, ok := keep[p]; !ok {
+			stale = append(stale, p)
+		}
+	}
+
+	// IN por bloques para no pasar el límite de variables de SQLite (999).
+	const chunkSize = 500
 	var lastErr error
-	for i := 0; i < len(newPaths); i += chunkSize {
-		end := i + chunkSize
-		if end > len(newPaths) {
-			end = len(newPaths)
-		}
-		chunk := newPaths[i:end]
-
-		query := d.gormdb.Model(&models.LocalFile{}).Where("path NOT IN ?", chunk)
-
-		if len(targetPaths) > 0 {
-			pathGroup := d.gormdb.Where("path LIKE ? ESCAPE '\\'", escapeLikePattern(targetPaths[0])+"%")
-			for _, target := range targetPaths[1:] {
-				pathGroup = pathGroup.Or("path LIKE ? ESCAPE '\\'", escapeLikePattern(target)+"%")
-			}
-			query = query.Where(pathGroup)
-		}
-
-		if err := query.Delete(&models.LocalFile{}).Error; err != nil {
+	for i := 0; i < len(stale); i += chunkSize {
+		end := min(i+chunkSize, len(stale))
+		if err := d.gormdb.Where("path IN ?", stale[i:end]).Delete(&models.LocalFile{}).Error; err != nil {
 			lastErr = err
 		}
 	}
@@ -314,26 +322,6 @@ func UpdateSingleLocalFileRelational(d *Database, f *dto.LocalFile) (bool, error
 	}
 	InvalidateLocalFilesCache()
 	return true, nil
-}
-
-// DeleteLocalFilesRelationalByPaths removes local files with the given paths.
-func DeleteLocalFilesRelationalByPaths(d *Database, paths []string) error {
-	if len(paths) == 0 {
-		return nil
-	}
-	for i := 0; i < len(paths); i += 500 {
-		end := i + 500
-		if end > len(paths) {
-			end = len(paths)
-		}
-		chunk := paths[i:end]
-		err := d.gormdb.Where("path IN ?", chunk).Delete(&models.LocalFile{}).Error
-		if err != nil {
-			return err
-		}
-	}
-	InvalidateLocalFilesCache()
-	return nil
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

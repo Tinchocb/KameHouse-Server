@@ -10,7 +10,6 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/platforms/platform"
 	"strconv"
-	"testing"
 
 	"github.com/rs/zerolog"
 )
@@ -174,10 +173,6 @@ func NewProvider(opts *NewProviderImplOptions) Provider {
 		}
 		return jikanProv
 	}
-	return &ProviderImpl{}
-}
-
-func GetFakeProvider(t *testing.T, database *db.Database) Provider {
 	return &ProviderImpl{}
 }
 

@@ -9,32 +9,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// GetLibraryMediaByTmdbId retrieves a LibraryMedia by its TMDB ID.
-// Results are cached in memory after the first DB hit to avoid redundant
-// SQLite reads during scan-time enrichment loops.
-// Returns nil if no matching media is found.
-func GetLibraryMediaByTmdbId(d *Database, tmdbID int) (*models.LibraryMedia, error) {
-	cacheKey := fmt.Sprintf("id_%d", tmdbID)
-	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
-		if media, _ := v.(*models.LibraryMedia); media == nil {
-			return nil, nil
-		} else {
-			return media, nil
-		}
-	}
-	var media models.LibraryMedia
-	err := d.Gorm().Where("tmdb_id = ?", tmdbID).First(&media).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			d.LibraryMediaCache.Store(cacheKey, (*models.LibraryMedia)(nil))
-			return nil, nil
-		}
-		return nil, err
-	}
-	d.LibraryMediaCache.Store(cacheKey, &media)
-	return &media, nil
-}
-
 // GetLibraryMediaByTmdbIdAndType retrieves a LibraryMedia by its TMDB ID and Type.
 // Cloned to prevent caller mutating cached object.
 func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (*models.LibraryMedia, error) {
@@ -119,29 +93,6 @@ func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.Librar
 	return media, nil
 }
 
-// GetAllMediaEntryListData retrieves all MediaEntryListData entries with their associated LibraryMedia preloaded.
-func GetAllMediaEntryListData(d *Database) ([]*models.MediaEntryListData, error) {
-	var entries []*models.MediaEntryListData
-	err := d.Gorm().Preload("LibraryMedia").Find(&entries).Error
-	if err != nil {
-		return nil, err
-	}
-	return entries, nil
-}
-
-// InsertMediaEntryListData creates or updates a MediaEntryListData record.
-// If a record with the same LibraryMediaID exists, it updates it; otherwise it creates a new one.
-func InsertMediaEntryListData(d *Database, data *models.MediaEntryListData) (*models.MediaEntryListData, error) {
-	err := d.Gorm().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "library_media_id"}},
-		UpdateAll: true,
-	}).Create(data).Error
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
 // TrimLocalFileEntries removes old legacy local file entries (blob storage) from the database,
 // keeping only the latest entry. This is only for the legacy local_files table.
 func TrimLocalFileEntries(d *Database) {
@@ -154,37 +105,6 @@ func TrimLocalFileEntries(d *Database) {
 			d.Gorm().Where("id != ?", latest.ID).Delete(&models.LocalFiles{})
 		}
 	}
-}
-
-// GetLibraryMediaByExternalID retrieves a LibraryMedia by its external ID (e.g. slug or custom mapping).
-func GetLibraryMediaByExternalID(d *Database, externalId string) (*models.LibraryMedia, error) {
-	var media models.LibraryMedia
-	err := d.Gorm().
-		Joins("JOIN provider_mappings ON provider_mappings.library_media_id = library_media.id").
-		Where("provider_mappings.external_id = ?", externalId).
-		First(&media).Error
-	if err != nil {
-		return nil, err
-	}
-	return &media, nil
-}
-
-// GetLibraryMediaByProviderExternalID retrieves a LibraryMedia by provider + external_id pair.
-// Uses the composite index idx_provider_external (provider, external_id) on provider_mappings.
-// Returns nil if no matching media is found.
-func GetLibraryMediaByProviderExternalID(d *Database, provider, externalId string) (*models.LibraryMedia, error) {
-	var media models.LibraryMedia
-	err := d.Gorm().
-		Joins("JOIN provider_mappings ON provider_mappings.library_media_id = library_media.id").
-		Where("provider_mappings.provider = ? AND provider_mappings.external_id = ?", provider, externalId).
-		First(&media).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &media, nil
 }
 
 // UpsertLibraryMediaBatch inserts or updates a slice of LibraryMedia atomically in a single transaction.
@@ -202,22 +122,47 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 	})
 
 	if err == nil {
-		// Evict stale cache entries for every record that was just written.
-		for _, m := range media {
-			if m.TmdbID != 0 {
-				d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", m.TmdbID))
-				d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", m.TmdbID, m.Type))
-				// Also evict malId mapping if present
-				if m.MyanimelistId != 0 {
-					d.LibraryMediaCache.Delete(fmt.Sprintf("malid_%d", m.MyanimelistId))
-				}
-			}
-			if m.ID != 0 {
-				d.LibraryMediaCache.Delete(fmt.Sprintf("pk_%d", m.ID))
-			}
-		}
+		evictLibraryMediaCache(d, media)
 	}
 	return err
+}
+
+// InsertLibraryMediaBatchIfMissing inserta solo los LibraryMedia cuyo (tmdb_id, type)
+// todavía no existe; los existentes quedan intactos. Es para orígenes con datos
+// parciales (NFO locales): UpsertLibraryMediaBatch pisaría con campos vacíos el
+// póster, la descripción y demás que un enriquecimiento previo ya había guardado.
+func InsertLibraryMediaBatchIfMissing(d *Database, media []*models.LibraryMedia, batchSize int) error {
+	if len(media) == 0 {
+		return nil
+	}
+	err := d.Gorm().Transaction(func(tx *gorm.DB) error {
+		return tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "tmdb_id"}, {Name: "type"}},
+			DoNothing: true,
+		}).CreateInBatches(media, batchSize).Error
+	})
+	if err == nil {
+		// También los nuevos: una consulta previa pudo dejar cacheado "no existe".
+		evictLibraryMediaCache(d, media)
+	}
+	return err
+}
+
+// evictLibraryMediaCache saca de la caché en memoria las entradas de cada registro escrito.
+func evictLibraryMediaCache(d *Database, media []*models.LibraryMedia) {
+	for _, m := range media {
+		if m.TmdbID != 0 {
+			d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", m.TmdbID))
+			d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", m.TmdbID, m.Type))
+			// Also evict malId mapping if present
+			if m.MyanimelistId != 0 {
+				d.LibraryMediaCache.Delete(fmt.Sprintf("malid_%d", m.MyanimelistId))
+			}
+		}
+		if m.ID != 0 {
+			d.LibraryMediaCache.Delete(fmt.Sprintf("pk_%d", m.ID))
+		}
+	}
 }
 
 // UpdateLibraryMediaMappings updates the external mappings (AniDB, MAL) for a LibraryMedia record.

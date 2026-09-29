@@ -127,56 +127,6 @@ func (db *Database) InsertMediaFiller(
 	return nil
 }
 
-// SaveCachedMediaFillerItems will save the cached media filler items in the database.
-// Call this function after editing the cached media filler items.
-func (db *Database) SaveCachedMediaFillerItems() error {
-	db.mediaFillerMu.RLock()
-	isAbsent := db.CurrMediaFillers.IsAbsent()
-	db.mediaFillerMu.RUnlock()
-
-	if isAbsent {
-		return nil
-	}
-
-	mediaFillers, err := db.GetCachedMediaFillers()
-	if err != nil {
-		return err
-	}
-
-	for _, mf := range mediaFillers {
-		if len(mf.FillerEpisodes) == 0 {
-			continue
-		}
-		// Marshal the filler data
-		fillerData := filler.Data{
-			FillerEpisodes: mf.FillerEpisodes,
-		}
-
-		fillerDataBytes, err := json.Marshal(fillerData)
-		if err != nil {
-			return err
-		}
-
-		// Save the media filler
-		err = db.gormdb.Model(&models.MediaFiller{}).
-			Where("id = ?", mf.DbId).
-			Updates(map[string]interface{}{
-				"last_fetched_at": mf.LastFetchedAt,
-				"data":            fillerDataBytes,
-			}).Error
-		if err != nil {
-			return err
-		}
-	}
-
-	// Update the cache
-	db.mediaFillerMu.Lock()
-	db.CurrMediaFillers = mo.None[map[int]*MediaFillerItem]()
-	db.mediaFillerMu.Unlock()
-
-	return nil
-}
-
 func (db *Database) DeleteMediaFiller(mediaID int) error {
 
 	mediaFillers, err := db.GetCachedMediaFillers()

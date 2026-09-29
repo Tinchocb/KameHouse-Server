@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"kamehouse/internal/constants"
@@ -17,9 +19,11 @@ import (
 
 const mappingTimeout = 10 * time.Second
 
-var (
-	animapBaseURL = constants.InternalMetadataURL
-)
+// animapBaseURL es un servicio externo (AniDB → TMDB) OPCIONAL: solo se consulta si
+// el usuario define KAMEHOUSE_ANIMAP_URL. Por defecto no se envía nada a terceros.
+func animapBaseURL() string {
+	return strings.TrimRight(os.Getenv("KAMEHOUSE_ANIMAP_URL"), "/")
+}
 
 func mapTMDBIDFromAniDB(ctx context.Context, anidbID int) (int, error) {
 	if anidbID <= 0 {
@@ -29,6 +33,9 @@ func mapTMDBIDFromAniDB(ctx context.Context, anidbID int) (int, error) {
 }
 
 func mapTMDBID(ctx context.Context, from string, id int) (int, error) {
+	if animapBaseURL() == "" {
+		return 0, metadata.ErrNotFound
+	}
 	ctx, cancel := context.WithTimeout(ctx, mappingTimeout)
 	defer cancel()
 
@@ -45,7 +52,7 @@ type animapResponse struct {
 }
 
 func fetchAnimapTMDBID(ctx context.Context, from string, id int) (int, error) {
-	url := fmt.Sprintf("%s/entry?%s_id=%d", animapBaseURL, from, id)
+	url := fmt.Sprintf("%s/entry?%s_id=%d", animapBaseURL(), from, id)
 	headers := map[string]string{
 		"X-KameHouse-Version": "KameHouse/" + constants.Version,
 	}

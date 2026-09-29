@@ -137,43 +137,6 @@ func TestLocalFile_IsAtRootOf(t *testing.T) {
 
 }
 
-func TestLocalFile_Equals(t *testing.T) {
-
-	tests := []struct {
-		filePath1      string
-		filePath2      string
-		libraryPath    string
-		expectedResult bool
-	}{
-		{
-			filePath1:      "E:/Anime/Bungou Stray Dogs 5th Season/Bungou Stray Dogs/[SubsPlease] Bungou Stray Dogs - 61 (1080p) [F609B947].mkv",
-			filePath2:      "E:/ANIME/Bungou Stray Dogs 5th Season/Bungou Stray Dogs/[SubsPlease] Bungou Stray Dogs - 61 (1080p) [F609B947].mkv",
-			libraryPath:    "E:/Anime",
-			expectedResult: runtime.GOOS == "windows",
-		},
-		{
-			filePath1:      "E:/Anime/Bungou Stray Dogs 5th Season/Bungou Stray Dogs/[SubsPlease] Bungou Stray Dogs - 61 (1080p) [F609B947].mkv",
-			filePath2:      "E:/Anime/Bungou Stray Dogs 5th Season/Bungou Stray Dogs/[SubsPlease] Bungou Stray Dogs - 62 (1080p) [F609B947].mkv",
-			libraryPath:    "E:/ANIME",
-			expectedResult: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.filePath1, func(t *testing.T) {
-			lf1 := dto.NewLocalFile(tt.filePath1, tt.libraryPath)
-			lf2 := dto.NewLocalFile(tt.filePath2, tt.libraryPath)
-
-			if assert.NotNil(t, lf1) && assert.NotNil(t, lf2) {
-				assert.Equal(t, tt.expectedResult, lf1.Equals(lf2))
-			}
-
-		})
-
-	}
-
-}
-
 func TestLocalFile_GetTitleVariations(t *testing.T) {
 
 	tests := []struct {

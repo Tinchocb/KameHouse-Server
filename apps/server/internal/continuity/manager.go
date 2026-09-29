@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	OnlinestreamKind   Kind = "onlinestream"
 	MediastreamKind    Kind = "mediastream"
 	ExternalPlayerKind Kind = "external_player"
 )
@@ -100,12 +99,3 @@ func (m *Manager) GetSettings() *Settings {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func (m *Manager) SetExternalPlayerEpisodeDetails(details *ExternalPlayerEpisodeDetails) {
-	if m == nil || details == nil {
-		return
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.externalPlayerEpisodeDetails = mo.Some(details)
-}

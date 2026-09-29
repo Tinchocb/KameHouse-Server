@@ -5,16 +5,6 @@ import (
 	"time"
 )
 
-const (
-	TMDBPlatform Platform = "tmdb"
-)
-
-type (
-	Platform string
-)
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 type (
 	AnimeMetadata struct {
 		Titles       map[string]string           `json:"titles"`
@@ -81,16 +71,6 @@ type (
 		SagaName              string `json:"sagaName,omitempty"`
 	}
 )
-
-func (m *AnimeMetadata) GetTitle() string {
-	if m == nil {
-		return ""
-	}
-	if len(m.Titles["en"]) > 0 {
-		return m.Titles["en"]
-	}
-	return m.Titles["ro"]
-}
 
 func (m *AnimeMetadata) GetMappings() *AnimeMappings {
 	if m == nil || m.Mappings == nil {

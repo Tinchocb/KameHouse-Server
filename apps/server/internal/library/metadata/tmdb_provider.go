@@ -256,11 +256,6 @@ func (p *TMDBProvider) fetchEnglishTitle(ctx context.Context, tmdbID int, isMovi
 	return ""
 }
 
-// GetClient returns the underlying TMDB client for direct API access.
-func (p *TMDBProvider) GetClient() *tmdb.Client {
-	return p.client
-}
-
 // TmdbTVResultToNormalizedMedia converts a TMDB TV SearchResult to NormalizedMedia.
 func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	tmdbID := r.ID

@@ -5,10 +5,8 @@ import (
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/comparison"
-	"strings"
 
 	"github.com/rs/zerolog"
-	"github.com/samber/lo"
 )
 
 type (
@@ -171,30 +169,4 @@ func NewMediaContainer(opts *MediaContainerOptions) *MediaContainer {
 	}
 
 	return mc
-}
-
-// Legacy helper function
-func (mc *MediaContainer) GetMediaFromTitleOrSynonym(title *string) (*dto.NormalizedMedia, bool) {
-	if title == nil {
-		return nil, false
-	}
-	t := strings.ToLower(*title)
-	res, found := lo.Find(mc.NormalizedMedia, func(m *dto.NormalizedMedia) bool {
-		if dto.HasEnglishTitle(m) && t == strings.ToLower(*m.Title.English) {
-			return true
-		}
-		if dto.HasRomajiTitle(m) && t == strings.ToLower(*m.Title.Romaji) {
-			return true
-		}
-		if dto.HasSynonyms(m) {
-			for _, syn := range m.Synonyms {
-				if t == strings.ToLower(*syn) {
-					return true
-				}
-			}
-		}
-		return false
-	})
-
-	return res, found
 }
