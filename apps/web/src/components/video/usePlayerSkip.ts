@@ -32,8 +32,8 @@ import {
     shouldShowNextEpisode,
 } from "./next-episode-policy"
 
-/** "segment": capítulo intermedio (recap, eyecatch, avance…); "filler": episodio de relleno. */
-export type AutoSkipToastType = "intro" | "outro" | "segment" | "filler"
+/** "segment": capítulo intermedio (recap, eyecatch, avance…). */
+export type AutoSkipToastType = "intro" | "outro" | "segment"
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -58,8 +58,6 @@ interface UsePlayerSkipProps {
     mediaFormat?: string | null
     autoSkipIntroPref: boolean
     autoSkipOutroPref: boolean
-    autoSkipFillerPref: boolean
-    isFillerEpisode: boolean
     skipStepSecondsPref: number
     hasNextEpisode: boolean
     onNextEpisode?: () => void
@@ -89,8 +87,6 @@ export function usePlayerSkip({
     mediaFormat,
     autoSkipIntroPref,
     autoSkipOutroPref,
-    autoSkipFillerPref,
-    isFillerEpisode,
     skipStepSecondsPref,
     hasNextEpisode,
     onNextEpisode,
@@ -126,7 +122,6 @@ export function usePlayerSkip({
     // ── Refs ────────────────────────────────────────────────────────────────────
     const hasAutoSkippedIntroRef = useRef(false)
     const hasAutoSkippedOutroRef = useRef(false)
-    const hasAutoSkippedFillerRef = useRef(false)
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
     const nextEpisodeTimerRef = useRef<NodeJS.Timeout | null>(null)
     const hasTriggeredNextEpisodeRef = useRef<boolean>(false)
@@ -141,8 +136,6 @@ export function usePlayerSkip({
         skipTimesEd: undefined as SkipWindow | undefined,
         autoSkipIntroPref: false,
         autoSkipOutroPref: false,
-        autoSkipFillerPref: false,
-        isFillerEpisode: false,
         skipStepSecondsPref: 85,
         chapters: [] as Chapter[],
         mediaFormat: undefined as string | undefined | null,
@@ -245,11 +238,10 @@ export function usePlayerSkip({
         setVideoEnded(false)
         hasAutoSkippedIntroRef.current = false
         hasAutoSkippedOutroRef.current = false
-        hasAutoSkippedFillerRef.current = false
         hasTriggeredNextEpisodeRef.current = false
         hasPreloadedRef.current = false
         skippedChaptersRef.current.clear()
-    }, [episodeNumber, playableUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [episodeNumber, playableUrl, setShowNextEpisode, setSkipMode]) // setters estables (useCallback sin deps)
 
     // ── Video ended tracking ─────────────────────────────────────────────────────
     useEffect(() => {
@@ -550,8 +542,6 @@ export function usePlayerSkip({
             skipTimesEd,
             autoSkipIntroPref: autoSkipIntroPref || marathonMode,
             autoSkipOutroPref: autoSkipOutroPref || marathonMode,
-            autoSkipFillerPref: autoSkipFillerPref || marathonMode,
-            isFillerEpisode,
             skipStepSecondsPref,
             chapters,
             mediaFormat,
@@ -691,23 +681,6 @@ export function usePlayerSkip({
             }
         }
 
-        // ── 6.5. Filler episode auto-advance ───────────────────────────────────
-        // Filler is a whole-episode editorial mark (not an intra-video window),
-        // so the "skip" is an auto-next, reusing the marathon guard.
-        if (
-            cfg.isFillerEpisode &&
-            cfg.autoSkipFillerPref &&
-            !hasAutoSkippedFillerRef.current &&
-            cfg.hasNextEpisode &&
-            cfg.onNextEpisode &&
-            cfg.mediaFormat?.toUpperCase() !== "MOVIE"
-        ) {
-            hasAutoSkippedFillerRef.current = true
-            triggerToast("filler")
-            tryAdvance()
-            return
-        }
-
         // ── 7. Next-episode preload ────────────────────────────────────────────
         const nearEnd = isNearEnd(total, curr, activeEd?.startTime)
         if (cfg.nextStreamUrl && !hasPreloadedRef.current && nearEnd) {
@@ -789,7 +762,6 @@ export function usePlayerSkip({
         if (marathonMode) {
             hasAutoSkippedIntroRef.current = false
             hasAutoSkippedOutroRef.current = false
-            hasAutoSkippedFillerRef.current = false
         }
     }, [marathonMode])
 

@@ -38,6 +38,56 @@ export function matchPendingAudioTrack(
     )
 }
 
+/**
+ * Puntaje de calidad de una pista de audio: primero el codec (sin pérdida >
+ * surround con pérdida > estéreo comprimido), después la cantidad de canales.
+ */
+export function audioQualityScore(track: AudioTrack): number {
+    const codec = (track.codec || "").toLowerCase()
+    let codecScore = 1
+    if (["flac", "truehd", "mlp", "alac"].includes(codec) || codec.startsWith("pcm") || codec.includes("dts-hd") || codec === "dtshd") {
+        codecScore = 4
+    } else if (["eac3", "ac3", "dts", "opus"].includes(codec)) {
+        codecScore = 3
+    } else if (["aac", "vorbis"].includes(codec)) {
+        codecScore = 2
+    }
+    return codecScore * 100 + (track.channels ?? 2)
+}
+
+/**
+ * Entre las pistas que cumplen `pred`, devuelve la de mejor calidad; si solo
+ * hay versiones peores (ej. latino solo en AAC estéreo), se queda con esa.
+ * Empate → la primera del contenedor, como antes.
+ */
+function pickBestAudio(tracks: AudioTrack[], pred: (t: AudioTrack) => boolean): AudioTrack | undefined {
+    let best: AudioTrack | undefined
+    for (const t of tracks) {
+        if (!pred(t)) continue
+        if (!best || audioQualityScore(t) > audioQualityScore(best)) best = t
+    }
+    return best
+}
+
+/**
+ * Posición de `target` en `video.audioTracks` (direct play con pistas nativas).
+ * Chromium solo expone las pistas que decodifica, en el orden del contenedor,
+ * así que la posición es el orden entre las pistas decodificables. Si la
+ * cantidad no coincide con la lista nativa el mapeo no es confiable → -1
+ * (el llamador cae al transcode en vez de habilitar la pista equivocada).
+ */
+export function resolveNativeAudioTrackPosition(
+    tracks: AudioTrack[],
+    target: AudioTrack,
+    nativeCount: number,
+    isPlayable: (codec: string | undefined) => boolean,
+): number {
+    if (!isPlayable(target.codec)) return -1
+    const playable = tracks.filter(t => isPlayable(t.codec))
+    if (playable.length !== nativeCount) return -1
+    return playable.findIndex(t => t.index === target.index)
+}
+
 export interface MatchAudioOptions {
     tracks: AudioTrack[]
     preferredAudioProfile?: string
@@ -62,12 +112,13 @@ export function matchPreferredAudioTrack({
     // 1. Match by intelligent dubbing profile
     if (preferredAudioProfile === "latino") {
         // Highest priority: Explicit latino code or title
-        preferred = tracks.find((t) => {
+        preferred = pickBestAudio(tracks, (t) => {
             const lang = (t.language || "").toLowerCase()
             const title = (t.title || "").toLowerCase()
             return (
                 lang === "spa-lat" ||
                 lang === "es-la" ||
+                lang === "es-419" ||
                 lang === "es-mx" ||
                 lang === "lat" ||
                 title.includes("latino") ||
@@ -78,7 +129,7 @@ export function matchPreferredAudioTrack({
         })
         // Fallback: General Spanish that is not explicitly Castellano/Spain
         if (!preferred) {
-            preferred = tracks.find((t) => {
+            preferred = pickBestAudio(tracks, (t) => {
                 const lang = (t.language || "").toLowerCase()
                 const title = (t.title || "").toLowerCase()
                 return (
@@ -89,7 +140,7 @@ export function matchPreferredAudioTrack({
             })
         }
     } else if (preferredAudioProfile === "castellano") {
-        preferred = tracks.find((t) => {
+        preferred = pickBestAudio(tracks, (t) => {
             const lang = (t.language || "").toLowerCase()
             const title = (t.title || "").toLowerCase()
             return (
@@ -101,13 +152,13 @@ export function matchPreferredAudioTrack({
             )
         })
         if (!preferred) {
-            preferred = tracks.find((t) => {
+            preferred = pickBestAudio(tracks, (t) => {
                 const lang = (t.language || "").toLowerCase()
                 return lang.startsWith("es") || lang.startsWith("spa")
             })
         }
     } else if (preferredAudioProfile === "japanese") {
-        preferred = tracks.find((t) => {
+        preferred = pickBestAudio(tracks, (t) => {
             const lang = (t.language || "").toLowerCase()
             const title = (t.title || "").toLowerCase()
             return (
@@ -120,7 +171,7 @@ export function matchPreferredAudioTrack({
             )
         })
     } else if (preferredAudioProfile === "english") {
-        preferred = tracks.find((t) => {
+        preferred = pickBestAudio(tracks, (t) => {
             const lang = (t.language || "").toLowerCase()
             const title = (t.title || "").toLowerCase()
             return (
@@ -135,7 +186,7 @@ export function matchPreferredAudioTrack({
     // 2. Explicit preferredAudioLang if profile did not match
     if (!preferred && preferredAudioLang && preferredAudioLang.toLowerCase() !== "und") {
         const langLower = preferredAudioLang.toLowerCase()
-        preferred = tracks.find((t) => {
+        preferred = pickBestAudio(tracks, (t) => {
             const lang = t.language?.toLowerCase() || ""
             return lang === langLower || lang.startsWith(langLower)
         })
@@ -143,24 +194,24 @@ export function matchPreferredAudioTrack({
 
     // 3. Persisted audio track index
     if (!preferred && preferredAudioTrackIndex >= 0) {
-        preferred = tracks.find((t) => t.index === preferredAudioTrackIndex)
+        preferred = pickBestAudio(tracks, (t) => t.index === preferredAudioTrackIndex)
     }
 
     // 4. Default fallback heuristics (Latino first, then Spanish)
     if (!preferred) {
-        preferred = tracks.find((t) => {
+        preferred = pickBestAudio(tracks, (t) => {
             const lang = t.language?.toLowerCase() || ""
-            return lang === "spa-lat" || lang === "es-la"
+            return lang === "spa-lat" || lang === "es-la" || lang === "es-419"
         })
     }
     if (!preferred) {
-        preferred = tracks.find((t) => {
+        preferred = pickBestAudio(tracks, (t) => {
             const title = t.title?.toLowerCase() || ""
             return title.includes("latino") || title.includes("latin")
         })
     }
     if (!preferred) {
-        preferred = tracks.find((t) => {
+        preferred = pickBestAudio(tracks, (t) => {
             const lang = t.language?.toLowerCase() || ""
             return lang === "spa" || lang === "es" || lang.startsWith("es-") || lang.startsWith("spa-")
         })

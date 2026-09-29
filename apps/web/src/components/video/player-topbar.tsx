@@ -6,8 +6,9 @@ import { toast } from "sonner"
 import { Clock, RotateCcw } from "lucide-react"
 import { useSaveChronologyMomentTime } from "@/api/hooks/chronology.hooks"
 import { formatSecondsToTime } from "@/components/chronology/data/spansToVolumes"
-import { IconStatusMonitorPlay, IconUiClose } from "@/components/ui/icons"
+import { IconStatusMonitorPlay, IconUiClose, IconUiSpinner } from "@/components/ui/icons"
 import { AnimatedTooltip } from "@/components/ui/kinetics/animated-tooltip"
+import { LoadSwap } from "@/components/ui/kinetics/load-swap"
 import { cn } from "@/components/ui/core/styling"
 import { PLAYER_EYEBROW, PLAYER_GLASS, PLAYER_ICON_BTN } from "./player-theme"
 
@@ -121,7 +122,12 @@ export function PlayerTopBar({
                             disabled={saveMomentMutation.isPending}
                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white border border-white/20 text-xs font-medium cursor-pointer active:scale-95 transition duration-150 backdrop-blur-md shadow-elevation-1 disabled:opacity-50"
                         >
-                            <Clock className="w-3.5 h-3.5 text-brand-accent" />
+                            <LoadSwap
+                                loading={saveMomentMutation.isPending}
+                                skeleton={<IconUiSpinner className="w-3.5 h-3.5 animate-spin text-brand-accent" />}
+                            >
+                                <Clock className="w-3.5 h-3.5 text-brand-accent" />
+                            </LoadSwap>
                             <span>Fijar este momento aquí ({formattedCurrentTime})</span>
                         </button>
                         <button

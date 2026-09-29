@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react"
 import Hls from "hls.js"
 import { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
+import { probeDriveQuotaError } from "./drive-quota"
 
 /**
  * Inicia la reproducción y clasifica el fallo de la promesa de `play()`.
@@ -196,6 +197,28 @@ export function usePlayerHls({
         }
 
         const handleNativeError = () => {
+            // Drive con la cuota diaria agotada: el transcode leería la misma
+            // fuente y fallaría igual, así que se muestra la causa real.
+            const failedSrc = video.currentSrc || video.src
+            if (!isHlsUrl && failedSrc.includes("/api/v1/drive/play")) {
+                void probeDriveQuotaError(failedSrc).then((quotaMsg) => {
+                    if ((video.currentSrc || video.src) !== failedSrc) return
+                    if (quotaMsg) {
+                        try {
+                            setIsStreamSwitching?.(false)
+                        } catch {}
+                        setStatus("error")
+                        setErrorMsg(quotaMsg)
+                        return
+                    }
+                    handleNativeFailure()
+                })
+                return
+            }
+            handleNativeFailure()
+        }
+
+        const handleNativeFailure = () => {
             // Preservar posición para el fallback direct→transcode: sin esto el
             // nuevo stream arranca en 0/history y se pierden minutos.
             const saveResume = () => {
@@ -265,8 +288,14 @@ export function usePlayerHls({
             // en un fragmento que hls.js no clasifica como fatal). Sin esto la UI
             // quedaba en spinner infinito.
             video.addEventListener("error", handleNativeError)
+            // "ready" recién con el primer cuadro decodificable, no al parsear el
+            // manifiesto: con un transcode pesado el primer segmento tarda, y marcar
+            // ready antes quitaba el overlay y dejaba el video en negro sin spinner.
+            // hls.js ya arranca en startPosition y autoplay va en MANIFEST_PARSED.
+            initialSeekDone = true
+            initialAutoplayDone = true
+            video.addEventListener("canplay", handleCanPlay)
             listenersAdded = true
-            // ... (keep HLS setup as is)
             const hls = new Hls({
                 enableWorker: !isTv,
 
@@ -314,8 +343,9 @@ export function usePlayerHls({
                 abrBandWidthUpFactor: 0.7,
                 // Back-buffer: keep 30s behind the playhead for smooth backwards seeks without holding excessive RAM.
                 backBufferLength: 30,
-                // Generous manifest load timeout for large library servers on LAN.
-                manifestLoadingTimeOut: 10000,
+                // The master waits for the keyframe index: on a cold cache with a
+                // remote (Drive) source that took well over 10s and killed playback.
+                manifestLoadingTimeOut: 60000,
                 // On-the-fly transcode has a real cold start: the first .ts of a quality
                 // is only produced after ffmpeg spawns and encodes it (seconds), and a
                 // hover-preload can be competing for the transcoder's governor slots. The
@@ -331,8 +361,6 @@ export function usePlayerHls({
             hls.attachMedia(video)
 
             hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-                setStatus("ready")
-                setIsBuffering(false)
 
                 const levels = data.levels.map((level, index) => ({
                     index,

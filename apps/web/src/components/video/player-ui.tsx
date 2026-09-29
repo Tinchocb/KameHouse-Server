@@ -1,18 +1,16 @@
-/* eslint-disable react-hooks/refs */
 import React, { useEffect, useRef, useState } from "react"
+import { m, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerTopBar } from "./player-topbar"
 import { PlayerBottomBar } from "./player-bottombar"
 import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, AutoSkipToastOverlay } from "./player-overlays"
 import { PlayerShortcutsModal } from "./player-shortcuts-modal"
 import type { EpisodeSource } from "@/api/types/unified.types"
-import { useGetVideoInsights } from "@/api/hooks/videocore.hooks"
 import type { PlayerCore, PlayerStats } from "./player-core"
 import { useAppStore, useQueueStore, type PlaylistItem } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { PlayerEpisodesSidebar } from "./player-episodes-sidebar"
 import { PlayerQueueSidebar } from "./player-queue-sidebar"
-import { PlayerAmbientBackdrop } from "./player-ambient"
 import { __isTV__ } from "@/types/constants"
 import { useFocusNavigation } from "@/hooks/use-focus-navigation"
 import { IconMediaPlay, IconMediaVolume2, IconUiStar } from "@/components/ui/icons";
@@ -90,12 +88,22 @@ export function PlayerUI(props: PlayerUIProps) {
         state,
         actions
     } = core
+    // Los refs del core, con nombre de ref: se pasan como `ref`/props, nunca
+    // se lee .current durante el render.
+    const {
+        videoElement: videoRef,
+        containerElement: containerRef,
+        progressBarElement: progressBarRef,
+        thumbElement: thumbRef,
+        progressInputElement: progressInputRef,
+        timeTextElement: timeTextRef,
+    } = domElements
 
     const localVideoRef = useRef<HTMLVideoElement | null>(null)
 
     useEffect(() => {
-        localVideoRef.current = domElements.videoElement.current
-    }, [domElements.videoElement])
+        localVideoRef.current = videoRef.current
+    }, [videoRef])
 
     const [localEpisodesSidebarOpen, setLocalEpisodesSidebarOpen] = React.useState(false)
     const [localQueueSidebarOpen, setLocalQueueSidebarOpen] = React.useState(false)
@@ -406,7 +414,7 @@ export function PlayerUI(props: PlayerUIProps) {
     }, [isEpisodesSidebarOpen, isQueueSidebarOpen, state.isSettingsOpen, state.isFullscreen, actions, onClose, setIsEpisodesSidebarOpen, setIsQueueSidebarOpen])
 
     useFocusNavigation({
-        containerRef: domElements.containerElement,
+        containerRef,
         enabled: controlsVisible,
         onEscape: handleEscape,
     })
@@ -422,22 +430,11 @@ export function PlayerUI(props: PlayerUIProps) {
         }
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Fetch video insights (heatmap)
-    const { data: insightsData } = useGetVideoInsights({
-        episodeId: (mediaId && episodeNumber) ? `${mediaId}${episodeNumber}` : ""
-    }, !!(mediaId && episodeNumber && state.duration > 0))
-
-    const insights = insightsData || []
-
-
-
-
-
     return (
         <div
             role="region"
             aria-label="Reproductor de video"
-            ref={domElements.containerElement}
+            ref={containerRef}
             onMouseMove={actions.triggerControlsVisibility}
             onMouseLeave={() => {
                 // Bug 2 fix: do not close the settings panel on mouse leave.
@@ -449,20 +446,15 @@ export function PlayerUI(props: PlayerUIProps) {
                 }
             }}
             className={cn(
-                "fixed inset-0 z-player w-screen h-screen bg-black flex flex-col items-center justify-center overflow-hidden font-sans",
+                "fixed inset-0 z-player w-screen h-dvh bg-black flex flex-col items-center justify-center overflow-hidden font-sans",
                 !controlsVisible && state.isPlaying ? "cursor-none" : "cursor-default"
             )}
             style={{
                 viewTransitionName: "video-player"
             } as React.CSSProperties}
         >
-
-            <PlayerAmbientBackdrop 
-                videoRef={localVideoRef} 
-                enabled={state.ambientModeEnabled && !state.tvMode} // Usually ambient mode isn't great for TVs or we can just leave it enabled for both
-            />
               <video
-                ref={domElements.videoElement}
+                ref={videoRef}
                 onPlay={() => actions.setIsPlaying(true)}
                 onPause={() => {
                     actions.setIsPlaying(false)
@@ -530,45 +522,70 @@ export function PlayerUI(props: PlayerUIProps) {
                 )}
             />
 
-            {/* Indicador de gesto (swipe) */}
-            {swipeIndicator && (
-                <div className="absolute inset-0 z-player-overlay pointer-events-none flex items-center justify-center animate-in fade-in duration-100">
-                    <div className={cn("flex items-center gap-2 h-11 px-4 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
-                        {swipeIndicator.type === "seek" && <IconMediaPlay className="w-4 h-4 fill-current shrink-0 text-brand-accent" />}
-                        {swipeIndicator.type === "volume" && <IconMediaVolume2 className="w-4 h-4 shrink-0 text-brand-accent" />}
-                        {swipeIndicator.type === "brightness" && <IconUiStar className="w-4 h-4 shrink-0 text-brand-accent" />}
-                        <span>{swipeIndicator.value}</span>
-                    </div>
-                </div>
-            )}
+            {/* Indicador de gesto (swipe) — fade-in/out con escala */}
+            <AnimatePresence>
+                {swipeIndicator && (
+                    <m.div
+                        key="swipe-indicator"
+                        initial={{ opacity: 0, scale: 0.92 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.92 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute inset-0 z-player-overlay pointer-events-none flex items-center justify-center"
+                    >
+                        <div className={cn("flex items-center gap-2 h-11 px-4 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
+                            {swipeIndicator.type === "seek" && <IconMediaPlay className="w-4 h-4 fill-current shrink-0 text-brand-accent" />}
+                            {swipeIndicator.type === "volume" && <IconMediaVolume2 className="w-4 h-4 shrink-0 text-brand-accent" />}
+                            {swipeIndicator.type === "brightness" && <IconUiStar className="w-4 h-4 shrink-0 text-brand-accent" />}
+                            <span>{swipeIndicator.value}</span>
+                        </div>
+                    </m.div>
+                )}
+            </AnimatePresence>
 
-            {/* Indicadores de ±10s: círculo simple a cada lado */}
-            {(["left", "right"] as const).map((side) => (
-                <div
-                    key={side}
-                    className={cn(
-                        `skip-indicator-${side} absolute top-1/2 -translate-y-1/2 z-player-overlay pointer-events-none transition-opacity duration-200 ease-out`,
-                        side === "left" ? "left-[15%]" : "right-[15%]",
-                        skipFlash === side ? "opacity-100" : "opacity-0"
-                    )}
-                >
-                    <div className={cn("flex flex-col items-center justify-center w-20 h-20 rounded-full text-white", PLAYER_GLASS)}>
-                        <svg className={cn("w-6 h-6 fill-current", side === "left" && "rotate-180")} viewBox="0 0 24 24">
-                            <path d="M5 5.5v13a1 1 0 0 0 1.53.85L15.5 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.53 4.65A1 1 0 0 0 5 5.5z" />
-                        </svg>
-                        <span className="text-2xs font-semibold tracking-wide tabular-nums mt-0.5">{side === "left" ? "-10s" : "+10s"}</span>
-                    </div>
-                </div>
-            ))}
+            {/* Indicadores de ±10s: entrada/salida con spring, idéntico a CenterPlayFlash */}
+            <AnimatePresence>
+                {(["left", "right"] as const).map((side) =>
+                    skipFlash === side ? (
+                        <m.div
+                            key={`skip-${side}`}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.15 }}
+                            transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                            className={cn(
+                                `skip-indicator-${side} absolute top-1/2 -translate-y-1/2 z-player-overlay pointer-events-none`,
+                                side === "left" ? "left-[15%]" : "right-[15%]"
+                            )}
+                        >
+                            <div className={cn("flex flex-col items-center justify-center w-20 h-20 rounded-full text-white", PLAYER_GLASS)}>
+                                <svg className={cn("w-6 h-6 fill-current", side === "left" && "rotate-180")} viewBox="0 0 24 24">
+                                    <path d="M5 5.5v13a1 1 0 0 0 1.53.85L15.5 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.53 4.65A1 1 0 0 0 5 5.5z" />
+                                </svg>
+                                <span className="text-2xs font-semibold tracking-wide tabular-nums mt-0.5">{side === "left" ? "-10s" : "+10s"}</span>
+                            </div>
+                        </m.div>
+                    ) : null
+                )}
+            </AnimatePresence>
 
-            {/* Velocidad 2x mientras se mantiene presionado */}
-            {isHoldSpeedActive && (
-                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-player-overlay pointer-events-none animate-in fade-in duration-150">
-                    <div className={cn("h-9 px-4 flex items-center gap-1.5 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
-                        <span className="text-brand-accent">2x</span> Velocidad
-                    </div>
-                </div>
-            )}
+            {/* Velocidad 2x mientras se mantiene presionado — con exit animation */}
+            <AnimatePresence>
+                {isHoldSpeedActive && (
+                    <m.div
+                        key="hold-speed"
+                        initial={{ opacity: 0, y: -8, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                        transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+                        className="absolute top-20 left-1/2 -translate-x-1/2 z-player-overlay pointer-events-none"
+                    >
+                        <div className={cn("h-9 px-4 flex items-center gap-1.5 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
+                            <span className="text-brand-accent">2x</span> Velocidad
+                        </div>
+                    </m.div>
+                )}
+            </AnimatePresence>
 
             <LoadingErrorOverlay
                 status={state.status}
@@ -661,10 +678,9 @@ export function PlayerUI(props: PlayerUIProps) {
                     episodeLabel={episodeLabel}
                     mediaFormat={mediaFormat}
                     duration={state.duration}
-                    insights={insights}
-                    progressBarRef={domElements.progressBarElement}
-                    thumbRef={domElements.thumbElement}
-                    progressInputRef={domElements.progressInputElement}
+                    progressBarRef={progressBarRef}
+                    thumbRef={thumbRef}
+                    progressInputRef={progressInputRef}
                     handleSeek={actions.handleSeek}
                     handleSeekStart={actions.handleSeekStart}
                     handleSeekEnd={actions.handleSeekEnd}
@@ -675,7 +691,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     toggleMute={actions.toggleMute}
                     volume={state.volume}
                     handleVolume={actions.handleVolume}
-                    timeTextRef={domElements.timeTextElement}
+                    timeTextRef={timeTextRef}
                     audioTracks={state.audioTracks}
                     activeAudioIndex={state.activeAudioIndex}
                     onSelectAudio={actions.onSelectAudio}
@@ -700,15 +716,9 @@ export function PlayerUI(props: PlayerUIProps) {
                     onAutoSkipIntroChange={actions.setAutoSkipIntro}
                     autoSkipOutro={state.autoSkipOutro}
                     onAutoSkipOutroChange={actions.setAutoSkipOutro}
-                    autoSkipFiller={state.autoSkipFiller}
-                    onAutoSkipFillerChange={actions.setAutoSkipFiller}
-                    skipStepSeconds={state.skipStepSeconds}
-                    onSkipStepSecondsChange={actions.setSkipStepSeconds}
                     hlsLevels={state.hlsLevels}
                     activeHlsLevel={state.activeHlsLevel}
                     onHlsLevelChange={actions.setHlsLevel}
-                    showHeatmap={state.showHeatmap}
-                    onShowHeatmapChange={actions.setShowHeatmap}
                     aspectRatio={state.aspectRatio}
                     onAspectRatioChange={(r) => actions.setAspectRatio(r)}
                     subtitleSize={state.subtitleSize}
@@ -719,8 +729,6 @@ export function PlayerUI(props: PlayerUIProps) {
                     onAutoDisableSubtitlesWhenDubbedChange={actions.setAutoDisableSubtitlesWhenDubbed}
                     tvMode={state.tvMode}
                     onTvModeChange={actions.setTvMode}
-                    ambientModeEnabled={state.ambientModeEnabled}
-                    onAmbientModeEnabledChange={actions.setAmbientModeEnabled}
                     marathonMode={state.marathonMode}
                     onMarathonModeChange={actions.setMarathonMode}
                     onNextEpisode={onNextEpisode}

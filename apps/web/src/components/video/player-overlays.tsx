@@ -224,7 +224,7 @@ export function SkipIntroOverlay({
 
                 <kbd className={cn(
                     "hidden sm:inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full",
-                    "text-[11px] font-mono font-semibold",
+                    "text-2xs font-mono font-semibold",
                     "bg-white/10 text-on-surface-variant group-hover:bg-black/10 group-hover:text-black/60"
                 )}>
                     {shortcutKey}
@@ -239,7 +239,7 @@ export function AutoSkipToastOverlay({
     onUndo,
     controlsVisible = true,
 }: {
-    showType: "intro" | "outro" | "segment" | "filler" | null
+    showType: "intro" | "outro" | "segment" | null
     onUndo: () => void
     controlsVisible?: boolean
 }) {
@@ -250,11 +250,8 @@ export function AutoSkipToastOverlay({
         ? "Outro saltado"
         : showType === "segment"
             ? "Segmento saltado"
-            : showType === "filler"
-                ? "Relleno saltado"
-                : "Intro saltada"
-    // Al saltar relleno el reproductor ya pasa al siguiente episodio: no hay nada que deshacer.
-    const canUndo = showType !== "filler"
+            : "Intro saltada"
+    const canUndo = true
 
     return (
         // El contenedor sube sobre la barra de controles con transform (no con `bottom`,

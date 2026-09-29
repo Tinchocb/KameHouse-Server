@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useWebSocket } from "@/hooks/use-websocket"
-import { getApiWebSocketUrl } from "@/api/client/server-url"
+import { useApiWebSocketUrl } from "@/api/client/use-api-websocket-url"
 import { useUpdateContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 
 interface MpvProgressEvent {
@@ -34,7 +34,7 @@ export function useMpvPlayer(options: UseMpvPlayerOptions) {
     const [isAvailable, setIsAvailable] = useState(false)
     const [isActive, setIsActive] = useState(false)
 
-    const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
+    const wsUrl = useApiWebSocketUrl()
     const { sendJsonMessage } = useWebSocket(wsUrl)
     const { mutate: saveProgress } = useUpdateContinuityWatchHistoryItem({ background: true })
 

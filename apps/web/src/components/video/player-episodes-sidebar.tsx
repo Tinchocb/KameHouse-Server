@@ -117,7 +117,7 @@ export const PlayerEpisodesSidebar = React.memo(function PlayerEpisodesSidebar({
                                     aria-label={`Episodio ${epNum}: ${ep.title || ""}`}
                                     aria-current={isCurrent ? "true" : undefined}
                                     className={cn(
-                                        "w-full h-full flex items-center gap-3 p-2 rounded-xl text-left cursor-pointer transition-colors duration-150",
+                                        "w-full h-full flex items-center gap-3 p-2 rounded-xl text-left cursor-pointer transition-[background-color,transform] duration-150 active:scale-[0.98] ease-smooth-out",
                                         isCurrent ? "bg-white/10" : "hover:bg-white/[0.06]"
                                     )}
                                 >

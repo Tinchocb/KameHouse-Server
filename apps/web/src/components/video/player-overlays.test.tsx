@@ -79,11 +79,5 @@ describe("Player Overlays", () => {
             expect(screen.getByText("Segmento saltado")).toBeInTheDocument()
             expect(screen.getByRole("button", { name: "Deshacer salto" })).toBeInTheDocument()
         })
-
-        it("el relleno saltado no ofrece deshacer", () => {
-            render(<AutoSkipToastOverlay showType="filler" onUndo={() => {}} />)
-            expect(screen.getByText("Relleno saltado")).toBeInTheDocument()
-            expect(screen.queryByRole("button", { name: "Deshacer salto" })).not.toBeInTheDocument()
-        })
     })
 })

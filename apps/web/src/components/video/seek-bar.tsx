@@ -1,6 +1,5 @@
 import React from "react"
 import { cn } from "@/components/ui/core/styling"
-import { TimelineHeatmap, type InsightNode } from "@/components/ui/timeline-heatmap"
 import { PlayerSeekPreview } from "./player-seek-preview"
 import type { PlayerPreviewManager } from "./player-preview"
 import type { Chapter } from "./player-bottombar"
@@ -27,8 +26,6 @@ export interface SeekBarProps {
     handleSeek: (e: React.ChangeEvent<HTMLInputElement>) => void
     handleSeekStart?: () => void
     handleSeekEnd?: (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => void
-    showHeatmap?: boolean
-    insights?: InsightNode[]
     skipTimesOp?: { startTime: number; endTime: number; source?: string }
     skipTimesEd?: { startTime: number; endTime: number; source?: string }
     chapters?: Chapter[]
@@ -45,8 +42,6 @@ export const SeekBar = React.memo(function SeekBar({
     handleSeek,
     handleSeekStart,
     handleSeekEnd,
-    showHeatmap,
-    insights = [],
     skipTimesOp,
     skipTimesEd,
     chapters = [],
@@ -151,15 +146,6 @@ export const SeekBar = React.memo(function SeekBar({
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
             >
-                {/* Timeline Heatmap */}
-                {showHeatmap && (
-                    <TimelineHeatmap
-                        duration={duration}
-                        insights={insights}
-                        className="absolute bottom-1/2 inset-x-0 w-full h-3 opacity-0 group-hover/seek:opacity-20 pointer-events-none transition-opacity duration-base"
-                    />
-                )}
-
                 {/* Track Background */}
                 <div className="w-full h-[3px] group-hover/seek:h-[5px] group-focus-within/seek:h-[5px] transition-[height] duration-fast bg-white/25 rounded-full relative flex items-center overflow-visible">
                     {/* Skip OP Marker */}

@@ -7,22 +7,29 @@ import { usePlayerPgs } from "./usePlayerPgs"
 import { usePlayerMediaSession } from "./usePlayerMediaSession"
 import { PlayerPreviewManager } from "./player-preview"
 import { usePlayerHls } from "./usePlayerHls"
-import { useAnimeTracking } from "@/api/hooks/useAnimeTracking"
 import { useWebSocket } from "@/hooks/use-websocket"
-import { getApiWebSocketUrl } from "@/api/client/server-url"
-import { WSEvents, type WebSocketMessage } from "@/lib/server/ws-events"
+import { useApiWebSocketUrl } from "@/api/client/use-api-websocket-url"
 import { useMediastreamShutdownTranscodeStream, usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { usePlayerStore } from "@/lib/store"
 import { persistLibraryPatch } from "@/lib/server/persist-settings"
 import { useShallow } from "zustand/react/shallow"
-import { usePlayerProgressSync } from "@/api/hooks/usePlayerProgressSync"
-import { useGetStatus, useGetSettings } from "@/api/hooks/settings.hooks"
+import { useGetStatus } from "@/api/hooks/settings.hooks"
 import type { PlayerCoreProps, PlayerCore, PlayerStats } from "./player-core.types"
 
 import { usePlayerSkip } from "./usePlayerSkip"
 import { usePlayerVolume } from "./usePlayerVolume"
 import { usePlayerTrackSelection } from "./usePlayerTrackSelection"
 import { resolveLanUrl } from "./lan-url"
+import { usePlayerDuration } from "./usePlayerDuration"
+import { usePlayerSeek } from "./usePlayerSeek"
+import { usePlayerFullscreen } from "./usePlayerFullscreen"
+import { usePlayerBackendSync } from "./usePlayerBackendSync"
+import { formatPlaybackTime } from "./format-playback-time"
+import { usePlayerStreamSwitch } from "./usePlayerStreamSwitch"
+import { usePlayerPlaybackPrefs } from "./usePlayerPlaybackPrefs"
+import { usePlayerControlsVisibility } from "./usePlayerControlsVisibility"
+import { usePlayerVisibilityPause } from "./usePlayerVisibilityPause"
+import { usePlayerHlsLevel } from "./usePlayerHlsLevel"
 
 
 
@@ -42,7 +49,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         mediaId,
         episodeNumber,
         malId,
-        isFillerEpisode = false,
         clientId,
         mediaFormat,
         title,
@@ -73,68 +79,29 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     
     const [previewManager, setPreviewManager] = useState<PlayerPreviewManager | null>(null)
 
-    const progressBarRef = useRef<HTMLDivElement>(null)
     const thumbRef = useRef<HTMLDivElement>(null)
     const progressInputRef = useRef<HTMLInputElement>(null)
-    const timeTextRef = useRef<HTMLSpanElement>(null)
 
-    const isSeekingRef = useRef(false)
-    const lastSeekTimeRef = useRef(0)
-    const pendingSeekTimeRef = useRef<number | null>(null)
-    const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const flashTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     const [isPlaying, setIsPlaying] = useState(false)
-    const [duration, setDurationState] = useState(0)
-
-    // El navegador puede reportar duration = Infinity/NaN en direct play de MKV
-    // sin duración en el header. Si ese valor entra al estado, toda la lógica de
-    // "cerca del final" (auto-skip de outro, avance marathon, panel de siguiente
-    // episodio) se rompe: `total - curr <= N` nunca es cierto. Saneamos acá y
-    // caemos a la duración de ffprobe (metadataDuration) que el server ya conoce.
-    const metadataDurationRef = useRef(metadataDuration)
-    useLayoutEffect(() => {
-        metadataDurationRef.current = metadataDuration
-    }, [metadataDuration])
-    const setDuration = useCallback((dur: number) => {
-        if (Number.isFinite(dur) && dur > 0) {
-            setDurationState(dur)
-            return
-        }
-        const meta = metadataDurationRef.current
-        if (meta && Number.isFinite(meta) && meta > 0) {
-            setDurationState(meta)
-        }
-        // Sin valor confiable: conservar el anterior en vez de guardar Infinity/0.
-    }, [])
-
-    // Semilla inicial: si la metadata del server llega antes (o el navegador nunca
-    // emite un durationchange finito), partimos de la duración de ffprobe.
-    useEffect(() => {
-        if (duration === 0 && metadataDuration && Number.isFinite(metadataDuration) && metadataDuration > 0) {
-            const timer = setTimeout(() => setDurationState(metadataDuration), 0)
-            return () => clearTimeout(timer)
-        }
-    }, [metadataDuration, duration])
+    // Duración saneada con fallback a ffprobe (ver usePlayerDuration).
+    const { duration, setDuration } = usePlayerDuration(metadataDuration)
     // Volumen con persistencia (hook extraído; ver usePlayerVolume).
-    const [isFullscreen, setIsFullscreen] = useState(false)
-    const [controlsVisible, setControlsVisible] = useState(true)
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
     const { volume, isMuted, setVolume, setIsMuted, handleVolume, toggleMute } = usePlayerVolume({ videoRef, status })
-    // true durante un cambio de stream mid-playback (ej. direct→transcode por cambio de pista de audio).
-    // En ese caso el overlay de loading debe ser semitransparente (no negro sólido) para que
-    // la imagen congelada del video sea visible y la UI no parezca rota.
-    const [isStreamSwitching, setIsStreamSwitching] = useState(false)
-    // Motivo del cambio de stream, para que el overlay diga lo que realmente pasa.
-    const [streamSwitchReason, setStreamSwitchReason] = useState<"audio" | "source" | "fallback">("audio")
-    // usePlayerHls solo marca el switch en el fallback direct→transcode.
-    const setFallbackStreamSwitching = useCallback((switching: boolean) => {
-        if (switching) setStreamSwitchReason("fallback")
-        setIsStreamSwitching(switching)
-    }, [])
+    // Cambios de stream a mitad de reproducción (ver usePlayerStreamSwitch).
+    const { isStreamSwitching, streamSwitchReason, setFallbackStreamSwitching, onAudioStreamSwitch, switchSource } = usePlayerStreamSwitch({
+        videoRef,
+        streamSwitchResumeRef,
+        status,
+        mediaId,
+        episodeNumber,
+        streamType,
+        onRequestStreamTypeChange,
+    })
     const [errorMsg, setErrorMsg] = useState("")
     const [isBuffering, setIsBuffering] = useState(false)
-    const [isSeeking, setIsSeeking] = useState(false)
     const [flash, setFlash] = useState<"play" | "pause" | null>(null)
     const [retryNonce, setRetryNonce] = useState(0)
 
@@ -149,20 +116,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [isJassubActive, setIsJassubActive] = useState(false)
     const [isPgsLoading, setIsPgsLoading] = useState(false)
     const [isPgsActive, setIsPgsActive] = useState(false)
-    const [hlsLevels, setHlsLevels] = useState<{ index: number; label: string; height: number }[]>([])
-    const [activeHlsLevel, setActiveHlsLevel] = useState<number>(-1) // -1 = auto
+    const { hlsLevels, setHlsLevels, activeHlsLevel, setHlsLevel } = usePlayerHlsLevel({ hlsRef })
 
-    const [isSettingsOpen, setIsSettingsOpenState] = useState(false)
-    // Mirror ref so the auto-hide setTimeout callback always sees the current value
-    // (setState closures capture the value at the time of creation).
-    const isSettingsOpenRef = useRef(false)
-    const setIsSettingsOpen = useCallback((action: React.SetStateAction<boolean>) => {
-        setIsSettingsOpenState(prev => {
-            const next = typeof action === "function" ? action(prev) : action
-            isSettingsOpenRef.current = next
-            return next
-        })
-    }, []) as React.Dispatch<React.SetStateAction<boolean>>
+    // Auto-ocultado de controles y panel de ajustes (ver usePlayerControlsVisibility).
+    const { controlsVisible, setControlsVisible, isSettingsOpen, setIsSettingsOpen, triggerControlsVisibility } = usePlayerControlsVisibility({ isPlaying })
 
     const {
         setFullscreen: setGlobalFullscreen,
@@ -170,16 +127,12 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setAutoSkipIntro,
         autoSkipOutro: autoSkipOutroPref,
         setAutoSkipOutro,
-        autoSkipFiller: autoSkipFillerPref,
-        setAutoSkipFiller: _setAutoSkipFiller,
         skipStepSeconds: skipStepSecondsPref,
         setSkipStepSeconds: setSkipStepSecondsPref,
         playbackRate: playbackRatePref,
         setPlaybackRate: setPlaybackRatePref,
         preferredAudioLang,
         preferredSubtitleLang,
-        showHeatmap: showHeatmapPref,
-        setShowHeatmap: setShowHeatmapPref,
         aspectRatio: globalAspectRatioPref,
         setAspectRatio: setGlobalAspectRatioPref,
         aspectRatioBySeries,
@@ -192,8 +145,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         marathonMode,
         tvMode,
         setTvMode,
-        ambientModeEnabled,
-        setAmbientModeEnabled,
     } = usePlayerStore(
         // Note: playerVolume/setPlayerVolume already destructured above (D3).
         useShallow(state => ({
@@ -202,16 +153,12 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setAutoSkipIntro: state.setAutoSkipIntro,
             autoSkipOutro: state.autoSkipOutro,
             setAutoSkipOutro: state.setAutoSkipOutro,
-            autoSkipFiller: state.autoSkipFiller,
-            setAutoSkipFiller: state.setAutoSkipFiller,
             skipStepSeconds: state.skipStepSeconds,
             setSkipStepSeconds: state.setSkipStepSeconds,
             playbackRate: state.playbackRate,
             setPlaybackRate: state.setPlaybackRate,
             preferredAudioLang: state.preferredAudioLang,
             preferredSubtitleLang: state.preferredSubtitleLang,
-            showHeatmap: state.showHeatmap,
-            setShowHeatmap: state.setShowHeatmap,
             aspectRatio: state.aspectRatio,
             setAspectRatio: state.setAspectRatio,
             aspectRatioBySeries: state.aspectRatioBySeries,
@@ -225,11 +172,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setMarathonMode: state.setMarathonMode,
             tvMode: state.tvMode,
             setTvMode: state.setTvMode,
-            ambientModeEnabled: state.ambientModeEnabled,
-            setAmbientModeEnabled: state.setAmbientModeEnabled,
         }))
     )
     
+    const { isFullscreen, toggleFullscreen } = usePlayerFullscreen({ containerRef, videoRef, setGlobalFullscreen })
+
     // Aspect ratio efectivo: el override de esta serie gana; el global es fallback.
     // El setter escribe en el mapa por serie cuando hay mediaId, así el ajuste
     // queda recordado para esta serie sin pisar el de las demás.
@@ -242,13 +189,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [mediaId, setAspectRatioForSeries, setGlobalAspectRatioPref])
 
-    // Cambio de pista que reconstruye el stream: retomar en el mismo punto y
-    // marcar el switch para que el overlay use fondo semitransparente.
-    const onAudioStreamSwitch = useCallback((resumeAt: number | null) => {
-        streamSwitchResumeRef.current = resumeAt
-        setStreamSwitchReason("audio")
-        setIsStreamSwitching(true)
-    }, [])
     const {
         audioTracks,
         setAudioTracks,
@@ -273,49 +213,15 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [showShortcuts, setShowShortcuts] = useState(false)
     const [statsData, setStatsData] = useState<PlayerStats | null>(null)
 
-    const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const lastReportedTimeRef = useRef(0)
 
-    const wsUrl = useMemo(() => getApiWebSocketUrl(), [])
+    const wsUrl = useApiWebSocketUrl()
     const { sendJsonMessage } = useWebSocket(wsUrl)
-    const lastSentHeartbeatRef = useRef(0)
     const lastStatsUpdateRef = useRef(0)
-
-    const sendHeartbeat = useCallback((curr: number, dur: number) => {
-        if (!mediaId || !episodeNumber) return
-        const progress = dur > 0 ? curr / dur : 0
-        sendJsonMessage({
-            type: "native-player",
-            payload: {
-                eventType: "playback-heartbeat-progress",
-                mediaId,
-                episodeNumber,
-                currentTime: curr,
-                duration: dur,
-                progress: Math.round(progress * 10000) / 10000,
-            }
-        })
-    }, [mediaId, episodeNumber, sendJsonMessage])
 
     const chapters = useMemo(() => {
         return backendTracks?.chapters || []
     }, [backendTracks])
-
-    const triggerControlsVisibility = useCallback(() => {
-        setControlsVisible(true)
-        if (controlsTimeoutRef.current) {
-            clearTimeout(controlsTimeoutRef.current)
-        }
-        controlsTimeoutRef.current = setTimeout(() => {
-            // Do not auto-hide while the settings panel is open: the panel is a
-            // child of .player-bottom-bar and GSAP's autoAlpha:0 makes it
-            // non-interactive even though isSettingsOpen stays true.
-            if (isPlaying && !isSettingsOpenRef.current) {
-                setControlsVisible(false)
-                setIsSettingsOpen(false)
-            }
-        }, 3000)
-    }, [isPlaying, setIsSettingsOpen])
 
     const {
         skipTimesOp,
@@ -351,8 +257,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         mediaFormat,
         autoSkipIntroPref,
         autoSkipOutroPref,
-        autoSkipFillerPref,
-        isFillerEpisode,
         skipStepSecondsPref,
         tvMode,
         hasNextEpisode,
@@ -367,6 +271,13 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         streamType,
         mediaId,
         preferredAudioLang,
+    })
+
+    // Seek con throttle y scrub sin inundar de peticiones (ver usePlayerSeek).
+    const { progressBarRef, timeTextRef, isSeeking, setIsSeeking, isSeekingRef, handleSeekStart, handleSeek, handleSeekEnd, skipTime } = usePlayerSeek({
+        videoRef,
+        checkManualSkipOverrides,
+        triggerControlsVisibility,
     })
 
     const { mutate: shutdownTranscode } = useMediastreamShutdownTranscodeStream()
@@ -391,47 +302,17 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [streamUrl, playableUrl, streamType, preferredAudioLang, preloadMutate])
 
-    const { data: serverSettings } = useGetSettings()
-    const enableWatchContinuity = serverSettings?.library?.enableWatchContinuity ?? true
 
-    const { onProgress: onTrackingProgress, reset: resetTracking } = useAnimeTracking({
+    // Heartbeat, tracking y continuidad hacia el servidor (ver usePlayerBackendSync).
+    const { flushBackendSync } = usePlayerBackendSync({
+        videoRef,
         mediaId,
         episodeNumber,
         filepath: streamUrl || playableUrl,
-        enabled: !!(mediaId && episodeNumber && enableWatchContinuity),
+        resetKey: playableUrl,
+        duration,
+        sendJsonMessage,
     })
-
-    const { onProgress: onSyncProgress } = usePlayerProgressSync({
-        mediaId,
-        episodeNumber,
-        filepath: streamUrl || playableUrl,
-        enabled: !!(mediaId && episodeNumber && enableWatchContinuity),
-    })
-
-    const lastBackendSyncTimeRef = useRef(0)
-
-    const flushBackendSync = useCallback((force = false) => {
-        const video = videoRef.current
-        if (!video) return
-        const curr = video.currentTime
-        const rawDur = video.duration
-        const total = Number.isFinite(rawDur) && rawDur > 0 ? rawDur : duration
-        const now = Date.now()
-
-        if (force || now - lastBackendSyncTimeRef.current >= 5000) {
-            lastBackendSyncTimeRef.current = now
-            lastSentHeartbeatRef.current = now
-            sendHeartbeat(curr, total)
-            onSyncProgress(curr, total)
-            onTrackingProgress(curr, total)
-        }
-    }, [duration, sendHeartbeat, onSyncProgress, onTrackingProgress])
-
-    useEffect(() => {
-        return () => {
-            flushBackendSync(true)
-        }
-    }, [flushBackendSync])
 
     useEffect(() => {
         return () => {
@@ -441,42 +322,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [clientId, shutdownTranscode])
 
-    useEffect(() => {
-        resetTracking()
-    }, [mediaId, episodeNumber, playableUrl, resetTracking])
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            // (Las pistas se resetean en usePlayerTrackSelection.)
-            // Nuevo episodio o URL completamente distinta: nunca es un stream-switch de audio.
-            // Resetear para que el loading inicial use fondo negro sólido.
-            setIsStreamSwitching(false)
-        }, 0)
-        return () => clearTimeout(timer)
-    }, [playableUrl])
-
-    // Cuando el stream está listo (ya sea tras carga inicial o tras un switch de audio),
-    // desactivar la bandera de stream-switching para limpiar el overlay.
-    useEffect(() => {
-        if (status === "ready") {
-            const timer = setTimeout(() => {
-                setIsStreamSwitching(false)
-            }, 0)
-            return () => clearTimeout(timer)
-        }
-    }, [status])
-
-    const formatTime = useCallback((secs: number) => {
-        if (!secs || isNaN(secs)) return "00:00"
-        const h = Math.floor(secs / 3600)
-        const m = Math.floor((secs % 3600) / 60)
-        const s = Math.floor(secs % 60)
-
-        const mm = m.toString().padStart(2, '0')
-        const ss = s.toString().padStart(2, '0')
-
-        return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
-    }, [])
 
     // HLS and Native video stream management hook
     usePlayerHls({
@@ -537,15 +382,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [playableUrl, streamType])
 
-    useEffect(() => {
-        Promise.resolve().then(() => {
-            triggerControlsVisibility()
-        })
-        return () => {
-            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
-        }
-    }, [triggerControlsVisibility])
-
     const togglePlay = useCallback(() => {
         const video = videoRef.current
         if (!video || status !== "ready") return
@@ -569,136 +405,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [status, flushBackendSync])
 
-    // Cambio de fuente desde el menú (Direct Play ↔ Transcodificado): retoma en el
-    // mismo punto, igual que el cambio de pista de audio. Antes el nuevo stream
-    // arrancaba desde 0.
-    const switchSource = useCallback((type: string) => {
-        if (type === streamType) return
-        if (type !== "direct" && type !== "transcode") return
-        if (!onRequestStreamTypeChange) return
-        const current = videoRef.current?.currentTime ?? 0
-        streamSwitchResumeRef.current = Number.isFinite(current) && current > 0 ? current : null
-        setStreamSwitchReason("source")
-        setIsStreamSwitching(true)
-        // Elección explícita del usuario: igual que el cambio de pista de audio,
-        // force permite transcodificar aunque el toggle global esté apagado.
-        onRequestStreamTypeChange(type, { force: type === "transcode" })
-    }, [streamType, onRequestStreamTypeChange])
 
-    const performSeek = useCallback((time: number) => {
-        const video = videoRef.current
-        if (!video || !Number.isFinite(time)) return
 
-        setIsSeeking(true)
-        checkManualSkipOverrides(time)
-
-        // Visual update of elements instantly
-        if (progressBarRef.current) {
-            const percent = video.duration > 0 ? (time / video.duration) : 0
-            progressBarRef.current.style.transform = `scaleX(${percent})`
-        }
-        if (timeTextRef.current) {
-            timeTextRef.current.innerText = formatTime(time)
-        }
-
-        if (isSeekingRef.current) {
-            // Do not perform actual video seek while dragging to avoid flooding requests
-            return
-        }
-
-        const now = Date.now()
-        const SEEK_THROTTLE_MS = 180
-
-        if (now - lastSeekTimeRef.current >= SEEK_THROTTLE_MS) {
-            video.currentTime = time
-            lastSeekTimeRef.current = now
-            pendingSeekTimeRef.current = null
-        } else {
-            pendingSeekTimeRef.current = time
-            if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
-            seekTimeoutRef.current = setTimeout(() => {
-                const latestTime = pendingSeekTimeRef.current
-                if (latestTime !== null && video) {
-                    video.currentTime = latestTime
-                    lastSeekTimeRef.current = Date.now()
-                    pendingSeekTimeRef.current = null
-                }
-            }, SEEK_THROTTLE_MS - (now - lastSeekTimeRef.current))
-        }
-    }, [checkManualSkipOverrides, formatTime])
-
-    const handleSeekStart = useCallback(() => {
-        isSeekingRef.current = true
-    }, [])
-
-    const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = parseFloat(e.target.value)
-        performSeek(val)
-        triggerControlsVisibility()
-    }, [performSeek, triggerControlsVisibility])
-
-    const handleSeekEnd = useCallback((e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => {
-        const video = videoRef.current
-        if (!video) return
-
-        isSeekingRef.current = false
-        setIsSeeking(false)
-        if (seekTimeoutRef.current) {
-            clearTimeout(seekTimeoutRef.current)
-            seekTimeoutRef.current = null
-        }
-
-        const val = parseFloat(e.currentTarget.value)
-        if (!Number.isFinite(val)) return
-        checkManualSkipOverrides(val)
-        video.currentTime = val
-        lastSeekTimeRef.current = Date.now()
-        pendingSeekTimeRef.current = null
-
-        triggerControlsVisibility()
-    }, [checkManualSkipOverrides, triggerControlsVisibility])
-
-    useEffect(() => {
-        return () => {
-            if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current)
-        }
-    }, [])
-
-    const skipTime = useCallback((amount: number) => {
-        const video = videoRef.current
-        if (!video) return
-        const dur = Number.isFinite(video.duration) ? video.duration : Infinity
-        const target = Math.max(0, Math.min(dur, video.currentTime + amount))
-
-        performSeek(target)
-        triggerControlsVisibility()
-    }, [performSeek, triggerControlsVisibility])
-
-    const toggleFullscreen = useCallback(() => {
-        const container = containerRef.current
-        const video = videoRef.current
-        if (!container) return
-
-        if (!document.fullscreenElement) {
-            if (container.requestFullscreen) {
-                container.requestFullscreen()
-                    .then(() => setIsFullscreen(true))
-                    .catch((err) => console.error("Error entering fullscreen:", err))
-            } else if (video && (video as HTMLVideoElement & { webkitEnterFullscreen?: () => void }).webkitEnterFullscreen) {
-                try {
-                    ;(video as HTMLVideoElement & { webkitEnterFullscreen: () => void }).webkitEnterFullscreen()
-                    setIsFullscreen(true)
-                } catch (err) {
-                    console.error("webkitEnterFullscreen error:", err)
-                }
-            }
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen()
-                    .then(() => setIsFullscreen(false))
-            }
-        }
-    }, [])
 
     const handleToggleSubtitle = useCallback(() => {
         if (onToggleSubtitle) {
@@ -714,46 +422,14 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
     }, [onToggleSubtitle, subtitleTracks, activeSubtitleIndex, preferredSubtitleLang, onSelectSubtitle])
 
-    const changePlaybackRate = useCallback((rate: number) => {
-        // La preferencia se guarda siempre (antes se perdía si aún no había <video>);
-        // defaultPlaybackRate hace que sobreviva al load() de un cambio de fuente.
-        setPlaybackRatePref(rate)
-        const video = videoRef.current
-        if (!video) return
-        video.defaultPlaybackRate = rate
-        video.playbackRate = rate
-    }, [setPlaybackRatePref])
+    const { changePlaybackRate } = usePlayerPlaybackPrefs({
+        videoRef,
+        status,
+        playbackRate: playbackRatePref,
+        setPlaybackRate: setPlaybackRatePref,
+        loopEnabled: loopEnabledPref,
+    })
 
-    useEffect(() => {
-        const video = videoRef.current
-        if (video) {
-            video.loop = loopEnabledPref
-        }
-    }, [loopEnabledPref, status])
-
-    useEffect(() => {
-        const video = videoRef.current
-        if (video) {
-            video.defaultPlaybackRate = playbackRatePref
-            if (video.playbackRate !== playbackRatePref) video.playbackRate = playbackRatePref
-        }
-    }, [status, playbackRatePref])
-
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            const isFs = Boolean(document.fullscreenElement)
-            setIsFullscreen(isFs)
-            setGlobalFullscreen(isFs)
-        }
-        document.addEventListener("fullscreenchange", handleFullscreenChange)
-        return () => {
-            document.removeEventListener("fullscreenchange", handleFullscreenChange)
-            setGlobalFullscreen(false)
-            if (document.fullscreenElement) {
-                document.exitFullscreen().catch(err => console.error("Error exiting fullscreen on unmount:", err))
-            }
-        }
-    }, [setGlobalFullscreen])
 
     // Media Session API hook (moved here to ensure togglePlay and skipTime are defined)
     usePlayerMediaSession({
@@ -767,41 +443,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         hasNextEpisode,
     })
 
-    useEffect(() => {
-        const desktopApi = window.desktop
-        if (!desktopApi) return
 
-        const unsub = desktopApi.on("window:fullscreen", (...args: unknown[]) => {
-            const isFs = args[0] as boolean
-            setIsFullscreen(isFs)
-            setGlobalFullscreen(isFs)
-        })
-
-        return () => {
-            unsub?.()
-        }
-    }, [setGlobalFullscreen])
-
-    // Handle Page Visibility / App Suspend (especially on Tizen Smart TVs)
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                const video = videoRef.current
-                if (video && !video.paused) {
-                    video.pause()
-                    setIsPlaying(false)
-                }
-            }
-        }
-        document.addEventListener("visibilitychange", handleVisibilityChange)
-        document.addEventListener("webkitvisibilitychange", handleVisibilityChange)
-        document.addEventListener("tizenvisibilitywrapper", handleVisibilityChange)
-        return () => {
-            document.removeEventListener("visibilitychange", handleVisibilityChange)
-            document.removeEventListener("webkitvisibilitychange", handleVisibilityChange)
-            document.removeEventListener("tizenvisibilitywrapper", handleVisibilityChange)
-        }
-    }, [setIsPlaying, videoRef])
+    usePlayerVisibilityPause({ videoRef, setIsPlaying })
 
     // Keyboard shortcuts hook
     usePlayerShortcuts({
@@ -858,7 +501,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
 
         if (timeTextRef.current) {
-            timeTextRef.current.innerText = formatTime(curr)
+            timeTextRef.current.innerText = formatPlaybackTime(curr)
         }
 
         if (onProgress && Math.abs(curr - lastReportedTimeRef.current) >= 10) {
@@ -867,9 +510,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         }
 
         const now = Date.now()
-        if (now - lastBackendSyncTimeRef.current >= 5000) {
-            flushBackendSync(false)
-        }
+        // Sin force: flushBackendSync respeta su propio intervalo.
+        flushBackendSync(false)
 
         processTimeUpdates(curr, total)
 
@@ -886,94 +528,19 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 source: playableUrl.substring(0, 50) + "...",
             })
         }
-    }, [showStats, lastStatsUpdateRef, processTimeUpdates, onProgress, flushBackendSync, playableUrl, formatTime, duration])
+    }, [showStats, processTimeUpdates, onProgress, flushBackendSync, playableUrl, duration, isSeekingRef, progressBarRef, timeTextRef])
 
-    // Apply playback rate instantly
-    useEffect(() => {
-        const video = videoRef.current
-        if (video && video.playbackRate !== playbackRatePref) {
-            video.playbackRate = playbackRatePref
-        }
-    }, [playbackRatePref])
-
+    // Última versión de handleTimeUpdate para el efecto de abajo, que solo debe
+    // re-evaluar al cambiar las preferencias de skip (no en cada render).
     const handleTimeUpdateRef = useRef(handleTimeUpdate)
-    // eslint-disable-next-line react-hooks/refs -- intentional: update ref after definition to avoid stale closure
-    handleTimeUpdateRef.current = handleTimeUpdate
+    useLayoutEffect(() => {
+        handleTimeUpdateRef.current = handleTimeUpdate
+    }, [handleTimeUpdate])
 
-    // Force skip check when preferences change (including marathon mode toggle)
     useEffect(() => {
         handleTimeUpdateRef.current()
-    }, [autoSkipIntroPref, autoSkipOutroPref, autoSkipFillerPref, marathonMode])
+    }, [autoSkipIntroPref, autoSkipOutroPref, marathonMode])
 
-    const handleSetHlsLevel = useCallback((levelIndex: number) => {
-        const hls = hlsRef.current
-        if (!hls) {
-            console.warn("[player-core] handleSetHlsLevel called without active HLS instance")
-            return
-        }
-        try {
-            if (levelIndex === -1) {
-                // Auto: reactivar ABR asignando currentLevel / nextLevel a -1
-                hls.currentLevel = -1
-                hls.nextLevel = -1
-            } else {
-                hls.currentLevel = levelIndex
-                hls.nextLevel = levelIndex
-            }
-            setActiveHlsLevel(levelIndex)
-        } catch (err) {
-            console.warn("[player-core] handleSetHlsLevel failed:", err)
-        }
-    }, [])
-
-    // Remote-control commands from the server (extensions, TV remote).
-    // The hook only exists while a player is mounted, so commands never hit
-    // a dead player. Broadcasts reach every tab with a player open — accepted
-    // tradeoff until the payload carries a routable client/media id.
-    const handleVideocoreCommand = useCallback((msg: WebSocketMessage) => {
-        if (msg.type !== WSEvents.VIDEOCORE) return
-        const inner = (msg.payload ?? {}) as { type?: string; payload?: unknown }
-        const video = videoRef.current
-        switch (inner.type) {
-            case "pause": {
-                if (!video || video.paused || status !== "ready") return
-                video.pause()
-                flushBackendSync(true)
-                setIsPlaying(false)
-                break
-            }
-            case "resume": {
-                if (!video || !video.paused || status !== "ready") return
-                video.play()
-                    .then(() => setIsPlaying(true))
-                    .catch(() => setIsPlaying(false))
-                break
-            }
-            case "seek": {
-                if (typeof inner.payload !== "number" || !Number.isFinite(inner.payload)) return
-                if (!video || status !== "ready") return
-                performSeek(video.currentTime + inner.payload)
-                break
-            }
-            case "seek-to": {
-                if (typeof inner.payload !== "number" || !Number.isFinite(inner.payload)) return
-                if (!video || status !== "ready") return
-                const dur = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : Infinity
-                performSeek(Math.max(0, Math.min(dur, inner.payload)))
-                break
-            }
-            case "terminate": {
-                if (video && !video.paused) video.pause()
-                setIsPlaying(false)
-                setStatus("error")
-                setErrorMsg("Reproducción terminada por el servidor")
-                break
-            }
-            default:
-                break
-        }
-    }, [status, flushBackendSync, performSeek])
-    useWebSocket(wsUrl, handleVideocoreCommand)
 
     const domElements = useMemo(() => ({
         videoElement: videoRef as React.RefObject<HTMLVideoElement>,
@@ -983,16 +550,14 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         thumbElement: thumbRef as React.RefObject<HTMLDivElement>,
         progressInputElement: progressInputRef as React.RefObject<HTMLInputElement>,
         timeTextElement: timeTextRef as React.RefObject<HTMLSpanElement>,
-    }), [])
+    }), [progressBarRef, timeTextRef])
 
     const state = useMemo(() => ({
         isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
         autoSkipIntro: autoSkipIntroPref,
         autoSkipOutro: autoSkipOutroPref,
-        autoSkipFiller: autoSkipFillerPref,
         skipStepSeconds: skipStepSecondsPref,
         playbackRate: playbackRatePref,
-        showHeatmap: showHeatmapPref,
         aspectRatio: aspectRatioPref,
         subtitleSize: subtitleSizePref,
         loopEnabled: loopEnabledPref,
@@ -1006,7 +571,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             return videoRef.current?.currentTime || 0
         },
         autoDisableSubtitlesWhenDubbed,
-        ambientModeEnabled,
         marathonMode,
         skipTimesOp,
         skipTimesEd,
@@ -1015,7 +579,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         absoluteLanUrl,
         serverIPs,
         serverPort,
-    }), [isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast, autoSkipIntroPref, autoSkipOutroPref, autoSkipFillerPref, skipStepSecondsPref, playbackRatePref, showHeatmapPref, aspectRatioPref, subtitleSizePref, loopEnabledPref, showStats, showShortcuts, statsData, hlsLevels, activeHlsLevel, previewManager, autoDisableSubtitlesWhenDubbed, ambientModeEnabled, marathonMode, skipTimesOp, skipTimesEd, chapters, activeChapter, absoluteLanUrl, serverIPs, serverPort])
+    }), [isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast, autoSkipIntroPref, autoSkipOutroPref, skipStepSecondsPref, playbackRatePref, aspectRatioPref, subtitleSizePref, loopEnabledPref, showStats, showShortcuts, statsData, hlsLevels, activeHlsLevel, previewManager, autoDisableSubtitlesWhenDubbed, marathonMode, skipTimesOp, skipTimesEd, chapters, activeChapter, absoluteLanUrl, serverIPs, serverPort])
 
     const actions = useMemo(() => ({
         setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleSubtitle: handleToggleSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate,
@@ -1024,15 +588,12 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         // store desde el servidor al montarse y, si no, revertía lo cambiado aquí.
         setAutoSkipIntro: (val: boolean) => { handleSetAutoSkipIntro(val); persistLibraryPatch({ autoSkipIntro: val }) },
         setAutoSkipOutro: (val: boolean) => { handleSetAutoSkipOutro(val); persistLibraryPatch({ autoSkipOutro: val }) },
-        setAutoSkipFiller: (val: boolean) => { usePlayerStore.getState().setAutoSkipFiller(val); persistLibraryPatch({ autoSkipFiller: val }) },
         setSkipStepSeconds: setSkipStepSecondsPref,
-        setHlsLevel: handleSetHlsLevel,
-        setShowHeatmap: setShowHeatmapPref,
+        setHlsLevel,
         setAspectRatio: setAspectRatioPref,
         setSubtitleSize: setSubtitleSizePref,
         setLoopEnabled: setLoopEnabledPref,
         setTvMode: handleSetTvMode,
-        setAmbientModeEnabled,
         setMarathonMode: (val: boolean) => { handleSetMarathonMode(val); persistLibraryPatch({ marathonMode: val }) },
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { usePlayerStore.getState().setAutoDisableSubtitlesWhenDubbed(val); persistLibraryPatch({ autoDisableSubtitlesWhenDubbed: val }) },
         skipToNextChapter,
@@ -1040,7 +601,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         retryStream,
         switchSource,
         flushProgressSync: () => flushBackendSync(true),
-    }), [switchSource, setDuration, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, handleToggleSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, handleSetHlsLevel, handleSetTvMode, handleSetMarathonMode, skipToNextChapter, skipToPrevChapter, retryStream, flushBackendSync, setSkipStepSecondsPref, setShowHeatmapPref, setAspectRatioPref, setSubtitleSizePref, setLoopEnabledPref, setAmbientModeEnabled])
+    }), [switchSource, setDuration, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, handleToggleSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, setHlsLevel, handleSetTvMode, handleSetMarathonMode, skipToNextChapter, skipToPrevChapter, retryStream, flushBackendSync, setSkipStepSecondsPref, setAspectRatioPref, setSubtitleSizePref, setLoopEnabledPref])
 
     return { domElements, state, actions }
 }

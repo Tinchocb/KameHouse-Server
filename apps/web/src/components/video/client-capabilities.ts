@@ -58,3 +58,27 @@ export function getClientCapabilities(): Mediastream_ClientCapabilities {
     }
     return cached
 }
+
+/**
+ * El motor soporta cambiar de pista de audio en direct play (`video.audioTracks`).
+ * En Chromium/WebView2 está detrás del flag Blink `AudioVideoTracks`, que la app
+ * de escritorio activa; en un navegador común no está y se cae al transcode.
+ */
+export function supportsNativeAudioTracks(): boolean {
+    return typeof HTMLMediaElement !== "undefined" && "audioTracks" in HTMLMediaElement.prototype
+}
+
+/**
+ * Si el navegador decodifica este codec de audio en direct play. Chromium omite
+ * de `video.audioTracks` las pistas que no decodifica (ej. AC3 en Chrome), así
+ * que esto también define qué pistas aparecen en la lista nativa.
+ */
+export function isAudioCodecNativelyPlayable(codec: string | undefined): boolean {
+    const c = (codec || "").toLowerCase()
+    if (["aac", "mp3", "opus", "vorbis", "flac"].includes(c) || c.startsWith("pcm")) return true
+    const caps = getClientCapabilities()
+    if (c === "ac3") return caps.ac3
+    if (c === "eac3") return caps.eac3
+    if (c === "dts") return caps.dts
+    return false
+}

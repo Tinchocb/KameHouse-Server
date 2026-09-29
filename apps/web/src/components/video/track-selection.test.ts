@@ -5,6 +5,7 @@ import {
     computeSubtitleTracksKey,
     matchPendingAudioTrack,
     matchPreferredAudioTrack,
+    resolveNativeAudioTrackPosition,
     isAudioTrackDubbed,
     matchPreferredSubtitleTrack,
     resolveAutoSubtitleTarget,
@@ -321,5 +322,53 @@ describe("track-selection", () => {
             })
             expect(noMatch).toBeNull()
         })
+    })
+})
+
+describe("matchPreferredAudioTrack: latino en la mejor calidad", () => {
+    const tracks = [
+        { index: 0, language: "ja", title: "Japonés", codec: "flac", channels: 2 },
+        { index: 1, language: "es", title: "Latino (TV)", codec: "aac", channels: 2 },
+        { index: 2, language: "es", title: "Latino Remasterizado", codec: "flac", channels: 6 },
+        { index: 3, language: "es", title: "Castellano", codec: "flac", channels: 8 },
+    ]
+
+    it("elige la pista latina de mejor calidad", () => {
+        expect(matchPreferredAudioTrack({ tracks, preferredAudioProfile: "latino" })?.index).toBe(2)
+    })
+
+    it("si el latino solo está en baja calidad, igual lo prefiere", () => {
+        const onlyLow = tracks.filter(t => t.index !== 2)
+        expect(matchPreferredAudioTrack({ tracks: onlyLow, preferredAudioProfile: "latino" })?.index).toBe(1)
+    })
+
+    it("reconoce es-419 como latino", () => {
+        const t = [
+            { index: 0, language: "es", title: "Castellano", codec: "ac3", channels: 6 },
+            { index: 1, language: "es-419", title: "", codec: "aac", channels: 2 },
+        ]
+        expect(matchPreferredAudioTrack({ tracks: t, preferredAudioProfile: "latino" })?.index).toBe(1)
+    })
+})
+
+describe("resolveNativeAudioTrackPosition", () => {
+    const playable = (c?: string) => c !== "ac3"
+    const tracks = [
+        { index: 0, language: "ja", title: "Japonés", codec: "flac" },
+        { index: 1, language: "es", title: "Latino AC3", codec: "ac3" },
+        { index: 2, language: "es", title: "Latino AAC", codec: "aac" },
+    ]
+
+    it("saltea las pistas que el navegador no expone", () => {
+        expect(resolveNativeAudioTrackPosition(tracks, tracks[2], 2, playable)).toBe(1)
+        expect(resolveNativeAudioTrackPosition(tracks, tracks[0], 2, playable)).toBe(0)
+    })
+
+    it("pista no decodificable → -1 (transcode)", () => {
+        expect(resolveNativeAudioTrackPosition(tracks, tracks[1], 2, playable)).toBe(-1)
+    })
+
+    it("conteo distinto al nativo → -1 (mapeo no confiable)", () => {
+        expect(resolveNativeAudioTrackPosition(tracks, tracks[2], 3, playable)).toBe(-1)
     })
 })

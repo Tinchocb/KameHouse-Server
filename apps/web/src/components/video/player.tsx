@@ -17,7 +17,7 @@ export type VideoPlayerProps = {
     /** Segundo desde el que arranca (lo decide la ficha: "Continuar viendo"). */
     initialProgressSeconds?: number
     malId?: number | null
-    /** Editorial filler mark (animefillerlist) — auto-advances when autoSkipFiller is on. */
+    /** Editorial filler mark (animefillerlist). */
     isFillerEpisode?: boolean
     /** Media format ("TV", "MOVIE", "OVA", etc.) — passed to player core to control fallback skip window */
     mediaFormat?: string | null
@@ -40,7 +40,7 @@ export type VideoPlayerProps = {
 
 function PlayerLoadingScreen() {
     return (
-        <div className="fixed inset-0 z-player bg-black w-screen h-screen flex flex-col items-center justify-center gap-4 text-white">
+        <div className="fixed inset-0 z-player bg-black w-screen h-dvh flex flex-col items-center justify-center gap-4 text-white">
             <IconUiSpinner className="w-14 h-14 text-white animate-spin" />
         </div>
     )
@@ -105,6 +105,21 @@ export function VideoPlayer(props: VideoPlayerProps) {
             }
         }
     }, [setVideoActive])
+    // El player es un portal a pantalla completa: la página de atrás seguía en el árbol de
+    // accesibilidad y con Tab se llegaba a sus controles (nav, botones) sin verlos. `inert`
+    // en #root la saca del foco y de los lectores de pantalla; el player vive fuera de #root.
+    // Al cerrar, el foco vuelve al control que lo abrió.
+    useEffect(() => {
+        if (!mounted) return
+        const root = document.getElementById("root")
+        const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        root?.setAttribute("inert", "")
+        return () => {
+            root?.removeAttribute("inert")
+            if (opener?.isConnected) opener.focus({ preventScroll: true })
+        }
+    }, [mounted])
+
     const isLocal = Boolean(props.streamUrl) && props.streamType !== "online"
 
     const playerContent = isLocal ? (

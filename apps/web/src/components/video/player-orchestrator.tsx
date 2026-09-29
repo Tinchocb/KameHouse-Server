@@ -4,21 +4,13 @@ import { usePlayerCore } from "./player-core"
 import { PlayerUI } from "./player-ui"
 import { useMpvPlayer } from "./use-mpv-player"
 import { MpvOverlay } from "./mpv-overlay"
-import { getClientCapabilities } from "./client-capabilities"
+import { getClientCapabilities, isAudioCodecNativelyPlayable, supportsNativeAudioTracks } from "./client-capabilities"
 import { STREAM_FILE_MISSING_MSG } from "./player-overlays"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import type { Mediastream_StreamType, Audio, Subtitle } from "@/api/generated/types"
 import type { VideoPlayerProps } from "./player"
-import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
-
-export interface Chapter {
-    startTime: number
-    endTime: number
-    name: string
-    type?: string
-}
 
 export interface OrchestratorProps extends VideoPlayerProps {
     playableUrl?: string
@@ -38,9 +30,6 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         setForceTranscode(!!opts?.force)
         setStreamType(type)
     }, [])
-
-    const { data: settingsQuery } = useGetSettings()
-    const transcodeEnabled = settingsQuery?.mediastream?.transcodeEnabled ?? false
 
     const currentStreamKey = `${props.streamUrl}_${props.episodeNumber}_${props.streamType}`
     const [prevStreamKey, setPrevStreamKey] = useState(currentStreamKey)
@@ -130,38 +119,47 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
 
     const { mutate: preloadTranscode } = usePreloadMediastreamMediaContainer()
 
-    // Pro-active warm-up: si arranca en direct play y hay múltiples audios, calentamos
-    // el transcoder en background para que el cambio de pista sea rápido.
+    // Warm-up: en direct play con pistas que el motor no puede cambiar nativamente
+    // (sin flag AudioVideoTracks, o codecs como AC3 en Chromium), preparamos en el
+    // servidor la sesión HLS (media info + keyframes, lo lento en frío: >1 min en
+    // un archivo pesado de Drive) sin codificar nada. Así el cambio de pista que
+    // obliga a pasar a HLS arranca al instante. Sin condición de transcodeEnabled:
+    // ese cambio fuerza el transcoder igual.
+    const needsTranscodeForAudioSwitch = useMemo(() => {
+        const audios = data?.mediaInfo?.audios ?? []
+        if (audios.length < 2) return false
+        if (!supportsNativeAudioTracks()) return true
+        return audios.some((a: Audio) => !isAudioCodecNativelyPlayable(a.codec))
+    }, [data?.mediaInfo?.audios])
     useEffect(() => {
-        if (activeStreamType === "direct" && data?.mediaInfo?.audios && data.mediaInfo.audios.length > 1 && transcodeEnabled && isLocal) {
-            const timer = setTimeout(() => {
-                try {
-                    preloadTranscode(
-                        {
-                            path: props.streamUrl || "",
-                            streamType: "transcode",
-                            audioStreamIndex: 0,
-                            preferredAudioLang: useAppStore.getState().preferredAudioLang || ""
-                        },
-                        { onError: (err) => console.warn("[orchestrator] preload warm-up failed (silencioso):", err) }
-                    )
-                } catch (err) {
-                    console.warn("[orchestrator] preloadTranscode error:", err)
-                }
-            }, 5000)
-            return () => clearTimeout(timer)
-        }
-    }, [activeStreamType, data?.mediaInfo?.audios, preloadTranscode, props.streamUrl, transcodeEnabled, isLocal])
+        if (activeStreamType !== "direct" || !needsTranscodeForAudioSwitch || !isLocal || !props.streamUrl) return
+        const path = props.streamUrl
+        // Tras el arranque: no competir con el buffer inicial del direct play.
+        const timer = setTimeout(() => {
+            preloadTranscode(
+                {
+                    path,
+                    streamType: "transcode",
+                    audioStreamIndex: 0,
+                    preferredAudioLang: useAppStore.getState().preferredAudioLang || "",
+                    warmOnly: true,
+                },
+                { onError: (err) => console.warn("[orchestrator] warm-up de la sesión HLS falló (silencioso):", err) }
+            )
+        }, 5000)
+        return () => clearTimeout(timer)
+    }, [activeStreamType, needsTranscodeForAudioSwitch, preloadTranscode, props.streamUrl, isLocal])
 
+    // El direct play falló en el cliente (error nativo del <video>): pedir HLS con
+    // force. Sin force el servidor recibe las capacidades del cliente, ve que "puede"
+    // decodificar el archivo y lo devuelve otra vez a direct play con la misma URL:
+    // el reproductor quedaba para siempre en "Preparando el video". force también
+    // inicializa el transcoder aunque el toggle global esté apagado — mejor que
+    // un error, igual que en el cambio manual de pista.
     const handleDirectPlayFailed = useCallback(() => {
-        if (transcodeEnabled) {
-            requestStreamType("transcode")
-            return true
-        } else {
-            console.warn("[orchestrator] Direct play failed but transcode is disabled — showing error")
-            return false
-        }
-    }, [transcodeEnabled, requestStreamType])
+        requestStreamType("transcode", { force: true })
+        return true
+    }, [requestStreamType])
 
     const [isEpisodesSidebarOpen, setIsEpisodesSidebarOpen] = useState(false)
     const [isQueueSidebarOpen, setIsQueueSidebarOpen] = useState(false)

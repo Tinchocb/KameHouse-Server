@@ -11,7 +11,29 @@ import {
     matchPendingAudioTrack,
     matchPreferredAudioTrack,
     resolveAutoSubtitleTarget,
+    resolveNativeAudioTrackPosition,
 } from "./track-selection"
+import { isAudioCodecNativelyPlayable, supportsNativeAudioTracks } from "./client-capabilities"
+
+type VideoWithAudioTracks = HTMLVideoElement & { audioTracks?: AudioTrackList }
+
+/**
+ * Cambia de pista con la API nativa (direct play, sin reconstruir el stream).
+ * Devuelve false si el motor no la soporta o la pista no está en la lista nativa.
+ */
+function enableNativeAudioTrack(video: VideoWithAudioTracks, tracks: AudioTrack[], track: AudioTrack): boolean {
+    const native = video.audioTracks
+    if (!native || native.length === 0) return false
+    const pos = resolveNativeAudioTrackPosition(tracks, track, native.length, isAudioCodecNativelyPlayable)
+    if (pos < 0) return false
+    // Primero habilitar la nueva y después apagar el resto: nunca queda un
+    // instante sin pista activa (Chromium reinicia el audio en cada cambio).
+    native[pos].enabled = true
+    for (let i = 0; i < native.length; i++) {
+        if (i !== pos) native[i].enabled = false
+    }
+    return true
+}
 
 interface UsePlayerTrackSelectionProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
@@ -91,6 +113,13 @@ export function usePlayerTrackSelection({
     // se aplica cuando llega la nueva lista de pistas HLS.
     const pendingAudioSelectionRef = useRef<AudioTrack | null>(null)
 
+    // Lista vigente para mapear pistas nativas dentro de onSelectAudio sin
+    // re-crear el callback en cada cambio de pistas.
+    const audioTracksRef = useRef(audioTracks)
+    useEffect(() => {
+        audioTracksRef.current = audioTracks
+    }, [audioTracks])
+
     // opts.auto === true → selección automática (preferencia): nunca forzar transcode.
     // Sin opts (o auto === false) → selección manual del usuario.
     const onSelectAudio = useCallback((track: AudioTrack, opts?: { auto?: boolean }) => {
@@ -104,12 +133,20 @@ export function usePlayerTrackSelection({
             // only when hlsId is not available (e.g. backend-only fallback list).
             // eslint-disable-next-line react-compiler/react-compiler -- instancia hls.js vía ref (hook con use no memo)
             hls.audioTrack = track.hlsId ?? track.index
-        } else if (videoRef.current && 'audioTracks' in videoRef.current && (videoRef.current as HTMLVideoElement & { audioTracks: AudioTrackList }).audioTracks?.length > 0) {
-            const video = videoRef.current as HTMLVideoElement & { audioTracks: AudioTrackList }
-            const trackList = Array.from(video.audioTracks)
-            for (let i = 0; i < trackList.length; i++) {
-                trackList[i].enabled = i === track.index
-            }
+        } else if (videoRef.current && enableNativeAudioTrack(videoRef.current, audioTracksRef.current, track)) {
+            // Direct play con pistas nativas (app de escritorio, flag AudioVideoTracks):
+            // cambio instantáneo, sin transcode.
+        } else if (
+            videoRef.current && supportsNativeAudioTracks() &&
+            videoRef.current.readyState < HTMLMediaElement.HAVE_METADATA &&
+            isAudioCodecNativelyPlayable(track.codec)
+        ) {
+            // La auto-selección llega antes que los metadatos: la lista nativa aún
+            // está vacía. Aplicar el cambio apenas cargue, en vez de descartarlo.
+            const video = videoRef.current
+            video.addEventListener("loadedmetadata", () => {
+                enableNativeAudioTrack(video, audioTracksRef.current, track)
+            }, { once: true })
         } else if (streamType === "direct" || streamType === "local") {
             // Chromium/WebView2 no soporta la API nativa de audioTracks en direct play.
             if (isAuto) {

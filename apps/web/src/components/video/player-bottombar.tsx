@@ -1,9 +1,21 @@
 import React from "react"
-import { IconMediaPause, IconMediaPlay, IconMediaSkipPrevious, IconMediaVolumeX, IconMediaVolume2, IconNavigationList, IconMediaQueue, IconMediaSkipNext, IconMediaMinimize, IconMediaMaximize } from "@/components/ui/icons";
+import {
+    IconMediaPause,
+    IconMediaPlay,
+    IconMediaSkipPrevious,
+    IconMediaVolumeX,
+    IconMediaVolume2,
+    IconNavigationList,
+    IconMediaQueue,
+    IconMediaSkipNext,
+    IconMediaMinimize,
+    IconMediaMaximize,
+    IconNavigationRocket,
+} from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 
-import type { InsightNode } from "@/components/ui/timeline-heatmap"
 import { AnimatedTooltip } from "@/components/ui/kinetics/animated-tooltip"
+import { IconSwap } from "@/components/ui/kinetics"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
 import { SeekBar } from "./seek-bar"
 import { PLAYER_GLASS, PLAYER_ICON_BTN, PLAYER_ICON_BTN_ACTIVE, PLAYER_PLAY_BTN } from "./player-theme"
@@ -33,7 +45,6 @@ export interface PlayerBottomBarProps {
     episodeLabel?: string
     mediaFormat?: string | null
     duration: number
-    insights: InsightNode[]
     progressBarRef: React.RefObject<HTMLDivElement>
     thumbRef: React.RefObject<HTMLDivElement>
     progressInputRef: React.RefObject<HTMLInputElement>
@@ -74,10 +85,6 @@ export interface PlayerBottomBarProps {
     onAutoSkipIntroChange?: (enabled: boolean) => void
     autoSkipOutro?: boolean
     onAutoSkipOutroChange?: (enabled: boolean) => void
-    autoSkipFiller?: boolean
-    onAutoSkipFillerChange?: (enabled: boolean) => void
-    skipStepSeconds?: number
-    onSkipStepSecondsChange?: (seconds: number) => void
 
     onNextEpisode?: () => void
     hasNextEpisode?: boolean
@@ -85,9 +92,6 @@ export interface PlayerBottomBarProps {
     hlsLevels?: { index: number; label: string; height: number }[]
     activeHlsLevel?: number
     onHlsLevelChange?: (level: number) => void
-
-    showHeatmap?: boolean
-    onShowHeatmapChange?: (show: boolean) => void
 
     aspectRatio?: "contain" | "fill" | "cover" | "16/9" | "21/9"
     onAspectRatioChange?: (ratio: "contain" | "fill" | "cover" | "16/9" | "21/9") => void
@@ -105,8 +109,6 @@ export interface PlayerBottomBarProps {
     onMarathonModeChange?: (enabled: boolean) => void
     tvMode?: boolean
     onTvModeChange?: (enabled: boolean) => void
-    ambientModeEnabled?: boolean
-    onAmbientModeEnabledChange?: (enabled: boolean) => void
 
     /** AniSkip intervals for rendering visual markers on the timeline */
     skipTimesOp?: { startTime: number; endTime: number; source?: string }
@@ -142,7 +144,7 @@ const CONTROL_BTN_ACTIVE = PLAYER_ICON_BTN_ACTIVE
 
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     title: _title, episodeNumber, episodeLabel: _episodeLabel, mediaFormat,
-    duration, insights, progressBarRef, thumbRef, progressInputRef, handleSeek, handleSeekStart, handleSeekEnd,
+    duration, progressBarRef, thumbRef, progressInputRef, handleSeek, handleSeekStart, handleSeekEnd,
     isPlaying, togglePlay, skipTime: _skipTime,
     isMuted, toggleMute, volume, handleVolume,
     timeTextRef,
@@ -154,19 +156,15 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     playbackRate = 1, onPlaybackRateChange,
     autoSkipIntro = false, onAutoSkipIntroChange,
     autoSkipOutro = false, onAutoSkipOutroChange,
-    autoSkipFiller = false, onAutoSkipFillerChange,
-    skipStepSeconds = 85, onSkipStepSecondsChange,
     onNextEpisode,
     hasNextEpisode,
     hlsLevels = [], activeHlsLevel = -1, onHlsLevelChange,
-    showHeatmap = true, onShowHeatmapChange,
     aspectRatio = "contain", onAspectRatioChange,
     subtitleSize = 100, onSubtitleSizeChange,
     loopEnabled = false, onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true, onAutoDisableSubtitlesWhenDubbedChange,
     marathonMode = false, onMarathonModeChange,
     tvMode = false, onTvModeChange,
-    ambientModeEnabled = true, onAmbientModeEnabledChange,
     skipTimesOp,
     skipTimesEd,
     chapters = [],
@@ -212,8 +210,6 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                 handleSeek={handleSeek}
                 handleSeekStart={handleSeekStart}
                 handleSeekEnd={handleSeekEnd}
-                showHeatmap={showHeatmap}
-                insights={insights}
                 skipTimesOp={skipTimesOp}
                 skipTimesEd={skipTimesEd}
                 chapters={chapters}
@@ -233,9 +229,11 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                             aria-label={isPlaying ? "Pausar" : "Reproducir"}
                             className={PLAYER_PLAY_BTN}>
-                            {isPlaying
-                                ? <IconMediaPause className="fill-current" />
-                                : <IconMediaPlay className="fill-current ml-0.5" />}
+                            <IconSwap swapKey={isPlaying ? "pause" : "play"}>
+                                {isPlaying
+                                    ? <IconMediaPause className="fill-current" />
+                                    : <IconMediaPlay className="fill-current ml-0.5" />}
+                            </IconSwap>
                         </button>
                     </AnimatedTooltip>
 
@@ -281,15 +279,18 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                             aria-label={isMuted || volume === 0 ? "Activar sonido [M]" : "Silenciar [M]"}
                             title={isMuted || volume === 0 ? "Activar sonido [M]" : "Silenciar [M]"}
-                            aria-expanded={volumeExpanded}
                             className={CONTROL_BTN}
                         >
-                            {isMuted || volume === 0 ? <IconMediaVolumeX className="w-4 h-4" /> : <IconMediaVolume2 className="w-4 h-4" />}
+                            <IconSwap swapKey={isMuted || volume === 0 ? "muted" : "unmuted"}>
+                                {isMuted || volume === 0
+                                    ? <IconMediaVolumeX className="w-4 h-4" />
+                                    : <IconMediaVolume2 className="w-4 h-4" />}
+                            </IconSwap>
                         </button>
 
                         <div
                             className={cn(
-                                "h-10 flex items-center overflow-hidden transition-[width,opacity] duration-200 ease-out",
+                                "h-10 flex items-center overflow-hidden transition-[width,opacity] duration-200 ease-smooth-out",
                                 volumeExpanded ? "w-[92px] opacity-100" : "w-0 opacity-0"
                             )}
                         >
@@ -366,7 +367,27 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         </AnimatedTooltip>
                     )}
 
-                    {/* Modo Maratón vive en Ajustes → Reproducción */}
+                    {!isMovie && onMarathonModeChange && (
+                        <AnimatedTooltip
+                            side="top"
+                            content={marathonMode ? "Modo Maratón: Activado" : "Modo Maratón: Desactivado"}
+                        >
+                            <button
+                                type="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onMarathonModeChange(!marathonMode)
+                                }}
+                                aria-label={marathonMode ? "Desactivar modo maratón" : "Activar modo maratón"}
+                                aria-pressed={marathonMode}
+                                className={cn(CONTROL_BTN, marathonMode && CONTROL_BTN_ACTIVE)}
+                            >
+                                <IconNavigationRocket className="w-4 h-4" />
+                            </button>
+                        </AnimatedTooltip>
+                    )}
+
                     <PlayerSettingsMenu
                         panelContainer={settingsPanelHost}
                         audioTracks={audioTracks}
@@ -388,15 +409,9 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onAutoSkipIntroChange={onAutoSkipIntroChange}
                         autoSkipOutro={autoSkipOutro}
                         onAutoSkipOutroChange={onAutoSkipOutroChange}
-                        autoSkipFiller={autoSkipFiller}
-                        onAutoSkipFillerChange={onAutoSkipFillerChange}
-                        skipStepSeconds={skipStepSeconds}
-                        onSkipStepSecondsChange={onSkipStepSecondsChange}
                         hlsLevels={hlsLevels}
                         activeHlsLevel={activeHlsLevel}
                         onHlsLevelChange={onHlsLevelChange}
-                        showHeatmap={showHeatmap}
-                        onShowHeatmapChange={onShowHeatmapChange}
                         aspectRatio={aspectRatio}
                         onAspectRatioChange={onAspectRatioChange}
                         subtitleSize={subtitleSize}
@@ -409,8 +424,6 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         onMarathonModeChange={onMarathonModeChange}
                         tvMode={tvMode}
                         onTvModeChange={onTvModeChange}
-                        ambientModeEnabled={ambientModeEnabled}
-                        onAmbientModeEnabledChange={onAmbientModeEnabledChange}
                         videoRef={videoRef}
                         malId={malId}
                         mediaId={mediaId}
@@ -425,7 +438,11 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                             onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
                             aria-label={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}
                             className={CONTROL_BTN}>
-                            {isFullscreen ? <IconMediaMinimize className="w-4 h-4" /> : <IconMediaMaximize className="w-4 h-4" />}
+                            <IconSwap swapKey={isFullscreen ? "minimize" : "maximize"}>
+                                {isFullscreen
+                                    ? <IconMediaMinimize className="w-4 h-4" />
+                                    : <IconMediaMaximize className="w-4 h-4" />}
+                            </IconSwap>
                         </button>
                     </AnimatedTooltip>
                 </div>

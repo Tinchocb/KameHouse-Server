@@ -28,7 +28,7 @@ export interface PlayerCoreProps {
     mediaId?: number
     episodeNumber?: number
     malId?: number | null
-    /** Editorial filler mark (animefillerlist) — auto-advances when autoSkipFiller is on. */
+    /** Editorial filler mark (animefillerlist). */
     isFillerEpisode?: boolean
     clientId?: string
     onClose: () => void
@@ -113,10 +113,8 @@ export interface PlayerCore {
         isSettingsOpen: boolean
         autoSkipIntro: boolean
         autoSkipOutro: boolean
-        autoSkipFiller: boolean
         skipStepSeconds: number
         playbackRate: number
-        showHeatmap: boolean
         aspectRatio: "contain" | "fill" | "cover" | "16/9" | "21/9"
         subtitleSize: number
         loopEnabled: boolean
@@ -129,11 +127,10 @@ export interface PlayerCore {
         autoDisableSubtitlesWhenDubbed: boolean
         marathonMode: boolean
         tvMode: boolean
-        ambientModeEnabled: boolean
         /** AniSkip intervals exposed to child components for rendering timeline markers */
         skipTimesOp?: { startTime: number; endTime: number }
         skipTimesEd?: { startTime: number; endTime: number }
-        showAutoSkipToast: "intro" | "outro" | "segment" | "filler" | null
+        showAutoSkipToast: "intro" | "outro" | "segment" | null
         chapters: { startTime: number; endTime: number; name: string; type?: string }[]
         activeChapter: string | null
         absoluteLanUrl?: string
@@ -168,17 +165,14 @@ export interface PlayerCore {
         setShowShortcuts: (show: boolean) => void
         setAutoSkipIntro: (val: boolean) => void
         setAutoSkipOutro: (val: boolean) => void
-        setAutoSkipFiller: (val: boolean) => void
         setSkipStepSeconds: (val: number) => void
         setHlsLevel: (level: number) => void
-        setShowHeatmap: (val: boolean) => void
         setAspectRatio: (val: "contain" | "fill" | "cover" | "16/9" | "21/9") => void
         setSubtitleSize: (val: number) => void
         setLoopEnabled: (val: boolean) => void
         setMarathonMode: (val: boolean) => void
         setTvMode: (val: boolean) => void
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void
-        setAmbientModeEnabled: (val: boolean) => void
         skipToNextChapter: () => void
         skipToPrevChapter: () => void
         retryStream: () => void
