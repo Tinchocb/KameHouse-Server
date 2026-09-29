@@ -20,7 +20,7 @@ Fuente: `apps/web/src/styles/tokens/*.css` + `app/globals.css`.
 | **Tipografía** | `font-display` (Outfit) para títulos, `font-sans` cuerpo, `font-mono` (Space Mono) para labels técnicos/contadores. Escala fluida con `clamp` (`--text-*`). |
 | **Radio** | Solo escala: pill `rounded-full` (botones, inputs, selects, tabs), `rounded-xl` filas/botones sidebar, `rounded-2xl` cards (`SectionCard`), `rounded-hero` (`--radius-hero: var(--radius-3xl)`). Prohibidos valores arbitrarios (13px, 19px…). |
 | **Sombra** | Solo tokens: `shadow-elevation-1..5`, `shadow-hero` (`--shadow-hero`), `shadow-hero-cta` (`--shadow-hero-cta-primary`), `shadow-hero-dot` (`--shadow-hero-dot-active`), `shadow-[var(--shadow-brand-primary)]` para CTA, **SectionBar shadow** `shadow-[var(--sectionbar-shadow)]` para cards glass. Sombra compuesta con brillo: `shadow-[shadow:var(--glass-highlight-md),var(--elevation-2)]` (el prefijo `shadow:` es el type hint de Tailwind 3 y es **válido**). Nunca `shadow-lg` genérico ni valores `rgba` inline. |
-| **Blur** | Solo overlays: `backdrop-blur-overlay-md/2xl`, clases `.glass-card` / `.glass-liquid`. Para filtros directos: `blur-hero`, `blur-hero-bg`, `blur-ambient-*`, `.hero-image-filter`. Una sola capa de blur por panel; filas internas con `bg-white/[0.04]` sin blur. Respeta `[data-flat]` y `[data-liquid]`. |
+| **Blur / Vidrio Esmerilado** | Solo overlays y contenedores flotantes: `backdrop-blur-overlay-md` (24px, estándar canónico para modales, paneles, pills y barras de navegación), clases canónicas `.glass-frosted`, `.glass-frosted-pill`, `.glass-card`, `.glass-liquid`. Saturación canónica: `--glass-saturate-frosted` (180% en Moderno, 125% en Clásico, 1 en Flat). Prohibido el doble blur apilado (overlay 48px + modal 64px; el overlay usa `backdrop-blur-overlay-xs` 8px y el modal `.glass-frosted`). Filas internas con `bg-white/[0.04]` sin blur. Respeta `[data-flat="true"]` (0px blur, superficie sólida sin costo GPU) y `[data-liquid="true"]`. |
 | **Motion** | Springs framer-motion: entrada `stiffness:380 damping:30 mass:0.8`, tabs `stiffness:280 damping:28`. Clases CSS: `duration-base` (250ms), `ease-out/smooth-out`. `active:scale-95`, `hover-lift` en cards. Variantes hero: `heroBackdropSlideVariants`, `heroBackdropFadeVariants`, `heroContentContainerVariants`. Auto-rotación: `--hero-rotation-duration: 8000ms` / `HERO_ROTATION_MS`. Respetar `prefers-reduced-motion` / `useReducedMotion`. |
 | **Layout** | Contenedor: `page-container` (`w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10`, `--content-max:1800px`). Zonas hero: `max-w-hero-content` (480px) / `max-w-hero-content-wide` (672px). Capas: `z-hero-base` (0), `z-hero-visual` (1), `z-hero-scrim` (10), `z-hero-content` (20), `z-hero-controls` (30). Utilidades: `.scrim-hero-*`, `.scrim-hero-bottom-rise`, `.scrim-hero-boost`, `.text-hero-title`, `.text-edge-glow`, `.no-scrollbar`, `.gpu`. |
 
@@ -635,6 +635,32 @@ function MagneticIndicator({ children, activeIndex, onChange }) {
 | `components/ui/media-spotlight.tsx` (Play CTA) | Usar `RippleFeedback` |
 | `components/ui/app-layout/app-topnav.tsx` (sidebar pills) | Usar `MagneticHover` |
 | `components/ui/stats/elastic-counter.tsx` (crear) | Usar `ElasticCounter` |
+
+---
+
+## 14. Patrón Canónico: Tarjeta de Lapso (Cronología) & Panel Lateral Contralateral
+
+Fuente canónica: `apps/web/src/components/chronology/TimelineVolumeCard.tsx`, `apps/web/src/components/chronology/AlternatingTimeline.tsx` y `MomentStrip.tsx`.
+
+### 14.1 Principios de Usabilidad y Jerarquía Limpia
+
+1. **Reproducción directa en la miniatura (Zero Redundant CTA)**:
+   - El disparador principal de reproducción vive directamente integrado en la miniatura 16:9 (`group/thumb`).
+   - Evita botoneras pesadas e hinchadas debajo del contenido. Un pill flotante elegante (`bg-brand-accent text-zinc-950 font-display font-extrabold text-xs uppercase tracking-wider`) responde al hover/focus con `scale-105` y brillo sutil.
+
+2. **Eliminación de fricción manual (Sin botón "Marcar")**:
+   - Se elimina el botón manual invasivo de "Marcar visto" en la tarjeta.
+   - El estado de visualización se refleja de manera pasiva y legible mediante badges discretos en el encabezado (`Visto ✓` en `bg-emerald-500/15 border-emerald-500/30 text-emerald-300` o porcentaje de avance tabular).
+
+3. **Detalles como Panel Lateral Contralateral (No acordeón vertical)**:
+   - En lugar de empujar verticalmente el contenido hacia abajo (layout shift agresivo), el botón "Detalles" activa una **card complementaria al costado** en el espacio libre del eje (columna contralateral en desktop).
+   - Icono semántico: `PanelRightOpen` (o variante lateral), nunca `ChevronDown` (`v`).
+   - Estado activo: Tiñe con el acento de la era (`bg-brand-accent/20 border-brand-accent/50 text-brand-accent shadow-[0_0_12px_rgba(var(--era)/0.25)]`).
+   - Contenido sintetizado: Pestañas claras (`Conflicto`, `Clímax`, `Lore`) estructuradas en oraciones breves, puntos de quiebre y fichas en chips sin bloques densos de texto.
+
+4. **Tira de Momentos Clave Simplificada**:
+   - Cada escena cuenta con thumbnail 16:9, badge de tiempo con glassmorphism (`bg-black/80 backdrop-blur-md`) y botón de play que emerge en hover sin ocultar permanentemente los rostros de los personajes.
+   - Acceso directo: Hacer clic sobre cualquier momento salta inmediatamente a la reproducción en ese minuto exacto.
 
 ---
 
