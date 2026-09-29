@@ -3,7 +3,7 @@ import { m } from "framer-motion"
 import * as React from "react"
 import { useState } from "react"
 import { cn } from "@/components/ui/core/styling"
-import { IconUiDownload, IconNavigationTv, IconNavigationFilm, IconStatusActivity, IconStatusHdd, IconStatusPulse, IconNavigationSearch, IconUiRefresh, IconUiLink, IconUiDelete, IconStatusDatabase, IconStatusImage, IconArrowRight, IconStatusCloud, IconNavigationLibrary, IconStatusZap, IconMediaWand, IconStatusMusic, IconUiCheckCircle, IconUiXCircle, IconUiAlertCircle, IconUiHelpCircle, IconStatusFile, IconUiSliders, IconNavigationUsers } from "@/components/ui/icons";
+import { IconUiDownload, IconNavigationTv, IconNavigationFilm, IconStatusActivity, IconStatusHdd, IconStatusPulse, IconNavigationSearch, IconUiRefresh, IconUiLink, IconUiDelete, IconStatusDatabase, IconStatusImage, IconArrowRight, IconStatusCloud, IconNavigationLibrary, IconStatusZap, IconMediaWand, IconStatusMusic, IconUiCheckCircle, IconUiXCircle, IconUiAlertCircle, IconUiHelpCircle, IconStatusFile, IconUiSliders, IconNavigationUsers, IconUiSpinner } from "@/components/ui/icons";
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
 import { useGetLibraryStats, useGetTranscodeStats } from "@/api/hooks/admin.hooks"
 import { useBackupDatabase, useDownloadDatabaseBackup } from "@/api/hooks/system.hooks"
@@ -19,7 +19,7 @@ import {
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { toast } from "sonner"
 import { SectionBar } from "@/components/ui/sectionbar"
-import { ElasticCounter } from "@/components/ui/kinetics"
+import { ElasticCounter, LoadSwap } from "@/components/ui/kinetics"
 import { Skeleton } from "@/components/ui/skeleton/skeleton"
 
 export const Route = createLazyFileRoute("/admin/")({
@@ -39,7 +39,7 @@ function AdminPage() {
             <div className="max-w-content-desktop mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
                 <AdminHeader />
 
-                <main className="mt-8 md:mt-12 space-y-6 md:space-y-8">
+                <div className="mt-8 md:mt-12 space-y-6 md:space-y-8">
                     <AdminStatsGrid trStats={trStats} />
 
                     <AdminSection title="Gestión de Biblioteca" subtitle="Escaneo y sincronización" icon={IconNavigationLibrary}>
@@ -63,7 +63,7 @@ function AdminPage() {
                     </AdminSection>
 
                     <AdminRecentActivity />
-                </main>
+                </div>
             </div>
         </m.div>
     )
@@ -100,7 +100,12 @@ function AdminHeader() {
                             disabled={isBackingUp || isDownloadingBackup}
                             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
                         >
-                            <IconUiDownload size={16} strokeWidth={2.5} />
+                            <LoadSwap
+                                loading={isBackingUp || isDownloadingBackup}
+                                skeleton={<IconUiSpinner size={16} className="animate-spin text-brand-accent" />}
+                            >
+                                <IconUiDownload size={16} strokeWidth={2.5} />
+                            </LoadSwap>
                             {isBackingUp ? "Creando..." : isDownloadingBackup ? "Descargando..." : "Backup"}
                         </button>
                         <button
@@ -108,7 +113,12 @@ function AdminHeader() {
                             disabled={isDownloadingReport}
                             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
                         >
-                            <IconStatusFile size={16} strokeWidth={2.5} />
+                            <LoadSwap
+                                loading={isDownloadingReport}
+                                skeleton={<IconUiSpinner size={16} className="animate-spin text-brand-accent" />}
+                            >
+                                <IconStatusFile size={16} strokeWidth={2.5} />
+                            </LoadSwap>
                             {isDownloadingReport ? "Descargando..." : "Reporte"}
                         </button>
                     </div>
@@ -603,6 +613,7 @@ function AdminLogsViewer() {
                 <select
                     value={selected ?? ""}
                     onChange={(e) => setSelected(e.target.value || null)}
+                    aria-label="Archivo de log"
                     disabled={isLoadingFiles || files.length === 0}
                     className="flex-1 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-white min-h-[40px] disabled:opacity-50"
                 >
@@ -667,12 +678,16 @@ function AdminRecentActivity() {
                         <IconArrowRight size={13} strokeWidth={2.5} />
                     </button>
                 </div>
-                <div className="space-y-2.5">
-                    {isLoading ? (
+                <LoadSwap
+                    className="space-y-2.5"
+                    loading={isLoading}
+                    skeleton={
                         <div role="status" aria-label="Cargando actividad" className="space-y-2.5">
                             <AdminRowSkeletons count={3} />
                         </div>
-                    ) : notifications.length === 0 ? (
+                    }
+                >
+                    {notifications.length === 0 ? (
                         <p className="text-2xs text-on-surface-variant/70">Sin actividad reciente.</p>
                     ) : (
                         notifications.map((n) => {
@@ -691,7 +706,7 @@ function AdminRecentActivity() {
                             )
                         })
                     )}
-                </div>
+                </LoadSwap>
             </div>
         </SectionBar>
     )

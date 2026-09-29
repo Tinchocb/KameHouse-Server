@@ -17,12 +17,11 @@
   --glass-saturate-subtle: 1.1;   /* sutil */
   --glass-saturate-strong: 1.3;   /* fuerte */
   --glass-saturate-cinematic: 1.4; /* cinematográfico */
+  --glass-saturate-frosted: 180%; /* vidrio esmerilado canónico */
 
-  /* ─── Contraste y Textura para Liquid Glass ──────── */
+  /* ─── Contraste para Glassmorphism ──────── */
   --glass-contrast:        1.06;
   --glass-contrast-subtle: 1.04;
-  /* Patrón de ruido estático pre-rasterizado para evitar re-rasterización continua de Skia CPU */
-  --noise-texture:         url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAwSURBVHgB7c4BDQAACAMw9E/tYw2Gv4MCLcnNrr7V9wAAAAAAAAAAAAAAAAAAAAAA3g0X3QABmQ2qPgAAAABJRU5ErkJggg==");
 
   /* ─── DEPRECATED — Alias legacy (mantener por compatibilidad temporal) ─────
        Migrar a: elevation (shadows.css) + surface colors (colors.css)         */
@@ -74,8 +73,58 @@
 }
 
 /* ─── Clases Utilitarias legacy (solo .blur-md, usada en tsx) ───────────── */
-.blur-md           { backdrop-filter: blur(var(--blur-md))  saturate(var(--glass-saturate)); }
+.blur-md {
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--blur-md)) saturate(var(--glass-saturate));
+}
 .hero-image-filter { filter: var(--hero-img-filter); }
+
+/* ─── Vidrio Esmerilado Canónico (Frosted Glass — v5) ─────────────────────
+     Efecto físico con refracción cromática vibrante, reflejo especular y
+     micro-textura difusa (acid-etched glass). ───────────────────────────── */
+.glass-frosted {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-frosted-bg);
+  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted)) brightness(1.05) contrast(1.06);
+  backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted)) brightness(1.05) contrast(1.06);
+  border: 1px solid var(--glass-frosted-border);
+  border-top-color: var(--glass-frosted-border-top);
+  border-bottom-color: var(--glass-frosted-border-bottom);
+  box-shadow: var(--glass-frosted-shadow);
+  border-radius: var(--radius-2xl);
+  transform: translateZ(0);
+}
+
+/* Variante pill para barras de navegación, segmented controls y chips */
+.glass-frosted-pill {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-frosted-bg);
+  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted)) brightness(1.05) contrast(1.06);
+  backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted)) brightness(1.05) contrast(1.06);
+  border: 1px solid var(--glass-frosted-border);
+  border-top-color: var(--glass-frosted-border-top);
+  border-bottom-color: var(--glass-frosted-border-bottom);
+  box-shadow: var(--glass-frosted-shadow);
+  border-radius: 9999px;
+  transform: translateZ(0);
+}
+
+/* Micro-textura superficial de dispersión lumínica (vidrio esmerilado real) */
+.glass-frosted::before,
+.glass-frosted-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 8px 8px;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+}
 
 /* ─── Liquid Glass — vidrio en capas con refracción especular ────────────
      Base frosted siempre; con [data-liquid="true"] sube a refracción completa
@@ -128,17 +177,18 @@
 
 /* ─── Glass Card — panel de contenido flotando sobre el DynamicBackdrop ────
      Receta canónica del design system: un solo blur por panel (no por fila).
-     Equivale a: bg-zinc-950/40 + backdrop-blur-overlay-xl + border-white/10
-     + rounded-3xl. Para filas internas usar bg-white/[0.04] sin blur. ────── */
+     Con prefijo -webkit para compatibilidad 100% con Safari/WebKit. ────── */
 .glass-card {
   background: var(--glass-card-bg);
+  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate)) contrast(var(--glass-contrast-subtle));
   backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate)) contrast(var(--glass-contrast-subtle));
-  border-top: 1px solid var(--glass-border-top, rgba(255, 255, 255, 0.12));
-  border-left: 1px solid var(--glass-border-side, rgba(255, 255, 255, 0.05));
-  border-right: 1px solid var(--glass-border-side, rgba(255, 255, 255, 0.05));
-  border-bottom: 1px solid var(--glass-border-bottom, rgba(255, 255, 255, 0.03));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  border-top: 1px solid var(--glass-border-top, rgba(255, 255, 255, 0.25));
+  border-left: 1px solid var(--glass-border-side, rgba(255, 255, 255, 0.10));
+  border-right: 1px solid var(--glass-border-side, rgba(255, 255, 255, 0.10));
+  border-bottom: 1px solid var(--glass-border-bottom, rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), 0 16px 36px -8px rgba(0, 0, 0, 0.70);
   border-radius: var(--radius-3xl);
+  transform: translateZ(0);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -176,6 +226,7 @@
   --glass-saturate-subtle:   1;
   --glass-saturate-strong:   1;
   --glass-saturate-cinematic: 1;
+  --glass-saturate-frosted:   1;
 
   --glass-contrast:          1;
   --glass-contrast-subtle:   1;
@@ -183,10 +234,10 @@
   /* ─── Filter blur decorativo se conserva en flat mode ─── */
 }
 
-/* ─── .glass-liquid y .glass-card tienen backgrounds hardcodeados (no usan
-   variables), necesitan override directo de background + border. El
+/* ─── .glass-liquid, .glass-card y .glass-frosted tienen backgrounds propios,
+   necesitan override directo de background + border en modo Flat. El
    backdrop-filter se desactiva automáticamente vía --blur-overlay-* = 0px
-   de arriba. ─────────────────────────────────────────────────────────── */
+   y reglas !important abajo. ─────────────────────────────────────────── */
 [data-flat="true"] .glass-liquid {
   background: color-mix(in srgb, var(--brand-accent-hex) 12%, var(--bg-secondary));
   border-top: 1px solid var(--sidebar-active-border);
@@ -207,8 +258,19 @@
   -webkit-backdrop-filter: none !important;
 }
 
+[data-flat="true"] .glass-frosted,
+[data-flat="true"] .glass-frosted-pill {
+  background: var(--bg-secondary);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 [data-flat="true"] .glass-liquid::before,
-[data-flat="true"] .glass-liquid::after {
+[data-flat="true"] .glass-liquid::after,
+[data-flat="true"] .glass-frosted::before,
+[data-flat="true"] .glass-frosted-pill::before {
   display: none !important;
   content: none;
 }
@@ -228,54 +290,6 @@
 [data-mode="classic"] {
   --glass-saturate:           var(--glass-saturate-subtle);
   --glass-saturate-cinematic: var(--glass-saturate-subtle);
+  --glass-saturate-frosted:   125%;
   --glass-contrast:           var(--glass-contrast-subtle);
-}
-
-
-/* ─── Efectos Liquid Glass Gated (GPU-Accelerated Specular Lighting) ────────
-     Con data-liquid=true el vidrio sube de frosted a refracción: más blur,
-     luminosidad y glow del acento. Sin el toggle, .glass-refract es neutro. */
-[data-liquid="true"] .glass-liquid {
-  -webkit-backdrop-filter: blur(var(--blur-overlay-lg)) saturate(1.8) brightness(1.12) contrast(1.08);
-  backdrop-filter: blur(var(--blur-overlay-lg)) saturate(1.8) brightness(1.12) contrast(1.08);
-}
-
-/* Clásico + liquid: restaura saturación cinematográfica (el modo clásico la
-   atenúa por defecto para sobriedad, pero el toggle liquid pide presencia). */
-[data-mode="classic"][data-liquid="true"] {
-  --glass-saturate-cinematic: 1.8;
-  --glass-contrast: 1.08;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .glass-liquid::before,
-  .glass-liquid::after {
-    mix-blend-mode: normal;
-  }
-}
-
-.grain-overlay {
-  position: absolute;
-  inset: 0;
-  background-image: var(--noise-texture);
-  opacity: 0.025;
-  pointer-events: none;
-  transform: translateZ(0);
-}
-
-[data-flat="true"] .grain-overlay,
-[data-flat="true"] html[data-grain="true"]::before {
-  display: none !important;
-}
-
-/* ─── Global Cinematic Grain (GPU Layer Promoted) ────────────────────────── */
-html[data-grain="true"]::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: var(--noise-texture);
-  opacity: 0.025;
-  pointer-events: none;
-  z-index: 9999;
-  transform: translateZ(0);
 }

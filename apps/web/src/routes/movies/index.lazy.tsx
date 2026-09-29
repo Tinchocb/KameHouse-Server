@@ -8,7 +8,7 @@ import { KNOWN_MOVIE_TMDB_IDS, type EraId } from "@/lib/config/eras"
 import type { EraTab } from "./-MovieCard"
 import { SortOption, getEntryEra, getEntryEraId, getReleaseDateTimestamp, getEntryTitle, getEntryRating, mapCollectionSortToOption, getMovieLore } from "./-components/movies-utils"
 import { MoviesHero } from "./-components/movies-hero"
-import { MoviesFilterBar, type MovieStatusFilter } from "./-components/movies-filter-bar"
+import { MoviesFilterBar } from "./-components/movies-filter-bar"
 import { MoviesGrid } from "./-components/movies-grid"
 import { LibraryBanner } from "./-components/library-banner"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
@@ -19,6 +19,7 @@ import { useSound } from "@/hooks/use-sound"
 import type { SwimlaneItem } from "@/components/ui/swimlane"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 import { getMovieWidescreenBackdrop } from "@/lib/config/hero-art"
+import type { MoviesSearch } from "./index"
 
 // Blur del fondo personalizado de biblioteca (Settings → Apariencia)
 const LIBRARY_BG_BLUR_PX: Record<string, number> = { none: 0, sm: 8, md: 16, lg: 32 }
@@ -33,20 +34,30 @@ export const Route = createLazyFileRoute("/movies/")({
 })
 
 function MoviesPage() {
-    const [activeEra, setActiveEra] = useState<EraId | "all">("all")
-    const [statusFilter, setStatusFilter] = useState<MovieStatusFilter>("all")
     const navigate = useNavigate()
+    const search = Route.useSearch()
+    // Era, estado, orden y búsqueda viven en la URL (validateSearch en index.tsx):
+    // sobreviven a recargar y a volver desde la ficha de una película.
+    const setSearch = useCallback((patch: Partial<MoviesSearch>) => {
+        void navigate({ from: "/movies/", search: (prev) => ({ ...prev, ...patch }), replace: true })
+    }, [navigate])
+    const activeEra: EraId | "all" = search.era ?? "all"
     const ts = useThemeSettings()
     const { playSound } = useSound()
 
-    // Default vivo desde Settings (llega async): userSort manda cuando el
-    // usuario elige manualmente en la filter-bar; null = seguir al ajuste.
+    // Default vivo desde Settings (llega async): ?sort manda cuando el
+    // usuario elige manualmente en la filter-bar; ausente = seguir al ajuste.
     const defaultSort = mapCollectionSortToOption(ts.themeAnimeLibraryCollectionDefaultSorting)
-    const [userSort, setUserSort] = useState<SortOption | null>(null)
-    const sortBy: SortOption = userSort ?? defaultSort
-    const handleSortChange = useCallback((v: SortOption) => setUserSort(v), [])
-    const [searchQuery, setSearchQuery] = useState("")
+    const sortBy: SortOption = search.sort ?? defaultSort
+    const handleSortChange = useCallback((v: SortOption) => setSearch({ sort: v }), [setSearch])
+    // El input es local (tipeo inmediato); a la URL va el valor con debounce.
+    const [searchQuery, setSearchQuery] = useState(search.q ?? "")
     const [debouncedSearchQuery] = useDebounce(searchQuery, 200)
+    const urlQuery = search.q ?? ""
+    useEffect(() => {
+        const q = debouncedSearchQuery.trim()
+        if (q !== urlQuery) setSearch({ q: q || undefined })
+    }, [debouncedSearchQuery, urlQuery, setSearch])
 
     const [hoveredMovie, setHoveredMovie] = useState<MovieEntry | null>(null)
     const [debouncedMovie, setDebouncedMovie] = useState<MovieEntry | null>(null)
@@ -158,10 +169,10 @@ function MoviesPage() {
         return result
     }, [allMovies])
 
-    const handleEraSelect = useCallback((eraId: EraId) => {
+    const handleEraSelect = useCallback((eraId: EraId | "all") => {
         playSound("category")
-        setActiveEra(prev => (prev === eraId ? "all" : eraId))
-    }, [playSound])
+        setSearch({ era: eraId === "all" || eraId === activeEra ? undefined : eraId })
+    }, [playSound, setSearch, activeEra])
 
     const handleHoverSound = useCallback(() => {
         playSound("hover")
@@ -181,15 +192,6 @@ function MoviesPage() {
             }
 
             if (query && !hay.includes(query)) return false
-
-            if (statusFilter === "completed") {
-                const media = movie.media
-                return media?.watched || (movie.listData?.progress || 0) >= (media?.totalEpisodes || 1)
-            }
-            if (statusFilter === "unwatched") {
-                const media = movie.media
-                return !media?.watched && (movie.listData?.progress || 0) < (media?.totalEpisodes || 1)
-            }
 
             return true
         })
@@ -221,7 +223,7 @@ function MoviesPage() {
             default:
                 return result
         }
-    }, [searchIndex, activeEra, statusFilter, sortBy, debouncedSearchQuery])
+    }, [searchIndex, activeEra, sortBy, debouncedSearchQuery])
 
     // Limpiar hover al cambiar de era durante el render
     const [prevActiveEra, setPrevActiveEra] = useState(activeEra)
@@ -292,8 +294,6 @@ function MoviesPage() {
                     <MoviesFilterBar
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
-                        statusFilter={statusFilter}
-                        setStatusFilter={setStatusFilter}
                         sortBy={sortBy}
                         setSortBy={handleSortChange}
                         totalCount={allMovies.length}
@@ -310,10 +310,8 @@ function MoviesPage() {
                         activeEra={activeEra}
                         searchQuery={searchQuery}
                         onResetFilters={() => {
-                            setActiveEra("all")
                             setSearchQuery("")
-                            setStatusFilter("all")
-                            setUserSort(null)
+                            setSearch({ era: undefined, sort: undefined, q: undefined })
                         }}
                     />
                 </SectionBar>

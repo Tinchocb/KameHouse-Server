@@ -1,9 +1,9 @@
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useGlobalSearch, type GlobalSearchResultItem } from "@/hooks/use-global-search"
-import { Link, useNavigate } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
 import { IconNavigationFilm, IconStatusSparkles } from "@/components/ui/icons"
 import { ThinkingOrb } from "@/components/ui/thinking-orb"
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { toast } from "sonner"
 const VideoPlayer = React.lazy(() =>
     import("@/components/video/player").then((m) => ({ default: m.VideoPlayer }))
@@ -55,13 +55,17 @@ export function CommandPalette() {
     const { mutate: enqueuePreTranscode, isPending: isEnqueueingPreTranscode } = useEnqueuePreTranscode()
     const { mutate: updateProgress } = useUpdateAnimeEntryProgress(undefined, 0, false)
     const addToQueue = useQueueStore((s) => s.addToQueue)
-    // Evita doble navegación: el click en un <Link> interno ya navega;
-    // onSelect solo navega cuando el Enter/click no pasó por un Link.
-    const linkNavHandledRef = useRef(false)
 
     useEffect(() => {
         const down = (e: KeyboardEvent) => {
-            if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+            const isInput =
+                document.activeElement?.tagName === "INPUT" ||
+                document.activeElement?.tagName === "TEXTAREA" ||
+                (document.activeElement as HTMLElement)?.isContentEditable
+            if (
+                (e.key === "k" && (e.metaKey || e.ctrlKey)) ||
+                (e.key === "/" && !isInput)
+            ) {
                 e.preventDefault()
                 setOpen((open) => !open)
             }
@@ -185,9 +189,13 @@ export function CommandPalette() {
         })
     }
 
-    // Navegación programática para Enter/teclado (el click en <Link> ya navega).
+    // Navegación de la opción seleccionada (Enter o click).
     const navigateToResult = (result: GlobalSearchResultItem): boolean => {
         if ("isUnlinked" in result && result.isUnlinked) return false
+        if ("isChronology" in result && result.isChronology) {
+            navigate({ to: "/chronology", search: { highlight: result.volumeId } })
+            return true
+        }
         if ("isSemantic" in result && result.isSemantic) {
             const sem = result.semanticData
             const isMovie = sem.mediaType === "MOVIE"
@@ -208,19 +216,15 @@ export function CommandPalette() {
         return true
     }
 
-    const markLinkNavHandled = () => {
-        linkNavHandledRef.current = true
-        setOpen(false)
-    }
-
     return (
         <>
             <CommandDialog 
                 open={open} 
                 onOpenChange={setOpen} 
+                contentClass="sm:max-w-2xl"
                 commandProps={{ 
                     label: "Search Command Palette",
-                    className: "bg-surface/85 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-3xl overflow-hidden shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_rgba(0,0,0,0.9)]"
+                    className: "bg-transparent border-none overflow-hidden"
                 }}
             >
                 <div className="p-4 border-b border-white/10 bg-white/[0.02]">
@@ -302,15 +306,18 @@ export function CommandPalette() {
                                         const numericMediaId = typeof result.mediaId === "number" ? result.mediaId : Number(result.mediaId)
                                         const totalEps = (media as unknown as { totalEpisodes?: number } | undefined)?.totalEpisodes ?? 0
                                         
+                                        const isUnlinked = "isUnlinked" in result && result.isUnlinked
+                                        const isPlain = !isUnlinked && !("isChronology" in result && result.isChronology) && !("isSemantic" in result && result.isSemantic)
+                                        const canMarkWatched = isPlain && Number.isInteger(numericMediaId) && numericMediaId > 0 && totalEps > 0
+                                        const hasActions = isUnlinked || canMarkWatched
+
+                                        // Las acciones secundarias van como hermanas de la opción (no dentro):
+                                        // un control interactivo dentro de un role="option" es un anidado inválido.
                                         return (
+                                            <div key={String(result?.mediaId ?? `idx-${index}`)} className="relative">
                                             <CommandItem
-                                                key={String(result?.mediaId ?? `idx-${index}`)}
                                                 value={`${title}-${result?.mediaId ?? index}`}
                                                 onSelect={() => {
-                                                    if (linkNavHandledRef.current) {
-                                                        linkNavHandledRef.current = false
-                                                        return
-                                                    }
                                                     setOpen(false)
                                                     if ("isUnlinked" in result && result.isUnlinked) {
                                                         setPlayTarget({ path: result.path, title })
@@ -318,18 +325,11 @@ export function CommandPalette() {
                                                         navigateToResult(result)
                                                     }
                                                 }}
-                                                className="rounded-2xl border border-white/10 hover:border-white/25 border-t-white/20 bg-white/[0.03] hover:bg-white/[0.08] transition-[background-color,border-color,transform] duration-150 p-0 overflow-hidden group cursor-pointer shadow-glass-highlight-sm"
+                                                className={`rounded-2xl border border-white/10 hover:border-white/25 border-t-white/20 bg-white/[0.03] hover:bg-white/[0.08] transition-[background-color,border-color,transform] duration-150 p-0 overflow-hidden group cursor-pointer shadow-glass-highlight-sm ${hasActions ? "pr-[5.5rem]" : ""}`}
                                             >
                                                 {"isUnlinked" in result && result.isUnlinked ? (
                                                     <div className="flex w-full items-center gap-5 p-3 text-left">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setOpen(false)
-                                                                setPlayTarget({ path: result.path, title })
-                                                            }}
-                                                            className="flex flex-1 items-center gap-5 min-w-0 text-left"
-                                                        >
+                                                        <div className="flex flex-1 items-center gap-5 min-w-0 text-left">
                                                             <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-outline-variant/50 group-hover:scale-105 transition-transform duration-base bg-brand-accent/10 flex items-center justify-center overflow-hidden relative">
                                                                 <div className="absolute inset-0 bg-gradient-to-tr from-brand-accent/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                                                 <IconNavigationFilm className="h-7 w-7 text-brand-accent group-hover:scale-110 transition-transform duration-base z-10" />
@@ -347,22 +347,46 @@ export function CommandPalette() {
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                        </button>
-                                                        <div className="flex flex-col gap-1.5 shrink-0 pr-1">
-                                                            <ActionButton label="Cola" title="Añadir a la cola" onClick={() => queueUnlinked(result, title)} />
-                                                            <ActionButton label="Pre-TC" title="Pre-transcodear" disabled={isEnqueueingPreTranscode} onClick={() => preTranscodeUnlinked(result)} />
-                                                            <ActionButton label="Match" title="Match TMDB en Biblioteca" onClick={() => matchUnlinked(result.path)} />
+                                                        </div>
+                                                    </div>
+                                                ) : "isChronology" in result && result.isChronology ? (
+                                                    <div className="flex w-full items-center gap-5 p-3">
+                                                        <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-amber-500/30 group-hover:scale-105 transition-transform duration-base bg-amber-500/10 flex items-center justify-center overflow-hidden relative">
+                                                            <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            {media?.posterImage ? (
+                                                                <img
+                                                                    src={media.posterImage}
+                                                                    alt={title}
+                                                                    className="w-full h-full object-cover relative z-10"
+                                                                />
+                                                            ) : (
+                                                                <IconStatusSparkles className="h-7 w-7 text-amber-400 group-hover:scale-110 transition-transform duration-base z-10" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col overflow-hidden text-left py-1 min-w-0">
+                                                            <span className="truncate text-lg font-bold text-on-surface group-hover:text-amber-400 transition-colors leading-tight" title={title}>
+                                                                {title}
+                                                            </span>
+                                                            <p className="text-label-sm text-on-surface-variant truncate mt-1">
+                                                                {result.media?.description || result.media?.titleEnglish}
+                                                            </p>
+                                                            <div className="flex items-center gap-2 mt-2">
+                                                                <span className="text-label-sm font-black uppercase tracking-widest text-amber-300 bg-amber-500/15 border border-amber-500/25 px-2 py-0.5 rounded-md">
+                                                                    CRONOLOGÍA
+                                                                </span>
+                                                                {media?.year && (
+                                                                    <span className="text-label-sm font-black uppercase tracking-widest text-on-surface-variant/80">
+                                                                        {media.year}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 ) : "isSemantic" in result && result.isSemantic ? (() => {
                                                     const sem = result.semanticData
-                                                    const isMovie = sem.mediaType === "MOVIE"
-                                                    const linkProps = isMovie
-                                                        ? { to: "/movies/$movieId" as const, params: { movieId: String(sem.mediaId) } }
-                                                        : { to: "/series/$seriesId" as const, params: { seriesId: String(sem.mediaId) } }
 
                                                     return (
-                                                        <Link {...linkProps} preload="intent" className="flex w-full items-center gap-5 p-3" onClick={markLinkNavHandled}>
+                                                        <div className="flex w-full items-center gap-5 p-3">
                                                             <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-brand-accent/30 group-hover:scale-105 transition-transform duration-base bg-brand-accent/10 flex items-center justify-center overflow-hidden relative">
                                                                 <div className="absolute inset-0 bg-gradient-to-tr from-brand-accent/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                                                 <IconStatusSparkles className="h-7 w-7 text-brand-accent group-hover:scale-110 transition-transform duration-base z-10" />
@@ -383,18 +407,12 @@ export function CommandPalette() {
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                        </Link>
+                                                        </div>
                                                     )
                                                 })() : (() => {
-                                                        const isMovie = media?.format === "MOVIE" || media?.format === "SPECIAL" || media?.format === "OVA"
-                                                        const linkProps = isMovie 
-                                                            ? { to: "/movies/$movieId" as const, params: { movieId: result?.mediaId?.toString() || "0" } }
-                                                            : { to: "/series/$seriesId" as const, params: { seriesId: result?.mediaId?.toString() || "0" } }
-                                                        const canMarkWatched = Number.isInteger(numericMediaId) && numericMediaId > 0 && totalEps > 0
-
                                                         return (
                                                             <div className="flex w-full items-center gap-5 p-3">
-                                                                <Link {...linkProps} preload="intent" className="flex flex-1 items-center gap-5 min-w-0" onClick={markLinkNavHandled}>
+                                                                <div className="flex flex-1 items-center gap-5 min-w-0">
                                                                     <div
                                                                         className="h-20 w-14 flex-shrink-0 rounded-lg bg-cover bg-center shadow-elevation-1 border border-outline-variant/50 group-hover:scale-105 transition-transform duration-base bg-surface-variant flex items-center justify-center overflow-hidden relative"
                                                                         style={media?.posterImage ? { backgroundImage: `url(${media.posterImage})` } : {}}
@@ -429,16 +447,24 @@ export function CommandPalette() {
                                                                             ))}
                                                                         </div>
                                                                     </div>
-                                                                </Link>
-                                                                {canMarkWatched && (
-                                                                    <div className="shrink-0 pr-1">
-                                                                        <ActionButton label="Visto" title="Marcar como visto" onClick={() => markWatched(numericMediaId, totalEps, title)} />
-                                                                    </div>
-                                                                )}
+                                                                </div>
                                                             </div>
                                                         )
                                                     })()}
                                             </CommandItem>
+                                            {isUnlinked && "path" in result && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-1.5">
+                                                    <ActionButton label="Cola" title="Añadir a la cola" onClick={() => queueUnlinked(result, title)} />
+                                                    <ActionButton label="Pre-TC" title="Pre-transcodear" disabled={isEnqueueingPreTranscode} onClick={() => preTranscodeUnlinked(result)} />
+                                                    <ActionButton label="Match" title="Match TMDB en Biblioteca" onClick={() => matchUnlinked(result.path)} />
+                                                </div>
+                                            )}
+                                            {canMarkWatched && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    <ActionButton label="Visto" title="Marcar como visto" onClick={() => markWatched(numericMediaId, totalEps, title)} />
+                                                </div>
+                                            )}
+                                            </div>
                                         )
                                     })}
                                 </div>

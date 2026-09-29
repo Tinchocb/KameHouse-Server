@@ -47,7 +47,7 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
             custom={index}
             {...motionProps}
             onClick={() => onNavigateSaga(seriesId, saga.id)}
-            // Activable con teclado; Enter sobre el botón "Reproducir" interno no navega.
+            // Activable con teclado (Enter/Espacio).
             role="button"
             tabIndex={0}
             aria-label={`Ver ${cleanTitle}`}
@@ -104,18 +104,16 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent z-10 pointer-events-none" />
 
             {/* Play Button Overlay on Hover (CSS, sin spring por tarjeta) — siempre visible en táctil */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
-                <button
-                    type="button"
-                    aria-label={`Reproducir ${cleanTitle}`}
-                    onClick={(e) => {
-                        e.stopPropagation()
-                        onNavigateSaga(seriesId, saga.id)
-                    }}
-                    className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] pointer-events-auto cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-90 p-0 border-0"
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 max-sm:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
+                {/* Decorativo: la tarjeta entera ya es el botón (un botón anidado dentro de
+                    role="button" es un control interactivo dentro de otro y confunde a lectores
+                    de pantalla). El clic sube a la tarjeta. */}
+                <span
+                    aria-hidden
+                    className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] transition-transform duration-150 group-hover:scale-110 group-active:scale-90"
                 >
                     <IconMediaPlay size={18} fill="currentColor" className="ml-0.5" />
-                </button>
+                </span>
             </div>
 
             {/* Title & Info at bottom over difuminado */}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { resolveBackdropTreatment } from "./media-hero"
+import { resolveBackdropTreatment, heroScrimBackground } from "./media-hero"
 
 /**
  * Settings → Apariencia → Página de Detalle → Tipo de Banner.
@@ -38,5 +38,26 @@ describe("resolveBackdropTreatment", () => {
         // Legacy/unset values must not blank out someone's hero.
         expect(resolveBackdropTreatment("", true)).toBe("show")
         expect(resolveBackdropTreatment("garbage", false)).toBe("show")
+    })
+})
+
+describe("heroScrimBackground", () => {
+    it("generates standard bottom dissolve to var(--bg-primary) when fullHeight is false", () => {
+        const scrim = heroScrimBackground(null, false, false)
+        expect(scrim).toContain("linear-gradient(to top, var(--bg-primary) 0%")
+        expect(scrim).toContain("linear-gradient(to bottom")
+        expect(scrim).toContain("linear-gradient(to right")
+    })
+
+    it("generates a gentle protective bottom gradient without solid var(--bg-primary) when fullHeight is true", () => {
+        const scrim = heroScrimBackground(null, false, true)
+        expect(scrim).not.toContain("var(--bg-primary) 0%")
+        expect(scrim).toContain("linear-gradient(to top")
+        expect(scrim).toContain("transparent 48%")
+    })
+
+    it("incorporates textZoneColor tint into the gradients", () => {
+        const scrim = heroScrimBackground("rgb(20, 30, 40)", false, true)
+        expect(scrim).toContain("rgb(20, 30, 40)")
     })
 })

@@ -63,12 +63,6 @@ export function PlayerSettingsMenu({
     onAutoSkipIntroChange,
     autoSkipOutro = false,
     onAutoSkipOutroChange,
-    autoSkipFiller = false,
-    onAutoSkipFillerChange,
-    skipStepSeconds = 85,
-    onSkipStepSecondsChange,
-    showHeatmap = true,
-    onShowHeatmapChange,
     hlsLevels = [],
     activeHlsLevel = -1,
     onHlsLevelChange,
@@ -86,8 +80,6 @@ export function PlayerSettingsMenu({
     onMarathonModeChange,
     mediaId,
     mediaFormat,
-    ambientModeEnabled = true,
-    onAmbientModeEnabledChange,
 }: PlayerSettingsMenuProps) {
     const isDesktop = useIsDesktop()
     const [internalOpen, setInternalOpen] = React.useState(false)
@@ -113,6 +105,28 @@ export function PlayerSettingsMenu({
 
     const panelRef = React.useRef<HTMLDivElement>(null)
     const buttonRef = React.useRef<HTMLButtonElement>(null)
+
+    // Igual que la lista de episodios: al abrir (o cambiar de vista) el foco entra al panel,
+    // así con teclado o control remoto se navega el menú sin buscarlo con Tab.
+    React.useEffect(() => {
+        if (!isOpen || !isDesktop) return
+        const id = window.setTimeout(() => {
+            const first = Array.from(panelRef.current?.querySelectorAll<HTMLElement>("button") ?? [])
+                .find((b) => b.getAttribute("aria-label") !== "Cerrar menú")
+            first?.focus({ preventScroll: true })
+        }, 30)
+        return () => window.clearTimeout(id)
+    }, [isOpen, isDesktop, view])
+
+    // Al cerrar, si el foco estaba dentro del panel vuelve al botón (si no, cae a <body>).
+    React.useEffect(() => {
+        if (!isOpen || !isDesktop) return
+        const panel = panelRef.current
+        const button = buttonRef.current
+        return () => {
+            if (panel?.contains(document.activeElement)) button?.focus({ preventScroll: true })
+        }
+    }, [isOpen, isDesktop])
 
     React.useEffect(() => {
         if (!isOpen) return
@@ -178,11 +192,10 @@ export function PlayerSettingsMenu({
         : null
 
     // Resumen de la fila "Reproducción": Maratón fuerza todos los saltos, así que
-    // manda; si no, se listan los saltos activos (incluido relleno) y la velocidad.
+    // manda; si no, se listan los saltos activos y la velocidad.
     const autoSkipLabel = [
         autoSkipIntro ? "Intro" : null,
         autoSkipOutro ? "Outro" : null,
-        autoSkipFiller ? "Relleno" : null,
     ].filter(Boolean).join("+")
     const isMovieFormat = mediaFormat?.toUpperCase() === "MOVIE"
     const rateLabel = Math.abs(playbackRate - 1) < 0.001 ? null : `${playbackRate}x`
@@ -374,20 +387,12 @@ export function PlayerSettingsMenu({
                         onAutoSkipIntroChange={onAutoSkipIntroChange ?? (() => {})}
                         autoSkipOutro={autoSkipOutro}
                         onAutoSkipOutroChange={onAutoSkipOutroChange ?? (() => {})}
-                        autoSkipFiller={autoSkipFiller}
-                        onAutoSkipFillerChange={onAutoSkipFillerChange}
-                        skipStepSeconds={skipStepSeconds}
-                        onSkipStepSecondsChange={onSkipStepSecondsChange ?? (() => {})}
-                        showHeatmap={showHeatmap}
-                        onShowHeatmapChange={onShowHeatmapChange ?? (() => {})}
                         loopEnabled={loopEnabled}
                         onLoopEnabledChange={onLoopEnabledChange ?? (() => {})}
                         autoDisableSubtitlesWhenDubbed={autoDisableSubtitlesWhenDubbed}
                         onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange ?? (() => {})}
                         tvMode={tvMode}
                         onTvModeChange={onTvModeChange}
-                        ambientModeEnabled={ambientModeEnabled}
-                        onAmbientModeEnabledChange={onAmbientModeEnabledChange ?? (() => {})}
                         marathonMode={marathonMode}
                         onMarathonModeChange={onMarathonModeChange}
                         showSeparator={false}
@@ -407,6 +412,8 @@ export function PlayerSettingsMenu({
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen) }}
                 aria-label="Configuración [O]"
                 title="Configuración [O]"
+                aria-haspopup="dialog"
+                aria-expanded={isOpen}
                 className={cn(
                     "relative",
                     PLAYER_ICON_BTN,
@@ -434,6 +441,8 @@ export function PlayerSettingsMenu({
                         <AnimatePresence>
                             {isOpen && (
                                 <m.div
+                                    role="dialog"
+                                    aria-label="Configuración del reproductor"
                                     initial={{ opacity: 0, y: 8 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 8 }}
@@ -451,7 +460,7 @@ export function PlayerSettingsMenu({
             {/* Mobile bottom-sheet — solo se monta en móvil (ver useIsDesktop) */}
             {!isDesktop && (
                 <Vaul open={isOpen} onOpenChange={setIsOpen}>
-                    <VaulContent className="bg-zinc-950 border-t border-white/10 p-3 pb-8 focus:outline-none max-h-[85vh] overflow-y-auto">
+                    <VaulContent className="bg-surface-container-lowest border-t border-white/10 p-3 pb-8 focus:outline-none max-h-[85vh] overflow-y-auto">
                         {renderContent()}
                     </VaulContent>
                 </Vaul>

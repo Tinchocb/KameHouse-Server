@@ -63,10 +63,9 @@ export function AnimatedTooltip({
                         transition={{ type: "spring", stiffness: 420, damping: 28 }}
                         className={cn(
                             "absolute pointer-events-none z-50 px-2.5 py-1 rounded-xl",
-                            "bg-zinc-950/90 border border-white/20 border-t-white/40 border-b-white/10",
+                            "sectionbar",
                             "text-white font-mono text-2xs font-bold tracking-wider uppercase",
-                            "shadow-[shadow:0_8px_24px_rgba(0,0,0,0.7),var(--glass-highlight-md)]",
-                            "backdrop-blur-overlay-xl whitespace-nowrap select-none",
+                            "whitespace-nowrap select-none",
                             side === "top" ? "-top-9 left-1/2 -translate-x-1/2" : "-bottom-9 left-1/2 -translate-x-1/2",
                             className
                         )}

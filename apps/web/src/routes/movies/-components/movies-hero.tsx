@@ -3,6 +3,8 @@ import { getFormatLabel } from "@/lib/helpers/media"
 import { useState, useCallback, useMemo } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { IconUiCheck, IconMediaPlay, IconUiPlus, IconUiInfo } from "@/components/ui/icons";
+import { IconSwap, useTransientFlag } from "@/components/ui/kinetics/icon-swap"
+import { LoadSwap } from "@/components/ui/kinetics/load-swap"
 import type { Continuity_WatchHistory } from "@/api/generated/types"
 import { cleanMovieTitle } from "../-MovieCard"
 import type { MovieEntry } from "../index"
@@ -12,7 +14,7 @@ import type { SwimlaneItem } from "@/components/ui/swimlane"
 import { useHeroBackdrop } from "@/hooks/use-hero"
 import { stripHtml } from "@/lib/helpers/sanitizer"
 import { getMediumResImage, getLowResImage } from "@/lib/helpers/images"
-import { HeroBackdrop, heroLowResSrc } from "@/components/ui/spotlight/hero-backdrop"
+import { HeroBackdrop } from "@/components/ui/spotlight/hero-backdrop"
 import { useQueueStore } from "@/lib/store"
 import {
     useMotionTier,
@@ -27,7 +29,7 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
 import { useHideAudienceScore } from "@/lib/theme/theme-hooks"
 import { getMovieLore, getEntryTitle, getLoreDescription, createShuffledIndices } from "./movies-utils"
-import { getMovieHeroArt, heroArtFromUrl, heroObjectPosition, DEFAULT_MOVIE_FOCAL, POSTER_FOCAL } from "@/lib/config/hero-art"
+import { getMovieHeroArt, heroArtFromUrl, DEFAULT_MOVIE_FOCAL, POSTER_FOCAL } from "@/lib/config/hero-art"
 import { HERO_AURA_CLASS, HERO_STAGE_CLASS } from "@/lib/config/hero-stage"
 import { HeroCarouselDots } from "@/components/ui/spotlight/hero-carousel-dots"
 
@@ -38,7 +40,7 @@ interface MoviesHeroProps {
     watchHistory?: Continuity_WatchHistory
     activeEraId: EraId | "all"
     categorizedData: Record<EraId, { series: SwimlaneItem | null; movies: SwimlaneItem[] }>
-    onSelectEra: (eraId: EraId) => void
+    onSelectEra: (eraId: EraId | "all") => void
     onHoverSound: () => void
     isLoading?: boolean
 }
@@ -141,7 +143,6 @@ export function MoviesHero({
     const visualArt = heroArt ?? (posterSrc ? heroArtFromUrl(posterSrc, { focal: POSTER_FOCAL, subject: "center", aspect: 2 / 3, safeTop: 100 }) : null)
     // Global solo con banner 16:9 widescreen auténtico (nunca la portada vertical)
     const bannerSrc = backdropSrc
-
     useHeroBackdrop(bannerSrc)
 
     const lore = useMemo(() => getMovieLore(currentMovie), [currentMovie])
@@ -162,6 +163,9 @@ export function MoviesHero({
         return cleanMovieTitle(raw)
     }, [currentMovie, lore])
 
+    // El botón confirma en el lugar (+ → ✓) además del toast.
+    const [justQueued, flashQueued] = useTransientFlag(1600)
+
     const handleAddToQueue = async (e: React.MouseEvent) => {
         e.stopPropagation()
         if (!currentMovie?.mediaId) return
@@ -179,6 +183,7 @@ export function MoviesHero({
                     malId: displayMedia?.idMal ?? null,
                     mediaFormat: displayMedia?.format ?? "MOVIE",
                 })
+                flashQueued()
                 toast.success("Añadida a la cola de reproducción", {
                     description: movieTitle,
                 })
@@ -230,219 +235,218 @@ export function MoviesHero({
                     categorizedData={categorizedData}
                     onSelectEra={onSelectEra}
                     onHoverSound={onHoverSound}
+                    showAllOption
                 />
             </div>
 
             {/* 2. CINEJOY THEATRICAL HERO STAGE */}
             <div className="relative z-10 w-full">
-                {isLoading && !currentMovie ? (
-                    <div
-                        className="w-full relative rounded-hero overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] border border-outline-variant bg-bg-primary animate-pulse"
-                        aria-label="Cargando destacadas"
-                    />
-                ) : !currentMovie ? (
-                    <div
-                        className="w-full relative rounded-hero overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] flex items-center justify-center border border-outline-variant shadow-hero bg-bg-primary transition-colors duration-700 p-6"
-                        style={{
-                            borderColor: `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
-                        }}
-                    >
-                        <EmptyState
-                            title="Sin películas en esta era"
-                            message={`La era ${currentEraLabel} no cuenta con películas o especiales cinematográficos en la biblioteca.`}
+                <LoadSwap
+                    loading={isLoading && !currentMovie}
+                    skeleton={
+                        <div
+                            className="w-full relative rounded-hero overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] border border-outline-variant bg-bg-primary animate-pulse"
+                            aria-label="Cargando destacadas"
                         />
-                    </div>
-                ) : (
-                    <div
-                        className={`w-full relative rounded-hero overflow-hidden ${HERO_STAGE_CLASS} flex flex-col justify-end border border-outline-variant shadow-hero bg-black transition-colors duration-700`}
-                        style={{
-                            borderColor: `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
-                        }}
-                    >
-                    {/* Full Stage Theatrical Visual with cinematic blend */}
-                    <AnimatePresence mode="popLayout">
-                        <m.div
-                            key={currentMovie.mediaId + "_visual"}
-                            variants={heroBackdropFadeVariants}
-                            initial="initial"
-                            animate="animate"
-                            exit="exit"
-                            className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-hero-base"
+                    }
+                >
+                    {!currentMovie ? (
+                        <div
+                            className="w-full relative rounded-hero overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] flex items-center justify-center border border-outline-variant shadow-hero bg-bg-primary transition-colors duration-700 p-6"
+                            style={{
+                                borderColor: `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
+                            }}
                         >
-                            {visualArt && (
-                                <>
-                                    {/* 1. Base negra cinematográfica: evita wash plano si la imagen tarda/falla */}
-                                     <div className="absolute inset-0 w-full h-full bg-black pointer-events-none" />
-                                     <div
-                                          className="absolute -inset-6 pointer-events-none"
-                                          style={{
-                                              backgroundImage: `url(${heroLowResSrc(visualArt) ?? visualArt.src})`,
-                                              backgroundSize: "cover",
-                                              backgroundPosition: heroObjectPosition(visualArt),
-                                              filter: "blur(var(--filter-blur-hero, 12px)) brightness(0.62) saturate(130%)",
-                                              transform: "scale(1.08)",
-                                          }}
-                                      />
-
-                                      {/* 2. Capa nítida: encuadre por punto focal, máscara según composición */}
-                                      <HeroBackdrop
-                                          art={visualArt}
-                                          alt={movieTitle}
-                                          imgClassName="hero-image-filter"
-                                      />
-                                </>
-                            )}
-
-                            {/* Cinejoy Cinematic Dark Gradients (tokenizados - respetan tema amoled/era) */}
-                            {/* Left-to-Right gradient: guarantees text legibility */}
-                            <div className="absolute inset-0 scrim-hero-left pointer-events-none" />
-                            {/* Bottom-to-Top gradient: seamless dissolve */}
-                            <div className="absolute inset-0 scrim-hero-bottom pointer-events-none" />
-                            {/* Top subtle vignette */}
-                            <div className="absolute inset-0 scrim-hero-top pointer-events-none" />
-                        </m.div>
-                    </AnimatePresence>
-
-                    {/* Content Overlay (idéntico padding y ritmo que Home) */}
-                    <div className="relative z-hero-content flex flex-col justify-end p-5 sm:p-6 md:p-7 space-y-2.5 w-full pointer-events-none">
-                        <AnimatePresence mode="wait">
+                            <EmptyState
+                                title="Sin películas en esta era"
+                                message={`La era ${currentEraLabel} no cuenta con películas o especiales cinematográficos en la biblioteca.`}
+                            />
+                        </div>
+                    ) : (
+                        <div
+                            className={`w-full relative rounded-hero overflow-hidden ${HERO_STAGE_CLASS} flex flex-col justify-end border border-outline-variant shadow-hero bg-black transition-colors duration-700`}
+                            style={{
+                                borderColor: `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
+                            }}
+                        >
+                        {/* Full Stage Theatrical Visual with cinematic blend */}
+                        <AnimatePresence mode="popLayout">
                             <m.div
-                                key={currentMovie.mediaId + "_content"}
-                                variants={heroContentContainerVariants}
-                                initial="hidden"
-                                animate="visible"
+                                key={currentMovie.mediaId + "_visual"}
+                                variants={heroBackdropFadeVariants}
+                                initial="initial"
+                                animate="animate"
                                 exit="exit"
-                                className="flex flex-col space-y-2.5 transform-gpu will-change-transform text-left w-full pointer-events-auto max-w-hero-content-wide"
+                                className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-hero-base"
                             >
-                                {/* Top Era Badge */}
-                                {currentEraLabel && (
-                                    <m.div variants={heroFadeOnlyVariants} className="flex items-center">
-                                        <span
-                                            className="inline-flex items-center gap-1.5 font-mono text-3xs sm:text-2xs font-bold tracking-widest uppercase px-3 py-1 rounded-full border backdrop-blur-md"
-                                            style={{
-                                                color: currentColors.accent,
-                                                borderColor: `color-mix(in srgb, ${currentColors.accent} 35%, transparent)`,
-                                                backgroundColor: `color-mix(in srgb, ${currentColors.accent} 12%, transparent)`,
-                                                boxShadow: `0 0 15px color-mix(in srgb, ${currentColors.accent} 18%, transparent)`
-                                            }}
-                                        >
-                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentColors.accent }} />
-                                            {currentEraLabel}
-                                        </span>
-                                    </m.div>
+                                {visualArt && (
+                                    <>
+                                        {/* 1. Base negra cinematográfica: evita wash plano si la imagen tarda/falla */}
+                                         <div className="absolute inset-0 w-full h-full bg-black pointer-events-none" />
+                                          {/* 2. Capa nítida: encuadre por punto focal, máscara según composición */}
+                                          <HeroBackdrop
+                                              art={visualArt}
+                                              alt={movieTitle}
+                                              // Ventana ancha: imagen a su tamaño a la derecha; el hueco lo llena su reflejo desenfocado.
+                                              wide="right"
+                                              // Scrims del texto solo sobre el desenfoque, nunca sobre la imagen.
+                                              scrims
+                                              imgClassName="hero-image-filter"
+                                          />
+                                    </>
                                 )}
 
-                                {/* Movie Title with display font (mismo tamaño y altura de línea que Home) */}
-                                <m.h1
-                                    variants={heroItemVariants}
-                                    role="link"
-                                    tabIndex={currentMovie.mediaId == null ? -1 : 0}
-                                    aria-label={`Ver ${movieTitle}`}
-                                    onClick={() => {
-                                        if (currentMovie.mediaId == null) return
-                                        handleMovieClick(currentMovie.mediaId)
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if ((e.key === 'Enter' || e.key === ' ') && currentMovie.mediaId != null) {
-                                            e.preventDefault();
-                                            handleMovieClick(currentMovie.mediaId)
-                                        }
-                                    }}
-                                    className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-[1.05] text-white uppercase select-none font-display cursor-pointer hover:text-brand-accent transition-colors text-edge-glow text-balance line-clamp-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded"
-                                >
-                                    {movieTitle}
-                                </m.h1>
-
-                                {/* Unified Metadata Capsule (Fade-only to avoid Chromium backdrop-filter delay) */}
-                                <MediaMetadataCapsule
-                                    format={getFormatLabel(displayMedia?.format, "Película")}
-                                    year={displayMedia?.year}
-                                    duration={displayMedia?.runtime ? `${displayMedia.runtime} MIN` : null}
-                                    rating={hideAudienceScore ? undefined : (displayMedia?.score ? (displayMedia.score / 10) : undefined)}
-                                    variants={heroFadeOnlyVariants}
-                                >
-                                    {isCompleted && (
-                                        <span className="bg-brand-success/20 text-brand-success text-3xs font-mono font-bold tracking-wider px-2 py-0.5 rounded border border-brand-success/30 uppercase flex items-center gap-1">
-                                            <IconUiCheck className="w-3 h-3" /> Visto
-                                        </span>
-                                    )}
-                                    {hasProgress && (
-                                        <span className="bg-brand-secondary/25 text-brand-secondary text-3xs font-mono font-bold tracking-wider px-2 py-0.5 rounded border border-brand-secondary/35 uppercase">
-                                            Reanudar ({progressPercent}%)
-                                        </span>
-                                    )}
-                                </MediaMetadataCapsule>
-
-                                {/* Synopsis */}
-                                {plainDescription && (
-                                    <m.p
-                                        variants={heroItemVariants}
-                                        className="text-on-surface text-xs sm:text-sm leading-relaxed font-normal select-none line-clamp-3 max-w-xl drop-shadow"
-                                    >
-                                        {plainDescription}
-                                    </m.p>
-                                )}
                             </m.div>
                         </AnimatePresence>
 
-                        {/* ─── CINEJOY ACTION BUTTONS & CAROUSEL CONTROLS ──────── */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 w-full pointer-events-auto">
-                            <div className="flex items-center gap-3">
-                                {/* Primary Cinejoy Pill Button (Play / Reanudar) */}
-                                <button
-                                    onClick={() => {
-                                        if (currentMovie.mediaId == null) return
-                                        handleMovieClick(currentMovie.mediaId)
-                                    }}
-                                    className="flex items-center justify-center bg-white text-black font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.04] hover:-translate-y-px active:scale-95"
+                        {/* Content Overlay (idéntico padding y ritmo que Home) */}
+                        <div className="relative z-hero-content flex flex-col justify-end p-5 sm:p-6 md:p-7 space-y-2.5 w-full pointer-events-none">
+                            <AnimatePresence mode="wait">
+                                <m.div
+                                    key={currentMovie.mediaId + "_content"}
+                                    variants={heroContentContainerVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    className="flex flex-col space-y-2.5 transform-gpu will-change-transform text-left w-full pointer-events-auto max-w-hero-content-wide"
                                 >
-                                    <IconMediaPlay size={15} fill="currentColor" />
-                                    <span>{hasProgress ? "Reanudar" : "Ver Película"}</span>
-                                </button>
+                                    {/* Top Era Badge */}
+                                    {currentEraLabel && (
+                                        <m.div variants={heroFadeOnlyVariants} className="flex items-center">
+                                            <span
+                                                className="inline-flex items-center gap-1.5 font-mono text-3xs sm:text-2xs font-bold tracking-widest uppercase px-3 py-1 rounded-full border backdrop-blur-md"
+                                                style={{
+                                                    color: currentColors.accent,
+                                                    borderColor: `color-mix(in srgb, ${currentColors.accent} 35%, transparent)`,
+                                                    backgroundColor: `color-mix(in srgb, ${currentColors.accent} 12%, transparent)`,
+                                                    boxShadow: `0 0 15px color-mix(in srgb, ${currentColors.accent} 18%, transparent)`
+                                                }}
+                                            >
+                                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentColors.accent }} />
+                                                {currentEraLabel}
+                                            </span>
+                                        </m.div>
+                                    )}
 
-                                {/* Secondary Segmented Glass Capsule [ + Cola | ℹ Detalles ] */}
-                                <div className="flex items-center rounded-full bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-xl text-white shadow-glass-highlight-md overflow-hidden">
-                                    <button
-                                        onClick={handleAddToQueue}
-                                        title="Añadir a la cola de reproducción"
-                                        aria-label="Añadir a la cola"
-                                        className="py-2.5 pl-4 pr-3 hover:bg-white/[0.08] text-on-surface-variant hover:text-white cursor-pointer transition-colors flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider font-display rounded-l-full"
+                                    {/* Movie Title with display font (mismo tamaño y altura de línea que Home) */}
+                                    <m.h1
+                                        variants={heroItemVariants}
+                                        className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-[1.05] text-white uppercase select-none font-display text-edge-glow text-balance line-clamp-2"
                                     >
-                                        <IconUiPlus size={15} />
-                                        <span className="hidden sm:inline">Cola</span>
-                                    </button>
+                                        {/* El enlace va en un hijo: role="link" sobre el h1 anularía el encabezado. */}
+                                        <span
+                                            role="link"
+                                            tabIndex={currentMovie.mediaId == null ? -1 : 0}
+                                            aria-label={`Ver ${movieTitle}`}
+                                            onClick={() => {
+                                                if (currentMovie.mediaId == null) return
+                                                handleMovieClick(currentMovie.mediaId)
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if ((e.key === 'Enter' || e.key === ' ') && currentMovie.mediaId != null) {
+                                                    e.preventDefault();
+                                                    handleMovieClick(currentMovie.mediaId)
+                                                }
+                                            }}
+                                            className="cursor-pointer hover:text-brand-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded"
+                                        >
+                                            {movieTitle}
+                                        </span>
+                                    </m.h1>
 
-                                    <div className="w-[1px] h-4 bg-white/20" aria-hidden />
+                                    {/* Unified Metadata Capsule (Fade-only to avoid Chromium backdrop-filter delay) */}
+                                    <MediaMetadataCapsule
+                                        format={getFormatLabel(displayMedia?.format, "Película")}
+                                        year={displayMedia?.year}
+                                        duration={displayMedia?.runtime ? `${displayMedia.runtime} MIN` : null}
+                                        rating={hideAudienceScore ? undefined : (displayMedia?.score ? (displayMedia.score / 10) : undefined)}
+                                        variants={heroFadeOnlyVariants}
+                                    >
+                                        {isCompleted && (
+                                            <span className="relative z-10 bg-emerald-950/70 text-emerald-300 text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-full border border-emerald-500/40 border-t-emerald-400/70 shadow-[inset_0_1px_1px_rgba(52,211,153,0.35),0_0_12px_rgba(16,185,129,0.2)] uppercase flex items-center gap-1">
+                                                <IconUiCheck className="w-3 h-3 text-emerald-400" /> Visto
+                                            </span>
+                                        )}
+                                        {hasProgress && (
+                                            <span className="relative z-10 bg-sky-950/70 text-sky-300 text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-full border border-sky-500/40 border-t-sky-400/70 shadow-[inset_0_1px_1px_rgba(56,189,248,0.35),0_0_12px_rgba(14,165,233,0.2)] uppercase">
+                                                Reanudar ({progressPercent}%)
+                                            </span>
+                                        )}
+                                    </MediaMetadataCapsule>
 
+                                    {/* Synopsis */}
+                                    {plainDescription && (
+                                        <m.p
+                                            variants={heroItemVariants}
+                                            className="text-on-surface text-xs sm:text-sm leading-relaxed font-normal select-none line-clamp-3 max-w-xl drop-shadow"
+                                        >
+                                            {plainDescription}
+                                        </m.p>
+                                    )}
+                                </m.div>
+                            </AnimatePresence>
+
+                            {/* ─── CINEJOY ACTION BUTTONS & CAROUSEL CONTROLS ──────── */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 w-full pointer-events-auto">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                    {/* Primary Cinejoy Pill Button (Play / Reanudar) */}
                                     <button
                                         onClick={() => {
                                             if (currentMovie.mediaId == null) return
                                             handleMovieClick(currentMovie.mediaId)
                                         }}
-                                        title="Ver detalles de la película"
-                                        aria-label="Ver detalles"
-                                        className="py-2.5 pr-4 pl-3 hover:bg-white/[0.08] text-on-surface-variant hover:text-white cursor-pointer transition-colors flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider font-display rounded-r-full"
+                                        className="flex items-center justify-center bg-white text-black font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.04] hover:-translate-y-px active:scale-95"
                                     >
-                                        <IconUiInfo size={15} />
-                                        <span>Detalles</span>
+                                        <IconMediaPlay size={15} fill="currentColor" className="shrink-0" />
+                                        <span className="whitespace-nowrap">{hasProgress ? "Reanudar" : "Ver Película"}</span>
                                     </button>
-                                </div>
-                            </div>
 
-                            {/* Cinejoy Carousel Dots (compartidos con Inicio) */}
-                            <HeroCarouselDots
-                                count={topFeatured.length}
-                                activeIndex={featuredIndex}
-                                onSelect={handleSelectSlide}
-                                getLabel={(i) => `Ir a película ${i + 1} de ${topFeatured.length}`}
-                                paused={isHeroHovered || !!debouncedMovie}
-                                showProgress={allowCinematicMotion}
-                                onCycleComplete={advanceShuffle}
-                            />
+                                    {/* Secondary Segmented Glass Capsule [ + Cola | ℹ Detalles ] */}
+                                    <div className="glass-frosted-pill flex items-center text-white shadow-glass-highlight-md overflow-hidden">
+                                        <button
+                                            onClick={handleAddToQueue}
+                                            title="Añadir a la cola de reproducción"
+                                            aria-label={justQueued ? "Añadida a la cola" : "Añadir a la cola"}
+                                            className="py-2.5 pl-4 pr-3 hover:bg-white/[0.08] text-on-surface-variant hover:text-white cursor-pointer transition-colors flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider font-display rounded-l-full"
+                                        >
+                                            <IconSwap swapKey={justQueued ? "queued" : "add"}>
+                                                {justQueued ? <IconUiCheck size={15} /> : <IconUiPlus size={15} />}
+                                            </IconSwap>
+                                            <span className="hidden sm:inline">Cola</span>
+                                        </button>
+
+                                        <div className="w-[1px] h-4 bg-white/20" aria-hidden />
+
+                                        <button
+                                            onClick={() => {
+                                                if (currentMovie.mediaId == null) return
+                                                handleMovieClick(currentMovie.mediaId)
+                                            }}
+                                            title="Ver detalles de la película"
+                                            aria-label="Ver detalles"
+                                            className="py-2.5 pr-4 pl-3 hover:bg-white/[0.08] text-on-surface-variant hover:text-white cursor-pointer transition-colors flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider font-display rounded-r-full"
+                                        >
+                                            <IconUiInfo size={15} />
+                                            <span>Detalles</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Cinejoy Carousel Dots (compartidos con Inicio) */}
+                                <HeroCarouselDots
+                                    count={topFeatured.length}
+                                    activeIndex={featuredIndex}
+                                    onSelect={handleSelectSlide}
+                                    getLabel={(i) => `Ir a película ${i + 1} de ${topFeatured.length}`}
+                                    paused={isHeroHovered || !!debouncedMovie}
+                                    showProgress={allowCinematicMotion}
+                                    onCycleComplete={advanceShuffle}
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
-                )}
+                    )}
+                </LoadSwap>
             </div>
         </section>
     )

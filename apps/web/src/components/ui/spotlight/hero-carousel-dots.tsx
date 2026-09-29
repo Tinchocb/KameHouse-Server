@@ -143,7 +143,7 @@ export function HeroCarouselDots({
                 e.stopPropagation()
                 selectFromKeyboard(next)
             }}
-            className="flex items-center rounded-full bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-2xl px-2.5 py-0.5 ml-auto shrink-0 shadow-[shadow:var(--glass-highlight-lg),0_8px_20px_rgba(0,0,0,0.6)]"
+            className="glass-frosted-pill flex items-center px-2.5 py-0.5 ml-auto shrink-0"
         >
             {/* popLayout: al deslizarse la ventana los dots entran/salen escalando
                 y los que quedan se reacomodan con layout en vez de saltar. */}
@@ -169,6 +169,10 @@ export function HeroCarouselDots({
                         aria-current={isCurrent ? "true" : undefined}
                         className={[
                             "group flex min-w-6 min-h-8 px-0.5 items-center justify-center rounded-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
+                            // Área táctil de 44 px de alto sin cambiar el dibujo: un ::after
+                            // invisible extiende 6 px arriba y abajo (no a los lados, donde
+                            // se pisaría con el dot vecino).
+                            "relative after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-['']",
                             mobileWindow.has(i) ? "" : "max-sm:hidden",
                         ].join(" ")}
                     >

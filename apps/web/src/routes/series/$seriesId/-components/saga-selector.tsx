@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { m } from "framer-motion"
 import { IconNavigationChevronRight, IconNavigationLayers, IconNavigationChevronLeft } from "@/components/ui/icons"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { ElasticCounter } from "@/components/ui/kinetics/elastic-counter"
 
 /** "(Relleno)" vive en los datos al final del título: se muestra como chip. */
 const FILLER_SUFFIX_RE = /\s*\(relleno\)\s*$/i
@@ -213,8 +214,8 @@ export function SagaSelector({
                   <span className="sectionbar-header-title">
                     Sagas
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-3xs font-mono font-bold bg-white/10 text-on-surface-variant border border-white/10">
-                    {sagas.length}
+                  <span className="px-2 py-0.5 rounded-full text-3xs font-mono font-bold bg-white/10 text-on-surface-variant border border-white/10 tabular-nums">
+                    <ElasticCounter value={sagas.length} />
                   </span>
                 </div>
               </div>
@@ -310,7 +311,7 @@ export function SagaSelector({
                 }}
                 aria-label="Volver a sagas"
                 title="Volver a sagas"
-                className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant hover:text-white transition-[background-color,color,transform] duration-150 active:scale-95 cursor-pointer flex items-center gap-1 text-xs font-semibold"
               >
                 <IconNavigationChevronLeft className="w-4 h-4 text-brand-accent" />
                 <span>Sagas</span>

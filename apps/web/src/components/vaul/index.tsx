@@ -25,7 +25,7 @@ const VaulOverlay = React.forwardRef<
             ref={ref}
             className={cn(
                 "fixed inset-0 z-overlay bg-[color:color-mix(in_srgb,var(--md-sys-color-surface)_80%,transparent)]",
-                ts.themeEnableBlurringEffects && "bg-zinc-950/70 backdrop-blur-overlay-xl firefox:backdrop-blur-none",
+                ts.themeEnableBlurringEffects && "bg-surface-container-lowest/70 backdrop-blur-overlay-xl firefox:backdrop-blur-none",
                 className)}
             {...props}
         />

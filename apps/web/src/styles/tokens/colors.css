@@ -115,20 +115,27 @@
       transparent 60%
     );
 
-  /* ─── Glassmorphism (rojo sutil por defecto, tintado por era) ─────────────────────────────── */
-  --glass-card-bg: linear-gradient(165deg, color-mix(in srgb, var(--brand-accent-hex) 3%, rgba(255, 255, 255, 0.03)), rgba(5, 5, 6, 0.62) 55%, color-mix(in srgb, var(--brand-secondary-hex) 2%, rgba(255, 255, 255, 0.01)) 100%);
+  /* ─── Glassmorphism & Frosted Glass (Vidrio Esmerilado Canónico) ────────── */
+  --glass-card-bg: linear-gradient(165deg, color-mix(in srgb, var(--brand-accent-hex) 3%, rgba(255, 255, 255, 0.05)), rgba(14, 14, 18, 0.65) 55%, color-mix(in srgb, var(--brand-secondary-hex) 2%, rgba(255, 255, 255, 0.02)) 100%);
   --glass-liquid-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.11), color-mix(in srgb, var(--brand-accent-hex) 3.5%, rgba(255, 255, 255, 0.04)) 45%, color-mix(in srgb, var(--brand-tertiary-hex) 2%, rgba(255, 255, 255, 0.02)) 100%);
   --glass-rim-accent: color-mix(in srgb, var(--brand-accent-hex) 45%, rgba(255, 255, 255, 0.12));
-  --glass-panel-bg: linear-gradient(165deg, color-mix(in srgb, var(--brand-accent-hex) 2%, rgba(255, 255, 255, 0.02)), rgba(5, 5, 6, 0.58) 100%);
-  --glass-panel-bg-strong: linear-gradient(165deg, color-mix(in srgb, var(--brand-accent-hex) 4%, rgba(255, 255, 255, 0.03)), rgba(5, 5, 6, 0.82) 100%);
-  --glass-bg: rgba(200, 16, 46, 0.05);
-  --glass-bg-strong: rgba(200, 16, 46, 0.10);
-  --glass-bg-hover: rgba(200, 16, 46, 0.08);
-  --glass-border-top: rgba(200, 16, 46, 0.12);
-  --glass-border-bottom: rgba(255, 255, 255, 0.03);
-  --glass-border-side: rgba(255, 255, 255, 0.05);
+  --glass-panel-bg: linear-gradient(165deg, color-mix(in srgb, var(--brand-accent-hex) 2%, rgba(255, 255, 255, 0.04)), rgba(12, 12, 16, 0.62) 100%);
+  --glass-panel-bg-strong: linear-gradient(165deg, color-mix(in srgb, var(--brand-accent-hex) 4%, rgba(255, 255, 255, 0.06)), rgba(10, 10, 14, 0.82) 100%);
+
+  /* ─── Vidrio Esmerilado Canónico (Frosted Glass) ─── */
+  --glass-frosted-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.07) 0%, rgba(18, 18, 24, 0.68) 40%, rgba(10, 10, 14, 0.82) 100%);
+  --glass-frosted-border: rgba(255, 255, 255, 0.16);
+  --glass-frosted-border-top: rgba(255, 255, 255, 0.38);
+  --glass-frosted-border-bottom: rgba(255, 255, 255, 0.08);
+
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-strong: rgba(255, 255, 255, 0.08);
+  --glass-bg-hover: rgba(255, 255, 255, 0.07);
+  --glass-border-top: rgba(255, 255, 255, 0.30);
+  --glass-border-bottom: rgba(255, 255, 255, 0.06);
+  --glass-border-side: rgba(255, 255, 255, 0.12);
   --glass-border: var(--glass-border-side);
-  --glass-border-strong: rgba(255, 255, 255, 0.12);
+  --glass-border-strong: rgba(255, 255, 255, 0.22);
   --glass-hover: var(--glass-bg-hover);
   --glass-strong: var(--glass-bg-strong);
 
@@ -803,18 +810,6 @@
   --glow-color-5: transparent;
 }
 
-/* ─── Toggle "Degradado del Sidebar" — intensifica el tinte de la era.
-   El overlay del sidebar está siempre activo en modo Por Era (sutil);
-   con el toggle ON sube la presencia del acento. ───────────────────────── */
-[data-mode="era"][data-sidebar-gradient="true"] {
-  --sidebar-accent-gradient: linear-gradient(180deg, color-mix(in srgb, var(--brand-accent-hex) 40%, transparent) 0%, color-mix(in srgb, var(--brand-accent-hex) 20%, transparent) 50%, transparent 100%);
-}
-
-[data-mode="era"][data-theme="era-universe"][data-sidebar-gradient="true"] {
-  --sidebar-accent-gradient: linear-gradient(180deg, color-mix(in srgb, #7C52D6 40%, transparent) 0%, color-mix(in srgb, #C94A8A 30%, transparent) 40%, transparent 60%, color-mix(in srgb, #269389 30%, transparent) 100%);
-}
-
-/* ─── Estado activo de Liquid Glass (clase sin uso retirada; vars intactas) ─── */
 
 /* ════════════════════════════════════════════════════════════════════════════
    Flat Mode — superficies sólidas, sin glass ni blur

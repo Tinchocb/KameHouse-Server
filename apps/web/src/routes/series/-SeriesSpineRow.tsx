@@ -6,6 +6,7 @@ import { getLowResImage, getMediumResImage } from '@/lib/helpers/images';
 import { getSeriesEraAccent } from '@/lib/helpers/series';
 import { usePrefetchAnimeEntry } from '@/hooks/use-prefetch-anime-entry';
 import { getVhsColor, type SeriesItem } from './-SeriesCard';
+import { ElasticCounter } from '@/components/ui/kinetics/elastic-counter';
 
 /**
  * Cinta VHS acostada para la estantería móvil: las cintas se apilan una sobre otra
@@ -78,7 +79,12 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                 {/* Kanji de la era como marca de agua del lomo */}
                 <span
                     aria-hidden
-                    className="absolute right-12 top-1/2 -translate-y-1/2 font-kanji font-black text-5xl leading-none text-white/[0.05] select-none pointer-events-none"
+                    className="absolute right-12 top-1/2 -translate-y-1/2 font-kanji font-black text-5xl leading-none select-none pointer-events-none transition-opacity duration-300"
+                    style={{
+                        color: accent,
+                        opacity: isOpen ? 0.35 : 0.18,
+                        textShadow: `0 0 20px color-mix(in srgb, ${accent} 40%, transparent)`,
+                    }}
                 >
                     {kanji}
                 </span>
@@ -105,8 +111,12 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                     <span className="font-display text-base leading-tight tracking-wide text-white truncate">
                         {item.title}
                     </span>
-                    <span className="font-mono text-2xs font-semibold uppercase tracking-wider text-white/60 tabular-nums">
-                        {isComplete ? 'Completa' : `${watched}/${item.eps || '?'} caps · ${item.progress}%`}
+                    <span className="font-mono text-2xs font-semibold uppercase tracking-wider text-white/60 tabular-nums flex items-center gap-0">
+                        {isComplete ? 'Completa' : (
+                            <>
+                                <ElasticCounter value={watched} /><span>/{item.eps || '?'} caps · {item.progress}%</span>
+                            </>
+                        )}
                     </span>
                 </span>
 

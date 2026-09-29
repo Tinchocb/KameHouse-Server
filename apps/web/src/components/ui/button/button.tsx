@@ -34,7 +34,7 @@ export const ButtonAnatomy = defineStyleAnatomy({
                 "link": "bg-transparent text-brand-accent underline-offset-4 hover:underline shadow-none",
 
                 /* ─── Glass variants ────────────────────────────────────────────── */
-                "primary-glass": "text-on-surface border border-white/10 bg-white/5 backdrop-blur-overlay-sm hover:bg-white/10 shadow-elevation-1",
+                "primary-glass": "text-white border border-white/15 border-t-white/35 border-b-white/5 bg-white/[0.08] hover:bg-white/[0.14] active:bg-white/[0.18] backdrop-blur-overlay-sm shadow-[shadow:var(--glass-highlight-lg),0_4px_16px_rgba(0,0,0,0.35)] transition-[transform,background-color,border-color,box-shadow] active:scale-[0.97]",
                 "gray-glass": "text-on-surface border border-outline-variant/30 bg-surface-container/60 backdrop-blur-overlay-md hover:bg-surface-container-high shadow-elevation-1",
 
                 /* Brand variants */
@@ -124,11 +124,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
                     size,
                     intent,
                 }),
-                // Respuesta al toque: se hunde al presionar (160 ms, ease-out fuerte) sin
+                // Respuesta al toque: se hunde al presionar (150 ms, ease-out fuerte) sin
                 // rebote. El agrandado de hover queda solo para mouse: en touch se pega.
                 // Una sola transición con color y transform, porque twMerge descarta
                 // `transition-colors` si le sigue otra clase `transition-*`.
-                !isDisabled && !disableSpring && "transition-[transform,background-color,border-color,color,box-shadow] duration-[160ms] ease-[cubic-bezier(0.23,1,0.32,1)] [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.02] active:scale-[0.97]",
+                !isDisabled && !disableSpring && "transition-[transform,background-color,border-color,color,box-shadow] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.02] active:scale-[0.97]",
                 className,
             )}
             disabled={isDisabled}

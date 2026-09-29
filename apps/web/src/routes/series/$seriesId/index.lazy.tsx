@@ -100,8 +100,11 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     const [isSagasSidebarCollapsed, setIsSagasSidebarCollapsed] = useState(false)
 
     const setSearchParams = useCallback(
-        (updates: Partial<SagaDetailSearchParams>) => {
+        // replace: para los ajustes automáticos de la URL (saga por defecto, limpiar
+        // ?autoplay); con push, Atrás volvería a la misma ficha y rebotaría.
+        (updates: Partial<SagaDetailSearchParams>, options?: { replace?: boolean }) => {
             navigate({
+                replace: options?.replace,
                 to: "/series/$seriesId",
                 params: { seriesId },
                 search: (prev: Record<string, unknown>) => {
@@ -137,7 +140,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     useEffect(() => {
         if (sagas && sagas.length > 0 && !activeSagaId) {
-            setSearchParams({ saga: sagas[0].id })
+            setSearchParams({ saga: sagas[0].id }, { replace: true })
         }
     }, [sagas, activeSagaId, setSearchParams])
 
@@ -302,7 +305,16 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             <div className="h-full w-full text-on-surface flex items-center justify-center px-6">
                 <EmptyState
                     title="Contenido no encontrado"
-                    message="No pudimos cargar este contenido. Vuelve al inicio o intenta con otro."
+                    message="No pudimos cargar este contenido. Vuelve a Series o intenta con otro."
+                    action={
+                        <button
+                            type="button"
+                            onClick={() => navigate({ to: "/series" })}
+                            className="min-h-11 px-5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors duration-base cursor-pointer"
+                        >
+                            Volver a Series
+                        </button>
+                    }
                 />
             </div>
         )
@@ -317,25 +329,28 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         <div
             ref={pageRef}
             data-theme={localTheme || undefined}
-            className="flex flex-col h-full w-full pt-16 md:pt-0 text-on-surface-variant selection:bg-brand-accent/30 overflow-hidden relative bg-transparent"
+            className="flex flex-col h-full w-full pt-16 md:pt-0 text-on-surface-variant selection:bg-brand-accent/30 overflow-clip relative bg-transparent"
         >
             {/* Back en el hero (volver a Series) */}
             <button
                 type="button"
                 onClick={() => navigate({ to: "/series" })}
                 aria-label="Volver a series"
-                className="absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-9 h-9 rounded-full bg-surface-container-lowest/60 border border-white/20 backdrop-blur-overlay-2xl text-white/90 hover:text-white flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer"
+                className="glass-frosted-pill absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-9 h-9 text-white/90 hover:text-white flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer"
             >
                 <IconNavigationChevronLeft className="w-4 h-4" />
             </button>
 
-            {/* ── Main Scrollable Content Area ─────────────────────────────────── */}
-            <main
+            {/* El scroll es del shell ([data-scroll-container], __root). Un scroller propio
+                acá nunca queda acotado: crece con el contenido, el virtualizador renderiza
+                todo y min-h-full sumaba el alto del hero como pantalla negra al final. */}
+            <div
                 ref={(node) => {
-                    mainScrollRef.current = node
-                    setScrollElement(node)
+                    const scroller = node?.closest<HTMLElement>("[data-scroll-container]") ?? node
+                    mainScrollRef.current = scroller
+                    setScrollElement(scroller)
                 }}
-                className="flex-1 overflow-y-auto no-scrollbar bg-transparent"
+                className="flex-1 bg-transparent"
             >
                 <div className="flex-shrink-0 relative">
                     <SeriesHero
@@ -355,7 +370,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     />
                 </div>
 
-                <div className="w-full page-container py-7 lg:py-6 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] space-y-8 lg:space-y-7 min-h-full bg-transparent relative z-10">
+                <div className="w-full page-container py-7 lg:py-6 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] space-y-8 lg:space-y-7 bg-transparent relative z-10">
                     {/* Continuar viendo — integrado en el flujo de contenido sin superposición */}
                     {continueWatching && (
                         <SeriesContinueWatching
@@ -402,56 +417,54 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         seriesMediaId={entry.mediaId ?? Number(seriesId) ?? undefined}
                     />
                 </div>
-            </main>
+            </div>
 
             {/* Mobile Vaul Drawer for Sagas */}
             <Vaul open={mobileSagasOpen} onOpenChange={setMobileSagasOpen}>
-                {mobileSagasOpen && (
-                    <VaulContent className="bg-surface-container-high/95 backdrop-blur-overlay-xl border-t border-white/[0.1] p-5 pb-8 flex flex-col focus:outline-none max-h-[85vh]">
-                        <div className="flex justify-between items-center mb-4 px-1">
-                            <h3 className="font-display text-2xl tracking-display text-on-surface uppercase flex items-center gap-2">
-                                <IconNavigationLayers className="w-5 h-5 text-brand-accent" />
-                                <span>Sagas y Arcos</span>
-                            </h3>
-                            <button
-                                onClick={() => setMobileSagasOpen(false)}
-                                className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-95 cursor-pointer"
-                            >
-                                <IconUiClose className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="overflow-y-auto flex-grow min-h-0 pb-4">
-                            <SagaSelector
-                                sagas={sagas || []}
-                                localSagas={localSagas}
-                                chronologySeriesId={chronologySeriesId}
-                                sagasProgressMap={sagasProgressMap}
-                                activeSagaId={activeSagaId}
-                                onSelectSaga={sagaId => {
-                                    setSearchParams({
-                                        tab: "episodes",
-                                        saga: sagaId,
-                                        subSaga: "",
-                                    })
-                                    const saga = sagas?.find(s => s.id === sagaId)
-                                    if (!saga?.subSagas?.length) {
-                                        setMobileSagasOpen(false)
-                                    }
-                                }}
-                                activeSubSagaId={activeSubSagaId}
-                                onSelectSubSaga={subSagaId => {
-                                    setSearchParams({
-                                        tab: "episodes",
-                                        subSaga: subSagaId,
-                                    })
+                <VaulContent className="bg-surface-container-high/95 backdrop-blur-overlay-xl border-t border-white/[0.1] p-5 pb-8 flex flex-col focus:outline-none max-h-[85vh]">
+                    <div className="flex justify-between items-center mb-4 px-1">
+                        <h3 className="font-display text-2xl tracking-display text-on-surface uppercase flex items-center gap-2">
+                            <IconNavigationLayers className="w-5 h-5 text-brand-accent" />
+                            <span>Sagas y Arcos</span>
+                        </h3>
+                        <button
+                            onClick={() => setMobileSagasOpen(false)}
+                            className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-95 cursor-pointer"
+                        >
+                            <IconUiClose className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div className="overflow-y-auto flex-grow min-h-0 pb-4">
+                        <SagaSelector
+                            sagas={sagas || []}
+                            localSagas={localSagas}
+                            chronologySeriesId={chronologySeriesId}
+                            sagasProgressMap={sagasProgressMap}
+                            activeSagaId={activeSagaId}
+                            onSelectSaga={sagaId => {
+                                setSearchParams({
+                                    tab: "episodes",
+                                    saga: sagaId,
+                                    subSaga: "",
+                                })
+                                const saga = sagas?.find(s => s.id === sagaId)
+                                if (!saga?.subSagas?.length) {
                                     setMobileSagasOpen(false)
-                                }}
-                                episodes={computedEpisodes}
-                                heroBackdrop={heroBackdrop}
-                            />
-                        </div>
-                    </VaulContent>
-                )}
+                                }
+                            }}
+                            activeSubSagaId={activeSubSagaId}
+                            onSelectSubSaga={subSagaId => {
+                                setSearchParams({
+                                    tab: "episodes",
+                                    subSaga: subSagaId,
+                                })
+                                setMobileSagasOpen(false)
+                            }}
+                            episodes={computedEpisodes}
+                            heroBackdrop={heroBackdrop}
+                        />
+                    </div>
+                </VaulContent>
             </Vaul>
 
             {/* Debajo del reproductor: tapa la ficha mientras el reproductor todavía no se montó */}
@@ -511,14 +524,13 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
             })()}
 
             {/* Character Detail Modal */}
-            {selectedCharacterName && (
-                <CharacterDetailModal
-                    characterName={selectedCharacterName}
-                    entry={entry}
-                    loreData={lore}
-                    onClose={() => setSelectedCharacterName(null)}
-                />
-            )}
+            {/* Siempre montado: su AnimatePresence interno necesita seguir vivo para correr la salida. */}
+            <CharacterDetailModal
+                characterName={selectedCharacterName}
+                entry={entry}
+                loreData={lore}
+                onClose={() => setSelectedCharacterName(null)}
+            />
         </div>
     )
 }

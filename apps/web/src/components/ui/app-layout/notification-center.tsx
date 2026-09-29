@@ -149,8 +149,8 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
                         exit={{ opacity: 0, scale: 0.95, y: -6 }}
                         transition={panelSpring}
                         className={cn(
-                            "fixed z-popover flex flex-col overflow-hidden",
-                            "bg-surface/80 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-2xl shadow-[shadow:var(--glass-highlight-lg),0_20px_50px_rgba(0,0,0,0.9)]",
+                            "glass-frosted fixed z-popover flex flex-col overflow-hidden",
+                            "shadow-[shadow:var(--glass-highlight-lg),0_20px_50px_rgba(0,0,0,0.9)]",
                             // origin-*: la escala de entrada nace del lado donde está anclado el panel
                             isMobile
                                 ? "top-16 left-3 right-3 max-h-[65vh] origin-top-right"

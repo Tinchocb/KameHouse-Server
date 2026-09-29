@@ -3,7 +3,7 @@ import { m, AnimatePresence } from 'framer-motion';
 import type { VolumeData } from './types';
 import { TimelineVolumeCard } from './TimelineVolumeCard';
 import { VolumeDetailsTabs, type DetailTab } from './VolumeDetailsTabs';
-import { EraHero, ERA_KANJI } from './EraHero';
+import { EraHero } from './EraHero';
 import { InterludeDivider } from './InterludeDivider';
 import { type MomentPlayInfo } from './MomentStrip';
 import { groupVolumesByEra, formatYearShort } from './data/spansToVolumes';
@@ -113,36 +113,9 @@ export const AlternatingTimeline: React.FC<AlternatingTimelineProps> = memo(({
           return (
             <section
               key={`era-section-${eraGroup.seriesId}`}
-              className="relative isolate w-full flex flex-col"
+              className="relative isolate w-full flex flex-col [content-visibility:auto] [contain-intrinsic-size:auto_800px]"
               aria-label={`Era ${eraGroup.seriesTag}`}
             >
-              {/* Fondo de la era: brillo del color de la era, trama de puntos y el kanji fijo detrás del
-                  contenido. Arranca un poco antes de la sección y se funde arriba y abajo con una
-                  máscara, así una era se disuelve en la siguiente en vez de cortar en seco.
-                  Todo en gradientes y texto: sin blur. */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -top-24 bottom-0 inset-x-0 lg:-inset-x-[20vw] -z-10 overflow-hidden"
-                style={{
-                  maskImage: 'linear-gradient(to bottom, transparent 0, black 300px, black calc(100% - 260px), transparent 100%)',
-                }}
-              >
-                <div
-                  className="absolute inset-x-0 top-0 h-[1200px]"
-                  style={{
-                    background: `radial-gradient(ellipse 60% 38% at 50% 330px, ${eraGroup.accentHex}24, transparent 72%), radial-gradient(ellipse 30% 24% at 84% 620px, ${eraGroup.accentHex}10, transparent 72%)`,
-                  }}
-                />
-                <div className="absolute inset-x-0 top-0 h-[1400px] bg-[radial-gradient(rgb(255_255_255/0.06)_1px,transparent_1px)] bg-[length:28px_28px] [mask-image:linear-gradient(to_bottom,transparent,black_28%,transparent)]" />
-                <div className="absolute inset-0 pt-24">
-                  <div className="sticky top-24 flex justify-center">
-                    <span className="font-kanji font-black leading-none text-white/[0.025] text-[42vh] select-none">
-                      {ERA_KANJI[eraGroup.seriesId]}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
               {/* Hilo entre eras: el eje pasa del color de la era que termina al de la que empieza */}
               {prevAccent && (
                 <div aria-hidden="true" className="relative h-16">
@@ -150,7 +123,6 @@ export const AlternatingTimeline: React.FC<AlternatingTimelineProps> = memo(({
                     className="absolute inset-y-0 left-3 lg:left-1/2 w-0.5 -translate-x-1/2"
                     style={{
                       background: `linear-gradient(to bottom, ${prevAccent}40, ${eraGroup.accentHex})`,
-                      boxShadow: `0 0 10px ${eraGroup.accentHex}40`,
                     }}
                   />
                 </div>
@@ -233,8 +205,8 @@ export const AlternatingTimeline: React.FC<AlternatingTimelineProps> = memo(({
 
 AlternatingTimeline.displayName = 'AlternatingTimeline';
 
-/** Filas que se arman de entrada: lo que se ve al abrir la página está en la primera pintura. */
-const EAGER_ROWS = 3;
+/** Filas que se arman de entrada: solo el primer lapso visible para garantizar 60 fps en la animación de entrada. */
+const EAGER_ROWS = 1;
 /** Alto de reserva de una fila todavía sin armar (mismo valor que su contain-intrinsic-size). */
 const ROW_PLACEHOLDER_PX = 620;
 
@@ -323,7 +295,7 @@ const TimelineRow = memo(function TimelineRow({
                   ? 'bg-brand-accent border-white text-zinc-950 scale-125'
                   : isRead
                     ? 'bg-emerald-600 border-emerald-400 text-white'
-                    : 'bg-zinc-950 border-white/25 text-brand-accent'
+                    : 'bg-surface-container-lowest border-white/25 text-brand-accent'
               }`}
             >
               {isRead ? (
@@ -339,10 +311,10 @@ const TimelineRow = memo(function TimelineRow({
             <div
               className={`hidden lg:flex absolute left-1/2 -translate-x-1/2 top-7 w-8 h-8 rounded-full border-2 items-center justify-center z-10 transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out-strong shadow-elevation-1 ${
                 isHighlighted
-                  ? 'bg-brand-accent border-white text-zinc-950 scale-125 shadow-lg'
+                  ? 'bg-brand-accent border-white text-zinc-950 scale-125 shadow-elevation-3'
                   : isRead
                     ? 'bg-emerald-600 border-emerald-400 text-white group-hover:scale-110'
-                    : 'bg-zinc-950 border-white/20 text-brand-accent group-hover:scale-110 group-hover:border-brand-accent/60'
+                    : 'bg-surface-container-lowest border-white/20 text-brand-accent group-hover:scale-110 group-hover:border-brand-accent/60'
               }`}
             >
               {isRead ? (
@@ -399,7 +371,7 @@ const TimelineRow = memo(function TimelineRow({
                     exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: isLeft ? 16 : -16, scale: 0.98 }}
                     transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                     style={{ '--era': hexToRgbChannels(accentHex) } as React.CSSProperties}
-                    className="sticky top-24 z-10 w-full rounded-2xl border border-white/[0.12] bg-zinc-950/90 backdrop-blur-overlay-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_24px_48px_-28px_rgb(0_0_0/0.9)] p-4 sm:p-5 flex flex-col gap-3 relative overflow-hidden"
+                    className="sticky top-24 z-10 w-full rounded-2xl border border-white/[0.12] bg-surface-container-lowest/85 backdrop-blur-overlay-md backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_24px_48px_-28px_rgb(0_0_0/0.9)] p-4 sm:p-5 flex flex-col gap-3 relative overflow-hidden"
                   >
                     {/* Filete superior con el color de la era */}
                     <span

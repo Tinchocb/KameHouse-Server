@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { useSpringPreset, useSpring, useMagneticSpring, useRubberSpring } from "./hooks"
+import { useSpringPreset, useSpring } from "./hooks"
 
 vi.mock("framer-motion", () => ({
     useReducedMotion: vi.fn(() => false),
@@ -88,46 +88,6 @@ describe("kinetics hooks", () => {
         it("returns tween fallback when reduced motion is true", () => {
             vi.mocked(useReducedMotion).mockReturnValueOnce(true)
             const fallback = useSpring(350, 25)
-            expect(fallback).toEqual({
-                type: "tween",
-                duration: 0.15,
-            })
-        })
-    })
-
-    describe("useMagneticSpring", () => {
-        it("returns 480/34 spring for tab/nav indicator", () => {
-            const spring = useMagneticSpring()
-            expect(spring).toEqual({
-                type: "spring",
-                stiffness: 480,
-                damping: 34,
-            })
-        })
-
-        it("returns tween fallback when reduced motion is true", () => {
-            vi.mocked(useReducedMotion).mockReturnValueOnce(true)
-            const fallback = useMagneticSpring()
-            expect(fallback).toEqual({
-                type: "tween",
-                duration: 0.15,
-            })
-        })
-    })
-
-    describe("useRubberSpring", () => {
-        it("returns 280/28 spring for rubber/content swap", () => {
-            const spring = useRubberSpring()
-            expect(spring).toEqual({
-                type: "spring",
-                stiffness: 280,
-                damping: 28,
-            })
-        })
-
-        it("returns tween fallback when reduced motion is true", () => {
-            vi.mocked(useReducedMotion).mockReturnValueOnce(true)
-            const fallback = useRubberSpring()
             expect(fallback).toEqual({
                 type: "tween",
                 duration: 0.15,

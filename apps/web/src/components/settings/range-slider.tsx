@@ -30,6 +30,8 @@ export function RangeSlider({ label, description, min, max, step = 1, value, onC
                         step={step}
                         value={value}
                         onChange={(e) => onChange(parseFloat(e.target.value))}
+                        aria-label={label}
+                        aria-valuetext={formatValue ? formatValue(value) : String(value)}
                         className="relative z-10 w-full min-h-[44px] h-11 accent-white bg-transparent appearance-none cursor-pointer [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-transparent [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:bg-transparent"
                     />
                 </div>

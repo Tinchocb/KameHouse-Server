@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import { createLazyFileRoute } from "@tanstack/react-router"
 import React, { useEffect, useState, useMemo, Suspense } from "react"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
@@ -10,6 +11,9 @@ import { m, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { IconUiPalette, IconMediaPlay, IconNavigationLibrary, IconStatusZap, IconUiSettings, IconUiCheck } from "@/components/ui/icons"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { LoadSwap } from "@/components/ui/kinetics"
+import { useSound } from "@/hooks/use-sound"
+import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control"
 import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 
 // Consolidación de los 5 Pilares de Configuración con lazy loading y prewarming
@@ -27,7 +31,10 @@ const LibraryTab = React.lazy(() => tabLoaders.library().then(m => ({ default: m
 const PerformanceTab = React.lazy(() => tabLoaders.performance().then(m => ({ default: m.PerformanceTab })))
 const SystemTab = React.lazy(() => tabLoaders.system().then(m => ({ default: m.SystemTab })))
 
-import { settingsSchema, type SettingsFormValues } from "@/lib/server/settings"
+import { findIgnoredBinaryPaths, settingsSchema, type SettingsFormValues } from "@/lib/server/settings"
+import { ApiError, buildSeaQuery } from "@/api/client/requests"
+import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import type { Models_Settings } from "@/api/generated/types"
 import { useAppStore, usePlayerStore, useUIStore } from "@/lib/store"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
 
@@ -50,9 +57,6 @@ function syncStoresWithSettings(data: Partial<SettingsFormValues>) {
         }
         if (lib.autoSkipOutro !== undefined && lib.autoSkipOutro !== playerState.autoSkipOutro) {
             playerUpdates.autoSkipOutro = lib.autoSkipOutro
-        }
-        if (lib.autoSkipFiller !== undefined && lib.autoSkipFiller !== playerState.autoSkipFiller) {
-            playerUpdates.autoSkipFiller = lib.autoSkipFiller
         }
         if (lib.autoDisableSubtitlesWhenDubbed !== undefined && lib.autoDisableSubtitlesWhenDubbed !== playerState.autoDisableSubtitlesWhenDubbed) {
             playerUpdates.autoDisableSubtitlesWhenDubbed = lib.autoDisableSubtitlesWhenDubbed
@@ -89,8 +93,7 @@ function syncStoresWithSettings(data: Partial<SettingsFormValues>) {
         }
         const visualKeys = [
             "themeEra", "themeMode", "enableColorSettings", "backgroundColor", "accentColor",
-            "themeEnableBlurringEffects", "themeEnableLiquidGlass", "themeEnableSidebarGradient",
-            "themeEnableCinematicGrain", "themeMediaPageBannerType", "themeMediaPageBannerSize",
+            "themeEnableBlurringEffects", "themeMediaPageBannerType", "themeMediaPageBannerSize",
             "themeMediaPageBannerInfoBoxSize", "themeEnableMediaPageBlurredBackground",
             "themeAnimeLibraryCollectionDefaultSorting",
         ] as const
@@ -177,7 +180,7 @@ function getEffectiveSettings(server: Partial<SettingsFormValues> | null | undef
             preferredAudioProfile: base.library?.preferredAudioProfile || appState.preferredAudioProfile || "latino",
             autoSkipIntro: base.library?.autoSkipIntro ?? appState.autoSkipIntro ?? false,
             autoSkipOutro: base.library?.autoSkipOutro ?? appState.autoSkipOutro ?? false,
-            autoSkipFiller: base.library?.autoSkipFiller ?? appState.autoSkipFiller ?? false,
+            autoSkipFiller: base.library?.autoSkipFiller ?? false,
             autoDisableSubtitlesWhenDubbed: base.library?.autoDisableSubtitlesWhenDubbed ?? appState.autoDisableSubtitlesWhenDubbed ?? true,
             marathonMode: base.library?.marathonMode ?? appState.marathonMode ?? false,
             tvMode: base.library?.tvMode ?? appState.tvMode ?? false,
@@ -264,24 +267,16 @@ function SettingsTabSkeleton() {
 }
 
 function SettingsPage() {
+    const { playSound } = useSound()
     const { data: serverSettings, isLoading } = useGetSettings()
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
     const search = Route.useSearch()
     const navigate = Route.useNavigate()
-    const initialTab = search.tab && VALID_TAB_IDS.has(search.tab) ? search.tab : "appearance"
-    const [activeTab, setActiveTab] = useState<string>(initialTab)
-    const [prevSearchTab, setPrevSearchTab] = useState(search.tab)
+    // La pestaña vive solo en la URL (?tab): sin copia local que sincronizar.
+    const activeTab = search.tab && VALID_TAB_IDS.has(search.tab) ? search.tab : "appearance"
     const [isSaveSuccess, setIsSaveSuccess] = useState(false)
 
-    if (search.tab !== prevSearchTab) {
-        setPrevSearchTab(search.tab)
-        if (search.tab && VALID_TAB_IDS.has(search.tab)) {
-            setActiveTab(search.tab)
-        }
-    }
-
     const handleSelectTab = (tabId: string) => {
-        setActiveTab(tabId)
         navigate({ search: { tab: tabId }, replace: true }).catch(() => {})
     }
 
@@ -355,21 +350,51 @@ function SettingsPage() {
     }, [serverSettings, reset, isDirty])
 
     const onSubmit: SubmitHandler<SettingsFormValues> = async (data) => {
+        // Sin los ajustes del servidor el formulario tiene defaults: guardarlos
+        // pisaría la configuración real.
+        if (!serverSettings) {
+            toast.error("No se pudieron cargar los ajustes del servidor; no se guardó nada")
+            return
+        }
         try {
             await saveSettings(data as unknown as SaveSettings_Variables)
+            playSound("category", 0.4)
             setIsSaveSuccess(true)
             reset(data)
             syncStoresWithSettings(data)
             toast.success("Ajustes guardados con éxito")
+            void warnIgnoredBinaryPaths(data)
             setTimeout(() => {
                 setIsSaveSuccess(false)
             }, 2000)
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Error al guardar los ajustes")
+            // Los errores de la API ya los muestra el onError de useServerMutation.
+            if (!(err instanceof ApiError)) {
+                toast.error(errorText(err, "Error al guardar los ajustes"))
+            }
+        }
+    }
+
+    // El servidor descarta en silencio las rutas de FFmpeg/FFprobe que no son
+    // seguras (fuera de la carpeta bin de KameHouse o del PATH): avisarlo.
+    const warnIgnoredBinaryPaths = async (sent: SettingsFormValues) => {
+        try {
+            const fresh = await buildSeaQuery<Models_Settings>({
+                endpoint: API_ENDPOINTS.SETTINGS.GetSettings.endpoint,
+                method: API_ENDPOINTS.SETTINGS.GetSettings.methods[0],
+            })
+            for (const { label, used } of findIgnoredBinaryPaths(sent.mediastream, fresh?.mediastream)) {
+                toast.warning(`La ruta de ${label} no está permitida`, {
+                    description: `Se usa la detectada: ${used}. Solo se aceptan binarios de la carpeta bin de KameHouse o del PATH del sistema.`,
+                })
+            }
+        } catch {
+            // Solo informativo: si falla la consulta no hay nada que avisar.
         }
     }
 
     const handleDiscard = () => {
+        playSound("hover", 0.3)
         const effective = getEffectiveSettings(serverSettings as unknown as SettingsFormValues)
         reset(effective)
         syncStoresWithSettings(effective)
@@ -399,7 +424,17 @@ function SettingsPage() {
         return SETTINGS_PILLARS.find(p => p.id === activeTab) || SETTINGS_PILLARS[0]
     }, [activeTab])
 
-    const mobileTabSpring = useSpringPreset("tabIndicator");
+    const mobilePillarOptions = useMemo<SegmentedOption<string>[]>(() => {
+        return SETTINGS_PILLARS.map((item) => {
+            const Icon = item.icon
+            return {
+                value: item.id,
+                label: item.shortLabel,
+                icon: <Icon className="w-4 h-4 shrink-0" />,
+            }
+        })
+    }, [])
+
     const desktopPillarSpring = useSpringPreset("entrance");
     const desktopIndicatorSpring = useSpringPreset("tabIndicator");
     const tabContentSpring = useSpringPreset("tabContent");
@@ -410,35 +445,19 @@ function SettingsPage() {
     return (
         <div className="flex flex-col md:flex-row h-full w-full text-on-surface-variant selection:bg-brand-accent/30 overflow-hidden relative bg-transparent">
             {/* ── Mobile Segmented Tab Bar ────────────────────────────────────────── */}
-            <nav className="md:hidden shrink-0 w-full flex flex-row overflow-x-auto no-scrollbar border-b border-white/10 sectionbar sectionbar-strong px-3 py-2.5 gap-2 z-20">
-                {SETTINGS_PILLARS.map((item) => {
-                    const isActive = activeTab === item.id
-                    const Icon = item.icon
-                    return (
-                        <button
-                            key={item.id}
-                            type="button"
-                            onMouseEnter={() => tabLoaders[item.id as keyof typeof tabLoaders]?.()}
-                            onFocus={() => tabLoaders[item.id as keyof typeof tabLoaders]?.()}
-                            onClick={() => handleSelectTab(item.id)}
-                            className={cn(
-                                "relative flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap shrink-0 active:scale-95",
-                                "[transition:color_var(--duration-fast)_var(--ease-smooth-out),background-color_var(--duration-fast)_var(--ease-smooth-out)]",
-                                isActive ? "text-black font-black" : "text-on-surface-variant hover:text-white"
-                            )}
-                        >
-                            {isActive && (
-                                <m.div
-                                    layoutId="activeMobileTabIndicator"
-                                    transition={mobileTabSpring}
-                                    className="absolute inset-0 bg-white rounded-full shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(0,0,0,0.5)]"
-                                />
-                            )}
-                            <Icon className={cn("w-4 h-4 shrink-0 relative z-10", isActive ? "text-black" : "text-on-surface-variant")} />
-                            <span className="relative z-10">{item.shortLabel}</span>
-                        </button>
-                    )
-                })}
+            <nav aria-label="Navegación de ajustes" className="md:hidden shrink-0 w-full flex flex-row overflow-x-auto no-scrollbar border-b border-white/10 sectionbar sectionbar-strong px-3 py-2.5 z-20">
+                <SegmentedControl
+                    aria-label="Pestañas de ajustes"
+                    layoutId="activeMobileTabIndicator"
+                    semantics="tablist"
+                    tone="neutral"
+                    surface="inset"
+                    value={activeTab}
+                    onChange={handleSelectTab}
+                    onOptionHover={(val) => tabLoaders[val as keyof typeof tabLoaders]?.()}
+                    options={mobilePillarOptions}
+                    className="w-max"
+                />
             </nav>
 
             {/* ── Left Sidebar Nav for Desktop (5 Clean Pillars) ─────────────────── */}
@@ -520,7 +539,7 @@ function SettingsPage() {
             </nav>
 
             {/* ── Main Content Area ────────────────────────────────────────────── */}
-            <main className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
                 {/* Content header */}
                 <header className="shrink-0 px-6 sm:px-8 lg:px-10 pt-5 md:pt-20 pb-5 border-b border-white/[0.06] sectionbar sectionbar-minimal">
                     <AnimatePresence mode="wait" initial={false}>
@@ -586,7 +605,7 @@ function SettingsPage() {
                         </form>
                     </FormProvider>
                 </div>
-            </main>
+            </div>
 
             {/* ── Floating Save Bar ────────────────────────────────────────────── */}
             <AnimatePresence>
@@ -648,19 +667,24 @@ function SettingsPage() {
                                         : "bg-white text-black hover:bg-white/90 hover:scale-102 active:scale-95 disabled:opacity-50"
                                 )}
                             >
-                                {isSaving ? (
-                                    <>
-                                        <div className="w-3.5 h-3.5 rounded-full border-2 border-black border-t-transparent animate-spin" />
-                                        <span className="animate-text-swap-in">Guardando...</span>
-                                    </>
-                                ) : isSaveSuccess ? (
-                                    <>
-                                        <IconUiCheck className="w-3.5 h-3.5 animate-success-check" strokeWidth={3} />
-                                        <span className="animate-text-swap-in">¡Guardado!</span>
-                                    </>
-                                ) : (
-                                    <span className="animate-text-swap-in">Guardar Ajustes</span>
-                                )}
+                                <LoadSwap
+                                    loading={isSaving}
+                                    skeleton={
+                                        <span className="flex items-center gap-2">
+                                            <div className="w-3.5 h-3.5 rounded-full border-2 border-black border-t-transparent animate-spin" />
+                                            <span className="animate-text-swap-in">Guardando...</span>
+                                        </span>
+                                    }
+                                >
+                                    {isSaveSuccess ? (
+                                        <span className="flex items-center gap-2">
+                                            <IconUiCheck className="w-3.5 h-3.5 animate-success-check" strokeWidth={3} />
+                                            <span className="animate-text-swap-in">¡Guardado!</span>
+                                        </span>
+                                    ) : (
+                                        <span className="animate-text-swap-in">Guardar Ajustes</span>
+                                    )}
+                                </LoadSwap>
                             </button>
                         </div>
                     </m.div>

@@ -74,27 +74,22 @@ export const CheckboxGroup = React.forwardRef<HTMLInputElement, CheckboxGroupPro
         size = undefined,
     }, basicFieldProps] = extractBasicFieldProps<CheckboxGroupProps>(props, React.useId())
 
-    const [value, setValue] = React.useState<string[]>(controlledValue ?? defaultValue)
+    // Controlado si llega `value`; si no, estado propio. Sin copiar la prop a
+    // estado con un efecto (render extra y valor viejo durante un cuadro).
+    const [uncontrolledValue, setUncontrolledValue] = React.useState<string[]>(defaultValue)
+    const value = controlledValue ?? uncontrolledValue
 
     const handleUpdateValue = (v: string) => {
         return (checked: boolean | "indeterminate") => {
-            setValue(p => {
-                const newArr = checked === true
-                    ? [...p, ...(p.includes(v) ? [] : [v])]
-                    : checked === false
-                        ? p.filter(v1 => v1 !== v)
-                        : [...p]
-                onValueChange?.(newArr)
-                return newArr
-            })
+            const newArr = checked === true
+                ? [...value, ...(value.includes(v) ? [] : [v])]
+                : checked === false
+                    ? value.filter(v1 => v1 !== v)
+                    : [...value]
+            if (controlledValue === undefined) setUncontrolledValue(newArr)
+            onValueChange?.(newArr)
         }
     }
-
-    React.useEffect(() => {
-        if (controlledValue !== undefined) {
-            setValue(controlledValue)
-        }
-    }, [controlledValue])
 
 
     return (

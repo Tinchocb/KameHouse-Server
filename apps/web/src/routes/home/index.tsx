@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import * as React from "react"
 import { HomeSkeleton } from "@/components/ui/shimmer-skeleton"
+import { LoadSwap } from "@/components/ui/kinetics"
 
 import {
     dedupeAndMapToSpotlight,
@@ -13,8 +14,6 @@ import {
 import { ErrorBanner, EmptyState } from "./home.components"
 import { MediaSpotlight } from "@/components/ui/media-spotlight"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
-
-import { m, AnimatePresence } from "framer-motion"
 
 export const Route = createFileRoute("/home/")({
     // prefetch (no ensureQueryData): nunca lanza, así un backend que aún arranca
@@ -86,34 +85,18 @@ function HomeClient() {
 
     return (
         <div className="relative min-h-screen text-on-surface overflow-x-hidden">
-            <AnimatePresence>
-                {!isReady && (
-                    <m.div
-                        key="home-skeleton"
-                        initial={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25, ease: "easeOut" }}
-                        className="absolute inset-0 z-20 pointer-events-none"
-                    >
-                        <HomeSkeleton />
-                    </m.div>
-                )}
-            </AnimatePresence>
-
-            {isReady && spotlightItems.length > 0 && (
-                <m.div
-                    key="home-content"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                    className="relative z-10 flex flex-col"
-                >
+            <LoadSwap
+                loading={!isReady}
+                skeleton={<HomeSkeleton />}
+                className="relative z-10 flex flex-col w-full"
+            >
+                {spotlightItems.length > 0 && (
                     <MediaSpotlight
                         items={spotlightItems}
                         onNavigate={handleSpotlightNavigate}
                     />
-                </m.div>
-            )}
+                )}
+            </LoadSwap>
         </div>
     )
 }

@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import React, { useState, useEffect } from "react"
 import { useFormContext } from "react-hook-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -116,7 +117,7 @@ export function GoogleDriveCard() {
             toast.success("Abriendo Google en tu navegador...")
         } catch (err) {
             setRawIsConnecting(false)
-            toast.error(err instanceof Error ? err.message : "Error al iniciar conexión con Google")
+            toast.error(errorText(err, "Error al iniciar conexión con Google"))
         }
     }
 
@@ -136,7 +137,7 @@ export function GoogleDriveCard() {
             queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
         },
         onError: (err: unknown) => {
-            const message = err instanceof Error ? err.message : "Error al desconectar Google Drive"
+            const message = errorText(err, "Error al desconectar Google Drive")
             toast.error(message)
         },
     })
@@ -156,7 +157,7 @@ export function GoogleDriveCard() {
             queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
         },
         onError: (err: unknown) => {
-            toast.error(err instanceof Error ? err.message : "No se pudo guardar la carpeta de Drive")
+            toast.error(errorText(err, "No se pudo guardar la carpeta de Drive"))
         },
     })
     const handleFolderBlur = () => {

@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import React, { useState } from "react"
 import { type Control, Controller, useFormContext, useWatch } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
@@ -60,7 +61,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
         } catch (err) {
             revert()
-            toast.error(err instanceof Error ? err.message : "No se pudo aplicar el cambio")
+            toast.error(errorText(err, "No se pudo aplicar el cambio"))
             throw err
         }
     }

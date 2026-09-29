@@ -15,7 +15,7 @@ export const ToasterAnatomy = defineStyleAnatomy({
         "group-[.toaster]:py-4 group-[.toaster]:px-5 group-[.toaster]:gap-3",
         "group-[.toaster]:text-sm group-[.toaster]:font-medium",
         "group-[.toaster]:rounded-2xl group-[.toaster]:border group-[.toaster]:border-t group-[.toaster]:shadow-elevation-4",
-        "group-[.toaster]:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_90%,transparent)] group-[.toaster]:backdrop-blur-overlay-xl group-[.toaster]:border-white/15 group-[.toaster]:border-t-white/35",
+        "group-[.toaster]:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_90%,transparent)] group-[.toaster]:backdrop-blur-overlay-sm group-[.toaster]:backdrop-saturate-[180%] group-[.toaster]:border-white/15 group-[.toaster]:border-t-white/35",
         "group-[.toaster]:text-on-surface",
         // Sin clases transition-*: pisarían la transición propia de Sonner (transform/opacity/height)
         // y los avisos aparecerían y se irían de golpe en vez de deslizarse.
@@ -61,6 +61,17 @@ export const Toaster = ({ position = "top-center", className, toastOptions, ...p
             theme="dark"
             position={position}
             visibleToasts={4}
+            // Sonner no conoce las zonas seguras: con viewport-fit=cover (PWA o
+            // celular en horizontal) el toast quedaba bajo la muesca/isla o la
+            // barra de gestos. Mismos márgenes por defecto (24/16 px) + el inset.
+            offset={{
+                top: "calc(24px + env(safe-area-inset-top, 0px))",
+                bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
+            }}
+            mobileOffset={{
+                top: "calc(16px + env(safe-area-inset-top, 0px))",
+                bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+            }}
             className={cn(ToasterAnatomy.toaster(), className)}
             toastOptions={{
                 classNames: {

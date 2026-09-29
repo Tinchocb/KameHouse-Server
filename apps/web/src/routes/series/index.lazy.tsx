@@ -1,15 +1,16 @@
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router';
-import { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react';
-import { m, LayoutGroup, useReducedMotion } from 'framer-motion';
+import { Fragment, useState, useMemo, useEffect, useCallback, useRef, memo } from 'react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { useGetLibraryCollection } from '@/api/hooks/anime_collection.hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/api/generated/endpoints';
 import { fetchAnimeEntry } from '@/api/hooks/anime_entries.hooks';
 import { SeriesCard, getVhsColor, type SeriesItem } from './-SeriesCard';
 import { SeriesSpineRow } from './-SeriesSpineRow';
-import { getMediumResImage, getLowResImage, prewarmImages } from '@/lib/helpers/images';
+import { getMediumResImage, getLowResImage, localImage, prewarmImages } from '@/lib/helpers/images';
 import { DeferredImage } from '@/components/shared/deferred-image';
-import { IconUiCheckCircle2, IconNavigationLayers } from "@/components/ui/icons";
+import { IconUiCheckCircle2, IconNavigationLayers, IconStatusImage } from "@/components/ui/icons";
+import { LoadSwap, MagneticIndicator, loadSwapVariants, viewSwapVariants } from '@/components/ui/kinetics';
 import { getSeriesIdFromMedia, getSeriesYear, getSeriesEraAccent, DRAGON_BALL_SERIES_ORDER, DRAGON_BALL_SERIES_INFO, DAIMA_VERTICAL_POSTER } from '@/lib/helpers/series';
 import { getSpineConfig } from '@/lib/helpers/goku-panorama';
 import { getSafeCollectionEntries } from '@/lib/helpers/collection';
@@ -17,10 +18,10 @@ import { Skeleton } from '@/components/ui/skeleton/skeleton';
 import { SectionBar } from '@/components/ui/sectionbar/sectionbar';
 import { PosterGridSkeleton } from '@/components/ui/shimmer-skeleton';
 import { useSpringPreset } from '@/components/ui/kinetics/hooks';
+import { useRevealChildren } from '@/components/ui/kinetics/scroll-reveal';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useSound } from '@/hooks/use-sound';
-import { startViewTransition } from '@/lib/helpers/transitions';
 import { useThemeSettings } from '@/lib/theme/theme-hooks';
 import { useUIStore } from '@/lib/store';
 import { cn } from '@/components/ui/core/styling';
@@ -29,18 +30,29 @@ import { HERO_AURA_CLASS, HERO_STAGE_CLASS } from '@/lib/config/hero-stage';
 
 export type SeriesViewMode = 'shelf' | 'etapas';
 
-interface SeriesTabItem {
+interface SeriesTabOption {
     id: SeriesViewMode;
     label: string;
+    icon: React.ReactNode;
 }
 
-const SERIES_TABS: SeriesTabItem[] = [
-    { id: 'shelf', label: 'Estantería' },
-    { id: 'etapas', label: 'Portadas' },
+const SERIES_TABS: SeriesTabOption[] = [
+    {
+        id: 'shelf',
+        label: 'Estantería',
+        icon: <IconNavigationLayers size={14} className="relative z-10 shrink-0" />,
+    },
+    {
+        id: 'etapas',
+        label: 'Portadas',
+        icon: <IconStatusImage size={14} className="relative z-10 shrink-0" />,
+    },
 ];
 
 /** Delay de stagger por card, en ms (tope acotado para fluidez). */
 const ENTRY_STAGGER_MS = 40;
+// Lomos que entran en pantalla al abrir (escritorio): sus fondos se piden ya.
+const SHELF_EAGER_ITEMS = 7;
 const ENTRY_STAGGER_MAX_ITEMS = 12;
 
 /** Transform compartido por los dos halos de fondo (exterior + interior del shelf). */
@@ -59,48 +71,88 @@ function ViewModeTabs({
     const reduceMotion = useReducedMotion();
     const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed);
     const allowEraFx = isHeavyAllowed && !reduceMotion;
+    const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+    const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+        let newIndex = index;
+        const total = SERIES_TABS.length;
+        switch (e.key) {
+            case 'ArrowRight':
+            case 'ArrowDown':
+                e.preventDefault();
+                newIndex = (index + 1) % total;
+                break;
+            case 'ArrowLeft':
+            case 'ArrowUp':
+                e.preventDefault();
+                newIndex = (index - 1 + total) % total;
+                break;
+            case 'Home':
+                e.preventDefault();
+                newIndex = 0;
+                break;
+            case 'End':
+                e.preventDefault();
+                newIndex = total - 1;
+                break;
+            default:
+                return;
+        }
+        const target = SERIES_TABS[newIndex];
+        if (target) {
+            onChange(target.id);
+            tabRefs.current[newIndex]?.focus();
+        }
+    };
+
     return (
         <div
             role="tablist"
             aria-label="Modo de visualización de series"
-            className="relative z-20 w-full flex items-center justify-between gap-2 bg-surface-container-lowest/60 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-full p-1.5 sm:p-2 shadow-[shadow:var(--glass-highlight-lg),0_12px_36px_-6px_rgba(0,0,0,0.85)] overflow-hidden"
+            className="glass-frosted-pill relative z-20 flex items-center justify-between gap-2 w-full p-1.5 sm:p-2 overflow-hidden"
         >
-            <LayoutGroup id="series-view-tabs">
-            <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full flex-1">
-                {SERIES_TABS.map(({ id, label }) => {
+            <div className="relative z-10 flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full flex-1">
+                {SERIES_TABS.map(({ id, label, icon }, index) => {
                     const isActive = id === mode;
                     return (
                         <button
                             key={id}
+                            ref={(el) => { tabRefs.current[index] = el; }}
                             role="tab"
                             aria-selected={isActive}
+                            tabIndex={isActive ? 0 : -1}
                             onClick={() => onChange(id)}
+                            onKeyDown={(e) => handleKeyDown(e, index)}
                             className={cn(
-                                'relative flex flex-1 items-center justify-center px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-full text-center shrink-0 cursor-pointer select-none overflow-hidden transition-[background-color,color] duration-150',
+                                'group relative flex flex-[1_0_auto] items-center justify-center gap-2 px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-full text-center cursor-pointer select-none transition-[transform,background-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent',
                                 isActive
-                                    ? 'text-black font-bold'
-                                    : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10',
+                                    ? 'text-zinc-950 font-black'
+                                    : 'text-on-surface-variant hover:text-white hover:bg-white/[0.08] hover:scale-[1.01] active:scale-[0.99]',
                             )}
                         >
-                            {isActive && (
-                                allowEraFx ? (
-                                    <m.div
-                                        layoutId="activeSeriesTopPill"
-                                        className="absolute inset-0 rounded-full pointer-events-none z-0 bg-white/95"
-                                        transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
-                                    />
-                                ) : (
-                                    <div className="absolute inset-0 rounded-full pointer-events-none z-0 bg-white/95" />
-                                )
-                            )}
-                            <span className="relative z-10 font-sans font-extrabold text-2xs sm:text-xs tracking-wider uppercase leading-tight whitespace-nowrap">
+                            <MagneticIndicator
+                                layoutId="activeSeriesTopPill"
+                                active={isActive}
+                                disableAnimation={!allowEraFx}
+                                className="border-t border-t-white"
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.95)',
+                                    boxShadow: allowEraFx
+                                        ? '0 2px 14px rgba(255, 255, 255, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.9)'
+                                        : undefined,
+                                }}
+                            />
+                            {icon}
+                            <span className={cn(
+                                'relative z-10 font-sans font-extrabold text-2xs sm:text-xs tracking-wider uppercase leading-tight whitespace-nowrap transition-colors duration-200',
+                                isActive ? 'text-zinc-950 font-black' : 'text-on-surface-variant group-hover:text-white',
+                            )}>
                                 {label}
                             </span>
                         </button>
                     );
                 })}
             </div>
-            </LayoutGroup>
         </div>
     );
 }
@@ -204,8 +256,9 @@ const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
     onNavigate: (id: string) => void;
 }) {
     const queryClient = useQueryClient();
-    const posterSrc = getMediumResImage(item.poster || item.img);
-    const posterLowSrc = useMemo(() => getLowResImage(item.poster || item.img) || undefined, [item.poster, item.img]);
+    // Vía caché local del servidor (precalentada): sin viaje a TMDB por internet.
+    const posterSrc = localImage(getMediumResImage(item.poster || item.img));
+    const posterLowSrc = useMemo(() => localImage(getLowResImage(item.poster || item.img)) || undefined, [item.poster, item.img]);
     const isComplete = item.progress >= 100;
     // Mismo número canónico que la estantería (SeriesCard): el índice solo
     // es fallback, porque con series faltantes (p. ej. Kai) se desfasaría.
@@ -339,9 +392,10 @@ function SeriesFullscreenIndex() {
 
     const handleViewChange = useCallback((nextView: SeriesViewMode) => {
         playSound('category', 0.1);
-        startViewTransition(() => {
-            navigate({ to: '/series', search: { view: nextView === 'shelf' ? undefined : nextView }, replace: true });
-        });
+        // Sin startViewTransition: el cambio de panel ya lo anima AnimatePresence
+        // (viewSwapVariants); el cross-fade del navegador lo duplicaba y dejaba
+        // fantasma la píldora del tab mientras se desplaza.
+        navigate({ to: '/series', search: { view: nextView === 'shelf' ? undefined : nextView }, replace: true });
     }, [navigate, playSound]);
 
     const seriesList = useMemo(() => {
@@ -438,11 +492,14 @@ function SeriesFullscreenIndex() {
             getLowResImage(item.poster),
             item.img,
             getLowResImage(item.img),
-        ]));
+        ].map(localImage)));
     }, [seriesList]);
 
     // Selección efectiva: cae al primer item si no hay selección explícita
     const displayedList = seriesList;
+    // Las portadas entran en ola al bajar (solo las que no se ven al cargar).
+    const posterGridRef = useRef<HTMLDivElement>(null);
+    useRevealChildren(posterGridRef, `${view}:${displayedList.map(s => s.id).join(',')}`);
 
     const effectiveSelectedId = displayedList.some(s => s.id === selectedId)
         ? selectedId
@@ -456,7 +513,7 @@ function SeriesFullscreenIndex() {
 
     // Aura ambiental sin flash: arte difuminado ultra-liviano (w185) con crossfade nativo
     const rawAuraSrc = selectedItem?.img || selectedItem?.poster || null;
-    const lowAuraSrc = useMemo(() => rawAuraSrc ? getLowResImage(rawAuraSrc) : null, [rawAuraSrc]);
+    const lowAuraSrc = useMemo(() => rawAuraSrc ? localImage(getLowResImage(rawAuraSrc)) : null, [rawAuraSrc]);
 
     // Precarga predictiva en idle: serie seleccionada y vecinos contiguos (±1).
     // Cubre tanto item.poster (card expandida) como item.img (aura ambiental) y sus variantes low.
@@ -470,7 +527,7 @@ function SeriesFullscreenIndex() {
             if (it.poster) targets.push(it.poster, getLowResImage(it.poster));
             if (it.img) targets.push(it.img, getLowResImage(it.img));
         });
-        prewarmImages(targets);
+        prewarmImages(targets.map(localImage));
     }, [selectedIndex, displayedList]);
 
     const defaultOpenSpineId = useMemo(
@@ -544,6 +601,7 @@ function SeriesFullscreenIndex() {
 
     return (
         <div className="relative w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-4 md:pt-20 pb-8 select-none flex flex-col justify-start space-y-4 text-on-surface">
+            <h1 className="sr-only">Series</h1>
             {/* ── Ambient Aura Background (mismo tamaño que Home / Películas) ── */}
             <div className={cn(HERO_AURA_CLASS, "[contain:paint]")}>
                 <AmbientAura src={lowAuraSrc} allowGlowFx={allowGlowFx} />
@@ -581,9 +639,11 @@ function SeriesFullscreenIndex() {
             </div>
 
             {/* ── Main Content ── */}
+            {/* Cambio de vista: el panel saliente se va antes de que entre el nuevo. */}
+            <AnimatePresence mode="wait" initial={false}>
             {view === 'shelf' && !isMobile ? (
                 /* ═══════════════════════ VISTA VHS SHELF (desktop, mismo stage que Home/Películas) ═══════════════════════ */
-                <div className="relative z-10 w-full">
+                <m.div key="shelf" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full">
                 <div
                     className={cn("sectionbar w-full relative z-10 flex flex-col rounded-3xl overflow-hidden border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] flex-none md:mb-8", HERO_STAGE_CLASS)}
                 >
@@ -625,16 +685,18 @@ function SeriesFullscreenIndex() {
                             )
                         )}
 
+                        {/* mode="wait": las cintas entran (con su propia cascada) recién cuando el skeleton terminó de irse. */}
+                        <AnimatePresence mode="wait" initial={false}>
                         {isLoading && displayedList.length === 0 ? (
-                            <div className="w-full h-full flex items-stretch gap-0 relative z-10 p-2">
+                            <m.div key="skeleton" variants={loadSwapVariants} exit="exit" className="w-full h-full flex items-stretch gap-0 relative z-10 p-2">
                                 {Array.from({ length: 8 }).map((_, i) => (
                                     <div key={i} className="h-full flex flex-col gap-2 p-2 shrink-0" style={{ flex: '1 0 150px' }}>
                                         <Skeleton className="flex-1 h-auto rounded-xl" />
                                     </div>
                                 ))}
-                            </div>
+                            </m.div>
                         ) : displayedList.length === 0 ? (
-                            <div className="w-full h-full flex items-center justify-center relative z-10 p-6">
+                            <div key="empty" className="w-full h-full flex items-center justify-center relative z-10 p-6">
                                 <EmptyState
                                     title="No hay series en tu colección"
                                     message="Agregá series a tu biblioteca para verlas acá."
@@ -650,7 +712,8 @@ function SeriesFullscreenIndex() {
                                 />
                             </div>
                         ) : (
-                            displayedList.map((item, i) => (
+                            <Fragment key="list">
+                            {displayedList.map((item, i) => (
                                 <SeriesCard
                                     key={item.id}
                                     item={item}
@@ -659,9 +722,12 @@ function SeriesFullscreenIndex() {
                                     onNavigate={handleNavigate}
                                     onSelect={handleSelectSeries}
                                     entryDelayMs={!reduceMotion && i < ENTRY_STAGGER_MAX_ITEMS ? i * ENTRY_STAGGER_MS : 0}
+                                    eager={i < SHELF_EAGER_ITEMS}
                                 />
-                            ))
+                            ))}
+                            </Fragment>
                         )}
+                        </AnimatePresence>
                     </div>
                     {/* Zócalo continuo unificador de mural para la base del shelf */}
                     <div
@@ -682,10 +748,10 @@ function SeriesFullscreenIndex() {
                     {/* CRT scanlines recortado al shelf */}
                     <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
                 </div>
-                </div>
+                </m.div>
             ) : view === 'shelf' && isMobile && displayedList.length > 0 ? (
                 /* ═══════════════════════ VISTA ESTANTERÍA MÓVIL (cintas apiladas) ═══════════════════════ */
-                <div className="w-full max-w-2xl mx-auto pt-1 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
+                <m.div key="spines" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="w-full max-w-2xl mx-auto pt-1 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
                     <ul aria-label="Colección de series" className="flex flex-col gap-2">
                         {displayedList.map((item, i) => (
                             <SeriesSpineRow
@@ -700,14 +766,13 @@ function SeriesFullscreenIndex() {
                             />
                         ))}
                     </ul>
-                </div>
+                </m.div>
             ) : (
                 /* ═══════════════════════ VISTA PORTADAS (grid / mobile) ═══════════════════════ */
-                <div className="flex-1 overflow-y-auto no-scrollbar transform-gpu [contain:paint]">
+                <m.div key="grid" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto no-scrollbar [contain:paint]">
                     <div className="w-full page-container py-7 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] space-y-6 min-h-full">
-                        {isLoading && displayedList.length === 0 ? (
-                            <PosterGridSkeleton count={12} />
-                        ) : displayedList.length === 0 ? (
+                        <LoadSwap loading={isLoading && displayedList.length === 0} skeleton={<PosterGridSkeleton count={12} />}>
+                        {displayedList.length === 0 ? (
                             <div className="min-h-[50vh] flex items-center justify-center p-6">
                                 <EmptyState
                                     title="No hay series en tu colección"
@@ -735,7 +800,7 @@ function SeriesFullscreenIndex() {
                                     </span>
                                 }
                             >
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 w-full">
+                                <div ref={posterGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 w-full">
                                     {displayedList.map((item, i) => (
                                         <SeriesPosterGridItem
                                             key={item.id}
@@ -747,9 +812,11 @@ function SeriesFullscreenIndex() {
                                 </div>
                             </SectionBar>
                         )}
+                        </LoadSwap>
                     </div>
-                </div>
+                </m.div>
             )}
+            </AnimatePresence>
         </div>
     );
 }

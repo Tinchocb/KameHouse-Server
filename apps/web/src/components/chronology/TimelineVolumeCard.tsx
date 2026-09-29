@@ -7,7 +7,7 @@ import { getSagaBadgeConfig } from './utils/sagaBadge';
 import { getSagaFallbackImages } from './data/sagaImages';
 import { sounds } from './utils/audio';
 import { hexToRgbChannels } from './utils/eraColor';
-import { Play, CheckCircle2, Circle, ChevronDown, Maximize2 } from 'lucide-react';
+import { Play, CheckCircle2, PanelRightOpen, Maximize2 } from 'lucide-react';
 
 export interface TimelineVolumeCardProps {
   volume: VolumeData;
@@ -20,7 +20,7 @@ export interface TimelineVolumeCardProps {
   /** Color de la era: tiñe borde, brillo, etiquetas y avance. */
   accentHex?: string;
   serverMomentTimes?: Record<string, number>;
-  onToggleRead: (volumeId: string) => void;
+  onToggleRead?: (volumeId: string) => void;
   onInspectThumbnail?: (volume: VolumeData) => void;
   onPlayVolume?: (volume: VolumeData, episodeNum?: number, momentInfo?: MomentPlayInfo) => void;
   /** Estado de apertura de detalles controlado externamente (soporte contralateral) */
@@ -40,7 +40,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
     isHighlighted = false,
     accentHex = '#f59e0b',
     serverMomentTimes,
-    onToggleRead,
+    onToggleRead: _onToggleRead,
     onInspectThumbnail,
     onPlayVolume,
     isDetailsOpen: controlledShowDetails,
@@ -112,21 +112,11 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
       }
     };
 
-    // El tilde celebra solo cuando lo marcás vos, no cada vez que la tarjeta se monta.
-    const [celebrateRead, setCelebrateRead] = useState(false);
-
-    const handleToggleWatched = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      sounds.playSelect();
-      setCelebrateRead(!isRead);
-      onToggleRead(volume.id);
-    };
-
     return (
       <article
         id={`timeline-card-${volume.id}`}
         style={{ '--era': hexToRgbChannels(accentHex) } as React.CSSProperties}
-        className={`group relative isolate flex flex-col rounded-2xl border overflow-hidden bg-zinc-950 bg-[linear-gradient(180deg,rgb(255_255_255/0.055),rgb(255_255_255/0.012)_40%,transparent_75%)] shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_24px_48px_-28px_rgb(0_0_0/0.9)] transition-[border-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
+        className={`group relative isolate flex flex-col rounded-2xl border overflow-hidden bg-surface-container-lowest bg-[linear-gradient(180deg,rgb(255_255_255/0.055),rgb(255_255_255/0.012)_40%,transparent_75%)] shadow-[inset_0_1px_0_rgb(255_255_255/0.07),0_24px_48px_-28px_rgb(0_0_0/0.9)] transition-[border-color,box-shadow,transform] duration-300 ease-out hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
           isHighlighted
             ? 'ring-2 ring-[rgb(var(--era)/0.7)] border-[rgb(var(--era)/0.5)]'
             : isRead
@@ -141,7 +131,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
         />
 
         {/* 1. Main 16:9 Image */}
-        <div className="group/thumb relative w-full aspect-video bg-zinc-900 overflow-hidden">
+        <div className="group/thumb relative w-full aspect-video bg-surface-container-high overflow-hidden">
           <EpisodeThumbnailImg
             key={preview ? (preview.milestone.momentKey ?? `ep-${preview.episodeNum}`) : 'cover'}
             volume={volume}
@@ -185,21 +175,24 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
             </div>
           </div>
 
-          {/* Toda la miniatura reproduce; el ícono solo aparece al apuntarla para no tapar el arte */}
+          {/* Toda la miniatura reproduce con botón integrado */}
           {onPlayVolume && (
             <>
               <button
                 type="button"
                 onClick={handlePlayMain}
                 aria-label={`${playTarget.label}: ${volume.title}`}
-                className="absolute inset-0 cursor-pointer focus-visible:outline-none select-none"
+                className="absolute inset-0 cursor-pointer focus-visible:outline-none select-none z-10"
               />
-              <span
+              <div
                 aria-hidden="true"
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-brand-accent text-zinc-950 flex items-center justify-center shadow-elevation-2 pointer-events-none opacity-0 scale-90 transition-[opacity,transform] duration-150 ease-out group-hover/thumb:opacity-100 group-hover/thumb:scale-100 group-focus-within/thumb:opacity-100 group-focus-within/thumb:scale-100 motion-reduce:transition-none motion-reduce:scale-100"
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
               >
-                <Play className="w-5 h-5 fill-current ml-0.5" />
-              </span>
+                <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-accent text-zinc-950 font-display font-extrabold text-xs uppercase tracking-wider shadow-elevation-3 transform scale-95 opacity-90 transition-[opacity,transform,filter] duration-200 ease-out group-hover/thumb:opacity-100 group-hover/thumb:scale-105 group-hover/thumb:brightness-110 group-focus-within/thumb:opacity-100 group-focus-within/thumb:scale-105 group-active/thumb:scale-95">
+                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                  <span>{playTarget.label}</span>
+                </span>
+              </div>
             </>
           )}
 
@@ -281,61 +274,27 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
             </dl>
           )}
 
-          {/* 3. Acciones. En móvil el botón principal ocupa toda la fila y debajo van
-            «visto» y «Detalles»; desde sm entran los tres en una fila. */}
-          <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-white/10">
-            {onPlayVolume && (
-              <button
-                type="button"
-                onClick={handlePlayMain}
-                className="basis-full sm:basis-auto min-h-[44px] px-3.5 rounded-full bg-brand-accent text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 hover:brightness-110 active:scale-[0.97] transition-[filter,transform] duration-150 ease-out-strong cursor-pointer select-none shadow-sm"
-              >
-                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                <span>{playTarget.label}</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              id={`btn-toggle-read-${volume.id}`}
-              aria-label={isRead ? 'Marcar como no visto' : 'Marcar como visto'}
-              onClick={handleToggleWatched}
-              className={`min-h-[44px] px-3 rounded-full text-xs font-mono transition-[background-color,border-color,color,transform] duration-150 ease-out-strong border cursor-pointer select-none active:scale-[0.97] flex items-center gap-1.5 ${
-                isRead
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold'
-                  : 'bg-white/[0.04] hover:bg-white/[0.08] text-on-surface-variant hover:text-white border-white/15'
-              }`}
-            >
-              {isRead ? (
-                <>
-                  <CheckCircle2
-                    className={`w-3.5 h-3.5 text-emerald-400 stroke-[2.5] ${celebrateRead ? 'animate-success-check' : ''}`}
-                  />
-                  <span>Visto</span>
-                </>
-              ) : (
-                <>
-                  <Circle className="w-3.5 h-3.5 text-on-surface-variant/70" />
-                  <span>Marcar visto</span>
-                </>
-              )}
-            </button>
+          {/* 3. Acciones: detalles simplificado al costado */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <span className="font-mono text-3xs uppercase tracking-wider text-on-surface-variant/70">
+              {volume.volumeNumber} · {capsFormatted}
+            </span>
 
             <button
               type="button"
               onClick={handleToggleDetails}
               aria-expanded={showDetails}
               aria-controls={`volume-details-${volume.id}`}
-              className={`ml-auto min-h-[44px] px-3 rounded-full text-xs font-mono transition-[background-color,border-color,color,transform] duration-150 ease-out-strong border cursor-pointer select-none active:scale-[0.97] flex items-center gap-1.5 ${
+              className={`min-h-[38px] px-3.5 rounded-full text-xs font-mono transition-[background-color,border-color,color,transform,box-shadow] duration-150 ease-out-strong border cursor-pointer select-none active:scale-[0.97] flex items-center gap-2 ${
                 showDetails
-                  ? 'bg-brand-accent/15 border-brand-accent/30 text-brand-accent font-semibold'
+                  ? 'bg-brand-accent/20 border-brand-accent/50 text-brand-accent font-semibold shadow-[0_0_12px_rgba(var(--era)/0.25)]'
                   : 'bg-white/[0.04] hover:bg-white/[0.08] text-on-surface-variant hover:text-white border-white/15'
               }`}
             >
               <span>Detalles</span>
-              <ChevronDown
+              <PanelRightOpen
                 className={`w-3.5 h-3.5 transition-transform duration-300 ease-out-strong motion-reduce:transition-none ${
-                  showDetails ? 'rotate-180 text-brand-accent' : ''
+                  showDetails ? 'text-brand-accent rotate-180' : ''
                 }`}
               />
             </button>
@@ -353,7 +312,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
           <div
             id={`volume-details-${volume.id}`}
             inert={!showDetails}
-            className={`lg:hidden grid -mt-3 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+            className={`lg:hidden grid -mt-3 transition-[grid-template-rows,opacity] duration-300 ease-expo-out motion-reduce:transition-none ${
               showDetails ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
             }`}
           >

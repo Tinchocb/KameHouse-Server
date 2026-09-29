@@ -93,18 +93,6 @@ export const MoviePosterCard = React.memo(function MoviePosterCard({
             animate={initial !== undefined ? "visible" : undefined}
             {...motionProps}
             onClick={onClick}
-            // Activable con teclado (Tab + Enter/Espacio): antes solo con mouse, y el
-            // onFocus que reciben algunas vistas nunca se disparaba.
-            role={onClick ? "button" : undefined}
-            tabIndex={onClick ? 0 : undefined}
-            aria-label={onClick ? title : undefined}
-            onKeyDown={onClick ? (e) => {
-                if (e.target !== e.currentTarget) return
-                if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    onClick()
-                }
-            } : undefined}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onFocus={onFocus}
@@ -115,6 +103,19 @@ export const MoviePosterCard = React.memo(function MoviePosterCard({
             )}
             style={titleHoverColor ? { "--poster-title-hover": titleHoverColor } as React.CSSProperties : undefined}
         >
+            {/* Destino de teclado y lectores de pantalla: un botón real bajo el póster.
+                Antes la tarjeta era role="button" con botones dentro (play, cola), que
+                es un control interactivo anidado. El clic del mouse sigue siendo el
+                onClick de la tarjeta; el de este botón sube hasta ahí. El póster va
+                encima (posicionado y después en el DOM), así sus acciones siguen
+                alcanzables. */}
+            {onClick && (
+                <button
+                    type="button"
+                    aria-label={title}
+                    className="absolute inset-0 rounded-2xl outline-none cursor-pointer"
+                />
+            )}
             {/* Póster limpio: el arte oficial ya trae su logo, así que no lleva
                 título ni degradé encima (antes quedaban dos títulos pisados). */}
             <div
@@ -125,7 +126,7 @@ export const MoviePosterCard = React.memo(function MoviePosterCard({
                         : isSubtleTier
                         ? "transition-[transform,border-color,box-shadow] duration-base ease-smooth-out group-hover:-translate-y-1 group-hover:scale-[1.015] group-active:scale-95"
                         : "transition-[border-color,box-shadow] duration-base ease-smooth-out",
-                    "group-hover:shadow-[0_15px_35px_rgba(0,0,0,0.9)] group-focus-visible:ring-2 group-focus-visible:ring-brand-accent",
+                    "group-hover:shadow-[0_15px_35px_rgba(0,0,0,0.9)] group-has-[:focus-visible]:ring-2 group-has-[:focus-visible]:ring-brand-accent",
                 )}
                 style={borderColor ? { borderColor } : undefined}
             >
@@ -140,7 +141,7 @@ export const MoviePosterCard = React.memo(function MoviePosterCard({
 
                 {/* Velo solo en hover: da contraste a las acciones sin apagar el póster en reposo */}
                 {centerOverlay && (
-                    <div aria-hidden className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 pointer-events-none" />
+                    <div aria-hidden className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 transition-opacity duration-200 z-10 pointer-events-none" />
                 )}
 
                 {/* Top Badges (cada badge ya trae su fondo, no hace falta scrim) */}
@@ -157,7 +158,7 @@ export const MoviePosterCard = React.memo(function MoviePosterCard({
 
                 {/* Center Overlay on Hover — siempre visible en táctil */}
                 {centerOverlay && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 max-sm:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 max-sm:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
                         {centerOverlay}
                     </div>
                 )}

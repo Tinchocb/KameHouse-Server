@@ -5,6 +5,7 @@ import { IconNavigationLayers } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { MagneticIndicator } from "@/components/ui/kinetics/magnetic-indicator"
 import { useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { ElasticCounter } from "@/components/ui/kinetics/elastic-counter"
 
 interface SourceOption {
     value: MediaSourceChoice
@@ -67,7 +68,7 @@ export function SeriesSourcePicker({ mediaId, className }: { mediaId: number | u
             <div
                 role="radiogroup"
                 aria-label="Origen de reproducción"
-                className="flex w-fit items-center gap-1 rounded-full border border-white/20 border-t-white/40 border-b-white/10 bg-zinc-950/40 p-1.5"
+                className="sectionbar sectionbar-pill flex w-fit items-center gap-1 p-1.5"
             >
                 {options.map(opt => {
                     const checked = info.preference === opt.value
@@ -97,7 +98,9 @@ export function SeriesSourcePicker({ mediaId, className }: { mediaId: number | u
                             />
                             <span className="relative z-10">{opt.label}</span>
                             {count != null && opt.disabled === false && (
-                                <span className="relative z-10 font-mono text-3xs tabular-nums opacity-70">{count}</span>
+                                <span className="relative z-10 font-mono text-3xs tabular-nums opacity-70">
+                                    <ElasticCounter value={count} />
+                                </span>
                             )}
                         </button>
                     )

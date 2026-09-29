@@ -99,7 +99,7 @@ export function CharacterDetailModal({
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/60 backdrop-blur-overlay-xl"
+                        className="absolute inset-0 bg-black/65 backdrop-blur-overlay-xs"
                     />
 
                     <m.div
@@ -111,7 +111,7 @@ export function CharacterDetailModal({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.94, y: 16 }}
                         transition={modalSpring}
-                        className="relative w-full max-w-3xl max-h-[90dvh] bg-zinc-950/85 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 rounded-3xl overflow-y-auto shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_rgba(0,0,0,0.9)] flex flex-col md:flex-row z-10 scrollbar-hide no-scrollbar transform-gpu"
+                        className="glass-frosted relative w-full max-w-3xl max-h-[90dvh] rounded-3xl overflow-y-auto shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_rgba(0,0,0,0.9)] flex flex-col md:flex-row z-10 scrollbar-hide no-scrollbar"
                     >
                         <button 
                             onClick={onClose}
@@ -123,11 +123,11 @@ export function CharacterDetailModal({
 
                     {/* Left Column: Avatar & Quick Info */}
                     <div className="w-full md:w-1/3 p-4 sm:p-6 flex flex-col items-center border-b md:border-b-0 md:border-r border-white/10 shrink-0 bg-white/[0.02]">
-                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-white/30 shadow-[0_0_24px_rgba(255,255,255,0.15)] mb-3 sm:mb-4 shrink-0 bg-zinc-950">
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-white/30 shadow-[0_0_24px_rgba(255,255,255,0.15)] mb-3 sm:mb-4 shrink-0 bg-surface-container-high">
                             {avatarUrl ? (
                                 <img src={avatarUrl} alt={charInfo.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full bg-zinc-950 flex items-center justify-center text-zinc-500 font-bold uppercase">DB</div>
+                                <div className="w-full h-full bg-surface-container-high flex items-center justify-center text-zinc-500 font-bold uppercase">DB</div>
                             )}
                         </div>
 
@@ -137,7 +137,7 @@ export function CharacterDetailModal({
                         )}
 
                         {/* Scouter Ki Level HUD */}
-                        <div className="w-full mt-3 p-2.5 rounded-2xl bg-zinc-950/60 border border-white/15 border-t-white/30 shadow-glass-highlight-md flex items-center justify-between text-caption font-mono text-emerald-400">
+                        <div className="w-full mt-3 p-2.5 rounded-2xl bg-surface-container-lowest/60 border border-white/15 border-t-white/30 shadow-glass-highlight-md flex items-center justify-between text-caption font-mono text-emerald-400">
                             <div className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                                 <span className="font-bold tracking-wider uppercase text-caption">SCOUTER KI:</span>

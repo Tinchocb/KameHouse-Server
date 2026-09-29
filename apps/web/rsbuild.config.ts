@@ -131,8 +131,13 @@ const config: RsbuildConfig = {
     },
     performance: {
         preload: process.env.NODE_ENV === "production" ? {
-            type: "initial",
-            include: [/(?:outfit|space-mono).*\.woff2$/],
+            // all-chunks + include: además de las fuentes, el chunk diferido de
+            // animaciones (motion-features) baja en paralelo con el JS inicial;
+            // el splash lo espera antes de retirarse.
+            type: "all-chunks",
+            // Solo el subset latin (cubre á, ñ, ¿, ¡): latin-ext y vietnamese casi
+            // nunca se usan y precargarlos competía con el JS del primer render.
+            include: [/(?:outfit|space-mono)-latin-(?!ext)[^/]*\.woff2$/, /motion-features\.[\w]+\.js$/],
         } : undefined,
         chunkSplit: process.env.NODE_ENV === "production" ? {
             forceSplitting: {
@@ -142,7 +147,8 @@ const config: RsbuildConfig = {
                 "lucide": /[\\/]node_modules[\\/]lucide-react[\\/]/,
                 "tanstack-query": /[\\/]node_modules[\\/]@tanstack[\\/]react-query/,
                 "tanstack-router": /[\\/]node_modules[\\/]@tanstack[\\/]react-router/,
-                "framer-motion": /[\\/]node_modules[\\/](framer-motion|motion)[\\/]/,
+                // framer-motion NO se fuerza a un chunk inicial: sus funciones
+                // (domMax) se cargan aparte vía import() (lib/motion-features.ts).
                 "ui-primitives": /[\\/]node_modules[\\/](@radix-ui|vaul|cmdk)[\\/]/,
                 "fontsource": /[\\/]node_modules[\\/]@fontsource/,
                 "zod": /[\\/]node_modules[\\/]zod[\\/]/,

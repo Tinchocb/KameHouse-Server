@@ -79,5 +79,5 @@ export const Route = createFileRoute("/movies/$movieId")({
         })
     },
     errorComponent: AppErrorBoundary,
-    // Anti-flash: sin pendingComponent (ver series/$seriesId/index.tsx).
+    // Anti-flash: sin skeleton propio de router (ver series/$seriesId/index.tsx).
 })

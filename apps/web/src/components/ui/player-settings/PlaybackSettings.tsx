@@ -1,10 +1,9 @@
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { SpringSwitch } from "@/components/ui/switch/spring-switch"
-import { IconUiMinus, IconUiPlus } from "@/components/ui/icons";
 import { buildSeaQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
-import { getApiWebSocketUrl } from "@/api/client/server-url"
+import { useApiWebSocketUrl } from "@/api/client/use-api-websocket-url"
 import { WSEvents, type WebSocketMessage } from "@/lib/server/ws-events"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
@@ -15,18 +14,10 @@ interface PlaybackSettingsProps {
     onAutoSkipIntroChange: (enabled: boolean) => void
     autoSkipOutro: boolean
     onAutoSkipOutroChange: (enabled: boolean) => void
-    autoSkipFiller?: boolean
-    onAutoSkipFillerChange?: (enabled: boolean) => void
-    skipStepSeconds: number
-    onSkipStepSecondsChange: (seconds: number) => void
-    showHeatmap: boolean
-    onShowHeatmapChange: (enabled: boolean) => void
     loopEnabled?: boolean
     onLoopEnabledChange?: (enabled: boolean) => void
     autoDisableSubtitlesWhenDubbed?: boolean
     onAutoDisableSubtitlesWhenDubbedChange?: (enabled: boolean) => void
-    ambientModeEnabled?: boolean
-    onAmbientModeEnabledChange?: (enabled: boolean) => void
     showSeparator?: boolean
     mediaFormat?: string | null
     tvMode?: boolean
@@ -52,7 +43,7 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
         }
     }, [])
 
-    const wsUrl = React.useMemo(() => getApiWebSocketUrl(), [])
+    const wsUrl = useApiWebSocketUrl()
     useWebSocket(wsUrl, React.useCallback((data: WebSocketMessage) => {
         if (data?.type !== WSEvents.SKIP_SCAN_STATUS) return
         const p = data.payload
@@ -181,18 +172,10 @@ export function PlaybackSettings({
     onAutoSkipIntroChange,
     autoSkipOutro,
     onAutoSkipOutroChange,
-    autoSkipFiller = false,
-    onAutoSkipFillerChange,
-    skipStepSeconds,
-    onSkipStepSecondsChange,
-    showHeatmap,
-    onShowHeatmapChange,
     loopEnabled = false,
     onLoopEnabledChange = () => {},
     autoDisableSubtitlesWhenDubbed = true,
     onAutoDisableSubtitlesWhenDubbedChange = () => {},
-    ambientModeEnabled = true,
-    onAmbientModeEnabledChange = () => {},
     showSeparator = true,
     mediaFormat,
     marathonMode,
@@ -234,13 +217,6 @@ export function PlaybackSettings({
 
             <ToggleRow label="Repetir (loop)" enabled={loopEnabled} onChange={onLoopEnabledChange} />
             <ToggleRow label="Ocultar subtítulos si está doblado" enabled={autoDisableSubtitlesWhenDubbed} onChange={onAutoDisableSubtitlesWhenDubbedChange} />
-            <ToggleRow
-                label="Bordes difuminados"
-                enabled={ambientModeEnabled}
-                onChange={onAmbientModeEnabledChange}
-                subtext="Rellena las franjas de los costados con el color del video. Apagado: bordes negros"
-            />
-            <ToggleRow label="Mapa de Calor (timeline)" enabled={showHeatmap} onChange={onShowHeatmapChange} />
             {!isMovie && onMarathonModeChange && (
                 <ToggleRow
                     label="Modo Maratón"
@@ -258,54 +234,7 @@ export function PlaybackSettings({
             )}
             {!isMovie && <ToggleRow label="Omitir Intro (automático)" enabled={marathonMode ? true : autoSkipIntro} onChange={onAutoSkipIntroChange} disabled={marathonMode} subtext={marathonMode ? "(controlado por Maratón)" : undefined} />}
             {!isMovie && <ToggleRow label="Saltar Final (automático)" enabled={marathonMode ? true : autoSkipOutro} onChange={onAutoSkipOutroChange} disabled={marathonMode} subtext={marathonMode ? "(controlado por Maratón)" : undefined} />}
-            {!isMovie && onAutoSkipFillerChange && (
-                <ToggleRow
-                    label="Saltar Relleno (automático)"
-                    enabled={marathonMode ? true : autoSkipFiller}
-                    onChange={onAutoSkipFillerChange}
-                    disabled={marathonMode}
-                    subtext={marathonMode ? "(controlado por Maratón)" : "Avanza al siguiente episodio canon"}
-                />
-            )}
             {!isMovie && typeof mediaId === "number" && mediaId > 0 && <AutoDetectRow mediaId={mediaId} />}
-
-            {/* Skip step seconds control */}
-            {!isMovie && (
-                <div className="px-3 py-2 border-t border-white/10 my-1">
-                    <div className="text-2xs font-semibold uppercase tracking-widest text-on-surface-variant mb-3">Tiempo de salto manual (S)</div>
-                    <div className="flex items-center justify-between gap-3">
-                        <button
-                            onClick={() => onSkipStepSecondsChange(Math.max(5, skipStepSeconds - 5))}
-                            disabled={skipStepSeconds <= 5}
-                            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
-                        >
-                            <IconUiMinus className="w-3 h-3" />
-                        </button>
-                        <div className="flex-1 flex flex-col items-center gap-1.5">
-                            <span className="text-sm font-bold text-white tabular-nums">{skipStepSeconds}s</span>
-                            <div className="w-full h-1.5 bg-white/10 rounded-full relative">
-                                <div
-                                    className="absolute left-0 h-full bg-brand-accent rounded-full transition-[width]"
-                                    style={{ width: `${Math.min(100, Math.max(0, ((skipStepSeconds - 5) / 175) * 100))}%` }}
-                                />
-                                <input
-                                    type="range" min={5} max={180} step={5}
-                                    value={skipStepSeconds}
-                                    onChange={(e) => onSkipStepSecondsChange(Number(e.target.value))}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => onSkipStepSecondsChange(Math.min(180, skipStepSeconds + 5))}
-                            disabled={skipStepSeconds >= 180}
-                            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
-                        >
-                            <IconUiPlus className="w-3 h-3" />
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

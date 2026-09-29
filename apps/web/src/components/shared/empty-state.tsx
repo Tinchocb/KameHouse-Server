@@ -24,6 +24,8 @@ export function EmptyState({
             "relative flex flex-col items-center justify-center text-center",
             "glass-card px-12 py-16 md:py-24",
             "max-w-2xl mx-auto overflow-hidden shadow-2xl",
+            // Entrada de la tarjeta: escala sutil + fade (el botón de acción entra aparte, más tarde).
+            "animate-scale-in",
         )}>
             {/* Diffused series colors inside the empty state card */}
             <div className="absolute inset-0 -z-10 overflow-hidden opacity-30 pointer-events-none">

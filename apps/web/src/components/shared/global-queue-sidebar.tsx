@@ -6,6 +6,7 @@ import { useQueueStore, useUIStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
+import { ElasticCounter } from "@/components/ui/kinetics"
 import { useSpringPreset, useSpring, useReducedMotion } from "@/components/ui/kinetics/hooks"
 import { useFocusTrap } from "@/hooks/use-focus-trap"
 
@@ -89,7 +90,7 @@ export const GlobalQueueSidebar = () => {
                         role="dialog"
                         aria-modal="true"
                         aria-label="Mi lista / Cola de reproducción"
-                        className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-modal flex flex-col pointer-events-auto select-none scroll-mt-28 bg-[var(--sectionbar-bg-strong)] backdrop-blur-overlay-2xl backdrop-saturate-[190%] border-l border-[var(--sectionbar-border)] shadow-elevation-3"
+                        className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-modal flex flex-col pointer-events-auto select-none scroll-mt-28 bg-[var(--sectionbar-bg-strong)] border-l border-[var(--sectionbar-border)] shadow-elevation-3"
                         style={{
                             borderTopColor: "var(--sectionbar-border-top)",
                             borderBottomColor: "var(--sectionbar-border-bottom)",
@@ -110,8 +111,8 @@ export const GlobalQueueSidebar = () => {
                                                 Mi Lista / Cola
                                             </h3>
                                             <span className="sectionbar-header-badge">
-                                                <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-white/5 text-on-surface-variant border border-white/10 shrink-0">
-                                                    {playlistQueue.length}
+                                                <span className="text-3xs font-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-white/5 text-on-surface-variant border border-white/10 shrink-0 inline-flex items-center justify-center">
+                                                    <ElasticCounter value={playlistQueue.length} />
                                                 </span>
                                             </span>
                                         </div>
@@ -301,7 +302,7 @@ export const GlobalQueueSidebar = () => {
                         {/* Footer — Segmented Control canónico (layoutId + spring 480/34) */}
                         {playlistQueue.length > 0 && (
                             <div className="p-4 sm:p-5 border-t border-white/10 shrink-0 space-y-3">
-                                <div className="flex items-center gap-1 bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10 p-1.5 rounded-full">
+                                <div className="sectionbar sectionbar-pill flex items-center gap-1 p-1.5">
                                     <button
                                         onClick={() => playPrevious()}
                                         disabled={currentQueueIndex <= 0 && queueRepeatMode !== "all"}

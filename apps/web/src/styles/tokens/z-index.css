@@ -41,7 +41,6 @@
 }
 
 /* ─── Clases utilitarias (solo las usadas en tsx) ─────────────────────── */
-.z-base         { z-index: var(--z-base); }
 .z-dropdown     { z-index: var(--z-dropdown); }
 .z-overlay      { z-index: var(--z-overlay); }
 .z-modal        { z-index: var(--z-modal); }

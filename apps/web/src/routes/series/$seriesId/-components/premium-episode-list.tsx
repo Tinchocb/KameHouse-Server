@@ -11,11 +11,21 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { WatchProgressBar } from "@/components/ui/watch-progress-bar"
 import { MagneticIndicator, ElasticCounter } from "@/components/ui/kinetics"
+import { useRevealRef } from "@/components/ui/kinetics/scroll-reveal"
 import { useQueueStore } from "@/lib/store"
+import { isImageLoaded } from "@/lib/helpers/images"
 import { toast } from "sonner"
 
 // Alto del `pb-4` de cada fila, que estimateSize tiene que contar junto con la tarjeta.
 const ROW_GAP_PX = 16
+// Filas montadas fuera de pantalla: sus miniaturas se piden antes de asomar
+// (~1.5 pantallas por delante), así al scrollear ya están descargadas.
+const LIST_OVERSCAN = 8
+// Ancho real de la miniatura por breakpoint (w-32 / sm:w-48 / md:w-56 / lg:w-60).
+const THUMBNAIL_SIZES = "(max-width: 639px) 128px, (max-width: 767px) 192px, (max-width: 1023px) 224px, 240px"
+const THUMBNAIL_TRANSITION: React.CSSProperties = {
+    transition: "opacity 450ms var(--ease-out), transform 500ms var(--ease-out)",
+}
 
 
 interface PremiumEpisodeListProps {
@@ -109,8 +119,8 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
         <div className="flex items-center justify-between gap-4 px-4 py-3 min-h-[60px] rounded-2xl bg-gradient-to-r from-zinc-900/60 via-zinc-900/40 to-zinc-950/60 border border-white/[0.12] shadow-[0_4px_20px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))] animate-pulse shrink-0" />
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 truncate">
-              <span className="text-white font-extrabold">{sagaProgress.watched}</span> / {sagaProgress.total} EPISODIOS VISTOS
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 truncate inline-flex items-center gap-1">
+              <span className="text-white font-extrabold"><ElasticCounter value={sagaProgress.watched} /></span> / {sagaProgress.total} EPISODIOS VISTOS
             </span>
             {fillerStats && fillerStats.filler > 0 && (
               <span className="text-3xs font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/10 text-amber-400 border border-amber-400/25 uppercase tracking-wider shrink-0">
@@ -122,8 +132,8 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
             <div className="flex-1">
               <WatchProgressBar percent={sagaProgress.percent} variant="compact" animateOnMount />
             </div>
-            <span className="text-xs font-mono font-extrabold text-brand-accent shrink-0">
-              {sagaProgress.percent}%
+            <span className="text-xs font-mono font-extrabold text-brand-accent shrink-0 inline-flex items-center">
+              <ElasticCounter value={sagaProgress.percent} />%
             </span>
           </div>
         </div>
@@ -273,6 +283,9 @@ interface EpisodeVirtualRowProps {
     isHighlighted: boolean
     virtualStart: number
     scrollMargin: number
+    /** Índice de la fila y ref de medición del virtualizador: la altura real varía con el largo del título. */
+    rowIndex: number
+    measureRef: (node: HTMLElement | null) => void
     priority?: boolean
     themeUseLegacyEpisodeCard?: boolean
     themeHideEpisodeCardDescription?: boolean
@@ -281,6 +294,28 @@ interface EpisodeVirtualRowProps {
     onMouseEnter: (id: string) => void
     onMouseLeave: (id: string) => void
     seriesMediaId?: number
+}
+
+/**
+ * Lo que se ve en la miniatura mientras carga o si falla: el número del episodio
+ * sobre la tarjeta, en vez de un bloque vacío que parpadea. Mientras carga, un
+ * brillo recorre la tarjeta (solo transform, en el compositor).
+ */
+function ThumbnailPlaceholder({ number, loading = false }: { number: number; loading?: boolean }) {
+    return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-zinc-900 overflow-hidden">
+            {loading && (
+                <div
+                    aria-hidden
+                    className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/[0.06] to-transparent motion-reduce:hidden"
+                />
+            )}
+            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center mb-1.5 shadow-sm">
+                <IconMediaPlay className="w-4 h-4 ml-0.5 text-zinc-300" />
+            </div>
+            <span className="text-2xs font-mono font-bold uppercase tracking-wider text-zinc-400">EP {number}</span>
+        </div>
+    )
 }
 
 function cleanEpisodeTitle(title: string | undefined): string {
@@ -297,6 +332,8 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
     isHighlighted,
     virtualStart,
     scrollMargin,
+    rowIndex,
+    measureRef,
     priority = false,
     themeUseLegacyEpisodeCard,
     themeHideEpisodeCardDescription,
@@ -306,6 +343,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
     onMouseLeave,
     seriesMediaId,
 }: EpisodeVirtualRowProps) {
+    const revealRef = useRevealRef<HTMLDivElement>(`ep:${seriesMediaId ?? ""}:${ep.number}`, "list")
     const handlePlay = React.useCallback(() => {
         onPlay?.(ep.number)
     }, [onPlay, ep.number])
@@ -320,11 +358,16 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
 
     const [currentThumbnail, setCurrentThumbnail] = React.useState(ep.thumbnailUrl)
     const [prevThumbnailUrl, setPrevThumbnailUrl] = React.useState(ep.thumbnailUrl)
+    // Una miniatura ya descargada en la sesión (fila que vuelve a montarse) no muestra el brillo de carga.
+    const [thumbnailLoaded, setThumbnailLoaded] = React.useState(() => isImageLoaded(ep.thumbnailUrl))
 
     if (ep.thumbnailUrl !== prevThumbnailUrl) {
         setPrevThumbnailUrl(ep.thumbnailUrl)
         setCurrentThumbnail(ep.thumbnailUrl)
+        setThumbnailLoaded(isImageLoaded(ep.thumbnailUrl))
     }
+
+    const handleThumbnailLoad = React.useCallback(() => setThumbnailLoaded(true), [])
 
     const handleThumbnailError = React.useCallback(() => {
         console.warn(`[Thumbnail] Error cargando miniatura de EP ${ep.number}:`, ep.thumbnailUrl)
@@ -368,13 +411,17 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
 
     return (
         <div
+            ref={measureRef}
+            data-index={rowIndex}
             className="absolute top-0 left-0 w-full pb-3.5 sm:pb-4"
             style={{
                 transform: `translate3d(0, ${virtualStart - scrollMargin}px, 0)`,
                 contain: "layout style paint",
             }}
         >
-            <div className="h-full">
+            {/* Revelado al bajar: va en este div y no en el contenedor posicionado
+                con translate3d, que perdería su posición si se le pisa el transform. */}
+            <div ref={revealRef} className="h-full">
                     <article
                         id={`episode-${ep.number}`}
                         aria-labelledby={`episode-title-${ep.number}`}
@@ -395,34 +442,37 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                             className="flex flex-1 min-w-0 items-stretch gap-3.5 sm:gap-5 text-left cursor-pointer rounded-xl transition-transform duration-150 ease-out-strong active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
                         >
                         {/* Thumbnail en proporción cinematográfica 16/9 */}
-                        <div className="relative aspect-[16/9] w-32 sm:w-48 md:w-56 lg:w-60 shrink-0 rounded-xl overflow-hidden border border-white/10 bg-zinc-950 shadow-md">
-                            {currentThumbnail ? (
+                        <div className="relative aspect-[16/9] w-32 sm:w-48 md:w-56 lg:w-60 shrink-0 rounded-xl overflow-hidden border border-white/10 bg-surface-container-high shadow-elevation-2">
+                            {/* La tarjeta con el número queda debajo; la foto entra encima con un fundido. */}
+                            <ThumbnailPlaceholder number={ep.number} loading={Boolean(currentThumbnail) && !thumbnailLoaded} />
+                            {currentThumbnail && (
+                                /* La lista ya está virtualizada: solo existen las filas cercanas a la
+                                   vista, así que la imagen se pide al montar la fila (sin esperar otro
+                                   IntersectionObserver ni el lazy del navegador) y con prioridad normal. */
                                 <DeferredImage
                                     src={currentThumbnail}
                                     alt={displayTitle}
-                                    priority={priority}
-                                    loading={priority ? "eager" : "lazy"}
+                                    priority
+                                    loading="eager"
+                                    fetchPriority={priority ? "high" : "auto"}
                                     decoding="async"
+                                    placeholderColor="transparent"
                                     className="w-full h-full"
-                                    imgClassName="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    showSkeleton={true}
+                                    // La miniatura mide 128–240 px: sin esto el srcSet de TMDB
+                                    // bajaba la variante de 500/780 px y cada foto tardaba el doble.
+                                    sizes={THUMBNAIL_SIZES}
+                                    imgClassName="w-full h-full object-cover group-hover:scale-105"
+                                    // Opacidad (entrada) y transform (hover) juntas. En línea porque
+                                    // las clases de duración/curva chocaban con las de DeferredImage
+                                    // y ganaba la que venía después en el CSS: la foto aparecía de golpe.
+                                    style={THUMBNAIL_TRANSITION}
+                                    showSkeleton={false}
+                                    // Las miniaturas del servidor se generan en frío con cola: no cortar antes que ella.
+                                    timeoutMs={30000}
+                                    onLoad={handleThumbnailLoad}
                                     onError={handleThumbnailError}
-                                    fallback={
-                                        <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-900">
-                                            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center mb-1.5 shadow-sm">
-                                                <IconMediaPlay className="w-4 h-4 ml-0.5 text-zinc-300" />
-                                            </div>
-                                            <span className="text-2xs font-mono font-bold uppercase tracking-wider text-zinc-400">EP {ep.number}</span>
-                                        </div>
-                                    }
+                                    fallback={<ThumbnailPlaceholder number={ep.number} />}
                                 />
-                            ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-900">
-                                    <div className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center mb-1.5 shadow-sm">
-                                        <IconMediaPlay className="w-4 h-4 ml-0.5 text-zinc-300" />
-                                    </div>
-                                    <span className="text-2xs font-mono font-bold uppercase tracking-wider text-zinc-400">EP {ep.number}</span>
-                                </div>
                             )}
 
                             {/* Scrim interno del thumbnail */}
@@ -433,7 +483,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                 aria-hidden
                                 className="absolute inset-0 z-20 hidden [@media(hover:hover)_and_(pointer:fine)]:flex items-center justify-center pointer-events-none"
                             >
-                                <span className="w-10 h-10 rounded-full bg-black/60 border border-white/25 text-white flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-[opacity,transform] duration-200 ease-out-strong">
+                                <span className="w-10 h-10 rounded-full bg-black/60 border border-white/25 text-white flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100 transition-[opacity,transform] duration-200 ease-out-strong">
                                     <IconMediaPlay className="w-4 h-4 ml-0.5" />
                                 </span>
                             </div>
@@ -586,20 +636,23 @@ function EpisodeVirtualList({
 
         const updateOffset = () => {
             if (!listRef.current || !scrollEl) return
-            let top = 0
-            let node: HTMLElement | null = listRef.current
-            while (node && node !== scrollEl && node !== document.body) {
-                top += node.offsetTop
-                node = node.offsetParent as HTMLElement | null
-            }
+            // Posición de la lista dentro del contenido del scroller. Con offsetTop la cadena
+            // de offsetParent se salteaba el scroller si no estaba posicionado.
+            const top = Math.round(
+                listRef.current.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop,
+            )
             if (top > 0) {
                 setScrollMargin(prev => (Math.abs(prev - top) <= 1 ? prev : top))
             }
         }
         updateOffset()
 
+        // Lo de arriba de la lista (continuar viendo, personajes) carga después y la corre.
+        const ro = new ResizeObserver(updateOffset)
+        if (scrollEl.firstElementChild) ro.observe(scrollEl.firstElementChild)
         window.addEventListener("resize", updateOffset, { passive: true })
         return () => {
+            ro.disconnect()
             window.removeEventListener("resize", updateOffset)
         }
     }, [scrollElement])
@@ -623,7 +676,9 @@ function EpisodeVirtualList({
             width: typeof window !== "undefined" ? window.innerWidth : 1280,
             height: typeof window !== "undefined" ? window.innerHeight : 800,
         },
-        overscan: 5,
+        // Clave por episodio: las alturas medidas siguen al episodio al filtrar o reordenar.
+        getItemKey: (index) => filteredEpisodes[index]?.id ?? index,
+        overscan: LIST_OVERSCAN,
         scrollMargin,
         useFlushSync: false,
     })
@@ -655,6 +710,8 @@ function EpisodeVirtualList({
                         isHighlighted={isHighlighted}
                         virtualStart={virtualRow.start}
                         scrollMargin={virtualizer.options.scrollMargin || 0}
+                        rowIndex={virtualRow.index}
+                        measureRef={virtualizer.measureElement}
                         priority={virtualRow.index < 4}
                         themeUseLegacyEpisodeCard={ts.themeUseLegacyEpisodeCard}
                         themeHideEpisodeCardDescription={ts.themeHideEpisodeCardDescription}

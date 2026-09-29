@@ -237,7 +237,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                       </span>
                     </div>
 
-                    <h3 className="font-display text-3xl sm:text-4xl text-white tracking-wide leading-tight">
+                    <h3 className="font-display text-3xl sm:text-4xl text-white tracking-wide leading-tight text-balance">
                       {currentEp.title}
                     </h3>
 

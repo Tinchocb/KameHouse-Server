@@ -76,7 +76,7 @@ export const NarrativeInspector: React.FC<NarrativeInspectorProps> = ({
         {/* Volume Title & Subtitle Banner */}
         <div className="mt-4">
           <div className="flex items-baseline gap-3">
-            <h1 className="font-display text-3xl sm:text-4xl tracking-wide text-white leading-none"> {volume.title} </h1>
+            <h1 className="font-display text-3xl sm:text-4xl tracking-wide text-white leading-none text-balance"> {volume.title} </h1>
             <span className="text-sm font-kanji font-bold text-on-surface-variant/80"> {coverArt.kanjiTitle} </span>
           </div>
           <p className="text-sm text-brand-accent/90 font-serif mt-1 tracking-wide"> {volume.subtitle} </p>

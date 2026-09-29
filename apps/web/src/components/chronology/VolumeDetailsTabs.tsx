@@ -49,7 +49,7 @@ export const VolumeDetailsTabs: React.FC<VolumeDetailsTabsProps> = memo(({
       <div
         role="tablist"
         aria-label="Detalles narrativos del lapso"
-        className="flex w-fit max-w-full items-center gap-1 overflow-x-auto no-scrollbar rounded-full border border-white/20 border-t-white/40 border-b-white/10 bg-zinc-950/40 p-1.5"
+        className="sectionbar sectionbar-pill flex w-fit max-w-full items-center gap-1 overflow-x-auto no-scrollbar p-1.5"
       >
         {tabs.map((tab) => {
           const isActive = activeTab === tab;

@@ -16,6 +16,9 @@ function DynamicBackdropLocalToggles() {
     const setDynamicBackdropEnabled = useUIStore((s) => s.setDynamicBackdropEnabled)
     const motionEnabled = useUIStore((s) => s.dynamicBackdropMotionEnabled)
     const setDynamicBackdropMotionEnabled = useUIStore((s) => s.setDynamicBackdropMotionEnabled)
+    const scrollBlurEnabled = useUIStore((s) => s.scrollBlurEnabled)
+    const setScrollBlurEnabled = useUIStore((s) => s.setScrollBlurEnabled)
+
     return (
         <div className="pt-2 border-t border-white/[0.05]">
             <div className="flex items-center gap-2 px-1 pb-1">
@@ -35,6 +38,12 @@ function DynamicBackdropLocalToggles() {
                 description="Anima el fondo ambiental. Desactívalo para ahorrar batería."
                 checked={motionEnabled}
                 onChange={setDynamicBackdropMotionEnabled}
+            />
+            <OsToggle
+                label="Viñeta Superior en Scroll"
+                description="Desenfoca el borde superior cuando el contenido pasa por debajo de la barra."
+                checked={scrollBlurEnabled}
+                onChange={setScrollBlurEnabled}
             />
         </div>
     )
@@ -156,6 +165,7 @@ return (
                                 whileTap={{ scale: 0.98 }}
                                 transition={cardSpring}
                                 onClick={() => setMode(mode.id)}
+                                aria-pressed={isActive}
                                 className={cn(
                                     "flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                     isActive
@@ -269,26 +279,11 @@ return (
                 />
                 <Controller
                     control={control}
-                    name="theme.themeEnableLiquidGlass"
-                    render={({ field }) => (
-                        <OsToggle
-                            label="Cristal Líquido (Liquid Glass)"
-                            description="Refracción y reflejos orgánicos con aceleración por GPU."
-                            checked={!!field.value}
-                            onChange={(v) => {
-                                field.onChange(v)
-                                setThemeVisual({ themeEnableLiquidGlass: v })
-                            }}
-                        />
-                    )}
-                />
-                <Controller
-                    control={control}
                     name="theme.themeEnableMediaPageBlurredBackground"
                     render={({ field }) => (
                         <OsToggle
                             label="Fondo Ambiental en Ficha de Medios"
-                            description="Ilumina el fondo de series y películas con el afiche oficial de fondo."
+                            description="Ilumina el fondo de series y películas con el afiche oficial difuminado detrás del banner."
                             checked={!!field.value}
                             onChange={(v) => {
                                 field.onChange(v)
@@ -297,38 +292,8 @@ return (
                         />
                     )}
                 />
-                <Controller
-                    control={control}
-                    name="theme.themeEnableSidebarGradient"
-                    render={({ field }) => (
-                        <OsToggle
-                            label="Degradado en Barra Lateral"
-                            description="Aplica un degradado sutil al fondo de la navegación lateral."
-                            checked={!!field.value}
-                            onChange={(v) => {
-                                field.onChange(v)
-                                setThemeVisual({ themeEnableSidebarGradient: v })
-                            }}
-                        />
-                    )}
-                />
-                <Controller
-                    control={control}
-                    name="theme.themeEnableCinematicGrain"
-                    render={({ field }) => (
-                        <OsToggle
-                            label="Grano Cinematográfico"
-                            description="Textura de grano de película sobre los fondos para un acabado cine."
-                            checked={!!field.value}
-                            onChange={(v) => {
-                                field.onChange(v)
-                                setThemeVisual({ themeEnableCinematicGrain: v })
-                            }}
-                        />
-                    )}
-                />
                 <DynamicBackdropLocalToggles />
-</SectionBar>
+            </SectionBar>
 
             {/* ══════════════════════════════════════════════════════════════════
                 3. ORGANIZACIÓN DEL CATÁLOGO

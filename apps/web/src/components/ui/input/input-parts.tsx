@@ -9,7 +9,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const InputAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Input__root",
-        "flex h-12 w-full rounded-none border border-white/15 bg-zinc-950/60 backdrop-blur-overlay-2xl px-3 py-2 text-base md:text-sm text-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:border-white/50 focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 transition duration-base"
+        "flex h-12 w-full rounded-none border border-white/15 bg-surface-container-lowest/60 backdrop-blur-overlay-sm px-3 py-2 text-base md:text-sm text-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:border-white/50 focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 transition duration-base"
     ], {
         variants: {
             size: {
@@ -19,7 +19,7 @@ export const InputAnatomy = defineStyleAnatomy({
             },
             intent: {
                 basic: "hover:border-white/40",
-                filled: "bg-zinc-900 border-transparent focus-within:bg-zinc-950 focus-within:border-white shadow-none",
+                filled: "bg-surface-container-low border-transparent focus-within:bg-surface-container-lowest focus-within:border-white shadow-none",
                 unstyled: "bg-transparent hover:bg-transparent border-0 shadow-none focus-within:ring-0 rounded-none p-0 text-base",
             },
             hasError: {
@@ -28,7 +28,7 @@ export const InputAnatomy = defineStyleAnatomy({
             },
             isDisabled: {
                 false: null,
-                true: "shadow-none pointer-events-none opacity-50 cursor-not-allowed bg-zinc-900",
+                true: "shadow-none pointer-events-none opacity-50 cursor-not-allowed bg-surface-container-low",
             },
             isReadonly: {
                 false: null,

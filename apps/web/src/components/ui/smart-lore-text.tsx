@@ -18,6 +18,17 @@ export const LORE_KEYWORD_RULES: KeywordRule[] = [
   { pattern: /\b(nube\s+voladora|kint[oō]un)\b/i, termKey: 'kintoun' },
   { pattern: /\b(pendientes\s+pothala|pothala|potara)\b/i, termKey: 'potara' },
   { pattern: /\b(genki-?dama)\b/i, termKey: 'genki-dama' },
+  { pattern: /\b(kamehameha)\b/i, termKey: 'kamehameha' },
+  { pattern: /\b(makank[oō]sapp[oō])\b/i, termKey: 'makankosappo' },
+  { pattern: /\b(kik[oō]h[oō])\b/i, termKey: 'kikoho' },
+  { pattern: /\b(dodonpa)\b/i, termKey: 'dodonpa' },
+  { pattern: /\b([oō]zaru)\b/i, termKey: 'ozaru' },
+  { pattern: /\b(super\s+saiyajin|super\s+saiyan)\b/i, termKey: 'super-saiyajin' },
+  { pattern: /\b(ultra\s+instinto|migatte\s+no\s+gokui)\b/i, termKey: 'ultra-instinto' },
+  { pattern: /\b(b[aá]culo\s+sagrado|nyoib[oō])\b/i, termKey: 'nyoibo' },
+  { pattern: /\b(sala\s+del\s+esp[ií]ritu\s+y\s+el\s+tiempo|habitaci[oó]n\s+del\s+tiempo)\b/i, termKey: 'sala-del-tiempo' },
+  { pattern: /\b(esferas?\s+del\s+drag[oó]n)\b/i, termKey: 'esferas-del-dragon' },
+  { pattern: /\b(anillos?\s+del\s+tiempo)\b/i, termKey: 'anillo-del-tiempo' },
 ];
 
 export interface SmartLoreTextProps {

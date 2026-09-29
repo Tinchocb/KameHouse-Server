@@ -1,16 +1,18 @@
-import { useAppStore, useUIStore } from "@/lib/store"
+import * as React from "react"
+import { useAppStore } from "@/lib/store"
 import { Link, useRouterState } from "@tanstack/react-router"
 import { IconNavigationSearch, IconNavigationMenu, IconNavigationHome, IconNavigationTv, IconNavigationFilm, IconStatusSparkles, IconUiAdmin } from "@/components/ui/icons"
 import { MagneticIndicator, MagneticHover } from "@/components/ui/kinetics"
 import { cn } from "@/components/ui/core/styling"
 import { NotificationBell } from "./notification-center"
+import { MobileMenuSheet } from "./mobile-menu-sheet"
 
 interface TopNavProps {
     title?: string
 }
 
 export const AppTopNav = ({ title }: TopNavProps) => {
-    const setSidebarOpen = useUIStore(state => state.setSidebarOpen)
+    const [menuOpen, setMenuOpen] = React.useState(false)
     const isFullscreen = useAppStore(state => state.isFullscreen)
 
     if (isFullscreen) return null
@@ -20,13 +22,13 @@ export const AppTopNav = ({ title }: TopNavProps) => {
     // resto de las rutas el contenido pasaba por debajo de un header invisible.
     return (
         <header
-            className="md:hidden fixed top-0 left-0 right-0 z-navbar h-[calc(4rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] px-4 flex items-center justify-between border-b border-white/10 backdrop-blur-overlay-2xl bg-surface-container-lowest/80 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.05),0_8px_24px_rgba(0,0,0,0.6)]"
+            className="md:hidden fixed top-0 left-0 right-0 z-navbar h-[calc(4rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] px-4 flex items-center justify-between border-b border-white/10 backdrop-blur-overlay-md backdrop-saturate-[180%] bg-surface-container-lowest/80 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.05),0_8px_24px_rgba(0,0,0,0.6)]"
         >
             {/* min-w-0 + truncate: sin esto un título largo empuja los botones fuera de la pantalla */}
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <img
                     src="/kamehouse-logo.png"
-                    alt="KameHouse"
+                    alt=""
                     className="h-7 w-7 object-contain shrink-0"
                 />
                 <span className="font-display text-lg text-on-surface tracking-wider uppercase truncate">
@@ -46,13 +48,16 @@ export const AppTopNav = ({ title }: TopNavProps) => {
                 <NotificationBell compact />
 
                 <button 
-                    onClick={() => setSidebarOpen(true)}
+                    onClick={() => setMenuOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={menuOpen}
                     className="p-2.5 rounded-full text-on-surface-variant hover:text-white active:scale-95 transition-[transform,color] duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
                     aria-label="Menú principal"
                 >
                     <IconNavigationMenu className="w-5 h-5" />
                 </button>
             </div>
+            <MobileMenuSheet open={menuOpen} onOpenChange={setMenuOpen} />
         </header>
     )
 }
@@ -62,12 +67,16 @@ const NAV_ITEMS = [
     { to: "/series", label: "Series", icon: IconNavigationTv },
     { to: "/movies", label: "Películas", icon: IconNavigationFilm },
     { to: "/admin", label: "Admin", icon: IconUiAdmin },
-    { to: "/chronology", label: "Sagas", icon: IconStatusSparkles, iconClass: "text-amber-400" },
+    { to: "/chronology", label: "Sagas", icon: IconStatusSparkles },
 ] as const
 
 export const AppBottomNav = () => {
     const isFullscreen = useAppStore(state => state.isFullscreen)
-    const pathname = useRouterState({ select: (s) => s.location.pathname })
+    const currentPath = useRouterState({ select: (s) => s.location.pathname })
+    // Igual que en la barra de escritorio: el indicador se mueve al tocar
+    // (pointerdown), no cuando termina de renderizar la página nueva.
+    const [pressed, setPressed] = React.useState<{ to: string; from: string } | null>(null)
+    const pathname = pressed && pressed.from === currentPath ? pressed.to : currentPath
 
     if (isFullscreen) return null
 
@@ -76,7 +85,7 @@ export const AppBottomNav = () => {
             <nav
                 role="navigation"
                 aria-label="Navegación móvil"
-                className="pointer-events-auto h-14 bg-surface-container-lowest/85 backdrop-blur-overlay-2xl backdrop-saturate-[190%] border border-white/20 border-t-white/40 border-b-white/10 rounded-full shadow-[shadow:var(--glass-highlight-lg),0_12px_36px_-6px_rgba(0,0,0,0.9)] flex items-stretch gap-0.5 px-1.5 py-1.5"
+                className="glass-frosted-pill pointer-events-auto h-14 flex items-stretch gap-0.5 px-1.5 py-1.5"
             >
                 {NAV_ITEMS.map((item) => {
                     const isActive = item.to === "/home"
@@ -89,6 +98,11 @@ export const AppBottomNav = () => {
                             <Link
                                 to={item.to}
                                 aria-current={isActive ? "page" : undefined}
+                                onPointerDown={(e) => {
+                                    if (e.button === 0) setPressed({ to: item.to, from: currentPath })
+                                }}
+                                onPointerCancel={() => setPressed(null)}
+                                onPointerLeave={() => setPressed((p) => (p?.to === item.to ? null : p))}
                                 className={cn(
                                     // Ícono arriba y texto abajo: los cinco destinos entran en 320px sin salirse de la pantalla.
                                     "relative flex h-full w-full flex-col items-center justify-center gap-0.5 px-0.5 rounded-full min-h-[44px] select-none cursor-pointer transition-colors duration-150 z-10",
@@ -101,7 +115,7 @@ export const AppBottomNav = () => {
                                         className="bg-white/95"
                                     />
                                 )}
-                                <Icon className={cn("w-4 h-4 relative z-10 shrink-0", "iconClass" in item && item.iconClass)} />
+                                <Icon className="w-4 h-4 relative z-10 shrink-0" />
                                 <span className="max-w-full truncate text-3xs font-bold uppercase tracking-normal min-[360px]:tracking-wide relative z-10">
                                     {item.label}
                                 </span>

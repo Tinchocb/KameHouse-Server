@@ -1,7 +1,7 @@
 import { useEffect, useState, type RefObject } from 'react';
 
-/** Margen por encima y por debajo de la pantalla: las filas se arman antes de que el scroll llegue. */
-const NEAR_MARGIN = '1200px 0px';
+/** Margen por encima y por debajo de la pantalla: las filas se arman antes de que el scroll llegue sin saturar el montaje inicial. */
+const NEAR_MARGIN = '400px 0px';
 
 type Listener = () => void;
 const listeners = new WeakMap<Element, Listener>();

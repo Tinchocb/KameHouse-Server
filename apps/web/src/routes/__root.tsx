@@ -10,6 +10,7 @@ import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layo
 import { AppBottomNav, AppTopNav } from "@/components/ui/app-layout/app-topnav"
 import { FloatingPillNav } from "@/components/ui/app-layout/floating-pill-nav"
 import { TvNavBar } from "@/components/ui/app-layout/tv-nav-bar"
+import { ScrollEdgeBlur } from "@/components/ui/kinetics"
 import { useTvDpad } from "@/hooks/use-tv-dpad"
 import { LiquidGlassDefs } from "@/components/shared/liquid-glass-defs"
 
@@ -36,6 +37,8 @@ const GettingStarted = React.lazy(() =>
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { useApplyCustomTheme, CustomThemeStyles } from "@/lib/theme/apply-custom-theme"
 import { prewarmVideoPlayer } from "@/components/video/prewarm"
+import { useMotionFeaturesReady } from "@/lib/motion-features-loader"
+import { SPINE_ART_URLS } from "@/lib/helpers/goku-panorama"
 
 const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() {
     const activeQueuePlayItem = useAppStore(state => state.activeQueuePlayItem)
@@ -126,6 +129,14 @@ function RootComponent() {
         const runPreload = () => {
             void router.preloadRoute({ to: "/movies" }).catch(() => {})
             void router.preloadRoute({ to: "/series" }).catch(() => {})
+            // Figuras de la estantería: bajadas y decodificadas antes de entrar,
+            // así no aparecen ~100 ms después que el resto de la página.
+            for (const src of SPINE_ART_URLS) {
+                const img = new Image()
+                img.decoding = "async"
+                img.src = src
+                void img.decode?.().catch(() => {})
+            }
         }
         if (typeof window !== "undefined" && "requestIdleCallback" in window) {
             const handle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number; cancelIdleCallback: (id: number) => void }).requestIdleCallback(runPreload, { timeout: 3000 })
@@ -149,7 +160,10 @@ function RootComponent() {
         }
     }, [isLoading, status, isInterfaceReady])
 
-    const isReadyNow = !isLoading && !!status && (
+    // El splash espera también las funciones de animación (chunk diferido): sin
+    // ellas los m.* con initial={{ opacity: 0 }} quedarían invisibles.
+    const motionReady = useMotionFeaturesReady()
+    const isReadyNow = motionReady && !isLoading && !!status && (
         !status.settings?.id ||
         showInitialSetup ||
         (!routerState.isLoading && (!isCollectionFetching || !!queryClient.getQueryData([API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key])))
@@ -263,6 +277,7 @@ function RootComponent() {
                 className={tvMode ? "pb-24" : "w-full"}
             >
                 {!tvMode && <AppTopNav />}
+                {!tvMode && <ScrollEdgeBlur />}
 
                 <PageTransition
                     id={MAIN_CONTENT_ID}

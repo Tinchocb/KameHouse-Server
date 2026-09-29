@@ -1,8 +1,7 @@
 import React, { useDeferredValue, useMemo, useState } from "react"
 import { Check, Cloud, FileVideo, Film, HardDrive, Search, Trash2, Tv } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
-import { MagneticIndicator } from "@/components/ui/kinetics/magnetic-indicator"
-import { useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control"
 import type { ScanFeedIcon, ScanLiveView } from "./views"
 
 const FEED_ICONS: Record<ScanFeedIcon, { icon: React.ElementType; className: string; label: string }> = {
@@ -27,8 +26,18 @@ function prettyFileName(name: string): string {
  */
 export function ScanFileList({ views }: { views: ScanLiveView[] }) {
     const [source, setSource] = useState<ScanLiveView["source"] | null>(null)
-    const reduceMotion = useReducedMotion()
     const view = views.find(v => v.source === source) ?? views[0]
+
+    const viewOptions = useMemo<SegmentedOption<string>[]>(() => {
+        return views.map(v => {
+            const Icon = v.source === "drive" ? Cloud : HardDrive
+            return {
+                value: v.source,
+                label: v.sourceLabel,
+                icon: <Icon className="size-3" />,
+            }
+        })
+    }, [views])
 
     const [group, setGroup] = useState<string | null>(null)
     const [query, setQuery] = useState("")
@@ -77,34 +86,16 @@ export function ScanFileList({ views }: { views: ScanLiveView[] }) {
                 </div>
 
                 {views.length > 1 && (
-                    <div className="flex items-center gap-1 p-1 rounded-full bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10" role="tablist" aria-label="Origen">
-                        {views.map(v => {
-                            const Icon = v.source === "drive" ? Cloud : HardDrive
-                            const active = v.source === view.source
-                            return (
-                                <button
-                                    key={v.source}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={active}
-                                    onClick={() => { setSource(v.source); setGroup(null) }}
-                                    className={cn(
-                                        "relative flex min-h-11 min-w-11 items-center justify-center gap-1 px-3 rounded-full text-3xs font-medium transition-colors duration-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
-                                        active ? "text-on-surface" : "text-on-surface-variant hover:text-on-surface hover:bg-white/5",
-                                    )}
-                                >
-                                    <MagneticIndicator
-                                        layoutId="scanFileListSource"
-                                        active={active}
-                                        disableAnimation={!!reduceMotion}
-                                        className="bg-white/10"
-                                    />
-                                    <Icon className="relative z-10 size-3" />
-                                    <span className="relative z-10">{v.sourceLabel}</span>
-                                </button>
-                            )
-                        })}
-                    </div>
+                    <SegmentedControl
+                        aria-label="Origen de escaneo"
+                        layoutId="scanFileListSource"
+                        semantics="tablist"
+                        tone="neutral"
+                        surface="glass"
+                        value={view.source}
+                        onChange={(val) => { setSource(val as ScanLiveView["source"]); setGroup(null) }}
+                        options={viewOptions}
+                    />
                 )}
 
                 <label className="flex items-center gap-1.5 w-full sm:w-56 sm:ml-auto px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 focus-within:border-brand-accent/50 transition-colors">

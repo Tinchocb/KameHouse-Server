@@ -56,7 +56,7 @@ export const LoreTerm: React.FC<LoreTermProps> = ({
       trigger={trigger}
       align="center"
       sideOffset={6}
-      className="w-80 max-w-[90vw] p-4 bg-zinc-950/95 border border-white/20 rounded-2xl shadow-elevation-3 backdrop-blur-overlay-xl space-y-2.5 text-left font-sans text-xs"
+      className="w-80 max-w-[90vw] p-4 bg-surface-container-lowest/95 border border-white/20 rounded-2xl shadow-elevation-3 backdrop-blur-overlay-xl space-y-2.5 text-left font-sans text-xs"
     >
       {/* Header: Title + Kanji + Category */}
       <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-2">

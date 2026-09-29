@@ -9,6 +9,7 @@ import { cn } from "@/components/ui/core/styling"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
 import { useSound } from "@/hooks/use-sound"
+import { LoadSwap } from "@/components/ui/kinetics"
 import { useAppStore, usePlayerStore, useQueueStore, useUIStore, PlaylistItem } from "@/lib/store"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 
@@ -277,16 +278,12 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                 ? "bg-brand-accent text-on-primary shadow-brand-primary scale-105"
                                 : "bg-white/[0.06] group-hover:bg-brand-accent/20 group-hover:text-brand-accent text-on-surface-variant"
                         )}>
-                            {isLoading ? (
-                                <m.div
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                >
-                                    <IconUiSpinner className="w-5 h-5" />
-                                </m.div>
-                            ) : (
+                            <LoadSwap
+                                loading={Boolean(isLoading)}
+                                skeleton={<IconUiSpinner className="w-5 h-5 animate-spin" />}
+                            >
                                 <IconNavigationTv className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
-                            )}
+                            </LoadSwap>
                         </div>
                         
                         {/* Text Label */}
@@ -323,7 +320,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.25 }}
                             onClick={() => setShowPicker(false)}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-overlay-2xl pointer-events-auto cursor-pointer"
+                            className="absolute inset-0 bg-black/65 backdrop-blur-overlay-xs pointer-events-auto cursor-pointer"
                         />
 
                         {/* Modal Container — Animated from Bottom */}
@@ -337,8 +334,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             exit={{ opacity: 0, y: 80, scale: 0.95 }}
                             transition={{ type: "spring", stiffness: 350, damping: 26 }}
                             className={cn(
-                                "relative z-10 w-full max-w-2xl flex flex-col rounded-3xl overflow-hidden shadow-2xl pointer-events-auto",
-                                "bg-surface-container-lowest/90 backdrop-blur-overlay-2xl border border-white/20 border-t-white/40 border-b-white/10 text-on-surface shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_rgba(0,0,0,0.9)]"
+                                "glass-frosted relative z-10 w-full max-w-2xl flex flex-col rounded-3xl overflow-hidden pointer-events-auto text-on-surface shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_rgba(0,0,0,0.9)]"
                             )}
                         >
                             {/* Top Ambient Glow */}
@@ -400,16 +396,12 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                 >
                                     <div className="flex items-center justify-between w-full mb-4">
                                         <div className="w-14 h-14 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-md shadow-brand-accent/20">
-                                            {isLoading === "episode" ? (
-                                                <m.div
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                >
-                                                    <IconUiSpinner className="w-6 h-6" />
-                                                </m.div>
-                                            ) : (
+                                            <LoadSwap
+                                                loading={isLoading === "episode"}
+                                                skeleton={<IconUiSpinner className="w-6 h-6 animate-spin text-brand-accent" />}
+                                            >
                                                 <IconNavigationTv className="w-7 h-7" />
-                                            )}
+                                            </LoadSwap>
                                         </div>
                                         <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-accent/20 text-on-surface-variant group-hover:text-brand-accent text-3xs font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-accent/30">
                                             Maratón
@@ -445,16 +437,12 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                 >
                                     <div className="flex items-center justify-between w-full mb-4">
                                         <div className="w-14 h-14 rounded-2xl bg-brand-secondary/15 border border-brand-secondary/30 text-brand-secondary flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-md shadow-brand-secondary/20">
-                                            {isLoading === "movie" ? (
-                                                <m.div
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                                >
-                                                    <IconUiSpinner className="w-6 h-6" />
-                                                </m.div>
-                                            ) : (
+                                            <LoadSwap
+                                                loading={isLoading === "movie"}
+                                                skeleton={<IconUiSpinner className="w-6 h-6 animate-spin text-brand-secondary" />}
+                                            >
                                                 <IconMediaClapperboard className="w-7 h-7" />
-                                            )}
+                                            </LoadSwap>
                                         </div>
                                         <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-secondary/20 text-on-surface-variant group-hover:text-brand-secondary text-3xs font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-secondary/30">
                                             Cine

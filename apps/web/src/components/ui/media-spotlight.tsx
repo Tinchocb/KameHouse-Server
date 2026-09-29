@@ -204,7 +204,8 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
 
     // Clic en la barra de eras: mismo sonido que dots y swipe del hero (que ya
     // lo reproducen ellos antes de llamar a handleEraSelect).
-    const handleEraNavSelect = React.useCallback((eraId: EraId) => {
+    const handleEraNavSelect = React.useCallback((eraId: EraId | "all") => {
+        if (eraId === "all") return
         if (eraId !== activeEraId) playSound("category", 0.05)
         handleEraSelect(eraId)
     }, [activeEraId, handleEraSelect, playSound])

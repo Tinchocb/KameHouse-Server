@@ -21,7 +21,32 @@ export function PosterGridSkeleton({ count = 8, className }: { count?: number; c
 
 // Renders a cinematic detail skeleton that mirrors MediaHero (series/movies):
 // black surface + white-tone border, same heights so there's no layout shift.
-export function BentoDetailsSkeleton({ className }: { className?: string }) {
+export function BentoDetailsSkeleton({ className, isMovie = false }: { className?: string; isMovie?: boolean }) {
+    if (isMovie) {
+        return (
+            <div role="status" aria-label="Cargando película" className={cn("relative min-h-screen text-on-surface overflow-x-hidden", className)}>
+                <div className="relative w-full min-h-screen flex flex-col justify-end pb-12 sm:pb-16 md:pb-20 pt-20 md:pt-24 bg-bg-primary">
+                    <div className="relative z-10 w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10 flex flex-col sm:flex-row items-start sm:items-end gap-6 md:gap-10 lg:gap-14">
+                        {/* Póster */}
+                        <Skeleton className="w-24 sm:w-32 md:w-36 lg:w-44 shrink-0 aspect-[2/3] h-auto rounded-2xl" />
+                        <div className="flex-1 flex flex-col gap-4 w-full">
+                            <Skeleton className="h-6 w-28 rounded-full" />
+                            <Skeleton className="h-10 sm:h-12 w-3/4 max-w-lg rounded-xl" />
+                            <Skeleton className="h-6 w-64 max-w-full rounded-lg" />
+                            <Skeleton className="h-14 w-full max-w-xl rounded-xl" />
+                            <div className="flex flex-wrap items-center gap-3 pt-1">
+                                <Skeleton className="h-10 w-36 rounded-full" />
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div role="status" aria-label="Cargando contenido" className={cn("relative min-h-screen text-on-surface overflow-x-hidden", className)}>
             <div className="relative z-10 flex flex-col page-container pt-4 md:pt-20 pb-8 space-y-4">

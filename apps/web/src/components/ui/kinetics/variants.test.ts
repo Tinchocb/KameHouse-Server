@@ -4,9 +4,7 @@ import {
     heroContentContainerVariants,
     heroItemVariants,
     heroFadeOnlyVariants,
-    gridContainerVariants,
     gridItemVariants,
-    swapTextVariants,
 } from "./variants"
 
 describe("kinetics variants", () => {
@@ -67,30 +65,6 @@ describe("kinetics variants", () => {
             expect(visibleFn(12).transition.delay).toBeCloseTo(0.48)
             expect(visibleFn(40).transition.delay).toBeCloseTo(0.48)
             expect(visibleFn(100).transition.delay).toBeCloseTo(0.48)
-        })
-    })
-
-    describe("gridContainerVariants", () => {
-        it("configures 40ms stagger for grid items", () => {
-            expect(gridContainerVariants.visible).toMatchObject({
-                transition: { staggerChildren: 0.04 },
-            })
-        })
-    })
-
-    describe("swapTextVariants", () => {
-        it("matches transitions-polish scale (4px micro distance, 150ms quick duration)", () => {
-            expect(swapTextVariants.initial).toEqual({ opacity: 0, y: 4 })
-            expect(swapTextVariants.animate).toMatchObject({
-                opacity: 1,
-                y: 0,
-                transition: { duration: 0.15 },
-            })
-            expect(swapTextVariants.exit).toEqual({
-                opacity: 0,
-                y: -4,
-                transition: { duration: 0.12, ease: "easeIn" },
-            })
         })
     })
 })

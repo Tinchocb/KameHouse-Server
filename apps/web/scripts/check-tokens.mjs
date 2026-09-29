@@ -191,6 +191,16 @@ for (const f of codeFiles) {
     for (const m of s.matchAll(/(?<![\w-])shadow-\[var\(--[^\]\s]*\]/g)) untypedShadowVars.push([m[0], rel(f)])
 }
 
+// tailwindcss-animate también registra duration-*, ease-* y delay-* (para
+// animation-*): con un valor arbitrario la clase queda ambigua y Tailwind 3 no
+// genera NADA (solo avisa en el build). Usar los tokens (duration-fast,
+// ease-out-strong, ease-expo-out...) o la propiedad: [transition-duration:160ms].
+const ambiguousMotion = []
+for (const f of codeFiles) {
+    const s = fs.readFileSync(f, "utf8")
+    for (const m of s.matchAll(/(?<![\w-])(?:duration|ease|delay)-\[[^\]\s]+\]/g)) ambiguousMotion.push([m[0], rel(f)])
+}
+
 // ─── Reporte ──────────────────────────────────────────────────────────────────
 let problems = 0
 if (tokenized.length) {
@@ -203,6 +213,12 @@ if (untypedShadowVars.length) {
     problems += untypedShadowVars.length
     console.log(`\n✖ ${untypedShadowVars.length} sombra(s) con var() sin hint (Tailwind la toma por color y no se ve; usar shadow-[shadow:var(...)]):`)
     for (const [c, f] of untypedShadowVars) console.log(`   ${c.padEnd(40)} ${f}`)
+}
+if (ambiguousMotion.length) {
+    problems += ambiguousMotion.length
+    console.log(`
+✖ ${ambiguousMotion.length} clase(s) de movimiento arbitrarias (ambiguas con tailwindcss-animate, no generan CSS):`)
+    for (const [c, f] of ambiguousMotion) console.log(`   ${c.padEnd(40)} ${f}`)
 }
 if (deadClasses.length) {
     problems += deadClasses.length

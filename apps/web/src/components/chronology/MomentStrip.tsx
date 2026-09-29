@@ -5,7 +5,8 @@ import { formatSecondsToTime } from './data/spansToVolumes';
 import { parseAbsoluteEpisode } from './data/episodeMapping';
 import { sounds } from './utils/audio';
 import { useReducedMotion } from '@/components/ui/kinetics/hooks';
-import { Play, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Clock, ChevronLeft, ChevronRight, Info, Sparkles } from 'lucide-react';
+import { MomentDetailsModal } from './MomentDetailsModal';
 
 export interface MomentPlayInfo {
   key?: string;
@@ -39,8 +40,23 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
     const items = milestones ?? volume.detailedStory?.episodeMilestones ?? [];
     const reduceMotion = useReducedMotion();
     const scrollerRef = useRef<HTMLDivElement>(null);
+
+    // Estado para el modal de detalles del momento
+    const [selectedDetails, setSelectedDetails] = useState<{
+      milestone: ChapterMilestone;
+      episodeNum: number;
+      seconds: number;
+      formattedTime: string | null;
+    } | null>(null);
+
     // Qué bordes tienen contenido escondido: define las flechas y el desvanecido.
-    const [edges, setEdges] = useState({ atStart: true, atEnd: true });
+    const [edges, setEdges] = useState(() => ({ atStart: true, atEnd: items.length <= 2 }));
+
+    // Drag-to-scroll con ratón
+    const isPointerDownRef = useRef(false);
+    const hasDraggedRef = useRef(false);
+    const startXRef = useRef(0);
+    const startScrollLeftRef = useRef(0);
 
     const updateEdges = useCallback(() => {
       const el = scrollerRef.current;
@@ -53,9 +69,7 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
     useEffect(() => {
       const el = scrollerRef.current;
       if (!el) return;
-      let rafId = requestAnimationFrame(() => {
-        updateEdges();
-      });
+      let rafId = 0;
       const observer = new ResizeObserver(() => {
         cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(updateEdges);
@@ -74,50 +88,95 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
       el.scrollBy({ left: direction * el.clientWidth * 0.85, behavior: reduceMotion ? 'auto' : 'smooth' });
     };
 
+    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return; // solo botón primario
+      const el = scrollerRef.current;
+      if (!el) return;
+      isPointerDownRef.current = true;
+      hasDraggedRef.current = false;
+      startXRef.current = e.clientX;
+      startScrollLeftRef.current = el.scrollLeft;
+    };
+
+    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isPointerDownRef.current) return;
+      const el = scrollerRef.current;
+      if (!el) return;
+      const dx = e.clientX - startXRef.current;
+      if (Math.abs(dx) > 6) {
+        hasDraggedRef.current = true;
+        el.scrollLeft = startScrollLeftRef.current - dx;
+      }
+    };
+
+    const handlePointerUp = () => {
+      isPointerDownRef.current = false;
+    };
+
     if (items.length === 0) {
       return null;
     }
 
-    const fadeStart = edges.atStart ? 'black 0' : 'transparent 0, black 40px';
-    const fadeEnd = edges.atEnd ? 'black 100%' : 'black calc(100% - 56px), transparent 100%';
+    const fadeStart = edges.atStart ? 'black 0' : 'transparent 0, black 32px';
+    const fadeEnd = edges.atEnd ? 'black 100%' : 'black calc(100% - 48px), transparent 100%';
 
     return (
       <div className={`flex flex-col gap-2.5 pt-1 ${className}`}>
+        {/* Cabecera de la sección con jerarquía clara y microcopy adaptativo */}
         <div className="flex items-center justify-between gap-2">
-          <h4 className="font-mono text-2xs font-bold uppercase tracking-wider text-on-surface-variant">
-            Momentos clave <span className="text-white/35 tabular-nums">· {items.length}</span>
-          </h4>
-
-          <div className={`${POINTER_ONLY} items-center gap-1`}>
-            {(
-              [
-                [-1, 'Momentos anteriores', ChevronLeft, edges.atStart],
-                [1, 'Momentos siguientes', ChevronRight, edges.atEnd],
-              ] as const
-            ).map(([direction, label, Icon, disabled]) => (
-              <button
-                key={label}
-                type="button"
-                aria-label={label}
-                aria-controls={`moments-${volume.id}`}
-                disabled={disabled}
-                onClick={() => scrollByPage(direction)}
-                className="w-8 h-8 rounded-full border border-white/15 bg-white/[0.04] text-white/80 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer transition-colors duration-150 disabled:opacity-30 disabled:pointer-events-none"
-              >
-                <Icon className="w-4 h-4" />
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-brand-accent shrink-0" aria-hidden="true" />
+            <h4 className="font-sans text-xs font-bold uppercase tracking-wider text-white/90 flex items-center gap-1.5">
+              Momentos clave
+              <span className="px-1.5 py-0.5 rounded-full bg-white/[0.06] border border-white/10 text-3xs font-mono font-medium text-white/70 tabular-nums">
+                {items.length}
+              </span>
+            </h4>
           </div>
-          <span className={`${TOUCH_ONLY} text-3xs font-mono text-white/40`}>Desliza →</span>
+
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline font-mono text-3xs text-on-surface-variant/70">
+              Clic para reproducir escena
+            </span>
+            <span className={`${TOUCH_ONLY} text-3xs font-mono text-white/40`}>
+              Desliza →
+            </span>
+
+            <div className={`${POINTER_ONLY} items-center gap-1`}>
+              {(
+                [
+                  [-1, 'Momentos anteriores', ChevronLeft, edges.atStart],
+                  [1, 'Momentos siguientes', ChevronRight, edges.atEnd],
+                ] as const
+              ).map(([direction, label, Icon, disabled]) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-label={label}
+                  aria-controls={`moments-${volume.id}`}
+                  disabled={disabled}
+                  onClick={() => scrollByPage(direction)}
+                  className="w-8 h-8 rounded-full border border-white/15 bg-white/[0.04] text-white/80 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-90 disabled:opacity-25 disabled:pointer-events-none"
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
+        {/* Carrusel horizontal con drag-to-scroll y snap */}
         <div
           ref={scrollerRef}
           id={`moments-${volume.id}`}
           role="region"
           aria-label={`Momentos clave de ${volume.title}`}
           onScroll={updateEdges}
-          className="flex items-start gap-3 overflow-x-auto snap-x snap-mandatory pt-1 pb-1 no-scrollbar focus-visible:outline-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          className="flex items-start gap-3.5 overflow-x-auto snap-x snap-mandatory pt-1 pb-1 no-scrollbar focus-visible:outline-none cursor-grab active:cursor-grabbing"
           style={{ maskImage: `linear-gradient(to right, ${fadeStart}, ${fadeEnd})` }}
         >
           {items.map((milestone, idx) => {
@@ -128,7 +187,8 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
             const hasTime = serverSec !== undefined || milestone.startSec !== undefined;
             const formattedTime = hasTime ? formatSecondsToTime(effectiveSeconds) : null;
 
-            const handleClick = () => {
+            const handleClickPlay = () => {
+              if (hasDraggedRef.current) return;
               sounds.playSelect();
               onPlayMoment?.(volume, episodeNum, {
                 key: milestone.momentKey,
@@ -137,62 +197,122 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
               });
             };
 
+            const handleOpenDetails = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              sounds.playSelect();
+              setSelectedDetails({
+                milestone,
+                episodeNum,
+                seconds: effectiveSeconds,
+                formattedTime,
+              });
+            };
+
             const handlePreview = () => onPreviewMoment?.({ milestone, episodeNum, seconds: effectiveSeconds });
             const handleEndPreview = () => onPreviewMoment?.(null);
 
+            const handleCardFocus = (e: React.FocusEvent<HTMLDivElement>) => {
+              handlePreview();
+              // Scroll suave para no quedar cortado por el desvanecido
+              e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+            };
+
             return (
-              <button
+              <div
                 key={milestone.momentKey || `${volume.id}-moment-${idx}`}
-                type="button"
-                onClick={handleClick}
+                role="group"
+                aria-label={milestone.title}
                 onMouseEnter={handlePreview}
                 onMouseLeave={handleEndPreview}
-                onFocus={handlePreview}
+                onFocus={handleCardFocus}
                 onBlur={handleEndPreview}
-                aria-label={`Reproducir momento: ${milestone.title}, Episodio ${episodeNum}${formattedTime ? ` en ${formattedTime}` : ''}`}
-                className="group/moment flex flex-col w-[176px] sm:w-[196px] shrink-0 snap-start text-left cursor-pointer select-none rounded-xl focus-visible:outline-none"
+                className="group/moment flex flex-col w-[184px] sm:w-[204px] shrink-0 snap-start text-left select-none rounded-xl"
               >
-                {/* Miniatura sin caja alrededor; el borde se tiñe con la era al apuntarla */}
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 transition-[box-shadow,transform] duration-200 ease-out group-hover/moment:-translate-y-0.5 group-hover/moment:ring-2 group-hover/moment:ring-[rgb(var(--era,245_158_11)/0.75)] group-focus-visible/moment:ring-2 group-focus-visible/moment:ring-brand-accent group-active/moment:scale-[0.98] motion-reduce:transition-none motion-reduce:group-hover/moment:translate-y-0">
-                  <EpisodeThumbnailImg
-                    volume={volume}
-                    milestone={milestone}
-                    startSec={effectiveSeconds}
-                    fetchPriority="low"
-                    tmdbSize="w300"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover/moment:scale-105"
-                  />
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
-
-                  <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/70 text-3xs font-mono font-bold text-white tabular-nums">
-                    Cap. {episodeNum}
-                    {formattedTime && (
-                      <>
-                        <Clock className="w-2.5 h-2.5 ml-0.5 text-white/60" aria-hidden="true" />
-                        <span className="text-white/80">{formattedTime}</span>
-                      </>
-                    )}
-                  </span>
-
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-0 m-auto w-9 h-9 rounded-full bg-brand-accent text-zinc-950 flex items-center justify-center shadow-lg shadow-black/60 opacity-0 scale-90 transition-[opacity,transform] duration-150 group-hover/moment:opacity-100 group-hover/moment:scale-100 group-focus-visible/moment:opacity-100 group-focus-visible/moment:scale-100 motion-reduce:transition-none"
+                {/* Miniatura 16:9 con badges limpios desacoplados y botón de detalles */}
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 transition-[box-shadow,transform] duration-200 ease-out group-hover/moment:-translate-y-0.5 group-hover/moment:ring-2 group-hover/moment:ring-[rgb(var(--era,245_158_11)/0.75)] group-hover/moment:shadow-[0_6px_20px_rgba(var(--era,245_158_11)/0.25)] shadow-sm">
+                  {/* Botón principal de reproducción sobre la miniatura */}
+                  <button
+                    type="button"
+                    onClick={handleClickPlay}
+                    aria-label={`Reproducir momento: ${milestone.title}, Episodio ${episodeNum}${formattedTime ? ` en ${formattedTime}` : ''}`}
+                    className="absolute inset-0 z-0 w-full h-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                   >
-                    <Play className="w-4 h-4 fill-current ml-0.5" />
+                    <EpisodeThumbnailImg
+                      volume={volume}
+                      milestone={milestone}
+                      startSec={effectiveSeconds}
+                      fetchPriority="low"
+                      tmdbSize="w300"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover/moment:scale-105"
+                    />
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+
+                    {/* Play que emerge en el centro al hacer hover */}
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 m-auto w-9 h-9 rounded-full bg-brand-accent text-zinc-950 flex items-center justify-center shadow-brand-primary opacity-0 scale-90 transition-[opacity,transform] duration-150 ease-out group-hover/moment:opacity-100 group-hover/moment:scale-100 motion-reduce:transition-none"
+                    >
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    </span>
+                  </button>
+
+                  {/* Badge de Episodio: Arriba a la Izquierda */}
+                  <span className="pointer-events-none absolute top-1.5 left-1.5 z-10 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md border border-white/15 text-3xs font-mono font-bold text-white/90 tabular-nums">
+                    Cap. {episodeNum}
                   </span>
+
+                  {/* Botón de Detalles de la Escena (Ficha): Arriba a la Derecha */}
+                  <button
+                    type="button"
+                    onClick={handleOpenDetails}
+                    aria-label={`Ver detalles de ${milestone.title}`}
+                    title="Ver detalles de la escena"
+                    className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-black/65 hover:bg-black/90 backdrop-blur-md border border-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-all duration-150 hover:scale-105 active:scale-90"
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Badge de Timestamp: Abajo a la Derecha (estilo streaming) */}
+                  {formattedTime && (
+                    <span className="pointer-events-none absolute bottom-1.5 right-1.5 z-10 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/85 backdrop-blur-md border border-white/15 text-3xs font-mono font-bold text-white tabular-nums">
+                      <Clock className="w-2.5 h-2.5 text-brand-accent" aria-hidden="true" />
+                      <span>{formattedTime}</span>
+                    </span>
+                  )}
                 </div>
 
-                <span className="mt-2 px-0.5 text-xs font-semibold text-white/90 line-clamp-1 transition-colors duration-150 group-hover/moment:text-[rgb(var(--era,245_158_11))]">
+                {/* Título en 2 líneas para evitar el recorte prematuro */}
+                <button
+                  type="button"
+                  onClick={handleClickPlay}
+                  className="mt-2 px-0.5 text-xs font-semibold text-white/95 line-clamp-2 min-h-[2.25rem] leading-snug text-left cursor-pointer transition-colors duration-150 group-hover/moment:text-[rgb(var(--era,245_158_11))] focus-visible:outline-none focus-visible:underline"
+                >
                   {milestone.title}
-                </span>
+                </button>
+
+                {/* Sinopsis legible en text-2xs */}
                 {milestone.synopsis && (
-                  <span className="mt-0.5 px-0.5 text-3xs text-on-surface-variant line-clamp-2 leading-snug">{milestone.synopsis}</span>
+                  <span className="mt-0.5 px-0.5 text-2xs text-on-surface-variant/80 line-clamp-2 min-h-[1.75rem] leading-relaxed">
+                    {milestone.synopsis}
+                  </span>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
+
+        {/* Modal cinemático para explorar los detalles del momento */}
+        <MomentDetailsModal
+          isOpen={selectedDetails !== null}
+          onClose={() => setSelectedDetails(null)}
+          volume={volume}
+          milestone={selectedDetails?.milestone ?? null}
+          episodeNum={selectedDetails?.episodeNum ?? 1}
+          effectiveSeconds={selectedDetails?.seconds ?? 0}
+          formattedTime={selectedDetails?.formattedTime ?? null}
+          onPlayMoment={onPlayMoment}
+        />
       </div>
     );
   },

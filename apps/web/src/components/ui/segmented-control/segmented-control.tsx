@@ -88,7 +88,7 @@ export function SegmentedControl<T extends string>({
             className={cn(
                 "flex items-center gap-1 p-1 rounded-full",
                 surface === "glass"
-                    ? "sectionbar sectionbar-pill"
+                    ? "glass-frosted-pill"
                     : "bg-white/[0.04] border border-[var(--sectionbar-border)]",
                 fullWidth ? "w-full" : "w-fit",
                 className,
@@ -123,15 +123,18 @@ export function SegmentedControl<T extends string>({
                             "disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100",
                             fullWidth && "flex-1",
                             selected
-                                ? "text-[var(--control-primary-fg)]"
-                                : "text-on-surface-variant hover:text-on-surface",
+                                ? "text-[var(--control-primary-fg)] font-black"
+                                : "text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08]",
                         )}
                     >
                         <MagneticIndicator
                             layoutId={layoutId}
                             active={selected}
                             disableAnimation={!!reduceMotion}
-                            className={tone === "accent" ? "bg-brand-accent" : "bg-[var(--control-primary-bg)]"}
+                            className={cn(
+                                "border-t border-t-white/80 shadow-[0_2px_14px_rgba(255,255,255,0.35),inset_0_1px_1px_rgba(255,255,255,0.9)]",
+                                tone === "accent" ? "bg-brand-accent text-zinc-950" : "bg-[var(--control-primary-bg)]"
+                            )}
                         />
                         <span className="relative z-10 flex items-center gap-2">
                             {option.icon}

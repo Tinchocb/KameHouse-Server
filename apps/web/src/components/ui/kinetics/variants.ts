@@ -102,19 +102,6 @@ export const heroFadeOnlyVariants: Variants = {
 
 // ─── Grid / List Variants ──────────────────────────────────────────────────────
 /**
- * Contenedor de grids o swimlanes para animar entrada en cascada controlada.
- */
-export const gridContainerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.04,
-        },
-    },
-}
-
-/**
  * Tarjeta individual dentro de un grid o swimlane.
  * Regla de oro de rendimiento:
  * 1. NUNCA blur por ítem (evita capas de composición pesadas en GPU).
@@ -139,21 +126,40 @@ export const gridItemVariants: Variants = {
     },
 }
 
-// ─── Micro-Interactions / Text Swaps ──────────────────────────────────────────
+// ─── Content Swaps ────────────────────────────────────────────────────────────
 /**
- * Transición canónica para intercambio de texto sin layout shift (filtros, contadores, estado).
- * Distancia micro de 4px (--distance-micro) y 150ms (--duration-quick).
+ * Cruce skeleton → contenido (con AnimatePresence mode="wait"): el skeleton se
+ * desvanece en 150ms (--duration-quick) y recién después entra el contenido en
+ * 250ms (--duration-base). Solo opacity + transform.
  */
-export const swapTextVariants: Variants = {
-    initial: { opacity: 0, y: 4 },
+export const loadSwapVariants: Variants = {
+    initial: { opacity: 0, y: 6 },
     animate: {
         opacity: 1,
         y: 0,
-        transition: { duration: 0.15, ease: [0.22, 1, 0.36, 1] },
+        transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] },
     },
     exit: {
         opacity: 0,
-        y: -4,
-        transition: { duration: 0.12, ease: "easeIn" },
+        transition: { duration: 0.15, ease: "easeOut" },
+    },
+}
+
+/**
+ * Cambio de panel entre vistas hermanas (tabs de vista): sale hacia arriba en
+ * 150ms y el nuevo entra desde abajo en 200ms. Sin stagger interno: los grids
+ * ya tienen el suyo.
+ */
+export const viewSwapVariants: Variants = {
+    initial: { opacity: 0, y: 6 },
+    animate: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+    },
+    exit: {
+        opacity: 0,
+        y: -6,
+        transition: { duration: 0.15, ease: "easeIn" },
     },
 }

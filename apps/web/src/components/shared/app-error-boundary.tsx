@@ -69,7 +69,7 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center max-w-lg mx-auto my-8">
                 <div className="w-8 h-8 mb-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                <h2 className="text-lg font-display tracking-widest text-white mb-2 uppercase">
+                <h2 className="text-lg font-display tracking-widest text-white mb-2 uppercase text-balance">
                     Iniciando servidor
                 </h2>
                 <p className="text-on-surface-variant text-sm">
@@ -81,7 +81,7 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
 
     return (
         <div className="sectionbar flex flex-col items-center justify-center min-h-[400px] p-8 text-center max-w-lg mx-auto my-8">
-            <h2 className="text-2xl font-display tracking-widest text-white mb-4 uppercase">
+            <h2 className="text-2xl font-display tracking-widest text-white mb-4 uppercase text-balance">
                 {isChunkLoadError ? "Actualización disponible" : "Error en el cliente"}
             </h2>
             <p className="text-on-surface-variant mb-6 leading-relaxed text-sm max-w-md">

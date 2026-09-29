@@ -318,6 +318,7 @@ export const CommandDialog = (props: CommandDialogProps) => {
     const { children, commandClass, contentClass, commandProps, ...rest } = props
     return (
         <Modal
+            srTitle="Buscar en KameHouse"
             {...rest}
             contentClass={cn(CommandDialogAnatomy.content(), contentClass)}
         >

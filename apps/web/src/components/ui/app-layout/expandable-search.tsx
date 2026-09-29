@@ -133,6 +133,15 @@ export function ExpandableSearch() {
             window.dispatchEvent(new CustomEvent("open-command-palette"))
             return
         }
+        // Cronología: navegar a /chronology resaltando el lapso seleccionado
+        if ("isChronology" in item && item.isChronology) {
+            handleCollapse()
+            navigate({
+                to: "/chronology",
+                search: { highlight: item.volumeId },
+            })
+            return
+        }
         // Semánticos: el id navegable vive en semanticData, no en mediaId.
         if ("isSemantic" in item && item.isSemantic) {
             const sem = item.semanticData
@@ -311,7 +320,7 @@ export function ExpandableSearch() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.96 }}
                         transition={tabIndicatorSpring}
-                        className="absolute top-[calc(100%+10px)] right-0 origin-top-right w-80 sm:w-96 max-h-[70vh] flex flex-col bg-bg-secondary border border-white/20 border-t-white/40 backdrop-blur-overlay-2xl backdrop-saturate-[190%] rounded-2xl shadow-[shadow:0_16px_40px_-8px_rgba(0,0,0,0.95),var(--glass-highlight-md)] p-2.5 z-50 overflow-hidden"
+                        className="glass-frosted absolute top-[calc(100%+10px)] right-0 origin-top-right w-80 sm:w-96 max-h-[70vh] flex flex-col shadow-[shadow:0_16px_40px_-8px_rgba(0,0,0,0.95),var(--glass-highlight-md)] p-2.5 z-50 overflow-hidden"
                     >
                         {isSearchActive ? (
                             <>
@@ -338,6 +347,7 @@ export function ExpandableSearch() {
                                                 media?.format === "OVA"
 
                                             const isSelected = selectedIndex === index
+                                            const isChronology = "isChronology" in result && Boolean(result.isChronology)
 
                                             return (
                                                 <button
@@ -359,6 +369,8 @@ export function ExpandableSearch() {
                                                                 alt={title}
                                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                                                             />
+                                                        ) : isChronology ? (
+                                                            <Sparkles className="w-4 h-4 text-amber-400" />
                                                         ) : isMovie ? (
                                                             <Film className="w-4 h-4 text-on-surface-variant/60" />
                                                         ) : (
@@ -376,8 +388,13 @@ export function ExpandableSearch() {
                                                         </p>
                                                         <div className="flex items-center gap-2 mt-1 text-3xs text-on-surface-variant">
                                                             {media?.year && <span>{media.year}</span>}
-                                                            <span className="px-1.5 py-px rounded bg-white/10 text-on-surface font-semibold uppercase tracking-wider">
-                                                                {getFormatLabel(media?.format, isMovie ? "Película" : "Serie")}
+                                                            <span className={cn(
+                                                                "px-1.5 py-px rounded font-semibold uppercase tracking-wider",
+                                                                isChronology
+                                                                    ? "bg-amber-500/15 text-amber-300 border border-amber-500/25"
+                                                                    : "bg-white/10 text-on-surface"
+                                                            )}>
+                                                                {isChronology ? "Cronología" : getFormatLabel(media?.format, isMovie ? "Película" : "Serie")}
                                                             </span>
                                                             {media && "score" in media && media.score !== undefined && media.score > 0 && (
                                                                 <span className="text-amber-400 font-black">

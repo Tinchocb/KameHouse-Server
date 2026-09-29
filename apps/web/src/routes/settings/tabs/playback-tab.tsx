@@ -1,11 +1,12 @@
+import { errorText } from "@/api/client/error-messages"
 import React, { useState } from "react"
 import { type Control, Controller, useFormContext } from "react-hook-form"
 import { m } from "framer-motion"
 import { type SettingsFormValues } from "../index"
 import { usePlayerStore, useUIStore, type BackgroundMusicTrack } from "@/lib/store"
-import { buildSeaQuery } from "@/api/client/requests"
+import { ApiError, buildSeaQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
-import { getApiWebSocketUrl } from "@/api/client/server-url"
+import { useApiWebSocketUrl } from "@/api/client/use-api-websocket-url"
 import { WSEvents, type WebSocketMessage } from "@/lib/server/ws-events"
 import { toast } from "sonner"
 import { RangeSlider } from "@/components/settings/range-slider"
@@ -16,6 +17,7 @@ import { cn } from "@/components/ui/core/styling"
 import { OsToggle, DirtyOsToggle } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { LoadSwap } from "@/components/ui/kinetics/load-swap"
 import { useShallow } from "zustand/react/shallow"
 import { persistThemePatch } from "@/lib/server/persist-settings"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -31,7 +33,7 @@ function LibrarySkipScanRow() {
     const [message, setMessage] = useState("")
     const [percent, setPercent] = useState(0)
 
-    const wsUrl = React.useMemo(() => getApiWebSocketUrl(), [])
+    const wsUrl = useApiWebSocketUrl()
     useWebSocket(wsUrl, React.useCallback((data: WebSocketMessage) => {
         if (data?.type !== WSEvents.SKIP_SCAN_STATUS) return
         const p = data.payload
@@ -53,7 +55,13 @@ function LibrarySkipScanRow() {
                 endpoint: API_ENDPOINTS.MEDIASTREAM.ScanAllSkipTimes.endpoint,
                 method: API_ENDPOINTS.MEDIASTREAM.ScanAllSkipTimes.methods[0],
             })
-        } catch {
+        } catch (err) {
+            // Ya hay uno corriendo (p. ej. se inició antes de recargar la página):
+            // no es un error, se sigue su progreso por WebSocket.
+            if (err instanceof ApiError && err.status === 409) {
+                setMessage("Ya hay un escaneo en curso. Mostrando su progreso…")
+                return
+            }
             setStatus("error")
             setMessage("No se pudo iniciar el escaneo.")
         }
@@ -83,8 +91,20 @@ function LibrarySkipScanRow() {
                             : "bg-brand-accent hover:brightness-110 text-on-primary shadow-elevation-1"
                     )}
                 >
-                    {running ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconMediaWand className="w-3.5 h-3.5" />}
-                    <span>{running ? "ESCANEANDO..." : "ESCANEAR AHORA"}</span>
+                    <LoadSwap
+                        loading={running}
+                        skeleton={
+                            <span className="flex items-center gap-1.5">
+                                <IconUiSpinner className="w-3.5 h-3.5 animate-spin" />
+                                <span>ESCANEANDO...</span>
+                            </span>
+                        }
+                    >
+                        <span className="flex items-center gap-1.5">
+                            <IconMediaWand className="w-3.5 h-3.5" />
+                            <span>ESCANEAR AHORA</span>
+                        </span>
+                    </LoadSwap>
                 </button>
             </div>
             {running && (
@@ -115,8 +135,6 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
         setAutoSkipIntro,
         autoSkipOutro,
         setAutoSkipOutro,
-        autoSkipFiller,
-        setAutoSkipFiller,
         autoDisableSubtitlesWhenDubbed,
         setAutoDisableSubtitlesWhenDubbed,
         marathonMode,
@@ -131,8 +149,6 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
             setAutoSkipIntro: s.setAutoSkipIntro,
             autoSkipOutro: s.autoSkipOutro,
             setAutoSkipOutro: s.setAutoSkipOutro,
-            autoSkipFiller: s.autoSkipFiller,
-            setAutoSkipFiller: s.setAutoSkipFiller,
             autoDisableSubtitlesWhenDubbed: s.autoDisableSubtitlesWhenDubbed,
             setAutoDisableSubtitlesWhenDubbed: s.setAutoDisableSubtitlesWhenDubbed,
             marathonMode: s.marathonMode,
@@ -206,7 +222,7 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
             setValue("theme.bgMusicTracks", tracks, { shouldDirty: true })
             toast.success(`${tracks.length} pista(s) de música encontradas`)
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Error al escanear la carpeta de música")
+            toast.error(errorText(err, "Error al escanear la carpeta de música"))
         } finally {
             setIsScanningMusic(false)
         }
@@ -246,6 +262,7 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                                                 field.onChange(p.id)
                                                 setPreferredAudioProfile(p.id)
                                             }}
+                                            aria-pressed={isSelected}
                                             className={cn(
                                                 "flex flex-col p-3.5 rounded-2xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                                 isSelected
@@ -294,11 +311,11 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
             <SectionBar
                 id="smart-skip"
                 label="Salto Inteligente (Smart Skip)"
-                description="Omisión de openings, endings, relleno y detección acústica en segundo plano."
+                description="Omisión de openings, endings y detección acústica en segundo plano."
                 icon={IconMediaSkipNext}
                 badge={
                     <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent border border-brand-accent/25">
-                        {[autoSkipIntro, autoSkipOutro, autoSkipFiller].filter(Boolean).length} activos
+                        {[autoSkipIntro, autoSkipOutro].filter(Boolean).length} activos
                     </span>
                 }
                 collapsible
@@ -330,21 +347,6 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                             onChange={(v) => {
                                 field.onChange(v)
                                 setAutoSkipOutro(v)
-                            }}
-                        />
-                    )}
-                />
-                <Controller
-                    control={control}
-                    name="library.autoSkipFiller"
-                    render={({ field }) => (
-                        <OsToggle
-                            label="Saltar Relleno (Filler) automáticamente"
-                            description="Avanza al siguiente episodio cuando el actual es de relleno según las marcas disponibles."
-                            checked={field.value !== undefined ? !!field.value : autoSkipFiller}
-                            onChange={(v) => {
-                                field.onChange(v)
-                                setAutoSkipFiller(v)
                             }}
                         />
                     )}

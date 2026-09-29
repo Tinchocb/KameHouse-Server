@@ -1,10 +1,10 @@
-import { memo, useState, useCallback, useRef, useEffect } from "react"
+import { memo, useState, useCallback } from "react"
 import { IconUiStar, IconUiMoreHorizontal, IconMediaPlay, IconUiListPlus, IconUiCheck } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 import { MoviePosterCard } from "@/components/ui/movie-poster-card"
 import { useResponsive } from "@/hooks/use-responsive"
 import { Vaul, VaulContent } from "@/components/vaul"
-import { getMediumResImage } from "@/lib/helpers/images"
+import { getMediumResImage, localImage } from "@/lib/helpers/images"
 import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { useHideAudienceScore } from "@/lib/theme/theme-hooks"
 import { useQueueStore } from "@/lib/store"
@@ -12,6 +12,8 @@ import { usePrefetchAnimeEntry } from "@/hooks/use-prefetch-anime-entry"
 import { getMovieLore, getEntryTitle, getMovieSynopsis } from "./-components/movies-utils"
 import { ERAS, ERA_COLOR_MAP, type EraId } from "@/lib/config/eras"
 import type { Anime_LibraryCollectionEntry, Continuity_WatchHistoryItem } from "@/api/generated/types"
+import { IconSwap, useTransientFlag } from "@/components/ui/kinetics"
+import { useSound } from "@/hooks/use-sound"
 import { toast } from "sonner"
 
 export type EraTab = "all" | "Dragon Ball" | "Dragon Ball Z" | "Dragon Ball Super" | "Dragon Ball GT" | "Especiales y OVAs"
@@ -80,12 +82,8 @@ export const MovieCard = memo(function MovieCard({
     const title = cleanMovieTitle(rawTitle)
     const synopsis = getMovieSynopsis(movie?.description, lore)
 
-    // Confirmación en el mismo botón (el aviso sale lejos, arriba): el ícono pasa a tilde un momento.
-    const [justQueued, setJustQueued] = useState(false)
-    const queuedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    useEffect(() => () => {
-        if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
-    }, [])
+    const { playSound } = useSound()
+    const [justQueued, triggerJustQueued] = useTransientFlag(1400)
 
     const handleQuickQueue = useCallback(async (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -108,9 +106,8 @@ export const MovieCard = memo(function MovieCard({
                 toast.success("Añadida a la cola de reproducción", {
                     description: title,
                 })
-                setJustQueued(true)
-                if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
-                queuedTimerRef.current = setTimeout(() => setJustQueued(false), 1400)
+                playSound("category", 0.35)
+                triggerJustQueued()
             } else {
                 toast.info("No hay archivos locales disponibles para esta película.")
             }
@@ -118,7 +115,7 @@ export const MovieCard = memo(function MovieCard({
             console.error(err)
             toast.error("No se pudo añadir a la cola")
         }
-    }, [mediaId, posterImage, idMal, format, title])
+    }, [mediaId, posterImage, idMal, format, title, playSound, triggerJustQueued])
 
     const handleCardClick = useCallback(() => {
         if (mediaId) {
@@ -144,8 +141,8 @@ export const MovieCard = memo(function MovieCard({
     // Badges
     const isCanon = lore?.canonStatus?.includes("Canon") && !lore?.canonStatus?.includes("No")
 
-    // Use medium resolution images for grid/card performance
-    const posterUrl = getMediumResImage(movie.posterImage || "")
+    // Resolución media, servida desde la caché local del servidor (precalentada)
+    const posterUrl = localImage(getMediumResImage(movie.posterImage || ""))
 
     return (
         <>
@@ -253,24 +250,16 @@ export const MovieCard = memo(function MovieCard({
                                         "relative w-11 h-11 rounded-full flex items-center justify-center ring-1 border shadow-[shadow:0_2px_12px_rgba(0,0,0,0.5),var(--glass-highlight-md)] hover:scale-[1.06] active:scale-[0.94] transition-[transform,background-color,color] duration-150 ease-out-strong cursor-pointer",
                                         justQueued
                                             ? "bg-emerald-950/90 text-emerald-300 ring-emerald-400/50 border-emerald-400/30"
-                                            : "bg-zinc-950/80 text-white ring-white/30 border-white/10"
+                                            : "bg-surface-container-lowest/80 text-white ring-white/30 border-white/10"
                                     )}
                                     aria-label={justQueued ? "Añadida a la cola" : "Añadir a la cola"}
                                     title="Añadir a la cola"
                                 >
-                                    <IconUiListPlus
-                                        className={cn(
-                                            "absolute w-4 h-4 transition-[opacity,transform,filter] duration-200 ease-out-strong",
-                                            justQueued ? "opacity-0 scale-50 blur-[2px]" : "opacity-100 scale-100 blur-0"
-                                        )}
-                                    />
-                                    <IconUiCheck
-                                        aria-hidden
-                                        className={cn(
-                                            "absolute w-4 h-4 transition-[opacity,transform,filter] duration-200 ease-out-strong",
-                                            justQueued ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-50 blur-[2px]"
-                                        )}
-                                    />
+                                    <IconSwap swapKey={justQueued ? "queued" : "queue"}>
+                                        {justQueued
+                                            ? <IconUiCheck className="w-4 h-4" strokeWidth={3} />
+                                            : <IconUiListPlus className="w-4 h-4" />}
+                                    </IconSwap>
                                 </button>
                             )}
                         </div>

@@ -2,7 +2,8 @@ import * as React from "react"
 import { toast } from "sonner"
 import { useQueueStore } from "@/lib/store"
 import type { Anime_Entry } from "@/api/generated/types"
-import { IconUiListPlus } from "@/components/ui/icons";
+import { IconUiCheck, IconUiListPlus } from "@/components/ui/icons";
+import { IconSwap, useTransientFlag } from "@/components/ui/kinetics/icon-swap"
 import { getHighResImage, getMediumResImage } from "@/lib/helpers/images"
 import { stripHtml } from "@/lib/helpers/sanitizer"
 import { getSeriesIdFromMedia, DRAGON_BALL_SERIES_INFO } from "@/lib/helpers/series"
@@ -12,6 +13,7 @@ import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
 import { useHideAudienceScore } from "@/lib/theme/theme-hooks"
 import { PlayCta } from "@/components/ui/play-cta"
 import { GlassIconButton } from "@/components/ui/glass-icon-button"
+import { useSound } from "@/hooks/use-sound"
 
 interface SeriesHeroProps {
   entry: Anime_Entry | undefined
@@ -66,7 +68,10 @@ export const SeriesHero = React.memo(function SeriesHero({
   // archivo (pack) y mostraba "1 EPISODIOS" por error.
   const totalEpisodes = media?.totalEpisodes || entry?.localFiles?.length || undefined
 
+  const { playSound } = useSound()
   const addToQueue = useQueueStore(state => state.addToQueue)
+  // El botón confirma en el lugar (ícono → ✓) además del toast.
+  const [justQueued, flashQueued] = useTransientFlag(1600)
 
   const handleAddToQueue = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -107,6 +112,8 @@ export const SeriesHero = React.memo(function SeriesHero({
         malId: media?.idMal ?? null,
         mediaFormat: media?.format ?? "TV"
       })
+      flashQueued()
+      playSound("category", 0.3)
       toast.success("Añadido a la cola de reproducción", {
         description: `${title} · ${epTitle}`,
       })
@@ -140,8 +147,12 @@ export const SeriesHero = React.memo(function SeriesHero({
       {entry?.localFiles && entry.localFiles.length > 0 && (
         <GlassIconButton
           onClick={handleAddToQueue}
-          icon={<IconUiListPlus className="w-5 h-5" />}
-          title="Añadir a la cola"
+          icon={
+            <IconSwap swapKey={justQueued ? "queued" : "add"}>
+              {justQueued ? <IconUiCheck className="w-5 h-5" /> : <IconUiListPlus className="w-5 h-5" />}
+            </IconSwap>
+          }
+          title={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
         />
       )}
     </>

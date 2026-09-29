@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import React, { useEffect } from "react"
 import { type Control, Controller, useFormContext, useFormState, useWatch } from "react-hook-form"
 import { m } from "framer-motion"
@@ -20,7 +21,7 @@ interface PerformanceTabProps {
 
 const PROFILES: { id: PerformanceProfile; label: string; desc: string; icon: React.ElementType; badge: string }[] = [
     { id: "auto", label: "Auto Inteligente", desc: "Asigna el perfil óptimo según tu hardware en tiempo real.", icon: IconStatusSparkles, badge: "AUTO" },
-    { id: "ultra", label: "Ultra / Alto Rendimiento", desc: "Efectos visuales completos, Liquid Glass y GPU-Next.", icon: IconStatusZap, badge: "ULTRA" },
+    { id: "ultra", label: "Ultra / Alto Rendimiento", desc: "Efectos visuales completos, Glassmorphism y GPU-Next.", icon: IconStatusZap, badge: "ULTRA" },
     { id: "balanced", label: "Equilibrado", desc: "Balance óptimo entre estética y 60 FPS estables.", icon: IconStatusActivity, badge: "BALANCED" },
     { id: "eco", label: "Ahorro / PC Modesta", desc: "Fondos acelerados sin blurs pesados, menor uso de RAM/batería.", icon: IconUiShield, badge: "ECO" },
 ]
@@ -193,6 +194,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                                     field.onChange(p.id)
                                                     setPerformanceProfile(p.id)
                                                 }}
+                                                aria-pressed={isSelected}
                                                 className={cn(
                                                     "flex flex-col p-3.5 rounded-xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                                     isSelected
@@ -332,8 +334,8 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                     control={control}
                                     name="mediastream.ffmpegPath"
                                     label="Ruta Personalizada FFmpeg"
-                                    description="Opcional. Deja vacío para usar el binario incluido con KameHouse."
-                                    placeholder="Ej. C:\ffmpeg\bin\ffmpeg.exe o /usr/bin/ffmpeg"
+                                    description="Opcional. Por seguridad solo se acepta el FFmpeg de la carpeta bin de KameHouse o el del PATH del sistema; otras rutas se ignoran."
+                                    placeholder="Vacío = detección automática"
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     isMono
@@ -348,8 +350,8 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                     control={control}
                                     name="mediastream.ffprobePath"
                                     label="Ruta Personalizada FFprobe"
-                                    description="Opcional. Herramienta de inspección de streams de audio/video."
-                                    placeholder="Ej. C:\ffmpeg\bin\ffprobe.exe o /usr/bin/ffprobe"
+                                    description="Opcional. Inspección de streams de audio/video. Mismas reglas que FFmpeg: carpeta bin de KameHouse o PATH del sistema."
+                                    placeholder="Vacío = detección automática"
                                     value={field.value || ""}
                                     onChange={field.onChange}
                                     isMono
@@ -394,6 +396,7 @@ function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormValues
                         whileTap={{ scale: 0.98 }}
                         transition={cardSpring}
                         onClick={() => setPolicy(opt.value)}
+                        aria-pressed={isSelected}
                         className={cn(
                             "flex flex-col p-4 rounded-xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                             isSelected
@@ -435,7 +438,7 @@ function FFmpegStatusSection() {
                 }
             },
             onError: (err) => {
-                toast.error(err instanceof Error ? err.message : "Error al descargar e instalar FFmpeg")
+                toast.error(errorText(err, "Error al descargar e instalar FFmpeg"))
             }
         })
     }

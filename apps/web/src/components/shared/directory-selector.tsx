@@ -36,7 +36,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         return upath.normalizeSafe(path.replace(/[<>"]/g, ""))
     }, [])
 
-    const [input, setInputRaw] = React.useState("")
+    const [input, setInputRaw] = React.useState(() => sanitizePath(value ?? ""))
     const [debouncedInput] = useDebounce(input, 300)
     const selectorState = useBoolean(false)
     const [isNativeOpening, setIsNativeOpening] = React.useState(false)
@@ -47,11 +47,15 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
 
     const { data, isLoading } = useDirectorySelector(debouncedInput)
 
-    React.useEffect(() => {
-        if (value !== input) {
-            setInput(value)
-        }
-    }, [value, input, setInput])
+    // Sincroniza desde la prop solo cuando la prop cambia (explorador, "Agregar"
+    // que limpia el campo). Antes el efecto dependía también de `input`: con cada
+    // tecla volvía a poner el valor viejo, porque onSelect avisa al padre recién
+    // tras el debounce, y no se podía escribir una ruta a mano.
+    const [prevValue, setPrevValue] = React.useState(value)
+    if (value !== prevValue) {
+        setPrevValue(value)
+        setInputRaw(sanitizePath(value ?? ""))
+    }
 
     React.useEffect(() => {
         if (input === ".") {
@@ -118,8 +122,8 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                 )}
 
                 <div className={cn(
-                    "group flex items-center gap-1.5 rounded-full bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10",
-                    "pl-4 pr-1.5 py-1.5 shadow-glass-highlight-sm",
+                    "group flex items-center gap-1.5 sectionbar sectionbar-pill",
+                    "pl-4 pr-1.5 py-1.5",
                     "transition duration-200 hover:border-white/30 hover:bg-white/[0.04]",
                     "focus-within:border-white/35 focus-within:bg-white/[0.06] focus-within:shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.1)]"
                 )}>
@@ -128,6 +132,9 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                         <TextInput
                             {...rest}
                             label={undefined}
+                            // La etiqueta visible es un <span> suelto: sin esto el campo
+                            // no tenía nombre accesible (lectores de pantalla, TV).
+                            aria-label={rest["aria-label"] ?? (typeof label === "string" ? label : undefined) ?? rest.placeholder ?? "Ruta de carpeta"}
                             value={input}
                             className="h-9 border-0 bg-transparent px-0 font-mono text-xs text-white shadow-none placeholder:text-zinc-600 placeholder:font-sans focus-visible:border-0"
                             inputContainerClass="flex-1 min-w-0"

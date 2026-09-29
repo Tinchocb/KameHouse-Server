@@ -13,6 +13,14 @@ const withAlpha = (cssVar: string) =>
 
 const config: Config = {
     darkMode: "class",
+    // hover:/group-hover: solo con mouse (@media (hover:hover) and (pointer:fine)).
+    // En táctil el hover se "pega" tras el toque (tarjetas agrandadas, botones
+    // iluminados) y en iOS el primer toque solo aplica el hover. Ningún control
+    // funcional depende de hover para aparecer (revisado 26/09/2026); el feedback
+    // táctil va por active:.
+    future: {
+        hoverOnlyWhenSupported: true,
+    },
     content: [
         "./index.html",
         "./src/**/*.{ts,tsx}",

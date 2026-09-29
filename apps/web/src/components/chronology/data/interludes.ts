@@ -29,8 +29,7 @@ export interface ChronologyInterlude {
  * epílogo final. El orden in-universe lo define `compareInUniverse`:
  * Clásico → Z (hasta Kid Buu, 774) → Daima (774–775) → Super (778–780) → GT (789+).
  *
- * El texto reutiliza `TIMELINE_MILESTONES` (volumes.ts), los `previouslyOn`
- * de los spans y las `chronologyNotes` de las películas.
+ * Datos curados y enriquecidos contra la cronología oficial (Daizenshuu 7 / Chōzenshū 4).
  */
 export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
   {
@@ -41,12 +40,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     kind: 'training',
     title: 'Leche, caparazón y Kame House',
     summary:
-      'Las esferas se vuelven piedra durante un año y Goku se queda a entrenar con Roshi junto a Krilin: repartir leche al amanecer, arar con el caparazón a la espalda y dominar el Kamehameha.',
+      'Tras el primer deseo a Shenlong, las esferas se convierten en piedra durante un año. Goku y Krilin se someten a ocho meses de riguroso entrenamiento bajo el Maestro Roshi para participar en el 21° Torneo de las Artes Marciales.',
     offscreen: [
-      'Bulma vuelve a la ciudad con Yamcha, Oolong y Puar mientras el radar queda mudo un año.',
-      'Roshi impone su método: madrugones, reparto de leche y trabajo de campo antes de enseñar artes marciales.',
+      'Bulma regresa a la Capital del Oeste con Yamcha, Oolong y Puar, asistiendo a la preparatoria mientras el radar queda inactivo.',
+      'El método Roshi: levantarse a las 4:30 AM para repartir leche saltando precipicios, arar campos con las manos y nadar huyendo de tiburones con caparazones de 20 kg (luego 40 kg).',
+      'Krilin y Goku aprenden lectura, matemáticas y cultura general con Roshi, fundamentando la filosofía del Estilo Tortuga: cuerpo sano y mente despierta.',
+      'Launch se instala como ama de llaves en Kame House, alternando su personalidad dulce y su versión armada con ametralladora tras cada estornudo.',
     ],
-    movieIds: ['m2'],
+    movieIds: ['m1', 'm2'],
   },
   {
     id: 'il-torneo-21-red-ribbon',
@@ -54,11 +55,13 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'db-red-ribbon',
     gap: { label: 'Mismo día', scale: 'continuo' },
     kind: 'transition',
-    title: 'La esfera del abuelo',
+    title: 'La búsqueda de la esfera de cuatro estrellas',
     summary:
-      'Nada más terminar el torneo, Goku parte solo en la Nube Voladora a buscar la esfera de cuatro estrellas de su abuelo Son Gohan.',
+      'Tras caer por milímetros ante Jackie Chun en la final del torneo, Goku rechaza la comodidad y parte solo en la Nube Voladora para recuperar la esfera de cuatro estrellas, la única reliquia de su abuelo Son Gohan.',
     offscreen: [
-      'Krilin y Roshi se quedan en Kame House; el radar de Bulma vuelve a detectar señales al cumplirse el año.',
+      'Jackie Chun (el Maestro Roshi disfrazado) celebra en secreto haber evitado que sus alumnos caigan en la arrogancia prematura.',
+      'Nam utiliza el dinero del premio del torneo para comprar agua y provisiones para su aldea en sequía gracias a las cápsulas Hoi-Poi de Roshi.',
+      'En las sombras, el ejército del Comandante Red moviliza regimientos en todo el globo para capturar las esferas y cumplir el deseo secreto de su líder.',
     ],
   },
   {
@@ -67,12 +70,13 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'db-uranai-baba',
     gap: { label: 'Unos días', scale: 'dias' },
     kind: 'transition',
-    title: 'La última esfera no aparece',
+    title: 'La esfera oculta y el palacio de Baba',
     summary:
-      'El Cuartel General cae, pero Goku solo reúne seis esferas: la última no sale en el radar porque Pilaf la esconde en una cápsula aislante, así que acuden a la adivina Uranai Baba.',
+      'Goku desmantela por completo el Cuartel General de la Patrulla Roja y reúne seis esferas, pero la séptima no emite señal en el radar porque Pilaf la ha blindado en un estuche aislante. El grupo debe recurrir a la adivina Uranai Baba.',
     offscreen: [
-      'Upa espera enterrar a Bora; sin la séptima esfera no hay deseo que lo reviva.',
-      'Pilaf y su banda sobreviven al derrumbe y guardan la esfera robada en secreto.',
+      'Upa aguarda con devoción junto a la tumba de su padre Bora al pie de la Torre Karin, esperando el milagro de Shenlong.',
+      'Pilaf, Shu y Mai vigilan desde su fortaleza voladora, convencidos de que su estuche anti-ondas los mantendrá a salvo de Goku.',
+      'Krilin, Yamcha y Puar se reúnen con Goku en Kame House y deciden acompañarlo al palacio de Uranai Baba para disputar el torneo de los cinco guerreros del Más Allá.',
     ],
     movieIds: ['m3', 'm4'],
   },
@@ -84,10 +88,12 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     kind: 'training',
     title: 'Tres años a pie por el mundo',
     summary:
-      'Tras la primera dispersión de las esferas, Goku recorre el mundo a pie para perfeccionar su cuerpo, mientras Tenshinhan y Chaoz se forman con la escuela Grulla del maestro Tsuru.',
+      'Tras revivir a Bora, Roshi prohíbe a Goku usar la Nube Voladora y le ordena recorrer el planeta a pie durante tres años. Mientras tanto, la Escuela Grulla del maestro Tsuru adoctrina a Tenshinhan y Chaoz para la victoria letal.',
     offscreen: [
-      'Krilin y Yamcha entrenan en Kame House para el próximo campeonato.',
-      'La escuela Grulla impone su ideología: ganar a cualquier precio frente al estilo Tortuga.',
+      'Goku nada a través de océanos, escala cordilleras nevadas y perfecciona su resistencia muscular y velocidad sin depender de artefactos mágicos.',
+      'Krilin y Yamcha entrenan sin descanso en Kame House bajo la tutela directa de Roshi, aprendiendo a proyectar el Kamehameha.',
+      'Tenshinhan y Chaoz perfeccionan técnicas mortíferas como el Dodonpa, el Shiyōken (cuatro brazos) y el Kikōhō en el dojo de la Grulla.',
+      'Tao Pai Pai es reconstruido como ciborg clandestinamente tras la explosión de la granada en la Torre Karin.',
     ],
   },
   {
@@ -96,12 +102,13 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'db-piccolo-daimaku',
     gap: { label: 'Mismo día', scale: 'continuo' },
     kind: 'transition',
-    title: 'Asesinan a Krilin',
+    title: 'La sombra del Rey Demonio',
     summary:
-      'Minutos después de la premiación, Krilin aparece muerto en los vestuarios y la esfera robada señala al Rey Demonio: Piccolo Daimaoh ha sido liberado.',
+      'Instantes después de la victoria por desempate de Tenshinhan, Krilin es asesinado en los vestuarios por el engendro Tambourine. El papel con el kanji «Demonio» anuncia el regreso del terror milenario: Piccolo Daimaoh.',
     offscreen: [
-      'Tambourine ejecuta la purga de artistas marciales por orden de Piccolo.',
-      'Roshi reconoce el sello «Ma» y comprende que el mal antiguo ha vuelto.',
+      'Goku pierde el control por la furia y persigue a Tambourine con el estómago vacío, lo que casi le cuesta la vida.',
+      'El Maestro Roshi relata con horror el pasado: cómo su maestro Mutaito sacrificó su vida utilizando el Mafūba para sellar a Piccolo en una arrocera eléctrica.',
+      'Emperor Pilaf pilota la nave donde Piccolo Daimaoh, anciano y debilitado, decreta la aniquilación de todos los artistas marciales del registro del torneo.',
     ],
   },
   {
@@ -110,12 +117,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'db-piccolo-jr',
     gap: { label: 'Unos días', scale: 'dias' },
     kind: 'training',
-    title: 'El último huevo y el Templo de Kamisama',
+    title: 'El heredero del mal y el Templo de Kamisama',
     summary:
-      'Piccolo Daimaoh expulsa su último huevo antes de morir: nace Piccolo Jr. Goku sube al Templo de Kamisama y entrena tres años con Mr. Popo para el 23° Torneo.',
+      'Con el último aliento antes de ser atravesado por el Puño del Dragón, Piccolo Daimaoh expulsa un huevo con su reencarnación y recuerdos. Goku sube con el Báculo Sagrado hasta el Templo Celeste para entrenar con Mr. Popo y Kamisama.',
     offscreen: [
-      'Shenlong fue asesinado por Piccolo; sin dragón no hay resurrecciones hasta que Kamisama restaura las esferas.',
-      'Karin revela el camino al Templo y el Agua Ultra Sagrada deja a Goku al borde de la muerte.',
+      'Piccolo Jr. nace en un páramo solitario, creciendo rápidamente con el odio y los recuerdos intactos de su predecesor.',
+      'Kamisama repara la maqueta de arcilla de Shenlong y le insufla vida, permitiendo revivir a Roshi, Krilin, Chaoz y todas las víctimas de Daimaoh.',
+      'Goku aprende a sentir el ki, a vaciar su mente («tranquilo como el cielo, rápido como el rayo») y utiliza por primera vez ropa con cientos de kilos de lastre.',
+      'Tenshinhan, Krilin, Yamcha y Chaoz viajan juntos a pie por el mundo para prepararse para el 23° Torneo.',
     ],
   },
   {
@@ -124,12 +133,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-saiyajin-raditz',
     gap: { label: '+5 años', scale: 'anios' },
     kind: 'time-jump',
-    title: 'Boda, Gohan y el origen saiyajin',
+    title: 'Cinco años de paz, boda y la sombra saiyajin',
     summary:
-      'Goku vence a Piccolo Jr., se casa con Milk y nace Son Gohan. La Tierra vive cinco años de paz ignorando que Kakarotto es un saiyajin y que el Planeta Vegeta fue destruido por Freezer.',
+      'Goku derrota a Piccolo Jr., rechaza asumir el trono de Dios y se casa con Milk en el Monte Frypan. Nace Son Gohan en el Año 757. La Tierra vive cinco años de absoluta calma ignorando que el cosmos alberga una verdad demoledora sobre la sangre de Kakarotto.',
     offscreen: [
-      'Piccolo se aísla a entrenar en páramos desiertos, rumiando su derrota.',
-      'En el espacio, Vegeta y Nappa siguen saqueando planetas a las órdenes de Freezer.',
+      'Piccolo medita en cascadas y desiertos lejanos, perfeccionando en secreto el Makankōsappō para atravesar las defensas de Goku.',
+      'Goku vive como leñador y campesino en el Monte Paoz, cuidando a su hijo Gohan y observando que el niño posee una fuerza anómala e inestable.',
+      'En los confines de la galaxia, Vegeta, Nappa y Raditz conquistan planetas para la Organización de Comercio Planetario de Freezer, preguntándose por qué el cuarto superviviente de su raza no ha purgado la Tierra.',
+      'El rey Enma-sama en el Otro Mundo mantiene su juicio diario sin anticipar que pronto recibirá al saiyajin más determinante del universo.',
     ],
     movieIds: ['sp1', 'm5'],
   },
@@ -139,12 +150,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-saiyajin-vegeta',
     gap: { label: '+1 año', scale: 'anios' },
     kind: 'training',
-    title: 'El Camino de la Serpiente y el niño solo',
+    title: 'El millón de kilómetros y el niño en el desierto',
     summary:
-      'Muerto tras el sacrificio contra Raditz, Goku corre el millón de kilómetros del Camino de la Serpiente hasta Kaio-sama y aprende el Kaioken y la Genkidama, mientras Piccolo deja a Gohan solo en el desierto para que sobreviva.',
+      'Goku se sacrifica para sujetar a Raditz y muere ante el Makankōsappō. Con un año antes de que Vegeta y Nappa aterricen en la Tierra, Goku recorre el millón de kilómetros del Camino de la Serpiente hasta el Kaio del Norte, mientras Piccolo instruye a Gohan en la supervivencia más despiadada.',
     offscreen: [
-      'Krilin, Yamcha, Tenshinhan, Chaoz y Yajirobe entrenan con Kamisama en el Templo.',
-      'Nappa y Vegeta viajan hacia la Tierra con un año de ventaja.',
+      'Piccolo abandona a Gohan durante seis meses en una meseta salvaje; cuando el niño contempla la luna llena y se transforma en Ōzaru, Piccolo destruye la luna terrestre y le amputa la cola.',
+      'Krilin, Yamcha, Tenshinhan, Chaoz y Yajirobe suben a la Torre Karin y entrenan con Kamisama y Mr. Popo, enfrentando a fantasmas de antiguos saiyajin.',
+      'En el planeta de Kaio (gravedad x10), Goku atrapa al mono Bubbles, golpea al grillo Gregory y domina las dos técnicas prohibidas: el Kaioken y la Genkidama.',
+      'Vegeta y Nappa duermen en animación suspendida dentro de sus naves espaciales mientras cruzan cuadrantes estelares.',
     ],
     movieIds: ['m6'],
   },
@@ -154,12 +167,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-namek-viaje',
     gap: { label: 'Unos días', scale: 'dias' },
     kind: 'training',
-    title: 'Hospitalizado y rumbo a Namek',
+    title: 'Hospital, nave namekiana y gravedad x100',
     summary:
-      'Goku queda hospitalizado tras el Kaioken x4 y, al recordar que Piccolo venía de Namek, Bulma, Krilin y Gohan parten al planeta en la nave de Kamisama mientras Goku entrena a gravedad x100 en su propia nave.',
+      'Vegeta escapa moribundo tras el golpe de Gohan Ōzaru. Con Piccolo y Kamisama muertos, las esferas terrestres se extinguen. Bulma, Krilin y Gohan despegan hacia el planeta Namek en la nave ancestral de Kami, mientras Goku aguarda en el hospital la cosecha de nuevas semillas del ermitaño.',
     offscreen: [
-      'Durante seis días de vuelo, Goku encadena Zenkais con Semillas del Ermitaño bajo gravedad extrema.',
-      'En Namek, Freezer ya caza las esferas con Zarbon, Dodoria y las Fuerzas Ginyu en camino.',
+      'El Dr. Brief acondiciona la cápsula espacial de Goku con un regulador de gravedad artificial capaz de alcanzar 100 veces la terrestre.',
+      'Goku entrena durante seis días en el espacio al borde de la muerte: cada vez que colapsa con el cuerpo destrozado consume una semilla y experimenta un Zenkai masivo.',
+      'En el Planeta Freezer 79, los médicos sumergen a Vegeta en líquido regenerativo; al despertar se entera de que Freezer ya viaja a Namek tras interceptar las transmisiones de los rastreadores.',
+      'Freezer aterriza en Namek con Zarbon y Dodoria, iniciando la masacre de aldeas namekianas pacíficas para arrebatarles sus esferas gigantes.',
     ],
     movieIds: ['m7', 'm8'],
   },
@@ -169,11 +184,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-namek-ginyu-freezer',
     gap: { label: 'Continuo', scale: 'continuo' },
     kind: 'transition',
-    title: 'Llegan las Fuerzas Ginyu',
+    title: 'La llegada de las Fuerzas Ginyu',
     summary:
-      'Justo cuando Vegeta roba esferas por su cuenta, aterrizan las Fuerzas Especiales Ginyu y la carrera por Polunga se vuelve una guerra de tres bandos.',
+      'Vegeta asesina a Dodoria y Zarbon y esconde una esfera en un lago namekiano. Desesperado ante la pérdida de sus radares y esferas, Freezer convoca de urgencia a su escuadrón de élite interestelar: las Fuerzas Especiales Ginyu.',
     offscreen: [
-      'Frieza encarga a Ginyu las esferas mientras Dende guía a Krilin y Gohan con el Gran Anciano.',
+      'El Gran Patriarca (Saichōrō) despierta el potencial latente oculto en Gohan y Krilin mediante su imposición de manos mística.',
+      'Dende se convierte en el enlace vital de los guerreros de la Tierra, revelando que para invocar a Polunga es imprescindible hablar en el idioma namekiano.',
+      'Vegeta se ve forzado por primera vez en su vida a forjar una alianza táctica con Krilin y Gohan para evitar que Ginyu se apodere de las siete esferas.',
+      'La nave de Goku penetra la atmósfera de Namek a velocidad terminal con el saiyajin completamente listo para el combate.',
     ],
   },
   {
@@ -182,12 +200,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-freezer-super-saiyajin',
     gap: { label: 'Continuo', scale: 'continuo' },
     kind: 'transition',
-    title: 'Goku sale de la cápsula y Dende se une',
+    title: 'La cápsula médica y el despertar de la leyenda',
     summary:
-      'Goku sale curado de la cámara médica y pisa el campo final mientras Dende se une al grupo para curar a los guerreros frente a la forma final de Freezer.',
+      'Goku queda con el cuerpo roto tras el intercambio de almas con el Capitán Ginyu y es introducido en la cámara de regeneración de la nave nodriza. Afuera, Piccolo es resucitado en Namek y se fusiona con el guerrero moribundo Nail.',
     offscreen: [
-      'Vegeta, humillado y moribundo, llora su orgullo saiyajin y pide a Goku que lo vengue.',
-      'Piccolo revive gracias a Polunga y llega fusionado con Nail.',
+      'Freezer exhibe su segunda y tercera forma monstruosa, masacrando a Krilin y humillando a Piccolo fusionado antes de adoptar su fisonomía final y perfecta.',
+      'Vegeta, con el orgullo destrozado y el corazón perforado por el rayo letal de Freezer, derrama lágrimas ante Goku rogándole que vengue a la raza saiyajin.',
+      'Dende utiliza sus poderes curativos en secreto hasta que Freezer lo detecta y lo asesina de un disparo en la cabeza.',
+      'Goku concluye su curación médica sintiendo cómo el destino cósmico lo empuja hacia el tirano que aniquiló su planeta natal.',
     ],
   },
   {
@@ -196,12 +216,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-garlic-jr',
     gap: { label: '+unos meses', scale: 'meses' },
     kind: 'context',
-    title: 'Namek explota: Yardrat y la resurrección',
+    title: 'Namek estalla: Yardrat y el Nuevo Namek',
     summary:
-      'Namek explota y Goku desaparece en el espacio hasta llegar a Yardrat, donde aprende la Teletransportación, mientras los namekianos son revividos en la Tierra con las esferas.',
+      'El planeta Namek vuela en pedazos en el Año 762. Todo el mundo cree muerto a Goku, pero logra escapar milagrosamente en una nave de las Fuerzas Ginyu con rumbo automático a Yardrat, donde los sabios locales le enseñan el control espiritual y la Teletransportación.',
     offscreen: [
-      'Krilin y Yamcha vuelven a la vida; los namekianos emigran al Nuevo Namek.',
-      'Goku rechaza volver de inmediato y se queda a entrenar con los yardratianos.',
+      'En la Tierra, Polunga es invocado gracias a los deseos restantes para resucitar a Krilin y Yamcha; más tarde se pide el traslado de los supervivientes al Nuevo Namek.',
+      'Shenlong intenta traer a Goku a la Tierra, pero el dragón informa que Goku se niega porque desea aprender nuevas técnicas en el espacio exterior.',
+      'Garlic Jr. escapa de la Zona Muerta aprovechando el paso del Planeta Makyo y asalta el Templo Celeste con el Agua de la Niebla Negra.',
+      'Vegeta roba una nave de Capsule Corp y viaja furioso por el cosmos intentando averiguar cómo alcanzar el Super Saiyajin.',
     ],
   },
   {
@@ -210,12 +232,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-androides-trunks',
     gap: { label: '+3 años', scale: 'anios' },
     kind: 'paradox',
-    title: 'La advertencia del 12 de mayo',
+    title: 'El viajero del futuro y la advertencia del 12 de mayo',
     summary:
-      'Trunks decapita a Mecha Freezer, entrega a Goku la medicina del corazón y avisa: en tres años, el 12 de mayo a las 9:00, aparecerán los androides. Contexto: viene de un futuro donde Goku muere y 17 y 18 lo arrasan todo.',
+      'Mecha Freezer y el Rey Cold aterrizan en la Tierra en el Año 764, pero un misterioso joven con espada los descuartiza en segundos. Es Trunks, venido de un futuro devastado para advertir que el 12 de mayo del Año 767 aparecerán dos androides asesinos creados por el Dr. Gero.',
     offscreen: [
-      'Los Guerreros Z entrenan tres años sin pausa para la fecha señalada.',
-      'Bulma halla una segunda máquina del tiempo cubierta de musgo con un cascarón biomecánico: Cell ya viajó al pasado.',
+      'Trunks entrega a Goku el fármaco que salvará su corazón de la letal enfermedad vírica que lo mató en su línea temporal.',
+      'Goku, Piccolo y Gohan entrenan juntos durante tres años en páramos rocosos, empujando su resistencia y perfeccionando el control del Super Saiyajin.',
+      'Vegeta se somete a gravedad x300 en Capsule Corp; tras casi morir en un asteroide espacial, su rabia y desprecio por sus límites desatan el Super Saiyajin.',
+      'En las profundidades del laboratorio del Dr. Gero, una supercomputadora incuba la larva de Cell y una segunda máquina del tiempo aterriza oculta entre la maleza.',
     ],
     movieIds: ['m9', 'm10', 'sp2'],
   },
@@ -225,12 +249,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-cell-imperfecto-perfeccion',
     gap: { label: 'Continuo', scale: 'continuo' },
     kind: 'transition',
-    title: 'Goku enfermo y Cell escapa',
+    title: 'El virus del corazón y el despertar del bioandroide',
     summary:
-      'El virus del corazón tumba a Goku en plena batalla y, entre la confusión, Cell emerge de su cáscara y huye a absorber a 17 y 18.',
+      'El 12 de mayo en la isla Amenbo, el corazón de Goku colapsa ante el Androide 19. El Dr. Gero activa a 17 y 18, quienes lo decapitan y despiertan al Androide 16. Pero el verdadero horror acecha en Ginger Town: una criatura biomecánica absorbe miles de almas para devorar a los androides.',
     offscreen: [
-      'Piccolo se fusiona con Kamisama y las esferas se apagan temporalmente.',
-      'Vegeta y Trunks entran a la Sala del Espíritu y el Tiempo por turnos.',
+      'Piccolo comprende su insuficiencia y sube al Templo para fusionarse definitivamente con Kamisama, renaciendo como el Namekiano Anónimo de poder colosal.',
+      'Al asimilarse Kamisama, las esferas del dragón de la Tierra se convierten en piedra ordinaria, dejando al mundo sin red de salvación.',
+      'Bulma y Trunks investigan el cascarón vacío encontrado en las afueras, descubriendo que Cell viajó desde otro futuro tras matar al Trunks de esa línea.',
+      'Goku despierta de su letargo médico gracias al antídoto y propone entrar por turnos en la Sala del Espíritu y el Tiempo.',
     ],
     movieIds: ['m11'],
   },
@@ -240,12 +266,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-juegos-de-cell',
     gap: { label: '10 días', scale: 'dias' },
     kind: 'training',
-    title: 'Diez días: la Sala del Tiempo',
+    title: 'Diez días de tregua: el descanso del guerrero',
     summary:
-      'Cell da diez días de plazo y anuncia su torneo por televisión. Goku y Gohan salen de la Sala del Espíritu y el Tiempo con el Super Saiyajin Full Power como estado natural.',
+      'Cell absorbe a los androides 17 y 18 alcanzando su Forma Perfecta. Para demostrar su superioridad absoluta al cosmos, construye una plataforma con telequinesis y anuncia por televisión mundial los «Juegos de Cell», otorgando diez días de plazo antes de exterminar la Tierra.',
     offscreen: [
-      'Dende llega del Nuevo Namek como nuevo Kamisama y reactiva las esferas con dos deseos.',
-      'El ejército mundial fracasa contra Cell y Mr. Satán se proclama campeón antes de empezar.',
+      'Goku y Gohan pasan casi un año completo en la Sala del Espíritu y el Tiempo, saliendo con el Super Saiyajin Máximo Poder (Full Power) dominado como un estado natural y relajado.',
+      'Goku decide no desgastar su cuerpo los últimos tres días: pesca, pasea y duerme con Gohan y Milk en el campo mientras los demás guerreros entrenan desesperados.',
+      'Goku viaja con la Teletransportación al Nuevo Namek y recluta al joven Dende como el nuevo Dios de la Tierra, quien reactiva las esferas otorgando dos deseos por invocación.',
+      'Mr. Satán se corona campeón del torneo de artes marciales y la prensa mundial lo declara el mesías que destruirá a Cell.',
     ],
     movieIds: ['m12'],
   },
@@ -255,12 +283,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-torneo-otro-mundo',
     gap: { label: 'Unos días', scale: 'dias' },
     kind: 'transition',
-    title: 'Goku se queda en el Otro Mundo',
+    title: 'El sacrificio de Goku y el torneo del Más Allá',
     summary:
-      'Tras sacrificarse con la Teletransportación, Goku decide no revivir para no atraer más amenazas y se queda a entrenar en el Más Allá junto a Kaio-sama.',
+      'Gohan desata el Super Saiyajin 2 y pulveriza a Cell con el Kamehameha Padre-Hijo. Tras sacrificarse teletransportando al Cell autodestructivo al planeta de Kaio, Goku comunica por telepatía que prefiere permanecer muerto para que su presencia no siga atrayendo amenazas al planeta.',
     offscreen: [
-      'La Tierra celebra a Mr. Satán como salvador mientras los guerreros guardan luto en silencio.',
-      'Kaio-sama, muerto en la explosión, sigue entrenando a Goku en su pequeño planeta.',
+      'Trunks del Futuro regresa a su línea temporal con el poder suficiente para desintegrar a los androides 17 y 18 y al Cell imperfecto, liberando su mundo por fin.',
+      'Mr. Satán se apropia públicamente de la victoria contra Cell con la complicidad silenciosa de los Guerreros Z, que prefieren vivir en el anonimato.',
+      'El Gran Kaio organiza el Gran Torneo del Más Allá con los cuatro cuadrantes cósmicos, donde Goku conoce a Paikuhan y utiliza el Super Kaioken.',
+      'Milk descubre que está embarazada de su segundo hijo: Son Goten nacerá sin conocer a su padre en vida.',
     ],
     movieIds: ['m13'],
   },
@@ -270,12 +300,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-buu-majin-vegeta',
     gap: { label: '+7 años', scale: 'anios' },
     kind: 'time-jump',
-    title: 'Goten y el Gran Saiyaman',
+    title: 'Siete años de paz, Goten y el Gran Saiyaman',
     summary:
-      'Goku no resucita para proteger la Tierra. Nace Goten y Gohan entra a la preparatoria Orange Star como el Gran Saiyaman hasta que Goku obtiene 24 horas de permiso para el 25° Torneo.',
+      'La Tierra disfruta de siete años de paz absoluta (Año 767 al 774). Gohan asiste a la preparatoria Orange Star en Ciudad Satán y combate el crimen como el justiciero enmascarado «El Gran Saiyaman». El anuncio del 25° Torneo de las Artes Marciales convoca a toda la familia, pues Uranai Baba concederá a Goku 24 horas de permiso en la Tierra.',
     offscreen: [
-      'Videl descubre la identidad de Gohan y aprende a volar con Ki.',
-      'El mago Babidi y Dabura viajan a la Tierra a drenar energía para despertar a Majin Buu.',
+      'Goku entrena intensamente en el Más Allá con un cuerpo espiritual libre de desgaste físico, lo que le permite romper la barrera del Super Saiyajin 3.',
+      'Vegeta se recluye en la gravedad artificial de Capsule Corp criando al pequeño Trunks con una disciplina feroz, obsesionado con no quedarse atrás respecto a Goku.',
+      'Videl descubre la verdadera identidad de Gohan y lo chantajea para que le enseñe a controlar el ki y a volar.',
+      'El mago Babidi y Dabura, rey del mundo demoníaco, aterrizan en secreto en la Tierra midiendo niveles de poder para despertar el huevo de Majin Buu.',
     ],
     movieIds: ['m14', 'm15'],
   },
@@ -285,12 +317,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-buu-ssj3-fusion',
     gap: { label: 'Continuo', scale: 'continuo' },
     kind: 'context',
-    title: 'Babidi, Dabura y el sacrificio del príncipe',
+    title: 'El orgullo del príncipe y la danza metamorana',
     summary:
-      'La autodestrucción de Vegeta fracasa: Majin Buu se regenera intacto, Vegeta cae al infierno y Goku despierta solo en el Templo a enseñar la fusión a Goten y Trunks.',
+      'Vegeta se deja poseer por la magia de Babidi para forzar su revancha con Goku. Su energía desata el nacimiento de Majin Buu. Al comprender la catástrofe que provocó, Vegeta noquea a Goku y se hace estallar en mil pedazos en un intento suicida por borrar al monstruo.',
     offscreen: [
-      'Babidi pierde a Dabura, convertido en galleta, y se queda sin guardián.',
-      'Piccolo y Krilin caen petrificados y convertidos en piedra ante Dabura.',
+      'Majin Buu sobrevive recomponiendo sus fragmentos de humo rosa, asesina a Babidi y convierte al rey Dabura en galleta para devorarlo.',
+      'Goku despierta malherido en el Templo Celeste; con las horas contadas antes de volver al Más Allá, asume la tarea de enseñar la danza de la Fusión a Goten y Trunks.',
+      'Krilin y Piccolo son devueltos a la vida tras ser petrificados al romperse la maldición con la muerte de Dabura.',
+      'Kaioshin y Kibito rescatan a Gohan al borde de la muerte y lo trasladan al sagrado e inaccesible Planeta de los Supremos Kaiohs.',
     ],
   },
   {
@@ -299,12 +333,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-buu-gotenks-gohan-mistico',
     gap: { label: 'Continuo', scale: 'continuo' },
     kind: 'context',
-    title: 'Buu en casa de Satán',
+    title: 'El despertar del mal puro y el ritual de los Kaioh',
     summary:
-      'El Buu gordo se muda a casa de Mr. Satán y se ablanda con su perro Bee, mientras Goten y Trunks perfeccionan a Gotenks en la Sala del Tiempo.',
+      'Goku exhibe el Super Saiyajin 3 consumiendo el resto de su energía terrenal y regresa al Más Allá. En la Tierra, Mr. Satán logra lo que ningún guerrero pudo: ganarse el corazón del Buu gordo con comida y un perrito llamado Bee, hasta que unos pistoleros desatan la furia que engendra a Super Buu.',
     offscreen: [
-      'Super Buu nace de la expulsión del mal y asesina a casi toda la humanidad de un golpe.',
-      'Los supervivientes se refugian en el Templo Sagrado esperando al guerrero prometido.',
+      'Gohan parte la legendaria Espada Z en el Planeta Kaioh liberando al Anciano Kaioshin de hace quince generaciones, quien inicia un ritual de 24 horas para desbloquear su poder latente.',
+      'Super Buu extermina a casi toda la población humana del planeta en cuestión de minutos disparando rayos teledirigidos desde lo alto del Templo Sagrado.',
+      'Goten y Trunks perfeccionan la fusión dentro de la Sala del Espíritu y el Tiempo, alcanzando a Gotenks Super Saiyajin 3 con técnicas extravagantes como los Fantasmas Kamikaze.',
+      'Piccolo destruye la puerta de la Sala del Tiempo para atrapar a Buu, pero el monstruo desgarra el tejido dimensional gritando de rabia.',
     ],
   },
   {
@@ -313,12 +349,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbz-buu-vegetto-kidbuu-final',
     gap: { label: 'Continuo', scale: 'continuo' },
     kind: 'cosmic-event',
-    title: 'Gohan místico y los Pothala',
+    title: 'Los pendientes Pothala y la aniquilación de la Tierra',
     summary:
-      'Super Buu absorbe a Gotenks y al Gohan místico liberado por el Kaioshin anciano, así que Goku y Vegeta se ponen los Pothala y nace Vegetto.',
+      'Super Buu absorbe a Gotenks, a Piccolo y al Gohan Místico recién llegado. Acorralado, el Anciano Kaioh entrega su propia vida para resucitar a Goku y le cede los pendientes Pothala. Enma-sama envía a Vegeta con cuerpo físico desde el infierno: nace Vegetto.',
     offscreen: [
-      'El Anciano Kaioshin entrega su vida para revivir a Goku y Enma-sama devuelve a Vegeta con cuerpo.',
-      'Dentro de Buu, Goku y Vegeta rescatan a todos los absorbidos antes de romperlo desde dentro.',
+      'Vegetto humilla a Buu en todas las facetas e ingresa deliberadamente en su estómago bajo una barrera de energía para rescatar a sus hijos y amigos.',
+      'Dentro del cuerpo de Buu la fusión se disuelve por los gases mágicos; al arrancar al Buu gordo de la carne interna, la bestia colapsa e involuciona a su estado primitivo y despiadado: Kid Buu.',
+      'Kid Buu destruye la Tierra instantáneamente con una esfera de ki planetaria; Goku y Vegeta son salvados por Kaioshin mediante teletransportación al Mundo Kaioh.',
+      'Dende y el Anciano Kaioh viajan al Nuevo Namek para preparar los deseos de Polunga mientras Goku y Vegeta juegan a piedra, papel o tijera para decidir quién pelea primero.',
     ],
   },
   {
@@ -327,12 +365,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'db-daima-conspiracion',
     gap: { label: 'Poco después', scale: 'continuo' },
     kind: 'context',
-    title: 'Daima, dentro del salto de diez años',
+    title: 'El deseo de Shenlong y el Reino Demoníaco',
     summary:
-      'Daima ocurre pocos meses después de Kid Buu, dentro del salto de diez años que cierra Z: la Tierra celebra el cumpleaños de Trunks en Capsule Corp cuando Gomah usa las esferas del Reino Demoníaco.',
+      'Goku fulmina a Kid Buu con la Súper Genkidama cósmica invocada por Mr. Satán en el Año 774. Seis meses después, Shenlong borra de la mente de los terrícolas el recuerdo de Buu para que el monstruo bondadoso viva en paz. Es en este respiro cuando el Reino Demoníaco pone sus ojos en la Tierra.',
     offscreen: [
-      'La humanidad olvida a Buu gracias al deseo a Shenlong; Mr. Satán carga con la fama.',
-      'En el Reino Demoníaco, Gomah, Degesu y Arinsu conspiran al ver el poder de los mortales.',
+      'En el Palacio Real del Reino de los Demonios, el Rey Gomah y Degesu revisan grabaciones del combate contra Buu y entran en pánico al ver el poderío de los mortales.',
+      'Gomah recluta al anciano namekiano Neva para activar las Esferas del Dragón del Reino Demoníaco y desear que los Guerreros Z vuelvan a ser niños.',
+      'Capsule Corp celebra por todo lo alto el cumpleaños número nueve de Trunks con una fiesta multitudinaria antes de la extraña niebla mágica.',
+      'Shin (el Kaioshin) investiga anomalías en las dimensiones inferiores sospechando que los demonios planean una venganza por la caída de Dabura.',
     ],
     movieIds: ['m16', 'm17'],
   },
@@ -342,12 +382,13 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'db-daima-climax',
     gap: { label: 'Continuo', scale: 'continuo' },
     kind: 'transition',
-    title: 'Travesía por el Reino Demoníaco',
+    title: 'Travesía por los Tres Mundos Demoníacos',
     summary:
-      'La travesía continúa sin pausa por el Segundo y el Primer Mundo Demoníaco, reuniendo esferas demoníacas y desmantelando las trampas de Degesu y Arinsu.',
+      'Convertidos en niños, Goku, el Supremo Kaioshin y sus aliados se internan en el Segundo y Primer Mundo Demoníaco. Con el Báculo Sagrado en mano, Goku redescubre el encanto de la aventura pura sorteando las trampas de Arinsu y sus esbirros mecánicos.',
     offscreen: [
-      'Glorio y Panzy guían a Goku Mini entre Tamagamis y tributos del Tercer Mundo.',
-      'Neva activa los Tamagami mientras Arinsu crea a Majin Kuu con una semilla Súper.',
+      'Glorio y Panzy operan sus naves y artefactos entre los volcanes de gas y ciénagas del Reino Demoníaco.',
+      'La científica Arinsu crea a Majin Kuu y cultiva semillas demoníacas para desafiar el mandato de Gomah.',
+      'En la Tierra, Piccolo y Bulma analizan el origen de la maldición mientras cuidan a los demás guerreros rejuvenecidos.',
     ],
   },
   {
@@ -356,12 +397,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbs-batalla-dioses',
     gap: { label: '+3 años', scale: 'anios' },
     kind: 'cosmic-event',
-    title: 'Beerus despierta tras 39 años',
+    title: 'La profecía del Dios de la Destrucción',
     summary:
-      'Pasan unos tres años de paz: el Pez Oráculo despierta a Beerus con la profecía del Super Saiyajin Dios mientras Goku trabaja la tierra como granjero y entrena a escondidas.',
+      'Tras resolver la crisis del Reino Demoníaco y recuperar sus formas adultas, transcurren tres años de calma (Año 775 al 778). Goku trabaja a regañadientes como agricultor de rábanos y entrena a escondidas en el planeta de Kaio. En los confines del cosmos, Lord Beerus despierta tras una siesta de 39 años.',
     offscreen: [
-      'Mr. Satán recibe el Premio de la Paz Mundial por «derrotar» a Buu.',
-      'Whis acompaña a Beerus a buscar al dios de la profecía por el Universo 7.',
+      'El Pez Oráculo confirma a Lord Beerus que en este ciclo aparecerá su rival profetizado: el «Super Saiyajin Dios».',
+      'Whis acompaña a Beerus por la galaxia, supervisando la destrucción de planetas con gastronomía mediocre antes de poner rumbo al cuadrante norte.',
+      'Bulma organiza su fiesta de cumpleaños número 38 en un crucero de lujo de la Corporación Cápsula, reservando las siete esferas del dragón como premio mayor del bingo.',
+      'Gohan y Videl contraen matrimonio; Videl queda embarazada de la pequeña Pan, quien será la sexta saiyajin requerida para el ritual divino.',
     ],
     movieIds: ['m18'],
   },
@@ -371,12 +414,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbs-resurreccion-f',
     gap: { label: '+unos meses', scale: 'meses' },
     kind: 'training',
-    title: 'Whis, Sorbet y las esferas',
+    title: 'El ki de los dioses y los restos del ejército de Freezer',
     summary:
-      'Goku y Vegeta entrenan con Whis a contener el ki dentro del cuerpo mientras Sorbet reúne las esferas de la Tierra para resucitar a Freezer.',
+      'Beerus perdona a la Tierra tras el combate con el Super Saiyajin Dios. Meses después (Año 779), Vegeta y Goku son aceptados por Whis en el planeta del Dios de la Destrucción para aprender a controlar el ki divino sin fugas de energía. En el espacio, el comandante Sorbet busca desesperadamente revivir a su señor.',
     offscreen: [
-      'Jaco patrulla el sector y avisa tarde de la invasión del ejército de Freezer.',
-      'Bulma organiza la fiesta que reunirá a todos cuando caiga la nave enemiga.',
+      'Sorbet y Tagoma roban las esferas del dragón en la Tierra y resucitan a Freezer en pedazos dentro de una cámara de rejuvenecimiento avanzada.',
+      'Freezer experimenta por primera vez en su vida un régimen de entrenamiento personal de cuatro meses, descubriendo la transformación «Golden Freezer».',
+      'Whis entrena a Goku y Vegeta en un espacio ultradimensional donde el ki ordinario inmoviliza el cuerpo si no se contiene con precisión milimétrica.',
+      'Jaco, el Patrullero Galáctico, vuela a toda velocidad hacia la Tierra para advertir a Bulma sobre la flota de mil soldados que se aproxima.',
     ],
     movieIds: ['m19'],
   },
@@ -386,12 +431,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbs-torneo-u6',
     gap: { label: 'Semanas después', scale: 'dias' },
     kind: 'context',
-    title: 'Champa desafía a Beerus',
+    title: 'Champa, Vados y las Súper Esferas del Dragón',
     summary:
-      'Semanas después de Golden Freezer, Champa aparece en el planeta de Beerus con Vados y reta a su hermano a un torneo de cinco contra cinco por las Súper Esferas del tamaño de planetas.',
+      'Freezer es devuelto al infierno tras el retroceso temporal de tres minutos de Whis. Semanas más tarde, Champa (Dios de la Destrucción del Universo 6) y su asistente Vados irrumpen en el templo de Beerus. Obsesionado con el ramen de la Tierra, Champa propone un torneo de cinco contra cinco entre ambos universos gemelos.',
     offscreen: [
-      'Monaka es presentado como el héroe que motivará a Goku y Vegeta.',
-      'Bulma y Jaco localizan la última Súper Esfera con el radar modificado.',
+      'Champa y Vados reúnen en secreto seis de las siete Súper Esferas del Dragón, cada una del tamaño de un planeta con núcleos estelares.',
+      'Bulma y Jaco viajan al centro del universo para consultar al sabio Zuno sobre el origen y las reglas de las Súper Esferas creadas por el Dios Dragón Zalama.',
+      'Goku y Vegeta reclutan a Piccolo, a Majin Buu y al misterioso Monaka, a quien Beerus presenta falsamente como el guerrero más fuerte que ha enfrentado.',
+      'En el Universo 6, Cabba, Frost, Botamo, Magetta y el legendario asesino Hit son convocados para el combate en el Planeta Sin Nombre.',
     ],
   },
   {
@@ -400,12 +447,13 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbs-copy-vegeta',
     gap: { label: 'Días después', scale: 'dias' },
     kind: 'transition',
-    title: 'Monaka «victorioso» y Potaufeu',
+    title: 'El banquete de Monaka y el agua de Potaufeu',
     summary:
-      'Tras brindar por Monaka, Goten y Trunks acaban accidentalmente en Potaufeu, donde el agua Súperhumana y el líquido Commeson clonan a Vegeta.',
+      'El Universo 7 se alza con la victoria gracias al salto temporal de Hit y el ingenio de Goku. Con las Súper Esferas, Beerus pide secretamente restaurar la Tierra del Universo 6. Días más tarde, Monaka llega a la Tierra como repartidor espacial, iniciando un imprevisto enredo.',
     offscreen: [
-      'Monaka guarda en secreto que nunca fue el más fuerte del Universo 7.',
-      'El sello de Potaufeu se rompe y el clon morado empieza a copiar poder sin límite.',
+      'Goten y Trunks se esconden en la furgoneta de reparto de Monaka y terminan atrapados en el remoto planeta Potaufeu.',
+      'El agua milagrosa «Commeson» (un arma biológica ancestral) absorbe los poderes de Vegeta y genera una copia idéntica que amenaza con disolver al verdadero príncipe saiyajin.',
+      'Goku debe pelear con el clon de Vegeta a máxima potencia antes de que el cuerpo del príncipe desaparezca para siempre.',
     ],
   },
   {
@@ -414,12 +462,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbs-goku-black',
     gap: { label: 'Días después', scale: 'dias' },
     kind: 'paradox',
-    title: 'Trunks llega herido del futuro',
+    title: 'Pesadilla en el futuro: la llegada de Trunks herido',
     summary:
-      'Trunks escapa del futuro en la máquina del tiempo y cae herido en el presente: un Goku idéntico, Black, masacra a la humanidad junto a Zamasu. Contexto: es el Trunks que entrenó con el Gohan manco de su línea.',
+      'En el Año 780, una máquina del tiempo aterriza violentamente en los jardines de Capsule Corp con Trunks del Futuro inconsciente y al borde de la muerte. En su línea temporal, una entidad idéntica a Son Goku y dotada de un zarcillo Pothala ha erradicado a los dioses y a casi toda la humanidad: Goku Black.',
     offscreen: [
-      'En el futuro, Mai lidera la resistencia con los pocos supervivientes.',
-      'Bulma del futuro muere para darle a Trunks el combustible del último viaje.',
+      'En el futuro devastado, Bulma es asesinada frente a Trunks tras lograr sintetizar el combustible para el último viaje de la máquina.',
+      'Mai del Futuro lidera el remanente de la resistencia armada en las ruinas subterráneas de la Capital del Oeste.',
+      'Goku Black utiliza su Anillo del Tiempo para abrir una grieta dimensional y materializarse temporalmente en el presente para medir fuerzas con Goku.',
+      'Beerus y Whis detectan en la firma de ki de Black la resonancia exacta de Zamasu, el aprendiz de Kaioshin del Universo 10 obsesionado con la justicia divina.',
     ],
   },
   {
@@ -428,12 +478,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbs-exhibicion-zen',
     gap: { label: 'Días después', scale: 'dias' },
     kind: 'cosmic-event',
-    title: 'El Zen-Oh del futuro y el torneo',
+    title: 'El borrado del futuro y el amigo para Zen-Oh',
     summary:
-      'Tras borrar el futuro con Zen-Oh, Goku trae al Zen-Oh del futuro al presente y, al visitarlo, recuerda el torneo prometido entre todos los universos.',
+      'Tras vencer a Zamasu Fusionado con la espada de luz de Trunks y el borrado absoluto de la línea temporal por parte de Zen-Oh del Futuro, Goku rescata al pequeño monarca cósmico y lo lleva al presente para que sea el compañero de juegos del Gran Zen-Oh.',
     offscreen: [
-      'Los dos Zen-Oh se hacen amigos inseparables y juegan juntos en el palacio.',
-      'El Gran Sacerdote empieza a preparar el torneo multiversal.',
+      'Trunks y Mai viajan a una línea temporal paralela alternativa donde convivirán con versiones alternas de sí mismos.',
+      'Goku visita el Palacio de Zen-Oh saltándose todos los protocolos divinos para recordar la promesa del gran torneo multiversal.',
+      'El Gran Sacerdote convoca de inmediato a los doce universos para un torneo de exhibición previo al gran evento.',
+      'Los Dioses de la Destrucción de todos los universos miran con furia y desprecio a Goku por poner en riesgo la existencia cósmica.',
     ],
   },
   {
@@ -442,12 +494,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbs-reclutamiento-u7',
     gap: { label: 'Días después', scale: 'dias' },
     kind: 'cosmic-event',
-    title: 'El universo que pierda será borrado',
+    title: 'La regla de la aniquilación y las 48 horas',
     summary:
-      'Al terminar la exhibición, el Gran Sacerdote anuncia la regla real: el universo perdedor del Torneo del Poder será borrado por Zen-Oh, y da pocas horas para reunir a diez guerreros.',
+      'El Torneo de Exhibición Zen concluye con la revelación más aterradora: Zen-Oh planeaba erradicar los universos con menor nivel de desarrollo mortal, y el Torneo del Poder será su única oportunidad de supervivencia. Los universos derrotados serán borrados de la existencia en el acto.',
     offscreen: [
-      'Gohan vuelve a entrenar con Piccolo para recuperar su forma mística.',
-      'Buu cae dormido y deja al Universo 7 con un hueco en el equipo.',
+      'El Gran Sacerdote concede un plazo improrrogable de 48 horas para que cada universo reúna un equipo de diez guerreros.',
+      'Gohan recupera su instinto combativo entrenando hasta el agotamiento con Piccolo y acepta asumir la capitanía táctica del Universo 7.',
+      'Krilin y Número 18 son reclutados tras comprobar su trabajo en equipo; Roshi entrena en secreto para superar sus debilidades mundanas.',
+      'Majin Buu entrena sin parar, adelgaza y alcanza un estado atlético formidable antes de caer en un sueño profundo del que nadie puede despertarlo.',
     ],
   },
   {
@@ -456,12 +510,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbs-torneo-del-poder',
     gap: { label: '48 h', scale: 'dias' },
     kind: 'transition',
-    title: 'Cuenta regresiva: el décimo guerrero',
+    title: 'Cuenta atrás: el décimo guerrero del infierno',
     summary:
-      'Quedan 48 horas para el torneo: con Buu dormido y 17 dudando en su isla, Goku convence al guardabosques androide como décimo guerrero del Universo 7.',
+      'Con el reloj en cero y Majin Buu en coma de hibernación, Goku toma una decisión insólita que estremece a sus compañeros: viajar al infierno con Uranai Baba para otorgar un permiso de 24 horas a Freezer a cambio de resucitarlo si logran la victoria.',
     offscreen: [
-      '17 protege sapos gigantes y caza furtivos mientras medita la oferta.',
-      'Freezer es reclutado del infierno como reemplazo de última hora.',
+      'Goku vuela a la Isla de los Monstruos para convencer al Androide 17, quien trabaja como guardabosques de animales mitológicos.',
+      'Freezer negocia despiadadamente en su capullo del infierno, aceptando combatir solo bajo la promesa de una resurrección completa.',
+      'El equipo de diez guerreros se reúne en la terraza de Capsule Corp, tomándose de las manos junto a Whis para ser transportados al Mundo de la Nada.',
+      'En el Mundo de la Nada, los ochenta guerreros más poderosos de ocho universos contemplan una arena construida con el mineral más denso del cosmos: el Kachi Katchin.',
     ],
   },
   {
@@ -470,12 +526,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbgt-black-star',
     gap: { label: '+9 años', scale: 'anios' },
     kind: 'time-jump',
-    title: 'Broly, Super Hero y el epílogo de Z',
+    title: 'Nueve años: Broly, Super Hero y el epílogo con Uub',
     summary:
-      'Tras el torneo caen Broly justo después y Super Hero unos dos años más tarde; en medio, el epílogo de Z en 784 (28° Torneo y la partida de Goku con Uub, ya visto en el lapso 21) deja la Tierra en paz hasta 789.',
+      'El Androide 17 gana el Torneo del Poder y pide revivir a todos los universos borrados. En los años venideros (Año 780 al 789), la Tierra presencia la llegada de Broly a la Tierra, la rebelión de la Patrulla Roja con Cell Max y el despertar de Gohan Bestia. En el Año 784, Goku conoce a Uub en el 28° Torneo y parte a entrenarlo durante cinco años.',
     offscreen: [
-      'Goku entrena a Uub en el Templo durante cinco años antes del deseo de Pilaf.',
-      'Piccolo deja el Templo y Gohan publica su tesis mientras Pan crece.',
+      'Goku y Vegeta se fusionan en Gogeta Azul para apaciguar a Broly en la Tierra ártica, forjando más tarde un vínculo amistoso en el planeta de Beerus.',
+      'Gohan y Piccolo derrotan a Cell Max en las instalaciones subterráneas de la Nueva Patrulla Roja (Super Hero, Año 783).',
+      'En el 28° Torneo de las Artes Marciales (Año 784), Goku identifica la reencarnación bondadosa de Buu en el niño Uub y vuela a su aldea para formarlo como protector del mundo.',
+      'En el Año 789, un anciano emperador Pilaf escala el Templo Celeste y abre la bóveda secreta donde yacen las Esferas del Dragón de Estrella Negra.',
     ],
     movieIds: ['m20', 'm21'],
   },
@@ -485,12 +543,13 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbgt-baby-ssj4',
     gap: { label: 'Días después', scale: 'dias' },
     kind: 'transition',
-    title: 'Regreso a la Tierra',
+    title: 'Viaje galáctico y el parásito tsufuru',
     summary:
-      'La nave vuelve a la Tierra con las esferas reunidas, pero en el planeta M2 el Dr. Myuu ya trabaja para una entidad parasitaria con ADN del rey tsufuru.',
+      'Goku es convertido en niño por el error de Pilaf con las esferas de estrella negra y viaja por el cosmos junto a Trunks y Pan para reunirlas antes de que la Tierra explote en un año. Pero en el planeta M-2 descubren la peor amenaza: Baby, la creación biológica del extinto pueblo Tsufuru.',
     offscreen: [
-      'Baby despierta dentro de su cápsula y empieza a poseer cuerpos para llegar a Vegeta.',
-      'Dende detecta una energía extraña creciendo en el laboratorio de Myuu.',
+      'El robot Gill traga el radar del dragón y se convierte en el navegador inseparable de la nave espacial.',
+      'El Dr. Myuu coordina a sus Mutantes Máquina mientras Baby infecta el cuerpo de varios alienígenas para viajar a la Tierra.',
+      'Dende y Mr. Popo observan preocupados desde el templo cómo el planeta comienza a sufrir desastres sísmicos por el uso de las esferas oscuras.',
     ],
   },
   {
@@ -499,12 +558,13 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbgt-super-17',
     gap: { label: '+unos meses', scale: 'meses' },
     kind: 'context',
-    title: 'El plan tsufuru de Baby',
+    title: 'El renacer del planeta Plant y el sacrificio de Piccolo',
     summary:
-      'Baby usa las esferas para recrear el Planeta Tsufuru y posee a toda la Tierra, hasta que Goku SSJ4 lo expulsa al sol; la Tierra se restaura con las esferas de Namek y vive una corta tregua.',
+      'Baby infecta a toda la población de la Tierra y se adueña del cuerpo de Vegeta. Goku desata el legendario Super Saiyajin 4 tras dominar el mono gigante dorado y destruye al parásito lanzándolo al sol. La Tierra es evacuada antes de explotar y luego restaurada con las esferas de Namek.',
     offscreen: [
-      'Piccolo se sacrifica para destruir las esferas de estrella negra junto a la Tierra moribunda.',
-      'La población, liberada del control, reconstruye las ciudades arrasadas.',
+      'Piccolo toma la decisión de permanecer en la Tierra mientras estalla para que las Esferas de Estrella Negra queden destruidas para siempre con su muerte.',
+      'En el Más Allá, el Dr. Myuu y el Dr. Gero se encuentran en el infierno y comienzan a conspirar una alianza científica para crear al androide definitivo.',
+      'La humanidad reconstruye sus ciudades tras liberarse del control mental de los parásitos Tsufuru gracias al Agua Sagrada.',
     ],
   },
   {
@@ -513,12 +573,13 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: 'dbgt-dragones-malignos',
     gap: { label: 'Días después', scale: 'dias' },
     kind: 'context',
-    title: 'Myuu y Gero abren el infierno',
+    title: 'La brecha del infierno y la sobrecarga negativa',
     summary:
-      'El Dr. Myuu y el Dr. Gero abren una brecha desde el infierno y fusionan a los dos 17 en el Súper 17; Krilin cae y los muertos invaden la Tierra hasta que Goku lo destruye.',
+      'Gero y Myuu abren un portal interdimensional desde el infierno fusionando al Androide 17 original con el 17 del infierno. Tras la caída del Súper 17 ante el Puño del Dragón de Goku y la venganza de Número 18, los héroes reúnen las esferas para reparar el desastre, pero las esferas se quiebran y emiten un humo negro.',
     offscreen: [
-      'Freezer y Cell intentan retener a Goku en el infierno con hielo y tretas.',
-      '18 venga a Krilin clavando su venganza en el pecho del Súper 17.',
+      'Antiguos villanos como Freezer, Cell y los miembros de la Patrulla Roja escapan temporalmente a la superficie antes de ser devueltos al infierno.',
+      'Krilin muere asesinado por el Androide 17 bajo control mental, desatando la furia de Número 18.',
+      'Las esferas del dragón han acumulado energía negativa a lo largo de décadas por deseos egoístas continuos, desatando a los siete Dragones Malignos sobre el mundo.',
     ],
   },
   {
@@ -527,12 +588,14 @@ export const CHRONOLOGY_INTERLUDES: ChronologyInterlude[] = [
     toVolumeId: null,
     gap: { label: '+100 años', scale: 'anios' },
     kind: 'time-jump',
-    title: 'Cien años después: Goku Jr.',
+    title: 'Cien años después: el legado del guerrero',
     summary:
-      'Un siglo después del adiós de Goku con Shenlong, su tataranieto Goku Jr. busca la esfera de cuatro estrellas para curar a la anciana Pan y se transforma por primera vez en el 64° Torneo.',
+      'Goku purifica a los dragones con la Genkidama Universal y se marcha sobre el lomo del verdadero Shenlong, fundiéndose con las esferas. Un siglo después (Año 889), la anciana Pan contempla cómo su tataranieto Goku Jr. busca la esfera de cuatro estrellas en el Monte Paoz para salvarle la vida.',
     offscreen: [
-      'El báculo sagrado y la esfera de cuatro estrellas descansan en el Monte Paoz como reliquias.',
-      'El espíritu del Goku original aparece para entregar el báculo a su descendiente.',
+      'Las esferas del dragón descansan purificadas en el corazón del cosmos hasta que la humanidad demuestre no depender de milagros para resolver sus problemas.',
+      'Pan funda y preserva el legado de la familia Son en la Tierra durante un siglo de paz ininterrumpida.',
+      'El espíritu de Son Goku aparece en su vieja cabaña del Monte Paoz para alentar a Goku Jr. a no rendirse jamás y confiar en su propia fuerza.',
+      'En el 64° Torneo de las Artes Marciales, Goku Jr. y Vegeta Jr. se transforman en Super Saiyajin, reiniciando el ciclo eterno de la rivalidad saiyajin bajo la estatua de Goku.',
     ],
     movieIds: ['sp3'],
   },

@@ -14,7 +14,7 @@ export interface EraHeroProps {
   className?: string;
 }
 
-const BACKDROP_MAP: Record<StorySpan['seriesId'], string> = {
+export const BACKDROP_MAP: Record<StorySpan['seriesId'], string> = {
   classic: '/backdrops/lq/db.webp',
   z: '/backdrops/lq/dbz.webp',
   daima: '/backdrops/lq/dbdaima.webp',
@@ -57,7 +57,7 @@ export const EraHero: React.FC<EraHeroProps> = memo(({
   return (
     <div
       id={`era-${seriesId}`}
-      className={`relative w-full rounded-2xl overflow-hidden border border-white/10 bg-zinc-950/80 my-6 scroll-mt-24 ${className}`}
+      className={`relative w-full rounded-2xl overflow-hidden border border-white/10 bg-surface-container-lowest/80 my-6 scroll-mt-24 ${className}`}
       style={{ boxShadow: `inset 0 1px 0 rgb(255 255 255 / 0.07), 0 24px 60px -32px ${accentHex}66` }}
     >
       {/* Filete superior con el color de la era, como en las tarjetas de lapso */}
@@ -83,7 +83,9 @@ export const EraHero: React.FC<EraHeroProps> = memo(({
           src={backdrop}
           alt=""
           aria-hidden="true"
-          className="w-full h-full object-cover object-center opacity-30 filter blur-xs scale-105"
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover object-center opacity-30 filter blur-sm scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/85 to-black/60" />
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-black/30" />

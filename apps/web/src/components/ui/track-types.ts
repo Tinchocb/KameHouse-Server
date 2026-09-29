@@ -152,15 +152,6 @@ export interface PlayerSettingsMenuProps {
     autoSkipOutro?: boolean
     onAutoSkipOutroChange?: (auto: boolean) => void
 
-    autoSkipFiller?: boolean
-    onAutoSkipFillerChange?: (auto: boolean) => void
-
-    skipStepSeconds?: number
-    onSkipStepSecondsChange?: (seconds: number) => void
-
-    showHeatmap?: boolean
-    onShowHeatmapChange?: (show: boolean) => void
-
     aspectRatio?: "contain" | "fill" | "cover" | "16/9" | "21/9"
     onAspectRatioChange?: (ratio: "contain" | "fill" | "cover" | "16/9" | "21/9") => void
 
@@ -178,9 +169,6 @@ export interface PlayerSettingsMenuProps {
 
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
-
-    ambientModeEnabled?: boolean
-    onAmbientModeEnabledChange?: (enabled: boolean) => void
 
     open?: boolean
     onOpenChange?: (open: boolean) => void

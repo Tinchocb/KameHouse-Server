@@ -2,12 +2,13 @@ import { memo, useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { IconMediaPlay } from '@/components/ui/icons';
 import { cn } from '@/components/ui/core/styling';
 import { getSpineConfig } from '@/lib/helpers/goku-panorama';
-import { getMediumResImage, getLowResImage } from '@/lib/helpers/images';
+import { getMediumResImage, getLowResImage, localImage } from '@/lib/helpers/images';
 import { usePrefetchAnimeEntry } from '@/hooks/use-prefetch-anime-entry';
 import { DRAGON_BALL_SERIES_INFO, getSeriesEraAccent } from '@/lib/helpers/series';
 import { DRAGON_BALL_SAGAS } from '@/lib/config/dragonball_sagas';
 import { usePerformanceStore, selectEffectiveTier } from '@/lib/hardware/performance-store';
 import { MediaMetadataCapsule } from '@/components/ui/media-metadata-capsule';
+import { ElasticCounter } from '@/components/ui/kinetics';
 
 /** Saga que contiene el episodio dado (para "Vas en…"). */
 function getSagaForEpisode(mediaId: number, ep: number): string | null {
@@ -49,6 +50,7 @@ export const SeriesCard = memo(function SeriesCard({
     onNavigate,
     onSelect,
     entryDelayMs = 0,
+    eager = false,
 }: {
     item: SeriesItem;
     isSelected: boolean;
@@ -56,6 +58,8 @@ export const SeriesCard = memo(function SeriesCard({
     onNavigate: (id: string) => void;
     onSelect: (id: number) => void;
     entryDelayMs?: number;
+    /** Lomo visible al montar: sus imágenes se piden sin esperar al lazy. */
+    eager?: boolean;
 }) {
     const effectiveTier = usePerformanceStore(selectEffectiveTier);
     const handlePrefetch = usePrefetchAnimeEntry(item.id);
@@ -121,14 +125,13 @@ export const SeriesCard = memo(function SeriesCard({
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {
-            if ((e.target as HTMLElement).tagName === 'BUTTON') return;
             e.preventDefault();
             handleActivate();
             return;
         }
         if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
             e.preventDefault();
-            const cards = Array.from(document.querySelectorAll<HTMLElement>('article[id^="series-card-"]'));
+            const cards = Array.from(document.querySelectorAll<HTMLElement>('[role="option"][id^="series-card-"]'));
             const idx = cards.findIndex((el) => el.id === `series-card-${item.id}`);
             const next = e.key === 'ArrowRight' ? cards[idx + 1] : cards[idx - 1];
             if (next) { next.focus(); next.click(); }
@@ -144,16 +147,10 @@ export const SeriesCard = memo(function SeriesCard({
 
     const handleMouseLeave = useCallback(() => setIsHovered(false), []);
 
-    const handlePlayClick = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        handlePrefetch();
-        onNavigate(item.id.toString());
-    }, [onNavigate, item.id, handlePrefetch]);
-
     const watchedCount = Math.round((item.progress / 100) * (item.eps || 0));
 
     return (
-        <article
+        <div
             id={`series-card-${item.id}`}
             role="option"
             tabIndex={0}
@@ -189,7 +186,7 @@ export const SeriesCard = memo(function SeriesCard({
                 {/* ─── ESTADO EXPANDIDO / PLACEHOLDER BASE: Capa inmediata que evita hueco negro ─── */}
                 {collapsedBgSrc && (
                     <img
-                        src={collapsedBgSrc}
+                        src={localImage(collapsedBgSrc)}
                         alt=""
                         aria-hidden="true"
                         draggable={false}
@@ -211,9 +208,9 @@ export const SeriesCard = memo(function SeriesCard({
                 {posterSrc && (
                     <img
                         ref={posterImgRef}
-                        src={posterSrc}
+                        src={localImage(posterSrc)}
                         alt={item.title}
-                        loading={isSelected ? "eager" : "lazy"}
+                        loading={isSelected || eager ? "eager" : "lazy"}
                         decoding="async"
                         fetchPriority={isSelected ? "high" : "low"}
                         onLoad={handlePosterLoad}
@@ -242,13 +239,14 @@ export const SeriesCard = memo(function SeriesCard({
                     {/* 1. Capa superior Mural: Color difuminado de la portada arriba (top → bottom) con blur etéreo */}
                     <div className="absolute top-0 inset-x-0 h-[68%] overflow-hidden pointer-events-none z-[1] transform-gpu">
                         <img
-                            src={collapsedBgSrc}
+                            src={localImage(collapsedBgSrc)}
                             alt=""
                             aria-hidden="true"
                             draggable={false}
-                            loading="lazy"
+                            // Lomos visibles al cargar: pedir ya, no al final de la cola.
+                            loading={eager ? "eager" : "lazy"}
                             decoding="async"
-                            fetchPriority="low"
+                            fetchPriority={eager ? "auto" : "low"}
                             className="w-full h-full object-cover object-top scale-115 blur-xl brightness-[0.6] saturate-[1.3] opacity-80 transform-gpu"
                             style={{
                                 maskImage: 'linear-gradient(to bottom, black 0%, black 35%, transparent 100%)',
@@ -278,18 +276,19 @@ export const SeriesCard = memo(function SeriesCard({
 
                     {/* 3. Kanji de la Era en marca de agua flotante de fondo (profundidad z-[2]) */}
                     <div
-                        className="absolute inset-0 z-[2] flex flex-col items-center justify-center pointer-events-none transition-transform duration-500"
+                        className="absolute inset-x-0 top-[20%] z-[2] flex flex-col items-center pointer-events-none transition-transform duration-500"
                         style={{
-                            transform: isHovered ? 'scale(1.06) translateY(-4px)' : 'scale(1) translateY(0)',
+                            transform: isHovered ? 'scale(1.08) translateY(-4px)' : 'scale(1) translateY(0)',
                         }}
                     >
                         <span
-                            className="font-display font-black leading-none select-none blur-[1px]"
+                            className="font-kanji font-black leading-none select-none"
                             style={{
                                 color: eraAccent,
-                                fontSize: '52px',
-                                opacity: isHovered ? 0.12 : 0.07,
-                                transition: 'opacity 300ms ease',
+                                fontSize: '72px',
+                                opacity: isHovered ? 0.45 : 0.28,
+                                textShadow: `0 0 24px color-mix(in srgb, ${eraAccent} 60%, transparent), 0 0 48px color-mix(in srgb, ${eraAccent} 30%, transparent)`,
+                                transition: 'opacity 300ms ease, transform 300ms ease',
                             }}
                         >
                             {spineCfg?.kanji ?? '★'}
@@ -300,7 +299,7 @@ export const SeriesCard = memo(function SeriesCard({
                                 color: eraAccent,
                                 fontSize: '10px',
                                 letterSpacing: '0.22em',
-                                opacity: isHovered ? 0.30 : 0.18,
+                                opacity: isHovered ? 0.60 : 0.35,
                             }}
                         >
                             {item.year}
@@ -390,12 +389,12 @@ export const SeriesCard = memo(function SeriesCard({
                         </div>
 
                         {/* Título horizontal */}
-                        <h3 className={cn(
+                        <h2 className={cn(
                             "font-display text-xl md:text-2xl font-black text-on-surface leading-tight tracking-tight line-clamp-2 transition-[opacity,transform] duration-slow ease-smooth-out text-edge-glow text-balance",
                             isSelected ? "opacity-100 translate-y-0 delay-200" : "opacity-0 translate-y-2 delay-0"
                         )}>
                             {item.title}
-                        </h3>
+                        </h2>
 
                         {/* Sinopsis */}
                         {isSelected && (
@@ -422,11 +421,13 @@ export const SeriesCard = memo(function SeriesCard({
                             isSelected ? "opacity-100 translate-y-0 delay-300" : "opacity-0 translate-y-2 delay-0"
                         )}>
                             <div className="flex justify-between items-end mb-1 text-2xs font-semibold">
-                                <span className="font-mono text-on-surface-variant uppercase tracking-wider text-3xs">
-                                    {item.progress > 0 ? `Visto: ${watchedCount} de ${item.eps}` : 'Sin comenzar'}
+                                <span className="font-mono text-on-surface-variant uppercase tracking-wider text-3xs tabular-nums">
+                                    {item.progress > 0 ? (
+                                        <>Visto: <ElasticCounter value={watchedCount} /> de {item.eps}</>
+                                    ) : 'Sin comenzar'}
                                 </span>
-                                <span className="font-mono font-extrabold text-2xs" style={{ color: eraAccent }}>
-                                    {item.progress}%
+                                <span className="font-mono font-extrabold text-2xs tabular-nums" style={{ color: eraAccent }}>
+                                    <ElasticCounter value={item.progress} />%
                                 </span>
                             </div>
                             <div className="h-1.5 w-full bg-surface-container-high/60 rounded-full overflow-hidden border border-[var(--sectionbar-border)]">
@@ -445,9 +446,11 @@ export const SeriesCard = memo(function SeriesCard({
                             "pt-2 transition-[opacity,transform] duration-slow ease-smooth-out",
                             isSelected ? "opacity-100 translate-y-0 delay-350" : "opacity-0 translate-y-2 delay-0"
                         )}>
-                            <button
-                                type="button"
-                                onClick={handlePlayClick}
+                            {/* Visual: la cinta ya es el control (option). Un botón acá quedaba anidado dentro
+                                de role="option" y, sin seleccionar, invisible pero enfocable. El clic sube a
+                                la cinta: seleccionada → abre la ficha. */}
+                            <div
+                                aria-hidden
                                 className="w-full min-h-11 text-zinc-950 font-display font-black uppercase tracking-display rounded-full text-label-sm py-2.5 transition duration-base ease-out flex justify-center items-center gap-2 relative overflow-hidden group/btn hover:brightness-110 active:scale-95 cursor-pointer"
                                 style={{
                                     background: eraAccent,
@@ -461,11 +464,11 @@ export const SeriesCard = memo(function SeriesCard({
                                     : item.progress >= 100
                                         ? 'Ver de nuevo'
                                         : `Continuar · EP ${Math.min(item.eps, watchedCount + 1)}`}
-                            </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </article>
+        </div>
     );
 });

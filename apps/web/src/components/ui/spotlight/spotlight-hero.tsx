@@ -9,6 +9,7 @@ import type { ERAS, ERA_COLOR_MAP, EraId } from "@/lib/config/eras"
 import { SERIES_HERO_ART, heroArtFromUrl } from "@/lib/config/hero-art"
 import { HeroBackdrop, heroHighResSrc } from "@/components/ui/spotlight/hero-backdrop"
 import { HERO_PARALLAX_OVERSCAN, HERO_STAGE_CLASS } from "@/lib/config/hero-stage"
+import { shortSagaTitle } from "@/lib/helpers/series"
 import { cn } from "@/components/ui/core/styling"
 import { useSound } from "@/hooks/use-sound"
 import { useImagePalette } from "@/hooks/use-image-palette"
@@ -184,6 +185,9 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                      <HeroBackdrop
                                          art={heroArt}
                                          alt={displayTitle}
+                                         // Stage panorámico: la imagen entera a la derecha en vez de
+                                         // agrandarla y recortarla (se veía con demasiado zoom).
+                                         wide="right"
                                          imgClassName="hero-image-filter"
                                      />
                                 </>
@@ -213,36 +217,36 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                             } as React.CSSProperties}
                         >
                             {/* Título (sin badge repetido encima en Home) */}
-                            <m.h2
+                            <m.h1
                                 variants={heroItemVariants}
-                                role="link"
-                                tabIndex={0}
-                                aria-label={`Ver ${displayTitle}`}
-                                onClick={onNavigateHero}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    onNavigateHero();
-                                  }
-                                }}
-                                className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-[1.05] text-white uppercase select-none font-display cursor-pointer hover:text-[var(--spotlight-title-hover)] transition-colors text-edge-glow text-balance focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded"
+                                className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-[1.05] text-white uppercase select-none font-display text-edge-glow text-balance"
                             >
-                                {displayTitle}
-                            </m.h2>
+                                {/* El enlace va en un hijo: role="link" sobre el h1 anularía el encabezado. */}
+                                <span
+                                    role="link"
+                                    tabIndex={0}
+                                    aria-label={`Ver ${displayTitle}`}
+                                    onClick={onNavigateHero}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        onNavigateHero();
+                                      }
+                                    }}
+                                    className="cursor-pointer hover:text-[var(--spotlight-title-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded"
+                                >
+                                    {displayTitle}
+                                </span>
+                            </m.h1>
 
                             {/* Cápsula de metadata glass */}
                             <MediaMetadataCapsule
                                 format={currentEraConfig?.tag ?? "SERIE TV"}
                                 year={activeSeries?.year || currentEraConfig?.year}
                                 ageRating={ERA_AGE_RATING[activeEraId] ?? "TV-14"}
+                                isComplete={isSeriesComplete}
                                 variants={heroFadeOnlyVariants}
-                            >
-                                {isSeriesComplete && (
-                                    <span className="bg-amber-500/20 text-amber-300 text-3xs font-mono font-bold px-2.5 py-1 rounded-lg border border-amber-500/30 uppercase">
-                                        Completa
-                                    </span>
-                                )}
-                            </MediaMetadataCapsule>
+                            />
 
                             {/* Sinopsis */}
                             {displayDescription && (
@@ -258,7 +262,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                             {activeEraSagas.length > 0 && (
                                 <m.div
                                     variants={heroItemVariants}
-                                    className="flex items-center gap-1.5 pt-1 overflow-hidden"
+                                    className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] sm:[mask-image:none]"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <span className="text-3xs font-mono uppercase tracking-wider text-zinc-400 font-bold mr-1 flex items-center gap-1 shrink-0">
@@ -268,10 +272,10 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                         <button
                                             key={saga.id}
                                             onClick={() => onNavigateSaga(activeEraSeriesId, saga.id)}
-                                            className="px-2.5 py-1 rounded-full text-3xs sm:text-2xs font-semibold bg-zinc-950/45 hover:bg-zinc-900/60 border border-white/15 hover:border-white/30 text-zinc-300 hover:text-white transition-[color,background-color,border-color,transform] cursor-pointer select-none active:scale-95 backdrop-blur-sm truncate max-w-[120px]"
+                                            className="px-2.5 py-1 rounded-full text-3xs sm:text-2xs font-semibold sectionbar sectionbar-pill hover:border-white/30 hover:border-t-white/50 text-zinc-300 hover:text-white transition-[color,background-color,border-color,transform,box-shadow] cursor-pointer select-none active:scale-95 truncate max-w-[160px] shrink-0"
                                             title={`Ir a ${saga.title}`}
                                         >
-                                            {saga.title.replace(/^Saga (de |del |de los )?/i, "").replace(/^Arco de /i, "")}
+                                            {shortSagaTitle(saga.title)}
                                         </button>
                                     ))}
                                 </m.div>
@@ -281,16 +285,16 @@ export const SpotlightHero = React.memo(function SpotlightHero({
 
                     {/* CTAs + Dots carrusel (idéntica posición y ritmo que Películas) */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-2 w-full pointer-events-auto">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                             <RippleFeedback
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     onNavigateHero()
                                 }}
                                 rippleColor="rgba(0, 0, 0, 0.22)"
-                                className="flex items-center justify-center bg-white hover:bg-zinc-100 text-zinc-950 font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
+                                className="flex items-center justify-center bg-white hover:bg-zinc-100 text-zinc-950 font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-5 sm:px-7 rounded-full font-display gap-2 cursor-pointer whitespace-nowrap border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
                             >
-                                <IconMediaPlay size={15} fill="currentColor" />
+                                <IconMediaPlay size={15} fill="currentColor" className="shrink-0" />
                                 <span>Reproducir</span>
                             </RippleFeedback>
 
@@ -300,9 +304,9 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                     onNavigateHero()
                                 }}
                                 rippleColor="rgba(255, 255, 255, 0.2)"
-                                className="flex items-center justify-center bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-xl text-white font-bold text-xs sm:text-sm uppercase tracking-wider font-display py-2.5 px-5 rounded-full gap-2 cursor-pointer shadow-glass-highlight-md transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
+                                className="glass-frosted-pill flex items-center justify-center text-white font-bold text-xs sm:text-sm uppercase tracking-wider font-display py-2.5 px-4 sm:px-5 gap-2 cursor-pointer whitespace-nowrap shadow-glass-highlight-md transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
                             >
-                                <IconUiInfo size={15} />
+                                <IconUiInfo size={15} className="shrink-0" />
                                 <span>Más información</span>
                             </RippleFeedback>
 

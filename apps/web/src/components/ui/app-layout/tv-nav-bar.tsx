@@ -20,11 +20,8 @@ export function TvNavBar() {
     return (
         <nav
             className={cn(
-                "fixed bottom-4 inset-x-6 sm:inset-x-12 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 z-50",
-                "flex items-center justify-center gap-2 px-6 py-3 rounded-full",
-                "bg-surface/85 backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
-                "border border-white/20 border-t-white/40 border-b-white/10",
-                "shadow-[shadow:var(--glass-highlight-lg),0_16px_40px_-6px_rgba(0,0,0,0.9)]"
+                "glass-frosted-pill fixed bottom-4 inset-x-6 sm:inset-x-12 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 z-50",
+                "flex items-center justify-center gap-2 px-6 py-3"
             )}
         >
             {TV_NAV_ITEMS.map(({ to, label, Icon }) => {

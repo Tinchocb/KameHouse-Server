@@ -15,7 +15,6 @@ import type { VolumeData } from './types';
 import { DRAGON_BALL_MOVIES_LORE } from '@/lib/config/dragonball_movies_lore';
 import { DRAGON_BALL_STORY_SPANS } from '@/lib/config/dragonball_story_spans';
 import { sounds } from './utils/audio';
-import { SmartLoreText } from '@/components/ui/smart-lore-text';
 
 export interface InterludeDividerProps {
   interlude: ChronologyInterlude;
@@ -63,7 +62,7 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
         {/* Mobile spine node (hidden on md+ since the pill is centered on the central spine) */}
         <div
           aria-hidden="true"
-          className="lg:hidden absolute left-3 -translate-x-1/2 top-2.5 w-6 h-6 rounded-full border flex items-center justify-center z-10 shadow-sm bg-zinc-950"
+          className="lg:hidden absolute left-3 -translate-x-1/2 top-2.5 w-6 h-6 rounded-full border flex items-center justify-center z-10 shadow-sm bg-surface-container-lowest"
           style={{
             borderColor: isYears ? `${accent}80` : 'rgba(255,255,255,0.2)',
             color: isYears ? accent : 'var(--color-on-surface-variant, #a1a1aa)',
@@ -76,10 +75,10 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
         <div
           className={`w-full lg:w-auto lg:max-w-xl rounded-2xl border transition duration-200 overflow-hidden shadow-elevation-1 ${
             isContinuo
-              ? 'border-dashed border-white/15 bg-zinc-950/70'
+              ? 'border-dashed border-white/15 bg-surface-container-lowest/70'
               : isYears
-                ? 'bg-zinc-950/90'
-                : 'border-dashed border-white/20 bg-zinc-950/80'
+                ? 'bg-surface-container-lowest/90'
+                : 'border-dashed border-white/20 bg-surface-container-lowest/80'
           }`}
           style={isYears ? { borderColor: `${accent}60` } : undefined}
         >
@@ -125,11 +124,15 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
               )}
             </div>
 
-            {isEpilogue && (
+            {isEpilogue ? (
               <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-3xs font-mono font-bold bg-white/[0.04] border border-white/10 text-on-surface-variant shrink-0">
                 Epílogo
               </span>
-            )}
+            ) : toVolume?.officialYear ? (
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-3xs font-mono font-semibold bg-white/[0.04] border border-white/10 text-on-surface-variant/80 shrink-0 tabular-nums">
+                Hacia {toVolume.officialYear}
+              </span>
+            ) : null}
 
             <ChevronDown
               className={`w-4 h-4 text-on-surface-variant transition-transform duration-200 shrink-0 ${
@@ -142,7 +145,7 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
           <div
             id={`interlude-body-${interlude.id}`}
             inert={!isExpanded}
-            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-expo-out motion-reduce:transition-none ${
               isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
             }`}
           >
@@ -150,7 +153,7 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
               {hasOpened && (
                 <div className="border-t border-white/10 p-3.5 sm:p-4 flex flex-col gap-3 text-xs">
                   <p className="text-on-surface/90 leading-relaxed text-pretty font-sans">
-                    <SmartLoreText text={interlude.summary} />
+                    {interlude.summary}
                   </p>
 
                   {/* Offscreen Events */}
@@ -169,9 +172,7 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
                               aria-hidden="true"
                               className="mt-1.5 w-1 h-1 rounded-full shrink-0 bg-brand-accent/70"
                             />
-                            <span>
-                              <SmartLoreText text={fact} />
-                            </span>
+                            <span>{fact}</span>
                           </li>
                         ))}
                       </ul>
@@ -215,8 +216,14 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
                   {toVolume && (destThreat || destVillains.length > 0 || destBalls) && (
                     <div className="rounded-xl border border-white/10 bg-black/40 p-2.5 flex flex-col gap-1">
                       <span className="text-2xs font-mono font-bold uppercase tracking-wider text-cyan-300">
-                        Al empezar el siguiente lapso
+                        Al empezar el siguiente lapso: {toVolume.title}
                       </span>
+                      {toVolume.officialYear && (
+                        <p className="text-2xs font-mono text-on-surface/85 leading-relaxed">
+                          <span className="text-on-surface-variant/70">Fecha in-universe: </span>
+                          <span className="text-amber-300 font-semibold">{toVolume.officialYear}</span>
+                        </p>
+                      )}
                       {destThreat && (
                         <p className="text-2xs font-mono text-on-surface/85 leading-relaxed">
                           <span className="text-on-surface-variant/70">Amenaza: </span>

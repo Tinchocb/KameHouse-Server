@@ -26,6 +26,9 @@ export const SelectAnatomy = defineStyleAnatomy({
     content: cva([
         "UI-Select__content",
         "w-full overflow-hidden rounded-corner-lg shadow-elevation-3 bg-surface-container border border-outline-variant leading-none z-dropdown",
+        // Misma entrada/salida que el popover: sin esto la lista aparecía de golpe.
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+        "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 ease-out-strong duration-200 data-[state=closed]:duration-fast",
     ]),
     viewport: cva([
         "UI-Select__viewport",

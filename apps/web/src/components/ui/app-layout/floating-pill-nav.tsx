@@ -9,7 +9,7 @@ import { useAppStore, usePlayerStore, useUIStore } from "@/lib/store"
 import { cn } from "@/components/ui/core/styling"
 import { useSound } from "@/hooks/use-sound"
 import { toast } from "sonner"
-import { MagneticIndicator } from "@/components/ui/kinetics"
+import { MagneticIndicator, ElasticCounter } from "@/components/ui/kinetics"
 import { ExpandableSearch } from "./expandable-search"
 import { RandomPlayButton } from "./random-play-button"
 import { BackgroundMusicPlayer } from "./background-music"
@@ -26,7 +26,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     { id: "home", to: "/home", label: "Inicio", icon: <IconNavigationHome className="w-3.5 h-3.5" /> },
     { id: "series", to: "/series", label: "Series", icon: <IconNavigationTv className="w-3.5 h-3.5" /> },
     { id: "movies", to: "/movies", label: "Películas", icon: <IconNavigationFilm className="w-3.5 h-3.5" /> },
-    { id: "chronology", to: "/chronology", label: "Cronología", icon: <IconStatusSparkles className="w-3.5 h-3.5 text-amber-400" /> },
+    { id: "chronology", to: "/chronology", label: "Cronología", icon: <IconStatusSparkles className="w-3.5 h-3.5" /> },
 ]
 
 export function FloatingPillNav() {
@@ -47,6 +47,14 @@ export function FloatingPillNav() {
 
     const routerState = useRouterState()
     const currentPath = routerState.location.pathname.replace(/\/$/, "") || "/"
+
+    // Pestaña presionada: el indicador se mueve al presionar (pointerdown), no
+    // al terminar de renderizar la página nueva. Antes quedaba ~300 ms en la
+    // pestaña vieja porque el render de la ruta trababa la animación (medido
+    // cuadro a cuadro). Guarda desde qué ruta se presionó: al navegar se
+    // descarta solo, y si se cancela (arrastrar fuera) vuelve a su lugar.
+    const [pressed, setPressed] = React.useState<{ to: string; from: string } | null>(null)
+    const activePath = pressed && pressed.from === currentPath ? pressed.to : currentPath
 
     if (isFullscreen || tvMode) return null
 
@@ -79,7 +87,7 @@ export function FloatingPillNav() {
     }
 
     return (
-        <div aria-label="Navegación flotante de KameHouse" className="select-none pointer-events-none">
+        <div role="region" aria-label="Navegación flotante" className="select-none pointer-events-none">
             {/* Background Music Engine & Random Play Picker Modal */}
             <BackgroundMusicPlayer headless />
             <div className="pointer-events-auto">
@@ -88,7 +96,7 @@ export function FloatingPillNav() {
             
             {/* ─── ISLAS FLOTANTES DE NAVEGACIÓN ─────────────────────────── */}
             {/* ─── ISLA IZQUIERDA: LOGO FLOTANTE (GLASSMORFISMO) ──────────── */}
-            <m.aside
+            <m.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -99,25 +107,25 @@ export function FloatingPillNav() {
                     onClick={() => playSound("category", 0.3)}
                     title="Ir a Inicio"
                     className={cn(
-                        "flex items-center gap-2.5 bg-surface-container-lowest/80 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-2xl px-4 py-1.5 rounded-full shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_-4px_rgba(0,0,0,0.7)] hover:bg-surface-container-high/80 hover:border-white/30 active:scale-95 group cursor-pointer",
+                        "glass-frosted-pill flex items-center gap-2.5 px-4 py-1.5 hover:border-white/30 active:scale-95 group cursor-pointer",
                         "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]"
                     )}
                 >
                     <img
                         src="/kamehouse-logo.png"
-                        alt="KameHouse"
-                        className="w-5 h-5 object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]"
+                        alt=""
+                        className="relative z-10 w-5 h-5 object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]"
                     />
                     {/* Entre md y lg no entra todo en una fila: el logo queda sin texto */}
-                    <span className="sr-only lg:not-sr-only font-display font-black tracking-widest text-xs uppercase text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    <span className="relative z-10 sr-only lg:not-sr-only font-display font-black tracking-widest text-xs uppercase text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                         KAMEHOUSE
                     </span>
                 </Link>
-            </m.aside>
+            </m.div>
 
             {/* ─── ISLA CENTRAL: NAVEGACIÓN PRINCIPAL (GLASSMORFISMO) ──────── */}
             <div className="fixed top-3.5 left-0 right-0 z-navbar hidden md:flex justify-center items-center pointer-events-none">
-                <m.aside
+                <m.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -126,10 +134,10 @@ export function FloatingPillNav() {
                     <nav
                         role="navigation"
                         aria-label="Navegación principal"
-                        className="flex items-center gap-1 bg-surface-container-lowest/80 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-2xl p-1.5 rounded-full shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_-4px_rgba(0,0,0,0.7)]"
+                        className="glass-frosted-pill flex items-center gap-1 p-1.5"
                     >
                         {NAV_ITEMS.map((item) => {
-                            const isRouteActive = currentPath === item.to || (item.to !== "/home" && currentPath.startsWith(item.to))
+                            const isRouteActive = activePath === item.to || (item.to !== "/home" && activePath.startsWith(item.to))
                             const isPillActive = !globalQueueOpen && isRouteActive
 
                             return (
@@ -139,6 +147,11 @@ export function FloatingPillNav() {
                                     aria-current={isPillActive ? "page" : undefined}
                                     title={item.label}
                                     onClick={() => playSound("category", 0.3)}
+                                    onPointerDown={(e) => {
+                                        if (e.button === 0 && !globalQueueOpen) setPressed({ to: item.to, from: currentPath })
+                                    }}
+                                    onPointerCancel={() => setPressed(null)}
+                                    onPointerLeave={() => setPressed((p) => (p?.to === item.to ? null : p))}
                                     className={cn(
                                         "relative px-3 lg:px-4 py-1.5 min-h-[36px] lg:min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 flex items-center gap-1.5 cursor-pointer select-none",
                                         isPillActive ? "text-black font-bold" : "text-on-surface-variant hover:text-white hover:bg-white/10"
@@ -185,26 +198,26 @@ export function FloatingPillNav() {
                                 <span className="sr-only lg:not-sr-only">Mi Lista</span>
                                 {playlistQueue.length > 0 && (
                                     <span className={cn(
-                                        "text-3xs font-black px-1.5 py-px rounded-full min-w-[17px] text-center shadow-sm",
+                                        "text-3xs font-black font-mono tabular-nums px-1.5 py-px rounded-full min-w-[17px] inline-flex items-center justify-center text-center shadow-sm",
                                         globalQueueOpen ? "bg-black text-white" : "bg-brand-accent text-on-primary"
                                     )}>
-                                        {playlistQueue.length}
+                                        <ElasticCounter value={playlistQueue.length} />
                                     </span>
                                 )}
                             </span>
                         </button>
                     </nav>
-                </m.aside>
+                </m.div>
             </div>
 
             {/* ─── ISLA DERECHA: BUSCADOR Y CONFIGURACIÓN (GLASSMORFISMO) ── */}
-            <m.aside
+            <m.div role="group" aria-label="Búsqueda y ajustes"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 className="fixed top-3.5 right-4 sm:right-6 md:right-8 z-navbar hidden md:flex items-center pointer-events-auto transform-gpu"
             >
-                <div className="flex items-center gap-1 bg-surface-container-lowest/80 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-2xl px-2 py-1.5 rounded-full shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_-4px_rgba(0,0,0,0.7)]">
+                <div className="glass-frosted-pill flex items-center gap-1 px-2 py-1.5">
                     {/* Buscador expandible */}
                     <ExpandableSearch />
 
@@ -244,17 +257,17 @@ export function FloatingPillNav() {
                         <IconNavigationSettings className="w-3.5 h-3.5" />
                     </Link>
                 </div>
-            </m.aside>
+            </m.div>
 
             {/* ─── ISLA FLOTANTE INFERIOR IZQUIERDA: ACCIONES Y UTILIDADES RÁPIDAS (SOLO ENTORNO DEV) ── */}
             {import.meta.env.DEV && (
-                <m.aside
+                <m.div role="group" aria-label="Utilidades de desarrollo"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     className="fixed bottom-5 left-4 sm:left-6 md:left-8 z-navbar hidden md:flex items-center pointer-events-auto transform-gpu"
                 >
-                    <div className="flex items-center gap-1.5 bg-surface-container-lowest/80 border border-white/20 border-t-white/40 border-b-white/10 backdrop-blur-overlay-2xl px-2.5 py-1.5 rounded-full shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_-4px_rgba(0,0,0,0.7)]">
+                    <div className="glass-frosted-pill flex items-center gap-1.5 px-2.5 py-1.5">
                         {/* Modo Maratón */}
                         <button
                             type="button"
@@ -305,7 +318,7 @@ export function FloatingPillNav() {
                             {isAudioActive ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                         </button>
                     </div>
-                </m.aside>
+                </m.div>
             )}
         </div>
     )

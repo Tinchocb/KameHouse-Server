@@ -2,6 +2,7 @@ import React from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { cn } from "@/components/ui/core/styling";
 import { useSpringPreset } from "@/components/ui/kinetics/hooks";
+import { useScrollReveal } from "@/components/ui/kinetics/scroll-reveal";
 import { IconNavigationChevronDown } from "@/components/ui/icons";
 
 export interface SectionBarProps {
@@ -19,6 +20,8 @@ export interface SectionBarProps {
   variant?: "default" | "strong" | "minimal";
   className?: string;
   layoutId?: string;
+  /** Nivel del título. h2 por defecto (cuelga del h1 de la página); h3 si la barra va dentro de otra sección. */
+  headingLevel?: "h2" | "h3";
 }
 
 export function SectionBar({
@@ -36,6 +39,7 @@ export function SectionBar({
   variant = "default",
   className,
   layoutId,
+  headingLevel: Heading = "h2",
 }: SectionBarProps) {
   const [internalIsOpen, setInternalIsOpen] = React.useState(defaultOpen);
   const isControlled = controlledIsOpen !== undefined;
@@ -50,6 +54,10 @@ export function SectionBar({
   };
   const isSearching = !!searchQuery && searchQuery.trim().length > 0;
   const collapseSpring = useSpringPreset("tabContent");
+  // Las secciones que están más abajo entran con el revelado de scroll. No se
+  // aplica con layoutId: ahí framer controla el transform del contenedor.
+  const revealRef = React.useRef<HTMLDivElement>(null);
+  useScrollReveal(revealRef);
 
   const baseClasses = cn(
     "sectionbar",
@@ -72,7 +80,7 @@ export function SectionBar({
               )}
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="sectionbar-header-title">{label}</h3>
+                  <Heading className="sectionbar-header-title">{label}</Heading>
                   {badge && <span className="sectionbar-header-badge">{badge}</span>}
                 </div>
                 {description && (
@@ -86,7 +94,7 @@ export function SectionBar({
       );
     }
     return (
-      <div id={id} className={cn(baseClasses, "space-y-3.5", "p-5 md:p-6")}>
+      <div id={id} ref={revealRef} className={cn(baseClasses, "space-y-3.5", "p-5 md:p-6")}>
         <div className="sectionbar-header">
           <div className="flex items-center gap-3">
             {Icon && (
@@ -96,7 +104,7 @@ export function SectionBar({
             )}
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="sectionbar-header-title">{label}</h3>
+                <Heading className="sectionbar-header-title">{label}</Heading>
                 {badge && <span className="sectionbar-header-badge">{badge}</span>}
               </div>
               {description && (
@@ -115,7 +123,7 @@ export function SectionBar({
   const wrapperProps = layoutId ? { layoutId, transition: collapseSpring } : {};
 
   return (
-    <Wrapper id={id} className={baseClasses} {...wrapperProps}>
+    <Wrapper id={id} ref={layoutId ? undefined : revealRef} className={baseClasses} {...wrapperProps}>
       <button
         type="button"
         onClick={handleToggle}
@@ -132,9 +140,9 @@ export function SectionBar({
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-black uppercase tracking-wider text-white font-mono group-hover:text-brand-accent transition-colors truncate text-balance">
+              <Heading className="text-xs font-black uppercase tracking-wider text-white font-mono group-hover:text-brand-accent transition-colors truncate text-balance">
                 {label}
-              </h3>
+              </Heading>
               {badge}
             </div>
             {description && (

@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import React, { useState } from "react"
 import { useGetUnlinkedFiles } from "@/api/hooks/unlinked.hooks"
 import {
@@ -62,7 +63,7 @@ export function TmdbMatchManual() {
             { query: q, searchType, bearerToken: "" },
             {
                 onSuccess: (data) => setResults(data ?? []),
-                onError: (err) => toast.error(err instanceof Error ? err.message : "Búsqueda fallida"),
+                onError: (err) => toast.error(errorText(err, "Búsqueda fallida")),
             }
         )
     }

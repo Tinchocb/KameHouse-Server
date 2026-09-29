@@ -32,30 +32,28 @@ export function SeriesContinueWatching({
         }
     }, [continueWatching.fallbackThumbnailUrl, currentThumbnail])
 
-    const handleCardKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault()
-            onResume()
-        }
-    }, [onResume])
-
     return (
         <section
             aria-label={`Continuar viendo episodio ${continueWatching.episodeNumber}: ${continueWatching.title}`}
             className={cn("w-full relative z-10", className)}
         >
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- el teclado lo cubre el botón interno */}
             <div
-                tabIndex={0}
-                role="button"
                 onClick={onResume}
-                onKeyDown={handleCardKeyDown}
-                aria-label={`Reanudar episodio ${continueWatching.episodeNumber}, ${continueWatching.title}`}
                 className={cn(
                     "sectionbar sectionbar-strong rounded-2xl group/continue relative w-full flex items-center gap-3.5 sm:gap-5 p-3 sm:p-4 select-none text-left cursor-pointer",
                     "transition-[transform,border-color] duration-base ease-smooth-out hover:border-white/25 active:scale-[0.995] active:duration-100",
-                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
                 )}
             >
+                {/* Destino de teclado y lectores de pantalla. Antes la tarjeta era role="button"
+                    con botones dentro ("Ver en lista", "Reanudar"): controles anidados. El clic de
+                    mouse sigue siendo el de la tarjeta; los botones internos son `relative` para
+                    quedar por encima de este. */}
+                <button
+                    type="button"
+                    aria-label={`Reanudar episodio ${continueWatching.episodeNumber}, ${continueWatching.title}`}
+                    className="absolute inset-0 rounded-2xl cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
+                />
                 {/* ── 16:9 Thumbnail with Overlay ───────────────────────────── */}
                 <div className="relative aspect-[16/9] w-28 min-[480px]:w-36 sm:w-44 md:w-52 shrink-0 rounded-xl overflow-hidden border border-white/10 bg-surface-container shadow-md">
                     {currentThumbnail ? (
@@ -133,7 +131,7 @@ export function SeriesContinueWatching({
                                     e.stopPropagation()
                                     onGoToEpisode()
                                 }}
-                                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-3xs sm:text-2xs font-mono font-medium text-on-surface-variant hover:text-on-surface bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 hover:border-white/20 transition-[color,background-color,border-color] duration-base cursor-pointer shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-accent"
+                                className="relative inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-3xs sm:text-2xs font-mono font-medium text-on-surface-variant hover:text-on-surface bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 hover:border-white/20 transition-[color,background-color,border-color] duration-base cursor-pointer shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-accent"
                                 title="Ver este episodio en la lista"
                             >
                                 <span>Ver en lista</span>
@@ -144,9 +142,9 @@ export function SeriesContinueWatching({
 
                     {/* Title */}
                     <div>
-                        <h4 className="font-display text-xs sm:text-sm md:text-base font-bold uppercase tracking-wide leading-snug text-on-surface group-hover/continue:text-brand-accent transition-colors truncate">
+                        <h2 className="font-display text-xs sm:text-sm md:text-base font-bold uppercase tracking-wide leading-snug text-on-surface group-hover/continue:text-brand-accent transition-colors truncate">
                             Ep {continueWatching.episodeNumber} — {continueWatching.title}
-                        </h4>
+                        </h2>
                     </div>
 
                     {/* Progress Bar & Details */}
@@ -170,7 +168,7 @@ export function SeriesContinueWatching({
                             e.stopPropagation()
                             onResume()
                         }}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-wider font-bold hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        className="relative inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-wider font-bold hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                     >
                         <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
                         <span>Reanudar</span>

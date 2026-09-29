@@ -20,6 +20,7 @@ import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
 import { startViewTransition } from "@/lib/helpers/transitions"
+import { IconSwap, useTransientFlag } from "@/components/ui/kinetics"
 import { MediaHero } from "@/components/ui/media-hero"
 import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
 import { useSound } from "@/hooks/use-sound"
@@ -64,12 +65,8 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const validNumericMovieId = Number.isFinite(numericMovieId) ? numericMovieId : null
     const { data: continuityData, refetch: refetchContinuity } = useGetContinuityWatchHistoryItem(validNumericMovieId ?? 0)
     const containerRef = useRef<HTMLDivElement>(null)
-    // Confirmación en el mismo botón de cola (el aviso sale lejos, arriba): el ícono pasa a tilde un momento.
-    const [justQueued, setJustQueued] = useState(false)
-    const queuedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    useEffect(() => () => {
-        if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
-    }, [])
+    // Confirmación en el mismo botón de cola con useTransientFlag canónico
+    const [justQueued, triggerJustQueued] = useTransientFlag(1400)
     // El latido del corazón solo cuando lo marcás, no al abrir una película que ya era favorita.
     const [favoriteBeat, setFavoriteBeat] = useState(false)
     const addToQueue = useQueueStore(state => state.addToQueue)
@@ -148,7 +145,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
 
     if (!entry || !entry.media) {
         if (isLoading) {
-            return <BentoDetailsSkeleton />
+            return <BentoDetailsSkeleton isMovie />
         }
         return (
             <div className="min-h-screen text-on-surface flex items-center justify-center">
@@ -229,6 +226,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             mediaId: validNumericMovieId,
             progress: nextState ? 1 : 0,
         })
+        playSound(nextState ? "category" : "hover", 0.3)
         toast.success(nextState ? "Marcada como vista" : "Quitada de vistas")
     }
 
@@ -236,7 +234,10 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         e.stopPropagation()
         const next = !isFavorite
         setIsFavorite(next)
-        if (next) setFavoriteBeat(true)
+        if (next) {
+            setFavoriteBeat(true)
+            playSound("category", 0.35)
+        }
         try {
             if (next) {
                 localStorage.setItem(`kamehouse-favorite-movie-${movieId}`, "1")
@@ -292,9 +293,8 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 mediaFormat: media.format ?? "MOVIE"
             })
             toast.success("Añadido a la cola de reproducción")
-            setJustQueued(true)
-            if (queuedTimerRef.current) clearTimeout(queuedTimerRef.current)
-            queuedTimerRef.current = setTimeout(() => setJustQueued(false), 1400)
+            triggerJustQueued()
+            playSound("category", 0.3)
         } else {
             toast.error("No hay archivos locales disponibles.")
         }
@@ -326,17 +326,17 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             rating={hideAudienceScore ? undefined : (media.score ? media.score / 10 : undefined)}
         >
             {technicalData?.hdrLabel && (
-                <span className="bg-status-warning/20 text-status-warning text-3xs font-mono font-black tracking-widest px-2.5 py-1 rounded-lg border border-status-warning/30 uppercase shadow-sm">
+                <span className="relative z-10 bg-amber-950/70 text-amber-300 text-3xs font-mono font-black tracking-widest px-2.5 py-1 rounded-full border border-amber-500/40 border-t-amber-400/70 shadow-[inset_0_1px_1px_rgba(251,191,36,0.35),0_0_12px_rgba(245,158,11,0.2)] uppercase">
                     {technicalData.hdrLabel}
                 </span>
             )}
             {technicalData?.videoCodec && (
-                <span className="bg-white/10 text-on-surface-variant text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+                <span className="relative z-10 bg-white/[0.08] text-zinc-200 text-3xs font-mono font-semibold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase">
                     {technicalData.videoCodec}
                 </span>
             )}
             {technicalData?.hasSubtitles && (
-                <span className="bg-white/10 text-on-surface-variant text-3xs font-mono font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 uppercase">
+                <span className="relative z-10 bg-white/[0.08] text-zinc-200 text-3xs font-mono font-semibold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase">
                     CC
                 </span>
             )}
@@ -362,15 +362,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         isActive={justQueued}
                         activeTone="success"
                         icon={
-                            <m.span
-                                key={justQueued ? "queued" : "queue"}
-                                initial={{ scale: 0.6, opacity: 0, filter: "blur(2px)" }}
-                                animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
-                                transition={{ type: "spring", stiffness: 480, damping: 28 }}
-                                className="inline-flex"
-                            >
+                            <IconSwap swapKey={justQueued ? "queued" : "queue"}>
                                 {justQueued ? <IconUiCheck className="w-5 h-5 stroke-[3px]" /> : <IconUiListPlus className="w-5 h-5" />}
-                            </m.span>
+                            </IconSwap>
                         }
                         title={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
                         className="flex-1 md:flex-initial"
@@ -382,15 +376,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     isActive={isWatched}
                     activeTone="success"
                     icon={
-                        <m.span
-                            key={isWatched ? "watched" : "unwatched"}
-                            initial={{ scale: 0.7, opacity: 0, rotate: -25 }}
-                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                            transition={{ type: "spring", stiffness: 480, damping: 28 }}
-                            className="inline-flex"
-                        >
+                        <IconSwap swapKey={isWatched ? "watched" : "unwatched"}>
                             {isWatched ? <IconUiCheck className="w-5 h-5 stroke-[3px]" /> : <IconUiPlus className="w-5 h-5 stroke-[2.5px]" />}
-                        </m.span>
+                        </IconSwap>
                     }
                     title={isWatched ? "Marcar como no vista" : "Marcar como vista"}
                     className="flex-1 md:flex-initial"
@@ -404,14 +392,14 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         <m.span
                             key={isFavorite ? "fav" : "unfav"}
                             initial={{ scale: 0.7, opacity: 0 }}
-                            // Al marcar favorito el corazón late una vez (momento de gusto, poco frecuente).
-                            animate={isFavorite && favoriteBeat ? { scale: [0.7, 1.25, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
+                            // Al marcar favorito el corazón late con rebote elástico.
+                            animate={isFavorite && favoriteBeat ? { scale: [0.7, 1.35, 0.95, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
                             transition={isFavorite && favoriteBeat
-                                ? { duration: 0.42, times: [0, 0.45, 1], ease: [0.23, 1, 0.32, 1] }
+                                ? { duration: 0.45, times: [0, 0.4, 0.75, 1], ease: [0.23, 1, 0.32, 1] }
                                 : { type: "spring", stiffness: 480, damping: 28 }}
                             className="inline-flex"
                         >
-                            <IconUiHeart className={cn("w-5 h-5", isFavorite && "fill-current")} />
+                            <IconUiHeart className={cn("w-5 h-5", isFavorite && "fill-current text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]")} />
                         </m.span>
                     }
                     title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
@@ -429,9 +417,9 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     )
 
     return (
-        <div ref={containerRef} className="w-full flex flex-col relative text-on-surface select-none" data-theme={localTheme || undefined}>
-            {/* Hero: 100svh (o 62svh en banner pequeño) – altura completa del viewport */}
-            <div className="flex-shrink-0">
+        <div ref={containerRef} className="w-full min-h-screen flex flex-col relative text-on-surface select-none" data-theme={localTheme || undefined}>
+            {/* Hero: pantalla completa (100dvh / min-h-screen) para experiencia cinematográfica inmersiva */}
+            <div className="flex-1 flex flex-col w-full">
                 <MediaHero
                     scrollContainerRef={containerRef}
                     backdropUrl={backdropUrl}
@@ -444,13 +432,14 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                     synopsis={synopsis}
                     actionButtons={actionButtons}
                     showPosterColumn={true}
+                    fullHeight={true}
                     onBackdropClick={handlePlayDefault}
                 />
             </div>
 
             {/* Progress bar (overlay al final del hero) */}
             {continuityData?.item?.currentTime && continuityData.item.duration && (
-                <div className="w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 -mt-16 mb-6 relative z-20">
+                <div className="w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 -mt-16 mb-6 relative z-20 pointer-events-none">
                     <WatchProgressBar percent={progressPercent} size="hero" animateOnMount />
                 </div>
             )}

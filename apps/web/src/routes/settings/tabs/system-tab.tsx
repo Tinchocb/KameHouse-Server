@@ -1,3 +1,4 @@
+import { errorText } from "@/api/client/error-messages"
 import React, { useState } from "react"
 import { type Control, Controller, useWatch, useFormContext } from "react-hook-form"
 import { type SettingsFormValues } from "../index"
@@ -5,7 +6,7 @@ import { toast } from "sonner"
 import { useBackupDatabase, useDownloadDatabaseBackup } from "@/api/hooks/system.hooks"
 import { useGetSettings, useSaveSettings } from "@/api/hooks/settings.hooks"
 import { settingsSchema } from "@/lib/server/settings"
-import { useAppStore, useUIStore } from "@/lib/store"
+import { useAppStore, usePlayerStore, useQueueStore, useUIStore } from "@/lib/store"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
 import { buildSeaQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
@@ -22,6 +23,10 @@ import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 
 interface SystemTabProps {
     control: Control<SettingsFormValues>
+}
+
+function resetStore<T>(store: { getInitialState: () => T; setState: (state: T, replace: true) => unknown }) {
+    store.setState(store.getInitialState(), true)
 }
 
 function ApiKeyCard({ name, description, connected, children }: { name: string; description: string; connected: boolean; children: React.ReactNode }) {
@@ -83,6 +88,10 @@ interface CacheStats {
         diskSizeBytes: number
         diskItemCount: number
     }
+    driveBlocks?: {
+        diskSizeBytes: number
+        diskItemCount: number
+    }
     totalDiskSizeBytes: number
     isWarming: boolean
     warmingProgress?: {
@@ -115,7 +124,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
         } catch (err) {
             revert()
-            toast.error(err instanceof Error ? err.message : "No se pudo aplicar el cambio")
+            toast.error(errorText(err, "No se pudo aplicar el cambio"))
             throw err
         }
     }, [queryClient])
@@ -167,20 +176,19 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                 serverSettings?.library?.moviePaths ?? []
             await saveSettings(defaultSettings as unknown as SaveSettings_Variables)
             reset(defaultSettings as unknown as SettingsFormValues)
-            // Limpiar tiendas locales y rehidratar a defaults (clearStorage solo
-            // borra el disco; el preview visual en memoria se limpia explícito).
-            useAppStore.persist?.clearStorage?.()
-            usePerformanceStore.persist?.clearStorage?.()
-            useUIStore.setState({ themeVisual: {}, hideAudienceScore: false })
-            await Promise.allSettled([
-                useAppStore.persist?.rehydrate?.(),
-                usePerformanceStore.persist?.rehydrate?.(),
-            ])
-            // Rehydrate puede devolver undefined desde disco: fijar fábrica explícito.
-            useUIStore.setState({ themeVisual: {}, hideAudienceScore: false })
+            // Ajustes locales a fábrica. rehydrate() con el storage vacío no toca la
+            // memoria, así que se reemplaza el estado por el inicial y persist lo
+            // vuelve a escribir. La cola y los tiempos de salto son datos, no ajustes.
+            resetStore(useAppStore)
+            resetStore(useUIStore)
+            resetStore(usePlayerStore)
+            const { hardwareSpecs } = usePerformanceStore.getState() // hardware detectado, no un ajuste
+            resetStore(usePerformanceStore)
+            usePerformanceStore.setState({ hardwareSpecs })
+            useQueueStore.setState({ queueRepeatMode: useQueueStore.getInitialState().queueRepeatMode })
             toast.success("Ajustes restablecidos de fábrica con éxito")
         } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Error al restablecer los ajustes")
+            toast.error(errorText(err, "Error al restablecer los ajustes"))
             throw new Error("reset-failed") // re-lanza para que SlideToConfirm sepa que falló
         } finally {
             setIsResetting(false)
@@ -223,7 +231,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                 void downloadBackup()
             },
             onError: (err) => {
-                toast.error(err instanceof Error ? err.message : "Error al generar el respaldo")
+                toast.error(errorText(err, "Error al generar el respaldo"))
             },
         })
     }
@@ -237,6 +245,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
             keyframes: "índices de keyframes",
             fingerprints: "huellas de audio",
             images: "imágenes proxy",
+            drive: "caché de Google Drive",
             metadata: "metadatos en caché",
         }
         const label = labels[target] || "caché"
@@ -677,6 +686,28 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "images" ? "Limpiando..." : "Limpiar"}</span>
+                        </button>
+                    </div>
+
+                    {/* 5b. Google Drive: fuera de "Limpiar todo" (rellenarla gasta cuota de Drive) */}
+                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-between gap-3">
+                        <div className="space-y-0.5 min-w-0">
+                            <p className="text-xs font-bold text-on-surface">Google Drive (bloques descargados)</p>
+                            <p className="text-2xs text-on-surface-variant font-mono tabular-nums">
+                                {formatBytes(cacheStats?.driveBlocks?.diskSizeBytes ?? 0)} ({cacheStats?.driveBlocks?.diskItemCount ?? 0} bloques)
+                            </p>
+                            <p className="text-2xs text-on-surface-variant">
+                                Evita volver a descargar de Drive. No se borra con «Limpiar todo».
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => handleClearCache("drive")}
+                            disabled={isClearingTarget !== null}
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0"
+                        >
+                            <IconUiTrash className="w-3.5 h-3.5" />
+                            <span>{isClearingTarget === "drive" ? "Limpiando..." : "Limpiar"}</span>
                         </button>
                     </div>
 

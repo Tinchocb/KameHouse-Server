@@ -7,6 +7,8 @@ import { MovieCard } from "../-MovieCard"
 import type { MovieEntry } from "../index"
 import type { EraId } from "@/lib/config/eras"
 import { PosterGridSkeleton } from "@/components/ui/shimmer-skeleton"
+import { useRevealRef } from "@/components/ui/kinetics/scroll-reveal"
+import { LoadSwap } from "@/components/ui/kinetics/load-swap"
 
 interface MoviesGridProps {
     filteredSorted: MovieEntry[]
@@ -64,6 +66,8 @@ export const MoviesGrid = memo(function MoviesGrid({
     // La página scrollea dentro del div raíz de /movies (overflow-x-hidden fuerza
     // overflow-y:auto), no en window: el virtualizador debe escuchar a ese elemento.
     const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null)
+    // Las tarjetas que montan al bajar (fuera de la cascada inicial) entran con revelado.
+    const revealRef = useRevealRef<HTMLDivElement>()
 
     // Control de animación de entrada del grid:
     // Solo las primeras N (12) tarjetas se animan en cascada en el primer render
@@ -152,74 +156,74 @@ export const MoviesGrid = memo(function MoviesGrid({
 
     return (
         <div className="w-full relative pb-32">
-            {isLoading && allMoviesLength === 0 ? (
-                <PosterGridSkeleton count={18} />
-            ) : filteredSorted.length === 0 ? (
-                <m.div
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                    className="py-32"
-                >
-                    <EmptyState
-                        title="Sin películas"
-                        message="No hay películas que coincidan con este filtro."
-                        action={
-                            onResetFilters ? (
-                                <button
-                                    type="button"
-                                    onClick={onResetFilters}
-                                    className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
+            <LoadSwap loading={isLoading && allMoviesLength === 0} skeleton={<PosterGridSkeleton count={18} />}>
+                {filteredSorted.length === 0 ? (
+                    <m.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                        className="py-32"
+                    >
+                        <EmptyState
+                            title="Sin películas"
+                            message="No hay películas que coincidan con este filtro."
+                            action={
+                                onResetFilters ? (
+                                    <button
+                                        type="button"
+                                        onClick={onResetFilters}
+                                        className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
+                                    >
+                                        Restablecer filtros
+                                    </button>
+                                ) : undefined
+                            }
+                        />
+                    </m.div>
+                ) : (
+                    <div
+                        ref={attachGrid}
+                        className="relative w-full"
+                        style={{ height: `${virtualizer.getTotalSize()}px` }}
+                    >
+                        {virtualizer.getVirtualItems().map((virtualRow) => {
+                            const rowItems = rows[virtualRow.index]
+                            if (!rowItems) return null
+                            return (
+                                <div
+                                    key={virtualRow.index}
+                                    className="absolute left-0 top-0 w-full grid gap-x-3.5 pb-6 items-start"
+                                    style={{
+                                        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                                        height: `${virtualRow.size}px`,
+                                        transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
+                                    }}
                                 >
-                                    Restablecer filtros
-                                </button>
-                            ) : undefined
-                        }
-                    />
-                </m.div>
-            ) : (
-                <div
-                    ref={attachGrid}
-                    className="relative w-full"
-                    style={{ height: `${virtualizer.getTotalSize()}px` }}
-                >
-                    {virtualizer.getVirtualItems().map((virtualRow) => {
-                        const rowItems = rows[virtualRow.index]
-                        if (!rowItems) return null
-                        return (
-                            <div
-                                key={virtualRow.index}
-                                className="absolute left-0 top-0 w-full grid gap-x-3.5 pb-6 items-start"
-                                style={{
-                                    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                                    height: `${virtualRow.size}px`,
-                                    transform: `translateY(${virtualRow.start - virtualizer.options.scrollMargin}px)`,
-                                }}
-                            >
-                                {rowItems.filter(e => e != null).map((entry, idx) => {
-                                    const itemIndex = virtualRow.index * columns + idx
-                                    const shouldAnimateEntrance = !isInitialEntranceDone && itemIndex < 12
+                                    {rowItems.filter(e => e != null).map((entry, idx) => {
+                                        const itemIndex = virtualRow.index * columns + idx
+                                        const shouldAnimateEntrance = !isInitialEntranceDone && itemIndex < 12
 
-                                    return (
-                                        <div key={entry?.mediaId ?? `idx-${idx}`} className="h-full [content-visibility:auto] [contain-intrinsic-size:280px]">
-                                            <MovieCard
-                                                entry={entry}
-                                                era={entry.era}
-                                                eraId={entry.eraId}
-                                                watchHistoryItem={entry.mediaId == null ? undefined : watchHistory?.[entry.mediaId]}
-                                                index={shouldAnimateEntrance ? itemIndex : undefined}
-                                                initial={shouldAnimateEntrance ? "hidden" : false}
-                                                onClick={handleMovieClick}
-                                                onHoverCard={handleHoverCard}
-                                            />
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )
-                    })}
-                </div>
-            )}
+                                        return (
+                                            <div key={entry?.mediaId ?? `idx-${idx}`} ref={shouldAnimateEntrance ? undefined : revealRef} data-reveal-key={`movie:${entry?.mediaId ?? idx}`} className="h-full [content-visibility:auto] [contain-intrinsic-size:280px]">
+                                                <MovieCard
+                                                    entry={entry}
+                                                    era={entry.era}
+                                                    eraId={entry.eraId}
+                                                    watchHistoryItem={entry.mediaId == null ? undefined : watchHistory?.[entry.mediaId]}
+                                                    index={shouldAnimateEntrance ? itemIndex : undefined}
+                                                    initial={shouldAnimateEntrance ? "hidden" : false}
+                                                    onClick={handleMovieClick}
+                                                    onHoverCard={handleHoverCard}
+                                                />
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </LoadSwap>
         </div>
     )
 })

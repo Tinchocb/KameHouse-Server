@@ -7,18 +7,14 @@ import { VolumeData, EraFilter, AspectRatioType } from '@/components/chronology/
 import type { EraProgress } from '@/components/chronology/ChronologyEraNav';
 import { compareInUniverse } from '@/components/chronology/data/spansToVolumes';
 import { useChronologyProgress, useShowInterludes } from './-hooks/use-timeline-prefs';
-import { Header, type StatusFilter } from '@/components/chronology/Header';
+import { Header } from '@/components/chronology/Header';
+import { ChronologyBackdrop } from '@/components/chronology/ChronologyBackdrop';
 import { AlternatingTimeline } from '@/components/chronology/AlternatingTimeline';
-import { ChronologyViewMenu } from '@/components/chronology/ChronologyViewMenu';
 import { type MomentPlayInfo } from '@/components/chronology/MomentStrip';
-import { SectionBar } from '@/components/ui/sectionbar';
 import { useSpring, useReducedMotion } from '@/components/ui/kinetics/hooks';
 
 const VolumeInspectorModal = React.lazy(() =>
   import('@/components/chronology/VolumeInspectorModal').then((mod) => ({ default: mod.VolumeInspectorModal }))
-);
-const LoreEncyclopediaModal = React.lazy(() =>
-  import('@/components/chronology/LoreEncyclopediaModal').then((mod) => ({ default: mod.LoreEncyclopediaModal }))
 );
 import { useGetChronologyMomentTimes } from '@/api/hooks/chronology.hooks';
 import { useGetLibraryCollection } from '@/api/hooks/anime_collection.hooks';
@@ -26,6 +22,7 @@ import { getSafeCollectionEntries } from '@/lib/helpers/collection';
 import { DRAGON_BALL_SERIES } from '@/lib/config/dragonball_sagas';
 import { getVolumeLoreEnrichment } from '@/components/chronology/data/loreEnrichment';
 import { sounds } from '@/components/chronology/utils/audio';
+import { ScrollProgress } from '@/components/ui/kinetics/scroll-progress';
 import { PlayerFallback } from '@/components/video/player-fallback';
 
 export const Route = createLazyFileRoute('/chronology/')({
@@ -44,6 +41,12 @@ const ERA_BY_SERIES_TAG: Record<VolumeData['seriesTag'], Exclude<EraFilter, 'all
   'Dragon Ball Super': 'db-super',
   'Dragon Ball GT': 'db-gt',
 };
+
+function getEraForVolumeId(id: string): EraFilter | null {
+  const vol = VOLUMES_DATA.find((v) => v.id === id);
+  if (!vol) return null;
+  return ERA_BY_SERIES_TAG[vol.seriesTag] ?? null;
+}
 
 function parseEraParam(rawEra?: string): EraFilter {
   if (!rawEra) return 'all';
@@ -74,17 +77,28 @@ function ChronologyPage() {
   // sin recorrer la página con scroll suave.
   const highlightFromUrlRef = React.useRef(Boolean(initialTargetVolumeId));
 
+  // Independent Era filter state
+  const [eraFilter, setEraFilter] = useState<EraFilter>(() => {
+    if (searchParams.era) return parseEraParam(searchParams.era);
+    if (initialTargetVolumeId) {
+      const targetEra = getEraForVolumeId(initialTargetVolumeId);
+      if (targetEra) return targetEra;
+    }
+    return 'all';
+  });
+  const [prevSearchEra, setPrevSearchEra] = useState(searchParams.era);
+
   if (searchParams.highlight !== prevHighlight) {
     setPrevHighlight(searchParams.highlight);
     if (searchParams.highlight) {
-      highlightFromUrlRef.current = true;
-      setHighlightedVolumeId(resolveHighlightId(searchParams.highlight));
+      const targetId = resolveHighlightId(searchParams.highlight);
+      setHighlightedVolumeId(targetId);
+      const targetEra = getEraForVolumeId(targetId);
+      if (targetEra && eraFilter !== 'all' && eraFilter !== targetEra) {
+        setEraFilter(targetEra);
+      }
     }
   }
-
-  // Independent Era filter state
-  const [eraFilter, setEraFilter] = useState<EraFilter>(() => parseEraParam(searchParams.era));
-  const [prevSearchEra, setPrevSearchEra] = useState(searchParams.era);
 
   if (searchParams.era !== prevSearchEra) {
     setPrevSearchEra(searchParams.era);
@@ -93,8 +107,15 @@ function ChronologyPage() {
     }
   }
 
-  const [searchQuery, setSearchQuery] = useState<string>(() => searchParams.q ?? '');
+  const searchQuery = searchParams.q ?? '';
   const { data: serverMomentTimes } = useGetChronologyMomentTimes();
+
+  // Un highlight que llega por URL salta sin animar. Se marca en un efecto (no
+  // durante el render, que React Compiler rechaza) declarado antes del scroll,
+  // así el setTimeout de abajo ya lo ve.
+  useEffect(() => {
+    if (searchParams.highlight) highlightFromUrlRef.current = true;
+  }, [searchParams.highlight]);
 
   // Handle highlight and auto-scroll
   useEffect(() => {
@@ -127,9 +148,7 @@ function ChronologyPage() {
   const [inspectedVolume, setInspectedVolume] = useState<VolumeData | null>(null);
   const [aspectRatio, setAspectRatio] = useState<AspectRatioType>('2:3');
   const [isFlipped, setIsFlipped] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const { showInterludes, handleToggleInterludes } = useShowInterludes();
-  const [isEncyclopediaOpen, setIsEncyclopediaOpen] = useState(false);
+  const { showInterludes } = useShowInterludes();
 
   const navigate = useNavigate();
   const router = useRouter();
@@ -196,9 +215,6 @@ function ChronologyPage() {
     progressById,
     readVolumeIds,
     handleToggleRead,
-    setWatched,
-    snapshotOverrides,
-    restoreOverrides,
   } = useChronologyProgress(enrichedVolumes);
 
   // Precarga de la página de cada serie (código + datos) para que reproducir no espere:
@@ -223,10 +239,10 @@ function ChronologyPage() {
     if (mediaIds.length === 0) return;
     const run = () => mediaIds.forEach(preloadSeries);
     if (typeof window.requestIdleCallback === 'function') {
-      const handle = window.requestIdleCallback(run, { timeout: 3000 });
+      const handle = window.requestIdleCallback(run, { timeout: 6000 });
       return () => window.cancelIdleCallback(handle);
     }
-    const timer = setTimeout(run, 1500);
+    const timer = setTimeout(run, 3500);
     return () => clearTimeout(timer);
   }, [enrichedVolumes, preloadSeries]);
 
@@ -260,38 +276,28 @@ function ChronologyPage() {
     [navigate]
   );
 
-  // "Marcar todos" y "Reiniciar" se aplican al instante y se pueden deshacer.
-  const applyBulkWithUndo = useCallback(
-    (watched: boolean) => {
-      const snapshot = snapshotOverrides();
-      setWatched(enrichedVolumes.map((v) => v.id), watched);
-      toast.success(watched ? 'Todos los lapsos marcados como vistos' : 'Progreso de la cronología reiniciado', {
-        action: {
-          label: 'Deshacer',
-          onClick: () => {
-            restoreOverrides(snapshot);
-            toast.info('Progreso restaurado');
-          },
-        },
-      });
-    },
-    [enrichedVolumes, setWatched, snapshotOverrides, restoreOverrides]
-  );
-  const handleMarkAllReadHere = useCallback(() => applyBulkWithUndo(true), [applyBulkWithUndo]);
-  const handleResetReadWithUndo = useCallback(() => applyBulkWithUndo(false), [applyBulkWithUndo]);
-
-  // Sync URL search params with era and search query
+  // Sync URL search params with era and search query (solo cuando difieren de la URL actual)
   useEffect(() => {
+    const currentEra = searchParams.era;
+    const currentQ = searchParams.q ?? '';
+    const targetEra = eraFilter !== 'all' ? eraFilter : undefined;
+    const targetQ = searchQuery.trim() || undefined;
+
+    // Evitar navegación redundante y llamada a history.replaceState si ya está sincronizado
+    if (currentEra === targetEra && currentQ === (targetQ ?? '')) {
+      return;
+    }
+
     navigate({
       to: '/chronology',
       search: (prev) => ({
         ...prev,
-        era: eraFilter !== 'all' ? eraFilter : undefined,
-        q: searchQuery.trim() || undefined,
+        era: targetEra,
+        q: targetQ,
       }),
       replace: true,
     });
-  }, [eraFilter, searchQuery, navigate]);
+  }, [eraFilter, searchQuery, searchParams.era, searchParams.q, navigate]);
 
   // Lapsos y vistos por era: alimenta las pestañas de era (única navegación por eras).
   const eraProgress = useMemo(() => {
@@ -308,18 +314,13 @@ function ChronologyPage() {
     return out;
   }, [enrichedVolumes, readVolumeIds]);
 
-  // Filter volumes by Era, Status, Saga, and Search query
+  // Filter volumes by Era and Search query
   const filteredVolumes = useMemo(() => {
     return enrichedVolumes.filter((vol) => {
       // 1. Era filter
       if (eraFilter !== 'all' && ERA_BY_SERIES_TAG[vol.seriesTag] !== eraFilter) return false;
 
-      // 2. Status filter
-      const isRead = readVolumeIds.has(vol.id);
-      if (statusFilter === 'pending' && isRead) return false;
-      if (statusFilter === 'watched' && !isRead) return false;
-
-      // 3. Search query
+      // 2. Search query (passive from URL if provided)
       const q = searchQuery.trim().toLowerCase();
       if (!q) return true;
 
@@ -337,7 +338,8 @@ function ChronologyPage() {
 
       return matchesQuery;
     });
-  }, [enrichedVolumes, eraFilter, statusFilter, readVolumeIds, searchQuery]);
+  }, [enrichedVolumes, eraFilter, searchQuery]);
+
 
   const inspectedIndex = useMemo(() => {
     if (!inspectedVolume) return -1;
@@ -421,36 +423,26 @@ function ChronologyPage() {
 
   return (
     <div className="relative min-h-screen text-on-surface overflow-x-hidden selection:bg-brand-accent/30 font-sans">
+      {/* Fondo cinematográfico inmersivo de la cronología con aura y transición de eras */}
+      <ChronologyBackdrop eraFilter={eraFilter} />
+
+      {/* Cuánto de la línea de tiempo se recorrió (página muy larga). */}
+      <ScrollProgress />
       <div className="relative z-10 flex flex-col">
-        {/* Simplified Header with independent Era Chips and Movie Filter */}
+        {/* Simplified Header with independent Era Chips */}
         <Header
           currentEraFilter={eraFilter}
           onSelectEraFilter={(era) => {
             setEraFilter(era);
           }}
-          searchQuery={searchQuery}
-          onSearchChange={(q) => setSearchQuery(q)}
           eraProgress={eraProgress}
-          onOpenEncyclopedia={() => setIsEncyclopediaOpen(true)}
-          actions={
-            <ChronologyViewMenu
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              showInterludes={showInterludes}
-              onToggleInterludes={handleToggleInterludes}
-              totalVolumes={eraProgress.all.count}
-              readCount={eraProgress.all.read}
-              onMarkAllRead={handleMarkAllReadHere}
-              onResetRead={handleResetReadWithUndo}
-            />
-          }
         />
 
         {/* La línea de tiempo queda en una columna de lectura */}
         <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 space-y-4 pt-4 pb-8">
 
           {/* Main Single-Focus Content: The Alternating Timeline */}
-          <main className="flex-1 w-full py-2 flex flex-col gap-6">
+          <div className="flex-1 w-full py-2 flex flex-col gap-6">
             {filteredVolumes.length === 0 ? (
               <div className="flex min-h-[50vh] items-center justify-center px-4">
                 <m.div
@@ -469,8 +461,6 @@ function ChronologyPage() {
                       type="button"
                       onClick={() => {
                         setEraFilter('all');
-                        setStatusFilter('all');
-                        setSearchQuery('');
                       }}
                       className="min-h-[44px] px-6 py-2 rounded-full bg-brand-accent hover:brightness-110 text-xs font-display tracking-widest font-black uppercase text-black shadow-brand-primary cursor-pointer active:scale-95 transition"
                     >
@@ -494,7 +484,7 @@ function ChronologyPage() {
                 searchQuery={searchQuery}
               />
             )}
-          </main>
+          </div>
 
           {/* Modal Inspector for Full Artwork View */}
           <AnimatePresence>
@@ -519,16 +509,6 @@ function ChronologyPage() {
               </React.Suspense>
             )}
           </AnimatePresence>
-
-          {/* Enciclopedia: artefactos, líneas temporales y glosario */}
-          {isEncyclopediaOpen && (
-            <React.Suspense fallback={null}>
-              <LoreEncyclopediaModal
-                isOpen={isEncyclopediaOpen}
-                onClose={() => setIsEncyclopediaOpen(false)}
-              />
-            </React.Suspense>
-          )}
 
           {launching && <PlayerFallback label={launching.label} sublabel={launching.sublabel} />}
 

@@ -4,71 +4,6 @@ export type EraFilter = 'all' | 'db-clasico' | 'db-z' | 'db-super' | 'db-daima' 
 
 export type AspectRatioType = '3:4' | '2:3';
 
-export type MovieFilterOption = 'none' | 'canon' | 'all';
-
-export type TimelineViewType = 'horizontal' | 'vertical' | 'branches' | 'inspector';
-
-export interface TimelineMilestone {
-  id: string;
-  year: string;
-  yearNumber: number;
-  label: string;
-  category: 'time-jump' | 'cosmic-event' | 'training' | 'paradox';
-  description: string;
-  durationOrGap?: string;
-  associatedVolumeBeforeId: string;
-  associatedVolumeAfterId: string;
-  iconType: 'hourglass' | 'swords' | 'zap' | 'orbit' | 'flame';
-}
-
-export interface SagaStartMilestone {
-  id: string;
-  sagaName: string;
-  shortTitle: string;
-  volumeId: string;
-  volumeNumber: string;
-  year: string;
-  yearNumber: number;
-  era: 'Dragon Ball' | 'Dragon Ball Z' | 'Super' | 'Dragon Ball Daima' | 'Dragon Ball GT';
-  eraKey: 'db-clasico' | 'db-z' | 'db-super' | 'db-daima' | 'db-gt';
-  eraBadgeColor: string;
-  colorHex: string;
-  kanji: string;
-  episodesStart: string;
-  description: string;
-}
-
-export interface MasterEraInfo {
-  key: 'db-clasico' | 'db-z' | 'db-super' | 'db-daima' | 'db-gt';
-  title: string;
-  shortTitle: string;
-  seriesTag: 'Dragon Ball Clásico' | 'Dragon Ball Z' | 'Dragon Ball Super' | 'Dragon Ball Daima' | 'Dragon Ball GT';
-  years: string;
-  yearStart: number;
-  yearEnd: number;
-  kanjiEmblems: string[];
-  themeColorHex: string;
-  accentBorder: string;
-  bgGradient: string;
-  tagline: string;
-  volumeRangeText: string;
-  canonEpisodesText: string;
-  sagasIncluded: string[];
-}
-
-export interface TimelineBranch {
-  id: string;
-  name: string;
-  codeName: string;
-  originYear: string;
-  status: 'active' | 'alternate' | 'erased' | 'divergent';
-  summary: string;
-  events: string[];
-  ringOfTimeColor: string;
-  paradoxCause: string;
-  fate: string;
-}
-
 export interface VolumeNarrative {
   detonante: {
     title: string;
@@ -221,17 +156,4 @@ export interface VolumeData {
   keyFacts?: KeyFact[];
   /** Notas de producción verificadas del lapso. */
   behindTheScenes?: BehindTheScenesNote[];
-}
-
-export interface GlossaryTerm {
-  id: string;
-  term: string;
-  originalJapanese?: string;
-  category: 'Biología & Razas' | 'Mecánicas Temporales' | 'Divinidad & Ki' | 'Técnicas & Fusiones' | 'Artefactos Cósmicos';
-  categoryColor: string;
-  shortDefinition: string;
-  deepLore: string;
-  canonicalRules: string[];
-  associatedVolumeIds: string[];
-  keyQuote?: string;
 }

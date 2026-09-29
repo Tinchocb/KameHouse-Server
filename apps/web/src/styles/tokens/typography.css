@@ -106,15 +106,9 @@
 
 /* ─── Clases utilitarias (solo las usadas en tsx; las variables --* se conservan) ─── */
 .text-h2 { font: var(--h2); }
-.text-h3 { font: var(--h3); }
-.text-h5 { font: var(--h5); }
-.text-h6 { font: var(--h6); }
 
 .text-body-md { font: var(--body-md); }
-.text-body-sm { font: var(--body-sm); }
 
-.text-button-md { font: var(--button-md); }
-.text-button-sm { font: var(--button-sm); }
 
 .text-label-md { font: var(--label-md); }
 .text-label-sm { font: var(--label-sm); }
@@ -122,8 +116,6 @@
 .text-badge { font: var(--badge); }
 .text-caption { font: var(--caption); }
 
-.text-numeric { font: var(--numeric); }
-.text-numeric-lg { font: var(--numeric-lg); }
 
 .font-sans      { font-family: var(--font-sans); }
 .font-display   { font-family: var(--font-display); }

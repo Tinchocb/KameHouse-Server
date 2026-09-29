@@ -42,6 +42,13 @@ export interface MediaHeroProps {
     showPosterColumn?: boolean
 
     /**
+     * Ocupa la pantalla completa del viewport (100dvh / min-h-screen).
+     * En este modo el arte se extiende hasta el borde inferior sin máscara
+     * de corte ni fundido a negro sólido, ideal para fichas de película.
+     */
+    fullHeight?: boolean
+
+    /**
      * Panel lateral flotante (e.g. SagaSelector) que se renderiza como overlay
      * glassmorphic a la derecha del backdrop en pantallas `lg+`. En mobile se oculta.
      */
@@ -80,7 +87,7 @@ export function resolveBackdropTreatment(bannerType: string, hasBannerImage: boo
  * imagen se funde con la página; la base termina exacto en `--bg-primary`.
  * `strong` para arte claro, donde el texto necesita más contraste.
  */
-export function heroScrimBackground(textZoneColor: string | null, strong: boolean): string {
+export function heroScrimBackground(textZoneColor: string | null, strong: boolean, fullHeight = false): string {
     const tint = textZoneColor
         ? `color-mix(in srgb, ${textZoneColor} 16%, var(--bg-primary))`
         : "var(--bg-primary)"
@@ -91,8 +98,11 @@ export function heroScrimBackground(textZoneColor: string | null, strong: boolea
         `linear-gradient(to bottom, ${a(0.45)} 0px, transparent 140px)`,
         // Lateral: columna de texto.
         `linear-gradient(to right, ${a(0.92 * k)} 0%, ${a(0.64 * k)} 20%, ${a(0.26 * k)} 38%, transparent 58%)`,
-        // Inferior: funde con la página.
-        `linear-gradient(to top, var(--bg-primary) 0%, ${a(0.78)} 18%, ${a(0.38)} 36%, ${a(0.1)} 52%, transparent 66%)`,
+        // Inferior: cuando no es fullHeight, funde a negro puro para dar paso a la siguiente sección.
+        // Cuando es fullHeight (pantalla completa), un velo protector suave para no convertir el tercio inferior en un pozo negro.
+        fullHeight
+            ? `linear-gradient(to top, ${a(0.75)} 0%, ${a(0.35)} 18%, ${a(0.1)} 32%, transparent 48%)`
+            : `linear-gradient(to top, var(--bg-primary) 0%, ${a(0.78)} 18%, ${a(0.38)} 36%, ${a(0.1)} 52%, transparent 66%)`,
     ].join(", ")
 }
 
@@ -109,6 +119,7 @@ export function MediaHero({
     footerText,
     actionButtons,
     showPosterColumn = false,
+    fullHeight = false,
     sidePanel,
     className,
     onBackdropClick,
@@ -132,19 +143,21 @@ export function MediaHero({
     const palette = useImagePalette(showArt ? heroHighResSrc(art) : null)
     const tone = useHeroTone(showArt ? art : null)
     const scrim = React.useMemo(
-        () => heroScrimBackground(palette?.left ?? null, tone === "light" || art?.subject !== "right"),
-        [palette?.left, tone, art?.subject]
+        () => heroScrimBackground(palette?.left ?? null, tone === "light" || art?.subject !== "right", fullHeight),
+        [palette?.left, tone, art?.subject, fullHeight]
     )
 
     // Sync current backdrop with global DynamicBackdrop blur background
     useEffect(() => {
-        if (backdropUrl) {
+        if (backdropUrl && ambientOn) {
             setBackdropUrl(backdropUrl)
+        } else {
+            setBackdropUrl(null)
         }
         return () => {
             setBackdropUrl(null)
         }
-    }, [backdropUrl, setBackdropUrl])
+    }, [backdropUrl, ambientOn, setBackdropUrl])
 
     // Smooth Parallax: escucha el scroll container real (detalle de serie hace
     // scroll en <main>, no en window) además de window como fallback.
@@ -162,7 +175,9 @@ export function MediaHero({
                 const target = e.target
                 if (target === document || target === window) {
                     el.style.transform = `translate3d(0, ${window.scrollY * 0.35}px, 0)`
-                } else if (target instanceof HTMLElement) {
+                } else if (target instanceof HTMLElement && target.contains(el)) {
+                    // Solo scrollers que contienen el hero: la captura en window también
+                    // recibe el scroll de listas internas (sagas, cola) y movía el fondo.
                     el.style.transform = `translate3d(0, ${Math.max(0, target.scrollTop) * 0.35}px, 0)`
                 }
             })
@@ -187,17 +202,19 @@ export function MediaHero({
         <section
             ref={heroRef}
             className={cn(
-                "relative w-full flex flex-col justify-end overflow-hidden pb-12 sm:pb-16 md:pb-20 pt-16 md:pt-24 shrink-0 select-none",
-                isSmallBanner ? "min-h-[360px] md:min-h-[420px]" : "min-h-[70svh] lg:min-h-[80svh]",
+                "relative w-full flex flex-col justify-end overflow-hidden select-none",
+                fullHeight
+                    ? "min-h-screen lg:min-h-screen pb-10 sm:pb-12 md:pb-16 pt-20 md:pt-24 shrink-0"
+                    : isSmallBanner
+                        ? "min-h-[360px] md:min-h-[420px] pb-12 sm:pb-16 md:pb-20 pt-16 md:pt-24 shrink-0"
+                        : "min-h-[70svh] lg:min-h-[80svh] pb-12 sm:pb-16 md:pb-20 pt-16 md:pt-24 shrink-0",
                 className
             )}
         >
-            {/* Cinematic Grain Overlay */}
-            <div className="grain-overlay z-20" />
-
             {/* ── Base 16:9 blur-fill: rellena sin recorte/zoom ───────────────────
-                Blur reducido para no lavar el fondo; solo rellena el vacío. */}
-            {art && backdropTreatment !== "hide" && (
+                Visible solo cuando Fondo Ambiental (ambientOn) está activo.
+                Si está apagado, se conserva fondo negro puro AMOLED. */}
+            {art && backdropTreatment !== "hide" && ambientOn && (
                 <div className="absolute inset-0 overflow-hidden bg-black z-hero-base" aria-hidden="true">
                     <div
                         className="absolute -inset-6"
@@ -205,9 +222,7 @@ export function MediaHero({
                             backgroundImage: `url(${heroLowResSrc(art) ?? art.src})`,
                             backgroundSize: "cover",
                             backgroundPosition: heroObjectPosition(art),
-                            filter: ambientOn
-                                ? "blur(14px) brightness(0.7) saturate(140%)"
-                                : "blur(12px) brightness(0.62) saturate(130%)",
+                            filter: "blur(16px) brightness(0.68) saturate(135%)",
                             transform: "scale(1.08)",
                         }}
                     />
@@ -219,7 +234,8 @@ export function MediaHero({
             {/* ── Sharp full-bleed: cubre el 100% del hero (paridad Movies) ──────
                 inset-0 + cover a toda la altura del hero; el fade inferior
                 (74%→100%) llega hasta el contenido y funde con el blur-fill
-                sin dejar pozo negro. Parallax conservado sobre esta capa. */}
+                sin dejar pozo negro. Parallax conservado sobre esta capa.
+                En fullHeight, no se corta la imagen inferior para lucir todo el arte. */}
             <div className="absolute inset-0 z-hero-visual overflow-hidden pointer-events-none">
                 {art && backdropTreatment !== "hide" && (
                     // Atajo de puntero sobre el arte; por teclado/lector ya está la
@@ -233,8 +249,12 @@ export function MediaHero({
                             onBackdropClick && "cursor-pointer pointer-events-auto"
                         )}
                         style={{
-                            maskImage: "linear-gradient(to bottom, black 74%, transparent 100%)",
-                            WebkitMaskImage: "linear-gradient(to bottom, black 74%, transparent 100%)",
+                            maskImage: fullHeight
+                                ? undefined
+                                : "linear-gradient(to bottom, black 74%, transparent 100%)",
+                            WebkitMaskImage: fullHeight
+                                ? undefined
+                                : "linear-gradient(to bottom, black 74%, transparent 100%)",
                         }}
                     >
                         <HeroBackdrop

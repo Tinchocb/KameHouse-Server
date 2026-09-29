@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router"
 
 export function NotFound() {
     return (
-        <div className="sectionbar flex flex-col items-center justify-center min-h-[360px] max-w-lg mx-auto my-12 p-8 md:p-12 text-center">
+        <div className="sectionbar flex flex-col items-center justify-center min-h-[360px] max-w-lg mx-auto my-12 p-8 md:p-12 text-center animate-slide-up">
             <h2 className="text-3xl md:text-4xl font-display tracking-widest text-white mb-4 uppercase">
                 PÁGINA NO ENCONTRADA
             </h2>

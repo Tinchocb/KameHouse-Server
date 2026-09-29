@@ -9,7 +9,10 @@
     <link rel="dns-prefetch" href="https://image.tmdb.org" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet" />
+    <!-- No bloqueante: sin red (app de escritorio offline) una hoja externa frenaba
+         el primer render hasta el timeout. display=swap ya cubre el cambio de fuente. -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet" /></noscript>
     <link rel="preload" as="image" href="/backdrops/db.webp" type="image/webp" fetchpriority="high" />
     <!-- El resto de las eras del carrusel: prefetch (en tiempo ocioso, sin competir
          con el LCP ni disparar avisos de "preload sin usar" en otras rutas). -->
@@ -22,7 +25,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2" />
     <link rel="shortcut icon" href="/icons/favicon-32x32.png?v=2" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>KameHouse</title>
     <meta name="description" content="Servidor multimedia personal y cinemático para anime y series." />
     

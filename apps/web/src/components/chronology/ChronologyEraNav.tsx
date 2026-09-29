@@ -30,15 +30,13 @@ export const CHRONO_ERAS: ChronoEraItem[] = [
     shortTitle: 'Todas',
     years: '749 - 790',
     kanji: '全',
-    // --brand-accent guarda canales HSL ("0 0% 100%"): usado como color directo es inválido
-    // y la píldora activa quedaba sin fondo. Neutro propio, válido con cualquier tema.
     colors: {
-      accent: 'rgba(255, 255, 255, 0.16)',
-      glow: 'rgba(255, 255, 255, 0.25)',
-      glowStrong: 'rgba(255, 255, 255, 0.4)',
-      textBrand: 'text-white',
-      ambientGlow1: '#e4e4e7',
-      ambientGlow2: '#a1a1aa',
+      accent: 'rgba(255, 255, 255, 0.95)',
+      glow: 'rgba(255, 255, 255, 0.35)',
+      glowStrong: 'rgba(255, 255, 255, 0.6)',
+      textBrand: 'text-zinc-950',
+      ambientGlow1: '#ffffff',
+      ambientGlow2: '#e4e4e7',
     },
   },
   {
@@ -145,9 +143,9 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
     <div
       role="tablist"
       aria-label="Navegación de Eras de la Cronología"
-      className="relative z-20 inline-flex max-w-full items-center bg-white/[0.04] border border-white/15 border-t-white/25 border-b-white/5 rounded-full p-1 shadow-glass-highlight-md"
+      className="glass-frosted-pill relative z-20 flex items-center justify-between gap-2 w-full p-1.5 sm:p-2 overflow-hidden"
     >
-      <div className="flex items-center gap-1 max-w-full overflow-x-auto no-scrollbar snap-x snap-mandatory flex-nowrap scroll-smooth">
+      <div className="relative z-10 flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full flex-1 [mask-image:linear-gradient(to_right,transparent,black_12px,black_calc(100%-12px),transparent)] sm:[mask-image:none]">
         {CHRONO_ERAS.map((era, index) => {
           const isEraActive = era.id === activeEraId;
           const eraColors = era.colors;
@@ -174,10 +172,12 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
                   : `Filtrar por ${era.title} (${era.years})`
               }
               className={cn(
-                'relative flex shrink-0 items-center justify-center gap-1.5 sm:gap-2 min-h-[44px] px-2.5 sm:px-3 py-1.5 rounded-full text-center shrink-0 snap-start select-none transition-[transform,background-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+                'group relative flex flex-[1_0_auto] items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-full text-center select-none transition-[transform,background-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black',
                 isEraActive
-                  ? 'text-white font-extrabold cursor-pointer'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10 cursor-pointer hover:scale-[1.02] active:scale-[0.98]',
+                  ? era.id === 'all'
+                    ? 'text-zinc-950 font-black cursor-pointer'
+                    : 'text-white font-extrabold cursor-pointer'
+                  : 'text-on-surface-variant hover:text-white hover:bg-white/[0.08] cursor-pointer hover:scale-[1.02] active:scale-[0.98]',
               )}
             >
               {/* Active Pill: adopts the vibrant accent color of the era with MagneticIndicator */}
@@ -185,11 +185,13 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
                 layoutId="activeChronoEraPill"
                 active={isEraActive}
                 disableAnimation={!allowEraFx}
+                className={cn(
+                  'border-t',
+                  era.id === 'all' ? 'border-t-white' : 'border-t-white/50'
+                )}
                 style={{
                   background: eraColors.accent,
-                  boxShadow: allowEraFx
-                    ? 'inset 0 1px 1px rgba(255,255,255,0.45)'
-                    : undefined,
+                  boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 2px 8px rgba(0, 0, 0, 0.35)',
                 }}
               />
 
@@ -197,15 +199,19 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
               <div
                 className={cn(
                   'relative z-10 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-2xs sm:text-xs select-none shrink-0 transition-colors duration-200 border',
-                  isEraActive ? 'text-white shadow-elevation-1 bg-black/25 border-white/40' : '',
+                  isEraActive
+                    ? era.id === 'all'
+                      ? 'text-zinc-950 font-black shadow-elevation-1 bg-black/10 border-black/20'
+                      : 'text-white shadow-elevation-1 bg-black/25 border-white/40'
+                    : 'text-white/80 group-hover:text-white',
                 )}
                 style={
                   isEraActive
                     ? undefined
                     : {
-                        borderColor: `color-mix(in srgb, ${eraColors.ambientGlow1} 55%, rgba(255,255,255,0.12))`,
-                        backgroundColor: `color-mix(in srgb, ${eraColors.ambientGlow1} 14%, transparent)`,
-                        color: eraColors.ambientGlow1,
+                        borderColor: `color-mix(in srgb, ${eraColors.ambientGlow1} 35%, rgba(255,255,255,0.12))`,
+                        backgroundColor: `color-mix(in srgb, ${eraColors.ambientGlow1} 10%, transparent)`,
+                        color: `color-mix(in srgb, ${eraColors.ambientGlow1} 90%, #ffffff)`,
                       }
                 }
               >
@@ -217,13 +223,12 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
                 <span
                   className={cn(
                     'font-sans font-extrabold text-2xs sm:text-xs tracking-wider uppercase leading-tight whitespace-nowrap transition-colors duration-200',
-                    isEraActive ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]' : '',
-                  )}
-                  style={
                     isEraActive
-                      ? undefined
-                      : { color: `color-mix(in srgb, ${eraColors.ambientGlow1} 80%, #e4e4e7)` }
-                  }
+                      ? era.id === 'all'
+                        ? 'text-zinc-950 font-black'
+                        : 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]'
+                      : 'text-on-surface-variant group-hover:text-white',
+                  )}
                 >
                   {era.shortTitle}
                 </span>

@@ -25,7 +25,8 @@ export const Route = createFileRoute("/series/$seriesId/")({
         return { dehydrateState: dehydrate(qc) }
     },
     errorComponent: AppErrorBoundary,
-    // Anti-flash: sin pendingComponent de router. El loader hace prefetch y el
-    // componente lazy ya muestra BentoDetailsSkeleton solo si no hay caché
-    // (isLoading && !entry). Evita doble skeleton router->lazy.
+    // Anti-flash: sin skeleton propio de router (solo el RoutePending neutro por
+    // defecto, pasados 800ms). El loader hace prefetch y el componente lazy ya
+    // muestra BentoDetailsSkeleton solo si no hay caché (isLoading && !entry).
+    // Evita doble skeleton router->lazy.
 })

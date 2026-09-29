@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/components/ui/core/styling';
 import { IconStatusImageOff } from "@/components/ui/icons";
 import { usePerformanceStore, selectIsHeavyEffectsAllowed } from '@/lib/hardware/performance-store';
-import { isImageLoaded, markImageLoaded } from '@/lib/helpers/images';
+import { isImageLoaded, markImageLoaded, isTmdbImageUrl, withTmdbSize } from '@/lib/helpers/images';
 
 interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "onDrag"> {
     src: string;
@@ -24,15 +24,10 @@ interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageEleme
 }
 
 function getTmdbSrcSet(url: string): string | undefined {
-    if (!url || (!url.includes("tmdb.org") && !url.includes("themoviedb.org"))) {
+    if (!url || !isTmdbImageUrl(url)) {
         return undefined;
     }
-    const w185 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w185");
-    const w342 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w342");
-    const w500 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w500");
-    const w780 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w780");
-    const w1280 = url.replace(/\/t\/p\/(?:original|w\d+)/, "/t/p/w1280");
-    return `${w185} 185w, ${w342} 342w, ${w500} 500w, ${w780} 780w, ${w1280} 1280w`;
+    return [185, 342, 500, 780, 1280].map((w) => `${withTmdbSize(url, `w${w}`)} ${w}w`).join(", ");
 }
 
 /**
@@ -40,10 +35,10 @@ function getTmdbSrcSet(url: string): string | undefined {
  * (los backdrops de TMDB son ≥1920 de ancho), así en 1440p/4K no se estira w1280.
  */
 export function getTmdbHeroSrcSet(url: string): string | undefined {
-    if (!url || (!url.includes("tmdb.org") && !url.includes("themoviedb.org"))) {
+    if (!url || !isTmdbImageUrl(url)) {
         return undefined;
     }
-    const size = (s: string) => url.replace(/\/t\/p\/(?:original|w\d+)/, `/t/p/${s}`);
+    const size = (s: string) => withTmdbSize(url, s);
     return `${size("w780")} 780w, ${size("w1280")} 1280w, ${size("original")} 1920w`;
 }
 
@@ -102,6 +97,8 @@ export function DeferredImage(props: DeferredImageProps) {
         decoding,
         objectPosition,
         style,
+        onLoad,
+        onError,
         ...restProps
     } = props;
 
@@ -151,14 +148,18 @@ export function DeferredImage(props: DeferredImageProps) {
         return () => clearTimeout(timer);
     }, [isIntersecting, isLoaded, hasError, src, timeoutMs]);
 
-    const handleLoad = useCallback(() => {
+    // Los onLoad/onError de quien usa el componente se encadenan: antes llegaban
+    // por restProps y pisaban estos, y la imagen quedaba en opacity 0 o sin fallback.
+    const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
         markImageLoaded(src);
         setIsLoaded(true);
-    }, [src]);
+        onLoad?.(e);
+    }, [src, onLoad]);
 
-    const handleError = useCallback(() => {
+    const handleError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
         setHasError(true);
-    }, []);
+        onError?.(e);
+    }, [onError]);
 
     useEffect(() => {
         if (priority || isIntersecting) return;
@@ -184,12 +185,12 @@ export function DeferredImage(props: DeferredImageProps) {
         <div
             ref={containerRef}
             style={{ backgroundColor: isLoaded ? 'transparent' : placeholderColor }}
-            className={cn("relative overflow-hidden bg-zinc-950/70", className)}
+            className={cn("relative overflow-hidden bg-surface-container-lowest/70", className)}
         >
             {/* Single Pulse Skeleton Layer */}
             {!isLoaded && !hasError && isIntersecting && showSkeleton && (
                 <div className="absolute inset-0 z-10 overflow-hidden">
-                    <div className="h-full w-full animate-pulse bg-zinc-900/80 border border-white/5" />
+                    <div className="h-full w-full animate-pulse bg-surface-container-high/80 border border-white/5" />
                 </div>
             )}
 

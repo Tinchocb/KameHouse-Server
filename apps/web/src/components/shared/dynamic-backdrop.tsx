@@ -176,8 +176,8 @@ export function DynamicBackdrop() {
 
     if (!isEnabled) return null
 
-    // La capa de era solo se renderiza en modo Era con tema activo (se omite en detalle para mantener fondo negro puro)
-    const showEraLayer = !tvMode && !isEcoMode && ts.effectiveMode === "era" && ts.hasEraTheme && !isDetailPage
+    // La capa de Universo solo se renderiza en modo Era cuando el tema activo es Universo DB
+    const showEraUniverseLayer = !tvMode && !isEcoMode && ts.effectiveMode === "era" && ts.themeEra === "era-universe" && !isDetailPage
 
     return (
         <div
@@ -187,7 +187,7 @@ export function DynamicBackdrop() {
         >
             {/* Capa de degradé del tema Universo. Sin orbes flotantes: el color de la
                 era llega por --page-gradient, que tiñe el fondo sin formas visibles. */}
-            {showEraLayer && (
+            {showEraUniverseLayer && (
                 <div className="absolute inset-0 overflow-hidden">
                     <div className="era-universe-layer absolute inset-0 transition-opacity duration-slow opacity-0" />
                 </div>
@@ -233,9 +233,6 @@ export function DynamicBackdrop() {
                     />
                 )}
             </div>
-
-            {/* Film Grain Overlay */}
-            {!tvMode && !isFlat && <div className="grain-overlay z-10" />}
 
             {/* Ambient soft glow when no backdrop image is active */}
             {/* --brand-accent-hex (no --brand-accent, que es un triplete HSL y dejaba el color-mix inválido) */}

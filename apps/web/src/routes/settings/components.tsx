@@ -296,7 +296,7 @@ export const OsSelect = React.memo(function OsSelect({
                             "z-dropdown min-w-[var(--radix-select-trigger-width)] max-w-[min(92vw,360px)] overflow-hidden",
                             // Mismos bordes que .sectionbar vía tokens: siguen a Clásico y Flat.
                             "rounded-2xl border border-[var(--sectionbar-border)] border-t-[var(--sectionbar-border-top)] border-b-[var(--sectionbar-border-bottom)]",
-                            "bg-surface-container-lowest/90 backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
+                            "bg-surface-container-lowest/90 backdrop-blur-overlay-md backdrop-saturate-[180%]",
                             "shadow-[shadow:var(--glass-highlight-md),0_12px_36px_-6px_rgba(0,0,0,0.75)]",
                             "p-1.5 origin-[var(--radix-select-content-transform-origin)]",
                             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-2 data-[state=open]:duration-base data-[state=open]:ease-smooth-out",
@@ -337,7 +337,11 @@ export const OsSelect = React.memo(function OsSelect({
                                                 "block truncate text-xs leading-tight",
                                                 isActive ? "font-bold text-white" : "font-semibold text-on-surface-variant"
                                             )}>
-                                                {opt.label}
+                                                {/* ItemText registra la <option> del <select> nativo que Radix
+                                                    usa dentro de un <form>. Sin él, el nativo no tenía la opción,
+                                                    quedaba en "" y esa "elección" vacía pisaba la real: ningún
+                                                    selector de Ajustes cambiaba de valor. */}
+                                                <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
                                             </span>
                                             {opt.desc && (
                                                 <span className="block truncate text-2xs text-on-surface-variant/70 leading-tight mt-0.5">
@@ -421,6 +425,8 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                     ref={ref}
                     type={isSecure ? (showSecure ? "text" : "password") : type}
                     placeholder={placeholder}
+                    // La etiqueta visible es un <p> suelto: sin esto el campo no tenía nombre accesible.
+                    aria-label={typeof label === "string" ? label : undefined}
                     className={cn(
                         "flex-1 bg-transparent text-on-surface placeholder:text-on-surface-variant/40 text-xs focus:outline-none",
                         isSecure && "pr-6",
@@ -594,6 +600,7 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                     shouldExist={true}
                     placeholder={placeholder}
                     label={false}
+                    aria-label={`Agregar carpeta: ${label}`}
                     trailingAction={
                         <button
                             type="button"

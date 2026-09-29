@@ -1,6 +1,6 @@
 import * as React from "react"
 import { IconMediaPlay } from "@/components/ui/icons";
-import { getMediumResImage } from "@/lib/helpers/images"
+import { getMediumResImage, localImage } from "@/lib/helpers/images"
 import type { SwimlaneItem } from "@/components/ui/swimlane"
 import type { ERA_COLOR_MAP, EraId } from "@/lib/config/eras"
 import { MoviePosterCard, moviePosterCardItemVariants } from "@/components/ui/movie-poster-card"
@@ -24,7 +24,7 @@ export const SpotlightMovieCard = React.memo(function SpotlightMovieCard({
     onHover,
 }: SpotlightMovieCardProps) {
     const posterSrc = movie.image
-        ? (movie.image.startsWith("/") ? movie.image : getMediumResImage(movie.image))
+        ? (movie.image.startsWith("/") ? movie.image : localImage(getMediumResImage(movie.image)))
         : (movie.backdropUrl || "")
 
     const isSpecial = movie.badge === "SPECIAL" || movie.badge === "OVA" || movie.title.toLowerCase().includes("especial") || movie.title.toLowerCase().includes("ova")

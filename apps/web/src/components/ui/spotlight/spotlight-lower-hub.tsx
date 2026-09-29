@@ -1,9 +1,8 @@
 import * as React from "react"
-import { m, useReducedMotion, AnimatePresence, type Variants } from "framer-motion"
+import { m, AnimatePresence, type Variants } from "framer-motion"
 import { IconNavigationLayers, IconNavigationFilm } from "@/components/ui/icons";
-import { cn } from "@/components/ui/core/styling"
 import { SectionBar } from "@/components/ui/sectionbar/sectionbar"
-import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control"
 import { ElasticCounter, useMotionTier } from "@/components/ui/kinetics"
 import type { SagaDefinition } from "@/lib/config/dragonball_sagas"
 import type { ERA_COLOR_MAP, EraId } from "@/lib/config/eras"
@@ -78,14 +77,27 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
     onNavigateMovie,
     onHoverSound,
 }: SpotlightLowerHubProps) {
-    const reduceMotion = useReducedMotion()
     const isFullMotion = useMotionTier() === "full"
-    const tabIndicatorSpring = useSpringPreset("tabIndicator")
     const hasSagas = activeEraSagas.length > 0
     const hasMovies = activeEraMovies.length > 0
     const [activeTab, setActiveTab] = React.useState<LowerHubTab>(hasSagas ? "sagas" : "movies")
     // Sentido del slide del grid: 0 en la primera aparición, luego el del último cambio.
     const [slideDir, setSlideDir] = React.useState(0)
+
+    const hubOptions = React.useMemo<SegmentedOption<LowerHubTab>[]>(() => [
+        {
+            value: "sagas",
+            label: "Sagas & Arcos",
+            icon: <IconNavigationLayers size={14} />,
+            count: activeEraSagas.length,
+        },
+        {
+            value: "movies",
+            label: "Películas",
+            icon: <IconNavigationFilm size={14} />,
+            count: activeEraMovies.length,
+        },
+    ], [activeEraSagas.length, activeEraMovies.length])
 
     // Al cambiar de era, volver al tab con contenido (sagas primero, como antes).
     // Se ajusta durante el render (no en un efecto): así el grid de la era nueva
@@ -166,66 +178,17 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
                 {/* Switch Sagas / Películas (segmented control canónico) si ambos están disponibles */}
                 {showSwitch && (
                     <div className="flex flex-wrap items-center justify-between gap-3 pb-1 pt-1">
-                        <div
-                            role="tablist"
+                        <SegmentedControl<LowerHubTab>
                             aria-label="Contenido de la era"
-                            className="flex items-center gap-1 bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10 p-1.5 rounded-full backdrop-blur-overlay-xl"
-                        >
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeTab === "sagas"}
-                                onClick={() => selectTab("sagas")}
-                                onMouseEnter={onHoverSound}
-                                className={cn(
-                                    "relative flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-[color,background-color,border-color,transform] cursor-pointer select-none active:scale-95",
-                                    activeTab === "sagas" ? "text-zinc-950 font-bold" : "text-on-surface-variant hover:text-on-surface",
-                                )}
-                            >
-                                {activeTab === "sagas" && (
-                                    reduceMotion ? (
-                                        <div className="absolute inset-0 bg-white/95 rounded-full" />
-                                    ) : (
-                                        <m.div
-                                            layoutId="spotlight-lower-hub-indicator"
-                                            className="absolute inset-0 bg-white/95 rounded-full"
-                                            transition={tabIndicatorSpring}
-                                        />
-                                    )
-                                )}
-                                <span className="relative z-10 flex items-center gap-2 font-mono font-bold uppercase tracking-wider">
-                                    <IconNavigationLayers size={14} />
-                                    <span>Sagas & Arcos ({activeEraSagas.length})</span>
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                role="tab"
-                                aria-selected={activeTab === "movies"}
-                                onClick={() => selectTab("movies")}
-                                onMouseEnter={onHoverSound}
-                                className={cn(
-                                    "relative flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-[color,background-color,border-color,transform] cursor-pointer select-none active:scale-95",
-                                    activeTab === "movies" ? "text-zinc-950 font-bold" : "text-on-surface-variant hover:text-on-surface",
-                                )}
-                            >
-                                {activeTab === "movies" && (
-                                    reduceMotion ? (
-                                        <div className="absolute inset-0 bg-white/95 rounded-full" />
-                                    ) : (
-                                        <m.div
-                                            layoutId="spotlight-lower-hub-indicator"
-                                            className="absolute inset-0 bg-white/95 rounded-full"
-                                            transition={tabIndicatorSpring}
-                                        />
-                                    )
-                                )}
-                                <span className="relative z-10 flex items-center gap-2 font-mono font-bold uppercase tracking-wider">
-                                    <IconNavigationFilm size={14} />
-                                    <span>Películas ({activeEraMovies.length})</span>
-                                </span>
-                            </button>
-                        </div>
+                            layoutId="spotlight-lower-hub-indicator"
+                            semantics="tablist"
+                            tone="neutral"
+                            surface="glass"
+                            value={activeTab}
+                            onChange={selectTab}
+                            onOptionHover={onHoverSound}
+                            options={hubOptions}
+                        />
                     </div>
                 )}
 

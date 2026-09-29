@@ -13,16 +13,13 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const ModalAnatomy = defineStyleAnatomy({
     overlay: cva([
         "UI-Modal__overlay",
-        "fixed inset-0 z-overlay bg-[color:color-mix(in_srgb,var(--md-sys-color-surface)_60%,transparent)] backdrop-blur-overlay-xl transition duration-base",
+        "fixed inset-0 z-overlay bg-black/65 backdrop-blur-overlay-xs transition duration-base",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        // "overflow-y-auto p-0 md:p-4 grid place-items-center",
     ]),
     content: cva([
         "UI-Modal__content",
-        "z-modal grid relative w-full max-w-lg gap-4 p-6 duration-base rounded-2xl",
-        "bg-surface/70 border border-white/20 border-t-white/40 border-b-white/10",
-        "backdrop-blur-overlay-2xl backdrop-saturate-[190%]",
+        "glass-frosted z-modal grid relative w-full max-w-lg gap-4 p-6 duration-base rounded-2xl",
         "shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_-12px_rgba(0,0,0,0.9)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -76,6 +73,11 @@ export type ModalProps =
          */
         title?: React.ReactNode
         /**
+         * Nombre accesible cuando no hay `title` visible (paletas, visores). Sin esto el diálogo
+         * quedaba con aria-labelledby apuntando a un elemento que no existe.
+         */
+        srTitle?: string
+        /**
          * An optional accessible description to be announced when the dialog is opened.
          */
         description?: React.ReactNode
@@ -100,6 +102,7 @@ export function Modal(props: ModalProps) {
         allowOutsideInteraction = false,
         trigger,
         title,
+        srTitle,
         footer,
         description,
         children,
@@ -145,6 +148,12 @@ export function Modal(props: ModalProps) {
                     {!description && (
                         <VisuallyHidden asChild>
                             <DialogPrimitive.Description />
+                        </VisuallyHidden>
+                    )}
+
+                    {!title && (
+                        <VisuallyHidden asChild>
+                            <DialogPrimitive.Title>{srTitle ?? "Ventana"}</DialogPrimitive.Title>
                         </VisuallyHidden>
                     )}
 

@@ -55,7 +55,7 @@ interface UseSeriesPlaybackInput {
     initialTime?: string | number
     momentKey?: string
     momentTitle?: string
-    setSearchParams: (updates: Partial<Record<string, string>>) => void
+    setSearchParams: (updates: Partial<Record<string, string>>, options?: { replace?: boolean }) => void
 }
 
 const NO_FILES_MESSAGE = "No hay archivos locales disponibles para reproducir."
@@ -351,7 +351,7 @@ function useSeriesAutoplay({
         overrideStartTime?: number,
         momentMeta?: { momentKey?: string; momentTitle?: string }
     ) => void
-    setSearchParams: (updates: Partial<Record<string, string>>) => void
+    setSearchParams: (updates: Partial<Record<string, string>>, options?: { replace?: boolean }) => void
 }) {
     const firedRef = React.useRef(false)
     React.useEffect(() => {
@@ -363,10 +363,10 @@ function useSeriesAutoplay({
         firedRef.current = true
         const n = Number(autoplayEp)
         const tSec = initialTime != null && initialTime !== "" ? Number(initialTime) : undefined
-        const parsedTime = Number.isFinite(tSec) && tSec! >= 0 ? tSec : undefined
+        const parsedTime = tSec !== undefined && Number.isFinite(tSec) && tSec >= 0 ? tSec : undefined
         const momentMeta = momentKey ? { momentKey, momentTitle } : undefined
         // ?autoplay=abc se descarta sin toast de error.
         if (Number.isFinite(n)) handlePlayByNumber(n, parsedTime, momentMeta)
-        setSearchParams({ autoplay: "", t: "", moment: "", momentTitle: "" })
+        setSearchParams({ autoplay: "", t: "", moment: "", momentTitle: "" }, { replace: true })
     }, [autoplayEp, initialTime, momentKey, momentTitle, computedEpisodes, handlePlayByNumber, setSearchParams])
 }
