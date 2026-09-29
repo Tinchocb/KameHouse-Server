@@ -1,23 +1,17 @@
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router';
-import { Fragment, useState, useMemo, useEffect, useCallback, useRef, memo } from 'react';
+import { Fragment, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { useGetLibraryCollection } from '@/api/hooks/anime_collection.hooks';
-import { useQueryClient } from '@tanstack/react-query';
-import { API_ENDPOINTS } from '@/api/generated/endpoints';
-import { fetchAnimeEntry } from '@/api/hooks/anime_entries.hooks';
-import { SeriesCard, getVhsColor, type SeriesItem } from './-SeriesCard';
+import { SeriesCard, getVhsColor } from './-SeriesCard';
 import { SeriesSpineRow } from './-SeriesSpineRow';
 import { getMediumResImage, getLowResImage, localImage, prewarmImages } from '@/lib/helpers/images';
-import { DeferredImage } from '@/components/shared/deferred-image';
-import { IconUiCheckCircle2, IconNavigationLayers, IconStatusImage } from "@/components/ui/icons";
-import { LoadSwap, MagneticIndicator, loadSwapVariants, viewSwapVariants } from '@/components/ui/kinetics';
+import { IconNavigationLayers } from '@/components/ui/icons';
+import { LoadSwap, loadSwapVariants, viewSwapVariants } from '@/components/ui/kinetics';
 import { getSeriesIdFromMedia, getSeriesYear, getSeriesEraAccent, DRAGON_BALL_SERIES_ORDER, DRAGON_BALL_SERIES_INFO, DAIMA_VERTICAL_POSTER } from '@/lib/helpers/series';
-import { getSpineConfig } from '@/lib/helpers/goku-panorama';
 import { getSafeCollectionEntries } from '@/lib/helpers/collection';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
 import { SectionBar } from '@/components/ui/sectionbar/sectionbar';
 import { PosterGridSkeleton } from '@/components/ui/shimmer-skeleton';
-import { useSpringPreset } from '@/components/ui/kinetics/hooks';
 import { useRevealChildren } from '@/components/ui/kinetics/scroll-reveal';
 import { EmptyState } from '@/components/shared/empty-state';
 import { useResponsive } from '@/hooks/use-responsive';
@@ -27,330 +21,22 @@ import { useUIStore } from '@/lib/store';
 import { cn } from '@/components/ui/core/styling';
 import { usePerformanceStore, selectIsHeavyEffectsAllowed, selectEffectiveTier } from '@/lib/hardware/performance-store';
 import { HERO_AURA_CLASS, HERO_STAGE_CLASS } from '@/lib/config/hero-stage';
+import { SeriesViewMode, ViewModeTabs } from './-ViewModeTabs';
+import { getGlowTransform, AmbientAura } from './-AmbientAura';
+import { SeriesPosterGridItem } from './-SeriesPosterGridItem';
 
-export type SeriesViewMode = 'shelf' | 'etapas';
-
-interface SeriesTabOption {
-    id: SeriesViewMode;
-    label: string;
-    icon: React.ReactNode;
-}
-
-const SERIES_TABS: SeriesTabOption[] = [
-    {
-        id: 'shelf',
-        label: 'Estantería',
-        icon: <IconNavigationLayers size={14} className="relative z-10 shrink-0" />,
-    },
-    {
-        id: 'etapas',
-        label: 'Portadas',
-        icon: <IconStatusImage size={14} className="relative z-10 shrink-0" />,
-    },
-];
+export type { SeriesViewMode } from './-ViewModeTabs';
 
 /** Delay de stagger por card, en ms (tope acotado para fluidez). */
 const ENTRY_STAGGER_MS = 40;
+
 // Lomos que entran en pantalla al abrir (escritorio): sus fondos se piden ya.
 const SHELF_EAGER_ITEMS = 7;
+
 const ENTRY_STAGGER_MAX_ITEMS = 12;
-
-/** Transform compartido por los dos halos de fondo (exterior + interior del shelf). */
-function getGlowTransform(selectedIndex: number, total: number, offsetPx: number) {
-    const pct = (selectedIndex / Math.max(total - 1, 1)) * 80 + 10;
-    return `translate3d(calc(${pct}% - ${offsetPx}px), -50%, 0)`;
-}
-
-function ViewModeTabs({
-    mode,
-    onChange,
-}: {
-    mode: SeriesViewMode;
-    onChange: (next: SeriesViewMode) => void;
-}) {
-    const reduceMotion = useReducedMotion();
-    const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed);
-    const allowEraFx = isHeavyAllowed && !reduceMotion;
-    const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
-    const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
-        let newIndex = index;
-        const total = SERIES_TABS.length;
-        switch (e.key) {
-            case 'ArrowRight':
-            case 'ArrowDown':
-                e.preventDefault();
-                newIndex = (index + 1) % total;
-                break;
-            case 'ArrowLeft':
-            case 'ArrowUp':
-                e.preventDefault();
-                newIndex = (index - 1 + total) % total;
-                break;
-            case 'Home':
-                e.preventDefault();
-                newIndex = 0;
-                break;
-            case 'End':
-                e.preventDefault();
-                newIndex = total - 1;
-                break;
-            default:
-                return;
-        }
-        const target = SERIES_TABS[newIndex];
-        if (target) {
-            onChange(target.id);
-            tabRefs.current[newIndex]?.focus();
-        }
-    };
-
-    return (
-        <div
-            role="tablist"
-            aria-label="Modo de visualización de series"
-            className="glass-frosted-pill relative z-20 flex items-center justify-between gap-2 w-full p-1.5 sm:p-2 overflow-hidden"
-        >
-            <div className="relative z-10 flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full flex-1">
-                {SERIES_TABS.map(({ id, label, icon }, index) => {
-                    const isActive = id === mode;
-                    return (
-                        <button
-                            key={id}
-                            ref={(el) => { tabRefs.current[index] = el; }}
-                            role="tab"
-                            aria-selected={isActive}
-                            tabIndex={isActive ? 0 : -1}
-                            onClick={() => onChange(id)}
-                            onKeyDown={(e) => handleKeyDown(e, index)}
-                            className={cn(
-                                'group relative flex flex-[1_0_auto] items-center justify-center gap-2 px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-full text-center cursor-pointer select-none transition-[transform,background-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent',
-                                isActive
-                                    ? 'text-zinc-950 font-black'
-                                    : 'text-on-surface-variant hover:text-white hover:bg-white/[0.08] hover:scale-[1.01] active:scale-[0.99]',
-                            )}
-                        >
-                            <MagneticIndicator
-                                layoutId="activeSeriesTopPill"
-                                active={isActive}
-                                disableAnimation={!allowEraFx}
-                                className="border-t border-t-white"
-                                style={{
-                                    background: 'rgba(255, 255, 255, 0.95)',
-                                    boxShadow: allowEraFx
-                                        ? '0 2px 14px rgba(255, 255, 255, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.9)'
-                                        : undefined,
-                                }}
-                            />
-                            {icon}
-                            <span className={cn(
-                                'relative z-10 font-sans font-extrabold text-2xs sm:text-xs tracking-wider uppercase leading-tight whitespace-nowrap transition-colors duration-200',
-                                isActive ? 'text-zinc-950 font-black' : 'text-on-surface-variant group-hover:text-white',
-                            )}>
-                                {label}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
-
-const AmbientAura = memo(function AmbientAura({
-    src,
-    allowGlowFx,
-}: {
-    src: string | null;
-    allowGlowFx: boolean;
-}) {
-    const [prevPropSrc, setPrevPropSrc] = useState(src);
-    const [activeSrc, setActiveSrc] = useState<string | null>(src);
-    const [incomingSrc, setIncomingSrc] = useState<string | null>(null);
-    const [isIncomingLoaded, setIsIncomingLoaded] = useState(false);
-
-    // Ajuste de estado durante el render (patrón documentado de React para
-    // derivar estado del prop anterior): arranca el crossfade sin efecto extra.
-    if (src !== prevPropSrc) {
-        setPrevPropSrc(src);
-        if (!src) {
-            setActiveSrc(null);
-            setIncomingSrc(null);
-            setIsIncomingLoaded(false);
-        } else if (!activeSrc) {
-            setActiveSrc(src);
-            setIncomingSrc(null);
-            setIsIncomingLoaded(false);
-        } else if (src !== activeSrc) {
-            setIncomingSrc(src);
-            setIsIncomingLoaded(false);
-        }
-    }
-
-    const handleIncomingLoad = useCallback(() => {
-        setIsIncomingLoaded(true);
-        const timer = setTimeout(() => {
-            setActiveSrc(incomingSrc);
-            setIncomingSrc(null);
-            setIsIncomingLoaded(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [incomingSrc]);
-
-    const targetOpacity = allowGlowFx ? 0.28 : 0.18;
-
-    return (
-        <div
-            className="absolute inset-0 pointer-events-none overflow-hidden transform-gpu will-change-[opacity]"
-            style={{
-                filter: "blur(48px) saturate(140%)",
-                maskImage: "radial-gradient(ellipse 90% 80% at 70% 40%, black 0%, transparent 75%)",
-                WebkitMaskImage: "radial-gradient(ellipse 90% 80% at 70% 40%, black 0%, transparent 75%)",
-            }}
-        >
-            {activeSrc && (
-                <img
-                    src={activeSrc}
-                    alt=""
-                    aria-hidden="true"
-                    draggable={false}
-                    decoding="async"
-                    className="absolute inset-0 w-full h-full object-cover object-[center_20%] pointer-events-none transition-opacity duration-500 ease-out"
-                    style={{
-                        opacity: incomingSrc && isIncomingLoaded ? 0 : targetOpacity,
-                    }}
-                />
-            )}
-            {incomingSrc && (
-                <img
-                    src={incomingSrc}
-                    alt=""
-                    aria-hidden="true"
-                    draggable={false}
-                    decoding="async"
-                    loading="lazy"
-                    onLoad={handleIncomingLoad}
-                    onError={handleIncomingLoad}
-                    className="absolute inset-0 w-full h-full object-cover object-[center_20%] pointer-events-none transition-opacity duration-500 ease-out"
-                    style={{
-                        opacity: isIncomingLoaded ? targetOpacity : 0,
-                    }}
-                />
-            )}
-        </div>
-    );
-});
 
 export const Route = createLazyFileRoute('/series/')({
     component: SeriesFullscreenIndex,
-});
-
-/** Tarjeta de póster fluida para el grid de Portadas (una por serie). */
-const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
-    item,
-    index,
-    onNavigate,
-}: {
-    item: SeriesItem;
-    index: number;
-    onNavigate: (id: string) => void;
-}) {
-    const queryClient = useQueryClient();
-    // Vía caché local del servidor (precalentada): sin viaje a TMDB por internet.
-    const posterSrc = localImage(getMediumResImage(item.poster || item.img));
-    const posterLowSrc = useMemo(() => localImage(getLowResImage(item.poster || item.img)) || undefined, [item.poster, item.img]);
-    const isComplete = item.progress >= 100;
-    // Mismo número canónico que la estantería (SeriesCard): el índice solo
-    // es fallback, porque con series faltantes (p. ej. Kai) se desfasaría.
-    const spineCfg = getSpineConfig(item.seriesId || '', item.id, item.title);
-    const volLabel = `VOL. ${spineCfg?.vol ?? index + 1}`;
-    const posterKanji = spineCfg?.kanji ?? '★';
-
-    const handleOpen = useCallback(() => {
-        onNavigate(item.id.toString());
-    }, [item.id, onNavigate]);
-
-    const handlePrefetch = useCallback(() => {
-        const sId = item.id.toString();
-        queryClient.prefetchQuery({
-            queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, sId],
-            queryFn: () => fetchAnimeEntry(sId),
-            staleTime: 60000,
-        });
-    }, [queryClient, item.id]);
-
-    const entranceSpring = useSpringPreset('entrance');
-    const shouldAnimate = index < 12;
-
-    return (
-        <m.article
-            initial={shouldAnimate ? { opacity: 0, y: 16 } : false}
-            animate={shouldAnimate ? { opacity: 1, y: 0 } : false}
-            transition={shouldAnimate ? { ...entranceSpring, delay: Math.min(index, 12) * 0.04 } : undefined}
-            className="group relative select-none"
-        >
-            <button
-                type="button"
-                aria-label={`${item.title} — ${item.progress}% completado`}
-                onClick={handleOpen}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpen(); }
-                }}
-                onMouseEnter={handlePrefetch}
-                onFocus={handlePrefetch}
-                className="relative block aspect-[2/3] w-full text-left overflow-hidden rounded-2xl border border-white/15 border-t-white/35 border-b-white/10 bg-surface-container/20 shadow-elevation-2 cursor-pointer transition-[transform,border-color,box-shadow] duration-base ease-smooth-out hover:-translate-y-1 active:scale-95"
-            >
-                {posterSrc ? (
-                    <DeferredImage
-                        src={posterSrc}
-                        lowResSrc={posterLowSrc}
-                        alt={item.title}
-                        priority={index < 2}
-                        className="h-full w-full object-cover transition-transform duration-base ease-smooth-out group-hover:scale-105"
-                    />
-                ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-surface-container-high to-surface-container p-4 text-center font-display text-lg uppercase tracking-wide text-on-surface-variant">
-                        {item.title}
-                    </div>
-                )}
-                <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent opacity-80 transition-opacity duration-base group-hover:opacity-90" />
-                <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-none group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/15 to-transparent z-10 pointer-events-none" />
-
-                <div className="absolute top-2.5 left-2.5 rounded-full border border-white/15 bg-black/75 px-2.5 py-1 font-mono text-3xs font-bold uppercase tracking-widest text-white shadow-sm">
-                    {volLabel}
-                </div>
-                {isComplete ? (
-                    <IconUiCheckCircle2 className="absolute top-2.5 right-2.5 h-5 w-5 text-brand-success drop-shadow-md" />
-                ) : (
-                    <span
-                        className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full border border-white/20 bg-black/75 flex items-center justify-center text-[13px] font-black leading-none text-white/90 shadow-sm"
-                        aria-hidden
-                    >
-                        {posterKanji}
-                    </span>
-                )}
-
-                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-3.5">
-                    <h3 className="font-display text-lg leading-tight tracking-wide text-white line-clamp-2 drop-shadow-md">
-                        {item.title}
-                    </h3>
-                    <p className="font-mono text-3xs font-bold uppercase tracking-widest text-white/70">
-                        {item.year} • {item.eps} EPS • {item.progress}%
-                    </p>
-                </div>
-
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-white/15 overflow-hidden">
-                    <div
-                        className="h-full w-full rounded-full origin-left transition-transform duration-300 ease-out"
-                        style={{
-                            transform: `scaleX(${Math.min(Math.max(item.progress, 0), 100) / 100})`,
-                            background: getSeriesEraAccent(item.seriesId),
-                        }}
-                    />
-                </div>
-            </button>
-        </m.article>
-    );
 });
 
 function SeriesFullscreenIndex() {
