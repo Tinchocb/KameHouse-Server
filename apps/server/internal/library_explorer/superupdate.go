@@ -118,6 +118,23 @@ func (l *LibraryExplorer) superUpdateFile(opt *SuperUpdateFileOptions, lfs []*dt
 		if !newAllowed {
 			return errors.New("unauthorized: destination path is not within library directories")
 		}
+
+		// os.Rename reemplaza en silencio un archivo existente (en Windows también):
+		// renombrar a un nombre ya usado destruiría el otro archivo. Un cambio solo
+		// de mayúsculas sobre el mismo archivo sí se permite.
+		if dst, dstErr := os.Lstat(newPath); dstErr == nil {
+			if src, srcErr := os.Lstat(opt.Path); srcErr != nil || !os.SameFile(src, dst) {
+				return errors.New("destination already exists: " + sanitizedNewName)
+			}
+		}
+
+		// Primero el archivo real: si falla, el registro de la base no se toca. Antes
+		// se actualizaba el registro y luego se renombraba, así que un fallo dejaba la
+		// base apuntando a una ruta que no existe.
+		if err := os.Rename(opt.Path, newPath); err != nil {
+			return err
+		}
+
 		// Update the file name
 		// If the local file exists, update the name
 		if found {
@@ -129,12 +146,6 @@ func (l *LibraryExplorer) superUpdateFile(opt *SuperUpdateFileOptions, lfs []*dt
 			lf.ParsedFolderData = newLf.ParsedFolderData
 			lf.Path = newPath
 			mu.Unlock()
-		}
-
-		// Rename the real file name
-		err := os.Rename(opt.Path, newPath)
-		if err != nil {
-			return err
 		}
 	}
 
