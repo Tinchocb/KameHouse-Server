@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -455,20 +454,25 @@ func (h *Handler) HandleDeleteLocalFiles(c echo.Context) error {
 	}
 
 	for _, p := range b.Paths {
-		absPath, err := filepath.Abs(p)
-		if err != nil {
-			return h.RespondWithError(c, fmt.Errorf("invalid path: %s", p))
+		if strings.TrimSpace(p) == "" {
+			return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid request: empty path"))
 		}
+		// IsFileUnderDir resuelve los enlaces simbólicos: un enlace dentro de la
+		// biblioteca que apunte afuera no sirve para borrar archivos ajenos, y la
+		// propia carpeta de la biblioteca no cuenta como "dentro" de sí misma.
 		inLibrary := false
 		for _, libPath := range libraryPaths {
-			absLib, _ := filepath.Abs(libPath)
-			if strings.HasPrefix(absPath, absLib+string(os.PathSeparator)) || absPath == absLib {
+			if util.IsFileUnderDir(libPath, p) {
 				inLibrary = true
 				break
 			}
 		}
 		if !inLibrary {
 			return h.RespondWithCodeError(c, 403, fmt.Errorf("forbidden: path outside library boundaries: %s", p))
+		}
+		// Esta ruta borra archivos, no carpetas (os.Remove también quita las vacías).
+		if info, err := os.Lstat(p); err == nil && info.IsDir() {
+			return h.RespondWithCodeError(c, http.StatusBadRequest, fmt.Errorf("invalid request: path is a directory: %s", p))
 		}
 	}
 
