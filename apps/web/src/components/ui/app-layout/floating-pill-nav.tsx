@@ -4,7 +4,7 @@ import * as React from "react"
 import { Link, useRouterState } from "@tanstack/react-router"
 import { m } from "framer-motion"
 import { IconNavigationHome, IconNavigationTv, IconNavigationFilm, IconStatusSparkles, IconNavigationLayers, IconNavigationSettings, IconNavigationRocket, IconUiAdmin } from "@/components/ui/icons";
-import { Shuffle, Volume2, VolumeX } from "lucide-react"
+import { IconMediaRandom, IconMediaVolume2, IconMediaVolumeX } from "@/components/ui/icons"
 import { useAppStore, usePlayerStore, useUIStore } from "@/lib/store"
 import { cn } from "@/components/ui/core/styling"
 import { useSound } from "@/hooks/use-sound"
@@ -297,7 +297,7 @@ export function FloatingPillNav() {
                                 "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]"
                             )}
                         >
-                            <Shuffle className="w-4 h-4" />
+                            <IconMediaRandom className="w-4 h-4" />
                         </button>
 
                         {/* Música de Fondo */}
@@ -315,7 +315,7 @@ export function FloatingPillNav() {
                                     : "text-on-surface-variant/80 hover:text-white hover:bg-white/10"
                             )}
                         >
-                            {isAudioActive ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                            {isAudioActive ? <IconMediaVolume2 className="w-4 h-4" /> : <IconMediaVolumeX className="w-4 h-4" />}
                         </button>
                     </div>
                 </m.div>

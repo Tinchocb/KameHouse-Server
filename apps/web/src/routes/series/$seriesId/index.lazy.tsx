@@ -336,7 +336,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 type="button"
                 onClick={() => navigate({ to: "/series" })}
                 aria-label="Volver a series"
-                className="glass-frosted-pill absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-9 h-9 text-white/90 hover:text-white flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer"
+                className="glass-frosted-pill absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-11 h-11 text-white/90 hover:text-white flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer"
             >
                 <IconNavigationChevronLeft className="w-4 h-4" />
             </button>

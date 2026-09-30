@@ -63,7 +63,7 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Buscar película... (/)"
-                        className="w-full bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 rounded-full py-1.5 pl-9 pr-8 text-xs font-medium text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/40 transition-[border-color,box-shadow] duration-base ease-smooth-out backdrop-blur-overlay-md shadow-glass-highlight-md"
+                        className="sectionbar sectionbar-pill w-full min-h-11 py-1.5 pl-9 pr-8 text-xs font-medium text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/40 transition-[border-color,box-shadow] duration-base ease-smooth-out"
                     />
                     <AnimatePresence>
                         {searchQuery && (
@@ -92,7 +92,7 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                         onClick={() => setSortOpen((o) => !o)}
                         aria-haspopup="true"
                         aria-expanded={sortOpen}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-container-lowest/60 hover:bg-surface-container-high/60 border border-white/20 border-t-white/40 border-b-white/10 text-xs font-mono font-bold text-on-surface-variant hover:text-white active:scale-[0.97] transition-[background-color,color,border-color,box-shadow,transform] duration-150 ease-out-strong backdrop-blur-overlay-md shadow-glass-highlight-md cursor-pointer"
+                        className="sectionbar sectionbar-pill flex items-center gap-1.5 px-3.5 min-h-11 hover:bg-surface-container-high/60 text-xs font-mono font-bold text-on-surface-variant hover:text-white active:scale-[0.97] transition-[background-color,color,border-color,box-shadow,transform] duration-150 ease-out-strong cursor-pointer"
                     >
                         <IconArrowDownUp className="w-3 h-3 text-on-surface-variant" />
                         <span className="hidden md:inline">{SORT_OPTIONS.find((s) => s.value === sortBy)?.label}</span>

@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
   const meta = ERA_HEADER_META[currentEraFilter] ?? ERA_HEADER_META.all;
 
   return (
-    <section className="relative w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-4 md:pt-20 pb-4 select-none flex flex-col justify-start space-y-4 shrink-0">
+    <section className="relative page-container pt-4 md:pt-20 pb-4 select-none flex flex-col justify-start space-y-4 shrink-0">
 
       {/* 1. Barra de Navegación Horizontal de Eras (misma posición y altura que Home y Películas) */}
       <div className="relative z-10 w-full mt-4">

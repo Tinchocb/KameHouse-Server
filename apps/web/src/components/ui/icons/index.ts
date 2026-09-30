@@ -81,6 +81,7 @@ import {
   Trash2,
   Tv,
   Users,
+  Shuffle,
   Volume2,
   VolumeX,
   Wand2,
@@ -111,6 +112,8 @@ export const IconMediaForward = FastForward;
 export const IconMediaSkipNext = SkipForward;
 export const IconMediaSkipPrevious = SkipBack;
 export const IconMediaShuffle = ArrowLeftRight;
+/** Las dos flechas cruzadas de "aleatorio" (IconMediaShuffle es un intercambio, otro dibujo). */
+export const IconMediaRandom = Shuffle;
 export const IconMediaVolume2 = Volume2;
 export const IconMediaVolumeX = VolumeX;
 export const IconMediaMaximize = Maximize;

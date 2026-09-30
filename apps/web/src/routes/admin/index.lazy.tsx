@@ -34,9 +34,9 @@ function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen text-on-surface bg-bg-primary font-sans antialiased selection:bg-brand-accent/30 selection:text-white"
+            className="min-h-screen text-on-surface font-sans antialiased selection:bg-brand-accent/30 selection:text-white"
         >
-            <div className="max-w-content-desktop mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+            <div className="page-container py-8 sm:py-10">
                 <AdminHeader />
 
                 <div className="mt-8 md:mt-12 space-y-6 md:space-y-8">

@@ -194,7 +194,7 @@ export function SagaSelector({
 
   return (
       <div className={cn(
-      "sectionbar w-full max-h-[calc(100dvh-8rem)] flex flex-col p-4 overflow-hidden relative bg-bg-primary border border-white/[0.12] shadow-[shadow:0_12px_40px_rgba(0,0,0,0.85),var(--glass-highlight-sm)] rounded-2xl [background:var(--classic-page-gradient)]",
+      "sectionbar w-full max-h-[calc(100dvh-8rem)] flex flex-col p-4 overflow-hidden relative shadow-[shadow:0_12px_40px_rgba(0,0,0,0.85),var(--glass-highlight-sm)] rounded-2xl",
       className
     )}>
       {/* Sin AnimatePresence mode="wait": el modo espera 200ms con el panel
