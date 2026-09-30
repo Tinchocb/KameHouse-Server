@@ -253,10 +253,9 @@ func NewEpisode(opts *NewEpisodeOptions) *Episode {
 
 			entryEp.SagaId = episodeMetadata.SagaId
 			entryEp.SagaName = episodeMetadata.SagaName
-		} else {
-			// DEVNOTE: Non-downloaded, without any AniDB data. Don't handle this case.
-			// Non-downloaded episodes are determined from AniDB data either way.
 		}
+		// DEVNOTE: episodio no descargado y sin datos de AniDB: no se maneja. Los episodios
+		// no descargados se determinan igualmente a partir de los datos de AniDB.
 
 	}
 

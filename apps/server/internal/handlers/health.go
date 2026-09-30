@@ -65,7 +65,6 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 	defer cancel()
 
 	checks := make(map[string]HealthCheckResult)
-	var degradedReasons []string
 	overallStatus := "ok"
 
 	// DB check
@@ -75,7 +74,6 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 		overallStatus = "down"
 	} else if dbResult.Status == "degraded" && overallStatus == "ok" {
 		overallStatus = "degraded"
-		degradedReasons = append(degradedReasons, "db")
 	}
 
 	// Cache check
@@ -85,7 +83,6 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 		overallStatus = "down"
 	} else if cacheResult.Status == "degraded" && overallStatus == "ok" {
 		overallStatus = "degraded"
-		degradedReasons = append(degradedReasons, "cache")
 	}
 
 	// TMDB check
@@ -95,7 +92,6 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 		overallStatus = "down"
 	} else if tmdbResult.Status == "degraded" && overallStatus == "ok" {
 		overallStatus = "degraded"
-		degradedReasons = append(degradedReasons, "tmdb")
 	}
 
 	// Migration status check
@@ -105,7 +101,6 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 		overallStatus = "down"
 	} else if migrationResult.Status == "degraded" && overallStatus == "ok" {
 		overallStatus = "degraded"
-		degradedReasons = append(degradedReasons, "migrations")
 	}
 
 	// FFmpeg check
@@ -115,7 +110,6 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 		overallStatus = "down"
 	} else if ffmpegResult.Status == "degraded" && overallStatus == "ok" {
 		overallStatus = "degraded"
-		degradedReasons = append(degradedReasons, "ffmpeg")
 	}
 
 	response := HealthResponse{

@@ -279,9 +279,9 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 
 	var year *int
 	if r.FirstAirDate != "" && len(r.FirstAirDate) >= 4 {
-		y := 0
-		fmt.Sscanf(r.FirstAirDate[:4], "%d", &y)
-		if y > 0 { year = &y }
+		if y, err := strconv.Atoi(r.FirstAirDate[:4]); err == nil && y > 0 {
+			year = &y
+		}
 	}
 
 	var startDate *dto.NormalizedMediaDate
@@ -355,9 +355,9 @@ func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails, englishTitle string) *dto
 
 	var year *int
 	if r.FirstAirDate != "" && len(r.FirstAirDate) >= 4 {
-		y := 0
-		fmt.Sscanf(r.FirstAirDate[:4], "%d", &y)
-		if y > 0 { year = &y }
+		if y, err := strconv.Atoi(r.FirstAirDate[:4]); err == nil && y > 0 {
+			year = &y
+		}
 	}
 
 	var startDate *dto.NormalizedMediaDate
@@ -443,9 +443,9 @@ func TmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 
 	var year *int
 	if r.ReleaseDate != "" && len(r.ReleaseDate) >= 4 {
-		y := 0
-		fmt.Sscanf(r.ReleaseDate[:4], "%d", &y)
-		if y > 0 { year = &y }
+		if y, err := strconv.Atoi(r.ReleaseDate[:4]); err == nil && y > 0 {
+			year = &y
+		}
 	}
 
 	var startDate *dto.NormalizedMediaDate
@@ -515,9 +515,9 @@ func TmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails, englishTitle string
 
 	var year *int
 	if r.ReleaseDate != "" && len(r.ReleaseDate) >= 4 {
-		y := 0
-		fmt.Sscanf(r.ReleaseDate[:4], "%d", &y)
-		if y > 0 { year = &y }
+		if y, err := strconv.Atoi(r.ReleaseDate[:4]); err == nil && y > 0 {
+			year = &y
+		}
 	}
 
 	var startDate *dto.NormalizedMediaDate
@@ -577,31 +577,29 @@ func TmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails, englishTitle string
 }
 
 // parseTMDBDate parses a TMDB date string (YYYY-MM-DD) into NormalizedMediaDate.
+// Las partes ausentes o no numéricas quedan en nil.
 func parseTMDBDate(dateStr string) *dto.NormalizedMediaDate {
 	parts := strings.Split(dateStr, "-")
 	date := &dto.NormalizedMediaDate{}
 
 	if len(parts) >= 1 {
-		y := 0
-		fmt.Sscanf(parts[0], "%d", &y)
-		if y > 0 {
-			date.Year = &y
-		}
+		date.Year = positiveInt(parts[0])
 	}
 	if len(parts) >= 2 {
-		m := 0
-		fmt.Sscanf(parts[1], "%d", &m)
-		if m > 0 {
-			date.Month = &m
-		}
+		date.Month = positiveInt(parts[1])
 	}
 	if len(parts) >= 3 {
-		d := 0
-		fmt.Sscanf(parts[2], "%d", &d)
-		if d > 0 {
-			date.Day = &d
-		}
+		date.Day = positiveInt(parts[2])
 	}
 
 	return date
+}
+
+// positiveInt devuelve el entero de s si es mayor que cero, o nil.
+func positiveInt(s string) *int {
+	n, err := strconv.Atoi(s)
+	if err != nil || n <= 0 {
+		return nil
+	}
+	return &n
 }

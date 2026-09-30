@@ -294,7 +294,7 @@ func videotoolboxProfile() HwAccelProfile {
 }
 
 func amfProfile(preset string) HwAccelProfile {
-	amfQuality := "speed"
+	var amfQuality string
 	switch preset {
 	case "slow", "slower", "veryslow":
 		amfQuality = "quality"

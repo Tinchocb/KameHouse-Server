@@ -90,10 +90,7 @@ func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo
 			}
 		}
 
-		// If AniDB has more episodes than the platform
-		if discrepancy == DiscrepancyAniDBHasMore {
-			// Do nothing
-		}
+		// Si AniDB tiene más episodios que la plataforma (DiscrepancyAniDBHasMore) no se hace nada.
 
 	}
 

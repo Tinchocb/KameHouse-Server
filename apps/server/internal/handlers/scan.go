@@ -170,7 +170,11 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 			}
 		}()
 		defer globalScanActive.Store(false)
-		defer scanLogger.Done()
+		defer func() {
+			if err := scanLogger.Done(); err != nil {
+				h.App.Logger.Warn().Err(err).Msg("scan: could not close the scan log")
+			}
+		}()
 
 		// Timeout safety: if any external API or DB call hangs indefinitely,
 		// globalScanActive would never be reset without this. Also cancels immediately on shutdown.

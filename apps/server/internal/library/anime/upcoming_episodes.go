@@ -80,7 +80,7 @@ func NewUpcomingEpisodes(opts *NewUpcomingEpisodesOptions) *UpcomingEpisodes {
 
 				// Get episode metadata
 			if opts.MetadataProviderRef != nil {
-				rateLimiter.Wait(context.Background())
+				_ = rateLimiter.Wait(context.Background()) // solo falla si n > burst
 				animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(media.ID)
 				if err == nil {
 					if ep, ok := animeMetadata.FindEpisode(strconv.Itoa(media.NextAiringEpisode.Episode)); ok {

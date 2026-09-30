@@ -15,7 +15,7 @@ func ReadIsMkvOrWebm(r io.ReadSeeker) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	defer r.Seek(0, io.SeekStart)
+	defer func() { _, _ = r.Seek(0, io.SeekStart) }()
 
 	return isMkvOrWebm(r)
 }

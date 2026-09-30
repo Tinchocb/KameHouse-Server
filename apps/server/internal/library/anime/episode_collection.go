@@ -77,7 +77,6 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 			}
 			opts.AnimeMetadata.Titles["en"] = opts.Media.TitleEnglish
 			opts.AnimeMetadata.Titles["x-jat"] = opts.Media.TitleRomaji
-			err = nil
 		}
 	}
 

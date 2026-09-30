@@ -66,7 +66,7 @@ func NewMissingEpisodes(opts *NewMissingEpisodesOptions) *MissingEpisodes {
 				return
 			}
 
-			rateLimiter.Wait(context.Background())
+			_ = rateLimiter.Wait(context.Background()) // solo falla si n > burst
 			// Fetch anime metadata
 			animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(int(media.ID))
 			if err != nil {

@@ -54,19 +54,25 @@ func TestGetVideoFilePathsFromDir_WithSymlinks(t *testing.T) {
 
 	libDir := filepath.Join(tmpDir, "library")
 	externalLibDir := t.TempDir()
-	os.Mkdir(libDir, 0755)
+	if err := os.Mkdir(libDir, 0755); err != nil {
+		t.Fatal(err)
+	}
 	// Create files in the external directory
 	createFile(t, filepath.Join(externalLibDir, "external_video1.mkv"))
 	createFile(t, filepath.Join(externalLibDir, "external_video2.mp4"))
 
 	// Create directories and files
 	dir1 := filepath.Join(libDir, "Anime1")
-	os.Mkdir(dir1, 0755)
+	if err := os.Mkdir(dir1, 0755); err != nil {
+		t.Fatal(err)
+	}
 	createFile(t, filepath.Join(dir1, "Anime1_1.mkv"))
 	createFile(t, filepath.Join(dir1, "Anime1_2.mp4"))
 
 	dir2 := filepath.Join(libDir, "Anime2")
-	os.Mkdir(dir2, 0755)
+	if err := os.Mkdir(dir2, 0755); err != nil {
+		t.Fatal(err)
+	}
 	createFile(t, filepath.Join(dir2, "Anime2_1.mkv"))
 
 	// Create a symlink to the external directory

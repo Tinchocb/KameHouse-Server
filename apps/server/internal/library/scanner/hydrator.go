@@ -360,7 +360,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 				// This handles cases where filenames use numbering relative to a previous part of the same season
 				// (e.g., S04E12 for the first episode of Part 2, where Part 1 had 11 episodes).
 				if !fetchedGroupMetadata && fh.MetadataProviderRef != nil {
-					rateLimiter.Wait(context.Background())
+					_ = rateLimiter.Wait(context.Background()) // solo falla si n > burst
 					groupMetadata, _ = fh.MetadataProviderRef.GetAnimeMetadata(mID)
 					fetchedGroupMetadata = true
 				}
@@ -406,7 +406,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 				// When we encounter a file with an episode number higher than the media's episode count
 				// we have a forced media ID, we will fetch the media from TMDB and get the offset
 				if !fetchedForcedMetadata && fh.MetadataProviderRef != nil {
-					rateLimiter.Wait(context.Background())
+					_ = rateLimiter.Wait(context.Background()) // solo falla si n > burst
 					forcedMetadata, forcedMetadataErr = fh.MetadataProviderRef.GetAnimeMetadata(fh.ForceMediaId)
 					fetchedForcedMetadata = true
 				}
@@ -452,7 +452,7 @@ func (fh *FileHydrator) hydrateGroupMetadata(
 				absoluteEpisodeNumber := firstEp.AbsoluteEpisodeNumber
 
 				// Calculate the relative episode number
-				relativeEp := episode
+				var relativeEp int
 
 				// Let's say the media has 12 episodes and the file is "episode 13"
 				// If the [partAbsoluteEpisodeNumber] is 13, then the [relativeEp] will be 1, we can safely ignore the [absoluteEpisodeNumber]

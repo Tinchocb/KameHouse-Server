@@ -276,12 +276,8 @@ func (mp *MatroskaParser) parseSimpleBlock(size uint64) (*Packet, error) {
 				frameData = frameData[:frameSize]
 			}
 		case 0x04: // EBML lacing
-			// For EBML lacing, we need to reconstruct the original stream
-			// The reference seems to include size information in the output
-			if frameCount > 1 && len(frameData) > 1 {
-				// Don't skip anything - include all lacing information
-				// This matches the reference file format
-			}
+			// Con EBML lacing se conserva todo el flujo, incluida la información de
+			// tamaños: es lo que produce la referencia. No se recorta nada.
 		case 0x06: // Xiph lacing
 			// Parse Xiph lacing sizes
 			if frameCount > 1 {

@@ -106,7 +106,7 @@ func (j *CustomJSONSerializer) Serialize(c echo.Context, i interface{}, indent s
 		return err
 	}
 
-	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSONCharsetUTF8)
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	_, err := c.Response().Write(buf.Bytes())
 	return err
 }

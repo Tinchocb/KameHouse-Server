@@ -101,7 +101,7 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 
 	for {
 		// Strict drop policy: Reap the goroutine if client vanishes without closing TCP socket
-		ws.SetReadDeadline(time.Now().Add(60 * time.Second))
+		_ = ws.SetReadDeadline(time.Now().Add(60 * time.Second)) // si falla, ReadMessage devuelve el error
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {

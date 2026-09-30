@@ -37,7 +37,6 @@ func NewEntryLibraryData(opts *NewEntryLibraryDataOptions) (ret *EntryLibraryDat
 		AllFilesLocked: lo.EveryBy(opts.EntryLocalFiles, func(item *LocalFile) bool { return item.Locked }),
 		SharedPath:     sharedPath,
 	}
-	ok = true
 
 	lfw := NewLocalFileWrapper(opts.EntryLocalFiles)
 	lfwe, ok := lfw.GetLocalEntryById(opts.MediaID)

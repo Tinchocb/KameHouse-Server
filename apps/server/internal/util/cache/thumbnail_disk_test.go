@@ -23,7 +23,7 @@ func TestThumbnailCache_MemoryMetrics(t *testing.T) {
 	// Miss
 	_, found := c.Get("nonexistent")
 	assert.False(t, found)
-	hits, misses, count = c.Stats()
+	hits, misses, _ = c.Stats()
 	assert.Equal(t, uint64(0), hits)
 	assert.Equal(t, uint64(1), misses)
 

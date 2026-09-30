@@ -213,7 +213,7 @@ func (h *Handler) HandleGetLogFilenames(c echo.Context) error {
 	}
 
 	var filenames []string
-	filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d == nil || d.IsDir() || filepath.Ext(path) != ".log" {
 			return nil
 		}
@@ -249,7 +249,7 @@ func (h *Handler) HandleDeleteLogs(c echo.Context) error {
 
 	actualNewest := ""
 	var allLogs []string
-	filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(h.App.Config.Logs.Dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || filepath.Ext(path) != ".log" {
 			return nil
 		}

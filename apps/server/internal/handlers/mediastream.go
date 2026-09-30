@@ -813,7 +813,9 @@ func (h *Handler) HandleResolveMAL(c echo.Context) error {
 	}
 	if malID, ok := dragonBallMalMap[lm.TmdbID]; ok {
 		if lm.MyanimelistId != malID {
-			db.UpdateLibraryMediaMappings(h.App.Database, lm.ID, lm.AnidbId, malID)
+			if err := db.UpdateLibraryMediaMappings(h.App.Database, lm.ID, lm.AnidbId, malID); err != nil {
+				h.App.Logger.Warn().Err(err).Uint("mediaId", lm.ID).Int("malId", malID).Msg("mediastream: could not persist MAL id mapping")
+			}
 		}
 		return h.RespondWithData(c, map[string]interface{}{"malId": malID})
 	}
@@ -858,7 +860,9 @@ func (h *Handler) HandleResolveMAL(c echo.Context) error {
 
 		if sfErr == nil {
 			if malId, ok := res.(int); ok && malId > 0 {
-				db.UpdateLibraryMediaMappings(h.App.Database, lm.ID, lm.AnidbId, malId)
+				if err := db.UpdateLibraryMediaMappings(h.App.Database, lm.ID, lm.AnidbId, malId); err != nil {
+					h.App.Logger.Warn().Err(err).Uint("mediaId", lm.ID).Int("malId", malId).Msg("mediastream: could not persist MAL id mapping")
+				}
 				return h.RespondWithData(c, map[string]interface{}{"malId": malId})
 			}
 		}

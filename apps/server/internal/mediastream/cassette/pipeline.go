@@ -364,7 +364,7 @@ func (p *Pipeline) Kill() {
 
 // killHeadLocked terminates an encoder head
 func (p *Pipeline) killHeadLocked(id int) {
-	defer func() { recover() }() // Guard against double-close of killCh.
+	defer func() { _ = recover() }() // Guard against double-close of killCh.
 	select {
 	case <-p.killCh:
 	default:

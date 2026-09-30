@@ -2851,7 +2851,7 @@ func TestReadPacket_BasicAndTrackMask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMatroskaParser() failed: %v", err)
 	}
-	parser2.SetTrackMask(1 << (1 - 1)) // mask track 1
+	parser2.SetTrackMask(1 << 0) // máscara de la pista 1 (bit 0)
 	pkt3, err := parser2.ReadPacket()
 	if err != io.EOF || pkt3 != nil {
 		t.Errorf("Expected EOF with masked track, got pkt=%v err=%v", pkt3, err)
