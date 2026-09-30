@@ -6,9 +6,19 @@ import { toast } from "sonner"
  * Registra y gestiona el ciclo de vida del Service Worker (PWA) de KameHouse.
  * 
  * - En desarrollo desregistra service workers previos para no interferir con HMR.
- * - En producción detecta actualizaciones en segundo plano y muestra un prompt
- *   amigable usando Sonner sin interrumpir la reproducción HLS activa.
+ * - En producción detecta actualizaciones en segundo plano. Si la app se acaba de abrir
+ *   y no hay video reproduciéndose, la nueva versión se aplica sola (una recarga);
+ *   en cualquier otro momento muestra un prompt con Sonner sin interrumpir la
+ *   reproducción HLS activa.
+ *
+ * Sin la aplicación automática, una versión nueva queda "esperando" hasta que se
+ * cierren todas las ventanas: en la app de escritorio (una sola ventana) el aviso de
+ * 12 s se pierde fácilmente y se sigue viendo la interfaz vieja durante días.
  */
+
+/** Ventana desde la carga de la página en la que aplicar una actualización es inocuo. */
+export const APPLY_UPDATE_WINDOW_MS = 30_000
+
 export function PwaRegistry() {
     useEffect(() => {
         if (typeof window === "undefined" || !("serviceWorker" in navigator)) return
@@ -40,6 +50,16 @@ export function PwaRegistry() {
             return Boolean(video && !video.paused && !video.ended && video.readyState > 2)
         }
 
+        // Recién abierta la app y sin video: recargar cuesta un instante y evita que el
+        // usuario quede con la versión anterior. Después, se le avisa y decide.
+        const handleUpdateReady = (waitingWorker: ServiceWorker) => {
+            if (!isVideoPlaying() && performance.now() < APPLY_UPDATE_WINDOW_MS) {
+                waitingWorker.postMessage({ type: "SKIP_WAITING" })
+                return
+            }
+            promptUserForUpdate(waitingWorker)
+        }
+
         const promptUserForUpdate = (waitingWorker: ServiceWorker) => {
             // Si el usuario está viendo video, diferir un momento o mostrar acción no intrusiva
             const onUpdateClick = () => {
@@ -65,7 +85,7 @@ export function PwaRegistry() {
 
                 // Si ya había un worker esperando activación cuando se abrió la app
                 if (registration.waiting) {
-                    promptUserForUpdate(registration.waiting)
+                    handleUpdateReady(registration.waiting)
                     return
                 }
 
@@ -77,7 +97,7 @@ export function PwaRegistry() {
                     newWorker.addEventListener("statechange", () => {
                         // Solo avisar si ya había un SW previo controlando la página
                         if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-                            promptUserForUpdate(newWorker)
+                            handleUpdateReady(newWorker)
                         }
                     })
                 })

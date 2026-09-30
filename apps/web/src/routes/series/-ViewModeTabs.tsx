@@ -39,7 +39,7 @@ export function ViewModeTabs({
             tone="neutral"
             surface="glass"
             fullWidth
-            className="relative z-20"
+            className="relative z-20 p-2 sm:p-2.5"
         />
     );
 }

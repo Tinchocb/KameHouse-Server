@@ -259,67 +259,65 @@ export function FloatingPillNav() {
                 </div>
             </m.div>
 
-            {/* ─── ISLA FLOTANTE INFERIOR IZQUIERDA: ACCIONES Y UTILIDADES RÁPIDAS (SOLO ENTORNO DEV) ── */}
-            {import.meta.env.DEV && (
-                <m.div role="group" aria-label="Utilidades de desarrollo"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    className="fixed bottom-5 left-4 sm:left-6 md:left-8 z-navbar hidden md:flex items-center pointer-events-auto transform-gpu"
-                >
-                    <div className="glass-frosted-pill flex items-center gap-1.5 px-2.5 py-1.5">
-                        {/* Modo Maratón */}
-                        <button
-                            type="button"
-                            onClick={handleToggleMarathon}
-                            aria-label={marathonMode ? "Desactivar Maratón" : "Activar Maratón"}
-                            aria-pressed={marathonMode}
-                            title={marathonMode ? "Modo Maratón: Activado (Auto-skip)" : "Modo Maratón: Desactivado"}
-                            className={cn(
-                                "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-90",
-                                "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
-                                marathonMode 
-                                    ? "bg-brand-accent/25 text-brand-accent border border-brand-accent/40" 
-                                    : "text-on-surface-variant hover:text-white hover:bg-white/10"
-                            )}
-                        >
-                            <IconNavigationRocket className="w-4 h-4" />
-                        </button>
+            {/* ─── ISLA FLOTANTE INFERIOR IZQUIERDA: MARATÓN, ALEATORIO Y MÚSICA ─────────────── */}
+            <m.div role="group" aria-label="Acciones rápidas"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="fixed bottom-5 left-4 sm:left-6 md:left-8 z-navbar hidden md:flex items-center pointer-events-auto transform-gpu"
+            >
+                <div className="glass-frosted-pill flex items-center gap-1.5 px-2.5 py-1.5">
+                    {/* Modo Maratón */}
+                    <button
+                        type="button"
+                        onClick={handleToggleMarathon}
+                        aria-label={marathonMode ? "Desactivar Maratón" : "Activar Maratón"}
+                        aria-pressed={marathonMode}
+                        title={marathonMode ? "Modo Maratón: Activado (Auto-skip)" : "Modo Maratón: Desactivado"}
+                        className={cn(
+                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-90",
+                            "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
+                            marathonMode 
+                                ? "bg-brand-accent/25 text-brand-accent border border-brand-accent/40" 
+                                : "text-on-surface-variant hover:text-white hover:bg-white/10"
+                        )}
+                    >
+                        <IconNavigationRocket className="w-4 h-4" />
+                    </button>
 
-                        {/* Reproducción Aleatoria / Modo TV */}
-                        <button
-                            type="button"
-                            onClick={handleOpenRandom}
-                            aria-label="Reproducción Aleatoria (Modo TV)"
-                            title="Reproducción Aleatoria / Modo TV"
-                            className={cn(
-                                "p-2 rounded-full text-xs text-on-surface-variant hover:text-white hover:bg-white/10 active:scale-90 flex items-center justify-center cursor-pointer",
-                                "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]"
-                            )}
-                        >
-                            <IconMediaRandom className="w-4 h-4" />
-                        </button>
+                    {/* Reproducción Aleatoria / Modo TV */}
+                    <button
+                        type="button"
+                        onClick={handleOpenRandom}
+                        aria-label="Reproducción Aleatoria (Modo TV)"
+                        title="Reproducción Aleatoria / Modo TV"
+                        className={cn(
+                            "p-2 rounded-full text-xs text-on-surface-variant hover:text-white hover:bg-white/10 active:scale-90 flex items-center justify-center cursor-pointer",
+                            "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]"
+                        )}
+                    >
+                        <IconMediaRandom className="w-4 h-4" />
+                    </button>
 
-                        {/* Música de Fondo */}
-                        <button
-                            type="button"
-                            onClick={handleToggleAudio}
-                            aria-label={isAudioActive ? "Silenciar Música" : "Activar Música de Fondo"}
-                            aria-pressed={isAudioActive}
-                            title={isAudioActive ? "Música de fondo: Encendida" : "Música de fondo: Silenciada"}
-                            className={cn(
-                                "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-90",
-                                "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
-                                isAudioActive 
-                                    ? "text-brand-secondary bg-brand-secondary/15 border border-brand-secondary/30" 
-                                    : "text-on-surface-variant/80 hover:text-white hover:bg-white/10"
-                            )}
-                        >
-                            {isAudioActive ? <IconMediaVolume2 className="w-4 h-4" /> : <IconMediaVolumeX className="w-4 h-4" />}
-                        </button>
-                    </div>
-                </m.div>
-            )}
+                    {/* Música de Fondo */}
+                    <button
+                        type="button"
+                        onClick={handleToggleAudio}
+                        aria-label={isAudioActive ? "Silenciar Música" : "Activar Música de Fondo"}
+                        aria-pressed={isAudioActive}
+                        title={isAudioActive ? "Música de fondo: Encendida" : "Música de fondo: Silenciada"}
+                        className={cn(
+                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-90",
+                            "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
+                            isAudioActive 
+                                ? "text-brand-secondary bg-brand-secondary/15 border border-brand-secondary/30" 
+                                : "text-on-surface-variant/80 hover:text-white hover:bg-white/10"
+                        )}
+                    >
+                        {isAudioActive ? <IconMediaVolume2 className="w-4 h-4" /> : <IconMediaVolumeX className="w-4 h-4" />}
+                    </button>
+                </div>
+            </m.div>
         </div>
     )
 }
