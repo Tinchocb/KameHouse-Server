@@ -185,22 +185,16 @@ func extractFpcalcFromZip(tmpFile *os.File, localPath string) error {
 		if baseName != "fpcalc.exe" && baseName != "fpcalc" {
 			continue
 		}
+		if f.UncompressedSize64 > uint64(maxFpcalcBytes) {
+			return fmt.Errorf("fpcalc descomprimido supera el máximo admitido de %d bytes", maxFpcalcBytes)
+		}
 		rc, err := f.Open()
 		if err != nil {
 			return err
 		}
 		defer rc.Close()
 
-		out, err := os.OpenFile(localPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-
-		if _, err := io.Copy(out, rc); err != nil {
-			return err
-		}
-		return nil
+		return writeFpcalcAtomic(localPath, rc)
 	}
 	return errors.New("fpcalc binary not found inside downloaded zip archive")
 }
@@ -224,18 +218,48 @@ func extractFpcalcFromTarGz(tmpFile *os.File, localPath string) error {
 		if filepath.Base(header.Name) != "fpcalc" {
 			continue
 		}
-		out, err := os.OpenFile(localPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-		if err != nil {
-			return err
-		}
-		defer out.Close()
-
-		if _, err := io.Copy(out, tr); err != nil {
-			return err
-		}
-		return nil
+		return writeFpcalcAtomic(localPath, tr)
 	}
 	return errors.New("fpcalc binary not found inside downloaded tar.gz archive")
+}
+
+// maxFpcalcBytes acota lo que se escribe al descomprimir (fpcalc pesa unos pocos MB). Es
+// una variable para poder probarlo.
+var maxFpcalcBytes int64 = 100 << 20
+
+// writeFpcalcAtomic escribe fpcalc en un temporal de la misma carpeta y lo renombra al
+// terminar bien. ensureFpcalc da por instalado cualquier archivo que exista en la ruta
+// final: escribir directo dejaba, tras un corte a mitad de la extracción, un binario
+// truncado que se usaba para siempre.
+func writeFpcalcAtomic(localPath string, r io.Reader) error {
+	tmp, err := os.CreateTemp(filepath.Dir(localPath), filepath.Base(localPath)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+
+	n, copyErr := io.Copy(tmp, io.LimitReader(r, maxFpcalcBytes+1))
+	closeErr := tmp.Close()
+	switch {
+	case copyErr != nil:
+		_ = os.Remove(tmpPath)
+		return copyErr
+	case n > maxFpcalcBytes:
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("fpcalc descomprimido supera el máximo admitido de %d bytes", maxFpcalcBytes)
+	case closeErr != nil:
+		_ = os.Remove(tmpPath)
+		return closeErr
+	}
+	if err := os.Chmod(tmpPath, 0o755); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	if err := os.Rename(tmpPath, localPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	return nil
 }
 
 func fpcalcReleaseForHost() (fpcalcRelease, error) {
