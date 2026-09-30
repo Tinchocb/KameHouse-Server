@@ -6,6 +6,8 @@ import {
     isOutroChapter,
     resolveActiveEd,
     resolveActiveOp,
+    resolveEdWindow,
+    resolveOpWindow,
     shouldAutoSkip,
     shouldAutoSkipOutro,
     type Chapter,
@@ -92,5 +94,76 @@ describe("detección de capítulos", () => {
         expect(findIntroChapter(chapters)?.name).toBe("Opening 1")
         expect(findOutroChapter(chapters)?.name).toBe("Ending")
         expect(findIntroChapter([chapters[1]])).toBeUndefined()
+    })
+})
+
+describe("resolveOpWindow", () => {
+    const chapters: Chapter[] = [
+        { startTime: 0, endTime: 30, name: "Prologue" },
+        { startTime: 30, endTime: 120, name: "Opening 1" },
+    ]
+
+    it("prefiere AniSkip y conserva su origen", () => {
+        expect(resolveOpWindow({ op: { startTime: 5, endTime: 95 }, opSource: "community" }, chapters, undefined))
+            .toEqual({ startTime: 5, endTime: 95, source: "community" })
+        expect(resolveOpWindow({ op: { startTime: 5, endTime: 95 } }, [], undefined))
+            .toEqual({ startTime: 5, endTime: 95, source: "aniskip" })
+    })
+
+    it("sin AniSkip usa el capítulo del archivo", () => {
+        expect(resolveOpWindow(undefined, chapters, { opStart: 1, opEnd: 2 }))
+            .toEqual({ startTime: 30, endTime: 120, source: "chapters" })
+    })
+
+    it("sin capítulo usa lo aprendido de la serie", () => {
+        expect(resolveOpWindow(undefined, [], { opStart: 10, opEnd: 100 }))
+            .toEqual({ startTime: 10, endTime: 100, source: "propagated" })
+    })
+
+    it("ignora una caché incompleta o ausente", () => {
+        expect(resolveOpWindow(undefined, [], { opStart: 10 })).toBeUndefined()
+        expect(resolveOpWindow(undefined, [], { opEnd: 100 })).toBeUndefined()
+        expect(resolveOpWindow(undefined, [], undefined)).toBeUndefined()
+    })
+
+    it("acepta 0 como inicio válido de la caché", () => {
+        expect(resolveOpWindow(undefined, [], { opStart: 0, opEnd: 85 }))
+            .toEqual({ startTime: 0, endTime: 85, source: "propagated" })
+    })
+})
+
+describe("resolveEdWindow", () => {
+    const chapters: Chapter[] = [{ startTime: 1300, endTime: 1400, name: "Ending" }]
+
+    it("prefiere AniSkip y conserva su origen", () => {
+        expect(resolveEdWindow({ ed: { startTime: 1300, endTime: 1390 }, edSource: "community" }, chapters, undefined, 1400))
+            .toEqual({ startTime: 1300, endTime: 1390, source: "community" })
+    })
+
+    it("si AniSkip no trae fin, termina en la duración", () => {
+        expect(resolveEdWindow({ ed: { startTime: 1300, endTime: 0 } }, [], undefined, 1400))
+            .toEqual({ startTime: 1300, endTime: 1400, source: "aniskip" })
+        expect(resolveEdWindow({ ed: { startTime: 1300, endTime: 0 } }, [], undefined, 0))
+            .toEqual({ startTime: 1300, endTime: 0, source: "aniskip" })
+    })
+
+    it("sin AniSkip usa el capítulo del archivo", () => {
+        expect(resolveEdWindow(undefined, chapters, { edOffset: 1, edEnd: 2 }, 1400))
+            .toEqual({ startTime: 1300, endTime: 1400, source: "chapters" })
+    })
+
+    it("sin capítulo usa la caché de la serie, con fin propio o la duración", () => {
+        expect(resolveEdWindow(undefined, [], { edOffset: 1320, edEnd: 1395 }, 1400))
+            .toEqual({ startTime: 1320, endTime: 1395, source: "propagated" })
+        expect(resolveEdWindow(undefined, [], { edOffset: 1320 }, 1400))
+            .toEqual({ startTime: 1320, endTime: 1400, source: "propagated" })
+        expect(resolveEdWindow(undefined, [], { edOffset: 1320, edEnd: 0 }, 1400))
+            .toEqual({ startTime: 1320, endTime: 1400, source: "propagated" })
+    })
+
+    it("la caché no vale sin duración conocida ni con offset cero", () => {
+        expect(resolveEdWindow(undefined, [], { edOffset: 1320 }, 0)).toBeUndefined()
+        expect(resolveEdWindow(undefined, [], { edOffset: 0 }, 1400)).toBeUndefined()
+        expect(resolveEdWindow(undefined, [], undefined, 1400)).toBeUndefined()
     })
 })

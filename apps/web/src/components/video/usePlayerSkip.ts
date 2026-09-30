@@ -1,15 +1,13 @@
 'use no memo'
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { useAniSkipTimes, getAniSkipTimes } from "@/api/hooks/aniskip.hooks"
+import { getAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { useQueryClient } from "@tanstack/react-query"
-import { usePlayerStore, useSkipTimesStore } from "@/lib/store"
+import { usePlayerStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { Mediastream_StreamType } from "@/api/generated/types"
 import {
-    findIntroChapter,
-    findOutroChapter,
     isIntroChapter,
     isOutroChapter,
     resolveActiveEd,
@@ -18,6 +16,9 @@ import {
     shouldAutoSkipOutro,
 } from "./skip-windows"
 import type { Chapter, SkipWindow } from "./skip-windows"
+import { useMirroredState } from "./use-mirrored-state"
+import { usePlayerSkipWindows } from "./usePlayerSkipWindows"
+import { usePlayerVideoEnded } from "./usePlayerVideoEnded"
 import {
     findActiveChapter,
     findSkippableChapter,
@@ -112,13 +113,6 @@ export function usePlayerSkip({
         }))
     )
 
-    const { seriesSkipTimes, saveSeriesSkipTimes } = useSkipTimesStore(
-        useShallow(state => ({
-            seriesSkipTimes: state.seriesSkipTimes,
-            saveSeriesSkipTimes: state.saveSeriesSkipTimes
-        }))
-    )
-
     // ── Refs ────────────────────────────────────────────────────────────────────
     const hasAutoSkippedIntroRef = useRef(false)
     const hasAutoSkippedOutroRef = useRef(false)
@@ -176,46 +170,21 @@ export function usePlayerSkip({
         }
     }, [videoRef])
     // ── Dual ref+state pattern (avoids stale closures in hot callbacks) ─────────
-    const [skipMode, setSkipModeState] = useState<"intro" | "outro" | null>(null)
-    const skipModeRef = useRef<"intro" | "outro" | null>(null)
-    const setSkipMode = useCallback((val: "intro" | "outro" | null) => {
-        skipModeRef.current = val
-        setSkipModeState(val)
-    }, [])
+    const [skipMode, setSkipMode, skipModeRef] = useMirroredState<"intro" | "outro" | null>(null)
 
-    const [skipRemainingSeconds, setSkipRemainingSecondsState] = useState(0)
-    const skipRemainingSecondsRef = useRef(0)
-    const setSkipRemainingSeconds = useCallback((val: number) => {
-        skipRemainingSecondsRef.current = val
-        setSkipRemainingSecondsState(val)
-    }, [])
+    const [skipRemainingSeconds, setSkipRemainingSeconds, skipRemainingSecondsRef] = useMirroredState<number>(0)
 
-    const [segmentProgress, setSegmentProgressState] = useState(0)
-    const segmentProgressRef = useRef(0)
-    const setSegmentProgress = useCallback((val: number) => {
-        segmentProgressRef.current = val
-        setSegmentProgressState(val)
-    }, [])
+    const [segmentProgress, setSegmentProgress] = useMirroredState<number>(0)
 
-    const [showNextEpisode, setShowNextEpisodeState] = useState(false)
-    const showNextEpisodeRef = useRef(false)
-    const setShowNextEpisode = useCallback((val: boolean) => {
-        showNextEpisodeRef.current = val
-        setShowNextEpisodeState(val)
-    }, [])
+    const [showNextEpisode, setShowNextEpisode, showNextEpisodeRef] = useMirroredState<boolean>(false)
 
     const [showAutoSkipToast, setShowAutoSkipToast] = useState<AutoSkipToastType | null>(null)
 
-    const [activeChapter, setActiveChapterState] = useState<string | null>(null)
-    const activeChapterRef = useRef<string | null>(null)
-    const setActiveChapter = useCallback((val: string | null) => {
-        activeChapterRef.current = val
-        setActiveChapterState(val)
-    }, [])
+    const [activeChapter, setActiveChapter, activeChapterRef] = useMirroredState<string | null>(null)
 
     const [countdownSeconds, setCountdownSeconds] = useState(COUNTDOWN_START)
     const [showCountdown, setShowCountdown] = useState(false)
-    const [videoEnded, setVideoEnded] = useState(false)
+    const [videoEnded, setVideoEnded] = usePlayerVideoEnded(videoRef)
 
     // ── Episode change reset ─────────────────────────────────────────────────────
     // When the orchestrator loads a new episode, playableUrl transitions "" → realUrl
@@ -241,96 +210,10 @@ export function usePlayerSkip({
         hasTriggeredNextEpisodeRef.current = false
         hasPreloadedRef.current = false
         skippedChaptersRef.current.clear()
-    }, [episodeNumber, playableUrl, setShowNextEpisode, setSkipMode]) // setters estables (useCallback sin deps)
+    }, [episodeNumber, playableUrl, setShowNextEpisode, setSkipMode, setVideoEnded]) // setters estables
 
-    // ── Video ended tracking ─────────────────────────────────────────────────────
-    useEffect(() => {
-        const video = videoRef.current
-        if (!video) return
-
-        const handleEnded = () => setVideoEnded(true)
-        const handlePlay = () => setVideoEnded(false)
-        const handleSeeked = () => setVideoEnded(video.ended)
-
-        video.addEventListener("ended", handleEnded)
-        video.addEventListener("play", handlePlay)
-        video.addEventListener("seeked", handleSeeked)
-        setVideoEnded(video.ended)
-
-        return () => {
-            video.removeEventListener("ended", handleEnded)
-            video.removeEventListener("play", handlePlay)
-            video.removeEventListener("seeked", handleSeeked)
-        }
-    }, [videoRef])
-
-    // ── AniSkip data ─────────────────────────────────────────────────────────────
-    const { data: skipTimes } = useAniSkipTimes({
-        malId: malId ?? null,
-        episodeNumber: episodeNumber ?? null,
-        episodeDuration: duration > 0 ? duration : undefined,
-        enabled: !!((malId || mediaId) && episodeNumber),
-        mediaId: mediaId ?? null,
-    })
-
-    // ── Resolved skip windows (AniSkip → chapter → series cache) ────────────────
-    const storeKey = malId || mediaId
-    const skipTimesOp = useMemo<SkipWindow | undefined>(() => {
-        if (skipTimes?.op) return { startTime: skipTimes.op.startTime, endTime: skipTimes.op.endTime, source: skipTimes.opSource ?? "aniskip" }
-        const chap = findIntroChapter(chapters)
-        if (chap) return { startTime: chap.startTime, endTime: chap.endTime, source: "chapters" }
-        if (storeKey) {
-            const cached = seriesSkipTimes[String(storeKey)]
-            if (cached && typeof cached.opStart === "number" && typeof cached.opEnd === "number") {
-                return { startTime: cached.opStart, endTime: cached.opEnd, source: "propagated" }
-            }
-        }
-        return undefined
-    }, [skipTimes, chapters, storeKey, seriesSkipTimes])
-
-    const skipTimesEd = useMemo<SkipWindow | undefined>(() => {
-        if (skipTimes?.ed) {
-            const endTime = skipTimes.ed.endTime > 0 ? skipTimes.ed.endTime : (duration > 0 ? duration : 0)
-            return { startTime: skipTimes.ed.startTime, endTime, source: skipTimes.edSource ?? "aniskip" }
-        }
-        const chap = findOutroChapter(chapters)
-        if (chap) return { startTime: chap.startTime, endTime: chap.endTime, source: "chapters" }
-        if (storeKey && duration > 0) {
-            const cached = seriesSkipTimes[String(storeKey)]
-            if (cached && typeof cached.edOffset === "number" && cached.edOffset > 0) {
-                const endTime = (typeof cached.edEnd === "number" && cached.edEnd > 0) ? cached.edEnd : duration
-                return { startTime: cached.edOffset, endTime, source: "propagated" }
-            }
-        }
-        return undefined
-    }, [skipTimes, chapters, storeKey, duration, seriesSkipTimes])
-
-    // ── Auto-learning: persist resolved skip times to series cache ───────────────
-    useEffect(() => {
-        if (!storeKey || duration <= 0) return
-
-        const cached = seriesSkipTimes[String(storeKey)]
-        let opStart = cached?.opStart
-        let opEnd = cached?.opEnd
-        let edOffset = cached?.edOffset
-        let edEnd = cached?.edEnd
-
-        // Use resolved skipTimesOp/Ed rather than re-running chapter regex
-        if (skipTimesOp) {
-            opStart = skipTimesOp.startTime
-            opEnd = skipTimesOp.endTime
-        }
-        if (skipTimesEd) {
-            edOffset = skipTimesEd.startTime
-            edEnd = skipTimesEd.endTime
-        }
-
-        if (typeof opStart === "number" && typeof opEnd === "number" && typeof edOffset === "number") {
-            if (cached?.opStart !== opStart || cached?.opEnd !== opEnd || cached?.edOffset !== edOffset || cached?.edEnd !== edEnd) {
-                saveSeriesSkipTimes(storeKey, opStart, opEnd, edOffset, edEnd)
-            }
-        }
-    }, [storeKey, duration, skipTimesOp, skipTimesEd, seriesSkipTimes, saveSeriesSkipTimes])
+    // ── Skip windows (AniSkip → chapter → series cache) + auto-learning ─────────
+    const { skipTimesOp, skipTimesEd } = usePlayerSkipWindows({ malId, mediaId, episodeNumber, duration, chapters })
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
     const triggerToast = useCallback((type: AutoSkipToastType) => {
@@ -742,7 +625,7 @@ export function usePlayerSkip({
         })) {
             tryAdvance()
         }
-    }, [setActiveChapter, setSegmentProgress, setShowNextEpisode, setSkipMode, setSkipRemainingSeconds, triggerToast, videoRef, tryAdvance])
+    }, [setActiveChapter, setSegmentProgress, setShowNextEpisode, setSkipMode, setSkipRemainingSeconds, activeChapterRef, showNextEpisodeRef, skipModeRef, skipRemainingSecondsRef, triggerToast, videoRef, tryAdvance])
 
     // D6: Se eliminó el efecto que limpiaba hasTriggeredNextEpisodeRef cuando
     // showNextEpisode pasaba a false. Ese comportamiento era incorrecto: si el

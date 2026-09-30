@@ -98,3 +98,69 @@ export function findOutroChapter(chapters: Chapter[]): Chapter | undefined {
     return chapters.find(isOutroChapter)
 }
 
+
+// ─── Resolución de ventanas (AniSkip → capítulos → caché de la serie) ──────────
+
+/** Intervalo devuelto por AniSkip (solo los campos que se usan). */
+export interface AniSkipInterval {
+    startTime: number
+    endTime: number
+}
+
+/** Lo que devuelve useAniSkipTimes, reducido a lo que la resolución necesita. */
+export interface AniSkipWindows {
+    op?: AniSkipInterval
+    ed?: AniSkipInterval
+    opSource?: string
+    edSource?: string
+}
+
+/** Tiempos aprendidos de otros episodios de la misma serie (skip-times-store). */
+export interface CachedSeriesSkipTimes {
+    opStart?: number
+    opEnd?: number
+    edOffset?: number
+    edEnd?: number
+}
+
+/**
+ * Ventana de intro: AniSkip primero, luego el capítulo "OP/Intro" del archivo y,
+ * por último, lo aprendido de otros episodios de la serie.
+ */
+export function resolveOpWindow(
+    aniskip: AniSkipWindows | undefined,
+    chapters: Chapter[],
+    cached: CachedSeriesSkipTimes | undefined,
+): SkipWindow | undefined {
+    if (aniskip?.op) return { startTime: aniskip.op.startTime, endTime: aniskip.op.endTime, source: aniskip.opSource ?? "aniskip" }
+    const chap = findIntroChapter(chapters)
+    if (chap) return { startTime: chap.startTime, endTime: chap.endTime, source: "chapters" }
+    if (cached && typeof cached.opStart === "number" && typeof cached.opEnd === "number") {
+        return { startTime: cached.opStart, endTime: cached.opEnd, source: "propagated" }
+    }
+    return undefined
+}
+
+/**
+ * Ventana de outro. Si AniSkip no trae fin (0), se usa la duración del video.
+ * La caché de la serie solo vale con duración conocida, porque el fin por
+ * defecto es la duración.
+ */
+export function resolveEdWindow(
+    aniskip: AniSkipWindows | undefined,
+    chapters: Chapter[],
+    cached: CachedSeriesSkipTimes | undefined,
+    duration: number,
+): SkipWindow | undefined {
+    if (aniskip?.ed) {
+        const endTime = aniskip.ed.endTime > 0 ? aniskip.ed.endTime : (duration > 0 ? duration : 0)
+        return { startTime: aniskip.ed.startTime, endTime, source: aniskip.edSource ?? "aniskip" }
+    }
+    const chap = findOutroChapter(chapters)
+    if (chap) return { startTime: chap.startTime, endTime: chap.endTime, source: "chapters" }
+    if (duration > 0 && cached && typeof cached.edOffset === "number" && cached.edOffset > 0) {
+        const endTime = (typeof cached.edEnd === "number" && cached.edEnd > 0) ? cached.edEnd : duration
+        return { startTime: cached.edOffset, endTime, source: "propagated" }
+    }
+    return undefined
+}
