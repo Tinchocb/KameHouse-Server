@@ -117,6 +117,19 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":43212.*LISTENING" 2^>nul') 
     )
 )
 
+:: Un servidor de desarrollo viejo -Rsbuild- que siga en :43210 se queda sirviendo la
+:: interfaz de una sesion anterior: el nuevo falla por puerto ocupado -strictPort- y la
+:: ventana de Tauri -devUrl :43210- mostraria la version vieja. Solo se cierra si el
+:: proceso es node.exe, para no matar otra cosa que use ese puerto.
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":43210.*LISTENING" 2^>nul') do (
+    if %%p NEQ 0 (
+        tasklist /FI "PID eq %%p" /FO CSV /NH 2>nul | findstr /i "node.exe" >nul && (
+            echo  [INFO] Cerrando el servidor de desarrollo anterior en :43210 - PID %%p
+            taskkill /F /T /PID %%p >nul 2>&1
+        )
+    )
+)
+
 :: ---------------------------------------------------------
 :: 3. Compilar servidor Go en SEGUNDO PLANO
 :: ---------------------------------------------------------

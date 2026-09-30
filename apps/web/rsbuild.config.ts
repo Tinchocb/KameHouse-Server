@@ -68,7 +68,15 @@ const config: RsbuildConfig = {
     },
     server: { // dev server
         port: Number(process.env.PORT) || 43210,
-        host: "0.0.0.0",
+        // Sin strictPort, si :43210 está ocupado por un servidor viejo Rsbuild se mueve en
+        // silencio a otro puerto y la ventana de Tauri (devUrl :43210) sigue mostrando la
+        // interfaz de la sesión anterior. Mejor fallar a la vista.
+        strictPort: true,
+        // Solo este equipo. El proxy de /api se conecta al backend desde 127.0.0.1, así que
+        // abrirlo a la red haría que cualquier equipo de la LAN pase por "localhost" y salte
+        // las restricciones de escritura y de endpoints sensibles del servidor. Para probar
+        // desde el celular o la TV: KAMEHOUSE_DEV_LAN=1 (y solo en una red de confianza).
+        host: process.env.KAMEHOUSE_DEV_LAN === "1" ? "0.0.0.0" : "127.0.0.1",
         headers: {
             "Cross-Origin-Embedder-Policy": "credentialless",
             "Cross-Origin-Opener-Policy": "same-origin",
