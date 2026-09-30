@@ -50,6 +50,43 @@ func (h *Handler) HandleGetSettings(c echo.Context) error {
 	return h.RespondWithData(c, settings.Redacted())
 }
 
+// normalizeLibraryPath limpia una carpeta de la biblioteca antes de guardarla. Devuelve
+// "" si está vacía y un error si no se admite: las comas rompen el guardado en CSV y las
+// carpetas de sistema (C:\, Windows, Program Files, /etc, .ssh…) nunca pueden ser una
+// biblioteca, porque de ella dependen los chequeos de qué archivos se sirven y se borran.
+func normalizeLibraryPath(p string) (string, error) {
+	trimmed := strings.TrimSpace(p)
+	if trimmed == "" {
+		return "", nil
+	}
+	clean := filepath.ToSlash(filepath.Clean(trimmed))
+	if clean == "" || clean == "." {
+		return "", nil
+	}
+	if strings.Contains(clean, ",") {
+		return "", fmt.Errorf("invalid library path %q: commas are not supported (CSV storage)", p)
+	}
+	if util.IsBlockedSystemDir(clean) {
+		return "", fmt.Errorf("invalid library path %q: protected system directory", p)
+	}
+	return clean, nil
+}
+
+// normalizeLibraryPaths aplica normalizeLibraryPath a una lista y descarta las vacías.
+func normalizeLibraryPaths(paths []string) ([]string, error) {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		clean, err := normalizeLibraryPath(p)
+		if err != nil {
+			return nil, err
+		}
+		if clean != "" {
+			out = append(out, clean)
+		}
+	}
+	return out, nil
+}
+
 // HandleGettingStarted implements the initial setup, saving base settings on first run.
 //
 //	@summary initial setup – save base settings on first run.
@@ -70,12 +107,16 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.Library.SeriesPaths == nil {
-		b.Library.SeriesPaths = []string{}
+	seriesPaths, err := normalizeLibraryPaths(b.Library.SeriesPaths)
+	if err != nil {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
 	}
-	if b.Library.MoviePaths == nil {
-		b.Library.MoviePaths = []string{}
+	moviePaths, err := normalizeLibraryPaths(b.Library.MoviePaths)
+	if err != nil {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
 	}
+	b.Library.SeriesPaths = seriesPaths
+	b.Library.MoviePaths = moviePaths
 
 	// El asistente precarga la configuración actual, que llega con los secretos
 	// enmascarados: se conserva la key guardada en vez de guardar la máscara.
@@ -190,19 +231,7 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 
 	// ── 2. Field-by-field PATCH merge for Library ─────────────────────────────
 	if b.Library != nil && rawLibrary != nil {
-		cleanOnePath := func(p string) (string, error) {
-			if strings.TrimSpace(p) == "" {
-				return "", nil
-			}
-			clean := filepath.ToSlash(filepath.Clean(strings.TrimSpace(p)))
-			if clean == "" || clean == "." {
-				return "", nil
-			}
-			if strings.Contains(clean, ",") {
-				return "", fmt.Errorf("invalid library path %q: commas are not supported (CSV storage)", p)
-			}
-			return clean, nil
-		}
+		cleanOnePath := normalizeLibraryPath
 		if _, ok := rawLibrary["seriesPaths"]; ok {
 			cleanSeries := make([]string, 0, len(b.Library.SeriesPaths))
 			for _, p := range b.Library.SeriesPaths {
