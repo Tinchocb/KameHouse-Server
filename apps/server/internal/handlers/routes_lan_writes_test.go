@@ -1,6 +1,10 @@
 package handlers
 
 import (
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/labstack/echo/v4"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -76,6 +80,31 @@ func TestLANWriteRoutesExist(t *testing.T) {
 	for p := range lanWriteRoutes {
 		if !writePaths[p] {
 			t.Errorf("lanWriteRoutes[%q] no coincide con ninguna ruta de escritura registrada", p)
+		}
+	}
+}
+
+func TestAPINoSniffMiddleware(t *testing.T) {
+	cases := []struct {
+		path string
+		want string
+	}{
+		{"/api/v1/status", "nosniff"},
+		{"/api/v1/image-proxy", "nosniff"},
+		{"/api/health", "nosniff"},
+		{"/assets/index.js", ""}, // estáticos de la interfaz: sin nosniff (MIME del registro de Windows)
+		{"/", ""},
+	}
+	e := echo.New()
+	for _, tc := range cases {
+		req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		if err := apiNoSniffMiddleware(func(c echo.Context) error { return c.NoContent(http.StatusOK) })(c); err != nil {
+			t.Fatal(err)
+		}
+		if got := rec.Header().Get("X-Content-Type-Options"); got != tc.want {
+			t.Errorf("%s: X-Content-Type-Options = %q, want %q", tc.path, got, tc.want)
 		}
 	}
 }

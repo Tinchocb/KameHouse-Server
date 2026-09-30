@@ -81,6 +81,11 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 			c.Response().Header().Set(k, v)
 		}
 	}
+	// El Content-Type no se reenvía tal cual: un upstream que declare text/html o
+	// image/svg+xml ejecutaría su contenido bajo nuestro origen. Solo pasan tipos
+	// de medios; el resto se sirve como application/octet-stream.
+	c.Response().Header().Set(echo.HeaderContentType, util.SafeProxyContentType(resp.Header.Get("Content-Type")))
+	util.HardenProxyResponse(c.Response().Header())
 
 	// Vary: Origin for correct caching with credentials (handled by global middleware).
 	c.Response().Header().Set("Vary", "Origin")
@@ -116,7 +121,7 @@ func (h *Handler) VideoProxy(c echo.Context) (err error) {
 		// Playlist might be valid but not decodable by the library, or simply corrupted.
 		// Option 1: Proxy as-is (might be preferred if decoding fails unexpectedly)
 		h.App.Logger.Warn().Err(decodeErr).Str("url", url).Msg("proxy: Failed to decode M3U8 playlist, proxying raw content")
-		c.Response().Header().Set(echo.HeaderContentType, resp.Header.Get("Content-Type")) // Use original Content-Type
+		c.Response().Header().Set(echo.HeaderContentType, util.SafeProxyContentType(resp.Header.Get("Content-Type")))
 		c.Response().Header().Set(echo.HeaderContentLength, strconv.Itoa(len(bodyBytes)))
 		c.Response().WriteHeader(resp.StatusCode)
 		_, writeErr := c.Response().Writer.Write(bodyBytes)

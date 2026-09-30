@@ -149,6 +149,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	e.HTTPErrorHandler = CustomHTTPErrorHandler
 
 	e.Use(TraceMiddleware(app.Logger))
+	e.Use(apiNoSniffMiddleware)
 
 	lechoLogger := lecho.From(*app.Logger)
 
@@ -401,6 +402,19 @@ func (h *Handler) invalidateSettingsCache() {
 	h.settings = nil
 	h.settingsMu.Unlock()
 	ClearLibraryCollectionCache()
+}
+
+// apiNoSniffMiddleware impide que el navegador reinterprete las respuestas de la
+// API por su contenido. Se limita a /api: los archivos estáticos de la interfaz
+// dependen del tipo MIME que Windows toma del registro, y con nosniff un .js
+// mal registrado dejaría la app sin cargar.
+func apiNoSniffMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if strings.HasPrefix(c.Request().URL.Path, "/api/") {
+			c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+		}
+		return next(c)
+	}
 }
 
 func headMethodMiddleware(next echo.HandlerFunc) echo.HandlerFunc {

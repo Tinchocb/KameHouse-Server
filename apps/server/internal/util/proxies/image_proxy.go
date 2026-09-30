@@ -52,6 +52,25 @@ func readCached(cachePath string) ([]byte, bool) {
 	return data, true
 }
 
+// readCachedImage lee la caché y devuelve el tipo real según los bytes. Un
+// archivo que no es una imagen (caché escrita por una versión anterior que no
+// validaba, o corrupta) se borra y cuenta como fallo de caché.
+func readCachedImage(cachePath string) ([]byte, string, bool) {
+	data, ok := readCached(cachePath)
+	if !ok {
+		return nil, "", false
+	}
+	contentType := util.SafeImageContentType("", data)
+	if contentType == "" {
+		contentType = util.SafeImageContentType("image/avif", data) // Go no detecta AVIF por sus bytes
+	}
+	if contentType == "" {
+		_ = os.Remove(cachePath)
+		return nil, "", false
+	}
+	return data, contentType, true
+}
+
 func (ip *ImageProxy) getCachePath(url string) string {
 	dir := ip.CacheDir
 	if dir == "" {
@@ -64,8 +83,8 @@ func (ip *ImageProxy) getCachePath(url string) string {
 
 func (ip *ImageProxy) GetImage(url string, headers map[string]string) ([]byte, string, error) {
 	cachePath := ip.getCachePath(url)
-	if data, ok := readCached(cachePath); ok {
-		return data, http.DetectContentType(data), nil
+	if data, contentType, ok := readCachedImage(cachePath); ok {
+		return data, contentType, nil
 	}
 
 	v, err, _ := imageProxyFlights.Do(cachePath, func() (interface{}, error) {
@@ -111,6 +130,14 @@ func (ip *ImageProxy) fetchImage(url string, cachePath string, headers map[strin
 		return nil, "", fmt.Errorf("ssrf proxy: image exceeds maximum allowed size of 25MB")
 	}
 
+	// Solo se sirve (y se cachea) una imagen ráster, decidida por los bytes y no
+	// por el Content-Type del origen: un HTML o un SVG con script servido bajo
+	// nuestro origen ejecutaría código con los privilegios de la app.
+	contentType := util.SafeImageContentType(resp.Header.Get("Content-Type"), body)
+	if contentType == "" {
+		return nil, "", fmt.Errorf("image proxy: %s no es una imagen ráster admitida", url)
+	}
+
 	// Persist to disk cache atomically (tmp+rename) to avoid corrupt .cache on crash.
 	// Unique tmp suffix: concurrent fetches of the same uncached URL must not share the tmp file.
 	tmpPath := fmt.Sprintf("%s.tmp.%d", cachePath, time.Now().UnixNano())
@@ -122,11 +149,6 @@ func (ip *ImageProxy) fetchImage(url string, cachePath string, headers map[strin
 		return nil, "", err
 	}
 
-	contentType := resp.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = http.DetectContentType(body)
-	}
-
 	return body, contentType, nil
 }
 
@@ -135,6 +157,7 @@ func (ip *ImageProxy) setHeaders(c echo.Context, contentType string) {
 		contentType = "image/jpeg"
 	}
 	c.Response().Header().Set("Content-Type", contentType)
+	util.HardenProxyResponse(c.Response().Header())
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	c.Response().Header().Set("Access-Control-Allow-Origin", "*")
 	c.Response().Header().Set("Access-Control-Allow-Methods", "GET")
@@ -152,8 +175,7 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 	// Fast path: check local disk cache first. If already downloaded, serve immediately
 	// without any network or DNS lookup overhead.
 	cachePath := ip.getCachePath(url)
-	if data, ok := readCached(cachePath); ok {
-		contentType := http.DetectContentType(data)
+	if data, contentType, ok := readCachedImage(cachePath); ok {
 		ip.setHeaders(c, contentType)
 		return c.Blob(http.StatusOK, contentType, data)
 	}
