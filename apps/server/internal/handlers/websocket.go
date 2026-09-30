@@ -21,6 +21,9 @@ import (
 //   - ?token=<value> query parameter (legacy)
 //   - Authorization: Bearer <token> header (preferred)
 //   - Sec-WebSocket-Protocol header with token (preferred for browsers)
+// wsMaxClientMessageBytes es el tamaño máximo de un mensaje que un cliente puede enviar.
+const wsMaxClientMessageBytes = 1 << 20 // 1 MiB
+
 func (h *Handler) webSocketEventHandler(c echo.Context) error {
 	// Client identity — passed as query parameters since WS browsers can't set custom headers.
 	id := c.QueryParam("id")
@@ -79,6 +82,10 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 		return err
 	}
 	defer ws.Close()
+	// Sin tope, gorilla acepta mensajes de cualquier tamaño: un solo cliente podía agotar
+	// la memoria del servidor. Lo que envía la interfaz (ping, reclamo de pestaña,
+	// eventos del reproductor) pesa unos pocos KB. Al pasarse, la conexión se cierra.
+	ws.SetReadLimit(wsMaxClientMessageBytes)
 
 	logCtx := h.App.Logger.Debug().Str("id", id)
 	if token != "" {
