@@ -5,6 +5,8 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,7 +24,20 @@ type binaryDownloadSpec struct {
 	Name  string   // "ffmpeg" or "ffprobe" or "bundle"
 	URLs  []string // Primary and fallback URLs
 	IsZip bool
+	// SHA256 es el hash esperado del archivo descargado (hex). Si está vacío no se
+	// verifica; si existe y no coincide, la descarga se rechaza y no se instala nada.
+	SHA256 string
 }
+
+// Topes de tamaño: sin ellos, un servidor comprometido (o un archivo corrupto) podía
+// llenar el disco durante la descarga o al descomprimir. Son variables para poder
+// probarlos. Los paquetes reales pesan ~55 MB (Windows) y ~130 MB descomprimidos.
+var (
+	maxDownloadBytes        int64 = 300 << 20
+	maxExtractedBinaryBytes int64 = 400 << 20
+)
+
+const ffbinariesBase = "https://github.com/vot/ffbinaries-prebuilt/releases/download/v6.1"
 
 // Manager coordinates status checking and downloading of FFmpeg/FFprobe binaries.
 type Manager struct {
@@ -128,72 +143,40 @@ func (m *Manager) EnsureBinaries(ctx context.Context, onProgress ProgressCallbac
 }
 
 func getDownloadSpecsForHost() []binaryDownloadSpec {
-	osName := runtime.GOOS
-	arch := runtime.GOARCH
+	return downloadSpecsFor(runtime.GOOS, runtime.GOARCH)
+}
 
-	switch osName {
+// downloadSpecsFor devuelve los paquetes de ffprobe y ffmpeg para una plataforma, o nil
+// si no hay uno publicado. Los nombres son los de los archivos de la versión v6.1 de
+// ffbinaries-prebuilt: todos son .zip y el de macOS se llama "macos-64". Antes se
+// pedían .tar.gz en Linux y "osx-64" en macOS, que dan 404: la instalación automática
+// solo funcionaba en Windows.
+func downloadSpecsFor(goos, goarch string) []binaryDownloadSpec {
+	var suffix string
+	switch goos {
 	case "windows":
-		return []binaryDownloadSpec{
-			{
-				Name: "FFprobe",
-				URLs: []string{
-					"https://github.com/vot/ffbinaries-prebuilt/releases/download/v6.1/ffprobe-6.1-win-64.zip",
-				},
-				IsZip: true,
-			},
-			{
-				Name: "FFmpeg",
-				URLs: []string{
-					"https://github.com/vot/ffbinaries-prebuilt/releases/download/v6.1/ffmpeg-6.1-win-64.zip",
-				},
-				IsZip: true,
-			},
-		}
-
+		suffix = "win-64"
 	case "linux":
-		archStr := "64"
-		if arch == "arm64" {
-			archStr = "arm-64"
-		} else if arch == "arm" {
-			archStr = "arm-32"
+		switch goarch {
+		case "amd64":
+			suffix = "linux-64"
+		case "386":
+			suffix = "linux-32"
+		case "arm64":
+			suffix = "linux-arm-64"
+		case "arm":
+			suffix = "linux-armhf-32"
 		}
-		return []binaryDownloadSpec{
-			{
-				Name: "FFprobe",
-				URLs: []string{
-					fmt.Sprintf("https://github.com/vot/ffbinaries-prebuilt/releases/download/v6.1/ffprobe-6.1-linux-%s.tar.gz", archStr),
-				},
-				IsZip: false,
-			},
-			{
-				Name: "FFmpeg",
-				URLs: []string{
-					fmt.Sprintf("https://github.com/vot/ffbinaries-prebuilt/releases/download/v6.1/ffmpeg-6.1-linux-%s.tar.gz", archStr),
-				},
-				IsZip: false,
-			},
-		}
-
 	case "darwin":
-		return []binaryDownloadSpec{
-			{
-				Name: "FFprobe",
-				URLs: []string{
-					"https://github.com/vot/ffbinaries-prebuilt/releases/download/v6.1/ffprobe-6.1-osx-64.zip",
-				},
-				IsZip: true,
-			},
-			{
-				Name: "FFmpeg",
-				URLs: []string{
-					"https://github.com/vot/ffbinaries-prebuilt/releases/download/v6.1/ffmpeg-6.1-osx-64.zip",
-				},
-				IsZip: true,
-			},
-		}
+		suffix = "macos-64" // en Apple Silicon corre con Rosetta
 	}
-
-	return nil
+	if suffix == "" {
+		return nil
+	}
+	return []binaryDownloadSpec{
+		{Name: "FFprobe", URLs: []string{fmt.Sprintf("%s/ffprobe-6.1-%s.zip", ffbinariesBase, suffix)}, IsZip: true},
+		{Name: "FFmpeg", URLs: []string{fmt.Sprintf("%s/ffmpeg-6.1-%s.zip", ffbinariesBase, suffix)}, IsZip: true},
+	}
 }
 
 func downloadAndExtractSpec(ctx context.Context, spec binaryDownloadSpec, binDir string, onProgress ProgressCallback, logger *zerolog.Logger) error {
@@ -204,7 +187,7 @@ func downloadAndExtractSpec(ctx context.Context, spec binaryDownloadSpec, binDir
 		}
 
 		logger.Info().Str("url", url).Str("name", spec.Name).Msg("ffmpegutil: Descargando paquete")
-		err := downloadAndExtractURL(ctx, url, spec.IsZip, binDir, onProgress)
+		err := downloadAndExtractURL(ctx, url, spec.IsZip, spec.SHA256, binDir, onProgress)
 		if err == nil {
 			return nil
 		}
@@ -233,7 +216,7 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func downloadAndExtractURL(ctx context.Context, url string, isZip bool, binDir string, onProgress ProgressCallback) error {
+func downloadAndExtractURL(ctx context.Context, url string, isZip bool, wantSHA256 string, binDir string, onProgress ProgressCallback) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -292,6 +275,11 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, binDir s
 			return lastErr
 		}
 
+		if resp.ContentLength > maxDownloadBytes {
+			resp.Body.Close()
+			return fmt.Errorf("el archivo a descargar pesa %d bytes y el máximo admitido es %d", resp.ContentLength, maxDownloadBytes)
+		}
+
 		tmpFile, err := os.CreateTemp("", "ffmpeg-dl-*")
 		if err != nil {
 			resp.Body.Close()
@@ -310,7 +298,13 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, binDir s
 			},
 		}
 
-		if _, err := io.Copy(tmpFile, pr); err != nil {
+		hasher := sha256.New()
+		written, err := io.Copy(io.MultiWriter(tmpFile, hasher), io.LimitReader(pr, maxDownloadBytes+1))
+		if err == nil && written > maxDownloadBytes {
+			resp.Body.Close()
+			return fmt.Errorf("la descarga supera el máximo admitido de %d bytes", maxDownloadBytes)
+		}
+		if err != nil {
 			resp.Body.Close()
 			lastErr = fmt.Errorf("error guardando archivo descargado: %w", err)
 			if attempt < maxAttempts {
@@ -326,6 +320,12 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, binDir s
 			return lastErr
 		}
 		resp.Body.Close()
+
+		if wantSHA256 != "" {
+			if got := hex.EncodeToString(hasher.Sum(nil)); !strings.EqualFold(got, wantSHA256) {
+				return fmt.Errorf("el hash SHA-256 del archivo descargado no coincide (esperado %s, obtenido %s): no se instaló nada", wantSHA256, got)
+			}
+		}
 
 		if onProgress != nil {
 			onProgress(85, "Descomprimiendo binarios...")
@@ -392,27 +392,57 @@ func extractBinariesFromZip(tmpFile *os.File, binDir string) error {
 			continue
 		}
 
+		if f.UncompressedSize64 > uint64(maxExtractedBinaryBytes) {
+			return fmt.Errorf("%s descomprimido supera el máximo admitido de %d bytes", baseName, maxExtractedBinaryBytes)
+		}
+
 		rc, err := f.Open()
 		if err != nil {
 			return err
 		}
-
-		targetPath := filepath.Join(binDir, baseName)
-		out, err := os.OpenFile(targetPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-		if err != nil {
-			rc.Close()
-			return err
-		}
-
-		_, copyErr := io.Copy(out, rc)
-		out.Close()
+		err = writeBinaryAtomic(binDir, baseName, rc)
 		rc.Close()
-
-		if copyErr != nil {
-			return copyErr
+		if err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+// writeBinaryAtomic escribe el binario en un archivo temporal de la misma carpeta y
+// recién al terminar bien lo renombra: un corte o un archivo corrupto a mitad de camino
+// ya no deja un ffmpeg truncado en lugar del que funcionaba. Además limita el tamaño.
+func writeBinaryAtomic(binDir, baseName string, r io.Reader) error {
+	tmp, err := os.CreateTemp(binDir, baseName+".*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	cleanup := func() { _ = os.Remove(tmpPath) }
+
+	n, copyErr := io.Copy(tmp, io.LimitReader(r, maxExtractedBinaryBytes+1))
+	closeErr := tmp.Close()
+	if copyErr != nil {
+		cleanup()
+		return copyErr
+	}
+	if n > maxExtractedBinaryBytes {
+		cleanup()
+		return fmt.Errorf("%s descomprimido supera el máximo admitido de %d bytes", baseName, maxExtractedBinaryBytes)
+	}
+	if closeErr != nil {
+		cleanup()
+		return closeErr
+	}
+	if err := os.Chmod(tmpPath, 0o755); err != nil {
+		cleanup()
+		return err
+	}
+	if err := os.Rename(tmpPath, filepath.Join(binDir, baseName)); err != nil {
+		cleanup()
+		return err
+	}
 	return nil
 }
 
@@ -442,17 +472,8 @@ func extractBinariesFromTarGz(tmpFile *os.File, binDir string) error {
 			continue
 		}
 
-		targetPath := filepath.Join(binDir, baseName)
-		out, err := os.OpenFile(targetPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-		if err != nil {
+		if err := writeBinaryAtomic(binDir, baseName, tr); err != nil {
 			return err
-		}
-
-		_, copyErr := io.Copy(out, tr)
-		out.Close()
-
-		if copyErr != nil {
-			return copyErr
 		}
 	}
 
