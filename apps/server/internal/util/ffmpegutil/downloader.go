@@ -39,6 +39,27 @@ var (
 
 const ffbinariesBase = "https://github.com/vot/ffbinaries-prebuilt/releases/download/v6.1"
 
+// ffbinariesSHA256 son los hashes SHA-256 de los paquetes de la versión v6.1 de
+// ffbinaries-prebuilt que se descargan. Se calcularon el 30/09/2026 bajando cada archivo
+// (los metadatos de la versión no publican hashes) y se comprobó que cada .zip está íntegro
+// y contiene el binario esperado. Si el mantenedor vuelve a subir un archivo, la descarga
+// se rechaza con un mensaje que incluye el hash nuevo: hay que revisarlo antes de actualizar
+// esta tabla. Un paquete sin entrada aquí se descarga sin verificar.
+var ffbinariesSHA256 = map[string]string{
+	"ffmpeg-6.1-linux-32.zip":        "b5f9a9cc0c759b890a5f7dd87d902509e426508ff80fbbaa1d13f740b6e822b0",
+	"ffmpeg-6.1-linux-64.zip":        "8bb4a27f5fd02f3dd9a5e75c9eddf6ace1d50a08929ee0d20bbf17eb467fb711",
+	"ffmpeg-6.1-linux-arm-64.zip":    "0e3a60df317df0bbfbe25e8b777864b5407d166e5b5ac692fb1e477568a4c886",
+	"ffmpeg-6.1-linux-armhf-32.zip":  "8766d3d118e589750dd35fdece8cb0e9b66deb22ff8dc35d4377915f73124dd5",
+	"ffmpeg-6.1-macos-64.zip":        "ffcd56ce5ef50c4d36d675b0ee80674f5a0869f94746460ff5d058a33cbd3128",
+	"ffmpeg-6.1-win-64.zip":          "b0fb4bcef9d4b5f7a77d2e4854f80d4ce3e43809bc29fd1f97caa1b467f96993",
+	"ffprobe-6.1-linux-32.zip":       "93147de02c25a184b29882e03fdebe2d2f70736421c095fb96f09f00dc064a49",
+	"ffprobe-6.1-linux-64.zip":       "cb690c360042b51d9e901db2b0185c585330c1067b5c5edf0b6a5e26e0375e2a",
+	"ffprobe-6.1-linux-arm-64.zip":   "c99358a90d93ada454e2f4dd26cd25718d36b4032b0ad5539425eac6e66349d8",
+	"ffprobe-6.1-linux-armhf-32.zip": "5445d7b9a5b4c9032f48a764c06838fa3568a7019bd5746c84d5c980c277bffd",
+	"ffprobe-6.1-macos-64.zip":       "878ab8787ca6c48a11cb668c01d544be4c1bf655637d719cdf3b3179841545f2",
+	"ffprobe-6.1-win-64.zip":         "3c0ea2856cf65edff23a2d4e76b1ceabba65fe8b1bed684ee2eeba24aa9427c3",
+}
+
 // Manager coordinates status checking and downloading of FFmpeg/FFprobe binaries.
 type Manager struct {
 	cacheDir      string
@@ -173,10 +194,16 @@ func downloadSpecsFor(goos, goarch string) []binaryDownloadSpec {
 	if suffix == "" {
 		return nil
 	}
-	return []binaryDownloadSpec{
-		{Name: "FFprobe", URLs: []string{fmt.Sprintf("%s/ffprobe-6.1-%s.zip", ffbinariesBase, suffix)}, IsZip: true},
-		{Name: "FFmpeg", URLs: []string{fmt.Sprintf("%s/ffmpeg-6.1-%s.zip", ffbinariesBase, suffix)}, IsZip: true},
+	spec := func(name, tool string) binaryDownloadSpec {
+		asset := fmt.Sprintf("%s-6.1-%s.zip", tool, suffix)
+		return binaryDownloadSpec{
+			Name:   name,
+			URLs:   []string{ffbinariesBase + "/" + asset},
+			IsZip:  true,
+			SHA256: ffbinariesSHA256[asset],
+		}
 	}
+	return []binaryDownloadSpec{spec("FFprobe", "ffprobe"), spec("FFmpeg", "ffmpeg")}
 }
 
 func downloadAndExtractSpec(ctx context.Context, spec binaryDownloadSpec, binDir string, onProgress ProgressCallback, logger *zerolog.Logger) error {

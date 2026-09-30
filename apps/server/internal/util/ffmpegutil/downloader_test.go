@@ -57,6 +57,66 @@ func TestDownloadSpecsApuntanAArchivosPublicados(t *testing.T) {
 	}
 }
 
+// Cada paquete que se descarga lleva su SHA-256, y la tabla no guarda hashes de archivos
+// que ya no se usan.
+func TestTodosLosPaquetesLlevanSHA256(t *testing.T) {
+	used := map[string]bool{}
+	for _, p := range [][2]string{
+		{"windows", "amd64"}, {"linux", "amd64"}, {"linux", "386"}, {"linux", "arm64"}, {"linux", "arm"}, {"darwin", "amd64"},
+	} {
+		for _, spec := range downloadSpecsFor(p[0], p[1]) {
+			if len(spec.SHA256) != 64 || strings.Trim(spec.SHA256, "0123456789abcdef") != "" {
+				t.Errorf("%s/%s %s: el hash %q no es un SHA-256 en hexadecimal", p[0], p[1], spec.Name, spec.SHA256)
+			}
+			used[path.Base(spec.URLs[0])] = true
+		}
+	}
+	for name := range ffbinariesSHA256 {
+		if !used[name] {
+			t.Errorf("la tabla tiene un hash para %q, que ningún paquete usa", name)
+		}
+	}
+	if len(used) != len(ffbinariesSHA256) {
+		t.Errorf("paquetes usados: %d, hashes: %d", len(used), len(ffbinariesSHA256))
+	}
+}
+
+// Prueba de integración opcional con los paquetes reales (~350 MB): se ejecuta solo si
+// FFBINARIES_ZIP_DIR apunta a una carpeta con los .zip descargados de la versión v6.1.
+// Comprueba que cada hash fijado coincide con el archivo real y que su binario cabe en
+// los topes de tamaño.
+func TestPaquetesRealesCoincidenConSusHashes(t *testing.T) {
+	dir := os.Getenv("FFBINARIES_ZIP_DIR")
+	if dir == "" {
+		t.Skip("definí FFBINARIES_ZIP_DIR para probar con los paquetes reales")
+	}
+	for name, want := range ffbinariesSHA256 {
+		b, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Errorf("%s: %v", name, err)
+			continue
+		}
+		if got := sha(b); got != want {
+			t.Errorf("%s: hash %s, la tabla dice %s", name, got, want)
+		}
+		if int64(len(b)) > maxDownloadBytes {
+			t.Errorf("%s pesa %d bytes y el tope de descarga es %d", name, len(b), maxDownloadBytes)
+		}
+		out := t.TempDir()
+		f, err := os.Open(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := extractBinariesFromZip(f, out); err != nil {
+			t.Errorf("%s: no se pudo extraer dentro de los topes: %v", name, err)
+		}
+		_ = f.Close()
+		if entries, _ := os.ReadDir(out); len(entries) != 1 {
+			t.Errorf("%s: se esperaba 1 binario extraído, hay %d", name, len(entries))
+		}
+	}
+}
+
 func TestDownloadSpecsPlataformaNoSoportada(t *testing.T) {
 	for _, p := range [][2]string{{"plan9", "amd64"}, {"linux", "riscv64"}, {"linux", "mips"}, {"freebsd", "amd64"}} {
 		if specs := downloadSpecsFor(p[0], p[1]); specs != nil {
