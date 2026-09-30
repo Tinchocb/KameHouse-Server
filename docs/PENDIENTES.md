@@ -29,4 +29,5 @@ Lo ya corregido está en el historial de git (`git log --oneline`).
 ## Calidad
 
 - **`usePlayerSkip.ts`** sigue en 721 líneas: el resto es cableado de estado y efectos con muchos refs. Ya tiene 16 tests de integración que sirven de red para seguir dividiéndolo.
+- **`database/db/buffered_writer.go` sin uso.** Ya no tiene `Enqueue` (se quitó en el commit `4c22bd7`): el escritor se crea al abrir la base y un temporizador de 300 ms revisa una cola que nunca recibe nada. Es inofensivo; se puede borrar junto con su uso en `db.go` y `backup.go`. Si se llega a reactivar, conviene envolver cada operación en un savepoint: hoy una operación que falla a la mitad deja escritas sus sentencias anteriores.
 - **`getting-started`, series y otros archivos grandes**: `matroska/parser.go`, `getting-started.tsx` y la ruta de Series ya se dividieron. Quedan candidatos: `usePlayerSkip.ts` (721), `upath.ts` (841), `handlers/mediastream.go` (934), `cassette/pipeline.go` (940), `database/db/db.go` (1028).
