@@ -4,7 +4,7 @@ import * as React from "react"
 import { getFormatLabel } from "@/lib/helpers/media"
 import { useNavigate } from "@tanstack/react-router"
 import { m, AnimatePresence } from "framer-motion"
-import { Search, X, Loader2, Sparkles, Film, Tv, Clock, ArrowRight } from "lucide-react"
+import { IconNavigationSearch, IconUiClose, IconUiSpinner, IconStatusSparkles, IconNavigationFilm, IconNavigationTv, IconTimeClock, IconArrowRight } from "@/components/ui/icons"
 import { useGlobalSearch, type GlobalSearchResultItem } from "@/hooks/use-global-search"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
@@ -235,7 +235,7 @@ export function ExpandableSearch() {
                             : "text-on-surface-variant hover:text-white hover:bg-white/10 active:scale-90"
                     )}
                 >
-                    <Search className="w-3.5 h-3.5" />
+                    <IconNavigationSearch className="w-3.5 h-3.5" />
                 </m.button>
 
                 {/* Animated Input & Actions */}
@@ -267,7 +267,7 @@ export function ExpandableSearch() {
 
                             {/* Loading indicator */}
                             {isLoading && (
-                                <Loader2 className="w-3 h-3 text-brand-accent animate-spin shrink-0 mx-1" />
+                                <IconUiSpinner className="w-3 h-3 text-brand-accent animate-spin shrink-0 mx-1" />
                             )}
 
                             {/* Clear or Close button */}
@@ -288,7 +288,7 @@ export function ExpandableSearch() {
                                         aria-label="Limpiar búsqueda"
                                         whileTap={{ scale: 0.85 }}
                                     >
-                                        <X className="w-3 h-3" />
+                                        <IconUiClose className="w-3 h-3" />
                                     </m.button>
                                 ) : (
                                     <m.button
@@ -303,7 +303,7 @@ export function ExpandableSearch() {
                                         aria-label="Cerrar búsqueda"
                                         whileTap={{ scale: 0.85 }}
                                     >
-                                        <X className="w-3 h-3" />
+                                        <IconUiClose className="w-3 h-3" />
                                     </m.button>
                                 )}
                             </AnimatePresence>
@@ -327,7 +327,7 @@ export function ExpandableSearch() {
                                 {/* Header bar */}
                                 <div className="flex items-center justify-between px-2 py-1 border-b border-white/10 text-3xs uppercase font-black tracking-widest text-on-surface-variant">
                                     <span className="flex items-center gap-1.5 text-brand-accent">
-                                        <Sparkles className="w-3 h-3" />
+                                        <IconStatusSparkles className="w-3 h-3" />
                                         Resultados instantáneos
                                     </span>
                                     <span>{results?.length || 0} encontrados</span>
@@ -370,11 +370,11 @@ export function ExpandableSearch() {
                                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                                                             />
                                                         ) : isChronology ? (
-                                                            <Sparkles className="w-4 h-4 text-amber-400" />
+                                                            <IconStatusSparkles className="w-4 h-4 text-amber-400" />
                                                         ) : isMovie ? (
-                                                            <Film className="w-4 h-4 text-on-surface-variant/60" />
+                                                            <IconNavigationFilm className="w-4 h-4 text-on-surface-variant/60" />
                                                         ) : (
-                                                            <Tv className="w-4 h-4 text-on-surface-variant/60" />
+                                                            <IconNavigationTv className="w-4 h-4 text-on-surface-variant/60" />
                                                         )}
                                                     </div>
 
@@ -434,7 +434,7 @@ export function ExpandableSearch() {
                                                 className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 hover:border-white/20 text-2xs font-medium text-on-surface transition-colors cursor-pointer flex items-center gap-1"
                                             >
                                                 <span>{tag}</span>
-                                                <ArrowRight className="w-2.5 h-2.5 text-on-surface-variant" />
+                                                <IconArrowRight className="w-2.5 h-2.5 text-on-surface-variant" />
                                             </button>
                                         ))}
                                     </div>
@@ -445,7 +445,7 @@ export function ExpandableSearch() {
                                     <div className="space-y-1.5 pt-2 border-t border-white/10">
                                         <div className="flex items-center justify-between text-3xs font-black uppercase tracking-widest text-on-surface-variant/80 font-mono">
                                             <span className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3 text-brand-accent" />
+                                                <IconTimeClock className="w-3 h-3 text-brand-accent" />
                                                 Recientes
                                             </span>
                                             <button
@@ -484,7 +484,7 @@ export function ExpandableSearch() {
                                                         className="text-on-surface-variant/40 hover:text-red-400 p-0.5 rounded cursor-pointer"
                                                         aria-label={`Eliminar ${term}`}
                                                     >
-                                                        <X className="w-3 h-3" />
+                                                        <IconUiClose className="w-3 h-3" />
                                                     </button>
                                                 </div>
                                             ))}

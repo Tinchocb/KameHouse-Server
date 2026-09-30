@@ -3,7 +3,7 @@ import { m } from "framer-motion"
 import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
 import { cleanMediaTitle } from "@/lib/helpers/media"
 import { toast } from "sonner"
-import { Clock, RotateCcw } from "lucide-react"
+import { IconTimeClock, IconUiRotateCcw } from "@/components/ui/icons"
 import { useSaveChronologyMomentTime } from "@/api/hooks/chronology.hooks"
 import { formatSecondsToTime } from "@/components/chronology/data/spansToVolumes"
 import { IconStatusMonitorPlay, IconUiClose, IconUiSpinner } from "@/components/ui/icons"
@@ -126,7 +126,7 @@ export function PlayerTopBar({
                                 loading={saveMomentMutation.isPending}
                                 skeleton={<IconUiSpinner className="w-3.5 h-3.5 animate-spin text-brand-accent" />}
                             >
-                                <Clock className="w-3.5 h-3.5 text-brand-accent" />
+                                <IconTimeClock className="w-3.5 h-3.5 text-brand-accent" />
                             </LoadSwap>
                             <span>Fijar este momento aquí ({formattedCurrentTime})</span>
                         </button>
@@ -137,7 +137,7 @@ export function PlayerTopBar({
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 text-xs font-medium cursor-pointer active:scale-95 transition duration-150 backdrop-blur-md shadow-sm disabled:opacity-50"
                             title="Restablecer minuto original"
                         >
-                            <RotateCcw className="w-3 h-3 text-zinc-400" />
+                            <IconUiRotateCcw className="w-3 h-3 text-zinc-400" />
                             <span>Restablecer</span>
                         </button>
                     </div>

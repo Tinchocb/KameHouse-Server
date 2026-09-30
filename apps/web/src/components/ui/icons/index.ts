@@ -65,6 +65,7 @@ import {
   RefreshCw,
   Repeat,
   Rocket,
+  RotateCcw,
   RotateCw,
   Search,
   Server,
@@ -144,6 +145,8 @@ export const IconUiTrash = Trash2;
 export const IconUiDownload = Download;
 export const IconUiRefresh = RefreshCw;
 export const IconUiRotate = RotateCw;
+/** Giro antihorario (IconUiRotate es horario: otro dibujo). */
+export const IconUiRotateCcw = RotateCcw;
 export const IconUiSettings = Settings;
 export const IconUiSliders = SlidersHorizontal;
 export const IconUiAdmin = Server;
