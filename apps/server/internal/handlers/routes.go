@@ -143,6 +143,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		},
 	}))
 
+	e.Use(crossOriginWriteGuard(allowedOrigins))
 	e.Use(rateLimitMiddleware)
 	e.Use(authRateLimitMiddleware)
 

@@ -459,7 +459,24 @@ func resolveCorsOrigins(cfg *Config) {
 		}
 	}
 
+	// Orígenes del webview de la app de escritorio empaquetada (Tauri en Windows,
+	// macOS y Linux). Sin ellos el CORS y el WebSocket rechazan a la propia app,
+	// que carga la interfaz desde archivos locales y llama al sidecar por
+	// 127.0.0.1. Solo el webview puede originar pedidos con estos orígenes.
+	for _, o := range desktopWebviewOrigins {
+		if !containsString(origins, o) {
+			origins = append(origins, o)
+		}
+	}
+
 	cfg.Server.CorsOrigins = origins
+}
+
+// desktopWebviewOrigins son los orígenes que Tauri asigna a su webview.
+var desktopWebviewOrigins = []string{
+	"http://tauri.localhost",
+	"https://tauri.localhost",
+	"tauri://localhost",
 }
 
 func containsString(slice []string, s string) bool {
