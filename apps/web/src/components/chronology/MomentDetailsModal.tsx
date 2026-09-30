@@ -79,7 +79,7 @@ export const MomentDetailsModal: React.FC<MomentDetailsModalProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Cerrar detalles del momento"
-              className="pointer-events-auto w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 border border-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-transform active:scale-90"
+              className="pointer-events-auto w-11 h-11 rounded-full bg-black/70 hover:bg-black/90 border border-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-transform active:scale-90"
             >
               <X className="w-4 h-4" />
             </button>

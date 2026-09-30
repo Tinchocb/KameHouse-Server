@@ -85,7 +85,7 @@ function LibrarySkipScanRow() {
                     onClick={handleScan}
                     disabled={running}
                     className={cn(
-                        "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-[background-color,border-color,color,filter,transform] duration-fast ease-smooth-out active:scale-95",
+                        "shrink-0 flex items-center gap-1.5 px-4 min-h-11 rounded-full text-xs font-bold transition-[background-color,border-color,color,filter,transform] duration-fast ease-smooth-out active:scale-95",
                         running
                             ? "bg-brand-accent/10 border border-brand-accent/20 text-brand-accent cursor-not-allowed"
                             : "bg-brand-accent hover:brightness-110 text-on-primary shadow-elevation-1"

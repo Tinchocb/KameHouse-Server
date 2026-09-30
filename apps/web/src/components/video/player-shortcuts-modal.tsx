@@ -132,7 +132,7 @@ export function PlayerShortcutsModal({ isOpen, onClose }: PlayerShortcutsModalPr
                                                     {shortcut.keyCombination.map((key, kIdx) => (
                                                         <kbd
                                                             key={kIdx}
-                                                            className="px-2 py-0.5 min-w-[24px] text-center text-2xs font-semibold bg-white/10 text-white rounded-full"
+                                                            className="px-2 py-0.5 min-w-[24px] text-center text-2xs font-mono font-semibold tracking-wider bg-white/10 text-white rounded-full"
                                                         >
                                                             {key}
                                                         </kbd>

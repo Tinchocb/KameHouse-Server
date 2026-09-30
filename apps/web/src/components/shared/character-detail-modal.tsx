@@ -116,7 +116,7 @@ export function CharacterDetailModal({
                         <button 
                             onClick={onClose}
                             aria-label="Cerrar detalles del personaje"
-                            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 p-2.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800 border border-white/20 border-t-white/40 text-white transition-[background-color,border-color,transform] duration-200 active:scale-95 cursor-pointer shadow-glass-highlight-lg"
+                            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-11 h-11 flex items-center justify-center rounded-full bg-zinc-900/80 hover:bg-zinc-800 border border-white/20 border-t-white/40 text-white transition-[background-color,border-color,transform] duration-200 active:scale-95 cursor-pointer shadow-glass-highlight-lg"
                         >
                             <IconUiClose className="w-4 h-4" />
                         </button>
