@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, afterEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LazyMotion, domAnimation } from "framer-motion"
+import { usePerformanceStore } from "@/lib/hardware/performance-store"
 import { SegmentedControl, type SegmentedControlProps } from "./segmented-control"
 
 type Mode = "sagas" | "movies" | "specials"
@@ -63,5 +64,40 @@ describe("SegmentedControl", () => {
         const { onChange } = renderControl()
         fireEvent.click(screen.getByRole("radio", { name: /Especiales/ }))
         expect(onChange).not.toHaveBeenCalled()
+    })
+})
+
+describe("SegmentedControl y el nivel de rendimiento", () => {
+    const indicatorOf = (name: RegExp) =>
+        screen.getByRole("radio", { name }).querySelector<HTMLElement>(".absolute.inset-0")
+
+    afterEach(() => usePerformanceStore.setState({ performanceProfile: "auto", autoThrottleActive: false }))
+
+    it("con efectos permitidos la pill lleva el brillo", () => {
+        usePerformanceStore.setState({ performanceProfile: "ultra" })
+        renderControl()
+        expect(indicatorOf(/Sagas/)?.className).toContain("shadow-[0_2px_14px")
+    })
+
+    it("en el perfil eco la pill queda sin brillo", () => {
+        usePerformanceStore.setState({ performanceProfile: "eco" })
+        renderControl()
+        const cls = indicatorOf(/Sagas/)?.className ?? ""
+        expect(cls).not.toContain("shadow-[0_2px_14px")
+        expect(cls).not.toContain("shadow-elevation-1") // versión sin animación
+    })
+
+    it("con el throttle automático activo también se apagan los efectos", () => {
+        usePerformanceStore.setState({ performanceProfile: "ultra", autoThrottleActive: true })
+        renderControl()
+        expect(indicatorOf(/Sagas/)?.className ?? "").not.toContain("shadow-[0_2px_14px")
+    })
+
+    it("la selección sigue funcionando sin efectos", () => {
+        usePerformanceStore.setState({ performanceProfile: "eco" })
+        const { onChange } = renderControl()
+        fireEvent.click(screen.getByRole("radio", { name: /Películas/ }))
+        expect(onChange).toHaveBeenCalledWith("movies")
+        expect(indicatorOf(/Sagas/)).not.toBeNull()
     })
 })

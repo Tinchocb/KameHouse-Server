@@ -2,6 +2,7 @@ import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { MagneticIndicator } from "@/components/ui/kinetics/magnetic-indicator"
 import { useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { usePerformanceStore, selectIsHeavyEffectsAllowed } from "@/lib/hardware/performance-store"
 
 export interface SegmentedOption<T extends string> {
     value: T
@@ -42,6 +43,8 @@ export interface SegmentedControlProps<T extends string> {
  * Segmented control canónico (DESIGN-GUIDE §5.3): pill deslizante con
  * layoutId + spring tabIndicator (480/34), touch 44px, flechas/Home/End con
  * roving tabindex y fallback sin animación para prefers-reduced-motion.
+ * En equipos de gama baja (perfil eco o throttle automático) la pill no anima ni
+ * lleva el brillo pesado, igual que el resto de los efectos del sistema.
  */
 export function SegmentedControl<T extends string>({
     options,
@@ -57,6 +60,8 @@ export function SegmentedControl<T extends string>({
     className,
 }: SegmentedControlProps<T>) {
     const reduceMotion = useReducedMotion()
+    const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed)
+    const allowFx = isHeavyAllowed && !reduceMotion
     const buttonRefs = React.useRef<Array<HTMLButtonElement | null>>([])
     const isTabs = semantics === "tablist"
 
@@ -130,9 +135,10 @@ export function SegmentedControl<T extends string>({
                         <MagneticIndicator
                             layoutId={layoutId}
                             active={selected}
-                            disableAnimation={!!reduceMotion}
+                            disableAnimation={!allowFx}
                             className={cn(
-                                "border-t border-t-white/80 shadow-[0_2px_14px_rgba(255,255,255,0.35),inset_0_1px_1px_rgba(255,255,255,0.9)]",
+                                "border-t border-t-white/80",
+                                allowFx && "shadow-[0_2px_14px_rgba(255,255,255,0.35),inset_0_1px_1px_rgba(255,255,255,0.9)]",
                                 tone === "accent" ? "bg-brand-accent text-zinc-950" : "bg-[var(--control-primary-bg)]"
                             )}
                         />

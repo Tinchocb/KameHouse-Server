@@ -9,7 +9,6 @@ Lo ya corregido está en el historial de git (`git log --oneline`).
 
 ## Diseño (de la auditoría de interfaz)
 
-- **`ViewModeTabs` → `SegmentedControl`** (`routes/series/-ViewModeTabs.tsx`). No es una limpieza: hoy usa tipografía sans extrabold y el canónico usa mono bold, y el canónico dibuja siempre la sombra pesada, mientras que `ViewModeTabs` la apaga según el nivel de rendimiento (`allowEraFx`). Para migrar sin regresión hay que extender `SegmentedControl` (por ejemplo una prop `disableEffects` y una variante de tipografía). Toca la cabecera de Series: acordar antes.
 - **Botones de Administración → `Button`.** El informe pedía cambiar `rounded-button` por `rounded-pill`, pero `--radius-button` ya vale `var(--radius-full)`: es el mismo radio. Migrar a `Button` (`outlined`, `sm`) sí cambia el estilo (mayúsculas `font-black`, texto de acento). Decidir si se quiere ese cambio visual.
 - **`text-balance`** en títulos de películas y descripciones de sagas. Es pulido subjetivo y necesita ojo de diseño para juzgar el resultado en anchos intermedios.
 - **Botones de la barra flotante** (`floating-pill-nav`): miden 32-34 px, por debajo de los 44 px de la guía. No estaban en el informe; se dejaron porque viven dentro de una píldora compacta.
