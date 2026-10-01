@@ -29,7 +29,6 @@ type Database struct {
 	mediaFillerMu           sync.RWMutex
 	CurrMediaFillers        mo.Option[map[int]*MediaFillerItem]
 	cleanupManager          *CleanupManager
-	bufferedWriter          *BufferedWriter
 	OnError                 func(error)
 	LibraryMediaCache       sync.Map // L1 read cache scoped to the database instance
 	slowTraceLogger         *SlowTraceLogger
@@ -51,9 +50,6 @@ type Database struct {
 
 func (db *Database) SetOnError(f func(error)) {
 	db.OnError = f
-	if db.bufferedWriter != nil {
-		db.bufferedWriter.OnError = f
-	}
 }
 
 func (db *Database) Gorm() *gorm.DB {
@@ -144,7 +140,6 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	}
 
 	database.cleanupManager = NewCleanupManager(database.gormdb, database.Logger)
-	database.bufferedWriter = NewBufferedWriter(database.gormdb, database.Logger, 100, 300*time.Millisecond)
 
 	logDir := appDataDir
 	if logDir == "" {
@@ -184,12 +179,8 @@ func NewDatabase(ctx context.Context, appDataDir, dbName string, logger *zerolog
 	return database, nil
 }
 
-// Shutdown detiene el buffered writer y asegura que todas las escrituras
-// pendientes se vuelquen antes de que el proceso termine.
+// Shutdown asegura que los logs pendientes se vuelquen antes de que el proceso termine.
 func (db *Database) Shutdown() {
-	if db.bufferedWriter != nil {
-		db.bufferedWriter.Shutdown()
-	}
 	if db.slowTraceLogger != nil {
 		db.slowTraceLogger.Flush()
 	}
@@ -302,7 +293,6 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 		&models.Account{},
 		&models.ScanSummary{},
 
-		&models.SilencedMediaEntry{},
 		&models.MediaSourcePreference{},
 		&models.Theme{},
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, memo } from 'react';
-import { m, AnimatePresence } from 'framer-motion';
+import { m } from 'framer-motion';
 import type { EraGroup } from './data/spansToVolumes';
 import { AnimatedTooltip } from '@/components/ui/kinetics/animated-tooltip';
 import { sounds } from './utils/audio';

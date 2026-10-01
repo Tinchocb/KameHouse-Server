@@ -79,7 +79,6 @@ func TestIsRestrictedWrite(t *testing.T) {
 		{http.MethodPost, "/api/v1/progress", false},
 		{http.MethodPost, "/api/v1/playback/sync", false},
 		{http.MethodPatch, "/api/v1/continuity/item", false},
-		{http.MethodPatch, "/api/v1/theme", false},
 		{http.MethodPost, "/api/v1/mediastream/request", false},
 		{http.MethodPost, "/api/v1/library/anime-entry/progress", false},
 		{http.MethodPost, "/api/v1/tmdb/search", false},

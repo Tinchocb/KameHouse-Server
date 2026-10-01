@@ -761,203 +761,6 @@
     }
   },
   {
-    "name": "HandleGetMissingEpisodes",
-    "trimmedName": "GetMissingEpisodes",
-    "comments": [
-      "HandleGetMissingEpisodes returns a list of missing episodes.",
-      "",
-      "\t@summary returns a list of missing episodes.",
-      "\t@desc This is used by the \"Missing episodes\" page to display the missing episodes.",
-      "\t@route /api/v1/library/missing-episodes [GET]",
-      "\t@returns anime.MissingEpisodes",
-      ""
-    ],
-    "filepath": "internal/handlers/anime_entries.go",
-    "filename": "anime_entries.go",
-    "api": {
-      "summary": "returns a list of missing episodes.",
-      "descriptions": [
-        "This is used by the \"Missing episodes\" page to display the missing episodes."
-      ],
-      "endpoint": "/api/v1/library/missing-episodes",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "anime.MissingEpisodes",
-      "returnGoType": "anime.MissingEpisodes",
-      "returnTypescriptType": "Anime_MissingEpisodes"
-    }
-  },
-  {
-    "name": "HandleGetUpcomingEpisodes",
-    "trimmedName": "GetUpcomingEpisodes",
-    "comments": [
-      "HandleGetUpcomingEpisodes returns a list of upcoming episodes.",
-      "",
-      "\t@summary returns a list of upcoming episodes.",
-      "\t@desc This is used by the \"Upcoming\" page to display the upcoming episodes.",
-      "\t@route /api/v1/library/upcoming-episodes [GET]",
-      "\t@returns anime.UpcomingEpisodes",
-      ""
-    ],
-    "filepath": "internal/handlers/anime_entries.go",
-    "filename": "anime_entries.go",
-    "api": {
-      "summary": "returns a list of upcoming episodes.",
-      "descriptions": [
-        "This is used by the \"Upcoming\" page to display the upcoming episodes."
-      ],
-      "endpoint": "/api/v1/library/upcoming-episodes",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "anime.UpcomingEpisodes",
-      "returnGoType": "anime.UpcomingEpisodes",
-      "returnTypescriptType": "Anime_UpcomingEpisodes"
-    }
-  },
-  {
-    "name": "HandleGetAnimeEntrySilenceStatus",
-    "trimmedName": "GetAnimeEntrySilenceStatus",
-    "comments": [
-      "HandleGetAnimeEntrySilenceStatus returns the silence status of an anime entry.",
-      "",
-      "\t@summary returns the silence status.",
-      "\t@param id - int - true - \"Anime media ID\"",
-      "\t@route /api/v1/library/anime-entry/silence/{id} [GET]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/anime_entries.go",
-    "filename": "anime_entries.go",
-    "api": {
-      "summary": "returns the silence status.",
-      "descriptions": [],
-      "endpoint": "/api/v1/library/anime-entry/silence/{id}",
-      "methods": [
-        "GET"
-      ],
-      "params": [
-        {
-          "name": "id",
-          "jsonName": "id",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": [
-            "Anime media ID"
-          ]
-        }
-      ],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleToggleAnimeEntrySilenceStatus",
-    "trimmedName": "ToggleAnimeEntrySilenceStatus",
-    "comments": [
-      "HandleToggleAnimeEntrySilenceStatus toggles the silence flag for an anime entry.",
-      "",
-      "\t@summary toggles the silence flag.",
-      "\t@route /api/v1/library/anime-entry/silence [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/anime_entries.go",
-    "filename": "anime_entries.go",
-    "api": {
-      "summary": "toggles the silence flag.",
-      "descriptions": [],
-      "endpoint": "/api/v1/library/anime-entry/silence",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "MediaID",
-          "jsonName": "mediaId",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleLogin",
-    "trimmedName": "Login",
-    "comments": [
-      "HandleLogin is a no-op kept for route compatibility: this fork has no",
-      "platform accounts and auth is handled by middleware (loopback/token).",
-      "It returns the current status so old clients don't break.",
-      "",
-      "\t@summary returns the current status (login is a no-op without platform accounts).",
-      "\t@desc This is called when the JWT token is obtained after logging in with redirection on the client.",
-      "\t@route /api/v1/auth/login [POST]",
-      "\t@returns handlers.Status",
-      ""
-    ],
-    "filepath": "internal/handlers/auth.go",
-    "filename": "auth.go",
-    "api": {
-      "summary": "returns the current status (login is a no-op without platform accounts).",
-      "descriptions": [
-        "This is called when the JWT token is obtained after logging in with redirection on the client."
-      ],
-      "endpoint": "/api/v1/auth/login",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "handlers.Status",
-      "returnGoType": "handlers.Status",
-      "returnTypescriptType": "Status"
-    }
-  },
-  {
-    "name": "HandleLogout",
-    "trimmedName": "Logout",
-    "comments": [
-      "HandleLogout is a no-op kept for route compatibility (see HandleLogin).",
-      "It returns the current status so old clients don't break.",
-      "",
-      "\t@summary returns the current status (logout is a no-op without platform accounts).",
-      "\t@route /api/v1/auth/logout [POST]",
-      "\t@returns handlers.Status",
-      ""
-    ],
-    "filepath": "internal/handlers/auth.go",
-    "filename": "auth.go",
-    "api": {
-      "summary": "returns the current status (logout is a no-op without platform accounts).",
-      "descriptions": [],
-      "endpoint": "/api/v1/auth/logout",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "handlers.Status",
-      "returnGoType": "handlers.Status",
-      "returnTypescriptType": "Status"
-    }
-  },
-  {
     "name": "HandleGetCacheStats",
     "trimmedName": "GetCacheStats",
     "comments": [
@@ -1378,6 +1181,56 @@
       "returns": "continuity.WatchHistory",
       "returnGoType": "continuity.WatchHistory",
       "returnTypescriptType": "Continuity_WatchHistory"
+    }
+  },
+  {
+    "name": "crossOriginWriteGuard",
+    "trimmedName": "crossOriginWriteGuard",
+    "comments": [
+      "crossOriginWriteGuard rechaza con 403 las escrituras (POST/PUT/PATCH/DELETE)",
+      "que un navegador origina desde un sitio no confiable. Deja pasar:",
+      "  - pedidos sin Origin (sidecar, curl, apps nativas: no son páginas web);",
+      "  - orígenes de la lista permitida (los mismos que acepta el CORS);",
+      "  - orígenes de loopback (cualquier puerto) desde una conexión de loopback,",
+      "    p. ej. un servidor de desarrollo en otro puerto;",
+      "  - el mismo origen del Host, si ese host es una IP o un nombre local: así los",
+      "    clientes de la LAN funcionan sin configurar nada, y un nombre público que",
+      "    resuelva a este equipo (rebinding) no califica.",
+      ""
+    ],
+    "filepath": "internal/handlers/cross_origin_guard.go",
+    "filename": "cross_origin_guard.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isLocalHostName",
+    "trimmedName": "isLocalHostName",
+    "comments": [
+      "isLocalHostName: una IP o un nombre que solo se resuelve en la red local.",
+      ""
+    ],
+    "filepath": "internal/handlers/cross_origin_guard.go",
+    "filename": "cross_origin_guard.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -1929,138 +1782,6 @@
     }
   },
   {
-    "name": "HandleGetFileCacheTotalSize",
-    "trimmedName": "GetFileCacheTotalSize",
-    "comments": [
-      "HandleGetFileCacheTotalSize ...",
-      "",
-      "\t@summary returns the total size of cache files.",
-      "\t@desc The total size of the cache files is returned in human-readable format.",
-      "\t@route /api/v1/filecache/total-size [GET]",
-      "\t@returns string",
-      ""
-    ],
-    "filepath": "internal/handlers/filecache.go",
-    "filename": "filecache.go",
-    "api": {
-      "summary": "returns the total size of cache files.",
-      "descriptions": [
-        "The total size of the cache files is returned in human-readable format."
-      ],
-      "endpoint": "/api/v1/filecache/total-size",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "string",
-      "returnGoType": "string",
-      "returnTypescriptType": "string"
-    }
-  },
-  {
-    "name": "HandleRemoveFileCacheBucket",
-    "trimmedName": "RemoveFileCacheBucket",
-    "comments": [
-      "HandleRemoveFileCacheBucket ...",
-      "",
-      "\t@summary deletes all buckets with the given prefix.",
-      "\t@desc The bucket value is the prefix of the cache files that should be deleted.",
-      "\t@desc Returns 'true' if the operation was successful.",
-      "\t@route /api/v1/filecache/bucket [DELETE]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/filecache.go",
-    "filename": "filecache.go",
-    "api": {
-      "summary": "deletes all buckets with the given prefix.",
-      "descriptions": [
-        "The bucket value is the prefix of the cache files that should be deleted.",
-        "Returns 'true' if the operation was successful."
-      ],
-      "endpoint": "/api/v1/filecache/bucket",
-      "methods": [
-        "DELETE"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Bucket",
-          "jsonName": "bucket",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetFileCacheMediastreamVideoFilesTotalSize",
-    "trimmedName": "GetFileCacheMediastreamVideoFilesTotalSize",
-    "comments": [
-      "HandleGetFileCacheMediastreamVideoFilesTotalSize ...",
-      "",
-      "\t@summary returns the total size of cached video file data.",
-      "\t@desc The total size of the cache video file data is returned in human-readable format.",
-      "\t@route /api/v1/filecache/mediastream/videofiles/total-size [GET]",
-      "\t@returns string",
-      ""
-    ],
-    "filepath": "internal/handlers/filecache.go",
-    "filename": "filecache.go",
-    "api": {
-      "summary": "returns the total size of cached video file data.",
-      "descriptions": [
-        "The total size of the cache video file data is returned in human-readable format."
-      ],
-      "endpoint": "/api/v1/filecache/mediastream/videofiles/total-size",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "string",
-      "returnGoType": "string",
-      "returnTypescriptType": "string"
-    }
-  },
-  {
-    "name": "HandleClearFileCacheMediastreamVideoFiles",
-    "trimmedName": "ClearFileCacheMediastreamVideoFiles",
-    "comments": [
-      "HandleClearFileCacheMediastreamVideoFiles ...",
-      "",
-      "\t@summary deletes the contents of the mediastream video file cache directory.",
-      "\t@desc Returns 'true' if the operation was successful.",
-      "\t@route /api/v1/filecache/mediastream/videofiles [DELETE]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/filecache.go",
-    "filename": "filecache.go",
-    "api": {
-      "summary": "deletes the contents of the mediastream video file cache directory.",
-      "descriptions": [
-        "Returns 'true' if the operation was successful."
-      ],
-      "endpoint": "/api/v1/filecache/mediastream/videofiles",
-      "methods": [
-        "DELETE"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "HandleGetHomeCurated",
     "trimmedName": "GetHomeCurated",
     "comments": [
@@ -2351,231 +2072,20 @@
     }
   },
   {
-    "name": "HandleSetOfflineMode",
-    "trimmedName": "SetOfflineMode",
+    "name": "TestHandleGettingStartedRechazaCarpetasDeSistema",
+    "trimmedName": "TestHandleGettingStartedRechazaCarpetasDeSistema",
     "comments": [
-      "HandleSetOfflineMode ...",
-      "",
-      "\t@summary sets the offline mode.",
-      "\t@desc Returns true if the offline mode is active, false otherwise.",
-      "\t@route /api/v1/local/offline [POST]",
-      "\t@returns bool",
+      "El asistente inicial guardaba las carpetas tal cual llegaban, sin ninguna de las",
+      "reglas del guardado de ajustes.",
       ""
     ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
+    "filepath": "internal/handlers/library_paths_validation_test.go",
+    "filename": "library_paths_validation_test.go",
     "api": {
-      "summary": "sets the offline mode.",
-      "descriptions": [
-        "Returns true if the offline mode is active, false otherwise."
-      ],
-      "endpoint": "/api/v1/local/offline",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Enabled",
-          "jsonName": "enabled",
-          "goType": "bool",
-          "usedStructType": "",
-          "typescriptType": "boolean",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleLocalGetTrackedMediaItems",
-    "trimmedName": "LocalGetTrackedMediaItems",
-    "comments": [
-      "HandleLocalGetTrackedMediaItems ...",
-      "",
-      "\t@summary gets all tracked media.",
-      "\t@route /api/v1/local/track [GET]",
-      "\t@returns []local.TrackedMediaItem",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "gets all tracked media.",
+      "summary": "",
       "descriptions": [],
-      "endpoint": "/api/v1/local/track",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "[]local.TrackedMediaItem",
-      "returnGoType": "local.TrackedMediaItem",
-      "returnTypescriptType": "Array\u003cLocal_TrackedMediaItem\u003e"
-    }
-  },
-  {
-    "name": "HandleLocalAddTrackedMedia",
-    "trimmedName": "LocalAddTrackedMedia",
-    "comments": [
-      "HandleLocalAddTrackedMedia ...",
-      "",
-      "\t@summary adds one or multiple media to be tracked for offline sync.",
-      "\t@route /api/v1/local/track [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "adds one or multiple media to be tracked for offline sync.",
-      "descriptions": [],
-      "endpoint": "/api/v1/local/track",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Media",
-          "jsonName": "media",
-          "goType": "[]__STRUCT__",
-          "inlineStructType": "[]struct{\nMediaID int `json:\"mediaId\"`\nType string `json:\"type\"`}",
-          "usedStructType": "",
-          "typescriptType": "Array\u003c{ mediaId: number; type: string; }\u003e",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleLocalRemoveTrackedMedia",
-    "trimmedName": "LocalRemoveTrackedMedia",
-    "comments": [
-      "HandleLocalRemoveTrackedMedia ...",
-      "",
-      "\t@summary remove media from being tracked for offline sync.",
-      "\t@desc This will remove anime from being tracked for offline sync and delete any associated data.",
-      "\t@route /api/v1/local/track [DELETE]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "remove media from being tracked for offline sync.",
-      "descriptions": [
-        "This will remove anime from being tracked for offline sync and delete any associated data."
-      ],
-      "endpoint": "/api/v1/local/track",
-      "methods": [
-        "DELETE"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "MediaID",
-          "jsonName": "mediaId",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": []
-        },
-        {
-          "name": "Type",
-          "jsonName": "type",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleLocalGetIsMediaTracked",
-    "trimmedName": "LocalGetIsMediaTracked",
-    "comments": [
-      "HandleLocalGetIsMediaTracked ...",
-      "",
-      "\t@summary checks if media is being tracked for offline sync.",
-      "\t@route /api/v1/local/track/{id}/{type} [GET]",
-      "\t@param id - int - true - \"Platform anime media ID\"",
-      "\t@param type - string - true - \"Type of media (anime)\"",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "checks if media is being tracked for offline sync.",
-      "descriptions": [],
-      "endpoint": "/api/v1/local/track/{id}/{type}",
-      "methods": [
-        "GET"
-      ],
-      "params": [
-        {
-          "name": "id",
-          "jsonName": "id",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": [
-            "Platform anime media ID"
-          ]
-        },
-        {
-          "name": "type",
-          "jsonName": "type",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": true,
-          "descriptions": [
-            "Type of media (anime)"
-          ]
-        }
-      ],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleLocalSyncData",
-    "trimmedName": "LocalSyncData",
-    "comments": [
-      "HandleLocalSyncData ...",
-      "",
-      "\t@summary syncs local data with Platform.",
-      "\t@route /api/v1/local/local [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "syncs local data with Platform.",
-      "descriptions": [],
-      "endpoint": "/api/v1/local/local",
-      "methods": [
-        "POST"
-      ],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -2584,55 +2094,19 @@
     }
   },
   {
-    "name": "HandleLocalGetSyncQueueState",
-    "trimmedName": "LocalGetSyncQueueState",
+    "name": "deleteLocalFiles",
+    "trimmedName": "deleteLocalFiles",
     "comments": [
-      "HandleLocalGetSyncQueueState ...",
-      "",
-      "\t@summary gets the current sync queue state.",
-      "\t@desc This will return the list of media that are currently queued for syncing.",
-      "\t@route /api/v1/local/queue [GET]",
-      "\t@returns local.QueueState",
+      "deleteLocalFiles llama a DELETE /library/local-files con una biblioteca en libDir.",
       ""
     ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
+    "filepath": "internal/handlers/local_files_delete_test.go",
+    "filename": "local_files_delete_test.go",
     "api": {
-      "summary": "gets the current sync queue state.",
-      "descriptions": [
-        "This will return the list of media that are currently queued for syncing."
-      ],
-      "endpoint": "/api/v1/local/queue",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "local.QueueState",
-      "returnGoType": "local.QueueState",
-      "returnTypescriptType": "Local_QueueState"
-    }
-  },
-  {
-    "name": "HandleLocalSyncPlatformData",
-    "trimmedName": "LocalSyncPlatformData",
-    "comments": [
-      "HandleLocalSyncPlatformData ...",
-      "",
-      "\t@summary syncs Platform data with local.",
-      "\t@route /api/v1/local/Platform [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "syncs Platform data with local.",
+      "summary": "",
       "descriptions": [],
-      "endpoint": "/api/v1/local/Platform",
-      "methods": [
-        "POST"
-      ],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -2641,116 +2115,20 @@
     }
   },
   {
-    "name": "HandleLocalSetHasLocalChanges",
-    "trimmedName": "LocalSetHasLocalChanges",
+    "name": "TestDeleteLocalFilesNoSigueEnlacesFueraDeLaBiblioteca",
+    "trimmedName": "TestDeleteLocalFilesNoSigueEnlacesFueraDeLaBiblioteca",
     "comments": [
-      "HandleLocalSetHasLocalChanges ...",
-      "",
-      "\t@summary sets the flag to determine if there are local changes that need to be synced with Platform.",
-      "\t@route /api/v1/local/updated [POST]",
-      "\t@returns bool",
+      "Un enlace simbólico dentro de la biblioteca que apunta afuera no debe servir",
+      "para borrar el archivo real de afuera.",
       ""
     ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
+    "filepath": "internal/handlers/local_files_delete_test.go",
+    "filename": "local_files_delete_test.go",
     "api": {
-      "summary": "sets the flag to determine if there are local changes that need to be synced with Platform.",
+      "summary": "",
       "descriptions": [],
-      "endpoint": "/api/v1/local/updated",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Updated",
-          "jsonName": "updated",
-          "goType": "bool",
-          "usedStructType": "",
-          "typescriptType": "boolean",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleLocalGetHasLocalChanges",
-    "trimmedName": "LocalGetHasLocalChanges",
-    "comments": [
-      "HandleLocalGetHasLocalChanges ...",
-      "",
-      "\t@summary gets the flag to determine if there are local changes that need to be synced with Platform.",
-      "\t@route /api/v1/local/updated [GET]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "gets the flag to determine if there are local changes that need to be synced with Platform.",
-      "descriptions": [],
-      "endpoint": "/api/v1/local/updated",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleLocalGetLocalStorageSize",
-    "trimmedName": "LocalGetLocalStorageSize",
-    "comments": [
-      "HandleLocalGetLocalStorageSize ...",
-      "",
-      "\t@summary gets the size of the local storage in a human-readable format.",
-      "\t@route /api/v1/local/storage/size [GET]",
-      "\t@returns string",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "gets the size of the local storage in a human-readable format.",
-      "descriptions": [],
-      "endpoint": "/api/v1/local/storage/size",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "string",
-      "returnGoType": "string",
-      "returnTypescriptType": "string"
-    }
-  },
-  {
-    "name": "HandleLocalSyncSimulatedDataToPlatform",
-    "trimmedName": "LocalSyncSimulatedDataToPlatform",
-    "comments": [
-      "HandleLocalSyncSimulatedDataToPlatform ...",
-      "",
-      "\t@summary syncs the simulated data to Platform.",
-      "\t@route /api/v1/local/sync-simulated-to-Platform [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/local.go",
-    "filename": "local.go",
-    "api": {
-      "summary": "syncs the simulated data to Platform.",
-      "descriptions": [],
-      "endpoint": "/api/v1/local/sync-simulated-to-Platform",
-      "methods": [
-        "POST"
-      ],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -4392,215 +3770,6 @@
     }
   },
   {
-    "name": "HandlePlatformListAnime",
-    "trimmedName": "PlatformListAnime",
-    "comments": [
-      "HandlePlatformListAnime bridges legacy Platform list-anime calls to the active platform",
-      ""
-    ],
-    "filepath": "internal/handlers/platform_handlers.go",
-    "filename": "platform_handlers.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Page",
-          "jsonName": "page",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "Search",
-          "jsonName": "search",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "PerPage",
-          "jsonName": "perPage",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "Sort",
-          "jsonName": "sort",
-          "goType": "[]platform.MediaSort",
-          "usedStructType": "platform.MediaSort",
-          "typescriptType": "Array\u003cMediaSort\u003e",
-          "required": true,
-          "descriptions": []
-        },
-        {
-          "name": "Status",
-          "jsonName": "status",
-          "goType": "[]platform.MediaStatus",
-          "usedStructType": "platform.MediaStatus",
-          "typescriptType": "Array\u003cMediaStatus\u003e",
-          "required": true,
-          "descriptions": []
-        },
-        {
-          "name": "Genres",
-          "jsonName": "genres",
-          "goType": "[]string",
-          "usedStructType": "",
-          "typescriptType": "Array\u003cstring\u003e",
-          "required": true,
-          "descriptions": []
-        },
-        {
-          "name": "AverageScoreGreater",
-          "jsonName": "averageScoreGreater",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "Season",
-          "jsonName": "season",
-          "goType": "platform.MediaSeason",
-          "usedStructType": "platform.MediaSeason",
-          "typescriptType": "MediaSeason",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "SeasonYear",
-          "jsonName": "seasonYear",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "Format",
-          "jsonName": "format",
-          "goType": "platform.MediaFormat",
-          "usedStructType": "platform.MediaFormat",
-          "typescriptType": "MediaFormat",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "IsAdult",
-          "jsonName": "isAdult",
-          "goType": "bool",
-          "usedStructType": "",
-          "typescriptType": "boolean",
-          "required": false,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandlePlatformListRecentAiringAnime",
-    "trimmedName": "PlatformListRecentAiringAnime",
-    "comments": [
-      "HandlePlatformListRecentAiringAnime bridges legacy Platform list-recent-anime calls to the active platform",
-      ""
-    ],
-    "filepath": "internal/handlers/platform_handlers.go",
-    "filename": "platform_handlers.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Page",
-          "jsonName": "page",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "PerPage",
-          "jsonName": "perPage",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "AiringAtGreater",
-          "jsonName": "airingAtGreater",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "AiringAtLesser",
-          "jsonName": "airingAtLesser",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": false,
-          "descriptions": []
-        },
-        {
-          "name": "NotYetAired",
-          "jsonName": "notYetAired",
-          "goType": "bool",
-          "usedStructType": "",
-          "typescriptType": "boolean",
-          "required": false,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetPlatformStats",
-    "trimmedName": "GetPlatformStats",
-    "comments": [
-      "HandleGetPlatformStats returns viewer stats for the active platform",
-      ""
-    ],
-    "filepath": "internal/handlers/platform_handlers.go",
-    "filename": "platform_handlers.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "validPlaybackBeat",
     "trimmedName": "validPlaybackBeat",
     "comments": [
@@ -4870,45 +4039,6 @@
     }
   },
   {
-    "name": "HandleResolveStreams",
-    "trimmedName": "ResolveStreams",
-    "comments": [
-      "HandleResolveStreams resolves all available playback sources for a given",
-      "episode using the UnifiedResolver.",
-      "",
-      "@summary  Resolve all playback sources for an episode",
-      "@desc     Returns a list of ResolvedSource objects. Only local files",
-      "",
-      "\tare supported in this architecture.",
-      "",
-      "@returns  []core.ResolvedSource",
-      "@route    /api/v1/resolver/streams [GET]",
-      "",
-      "Query parameters:",
-      "  - mediaID  (required) — Platform media ID (positive) or TMDB ID (negative)",
-      "  - episode  (required) — 1-based episode number",
-      "  - kitsuId  (optional) — Kitsu anime ID; if absent, Torrentio is skipped",
-      ""
-    ],
-    "filepath": "internal/handlers/resolver.go",
-    "filename": "resolver.go",
-    "api": {
-      "summary": "Resolve all playback sources for an episode",
-      "descriptions": [
-        "Returns a list of ResolvedSource objects. Only local files"
-      ],
-      "endpoint": "/api/v1/resolver/streams",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "[]core.ResolvedSource",
-      "returnGoType": "core.ResolvedSource",
-      "returnTypescriptType": "Array\u003cINTERNAL_ResolvedSource\u003e"
-    }
-  },
-  {
     "name": "JSONSuccess",
     "trimmedName": "JSONSuccess",
     "comments": [
@@ -5081,6 +4211,30 @@
     }
   },
   {
+    "name": "apiNoSniffMiddleware",
+    "trimmedName": "apiNoSniffMiddleware",
+    "comments": [
+      "apiNoSniffMiddleware impide que el navegador reinterprete las respuestas de la",
+      "API por su contenido. Se limita a /api: los archivos estáticos de la interfaz",
+      "dependen del tipo MIME que Windows toma del registro, y con nosniff un .js",
+      "mal registrado dejaría la app sin cargar.",
+      ""
+    ],
+    "filepath": "internal/handlers/routes.go",
+    "filename": "routes.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "RegisterDriveRoutes",
     "trimmedName": "RegisterDriveRoutes",
     "comments": [
@@ -5089,6 +4243,52 @@
     ],
     "filepath": "internal/handlers/routes_drive.go",
     "filename": "routes_drive.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "registeredRoutes",
+    "trimmedName": "registeredRoutes",
+    "comments": [
+      "registeredRoutes lee routes*.go y devuelve \"MÉTODO /ruta/completa\" para cada",
+      "ruta declarada, resolviendo los prefijos de los grupos (v1.Group(\"/drive\")...).",
+      "Evita levantar toda la app: InitRoutes necesita base de datos, eventos y WS.",
+      ""
+    ],
+    "filepath": "internal/handlers/routes_lan_writes_test.go",
+    "filename": "routes_lan_writes_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestLANWriteRoutesExist",
+    "trimmedName": "TestLANWriteRoutesExist",
+    "comments": [
+      "Cada entrada de lanWriteRoutes debe apuntar a una ruta de escritura real: un",
+      "error de tipeo o una ruta renombrada dejaría a los clientes de la LAN",
+      "bloqueados sin ningún aviso.",
+      ""
+    ],
+    "filepath": "internal/handlers/routes_lan_writes_test.go",
+    "filename": "routes_lan_writes_test.go",
     "api": {
       "summary": "",
       "descriptions": [],
@@ -5385,6 +4585,73 @@
     }
   },
   {
+    "name": "TestOptionalAuthMiddleware_LANWritesRestricted",
+    "trimmedName": "TestOptionalAuthMiddleware_LANWritesRestricted",
+    "comments": [
+      "Sin contraseña, un equipo de la LAN puede reportar progreso o iniciar una",
+      "reproducción, pero no disparar escaneos, borrar notificaciones ni tocar la",
+      "cronología: solo localhost.",
+      ""
+    ],
+    "filepath": "internal/handlers/security_p0_test.go",
+    "filename": "security_p0_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestIsStreamTokenRequest",
+    "trimmedName": "TestIsStreamTokenRequest",
+    "comments": [
+      "El token comodín de streaming va en las URLs de video: solo debe servir para",
+      "leer rutas de reproducción, nunca para ajustes, apagado o borrados.",
+      ""
+    ],
+    "filepath": "internal/handlers/sensitive_endpoint_test.go",
+    "filename": "sensitive_endpoint_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestIsRestrictedWrite",
+    "trimmedName": "TestIsRestrictedWrite",
+    "comments": [
+      "Sin contraseña, toda escritura que no figure en lanWriteRoutes queda",
+      "restringida a localhost: una ruta nueva nace cerrada.",
+      ""
+    ],
+    "filepath": "internal/handlers/sensitive_endpoint_test.go",
+    "filename": "sensitive_endpoint_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "resolveLibraryMediaForSagas",
     "trimmedName": "resolveLibraryMediaForSagas",
     "comments": [
@@ -5471,10 +4738,76 @@
     }
   },
   {
+    "name": "isStreamTokenRequest",
+    "trimmedName": "isStreamTokenRequest",
+    "comments": [
+      "isStreamTokenRequest indica si el pedido es una lectura de una ruta de streaming.",
+      ""
+    ],
+    "filepath": "internal/handlers/server_auth_middleware.go",
+    "filename": "server_auth_middleware.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isValidHMACToken",
+    "trimmedName": "isValidHMACToken",
+    "comments": [
+      "isValidHMACToken valida un token HMAC contra la ruta pedida. El token de",
+      "streaming lleva endpoint \"*\" y va en la URL (historial, Referer, logs): solo",
+      "vale para leer rutas de reproducción, nunca para ajustes, apagado o borrados.",
+      ""
+    ],
+    "filepath": "internal/handlers/server_auth_middleware.go",
+    "filename": "server_auth_middleware.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "isLoopbackRequest",
     "trimmedName": "isLoopbackRequest",
     "comments": [
       "isLoopbackRequest comprueba si la petición HTTP se originó desde la máquina local (loopback).",
+      ""
+    ],
+    "filepath": "internal/handlers/server_auth_middleware.go",
+    "filename": "server_auth_middleware.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isRestrictedWrite",
+    "trimmedName": "isRestrictedWrite",
+    "comments": [
+      "isRestrictedWrite indica si el pedido modifica estado y no figura entre las",
+      "escrituras que se permiten a la LAN.",
       ""
     ],
     "filepath": "internal/handlers/server_auth_middleware.go",
@@ -5537,6 +4870,51 @@
       "returns": "models.Settings",
       "returnGoType": "models.Settings",
       "returnTypescriptType": "Models_Settings"
+    }
+  },
+  {
+    "name": "normalizeLibraryPath",
+    "trimmedName": "normalizeLibraryPath",
+    "comments": [
+      "normalizeLibraryPath limpia una carpeta de la biblioteca antes de guardarla. Devuelve",
+      "\"\" si está vacía y un error si no se admite: las comas rompen el guardado en CSV y las",
+      "carpetas de sistema (C:\\, Windows, Program Files, /etc, .ssh…) nunca pueden ser una",
+      "biblioteca, porque de ella dependen los chequeos de qué archivos se sirven y se borran.",
+      ""
+    ],
+    "filepath": "internal/handlers/settings.go",
+    "filename": "settings.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "normalizeLibraryPaths",
+    "trimmedName": "normalizeLibraryPaths",
+    "comments": [
+      "normalizeLibraryPaths aplica normalizeLibraryPath a una lista y descarta las vacías.",
+      ""
+    ],
+    "filepath": "internal/handlers/settings.go",
+    "filename": "settings.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -5697,43 +5075,6 @@
       "returns": "handlers.Status",
       "returnGoType": "handlers.Status",
       "returnTypescriptType": "Status"
-    }
-  },
-  {
-    "name": "HandleSaveMediaPlayerSettings",
-    "trimmedName": "SaveMediaPlayerSettings",
-    "comments": [
-      "HandleSaveMediaPlayerSettings updates the media player settings.",
-      "",
-      "\t@summary updates the media player settings.",
-      "\t@route /api/v1/settings/media-player [PATCH]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/settings.go",
-    "filename": "settings.go",
-    "api": {
-      "summary": "updates the media player settings.",
-      "descriptions": [],
-      "endpoint": "/api/v1/settings/media-player",
-      "methods": [
-        "PATCH"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "MediaPlayer",
-          "jsonName": "mediaPlayer",
-          "goType": "models.MediaPlayerSettings",
-          "usedStructType": "models.MediaPlayerSettings",
-          "typescriptType": "Models_MediaPlayerSettings",
-          "required": false,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -6146,60 +5487,6 @@
     }
   },
   {
-    "name": "HandleGetHomeItems",
-    "trimmedName": "GetHomeItems",
-    "comments": [
-      "HandleGetHomeItems ...",
-      "",
-      "\t@summary returns the home items.",
-      "\t@route /api/v1/status/home-items [GET]",
-      "\t@returns []string",
-      ""
-    ],
-    "filepath": "internal/handlers/status.go",
-    "filename": "status.go",
-    "api": {
-      "summary": "returns the home items.",
-      "descriptions": [],
-      "endpoint": "/api/v1/status/home-items",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "[]string",
-      "returnGoType": "string",
-      "returnTypescriptType": "Array\u003cstring\u003e"
-    }
-  },
-  {
-    "name": "HandleUpdateHomeItems",
-    "trimmedName": "UpdateHomeItems",
-    "comments": [
-      "HandleUpdateHomeItems ...",
-      "",
-      "\t@summary updates the home items.",
-      "\t@route /api/v1/status/home-items [POST]",
-      "\t@returns nil",
-      ""
-    ],
-    "filepath": "internal/handlers/status.go",
-    "filename": "status.go",
-    "api": {
-      "summary": "updates the home items.",
-      "descriptions": [],
-      "endpoint": "/api/v1/status/home-items",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "nil",
-      "returnGoType": "nil",
-      "returnTypescriptType": "null"
-    }
-  },
-  {
     "name": "HandleShutdown",
     "trimmedName": "Shutdown",
     "comments": [
@@ -6304,77 +5591,6 @@
       "returns": "bool",
       "returnGoType": "bool",
       "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetTheme",
-    "trimmedName": "GetTheme",
-    "comments": [
-      "HandleGetTheme returns the theme settings.",
-      "",
-      "\t@summary returns the theme settings.",
-      "\t@route /api/v1/theme [GET]",
-      "\t@returns models.Theme",
-      ""
-    ],
-    "filepath": "internal/handlers/theme.go",
-    "filename": "theme.go",
-    "api": {
-      "summary": "returns the theme settings.",
-      "descriptions": [],
-      "endpoint": "/api/v1/theme",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "models.Theme",
-      "returnGoType": "models.Theme",
-      "returnTypescriptType": "Models_Theme"
-    }
-  },
-  {
-    "name": "HandleUpdateTheme",
-    "trimmedName": "UpdateTheme",
-    "comments": [
-      "HandleUpdateTheme updates the color-related theme settings (used by the",
-      "quick theme-preset picker). It only touches the color fields it receives",
-      "and preserves every other theme setting already saved — it does NOT",
-      "overwrite the whole theme row, to avoid wiping unrelated appearance",
-      "settings configured elsewhere (Settings → Apariencia).",
-      "",
-      "\t@summary updates the theme settings.",
-      "\t@desc The server status should be re-fetched after this on the client.",
-      "\t@route /api/v1/theme [PATCH]",
-      "\t@returns models.Theme",
-      ""
-    ],
-    "filepath": "internal/handlers/theme.go",
-    "filename": "theme.go",
-    "api": {
-      "summary": "updates the theme settings.",
-      "descriptions": [
-        "The server status should be re-fetched after this on the client."
-      ],
-      "endpoint": "/api/v1/theme",
-      "methods": [
-        "PATCH"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Theme",
-          "jsonName": "theme",
-          "goType": "models.Theme",
-          "usedStructType": "models.Theme",
-          "typescriptType": "Models_Theme",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "models.Theme",
-      "returnGoType": "models.Theme",
-      "returnTypescriptType": "Models_Theme"
     }
   },
   {
@@ -6889,16 +6105,11 @@
     }
   },
   {
-    "name": "webSocketEventHandler",
-    "trimmedName": "webSocketEventHandler",
+    "name": "extractWSToken",
+    "trimmedName": "extractWSToken",
     "comments": [
-      "webSocketEventHandler creates a new websocket handler for real-time event communication.",
-      "The route is registered BEFORE the auth middleware group so the HTTP→WS upgrade",
-      "is never blocked by a missing Authorization header (browsers can't send one during WS connect).",
-      "Clients can authenticate via:",
-      "  - ?token=\u003cvalue\u003e query parameter (legacy)",
-      "  - Authorization: Bearer \u003ctoken\u003e header (preferred)",
-      "  - Sec-WebSocket-Protocol header with token (preferred for browsers)",
+      "extractWSToken extracts the authentication token from a WebSocket request.",
+      "Priority: Authorization header \u003e Sec-WebSocket-Protocol \u003e query parameter.",
       ""
     ],
     "filepath": "internal/handlers/websocket.go",
@@ -6916,15 +6127,14 @@
     }
   },
   {
-    "name": "extractWSToken",
-    "trimmedName": "extractWSToken",
+    "name": "TestWebSocketCierraLaConexionConUnMensajeEnorme",
+    "trimmedName": "TestWebSocketCierraLaConexionConUnMensajeEnorme",
     "comments": [
-      "extractWSToken extracts the authentication token from a WebSocket request.",
-      "Priority: Authorization header \u003e Sec-WebSocket-Protocol \u003e query parameter.",
+      "Un mensaje de más de wsMaxClientMessageBytes cierra la conexión en vez de cargarse en memoria.",
       ""
     ],
-    "filepath": "internal/handlers/websocket.go",
-    "filename": "websocket.go",
+    "filepath": "internal/handlers/websocket_limit_test.go",
+    "filename": "websocket_limit_test.go",
     "api": {
       "summary": "",
       "descriptions": [],

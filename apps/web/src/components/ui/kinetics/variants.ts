@@ -64,9 +64,6 @@ export const heroContainerVariants: Variants = {
     },
 }
 
-/** Alias retrocompatible para heroContainerVariants. */
-export const heroContentContainerVariants: Variants = heroContainerVariants
-
 /**
  * Ítems dentro del hero (título, metadatos, botones de acción).
  * Utiliza el spring canonical de entrada (380/30/0.8) con recorrido sutil de 10px.

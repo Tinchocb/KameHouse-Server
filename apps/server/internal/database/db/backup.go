@@ -30,10 +30,6 @@ func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
 	backupFileName := fmt.Sprintf("kamehouse-backup-%s.db", timestamp)
 	backupPath := filepath.Join(backupDir, backupFileName)
 
-	// Ensure all writes in buffer and slow logger are flushed
-	if db.bufferedWriter != nil {
-		db.bufferedWriter.Flush()
-	}
 	if db.slowTraceLogger != nil {
 		db.slowTraceLogger.Flush()
 	}

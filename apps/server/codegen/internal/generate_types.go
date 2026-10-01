@@ -203,8 +203,6 @@ func GenerateTypescriptFile(docsFilePath string, publicStructsFilePath string, o
 	file.WriteString("export type Platform_MediaFormat = MediaFormat\n")
 	file.WriteString("export type Platform_UnifiedMedia = UnifiedMedia\n")
 	file.WriteString("export type Platform_BaseAnime = UnifiedMedia\n")
-	file.WriteString("export type Platform_UnifiedCollectionEntry = UnifiedCollectionEntry\n")
-
 }
 
 // getReferencedStructsRecursively returns a map of GoStructs that are referenced by the fields of sharedStructs and otherStructs.

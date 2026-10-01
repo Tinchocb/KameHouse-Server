@@ -16,7 +16,7 @@ import { useImagePalette } from "@/hooks/use-image-palette"
 import {
     RippleFeedback,
     useMotionTier,
-    heroContentContainerVariants,
+    heroContainerVariants,
     heroItemVariants,
     heroFadeOnlyVariants,
     heroBackdropSlideVariants,
@@ -207,7 +207,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                     <AnimatePresence mode="wait" initial={false}>
                         <m.div
                             key={activeEraId}
-                            variants={allowCinematicMotion ? heroContentContainerVariants : undefined}
+                            variants={allowCinematicMotion ? heroContainerVariants : undefined}
                             initial={allowCinematicMotion ? "hidden" : { opacity: 0 }}
                             animate={allowCinematicMotion ? "visible" : { opacity: 1, transition: { duration: 0.25 } }}
                             exit={{ opacity: 0, transition: { duration: 0.15 } }}

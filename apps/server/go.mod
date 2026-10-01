@@ -31,7 +31,6 @@ require (
 	github.com/ziflex/lecho/v3 v3.9.0
 	go.felesatra.moe/anidb v1.2.2
 	golang.org/x/crypto v0.57.0
-	golang.org/x/image v0.46.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/text v0.42.0
 	golang.org/x/time v0.15.0

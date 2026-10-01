@@ -28,10 +28,8 @@ import (
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library_explorer"
-	"kamehouse/internal/local"
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/notifier"
-	"kamehouse/internal/platforms/offline_platform"
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/platforms/simulated_platform"
 	"kamehouse/internal/skipdetect"
@@ -81,8 +79,6 @@ type (
 		Watcher *scanner.Watcher
 
 		Metadata MetadataProviders
-
-		LocalManager local.Manager
 
 		ContinuityManager *continuity.Manager
 		TelemetryManager  *continuity.TelemetryManager
@@ -162,16 +158,12 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	fileCacher := initFileCacher(cfg, logger)
 	metadataProvider := initMetadataProvider(cfg, logger, fileCacher, database, tmdbClient)
 
-	localManager := initLocalManager(cfg, database, logger, wsEventManager)
-
 	// DynamicProvider envuelve el provider activo con conmutación atómica
-	dynamicProvider := metadata_provider.NewDynamicProvider(resolveInitialProvider(cfg, localManager, metadataProvider))
+	dynamicProvider := metadata_provider.NewDynamicProvider(metadataProvider)
 
-	offlinePlatform := initOfflinePlatform(localManager, logger)
 	simulatedPlatform := initSimulatedPlatform(logger, database)
-
 	// DynamicPlatform envuelve la plataforma activa con conmutación atómica
-	dynamicPlatform := platform.NewDynamicPlatform(resolveInitialPlatform(cfg, offlinePlatform, simulatedPlatform))
+	dynamicPlatform := platform.NewDynamicPlatform(simulatedPlatform)
 
 	isOffline := &atomic.Bool{}
 	isOffline.Store(cfg.Server.Offline)
@@ -414,47 +406,10 @@ func initMetadataProvider(cfg *Config, logger *zerolog.Logger, fileCacher *filec
 	})
 }
 
-func resolveInitialProvider(cfg *Config, localManager local.Manager, onlineProvider metadata_provider.Provider) metadata_provider.Provider {
-	if cfg.Server.Offline {
-		return localManager.GetOfflineMetadataProvider()
-	}
-	return onlineProvider
-}
-
-func initLocalManager(cfg *Config, database *db.Database, logger *zerolog.Logger, wsEventManager *events.WSEventManager) local.Manager {
-	localManager, err := local.NewManager(&local.NewManagerOptions{
-		LocalDir:       cfg.Offline.Dir,
-		AssetDir:       cfg.Offline.AssetDir,
-		Logger:         logger,
-		Database:       database,
-		WSEventManager: wsEventManager,
-		IsOffline:      cfg.Server.Offline,
-	})
-	if err != nil {
-		logger.Fatal().Err(err).Msgf("app: Failed to initialize sync manager")
-	}
-	return localManager
-}
-
-func initOfflinePlatform(localManager local.Manager, logger *zerolog.Logger) platform.Platform {
-	offlinePlatform, err := offline_platform.NewOfflinePlatform(localManager, logger)
-	if err != nil {
-		logger.Fatal().Err(err).Msgf("app: Failed to initialize local platform")
-	}
-	return offlinePlatform
-}
-
 func initSimulatedPlatform(logger *zerolog.Logger, database *db.Database) platform.Platform {
 	simulatedPlatform := simulated_platform.NewSimulatedPlatform(logger, database)
 	if simulatedPlatform == nil {
 		logger.Fatal().Err(nil).Msgf("app: Failed to initialize simulated platform")
-	}
-	return simulatedPlatform
-}
-
-func resolveInitialPlatform(cfg *Config, offlinePlatform, simulatedPlatform platform.Platform) platform.Platform {
-	if cfg.Server.Offline {
-		return offlinePlatform
 	}
 	return simulatedPlatform
 }

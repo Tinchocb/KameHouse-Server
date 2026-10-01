@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Tauri-based Desktop client for KameHouse"
 authors = ["KameHouse"]
 license = "MIT"
-repository = "https://github.com/5rahim/kamehouse"
+repository = "https://github.com/Tinchocb/KameHouse-Server"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -25,7 +25,6 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.3", features = ["tray-icon", "image-png", "image-ico"] }
 tauri-plugin-log = "2"
-tauri-plugin-shell = "2"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"

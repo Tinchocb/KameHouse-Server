@@ -561,23 +561,6 @@ func (h *Handler) HandleForceGC(c echo.Context) error {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// HandleGetHomeItems ...
-//
-//	@summary returns the home items.
-//	@route /api/v1/status/home-items [GET]
-//	@returns []string
-func (h *Handler) HandleGetHomeItems(c echo.Context) error {
-	return h.RespondWithCodeError(c, 501, errors.New("home items not implemented"))
-}
-
-// HandleUpdateHomeItems ...
-//
-//	@summary updates the home items.
-//	@route /api/v1/status/home-items [POST]
-//	@returns nil
-func (h *Handler) HandleUpdateHomeItems(c echo.Context) error {
-	return h.RespondWithCodeError(c, 501, errors.New("home items not implemented"))
-}
 
 // HandleShutdown handles graceful shutdown requests from local clients (e.g. desktop sidecar).
 //

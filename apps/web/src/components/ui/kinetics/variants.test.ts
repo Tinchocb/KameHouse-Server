@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
     heroContainerVariants,
-    heroContentContainerVariants,
     heroItemVariants,
     heroFadeOnlyVariants,
     gridItemVariants,
@@ -17,10 +16,6 @@ describe("kinetics variants", () => {
                     delayChildren: 0.02,
                 },
             })
-        })
-
-        it("heroContentContainerVariants aliases heroContainerVariants", () => {
-            expect(heroContentContainerVariants).toBe(heroContainerVariants)
         })
     })
 

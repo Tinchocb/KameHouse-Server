@@ -24,7 +24,6 @@ export function useScanLocalFiles(onSuccess?: () => void) {
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
             toast.success("Escaneo iniciado en segundo plano")
             refreshLibraryExplorerTree()
-            await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetMissingEpisodes.key] })
             if (data && data.length > 0) {
                 const mediaIds = [...new Set(data.map(f => f.mediaId).filter(id => !!id))]
                 for (const id of mediaIds) {

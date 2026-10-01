@@ -2,8 +2,6 @@ import { GettingStarted_Variables } from "@/api/generated/endpoint.types"
 import type { Models_Settings } from "@/api/generated/types"
 import { z } from "zod"
 
-export { persistLibraryPatch, persistThemePatch } from "./persist-settings"
-
 
 const _gettingStartedSchema = z.object({
     enableTranscode: z.boolean().optional().default(false),

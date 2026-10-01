@@ -47,9 +47,6 @@ func TestStubEndpointsReturn501(t *testing.T) {
 		fn     func(c echo.Context) error
 	}{
 		{"announcements", http.MethodPost, "/api/v1/announcements", h.HandleGetAnnouncements},
-		{"home-items GET", http.MethodGet, "/api/v1/status/home-items", h.HandleGetHomeItems},
-		{"home-items POST", http.MethodPost, "/api/v1/status/home-items", h.HandleUpdateHomeItems},
-		{"local queue", http.MethodGet, "/api/v1/local/queue", h.HandleLocalGetSyncQueueState},
 		{"config metadata", http.MethodGet, "/api/v1/config/metadata", h.HandleGetConfigMetadata},
 	}
 	for _, tc := range cases {

@@ -24,15 +24,6 @@
     "core:window:allow-is-maximizable",
     "core:window:allow-is-closable",
     "core:window:allow-is-visible",
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "binaries/kamehouse-server",
-          "sidecar": true
-        }
-      ]
-    },
     "clipboard-manager:allow-write-text",
     "dialog:allow-open",
     "opener:allow-open-url",

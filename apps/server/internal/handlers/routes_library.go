@@ -26,8 +26,6 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.GET("/collection", h.HandleGetLibraryCollection)
 	v1Library.GET("/schedule", h.HandleGetAnimeCollectionSchedule)
 	v1Library.GET("/scan-summaries", h.HandleGetScanSummaries)
-	v1Library.GET("/missing-episodes", h.HandleGetMissingEpisodes)
-	v1Library.GET("/upcoming-episodes", h.HandleGetUpcomingEpisodes)
 	v1Library.GET("/episode-file", h.HandleGetLibraryEpisodeFile)
 	v1Library.GET("/chronology-episode-files", h.HandleGetChronologyEpisodeFiles)
 
@@ -41,12 +39,8 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.POST("/anime-entry/unmatch", h.HandleAnimeEntryUnmatch)
 	v1Library.PATCH("/anime-entry/bulk-action", h.HandleAnimeEntryBulkAction)
 	v1Library.POST("/anime-entry/open-in-explorer", h.HandleOpenAnimeEntryInExplorer)
-	v1Library.POST("/anime-entry/update-progress", h.HandleUpdateAnimeEntryProgress)
 	v1Library.POST("/anime-entry/progress", h.HandleUpdateAnimeEntryProgress)
-	v1Library.POST("/anime-entry/update-repeat", h.HandleUpdateAnimeEntryRepeat)
 	v1Library.POST("/anime-entry/repeat", h.HandleUpdateAnimeEntryRepeat)
-	v1Library.GET("/anime-entry/silence/:id", h.HandleGetAnimeEntrySilenceStatus)
-	v1Library.POST("/anime-entry/silence", h.HandleToggleAnimeEntrySilenceStatus)
 
 	v1Library.POST("/unknown-media", h.HandleAddUnknownMedia)
 
@@ -54,13 +48,6 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1LibraryExplorer := v1Library.Group("/explorer")
 	v1LibraryExplorer.GET("/file-tree", h.HandleGetLibraryExplorerFileTree)
 	v1LibraryExplorer.POST("/file-tree/refresh", h.HandleRefreshLibraryExplorerFileTree)
-
-	// Platform
-	v1Platform := v1.Group("/platform")
-	v1Platform.GET("/collection", h.HandleGetLibraryCollection)
-	v1Platform.POST("/list-anime", h.HandlePlatformListAnime)
-	v1Platform.POST("/list-recent-anime", h.HandlePlatformListRecentAiringAnime)
-	v1Platform.GET("/stats", h.HandleGetPlatformStats)
 
 	// Anime
 	v1.GET("/anime/episode-collection/:id", h.HandleGetAnimeEpisodeCollection)

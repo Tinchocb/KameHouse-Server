@@ -333,10 +333,6 @@ type MediaSourcePreference struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-type SilencedMediaEntry struct {
-	BaseModel
-}
-
 type MediaFiller struct {
 	BaseModel
 	Data          []byte    `json:"data"`

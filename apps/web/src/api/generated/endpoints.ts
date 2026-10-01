@@ -153,53 +153,6 @@ export const API_ENDPOINTS = {
             methods: ["POST"],
             endpoint: "/api/v1/library/anime-entry/unmatch",
         },
-        /**
-         *  @description
-         *  Route returns a list of missing episodes.
-         *  This is used by the "Missing episodes" page to display the missing episodes.
-         */
-        GetMissingEpisodes: {
-            key: "ANIME-ENTRIES-get-missing-episodes",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/missing-episodes",
-        },
-        /**
-         *  @description
-         *  Route returns a list of upcoming episodes.
-         *  This is used by the "Upcoming" page to display the upcoming episodes.
-         */
-        GetUpcomingEpisodes: {
-            key: "ANIME-ENTRIES-get-upcoming-episodes",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/upcoming-episodes",
-        },
-        GetAnimeEntrySilenceStatus: {
-            key: "ANIME-ENTRIES-get-anime-entry-silence-status",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/anime-entry/silence/{id}",
-        },
-        ToggleAnimeEntrySilenceStatus: {
-            key: "ANIME-ENTRIES-toggle-anime-entry-silence-status",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/anime-entry/silence",
-        },
-    },
-    AUTH: {
-        /**
-         *  @description
-         *  Route returns the current status (login is a no-op without platform accounts).
-         *  This is called when the JWT token is obtained after logging in with redirection on the client.
-         */
-        Login: {
-            key: "AUTH-login",
-            methods: ["POST"],
-            endpoint: "/api/v1/auth/login",
-        },
-        Logout: {
-            key: "AUTH-logout",
-            methods: ["POST"],
-            endpoint: "/api/v1/auth/logout",
-        },
     },
     CACHE_HANDLERS: {
         GetCacheStats: {
@@ -365,49 +318,6 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/open-in-explorer",
         },
     },
-    FILECACHE: {
-        /**
-         *  @description
-         *  Route returns the total size of cache files.
-         *  The total size of the cache files is returned in human-readable format.
-         */
-        GetFileCacheTotalSize: {
-            key: "FILECACHE-get-file-cache-total-size",
-            methods: ["GET"],
-            endpoint: "/api/v1/filecache/total-size",
-        },
-        /**
-         *  @description
-         *  Route deletes all buckets with the given prefix.
-         *  The bucket value is the prefix of the cache files that should be deleted.
-         *  Returns 'true' if the operation was successful.
-         */
-        RemoveFileCacheBucket: {
-            key: "FILECACHE-remove-file-cache-bucket",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/filecache/bucket",
-        },
-        /**
-         *  @description
-         *  Route returns the total size of cached video file data.
-         *  The total size of the cache video file data is returned in human-readable format.
-         */
-        GetFileCacheMediastreamVideoFilesTotalSize: {
-            key: "FILECACHE-get-file-cache-mediastream-video-files-total-size",
-            methods: ["GET"],
-            endpoint: "/api/v1/filecache/mediastream/videofiles/total-size",
-        },
-        /**
-         *  @description
-         *  Route deletes the contents of the mediastream video file cache directory.
-         *  Returns 'true' if the operation was successful.
-         */
-        ClearFileCacheMediastreamVideoFiles: {
-            key: "FILECACHE-clear-file-cache-mediastream-video-files",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/filecache/mediastream/videofiles",
-        },
-    },
     INTELLIGENCE: {
         /**
          *  @description
@@ -462,83 +372,6 @@ export const API_ENDPOINTS = {
             key: "LIBRARY-EXPLORER-refresh-library-explorer-file-tree",
             methods: ["POST"],
             endpoint: "/api/v1/library/explorer/file-tree/refresh",
-        },
-    },
-    LOCAL: {
-        /**
-         *  @description
-         *  Route sets the offline mode.
-         *  Returns true if the offline mode is active, false otherwise.
-         */
-        SetOfflineMode: {
-            key: "LOCAL-set-offline-mode",
-            methods: ["POST"],
-            endpoint: "/api/v1/local/offline",
-        },
-        LocalGetTrackedMediaItems: {
-            key: "LOCAL-local-get-tracked-media-items",
-            methods: ["GET"],
-            endpoint: "/api/v1/local/track",
-        },
-        LocalAddTrackedMedia: {
-            key: "LOCAL-local-add-tracked-media",
-            methods: ["POST"],
-            endpoint: "/api/v1/local/track",
-        },
-        /**
-         *  @description
-         *  Route remove media from being tracked for offline sync.
-         *  This will remove anime from being tracked for offline sync and delete any associated data.
-         */
-        LocalRemoveTrackedMedia: {
-            key: "LOCAL-local-remove-tracked-media",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/local/track",
-        },
-        LocalGetIsMediaTracked: {
-            key: "LOCAL-local-get-is-media-tracked",
-            methods: ["GET"],
-            endpoint: "/api/v1/local/track/{id}/{type}",
-        },
-        LocalSyncData: {
-            key: "LOCAL-local-sync-data",
-            methods: ["POST"],
-            endpoint: "/api/v1/local/local",
-        },
-        /**
-         *  @description
-         *  Route gets the current sync queue state.
-         *  This will return the list of media that are currently queued for syncing.
-         */
-        LocalGetSyncQueueState: {
-            key: "LOCAL-local-get-sync-queue-state",
-            methods: ["GET"],
-            endpoint: "/api/v1/local/queue",
-        },
-        LocalSyncPlatformData: {
-            key: "LOCAL-local-sync-platform-data",
-            methods: ["POST"],
-            endpoint: "/api/v1/local/Platform",
-        },
-        LocalSetHasLocalChanges: {
-            key: "LOCAL-local-set-has-local-changes",
-            methods: ["POST"],
-            endpoint: "/api/v1/local/updated",
-        },
-        LocalGetHasLocalChanges: {
-            key: "LOCAL-local-get-has-local-changes",
-            methods: ["GET"],
-            endpoint: "/api/v1/local/updated",
-        },
-        LocalGetLocalStorageSize: {
-            key: "LOCAL-local-get-local-storage-size",
-            methods: ["GET"],
-            endpoint: "/api/v1/local/storage/size",
-        },
-        LocalSyncSimulatedDataToPlatform: {
-            key: "LOCAL-local-sync-simulated-data-to-platform",
-            methods: ["POST"],
-            endpoint: "/api/v1/local/sync-simulated-to-Platform",
         },
     },
     LOCALFILES: {
@@ -923,18 +756,6 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/mediastream/pretranscode/:hash",
         },
     },
-    RESOLVER: {
-        /**
-         *  @description
-         *  Route Resolve all playback sources for an episode
-         *  Returns a list of ResolvedSource objects. Only local files
-         */
-        ResolveStreams: {
-            key: "RESOLVER-resolve-streams",
-            methods: ["GET"],
-            endpoint: "/api/v1/resolver/streams",
-        },
-    },
     SCAN: {
         /**
          *  @description
@@ -1023,11 +844,6 @@ export const API_ENDPOINTS = {
             key: "SETTINGS-save-settings",
             methods: ["PATCH"],
             endpoint: "/api/v1/settings",
-        },
-        SaveMediaPlayerSettings: {
-            key: "SETTINGS-save-media-player-settings",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/settings/media-player",
         },
     },
     STATUS: {
@@ -1124,16 +940,6 @@ export const API_ENDPOINTS = {
             methods: ["POST"],
             endpoint: "/api/v1/memory/gc",
         },
-        GetHomeItems: {
-            key: "STATUS-get-home-items",
-            methods: ["GET"],
-            endpoint: "/api/v1/status/home-items",
-        },
-        UpdateHomeItems: {
-            key: "STATUS-update-home-items",
-            methods: ["POST"],
-            endpoint: "/api/v1/status/home-items",
-        },
         Shutdown: {
             key: "STATUS-shutdown",
             methods: ["POST"],
@@ -1155,23 +961,6 @@ export const API_ENDPOINTS = {
             key: "SYSTEM-get-diagnostics-report",
             methods: ["GET"],
             endpoint: "/api/v1/report",
-        },
-    },
-    THEME: {
-        GetTheme: {
-            key: "THEME-get-theme",
-            methods: ["GET"],
-            endpoint: "/api/v1/theme",
-        },
-        /**
-         *  @description
-         *  Route updates the theme settings.
-         *  The server status should be re-fetched after this on the client.
-         */
-        UpdateTheme: {
-            key: "THEME-update-theme",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/theme",
         },
     },
     THUMBNAIL: {

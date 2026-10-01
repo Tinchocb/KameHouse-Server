@@ -293,16 +293,6 @@ export type Anime_LibraryCollectionStats = {
 }
 
 /**
- * - Filepath: internal/library/anime/missing_episodes.go
- * - Filename: missing_episodes.go
- * - Package: anime
- */
-export type Anime_MissingEpisodes = {
-    episodes: Array<Anime_Episode> | null
-    silencedEpisodes: Array<Anime_Episode> | null
-}
-
-/**
  * - Filepath: internal/library/anime/schedule.go
  * - Filename: schedule.go
  * - Package: anime
@@ -350,29 +340,6 @@ export type Anime_UnmatchedGroup = {
     suggestions: Array<Models_LibraryMedia> | null
 }
 
-/**
- * - Filepath: internal/library/anime/upcoming_episodes.go
- * - Filename: upcoming_episodes.go
- * - Package: anime
- */
-export type Anime_UpcomingEpisode = {
-    mediaId: number
-    episodeNumber: number
-    airingAt: number
-    timeUntilAiring: number
-    baseAnime: UnifiedMedia | null
-    episodeMetadata?: Anime_EpisodeMetadata
-}
-
-/**
- * - Filepath: internal/library/anime/upcoming_episodes.go
- * - Filename: upcoming_episodes.go
- * - Package: anime
- */
-export type Anime_UpcomingEpisodes = {
-    episodes: Array<Anime_UpcomingEpisode> | null
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cassette
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -403,7 +370,7 @@ export type GovernorStats = {
  * - Filename: manager.go
  * - Package: continuity
  */
-export type Continuity_Kind = "onlinestream" | "mediastream" | "external_player"
+export type Continuity_Kind = "mediastream" | "external_player"
 
 /**
  * - Filepath: internal/continuity/history.go
@@ -1454,21 +1421,6 @@ export type LibraryExplorer_SuperUpdateFileOptions = {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Local
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/local/manager.go
- * - Filename: manager.go
- * - Package: local
- */
-export type Local_TrackedMediaItem = {
-    mediaId: number
-    type: string
-    animeEntry?: UnifiedCollectionEntry
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mediastream
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2169,18 +2121,6 @@ export type MediaKind = "ANIME" | "GENERAL"
  * - Filename: models.go
  * - Package: platform
  */
-export type MediaListStatus = "CURRENT" |
-    "PLANNING" |
-    "COMPLETED" |
-    "DROPPED" |
-    "PAUSED" |
-    "REPEATING"
-
-/**
- * - Filepath: internal/platforms/platform/models.go
- * - Filename: models.go
- * - Package: platform
- */
 export type MediaRelationType = "PREQUEL" |
     "SEQUEL" |
     "SPIN_OFF" |
@@ -2255,22 +2195,6 @@ export type UnifiedCharacter = {
     name: string
     role: string
     imageUrl: string
-}
-
-/**
- * - Filepath: internal/platforms/platform/models.go
- * - Filename: models.go
- * - Package: platform
- */
-export type UnifiedCollectionEntry = {
-    id: number
-    media: UnifiedMedia | null
-    status: MediaListStatus
-    score?: number
-    progress?: number
-    repeat?: number
-    startedAt?: FuzzyDate
-    completedAt?: FuzzyDate
 }
 
 /**
@@ -2484,4 +2408,3 @@ export type Platform_MediaStatus = MediaStatus
 export type Platform_MediaFormat = MediaFormat
 export type Platform_UnifiedMedia = UnifiedMedia
 export type Platform_BaseAnime = UnifiedMedia
-export type Platform_UnifiedCollectionEntry = UnifiedCollectionEntry

@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"kamehouse/internal/database/models"
@@ -538,49 +537,3 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	return h.RespondWithData(c, h.NewStatus(c))
 }
 
-// HandleSaveMediaPlayerSettings updates the media player settings.
-//
-//	@summary updates the media player settings.
-//	@route /api/v1/settings/media-player [PATCH]
-//	@returns bool
-func (h *Handler) HandleSaveMediaPlayerSettings(c echo.Context) error {
-
-	type body struct {
-		MediaPlayer *models.MediaPlayerSettings `json:"mediaPlayer"`
-	}
-
-	var b body
-
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	cached, err := h.App.Database.GetStoredSettings()
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if b.MediaPlayer == nil {
-		return h.RespondWithError(c, errors.New("mediaPlayer is required"))
-	}
-
-	// Copia: mutar el puntero cacheado dejaba cambios sin guardar si el upsert fallaba.
-	updated := *cached
-	currSettings := &updated
-	currSettings.MediaPlayer = *b.MediaPlayer
-	currSettings.BaseModel = models.BaseModel{
-		ID:        1,
-		UpdatedAt: time.Now(),
-	}
-
-	_, err = h.App.Database.UpsertSettings(currSettings)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	h.invalidateSettingsCache()
-	h.App.WSEventManager.SendEvent("settings", currSettings.Redacted())
-	h.App.InitOrRefreshModules()
-
-	return h.RespondWithData(c, true)
-}

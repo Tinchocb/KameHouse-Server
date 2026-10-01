@@ -41,9 +41,6 @@
     ]
   },
   "plugins": {
-    "shell": {
-      "open": false
-    },
     "updater": {
       "endpoints": [
         "https://kamehouse.app/api/updates/stable/latest.json"

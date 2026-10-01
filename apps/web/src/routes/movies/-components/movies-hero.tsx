@@ -18,7 +18,7 @@ import { HeroBackdrop } from "@/components/ui/spotlight/hero-backdrop"
 import { useQueueStore } from "@/lib/store"
 import {
     useMotionTier,
-    heroContentContainerVariants,
+    heroContainerVariants,
     heroItemVariants,
     heroFadeOnlyVariants,
     heroBackdropFadeVariants,
@@ -304,7 +304,7 @@ export function MoviesHero({
                             <AnimatePresence mode="wait">
                                 <m.div
                                     key={currentMovie.mediaId + "_content"}
-                                    variants={heroContentContainerVariants}
+                                    variants={heroContainerVariants}
                                     initial="hidden"
                                     animate="visible"
                                     exit="exit"
