@@ -8,17 +8,17 @@ import { defineStyleAnatomy } from "../core/styling"
 
 export const CardAnatomy = defineStyleAnatomy({
     root: cva([
-        "UI-Card__root bg-surface border border-outline-variant rounded-container shadow-elevation-1 transition duration-base ease-standard",
+        "UI-Card__root bg-surface border border-outline-variant rounded-container shadow-elevation-1 transition-[transform,box-shadow,background-color,border-color] duration-fast ease-out-strong",
     ], {
         variants: {
             variant: {
                 elevated: "shadow-elevation-2 bg-surface-container",
-                outlined: "border-2 border-outline bg-transparent shadow-none hover:bg-surface-container-low",
-                filled: "bg-surface-container-highest border-none shadow-none hover:bg-surface-container-high",
+                outlined: "border-2 border-outline bg-transparent shadow-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-low",
+                filled: "bg-surface-container-highest border-none shadow-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high",
                 tonal: "bg-secondary-container border-none shadow-none",
             },
             interactive: {
-                true: "hover:shadow-elevation-2 hover:-translate-y-0.5 cursor-pointer",
+                true: "[@media(hover:hover)_and_(pointer:fine)]:hover:shadow-elevation-2 [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-0.5 cursor-pointer active:scale-[0.99]",
                 false: "",
             },
             padded: {

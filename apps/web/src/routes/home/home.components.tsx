@@ -17,7 +17,7 @@ export function ErrorBanner({ message }: { message: string }) {
                 className="w-full max-w-md glass-card rounded-3xl p-8 border border-[var(--glass-border-side)] text-center"
             >
                 <div className="relative flex justify-center items-center w-16 h-16 mx-auto mb-4">
-                    <div className="absolute inset-0 bg-brand-accent/20 rounded-full animate-ping" />
+                    <div className="absolute inset-0 bg-brand-accent/20 rounded-full animate-ping motion-reduce:animate-none" />
                     <AlertTriangle className="relative w-8 h-8 text-brand-accent" />
                 </div>
                 <h2 className="text-lg font-black uppercase tracking-wider text-on-surface mb-2">
@@ -29,7 +29,7 @@ export function ErrorBanner({ message }: { message: string }) {
                 <button
                     type="button"
                     onClick={() => window.location.reload()}
-                    className="flex items-center gap-3 mx-auto px-8 py-3 rounded-full bg-brand-accent text-on-primary font-display tracking-widest active:scale-95 hover:brightness-110 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary"
+                    className="flex items-center gap-3 mx-auto px-8 py-3 rounded-full bg-brand-accent text-on-primary font-display tracking-widest active:scale-95 [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
                     aria-label="Reintentar conexión"
                 >
                     <RefreshCcw className="w-4 h-4" />
@@ -67,7 +67,7 @@ export function EmptyState() {
                 <button
                     type="button"
                     onClick={() => navigate({ to: "/settings" })}
-                    className="flex items-center gap-3 mx-auto px-8 py-3.5 rounded-full bg-brand-accent text-on-primary font-display tracking-widest text-sm active:scale-95 hover:brightness-110 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary"
+                    className="flex items-center gap-3 mx-auto px-8 py-3.5 rounded-full bg-brand-accent text-on-primary font-display tracking-widest text-sm active:scale-95 [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
                     aria-label="Ir a Configuración"
                 >
                     <Settings className="w-4 h-4" />

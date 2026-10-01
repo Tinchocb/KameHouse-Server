@@ -73,7 +73,7 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
 
         {/* Centered pill on md+, full width on mobile */}
         <div
-          className={`w-full lg:w-auto lg:max-w-xl rounded-2xl border transition duration-200 overflow-hidden shadow-elevation-1 ${
+          className={`w-full lg:w-auto lg:max-w-xl rounded-2xl border transition-[border-color,background-color] duration-fast ease-smooth-out overflow-hidden shadow-elevation-1 ${
             isContinuo
               ? 'border-dashed border-white/15 bg-surface-container-lowest/70'
               : isYears
@@ -92,7 +92,7 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
               setHasOpened(true);
               setIsExpanded((v) => !v);
             }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-left cursor-pointer min-h-[44px] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent select-none active:scale-[0.99] transition-transform"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-left cursor-pointer min-h-[44px] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent select-none active:scale-95 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04] transition-[transform,background-color] duration-fast ease-smooth-out"
           >
             {/* Kind & Gap Badge */}
             <span

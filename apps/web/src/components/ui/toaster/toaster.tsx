@@ -38,14 +38,14 @@ export const ToasterAnatomy = defineStyleAnatomy({
         "group/toast:bg-white group/toast:text-black",
         "group/toast:rounded-full group/toast:px-3.5 group/toast:py-1.5",
         "group/toast:text-xs group/toast:font-bold",
-        "group/toast:transition group/toast:hover:bg-zinc-200 group/toast:active:scale-95",
+        "group/toast:transition-[background-color,transform] group/toast:duration-fast group/toast:ease-out-strong group/toast:hover:bg-white/90 group/toast:active:scale-95 cursor-pointer",
         "group/toast:shadow-elevation-1",
     ]),
     cancelButton: cva([
         "group/toast:bg-transparent group/toast:text-on-surface-variant",
         "group/toast:rounded-full group/toast:px-3.5 group/toast:py-1.5",
         "group/toast:text-xs group/toast:font-medium",
-        "group/toast:transition group/toast:hover:bg-white/10 group/toast:active:scale-95",
+        "group/toast:transition-[background-color,transform] group/toast:duration-fast group/toast:ease-out-strong group/toast:hover:bg-white/10 group/toast:active:scale-95 cursor-pointer",
     ]),
 })
 

@@ -352,7 +352,7 @@ export function PerformanceMonitor() {
                         <div className="flex items-center gap-1.5">
                             <button
                                 onClick={handleClearStats}
-                                className="p-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-white transition-colors"
+                                className="p-1 rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                                 aria-label="Reiniciar estadísticas"
                                 title="Reiniciar estadísticas"
                             >
@@ -360,7 +360,7 @@ export function PerformanceMonitor() {
                             </button>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1 rounded bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-white transition-colors"
+                                className="p-1 rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                                 aria-label="Cerrar diagnóstico de rendimiento"
                                 title="Cerrar diagnóstico"
                             >

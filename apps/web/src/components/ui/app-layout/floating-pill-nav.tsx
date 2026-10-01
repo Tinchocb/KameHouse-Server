@@ -9,7 +9,7 @@ import { useAppStore, usePlayerStore, useUIStore } from "@/lib/store"
 import { cn } from "@/components/ui/core/styling"
 import { useSound } from "@/hooks/use-sound"
 import { toast } from "sonner"
-import { MagneticIndicator, ElasticCounter } from "@/components/ui/kinetics"
+import { MagneticIndicator, ElasticCounter, IconSwap } from "@/components/ui/kinetics"
 import { ExpandableSearch } from "./expandable-search"
 import { RandomPlayButton } from "./random-play-button"
 import { BackgroundMusicPlayer } from "./background-music"
@@ -114,7 +114,7 @@ export function FloatingPillNav() {
                     <img
                         src="/kamehouse-logo.png"
                         alt=""
-                        className="relative z-10 w-5 h-5 object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]"
+                        className="relative z-10 w-5 h-5 object-contain [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-out-strong drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]"
                     />
                     {/* Entre md y lg no entra todo en una fila: el logo queda sin texto */}
                     <span className="relative z-10 sr-only lg:not-sr-only font-display font-black tracking-widest text-xs uppercase text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
@@ -153,7 +153,7 @@ export function FloatingPillNav() {
                                     onPointerCancel={() => setPressed(null)}
                                     onPointerLeave={() => setPressed((p) => (p?.to === item.to ? null : p))}
                                     className={cn(
-                                        "relative px-3 lg:px-4 py-1.5 min-h-[36px] lg:min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 flex items-center gap-1.5 cursor-pointer select-none",
+                                        "relative px-3 lg:px-4 py-1.5 min-h-[36px] lg:min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-[color,background-color,transform] duration-fast ease-out-strong active:scale-95 flex items-center gap-1.5 cursor-pointer select-none",
                                         isPillActive ? "text-black font-bold" : "text-on-surface-variant hover:text-white hover:bg-white/10"
                                     )}
                                 >
@@ -183,7 +183,7 @@ export function FloatingPillNav() {
                             aria-pressed={globalQueueOpen}
                             title="Mi Lista / Cola"
                             className={cn(
-                                "relative px-3 lg:px-4 py-1.5 min-h-[36px] lg:min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-colors duration-200 flex items-center gap-1.5 cursor-pointer select-none",
+                                "relative px-3 lg:px-4 py-1.5 min-h-[36px] lg:min-w-[104px] justify-center rounded-full text-xs font-semibold tracking-wide transition-[color,background-color,transform] duration-fast ease-out-strong active:scale-95 flex items-center gap-1.5 cursor-pointer select-none",
                                 globalQueueOpen ? "text-black font-bold" : "text-on-surface-variant hover:text-white hover:bg-white/10"
                             )}
                         >
@@ -229,7 +229,7 @@ export function FloatingPillNav() {
                         aria-current={currentPath.startsWith("/admin") ? "page" : undefined}
                         title="Administración"
                         className={cn(
-                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-90",
+                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-95",
                             "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
                             currentPath.startsWith("/admin")
                                 ? "bg-white/95 text-black font-bold"
@@ -247,7 +247,7 @@ export function FloatingPillNav() {
                         aria-current={currentPath.startsWith("/settings") ? "page" : undefined}
                         title="Configuración"
                         className={cn(
-                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-90",
+                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-95",
                             "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
                             currentPath.startsWith("/settings")
                                 ? "bg-white/95 text-black font-bold"
@@ -275,7 +275,7 @@ export function FloatingPillNav() {
                         aria-pressed={marathonMode}
                         title={marathonMode ? "Modo Maratón: Activado (Auto-skip)" : "Modo Maratón: Desactivado"}
                         className={cn(
-                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-90",
+                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-95",
                             "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
                             marathonMode 
                                 ? "bg-brand-accent/25 text-brand-accent border border-brand-accent/40" 
@@ -292,7 +292,7 @@ export function FloatingPillNav() {
                         aria-label="Reproducción Aleatoria (Modo TV)"
                         title="Reproducción Aleatoria / Modo TV"
                         className={cn(
-                            "p-2 rounded-full text-xs text-on-surface-variant hover:text-white hover:bg-white/10 active:scale-90 flex items-center justify-center cursor-pointer",
+                            "p-2 rounded-full text-xs text-on-surface-variant hover:text-white hover:bg-white/10 active:scale-95 flex items-center justify-center cursor-pointer",
                             "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]"
                         )}
                     >
@@ -307,14 +307,16 @@ export function FloatingPillNav() {
                         aria-pressed={isAudioActive}
                         title={isAudioActive ? "Música de fondo: Encendida" : "Música de fondo: Silenciada"}
                         className={cn(
-                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-90",
+                            "p-2 rounded-full text-xs flex items-center justify-center cursor-pointer active:scale-95",
                             "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
                             isAudioActive 
                                 ? "text-brand-secondary bg-brand-secondary/15 border border-brand-secondary/30" 
                                 : "text-on-surface-variant/80 hover:text-white hover:bg-white/10"
                         )}
                     >
-                        {isAudioActive ? <IconMediaVolume2 className="w-4 h-4" /> : <IconMediaVolumeX className="w-4 h-4" />}
+                        <IconSwap swapKey={isAudioActive ? "active" : "muted"}>
+                            {isAudioActive ? <IconMediaVolume2 className="w-4 h-4" /> : <IconMediaVolumeX className="w-4 h-4" />}
+                        </IconSwap>
                     </button>
                 </div>
             </m.div>

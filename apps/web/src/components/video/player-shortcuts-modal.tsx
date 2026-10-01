@@ -132,7 +132,7 @@ export function PlayerShortcutsModal({ isOpen, onClose }: PlayerShortcutsModalPr
                                                     {shortcut.keyCombination.map((key, kIdx) => (
                                                         <kbd
                                                             key={kIdx}
-                                                            className="px-2 py-0.5 min-w-[24px] text-center text-2xs font-mono font-semibold tracking-wider bg-white/10 text-white rounded-full"
+                                                            className="px-2 py-0.5 min-w-[24px] text-center text-2xs font-mono font-semibold tracking-wider tabular-nums bg-white/10 text-white rounded-full"
                                                         >
                                                             {key}
                                                         </kbd>
@@ -146,7 +146,7 @@ export function PlayerShortcutsModal({ isOpen, onClose }: PlayerShortcutsModalPr
                         </div>
 
                         {/* Footer note */}
-                        <div className="px-6 py-3 border-t border-white/10 bg-surface-container-lowest/40 flex items-center justify-between text-caption text-zinc-500 font-mono">
+                        <div className="px-6 py-3 border-t border-white/10 bg-surface-container-lowest/40 flex items-center justify-between text-caption text-on-surface-variant font-mono">
                             <span>Presiona [?] o [Esc] para cerrar</span>
                             <span>La reproducción continúa en segundo plano</span>
                         </div>

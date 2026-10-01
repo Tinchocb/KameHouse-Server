@@ -120,10 +120,10 @@ export function TmdbMatchManual() {
                                     type="button"
                                     onClick={() => setSelectedPath(f.path)}
                                     className={cn(
-                                        "w-full text-left p-3 rounded-xl border transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out text-xs",
+                                        "w-full text-left p-3 rounded-xl border transition-[background-color,border-color,box-shadow,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer text-xs",
                                         selectedPath === f.path
                                             ? "border-brand-accent bg-brand-accent/10 text-white"
-                                            : "border-white/10 bg-white/[0.02] text-on-surface hover:border-white/25"
+                                            : "border-white/10 bg-white/[0.02] text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/25"
                                     )}
                                 >
                                     <p className="font-bold truncate">{f.originalTitle || f.path}</p>
@@ -156,7 +156,7 @@ export function TmdbMatchManual() {
                             type="button"
                             onClick={handleSearch}
                             disabled={isSearching}
-                            className="px-4 py-2.5 rounded-xl bg-brand-accent text-on-primary text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 min-h-[40px]"
+                            className="px-4 py-2.5 rounded-xl bg-brand-accent text-on-primary text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 min-h-[40px] transition-[filter,transform,opacity] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 cursor-pointer disabled:cursor-not-allowed"
                         >
                             {isSearching ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconNavigationSearch className="w-3.5 h-3.5" />}
                             Buscar
@@ -185,7 +185,7 @@ export function TmdbMatchManual() {
                                                     type="button"
                                                     onClick={() => handleAssign(r)}
                                                     disabled={isAssigning || !selectedPath}
-                                                    className="px-2.5 py-1.5 rounded-lg bg-brand-accent text-on-primary text-3xs font-bold active:scale-95 disabled:opacity-50"
+                                                    className="px-2.5 py-1.5 rounded-lg bg-brand-accent text-on-primary text-3xs font-bold active:scale-95 disabled:opacity-50 transition-[filter,transform,opacity] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 cursor-pointer disabled:cursor-not-allowed"
                                                 >
                                                     Asignar
                                                 </button>
@@ -194,7 +194,7 @@ export function TmdbMatchManual() {
                                                     onClick={() => handleResolve(r)}
                                                     disabled={isResolving || !selectedPath}
                                                     title="Solo guarda el vínculo para el próximo escaneo"
-                                                    className="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-3xs font-bold text-on-surface-variant hover:text-white active:scale-95 disabled:opacity-50"
+                                                    className="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 text-3xs font-bold text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 active:scale-95 disabled:opacity-50 transition-[background-color,color,transform,opacity] duration-fast ease-smooth-out cursor-pointer disabled:cursor-not-allowed"
                                                 >
                                                     Vincular
                                                 </button>

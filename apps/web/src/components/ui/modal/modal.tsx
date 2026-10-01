@@ -13,7 +13,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const ModalAnatomy = defineStyleAnatomy({
     overlay: cva([
         "UI-Modal__overlay",
-        "fixed inset-0 z-overlay bg-black/65 backdrop-blur-overlay-xs transition duration-base",
+        "fixed inset-0 z-overlay bg-black/65 backdrop-blur-overlay-xs transition-opacity duration-base",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     ]),

@@ -98,7 +98,7 @@ function AdminHeader() {
                         <button
                             onClick={handleBackup}
                             disabled={isBackingUp || isDownloadingBackup}
-                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
+                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 h-10 border border-white/15 text-on-surface font-semibold text-xs rounded-full bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 active:scale-95 transition-[background-color,border-color,transform] duration-base ease-smooth-out disabled:opacity-50 cursor-pointer"
                         >
                             <LoadSwap
                                 loading={isBackingUp || isDownloadingBackup}
@@ -111,7 +111,7 @@ function AdminHeader() {
                         <button
                             onClick={downloadReport}
                             disabled={isDownloadingReport}
-                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 sm:px-5 h-10 border border-outline-variant text-on-surface-variant font-semibold text-sm rounded-button transition duration-fast hover:border-brand-accent hover:bg-brand-accent/10 active:scale-[0.97] disabled:opacity-50"
+                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 h-10 border border-white/15 text-on-surface font-semibold text-xs rounded-full bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 active:scale-95 transition-[background-color,border-color,transform] duration-base ease-smooth-out disabled:opacity-50 cursor-pointer"
                         >
                             <LoadSwap
                                 loading={isDownloadingReport}
@@ -136,12 +136,12 @@ function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTransco
     const memoryUsed = trStats?.system?.memoryUsed ? (trStats.system.memoryUsed / 1024 / 1024 / 1024).toFixed(1) : "0.0"
 
     const stats = React.useMemo(() => [
-        { label: "Medios", count: libStats?.totalMedia, change: "Series y Películas", icon: IconNavigationTv, color: "var(--brand-primary)" },
-        { label: "Archivos", count: libStats?.totalLocalFiles, change: "Ficheros indexados", icon: IconNavigationFilm, color: "var(--brand-secondary)" },
-        { label: "CPU", value: `${cpuPercent}%`, change: "Uso del sistema", icon: IconStatusActivity, color: "var(--brand-success)" },
-        { label: "Memoria", value: `${memoryUsed} GB`, change: `De ${memoryTotal} GB totales`, icon: IconStatusHdd, color: "var(--brand-magic)" },
+        { label: "Medios", count: libStats?.totalMedia, change: "Series y Películas", icon: IconNavigationTv, color: "var(--brand-accent)" },
+        { label: "Archivos", count: libStats?.totalLocalFiles, change: "Ficheros indexados", icon: IconNavigationFilm, color: "var(--brand-accent)" },
+        { label: "CPU", value: `${cpuPercent}%`, change: "Uso del sistema", icon: IconStatusActivity, color: "rgb(52 211 153)" },
+        { label: "Memoria", value: `${memoryUsed} GB`, change: `De ${memoryTotal} GB totales`, icon: IconStatusHdd, color: "rgb(168 85 247)" },
         { label: "Transcoder NVENC", value: trStats?.transcoderInitialized && trStats.governor ? `${trStats.governor.activeNvenc} / ${trStats.governor.nvencCap}` : "Inactivo", change: "Sesiones GPU activas", icon: IconNavigationTv, color: "var(--md-sys-color-on-surface-variant)" },
-        { label: "Pre-Transcode", count: trStats?.preTranscodeQueue, change: "En cola", icon: IconStatusPulse, color: "var(--brand-success)" },
+        { label: "Pre-Transcode", count: trStats?.preTranscodeQueue, change: "En cola", icon: IconStatusPulse, color: "rgb(52 211 153)" },
     ], [libStats, trStats, cpuPercent, memoryUsed, memoryTotal])
 
     return (
@@ -149,10 +149,10 @@ function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTransco
             <h2 id="stats-title" className="sr-only">Estadísticas Generales</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
                 {stats.map((stat) => (
-                    <div key={stat.label} className="sectionbar p-4.5 relative overflow-hidden group hover:border-white/30 transition duration-base">
+                    <div key={stat.label} className="sectionbar p-4.5 relative overflow-hidden group [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/25 transition-[border-color,box-shadow] duration-base ease-smooth-out">
                         <div className="flex items-start justify-between">
-                            <stat.icon size={24} className="text-on-surface-variant group-hover:text-on-surface transition-colors" style={{ color: stat.color }} />
-                            <span className="text-3xs font-mono text-on-surface-variant/60 uppercase tracking-wider">—</span>
+                            <stat.icon size={22} className="text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface transition-colors duration-fast ease-smooth-out" style={{ color: stat.color }} />
+                            <span className="text-3xs font-mono text-on-surface-variant/50 uppercase tracking-wider">—</span>
                         </div>
                         <div className="text-2xl font-display text-on-surface font-extrabold tracking-tight mt-3 tabular-nums">
                             {stat.count !== undefined ? (
@@ -225,7 +225,7 @@ function AdminActionsGrid() {
             {actions.map((action, i) => {
                 if (action.variant === "destructive") {
                     return (
-                        <div key={i} className="w-full text-left sectionbar p-5 transition duration-base flex flex-col justify-between">
+                        <div key={i} className="w-full text-left rounded-xl bg-white/[0.03] border border-white/10 p-5 flex flex-col justify-between">
                             <div className="flex items-start gap-3.5">
                                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-red-500/15 text-red-400 border border-red-500/25">
                                     <action.icon size={20} strokeWidth={2.5} />
@@ -249,15 +249,14 @@ function AdminActionsGrid() {
                         key={i}
                         type="button"
                         onClick={action.action}
-                        className="w-full text-left sectionbar p-5 cursor-pointer transition duration-base hover:border-white/30 hover:bg-white/[0.04] active:scale-[0.98] group flex flex-col justify-between"
+                        className="w-full text-left rounded-xl bg-white/[0.03] border border-white/10 p-5 cursor-pointer transition-[background-color,border-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] active:scale-95 group flex flex-col justify-between"
                     >
                         <div className="flex items-start gap-3.5">
                             <div className={cn(
-                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform",
+                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-smooth-out",
                                 action.variant === "primary" && "bg-brand-accent/15 text-brand-accent border border-brand-accent/25",
-                                action.variant === "secondary" && "bg-brand-secondary/15 text-brand-secondary border border-brand-secondary/25",
+                                action.variant === "secondary" && "bg-sky-500/15 text-sky-400 border border-sky-500/25",
                                 action.variant === "outline" && "bg-white/[0.04] border border-white/10 text-on-surface-variant",
-                                (action.variant as string) === "magic" && "bg-brand-magic/15 text-brand-magic border border-brand-magic/25",
                             )}>
                                 <action.icon size={20} strokeWidth={2.5} />
                             </div>
@@ -265,7 +264,7 @@ function AdminActionsGrid() {
                                 <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase font-mono">{action.label}</h3>
                                 <p className="text-2xs text-on-surface-variant/70 mt-0.5">{action.desc}</p>
                             </div>
-                            <IconArrowRight size={18} className="text-on-surface-variant/70 group-hover:text-brand-accent group-hover:translate-x-0.5 transition shrink-0 mt-0.5" />
+                            <IconArrowRight size={18} className="text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
                         </div>
                     </button>
                 )
@@ -334,9 +333,9 @@ function AdminServicesGrid() {
 
     const getStatusConfig = (status: string) => {
         switch (status) {
-            case "connected": return { color: "var(--brand-success)", label: "Conectado", icon: IconUiCheckCircle }
+            case "connected": return { color: "rgb(52 211 153)", label: "Conectado", icon: IconUiCheckCircle }
             case "disconnected": return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconectado", icon: IconUiXCircle }
-            case "error": return { color: "var(--brand-destructive)", label: "Error", icon: IconUiAlertCircle }
+            case "error": return { color: "rgb(248 113 113)", label: "Error", icon: IconUiAlertCircle }
             case "unknown": return { color: "var(--md-sys-color-on-surface-variant)", label: "No monitoreado", icon: IconUiHelpCircle }
             default: return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconocido", icon: IconUiHelpCircle }
         }
@@ -347,7 +346,7 @@ function AdminServicesGrid() {
             {services.map((service, i) => {
                 const status = getStatusConfig(service.status)
                 return (
-                    <div key={i} className="sectionbar p-5 transition duration-base hover:border-white/25 flex flex-col justify-between">
+                    <div key={i} className="rounded-xl bg-white/[0.03] border border-white/10 p-5 transition-[background-color,border-color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.05] flex flex-col justify-between">
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3.5 min-w-0">
                                 <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center shrink-0">
@@ -368,7 +367,7 @@ function AdminServicesGrid() {
                             <Link
                                 to="/settings"
                                 search={{ tab: service.tab }}
-                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 hover:border-white/25 hover:bg-white/[0.06] hover:text-white active:scale-95 transition min-h-[30px]"
+                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:text-white active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out min-h-[32px] cursor-pointer"
                             >
                                 Configurar
                             </Link>
@@ -413,7 +412,7 @@ function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTr
         <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {/* Motor de transcodificación */}
-            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition duration-base">
+            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[background-color,border-color] duration-base ease-smooth-out">
                 <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">Motor de Streaming</h3>
                     <span className={cn(
@@ -439,7 +438,7 @@ function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTr
                             value={governor.activeNvenc}
                             max={governor.nvencCap}
                             display={`${governor.activeNvenc} / ${governor.nvencCap}`}
-                            color="var(--brand-success)"
+                            color="rgb(52 211 153)"
                         />
                         <div className="flex items-center justify-between text-2xs text-on-surface-variant/70 mt-auto pt-3.5 border-t border-white/[0.08]">
                             <span>Lanzados: <span className="font-mono text-on-surface ml-1">{governor.totalLaunched}</span></span>
@@ -458,7 +457,7 @@ function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTr
             </div>
 
             {/* Sistema */}
-            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition duration-base">
+            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[background-color,border-color] duration-base ease-smooth-out">
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">Sistema</h3>
                 <StatBar
                     label="CPU"
@@ -471,23 +470,23 @@ function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTr
                     value={system?.memoryUsed || 0}
                     max={system?.memoryTotal || 1}
                     display={`${formatGb(system?.memoryUsed)} / ${formatGb(system?.memoryTotal)} GB`}
-                    color="var(--brand-secondary)"
+                    color="var(--brand-accent)"
                 />
             </div>
 
             {/* GPU (solo si nvidia-smi respondió) */}
-            <div className="sectionbar p-5 flex flex-col gap-4.5 hover:border-white/25 transition duration-base">
+            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[background-color,border-color] duration-base ease-smooth-out">
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">GPU · NVIDIA</h3>
                 {gpu ? (
                     <>
                         <StatBar label="Uso de GPU" value={gpu.utilization} max={100} display={`${gpu.utilization}%`} />
-                        <StatBar label="Encoder NVENC" value={gpu.encoder} max={100} display={`${gpu.encoder}%`} color="var(--brand-success)" />
+                        <StatBar label="Encoder NVENC" value={gpu.encoder} max={100} display={`${gpu.encoder}%`} color="rgb(52 211 153)" />
                         <StatBar
                             label="VRAM"
                             value={gpu.memoryUsed}
                             max={gpu.memoryTotal || 1}
                             display={`${gpu.memoryUsed} / ${gpu.memoryTotal} MB`}
-                            color="var(--brand-magic)"
+                            color="rgb(168 85 247)"
                         />
                     </>
                 ) : (
@@ -519,7 +518,7 @@ function PreTranscodeJobsList() {
 
     if (isLoading) {
         return (
-            <div className="sectionbar p-5 mt-3.5 space-y-2.5" role="status" aria-label="Cargando cola de pre-transcode">
+            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 mt-3.5 space-y-2.5" role="status" aria-label="Cargando cola de pre-transcode">
                 <Skeleton className="h-3 w-40 rounded-full" />
                 <AdminRowSkeletons count={2} />
             </div>
@@ -528,7 +527,7 @@ function PreTranscodeJobsList() {
     if (!jobs || jobs.length === 0) return null
 
     return (
-        <div className="sectionbar p-5 mt-3.5">
+        <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 mt-3.5">
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface mb-3">
                 Cola de Pre-Transcode ({jobs.length})
             </h3>
@@ -557,7 +556,7 @@ function PreTranscodeJobsList() {
                             onClick={() => cancelJob(job.hash)}
                             disabled={isCancelling}
                             title="Cancelar pre-transcode"
-                            className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 text-on-surface-variant hover:text-red-400 hover:border-red-500/40 active:scale-95 transition disabled:opacity-50"
+                            className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-red-400 [@media(hover:hover)_and_(pointer:fine)]:hover:border-red-500/40 active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out disabled:opacity-50 cursor-pointer"
                         >
                             <IconUiDelete size={14} />
                         </button>
@@ -582,16 +581,16 @@ function AdminSystemGrid() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {items.map((item, i) => (
-                <button key={i} type="button" onClick={item.action} className="w-full text-left sectionbar p-5 cursor-pointer transition duration-base hover:border-white/30 hover:bg-white/[0.04] active:scale-[0.98] group flex flex-col justify-between">
+                <button key={i} type="button" onClick={item.action} className="w-full text-left rounded-xl bg-white/[0.03] border border-white/10 p-5 cursor-pointer transition-[background-color,border-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] active:scale-95 group flex flex-col justify-between">
                     <div className="flex items-start gap-3.5">
-                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center group-hover:bg-white/[0.08] group-hover:border-white/20 transition shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-white/20 transition-[background-color,border-color] duration-fast ease-smooth-out shrink-0">
                             <item.icon size={20} className="text-on-surface-variant/80" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase font-mono">{item.label}</h3>
                             <p className="text-2xs text-on-surface-variant/70 mt-0.5">{item.desc}</p>
                         </div>
-                        <IconArrowRight size={18} className="text-on-surface-variant/70 group-hover:text-brand-accent group-hover:translate-x-0.5 transition shrink-0 mt-0.5" />
+                        <IconArrowRight size={18} className="text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
                     </div>
                 </button>
             ))}
@@ -608,18 +607,18 @@ function AdminLogsViewer() {
     const shown = (content ?? "").split("\n").slice(-300).join("\n")
 
     return (
-        <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row gap-2">
+        <div className="space-y-3.5">
+            <div className="flex flex-col sm:flex-row gap-2.5">
                 <select
                     value={selected ?? ""}
                     onChange={(e) => setSelected(e.target.value || null)}
                     aria-label="Archivo de log"
                     disabled={isLoadingFiles || files.length === 0}
-                    className="flex-1 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-white min-h-[40px] disabled:opacity-50"
+                    className="flex-1 px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-mono text-white min-h-[42px] focus:outline-none focus:border-white/30 transition-[border-color,background-color] duration-fast ease-smooth-out disabled:opacity-50 cursor-pointer"
                 >
-                    <option value="">Último log</option>
+                    <option value="" className="bg-surface-container-lowest text-white">Último log activo</option>
                     {files.map((f) => (
-                        <option key={f} value={f}>{f}</option>
+                        <option key={f} value={f} className="bg-surface-container-lowest text-white">{f}</option>
                     ))}
                 </select>
                 <button
@@ -634,12 +633,12 @@ function AdminLogsViewer() {
                         })
                     }}
                     disabled={isDeleting || !selected}
-                    className="px-4 py-2.5 rounded-xl border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/10 active:scale-95 transition disabled:opacity-50 min-h-[40px]"
+                    className="px-5 py-2 rounded-full border border-red-500/30 text-red-400 text-xs font-bold [@media(hover:hover)_and_(pointer:fine)]:hover:bg-red-500/10 active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out disabled:opacity-50 min-h-[42px] cursor-pointer"
                 >
                     {isDeleting ? "Eliminando..." : "Eliminar"}
                 </button>
             </div>
-            <pre className="max-h-[400px] overflow-auto p-4 rounded-xl bg-black/40 border border-white/10 text-3xs font-mono text-on-surface-variant whitespace-pre-wrap break-all">
+            <pre className="max-h-[400px] overflow-auto p-4 rounded-xl bg-black/40 border border-white/10 text-3xs font-mono text-on-surface-variant whitespace-pre-wrap break-all select-text leading-relaxed no-scrollbar">
                 {isLoadingContent ? "Cargando..." : shown || "Sin contenido."}
             </pre>
         </div>
@@ -653,9 +652,9 @@ function AdminRecentActivity() {
 
     const iconForType = (type: string) => {
         switch (type) {
-            case "scanner": return { icon: IconNavigationSearch, color: "var(--brand-success)" }
-            case "mediastream": return { icon: IconStatusZap, color: "var(--brand-secondary)" }
-            default: return { icon: IconStatusActivity, color: "var(--brand-primary)" }
+            case "scanner": return { icon: IconNavigationSearch, color: "rgb(52 211 153)" }
+            case "mediastream": return { icon: IconStatusZap, color: "var(--brand-accent)" }
+            default: return { icon: IconStatusActivity, color: "rgb(59 130 246)" }
         }
     }
 
@@ -672,7 +671,7 @@ function AdminRecentActivity() {
                     <button
                         type="button"
                         onClick={() => navigate({ to: "/settings", search: { tab: "system" } })}
-                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 hover:border-white/25 hover:bg-white/[0.06] hover:text-white active:scale-95 transition cursor-pointer min-h-[32px]"
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/25 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] [@media(hover:hover)_and_(pointer:fine)]:hover:text-white active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out cursor-pointer min-h-[32px]"
                     >
                         Ver Todo en Sistema
                         <IconArrowRight size={13} strokeWidth={2.5} />
@@ -693,7 +692,7 @@ function AdminRecentActivity() {
                         notifications.map((n) => {
                             const cfg = iconForType(n.type)
                             return (
-                                <div key={n.id} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-colors">
+                                <div key={n.id} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[border-color] duration-fast ease-smooth-out">
                                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`, color: cfg.color }}>
                                         <cfg.icon size={16} strokeWidth={2.5} />
                                     </div>

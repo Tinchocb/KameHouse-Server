@@ -139,13 +139,14 @@ export const SpotlightEraNav = React.memo(function SpotlightEraNav({
                             title={!hasItems ? `${item.title} (No disponible)` : undefined}
                             className={cn(
                                 "group relative flex flex-[1_0_auto] items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-full text-center select-none transition-[transform,background-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                hasItems && "active:scale-95",
                                 isEraActive
                                     ? isAll
-                                        ? "text-zinc-950 font-black cursor-pointer"
+                                        ? "text-black font-black cursor-pointer"
                                         : "text-white font-extrabold cursor-pointer"
                                     : hasItems
-                                        ? "text-on-surface-variant hover:text-white hover:bg-white/[0.08] cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                                        : "text-zinc-500 opacity-40 cursor-not-allowed"
+                                        ? "text-on-surface-variant hover:text-white hover:bg-white/[0.08] cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.02]"
+                                        : "text-on-surface-variant/40 opacity-40 cursor-not-allowed"
                             )}
                         >
                             {/* Pill activa: adopta el color vibrante y glow de la era con MagneticIndicator */}
@@ -173,10 +174,10 @@ export const SpotlightEraNav = React.memo(function SpotlightEraNav({
                                     "relative z-10 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-2xs sm:text-xs select-none shrink-0 transition-colors duration-200 border",
                                     isEraActive
                                         ? isAll
-                                            ? "text-zinc-950 font-black shadow-elevation-1 bg-black/10 border-black/20"
+                                            ? "text-black font-black shadow-elevation-1 bg-black/10 border-black/20"
                                             : "text-white shadow-elevation-1 bg-black/25 border-white/40"
                                         : !hasItems
-                                            ? "text-zinc-500 bg-white/5 border-white/10 shadow-none grayscale"
+                                            ? "text-on-surface-variant/40 bg-white/5 border-white/10 shadow-none grayscale"
                                             : "text-white/80 group-hover:text-white"
                                 )}
                                 style={isEraActive || !hasItems ? undefined : {
@@ -204,10 +205,10 @@ export const SpotlightEraNav = React.memo(function SpotlightEraNav({
                                         "font-sans font-extrabold text-2xs sm:text-xs tracking-wider uppercase leading-tight whitespace-nowrap transition-colors duration-200",
                                         isEraActive
                                             ? isAll
-                                                ? "text-zinc-950 font-black"
+                                                ? "text-black font-black"
                                                 : "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"
                                             : !hasItems
-                                                ? "text-zinc-500"
+                                                ? "text-on-surface-variant/40"
                                                 : "text-on-surface-variant group-hover:text-white"
                                     )}
                                 >

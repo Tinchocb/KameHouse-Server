@@ -62,7 +62,7 @@ export const SpotlightMovieCard = React.memo(function SpotlightMovieCard({
                         e.stopPropagation()
                         onNavigate(movie)
                     }}
-                    className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] pointer-events-auto cursor-pointer transition-transform duration-150 hover:scale-110 active:scale-90 p-0 border-0"
+                    className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] pointer-events-auto cursor-pointer transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.04] active:scale-95 p-0 border-0"
                 >
                     <IconMediaPlay size={18} fill="currentColor" className="ml-0.5" />
                 </button>

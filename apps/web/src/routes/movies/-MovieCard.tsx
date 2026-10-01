@@ -192,7 +192,7 @@ export const MovieCard = memo(function MovieCard({
                             </div>
                         )}
                         {isCanon && (
-                            <span className="hidden group-hover:inline-flex px-2.5 py-0.5 rounded-full bg-black/65 border border-white/20 text-brand-success font-mono text-2xs font-extrabold tracking-wider uppercase shadow-elevation-1 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
+                            <span className="hidden [@media(hover:hover)_and_(pointer:fine)]:group-hover:inline-flex px-2.5 py-0.5 rounded-full bg-black/65 border border-white/20 text-brand-success font-mono text-2xs font-extrabold tracking-wider uppercase shadow-elevation-1 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
                                 Canon
                             </span>
                         )}
@@ -206,7 +206,7 @@ export const MovieCard = memo(function MovieCard({
                                     e.stopPropagation()
                                     setDrawerOpen(true)
                                 }}
-                                className="pointer-events-auto min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-black/65 border border-white/20 text-white/90 active:scale-95 transition-[transform,background-color,border-color] duration-base ease-smooth-out mb-1 shadow-elevation-1 cursor-pointer"
+                                className="pointer-events-auto min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-black/65 border border-white/20 text-white/90 active:scale-95 transition-[transform,background-color,border-color] duration-fast ease-out-strong mb-1 shadow-elevation-1 cursor-pointer"
                                 aria-label="Más opciones"
                             >
                                 <IconUiMoreHorizontal className="w-4 h-4" />
@@ -237,7 +237,7 @@ export const MovieCard = memo(function MovieCard({
                                     e.stopPropagation()
                                     handleCardClick()
                                 }}
-                                className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] hover:scale-[1.06] active:scale-[0.94] transition-transform duration-150 ease-out-strong cursor-pointer"
+                                className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] [@media(hover:hover)_and_(pointer:fine)]:hover:scale-105 active:scale-95 transition-transform duration-fast ease-out-strong cursor-pointer"
                                 aria-label="Ver Película"
                                 title="Ver Película"
                             >
@@ -247,7 +247,7 @@ export const MovieCard = memo(function MovieCard({
                                 <button
                                     onClick={handleQuickQueue}
                                     className={cn(
-                                        "relative w-11 h-11 rounded-full flex items-center justify-center ring-1 border shadow-[shadow:0_2px_12px_rgba(0,0,0,0.5),var(--glass-highlight-md)] hover:scale-[1.06] active:scale-[0.94] transition-[transform,background-color,color] duration-150 ease-out-strong cursor-pointer",
+                                        "relative w-11 h-11 rounded-full flex items-center justify-center ring-1 border shadow-[shadow:0_2px_12px_rgba(0,0,0,0.5),var(--glass-highlight-md)] [@media(hover:hover)_and_(pointer:fine)]:hover:scale-105 active:scale-95 transition-[transform,background-color,color] duration-fast ease-out-strong cursor-pointer",
                                         justQueued
                                             ? "bg-emerald-950/90 text-emerald-300 ring-emerald-400/50 border-emerald-400/30"
                                             : "bg-surface-container-lowest/80 text-white ring-white/30 border-white/10"
@@ -301,7 +301,7 @@ export const MovieCard = memo(function MovieCard({
                         </div>
 
                         {synopsis && (
-                            <p className="text-label-sm leading-relaxed text-on-surface-variant line-clamp-4 mb-6">
+                            <p className="text-label-sm leading-relaxed text-on-surface-variant line-clamp-4 mb-6 text-pretty">
                                 {synopsis}
                             </p>
                         )}
@@ -312,7 +312,7 @@ export const MovieCard = memo(function MovieCard({
                                     setDrawerOpen(false)
                                     handleCardClick()
                                 }}
-                                className="w-full py-3 bg-brand-accent text-on-primary font-black uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 active:scale-[0.97] transition-transform duration-150 ease-out-strong"
+                                className="w-full py-3 bg-brand-accent text-on-primary font-black uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform duration-fast ease-out-strong cursor-pointer"
                             >
                                 <IconMediaPlay className="w-4 h-4 fill-current" />
                                 <span>Ver Detalles</span>
@@ -325,7 +325,7 @@ export const MovieCard = memo(function MovieCard({
                                         setDrawerOpen(false)
                                         await handleQuickQueue(e)
                                     }}
-                                    className="w-full py-3 border border-outline-variant/30 text-on-surface font-bold uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 active:scale-[0.97] transition-transform duration-150 ease-out-strong"
+                                    className="w-full py-3 border border-outline-variant/30 text-on-surface font-bold uppercase tracking-wider text-xs rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform duration-fast ease-out-strong cursor-pointer"
                                 >
                                     <IconUiListPlus className="w-4 h-4" />
                                     <span>Añadir a la cola</span>
@@ -334,7 +334,7 @@ export const MovieCard = memo(function MovieCard({
 
                             <button
                                 onClick={() => setDrawerOpen(false)}
-                                className="w-full py-3 border border-outline-variant/30 text-on-surface-variant font-bold uppercase tracking-wider text-xs rounded-xl active:scale-[0.97] transition-transform duration-150 ease-out-strong"
+                                className="w-full py-3 border border-outline-variant/30 text-on-surface-variant font-bold uppercase tracking-wider text-xs rounded-xl active:scale-95 transition-transform duration-fast ease-out-strong cursor-pointer"
                             >
                                 Cerrar
                             </button>

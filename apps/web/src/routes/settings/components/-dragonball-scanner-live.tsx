@@ -218,7 +218,7 @@ export function DragonBallScannerLive() {
                             <m.div
                                 key={series.id}
                                 whileHover={{ y: -3 }}
-                                whileTap={{ scale: 0.98 }}
+                                whileTap={{ scale: 0.96 }}
                                 transition={{ type: "spring", stiffness: 450, damping: 25 }}
                                 role="button"
                                 tabIndex={0}
@@ -236,8 +236,8 @@ export function DragonBallScannerLive() {
                                 className={cn(
                                     "group relative flex flex-col rounded-xl overflow-hidden cursor-pointer border transition-[border-color,box-shadow,opacity,transform] duration-fast ease-smooth-out bg-white/[0.02]",
                                     (count > 0 || detectedMoviesInSeries > 0)
-                                        ? "border-white/15 hover:border-brand-accent/60 hover:shadow-[0_4px_20px_rgba(0,0,0,0.5),0_0_14px_hsl(var(--brand-accent)/0.2)]"
-                                        : "border-white/10 opacity-75 hover:opacity-100 hover:border-white/20"
+                                        ? "border-white/15 [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-accent/60 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-[0_4px_20px_rgba(0,0,0,0.5),0_0_14px_hsl(var(--brand-accent)/0.2)]"
+                                        : "border-white/10 opacity-75 [@media(hover:hover)_and_(pointer:fine)]:hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20"
                                 )}
                             >
                                 {/* Poster Image Container (2:3 Aspect Ratio) */}
@@ -251,7 +251,7 @@ export function DragonBallScannerLive() {
                                             }
                                         }}
                                         className={cn(
-                                            "w-full h-full object-cover transition-transform duration-slow ease-smooth-out group-hover:scale-105",
+                                            "w-full h-full object-cover transition-transform duration-slow ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105",
                                             count === 0 && detectedMoviesInSeries === 0 && "grayscale-[40%] opacity-80"
                                         )}
                                         loading="lazy"
@@ -367,7 +367,7 @@ export function DragonBallScannerLive() {
                                 <button
                                     type="button"
                                     onClick={() => setSelectedSeries(null)}
-                                    className="p-1.5 rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-white transition-colors cursor-pointer"
+                                    className="p-1.5 rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-white active:scale-95 transition-[background-color,color,transform] duration-fast cursor-pointer"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -380,7 +380,7 @@ export function DragonBallScannerLive() {
                                         type="button"
                                         onClick={() => setModalTab("sagas")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color] duration-fast ease-smooth-out cursor-pointer",
+                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer",
                                             modalTab === "sagas"
                                                 ? "bg-white/15 text-white shadow-elevation-1"
                                                 : "text-on-surface-variant hover:text-white"
@@ -392,7 +392,7 @@ export function DragonBallScannerLive() {
                                         type="button"
                                         onClick={() => setModalTab("movies")}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color] duration-fast ease-smooth-out cursor-pointer",
+                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer",
                                             modalTab === "movies"
                                                 ? "bg-white/15 text-white shadow-elevation-1"
                                                 : "text-on-surface-variant hover:text-white"
@@ -531,7 +531,7 @@ export function DragonBallScannerLive() {
                                 <button
                                     type="button"
                                     onClick={() => setSelectedSeries(null)}
-                                    className="px-4 py-1.5 rounded-xl font-bold text-xs bg-white/10 text-white hover:bg-white/15 transition-colors cursor-pointer"
+                                    className="px-4 py-1.5 rounded-xl font-bold text-xs bg-white/10 text-white hover:bg-white/15 active:scale-95 transition-[background-color,transform] duration-fast ease-out-strong cursor-pointer"
                                 >
                                     Cerrar
                                 </button>

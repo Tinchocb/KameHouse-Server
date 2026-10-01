@@ -124,24 +124,24 @@ export const MoviePosterCard = React.memo(function MoviePosterCard({
                     isFullTier
                         ? "transition-[border-color,box-shadow] duration-base ease-smooth-out"
                         : isSubtleTier
-                        ? "transition-[transform,border-color,box-shadow] duration-base ease-smooth-out group-hover:-translate-y-1 group-hover:scale-[1.015] group-active:scale-95"
+                        ? "transition-[transform,border-color,box-shadow] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:-translate-y-1 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-[1.015] group-active:scale-95"
                         : "transition-[border-color,box-shadow] duration-base ease-smooth-out",
-                    "group-hover:shadow-[0_15px_35px_rgba(0,0,0,0.9)] group-has-[:focus-visible]:ring-2 group-has-[:focus-visible]:ring-brand-accent",
+                    "[@media(hover:hover)_and_(pointer:fine)]:group-hover:shadow-[0_15px_35px_rgba(0,0,0,0.9)] group-has-[:focus-visible]:ring-2 group-has-[:focus-visible]:ring-brand-accent",
                 )}
                 style={borderColor ? { borderColor } : undefined}
             >
                 <DeferredImage
                     src={image}
                     alt={title}
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-slow ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
                     showSkeleton={showSkeleton}
                     fallback={imageFallback}
                 />
-                <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-none group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-10 pointer-events-none" />
+                <div aria-hidden className="absolute inset-0 -translate-x-full [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-full transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-10 pointer-events-none" />
 
                 {/* Velo solo en hover: da contraste a las acciones sin apagar el póster en reposo */}
                 {centerOverlay && (
-                    <div aria-hidden className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 transition-opacity duration-200 z-10 pointer-events-none" />
+                    <div aria-hidden className="absolute inset-0 bg-black/40 opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 transition-opacity duration-fast ease-smooth-out z-10 pointer-events-none" />
                 )}
 
                 {/* Top Badges (cada badge ya trae su fondo, no hace falta scrim) */}
@@ -158,7 +158,7 @@ export const MoviePosterCard = React.memo(function MoviePosterCard({
 
                 {/* Center Overlay on Hover — siempre visible en táctil */}
                 {centerOverlay && (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 max-sm:opacity-100 transition-opacity duration-200 z-20 pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 max-sm:opacity-100 transition-opacity duration-fast ease-smooth-out z-20 pointer-events-none">
                         {centerOverlay}
                     </div>
                 )}
@@ -167,7 +167,7 @@ export const MoviePosterCard = React.memo(function MoviePosterCard({
                 {hasProgress && (
                     <div className="absolute bottom-0 inset-x-0 h-1 bg-black/50 z-20 pointer-events-none overflow-hidden">
                         <div
-                            className="h-full w-full origin-left transition-transform duration-300 ease-smooth-out"
+                            className="h-full w-full origin-left transition-transform duration-base ease-smooth-out"
                             style={{
                                 transform: `scaleX(${progressPercent / 100})`,
                                 backgroundColor: progressColor,

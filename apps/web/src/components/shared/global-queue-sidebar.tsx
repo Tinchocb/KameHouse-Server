@@ -125,7 +125,7 @@ export const GlobalQueueSidebar = () => {
                             <button
                                 onClick={() => setGlobalQueueOpen(false)}
                                 aria-label="Cerrar lista de reproducción"
-                                className="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent hover:border-white/20 transition duration-base cursor-pointer active:scale-95 shrink-0"
+                                className="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-white/10 border border-transparent hover:border-white/20 transition-[background-color,border-color,color,transform] duration-fast ease-out-strong cursor-pointer active:scale-95 shrink-0"
                             >
                                 <IconUiClose className="w-5 h-5" />
                             </button>
@@ -150,7 +150,7 @@ export const GlobalQueueSidebar = () => {
                                                 transition={{ ...tabContentSpring, delay: Math.min(idx, 8) * 0.06, layout: reorderSpring }}
                                                 whileHover={prefersReducedMotion ? undefined : { scale: 1.012 }}
                                                 className={cn(
-                                                    "w-full text-left flex gap-3 p-3 rounded-2xl border transition duration-base group relative items-center",
+                                                    "w-full text-left flex gap-3 p-3 rounded-2xl border transition-[background-color,border-color,color] duration-fast ease-out-strong group relative items-center",
                                                     "border-[var(--sectionbar-border)] bg-white/[0.04]",
                                                     isCurrent
                                                         ? "bg-white/[0.08] border-[var(--sectionbar-border-strong)] text-on-surface"
@@ -186,7 +186,7 @@ export const GlobalQueueSidebar = () => {
 
                                                         {/* Play overlay */}
                                                         <div className={cn(
-                                                            "absolute inset-0 flex items-center justify-center transition duration-base",
+                                                            "absolute inset-0 flex items-center justify-center transition-[opacity,background-color] duration-fast ease-out-strong",
                                                             isCurrent
                                                                 ? "opacity-100 bg-brand-accent/10"
                                                                 : "opacity-0 group-hover:opacity-100 bg-black/60"
@@ -230,7 +230,7 @@ export const GlobalQueueSidebar = () => {
                                                             if (idx > 0) moveQueueItem(idx, idx - 1)
                                                         }}
                                                         disabled={idx === 0}
-                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] disabled:opacity-20 disabled:cursor-not-allowed transition active:scale-95"
+                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] disabled:opacity-20 disabled:cursor-not-allowed transition-[transform,background-color,color] duration-fast ease-out-strong active:scale-95 cursor-pointer"
                                                         aria-label="Mover arriba"
                                                         title="Mover arriba"
                                                     >
@@ -242,7 +242,7 @@ export const GlobalQueueSidebar = () => {
                                                             if (idx < playlistQueue.length - 1) moveQueueItem(idx, idx + 1)
                                                         }}
                                                         disabled={idx === playlistQueue.length - 1}
-                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] disabled:opacity-20 disabled:cursor-not-allowed transition active:scale-95"
+                                                        className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08] disabled:opacity-20 disabled:cursor-not-allowed transition-[transform,background-color,color] duration-fast ease-out-strong active:scale-95 cursor-pointer"
                                                         aria-label="Mover abajo"
                                                         title="Mover abajo"
                                                     >
@@ -255,7 +255,7 @@ export const GlobalQueueSidebar = () => {
                                                         e.stopPropagation()
                                                         removeFromQueue(idx)
                                                     }}
-                                                    className="w-11 h-11 rounded-xl flex items-center justify-center text-on-surface-variant/70 hover:text-red-400 self-center hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition duration-base shrink-0 z-10 cursor-pointer active:scale-95"
+                                                    className="w-11 h-11 rounded-xl flex items-center justify-center text-on-surface-variant/70 hover:text-red-400 self-center hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-[transform,background-color,border-color,color] duration-fast ease-out-strong shrink-0 z-10 cursor-pointer active:scale-95"
                                                     aria-label={`Eliminar ${item.title} de la cola`}
                                                     title="Eliminar de la lista"
                                                 >
@@ -291,7 +291,7 @@ export const GlobalQueueSidebar = () => {
                                             setGlobalQueueOpen(false)
                                             navigate({ to: "/home" })
                                         }}
-                                        className="px-8 py-3 rounded-full bg-brand-accent text-on-primary font-display tracking-widest text-xs uppercase active:scale-95 hover:brightness-110 transition shadow-brand-primary min-h-[44px] cursor-pointer"
+                                        className="px-8 py-3 rounded-full bg-brand-accent text-on-primary font-display tracking-widest text-xs uppercase active:scale-95 [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary min-h-[44px] cursor-pointer"
                                     >
                                         Explorar catálogo
                                     </button>
@@ -306,7 +306,7 @@ export const GlobalQueueSidebar = () => {
                                     <button
                                         onClick={() => playPrevious()}
                                         disabled={currentQueueIndex <= 0 && queueRepeatMode !== "all"}
-                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-[color,transform] duration-fast ease-out-strong active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                                         aria-label="Anterior"
                                         title="Anterior"
                                     >
@@ -315,7 +315,7 @@ export const GlobalQueueSidebar = () => {
                                     </button>
                                     <button
                                         onClick={() => shuffleQueue()}
-                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface"
+                                        className="relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-[color,transform] duration-fast ease-out-strong active:scale-95 flex items-center justify-center gap-1 min-h-[44px] text-on-surface-variant hover:text-on-surface cursor-pointer"
                                         aria-label="Aleatorio"
                                         title="Mezclar cola"
                                     >
@@ -331,8 +331,8 @@ export const GlobalQueueSidebar = () => {
                                         aria-label="Repetir"
                                         title={`Repetir: ${queueRepeatMode}`}
                                         className={cn(
-                                            "relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition active:scale-95 flex items-center justify-center gap-1 min-h-[44px]",
-                                            isRepeating ? "text-zinc-950 font-bold" : "text-on-surface-variant hover:text-on-surface"
+                                            "relative flex-1 px-4 py-2 rounded-full text-3xs font-bold uppercase tracking-widest transition-[color,transform] duration-fast ease-out-strong active:scale-95 flex items-center justify-center gap-1 min-h-[44px] cursor-pointer",
+                                            isRepeating ? "text-black font-bold" : "text-on-surface-variant hover:text-on-surface"
                                         )}
                                     >
                                         {isRepeating && (
@@ -353,7 +353,7 @@ export const GlobalQueueSidebar = () => {
                                         clearQueue()
                                         setGlobalQueueOpen(false)
                                     }}
-                                    className="w-full py-3 min-h-[44px] border border-white/15 hover:border-red-500/40 hover:bg-red-500/10 text-on-surface-variant hover:text-red-400 font-display font-bold text-xs uppercase tracking-widest rounded-full transition duration-base cursor-pointer active:scale-95"
+                                    className="w-full py-3 min-h-[44px] border border-white/15 hover:border-red-500/40 hover:bg-red-500/10 text-on-surface-variant hover:text-red-400 font-display font-bold text-xs uppercase tracking-widest rounded-full transition-[border-color,background-color,color,transform] duration-base ease-smooth-out cursor-pointer active:scale-95"
                                 >
                                     Vaciar Lista
                                 </button>

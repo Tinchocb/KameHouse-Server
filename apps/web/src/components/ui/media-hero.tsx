@@ -343,7 +343,7 @@ export function MediaHero({
                                 <button
                                     type="button"
                                     onClick={onTitleClick}
-                                    className="text-left p-0 border-0 bg-transparent cursor-pointer group/title"
+                                    className="text-left p-0 border-0 bg-transparent cursor-pointer group/title active:scale-[0.99] transition-transform duration-fast ease-out-strong"
                                 >
                                     <h1 
                                         className={cn(
@@ -365,7 +365,7 @@ export function MediaHero({
                     </div>
 
                     {synopsis && (
-                        <p className="animate-slide-up delay-200 text-on-surface-variant text-sm md:text-base leading-relaxed line-clamp-3 drop-shadow-md font-medium max-w-3xl border-l-2 border-brand-secondary/30 pl-4 py-0.5 pointer-events-auto">
+                        <p className="animate-slide-up delay-200 text-on-surface-variant text-sm md:text-base leading-relaxed line-clamp-3 drop-shadow-md font-medium max-w-3xl border-l-2 border-brand-secondary/30 pl-4 py-0.5 pointer-events-auto text-pretty">
                             {synopsis}
                         </p>
                     )}

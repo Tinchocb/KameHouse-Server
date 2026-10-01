@@ -34,7 +34,7 @@ export const CHRONO_ERAS: ChronoEraItem[] = [
       accent: 'rgba(255, 255, 255, 0.95)',
       glow: 'rgba(255, 255, 255, 0.35)',
       glowStrong: 'rgba(255, 255, 255, 0.6)',
-      textBrand: 'text-zinc-950',
+      textBrand: 'text-black',
       ambientGlow1: '#ffffff',
       ambientGlow2: '#e4e4e7',
     },
@@ -172,12 +172,12 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
                   : `Filtrar por ${era.title} (${era.years})`
               }
               className={cn(
-                'group relative flex flex-[1_0_auto] items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-full text-center select-none transition-[transform,background-color,color,opacity] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black',
+                'group relative flex flex-[1_0_auto] items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 min-h-[44px] rounded-full text-center select-none active:scale-95 transition-[transform,background-color,color,opacity] duration-fast ease-out-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black cursor-pointer',
                 isEraActive
                   ? era.id === 'all'
-                    ? 'text-zinc-950 font-black cursor-pointer'
-                    : 'text-white font-extrabold cursor-pointer'
-                  : 'text-on-surface-variant hover:text-white hover:bg-white/[0.08] cursor-pointer hover:scale-[1.02] active:scale-[0.98]',
+                    ? 'text-black font-black'
+                    : 'text-white font-extrabold'
+                  : 'text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.02]',
               )}
             >
               {/* Active Pill: adopts the vibrant accent color of the era with MagneticIndicator */}
@@ -198,12 +198,12 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
               {/* Kanji Circle matching SpotlightEraNav canonical styling */}
               <div
                 className={cn(
-                  'relative z-10 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-2xs sm:text-xs select-none shrink-0 transition-colors duration-200 border',
+                  'relative z-10 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-2xs sm:text-xs select-none shrink-0 transition-colors duration-fast ease-smooth-out border',
                   isEraActive
                     ? era.id === 'all'
-                      ? 'text-zinc-950 font-black shadow-elevation-1 bg-black/10 border-black/20'
+                      ? 'text-black font-black shadow-elevation-1 bg-black/10 border-black/20'
                       : 'text-white shadow-elevation-1 bg-black/25 border-white/40'
-                    : 'text-white/80 group-hover:text-white',
+                    : 'text-white/80 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white',
                 )}
                 style={
                   isEraActive
@@ -222,12 +222,12 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
               <div className="relative z-10 flex flex-col text-center items-center justify-center min-w-0 pr-0.5">
                 <span
                   className={cn(
-                    'font-sans font-extrabold text-2xs sm:text-xs tracking-wider uppercase leading-tight whitespace-nowrap transition-colors duration-200',
+                    'font-sans font-extrabold text-2xs sm:text-xs tracking-wider uppercase leading-tight whitespace-nowrap transition-colors duration-fast ease-smooth-out',
                     isEraActive
                       ? era.id === 'all'
-                        ? 'text-zinc-950 font-black'
+                        ? 'text-black font-black'
                         : 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]'
-                      : 'text-on-surface-variant group-hover:text-white',
+                      : 'text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white',
                   )}
                 >
                   {era.shortTitle}

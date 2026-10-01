@@ -42,7 +42,7 @@ export function RadioCardGroup({ name, options, value, onChange, className }: Ra
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.995]",
                             isActive
                                 ? "bg-white/[0.10] border-white/25 text-white"
-                                : "bg-transparent border-white/10 text-zinc-300 hover:text-white hover:bg-white/[0.06] hover:border-white/20"
+                                : "bg-transparent border-white/10 text-on-surface-variant hover:text-white hover:bg-white/[0.06] hover:border-white/20"
                         )}
                     >
                         {isActive && (
@@ -62,7 +62,7 @@ export function RadioCardGroup({ name, options, value, onChange, className }: Ra
                                         : "border-white/30 bg-transparent group-hover:border-white/50"
                                 )}
                             >
-                                {isActive && <span className="block w-1.5 h-1.5 rounded-full bg-zinc-950 animate-success-pop" />}
+                                {isActive && <span className="block w-1.5 h-1.5 rounded-full bg-black animate-success-pop" />}
                             </span>
                             <input
                                 type="radio"
@@ -77,14 +77,14 @@ export function RadioCardGroup({ name, options, value, onChange, className }: Ra
                         <div className="flex-1 -mt-0.5 relative z-10">
                             <span className={cn(
                                 "text-xs block tracking-tight transition-[color] duration-fast ease-smooth-out",
-                                isActive ? "font-bold text-white" : "font-semibold text-zinc-200 group-hover:text-white"
+                                isActive ? "font-bold text-white" : "font-semibold text-on-surface group-hover:text-white"
                             )}>
                                 {opt.label}
                             </span>
                             {opt.desc && (
                                 <span className={cn(
                                     "text-caption block mt-0.5 transition-[color] duration-fast ease-smooth-out leading-relaxed",
-                                    isActive ? "text-zinc-300" : "text-zinc-400 group-hover:text-zinc-300"
+                                    isActive ? "text-on-surface-variant" : "text-on-surface-variant/80 group-hover:text-on-surface-variant"
                                 )}>
                                     {opt.desc}
                                 </span>
@@ -94,8 +94,8 @@ export function RadioCardGroup({ name, options, value, onChange, className }: Ra
                             <div className={cn(
                                 "h-8 px-3 rounded-full flex items-center justify-center text-label-sm font-black uppercase tracking-wider shrink-0 transition-[background-color,color,border-color] duration-fast ease-smooth-out relative z-10 border",
                                 isActive
-                                    ? "bg-white text-zinc-950 border-white"
-                                    : "bg-white/[0.06] text-zinc-300 border-white/15"
+                                    ? "bg-white text-black font-black border-white"
+                                    : "bg-white/[0.06] text-on-surface-variant border-white/15"
                             )}>
                                 {opt.badge}
                             </div>

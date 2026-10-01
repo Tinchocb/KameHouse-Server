@@ -130,20 +130,20 @@ export const OsToggle = React.memo(function OsToggle({
             onPointerUp={() => setIsRowPressing(false)}
             onPointerLeave={() => setIsRowPressing(false)}
             className={cn(
-                "flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 min-h-[44px] transition-[background-color,transform] duration-fast ease-smooth-out gap-4 select-none group outline-none",
-                "focus-visible:ring-2 focus-visible:ring-brand-accent/40 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-950",
-                disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-white/[0.03] active:bg-white/[0.05] active:scale-[0.995]",
+                "flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 min-h-[44px] transition-[background-color,transform] duration-fast ease-out-strong gap-4 select-none group outline-none",
+                "focus-visible:ring-2 focus-visible:ring-brand-accent/40 focus-visible:ring-offset-1 focus-visible:ring-offset-black",
+                disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.03] active:bg-white/[0.05] active:scale-[0.985]",
                 className
             )}
         >
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
                 {Icon && (
-                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/20 border-t-white/30 flex items-center justify-center text-on-surface-variant shrink-0 group-hover:border-white/30 group-hover:text-white transition-colors">
+                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/20 border-t-white/30 flex items-center justify-center text-on-surface-variant shrink-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-white/30 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white transition-colors duration-fast ease-smooth-out">
                         <Icon className="w-3.5 h-3.5" />
                     </div>
                 )}
                 <div className="space-y-0.5 min-w-0 flex-1 py-0.5">
-                    <p className="text-xs font-bold text-on-surface tracking-tight leading-snug group-hover:text-white transition-colors flex items-center gap-2 flex-wrap">
+                    <p className="text-xs font-bold text-on-surface tracking-tight leading-snug [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white transition-colors duration-fast ease-smooth-out flex items-center gap-2 flex-wrap">
                         {label}
                         <DirtyPill show={dirty} />
                     </p>
@@ -251,7 +251,7 @@ export const OsSelect = React.memo(function OsSelect({
                         "rounded-full bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10",
                         "pl-4 pr-1.5 py-1.5 text-left outline-none select-none cursor-pointer",
                         "shadow-glass-highlight-sm",
-                        "transition-[border-color,background-color,box-shadow,transform] duration-fast ease-smooth-out hover:border-white/30 hover:bg-white/[0.06] active:scale-[0.98]",
+                        "transition-[border-color,background-color,box-shadow,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] active:scale-95",
                         "focus-visible:ring-2 focus-visible:ring-white/40",
                         "data-[state=open]:border-white/35 data-[state=open]:bg-white/[0.07] data-[state=open]:shadow-[shadow:var(--glass-highlight-lg),0_0_16px_rgba(255,255,255,0.12)]",
                         "data-[disabled]:opacity-40 data-[disabled]:cursor-not-allowed",
@@ -315,7 +315,7 @@ export const OsSelect = React.memo(function OsSelect({
                                         style={{ animationDelay: `${Math.min(idx, 6) * 40}ms` }}
                                         className={cn(
                                             "relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 outline-none cursor-pointer select-none min-h-[38px]",
-                                            "transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-[0.98]",
+                                            "transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95",
                                             "data-[highlighted]:bg-white/[0.08] data-[highlighted]:text-white",
                                             "data-[state=checked]:bg-white/[0.08]",
                                             "data-[disabled]:opacity-40 data-[disabled]:pointer-events-none",
@@ -440,7 +440,7 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
                         type="button"
                         onClick={() => setShowSecure(!showSecure)}
                         aria-label={showSecure ? "Ocultar contenido" : "Mostrar contenido"}
-                        className="absolute right-3 text-on-surface-variant/70 hover:text-on-surface transition-[color,transform,background-color] duration-fast ease-smooth-out p-1 active:scale-90 rounded-full hover:bg-white/10"
+                        className="absolute right-3 text-on-surface-variant/70 hover:text-on-surface transition-[color,transform,background-color] duration-fast ease-smooth-out p-1 active:scale-95 rounded-full hover:bg-white/10"
                     >
                         <AnimatePresence mode="wait" initial={false}>
                             <m.span
@@ -517,7 +517,7 @@ function PathRow({ dir, showFullPath, onRemove }: { dir: string, showFullPath: b
                 <button
                     type="button"
                     onClick={() => onRemove(dir)}
-                    className="relative text-on-surface-variant/70 hover:text-status-error transition-[color,background-color,transform] duration-fast ease-smooth-out min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-status-error/10 active:scale-90 before:absolute before:-inset-2"
+                    className="relative text-on-surface-variant/70 hover:text-status-error transition-[color,background-color,transform] duration-fast ease-smooth-out min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-status-error/10 active:scale-95 before:absolute before:-inset-2"
                     title="Eliminar ruta"
                     aria-label={`Eliminar ruta ${dir}`}
                 >
@@ -607,7 +607,7 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                             onClick={handleAdd}
                             disabled={!selectedPath.trim()}
                             title={selectedPath.trim() ? `Agregar ${selectedPath.trim()}` : "Escribe o explora una carpeta"}
-                            className="h-9 pl-3.5 pr-4 rounded-full text-xs font-bold shrink-0 flex items-center gap-1.5 transition-[background-color,color,box-shadow,transform,filter] duration-fast ease-smooth-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 bg-brand-accent text-white shadow-brand-primary hover:brightness-110 disabled:bg-white/[0.07] disabled:text-on-surface-variant/50 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:brightness-100"
+                            className="h-9 pl-3.5 pr-4 rounded-full text-xs font-bold shrink-0 flex items-center gap-1.5 transition-[background-color,color,box-shadow,transform,filter] duration-fast ease-smooth-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 bg-brand-accent text-white shadow-brand-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 cursor-pointer disabled:bg-white/[0.07] disabled:text-on-surface-variant/50 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:brightness-100"
                         >
                             <IconUiPlus className="w-3.5 h-3.5" />
                             <span>Agregar</span>

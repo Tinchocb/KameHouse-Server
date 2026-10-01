@@ -31,7 +31,8 @@ export function SubtitleSettings({
                         <button
                             onClick={() => onSubtitleSizeChange(Math.max(50, subtitleSize - 10))}
                             disabled={subtitleSize <= 50}
-                            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
+                            aria-label="Reducir tamaño de subtítulos"
+                            className="relative flex items-center justify-center w-7 h-7 rounded-full bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/20 active:scale-95 text-white disabled:opacity-30 transition-[transform,background-color] duration-fast ease-out-strong cursor-pointer after:absolute after:-inset-2 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                         >
                             <IconUiMinus className="w-4 h-4" />
                         </button>
@@ -53,7 +54,8 @@ export function SubtitleSettings({
                         <button
                             onClick={() => onSubtitleSizeChange(Math.min(200, subtitleSize + 10))}
                             disabled={subtitleSize >= 200}
-                            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 transition-colors"
+                            aria-label="Aumentar tamaño de subtítulos"
+                            className="relative flex items-center justify-center w-7 h-7 rounded-full bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/20 active:scale-95 text-white disabled:opacity-30 transition-[transform,background-color] duration-fast ease-out-strong cursor-pointer after:absolute after:-inset-2 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                         >
                             <IconUiPlus className="w-4 h-4" />
                         </button>
@@ -65,8 +67,8 @@ export function SubtitleSettings({
             <button
                 onClick={() => onSelectSubtitle(null)}
                 className={cn(
-                    "w-full flex items-center justify-between min-h-10 py-2 px-3 rounded-full transition-colors duration-200 group text-left relative overflow-hidden",
-                    activeSubtitleIndex === null ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
+                    "w-full flex items-center justify-between min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer group text-left relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                    activeSubtitleIndex === null ? "bg-white/10 text-white" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white"
                 )}
             >
                 {/* Hover/Active left-edge accent indicator */}
@@ -77,7 +79,7 @@ export function SubtitleSettings({
 
                 <span className={cn(
                     "text-xs font-bold transition-colors duration-base",
-                    activeSubtitleIndex === null ? "text-brand-accent" : "text-on-surface group-hover:text-on-surface"
+                    activeSubtitleIndex === null ? "text-brand-accent" : "text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
                 )}>
                     Desactivado
                 </span>
@@ -91,8 +93,8 @@ export function SubtitleSettings({
                         key={track.index}
                         onClick={() => onSelectSubtitle(track)}
                         className={cn(
-                            "w-full flex items-center justify-between min-h-10 py-2 px-3 rounded-full transition-colors duration-200 group text-left relative overflow-hidden",
-                            isActive ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
+                            "w-full flex items-center justify-between min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer group text-left relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                            isActive ? "bg-white/10 text-white" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white"
                         )}
                     >
                         {/* Hover/Active left-edge accent indicator */}
@@ -101,16 +103,16 @@ export function SubtitleSettings({
                             isActive ? "h-1/2 bg-brand-accent" : "h-0 bg-outline-variant group-hover:h-1/3"
                         )} />
 
-                        <div className="flex flex-col  transition-transform duration-base ease-out">
+                        <div className="flex flex-col transition-transform duration-base ease-out">
                             <span className={cn(
                                 "text-xs font-bold leading-none transition-colors duration-base",
-                                isActive ? "text-brand-accent" : "text-on-surface group-hover:text-on-surface"
+                                isActive ? "text-brand-accent" : "text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
                             )}>
                                 {track.title || getFriendlyLanguage(track.language)}
                             </span>
                             <span className={cn(
                                 "text-xs mt-0.5 transition-colors duration-base",
-                                isActive ? "text-on-surface/60" : "text-on-surface-variant group-hover:text-on-surface"
+                                isActive ? "text-on-surface/60" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
                             )}>
                                 {[track.codec?.toUpperCase(), track.forced ? "FORZADO" : undefined].filter(Boolean).join(" // ")}
                             </span>

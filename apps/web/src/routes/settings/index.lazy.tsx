@@ -499,7 +499,7 @@ function SettingsPage() {
                                     "[transition:color_var(--duration-fast)_var(--ease-smooth-out),background-color_var(--duration-fast)_var(--ease-smooth-out)]",
                                     isActive
                                         ? "text-black font-bold"
-                                        : "text-on-surface-variant hover:text-white hover:bg-white/[0.04]"
+                                        : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04]"
                                 )}
                             >
                                 {isActive && (
@@ -514,20 +514,20 @@ function SettingsPage() {
                                     "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out)]",
                                     isActive
                                         ? "bg-black/10 border-black/20 text-black"
-                                        : "bg-white/5 border-white/10 text-on-surface-variant group-hover:text-white group-hover:bg-white/10"
+                                        : "bg-white/5 border-white/10 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-white/10"
                                 )}>
                                     <Icon className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1 min-w-0 relative z-10">
                                     <span className={cn(
                                         "text-xs sm:text-sm block leading-snug [transition:color_var(--duration-fast)_var(--ease-smooth-out)]",
-                                        isActive ? "font-black text-black" : "font-semibold text-on-surface group-hover:text-white"
+                                        isActive ? "font-black text-black" : "font-semibold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white"
                                     )}>
                                         {pillar.label}
                                     </span>
                                     <span className={cn(
                                         "text-3xs block mt-0.5 font-normal truncate [transition:color_var(--duration-fast)_var(--ease-smooth-out)]",
-                                        isActive ? "text-black/70 font-medium" : "text-on-surface-variant/70 group-hover:text-on-surface-variant"
+                                        isActive ? "text-black/70 font-medium" : "text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface-variant"
                                     )}>
                                         {pillar.desc}
                                     </span>
@@ -650,10 +650,10 @@ function SettingsPage() {
                                 <button
                                     type="button"
                                     onClick={handleDiscard}
-                                    className="text-xs font-semibold text-on-surface-variant hover:text-white transition-[color,background-color,transform] duration-fast ease-smooth-out px-3.5 py-1.5 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer min-h-[44px]"
+                                    className="text-xs font-semibold text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[color,background-color,transform] duration-fast ease-smooth-out px-3.5 py-1.5 rounded-full [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 active:scale-95 cursor-pointer min-h-[44px]"
                                 >
                                     Descartar
-                                </button>
+                                 </button>
                             )}
                             <button
                                 type="submit"
@@ -661,10 +661,10 @@ function SettingsPage() {
                                 disabled={isSaving || isSaveSuccess}
                                 className={cn(
                                     "flex items-center gap-2 px-5 py-2 min-h-[44px] rounded-full text-xs font-black select-none cursor-pointer uppercase tracking-wider",
-                                    "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out),opacity_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)]",
+                                    "transition-[background-color,box-shadow,opacity,transform] duration-fast ease-smooth-out",
                                     isSaveSuccess
                                         ? "bg-status-success text-black animate-success-pop"
-                                        : "bg-white text-black hover:bg-white/90 hover:scale-102 active:scale-95 disabled:opacity-50"
+                                        : "bg-white text-black [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/90 [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                 )}
                             >
                                 <LoadSwap

@@ -15,7 +15,7 @@ export const PosterArtwork: React.FC<PosterArtworkProps> = ({ volume }) => {
         <img
           src={posterUrl}
           alt={title}
-          className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-500 ease-out [@media(hover:hover)_and_(pointer:fine)]:hover:scale-105"
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
@@ -165,7 +165,10 @@ export const PosterArtwork: React.FC<PosterArtworkProps> = ({ volume }) => {
 
             {/* Planet Molten Countdown */}
             <div className="relative -mt-4 z-20 flex items-center space-x-2 bg-red-950/90 border border-red-500/50 px-3 py-1 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              </span>
               <span className="text-3xs font-mono font-bold tracking-widest text-red-200 uppercase">
                 Namek: Colapso en 5 Minutos
               </span>

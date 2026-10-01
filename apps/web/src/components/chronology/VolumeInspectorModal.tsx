@@ -5,14 +5,15 @@ import { EpisodeThumbnailImg } from './EpisodeThumbnailImg';
 import { NarrativeInspector } from './NarrativeInspector';
 import { sounds } from './utils/audio';
 import { Modal } from '@/components/ui/modal';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
-  X,
-  RotateCcw,
-  Sparkles,
-  Layers,
-  BookOpen,
-  Play,
-} from 'lucide-react';
+  IconUiClose,
+  IconUiRotateCcw,
+  IconStatusSparkles,
+  IconNavigationLayers,
+  IconUiBookOpen,
+  IconMediaPlay,
+} from '@/components/ui/icons';
 
 interface VolumeInspectorModalProps {
   volume: VolumeData;
@@ -113,54 +114,47 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                   const epNum = currentEp.absoluteEpisode || Number(currentEp.episode.match(/\d+/)?.[0]) || volume.recommendedStartEpisode || volume.startEpisode;
                   onPlayVolume(volume, epNum);
                 }}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-brand-accent hover:brightness-110 text-black font-display font-black uppercase text-xs flex items-center gap-1.5 cursor-pointer shadow-brand-primary active:scale-95 transition"
+                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 text-black font-display font-black uppercase text-xs flex items-center gap-1.5 cursor-pointer shadow-brand-primary active:scale-95 transition-[transform,filter] duration-fast ease-out-strong"
               >
-                <Play className="w-3.5 h-3.5 fill-current" />
+                <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
                 <span>Reproducir lapso</span>
               </button>
             )}
 
-            {/* View Mode Toggle: Tarjetas de Episodios vs. Portada Vertical */}
-            <div className="flex items-center bg-surface-container-low rounded-xl p-1 border border-white/10 text-xs font-mono">
-              <button
-                onClick={() => {
-                  sounds.playSelect();
-                  setModalViewMode('episodes-deck');
-                }}
-                className={`px-3 py-1.5 rounded-lg transition-colors duration-150 flex items-center gap-1.5 cursor-pointer ${
-                  modalViewMode === 'episodes-deck'
-                    ? 'bg-brand-accent text-on-primary font-bold shadow'
-                    : 'text-on-surface-variant hover:text-white'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Tarjetas Agrupadas ({episodes.length})</span>
-              </button>
-              <button
-                onClick={() => {
-                  sounds.playSelect();
-                  setModalViewMode('vertical-poster');
-                }}
-                className={`px-3 py-1.5 rounded-lg transition-colors duration-150 flex items-center gap-1.5 cursor-pointer ${
-                  modalViewMode === 'vertical-poster'
-                    ? 'bg-brand-accent text-on-primary font-bold shadow'
-                    : 'text-on-surface-variant hover:text-white'
-                }`}
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>Tomo 3D</span>
-              </button>
-            </div>
+            {/* View Mode Toggle: Tarjetas de Episodios vs. Portada Vertical (Canónico SegmentedControl §5.3) */}
+            <SegmentedControl<'episodes-deck' | 'vertical-poster'>
+              layoutId="volume-inspector-modal-view-mode"
+              surface="inset"
+              tone="accent"
+              value={modalViewMode}
+              onChange={(mode) => {
+                sounds.playSelect();
+                setModalViewMode(mode);
+              }}
+              aria-label="Modo de visualización del tomo"
+              options={[
+                {
+                  value: 'episodes-deck',
+                  label: `Tarjetas Agrupadas (${episodes.length})`,
+                  icon: <IconNavigationLayers className="w-3.5 h-3.5" />,
+                },
+                {
+                  value: 'vertical-poster',
+                  label: 'Tomo 3D',
+                  icon: <IconUiBookOpen className="w-3.5 h-3.5" />,
+                },
+              ]}
+            />
 
             {/* Close Button */}
             <button
               id="btn-close-volume-modal"
               onClick={handleClose}
               aria-label="Cerrar inspección del tomo"
-              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-surface-container-low border border-white/10 hover:border-white/30 text-on-surface-variant hover:text-white flex items-center justify-center transition-[color,background-color,border-color,transform] duration-150 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-surface-container-low border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
               title="Cerrar Inspección"
             >
-              <X className="w-5 h-5" />
+              <IconUiClose className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -172,7 +166,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
           <div className="flex flex-col gap-6">
             {/* Active Selected Episode Cinema Card */}
             <div
-              className="w-full bg-surface-container/90 border border-white/15 rounded-2xl p-5 sm:p-6 shadow-2xl relative overflow-hidden"
+              className="w-full bg-surface-container/90 border border-white/15 rounded-2xl p-5 sm:p-6 shadow-elevation-3 relative overflow-hidden"
               style={{
                 background: `linear-gradient(135deg, var(--md-sys-color-surface-container-lowest) 0%, var(--md-sys-color-surface-container-low) 50%, color-mix(in srgb, var(--poster-accent) 13%, transparent) 100%)`,
                 borderColor: 'color-mix(in srgb, var(--poster-accent) 25%, transparent)',
@@ -197,7 +191,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/45 pointer-events-none" />
                   <div className="relative z-10 flex items-center justify-between">
                     <span
-                      className="px-2 py-0.5 rounded text-xs font-mono font-bold tracking-wider uppercase border shadow"
+                      className="px-2 py-0.5 rounded text-xs font-mono font-bold tracking-wider uppercase border shadow-elevation-1"
                       style={{
                         backgroundColor: 'color-mix(in srgb, var(--poster-accent) 19%, transparent)',
                         borderColor: 'color-mix(in srgb, var(--poster-accent) 44%, transparent)',
@@ -211,7 +205,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
 
                   <div className="relative z-10 bg-surface-container-high/90 p-2 rounded-lg border border-white/10">
                     <span className="text-3xs font-mono text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-brand-accent" />
+                      <IconStatusSparkles className="w-3 h-3 text-brand-accent" />
                       <span>{currentEp.characterFocus}</span>
                     </span>
                     <p className="text-xs font-bold text-white mt-0.5 line-clamp-2">
@@ -266,9 +260,9 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                           const epNum = currentEp.absoluteEpisode || Number(currentEp.episode.match(/\d+/)?.[0]) || volume.startEpisode || 1;
                           onPlayVolume(volume, epNum);
                         }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-accent hover:brightness-110 text-black text-xs font-mono font-bold shadow-brand-primary active:scale-95 transition cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-accent text-black text-xs font-mono font-bold shadow-brand-primary active:scale-95 transition-[transform,filter] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 cursor-pointer"
                       >
-                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
                         <span>Reproducir {currentEp.episode}</span>
                       </button>
                     </div>
@@ -281,7 +275,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-brand-accent" />
+                  <IconNavigationLayers className="w-4 h-4 text-brand-accent" />
                   <h4 className="text-xs sm:text-sm font-mono font-bold uppercase tracking-wider text-white">
                     Baraja de Episodios del Lapso ({episodes.length} tarjetas agrupadas)
                   </h4>
@@ -312,10 +306,10 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                           setSelectedEpIdx(idx);
                         }
                       }}
-                      className={`relative rounded-xl p-3 border transition cursor-pointer flex flex-col justify-between min-h-[120px] shadow-md group/epcard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+                      className={`relative rounded-xl p-3 border transition-[transform,border-color,background-color,box-shadow] duration-fast ease-smooth-out active:scale-95 cursor-pointer flex flex-col justify-between min-h-[120px] shadow-elevation-1 group/epcard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
                         isSelected
                           ? 'bg-surface-container border-brand-accent transform -translate-y-1'
-                          : 'bg-surface-container-low/80 hover:bg-surface-container-low border-white/10 hover:border-white/30'
+                          : 'bg-surface-container-low/80 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-low border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30'
                       }`}
                     >
                       {/* Card Header */}
@@ -331,7 +325,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                       </div>
 
                       {/* Title */}
-                      <p className="text-xs font-bold text-white group-hover/epcard:text-brand-accent/80 transition-colors line-clamp-2 leading-snug">
+                      <p className="text-xs font-bold text-white [@media(hover:hover)_and_(pointer:fine)]:group-hover/epcard:text-brand-accent/80 transition-colors line-clamp-2 leading-snug">
                         {ep.title}
                       </p>
 
@@ -366,9 +360,9 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                     sounds.playFlip();
                     onToggleFlip();
                   }}
-                  className="text-brand-accent hover:text-brand-secondary underline flex items-center gap-1 cursor-pointer"
+                  className="text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:text-brand-secondary underline flex items-center gap-1 cursor-pointer transition-[color,transform] duration-fast ease-smooth-out active:scale-95"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <IconUiRotateCcw className="w-3.5 h-3.5" />
                   <span>{isFlipped ? 'Ver Anverso' : 'Ver Dorso de Lore'}</span>
                 </button>
               </div>
@@ -389,7 +383,7 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant/70">Cabecera Oficial:</span>
                   <span className="text-white font-semibold">
-                    {volume.volumeNumber} \u00b7 {volume.episodesRange}
+                    {volume.volumeNumber} · {volume.episodesRange}
                   </span>
                 </div>
                 <div className="flex justify-between">

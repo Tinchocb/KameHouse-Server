@@ -88,7 +88,7 @@ function LibrarySkipScanRow() {
                         "shrink-0 flex items-center gap-1.5 px-4 min-h-11 rounded-full text-xs font-bold transition-[background-color,border-color,color,filter,transform] duration-fast ease-smooth-out active:scale-95",
                         running
                             ? "bg-brand-accent/10 border border-brand-accent/20 text-brand-accent cursor-not-allowed"
-                            : "bg-brand-accent hover:brightness-110 text-on-primary shadow-elevation-1"
+                            : "bg-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 text-on-primary shadow-elevation-1"
                     )}
                 >
                     <LoadSwap
@@ -256,7 +256,7 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                                             key={p.id}
                                             type="button"
                                             whileHover={{ scale: 1.025, y: -2 }}
-                                            whileTap={{ scale: 0.97 }}
+                                            whileTap={{ scale: 0.96 }}
                                             transition={cardSpring}
                                             onClick={() => {
                                                 field.onChange(p.id)
@@ -267,7 +267,7 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
                                                 "flex flex-col p-3.5 rounded-2xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                                 isSelected
                                                     ? "bg-surface-container-high/80 border-white/30 border-t-white/50 shadow-[shadow:var(--glass-highlight-lg),0_8px_20px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
-                                                    : "bg-surface-container-lowest/60 border-white/10 border-t-white/20 hover:border-white/25 hover:bg-white/[0.04] shadow-glass-highlight-sm"
+                                                    : "bg-surface-container-lowest/60 border-white/10 border-t-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/25 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04] shadow-glass-highlight-sm"
                                             )}
                                         >
                                             <div className="flex items-center justify-between mb-1.5">

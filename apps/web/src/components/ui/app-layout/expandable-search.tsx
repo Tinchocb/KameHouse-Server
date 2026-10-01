@@ -226,13 +226,13 @@ export function ExpandableSearch() {
                     onClick={handleExpand}
                     aria-label="Buscar (Ctrl+K)"
                     title={isExpanded ? undefined : "Buscar (Ctrl+K)"}
-                    whileTap={{ scale: 0.9 }}
+                    whileTap={{ scale: 0.96 }}
                     whileHover={{ scale: isExpanded ? 1 : 1.05 }}
                     className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors duration-150",
                         isExpanded
                             ? "text-brand-accent"
-                            : "text-on-surface-variant hover:text-white hover:bg-white/10 active:scale-90"
+                            : "text-on-surface-variant hover:text-white hover:bg-white/10"
                     )}
                 >
                     <IconNavigationSearch className="w-3.5 h-3.5" />
@@ -286,7 +286,7 @@ export function ExpandableSearch() {
                                         }}
                                         className="p-1 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 shrink-0 cursor-pointer"
                                         aria-label="Limpiar búsqueda"
-                                        whileTap={{ scale: 0.85 }}
+                                        whileTap={{ scale: 0.95 }}
                                     >
                                         <IconUiClose className="w-3 h-3" />
                                     </m.button>
@@ -301,7 +301,7 @@ export function ExpandableSearch() {
                                         onClick={handleCollapse}
                                         className="p-1 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 shrink-0 cursor-pointer"
                                         aria-label="Cerrar búsqueda"
-                                        whileTap={{ scale: 0.85 }}
+                                        whileTap={{ scale: 0.95 }}
                                     >
                                         <IconUiClose className="w-3 h-3" />
                                     </m.button>
@@ -355,10 +355,10 @@ export function ExpandableSearch() {
                                                     type="button"
                                                     onClick={() => handleSelectResult(result)}
                                                     className={cn(
-                                                        "w-full group flex items-center gap-3 p-2 rounded-xl transition duration-150 cursor-pointer text-left",
+                                                        "w-full group flex items-center gap-3 p-2 rounded-xl transition-[background-color,border-color,transform] duration-fast ease-out-strong active:scale-[0.99] cursor-pointer text-left",
                                                         isSelected
                                                             ? "bg-brand-accent/20 border border-brand-accent/40"
-                                                            : "hover:bg-white/10 active:bg-white/15 border border-transparent"
+                                                            : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 active:bg-white/15 border border-transparent"
                                                     )}
                                                 >
                                                     {/* Poster preview */}
@@ -367,7 +367,7 @@ export function ExpandableSearch() {
                                                             <img
                                                                 src={media.posterImage}
                                                                 alt={title}
-                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                                className="w-full h-full object-cover [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-out-strong"
                                                             />
                                                         ) : isChronology ? (
                                                             <IconStatusSparkles className="w-4 h-4 text-amber-400" />
@@ -431,7 +431,7 @@ export function ExpandableSearch() {
                                                     setQuery(tag)
                                                     inputRef.current?.focus()
                                                 }}
-                                                className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 hover:border-white/20 text-2xs font-medium text-on-surface transition-colors cursor-pointer flex items-center gap-1"
+                                                className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 hover:border-white/20 text-2xs font-medium text-on-surface active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-out-strong cursor-pointer flex items-center gap-1"
                                             >
                                                 <span>{tag}</span>
                                                 <IconArrowRight className="w-2.5 h-2.5 text-on-surface-variant" />
@@ -454,7 +454,7 @@ export function ExpandableSearch() {
                                                     localStorage.removeItem(RECENT_SEARCHES_KEY)
                                                     setRecentSearches([])
                                                 }}
-                                                className="text-4xs text-on-surface-variant hover:text-white lowercase cursor-pointer"
+                                                className="text-4xs text-on-surface-variant hover:text-white lowercase cursor-pointer active:scale-95 transition-transform duration-fast"
                                             >
                                                 limpiar
                                             </button>
@@ -471,7 +471,7 @@ export function ExpandableSearch() {
                                                             setQuery(term)
                                                             inputRef.current?.focus()
                                                         }}
-                                                        className="flex-1 text-left text-xs text-on-surface group-hover/recent:text-white truncate cursor-pointer"
+                                                        className="flex-1 text-left text-xs text-on-surface group-hover/recent:text-white truncate cursor-pointer active:scale-[0.99] transition-[color,transform] duration-fast"
                                                     >
                                                         {term}
                                                     </button>
@@ -481,7 +481,7 @@ export function ExpandableSearch() {
                                                             removeStoredRecent(term)
                                                             setRecentSearches(getStoredRecents())
                                                         }}
-                                                        className="text-on-surface-variant/40 hover:text-red-400 p-0.5 rounded cursor-pointer"
+                                                        className="text-on-surface-variant/40 hover:text-red-400 p-0.5 rounded cursor-pointer active:scale-90 transition-[color,transform] duration-fast"
                                                         aria-label={`Eliminar ${term}`}
                                                     >
                                                         <IconUiClose className="w-3 h-3" />
@@ -499,7 +499,7 @@ export function ExpandableSearch() {
                             <button
                                 type="button"
                                 onClick={handleOpenFullPalette}
-                                className="w-full py-1.5 px-2.5 rounded-lg text-left text-2xs font-semibold text-on-surface-variant hover:text-white hover:bg-white/10 transition-colors flex items-center justify-between group cursor-pointer"
+                                className="w-full py-1.5 px-2.5 rounded-lg text-left text-2xs font-semibold text-on-surface-variant hover:text-white hover:bg-white/10 active:scale-[0.99] transition-[background-color,color,transform] duration-fast ease-out-strong flex items-center justify-between group cursor-pointer"
                             >
                                 <span>Búsqueda avanzada en Bóveda</span>
                                 <kbd className="text-4xs font-mono px-1.5 py-0.5 rounded bg-white/10 text-on-surface-variant border border-white/10 group-hover:border-white/20">

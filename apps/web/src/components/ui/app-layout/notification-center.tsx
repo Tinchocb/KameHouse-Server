@@ -96,7 +96,7 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
                             ]
                     )}
                 >
-                    <span className={cn("shrink-0 z-10 relative group-hover:scale-110 transition-transform duration-base", open && "text-on-surface")}>
+                    <span className={cn("shrink-0 z-10 relative [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-out-strong", open && "text-on-surface")}>
                         <IconUiBell className="w-5 h-5" />
                         <AnimatePresence>
                             {unreadCount > 0 && (
@@ -193,7 +193,7 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
                                             <div className="flex flex-col gap-0.5 min-w-0">
                                                 <span className="text-on-surface text-label-md font-bold truncate">{n.title}</span>
                                                 <span className="text-on-surface-variant text-body-md break-words">{n.message}</span>
-                                                <span className="text-on-surface-variant/70 text-label-sm font-mono">{relativeTime(n.createdAt)}</span>
+                                                <span className="text-on-surface-variant/70 text-label-sm font-mono tabular-nums">{relativeTime(n.createdAt)}</span>
                                             </div>
                                         </div>
                                     )

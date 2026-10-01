@@ -266,13 +266,13 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
 
                         {/* Active vertical bar indicator */}
                         <div className={cn(
-                            "absolute left-0 w-1.5 h-8 bg-brand-accent rounded-r-full transition duration-300 hidden md:block",
+                            "absolute left-0 w-1.5 h-8 bg-brand-accent rounded-r-full transition-[transform,opacity] duration-base ease-smooth-out hidden md:block",
                             (tvMode || showPicker) ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
                         )} />
                         
                         {/* Icon with glowing badge */}
                         <div className={cn(
-                            "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition duration-300",
+                            "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-fast ease-out-strong",
                             sidebarOpen ? "w-10 h-10" : "w-10 h-10",
                             (tvMode || showPicker)
                                 ? "bg-brand-accent text-on-primary shadow-brand-primary scale-105"
@@ -282,13 +282,13 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                 loading={Boolean(isLoading)}
                                 skeleton={<IconUiSpinner className="w-5 h-5 animate-spin" />}
                             >
-                                <IconNavigationTv className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
+                                <IconNavigationTv className="w-5 h-5 transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105" />
                             </LoadSwap>
                         </div>
                         
                         {/* Text Label */}
                         <div className={cn(
-                            "z-10 flex flex-col text-left transition duration-300 whitespace-nowrap overflow-hidden",
+                            "z-10 flex flex-col text-left transition-colors duration-fast ease-out-strong whitespace-nowrap overflow-hidden",
                             sidebarOpen ? "block" : "hidden md:hidden"
                         )}>
                             <span className="uppercase tracking-ultra text-label-md font-black text-on-surface leading-tight">
@@ -368,7 +368,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                         e.stopPropagation()
                                         setShowPicker(false)
                                     }}
-                                    className="p-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant hover:text-on-surface transition duration-200 active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-glass-highlight-md"
+                                    className="p-2.5 rounded-xl bg-white/[0.05] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-glass-highlight-md"
                                     title="Cerrar (ESC)"
                                 >
                                     <IconUiClose className="w-5 h-5" />
@@ -386,16 +386,16 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     disabled={Boolean(isLoading)}
                                     onClick={() => pick("episode")}
                                     whileHover={{ y: -4, scale: 1.02 }}
-                                    whileTap={{ scale: 0.97 }}
+                                    whileTap={{ scale: 0.95 }}
                                     className={cn(
-                                        "group relative flex flex-col p-6 rounded-2xl text-left transition duration-300 outline-none pointer-events-auto cursor-pointer",
-                                        "bg-surface-container-lowest/60 hover:bg-surface-container-high/70 border border-white/15 border-t-white/35",
-                                        "shadow-glass-highlight-md hover:shadow-brand-accent/15",
+                                        "group relative flex flex-col p-6 rounded-2xl text-left transition-[background-color,border-color,box-shadow] duration-base ease-smooth-out outline-none pointer-events-auto cursor-pointer",
+                                        "bg-surface-container-lowest/60 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70 border border-white/15 border-t-white/35",
+                                        "shadow-glass-highlight-md [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-brand-accent/15",
                                         isLoading === "episode" && "opacity-75 pointer-events-none"
                                     )}
                                 >
-                                    <div className="flex items-center justify-between w-full mb-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-md shadow-brand-accent/20">
+                                     <div className="flex items-center justify-between w-full mb-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent flex items-center justify-center transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 shadow-md shadow-brand-accent/20">
                                             <LoadSwap
                                                 loading={isLoading === "episode"}
                                                 skeleton={<IconUiSpinner className="w-6 h-6 animate-spin text-brand-accent" />}
@@ -427,16 +427,16 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     disabled={Boolean(isLoading)}
                                     onClick={() => pick("movie")}
                                     whileHover={{ y: -4, scale: 1.02 }}
-                                    whileTap={{ scale: 0.97 }}
+                                    whileTap={{ scale: 0.95 }}
                                     className={cn(
-                                        "group relative flex flex-col p-6 rounded-2xl text-left transition duration-300 outline-none pointer-events-auto cursor-pointer",
-                                        "bg-surface-container-lowest/60 hover:bg-surface-container-high/70 border border-white/15 hover:border-brand-secondary/60 border-t-white/35",
-                                        "shadow-glass-highlight-md hover:shadow-brand-secondary/15",
+                                        "group relative flex flex-col p-6 rounded-2xl text-left transition-[background-color,border-color,box-shadow] duration-base ease-smooth-out outline-none pointer-events-auto cursor-pointer",
+                                        "bg-surface-container-lowest/60 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70 border border-white/15 [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-secondary/60 border-t-white/35",
+                                        "shadow-glass-highlight-md [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-brand-secondary/15",
                                         isLoading === "movie" && "opacity-75 pointer-events-none"
                                     )}
                                 >
                                     <div className="flex items-center justify-between w-full mb-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-brand-secondary/15 border border-brand-secondary/30 text-brand-secondary flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-md shadow-brand-secondary/20">
+                                        <div className="w-14 h-14 rounded-2xl bg-brand-secondary/15 border border-brand-secondary/30 text-brand-secondary flex items-center justify-center transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 shadow-md shadow-brand-secondary/20">
                                             <LoadSwap
                                                 loading={isLoading === "movie"}
                                                 skeleton={<IconUiSpinner className="w-6 h-6 animate-spin text-brand-secondary" />}

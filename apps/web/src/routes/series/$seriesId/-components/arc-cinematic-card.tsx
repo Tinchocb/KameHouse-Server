@@ -74,12 +74,12 @@ export const ArcCinematicCard = React.memo(function ArcCinematicCard({
             aria-current={isActive ? "true" : undefined}
             className={cn(
                 "group relative w-full text-left flex items-center justify-between gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[50px] rounded-xl select-none cursor-pointer transform-gpu overflow-hidden",
-                "transition-[border-color,background-color,box-shadow,transform] duration-200 active:scale-[0.98]",
+                "transition-[border-color,background-color,box-shadow,transform] duration-fast ease-out-strong active:scale-95",
                 "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70",
                 "border",
                 isActive
                     ? "bg-gradient-to-r from-white/[0.16] via-white/[0.10] to-white/[0.04] border-white/35 text-white shadow-[shadow:0_6px_24px_rgba(0,0,0,0.6),var(--glass-highlight-lg)] ring-1 ring-white/15"
-                    : "bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:-translate-y-0.5"
+                    : "bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] border-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-0.5"
             )}
             style={{
                 borderColor: isActive ? undefined : (borderGlow || undefined),
@@ -100,20 +100,20 @@ export const ArcCinematicCard = React.memo(function ArcCinematicCard({
                         "w-1 h-7 rounded-full shrink-0 [transition:background-color_var(--duration-fast)_var(--ease-smooth-out),transform_var(--duration-fast)_var(--ease-smooth-out),opacity_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out)]",
                         isActive
                             ? "bg-brand-accent shadow-[0_0_10px_hsl(var(--brand-accent)/0.6)] opacity-100 scale-100"
-                            : "bg-white/20 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
+                            : "bg-white/20 opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 scale-75 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-100"
                     )}
                 />
 
                 {/* Título y metadatos */}
                 <div className="flex flex-col min-w-0 flex-1">
                     <span className={cn(
-                        "font-display text-xs sm:text-sm font-bold uppercase tracking-wide truncate transition-colors",
-                        isActive ? "text-white font-extrabold" : "text-zinc-200 group-hover:text-white"
+                        "font-display text-xs sm:text-sm font-bold uppercase tracking-wide truncate transition-colors duration-fast ease-smooth-out",
+                        isActive ? "text-white font-extrabold" : "text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white"
                     )}>
                         {title}
                     </span>
-                    <div className="flex items-center gap-1.5 text-3xs sm:text-2xs font-mono text-zinc-400 group-hover:text-zinc-300 truncate mt-0.5">
-                        <span className="font-semibold text-zinc-300">{topLeft}</span>
+                    <div className="flex items-center gap-1.5 text-3xs sm:text-2xs font-mono text-on-surface-variant/80 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface transition-colors duration-fast ease-smooth-out truncate mt-0.5">
+                        <span className="font-semibold text-on-surface-variant">{topLeft}</span>
                         {metaLeft && (
                             <>
                                 <span className="opacity-40">·</span>
@@ -123,7 +123,7 @@ export const ArcCinematicCard = React.memo(function ArcCinematicCard({
                         {metaRight && (
                             <>
                                 <span className="opacity-40">·</span>
-                                <span className="text-zinc-400">{metaRight}</span>
+                                <span className="text-on-surface-variant">{metaRight}</span>
                             </>
                         )}
                         {isFiller && (
@@ -143,13 +143,13 @@ export const ArcCinematicCard = React.memo(function ArcCinematicCard({
             </div>
 
             {/* Lado derecho: Badge opcional + Chevron */}
-            <div className="shrink-0 flex items-center gap-1.5 text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition">
+            <div className="shrink-0 flex items-center gap-1.5 text-on-surface-variant group-hover:text-white [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-out-strong">
                 {topRight && (
                     <span className={cn(
                         "text-4xs font-mono font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0",
                         isActive
                             ? "bg-white/25 text-white border border-white/30 shadow-sm"
-                            : "bg-white/[0.08] text-zinc-300 border border-white/15"
+                            : "bg-white/[0.08] text-on-surface-variant border border-white/15"
                     )}>
                         {topRight}
                     </span>

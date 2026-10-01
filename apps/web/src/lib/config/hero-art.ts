@@ -51,9 +51,9 @@ export interface HeroArt {
      */
     sourceWidth?: number
     /**
-     * `false`: en modo `right` no se refleja el borde izquierdo (queda la base
-     * oscura). Para arte cuyo borde es un destello o un fondo plano que, espejado,
-     * ensucia la zona del texto.
+     * `false`: en modo `right` el relleno de la izquierda no toma los colores del
+     * borde izquierdo (queda la imagen en `cover` muy desenfocada). Para arte cuyo
+     * borde es un destello o un fondo plano que ensuciaría la zona del texto.
      */
     reflect?: boolean
     /**

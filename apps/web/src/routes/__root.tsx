@@ -307,7 +307,7 @@ function SkipToContent() {
                 e.preventDefault()
                 document.getElementById(MAIN_CONTENT_ID)?.focus()
             }}
-            className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[9999] focus:inline-flex focus:items-center focus:min-h-[44px] focus:px-5 focus:rounded-full focus:bg-white focus:text-zinc-950 focus:text-sm focus:font-semibold focus:outline-none focus:ring-2 focus:ring-brand-accent"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[9999] focus:inline-flex focus:items-center focus:min-h-[44px] focus:px-5 focus:rounded-full focus:bg-white focus:text-black focus:text-sm focus:font-semibold focus:outline-none focus:ring-2 focus:ring-brand-accent"
         >
             Saltar al contenido
         </a>

@@ -3,7 +3,7 @@ import { m, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerTopBar } from "./player-topbar"
 import { PlayerBottomBar } from "./player-bottombar"
-import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, AutoSkipToastOverlay } from "./player-overlays"
+import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, AutoSkipToastOverlay, PlayerHudOverlay, type PlayerHudData } from "./player-overlays"
 import { PlayerShortcutsModal } from "./player-shortcuts-modal"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import type { PlayerCore, PlayerStats } from "./player-core"
@@ -173,6 +173,54 @@ export function PlayerUI(props: PlayerUIProps) {
     } | null>(null)
     const [skipFlash, setSkipFlash] = useState<"left" | "right" | null>(null)
     const skipFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // OS-Style Floating HUD (volume & playback speed)
+    const [hudData, setHudData] = useState<PlayerHudData | null>(null)
+    const hudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const showHud = React.useCallback((data: PlayerHudData) => {
+        if (hudTimerRef.current) clearTimeout(hudTimerRef.current)
+        setHudData(data)
+        hudTimerRef.current = setTimeout(() => {
+            setHudData(null)
+        }, 1200)
+    }, [])
+
+    const isMountedRef = useRef(false)
+    const prevVolRef = useRef(state.volume)
+    const prevMuteRef = useRef(state.isMuted)
+    useEffect(() => {
+        if (!isMountedRef.current) {
+            isMountedRef.current = true
+            return
+        }
+        if (prevVolRef.current !== state.volume || prevMuteRef.current !== state.isMuted) {
+            prevVolRef.current = state.volume
+            prevMuteRef.current = state.isMuted
+            showHud({
+                type: "volume",
+                value: state.volume,
+                isMuted: state.isMuted,
+            })
+        }
+    }, [state.volume, state.isMuted, showHud])
+
+    const prevRateRef = useRef(state.playbackRate)
+    useEffect(() => {
+        if (prevRateRef.current !== state.playbackRate) {
+            prevRateRef.current = state.playbackRate
+            showHud({
+                type: "speed",
+                value: state.playbackRate,
+            })
+        }
+    }, [state.playbackRate, showHud])
+
+    useEffect(() => {
+        return () => {
+            if (hudTimerRef.current) clearTimeout(hudTimerRef.current)
+        }
+    }, [])
 
     const touchStartRef = useRef<{ x: number, y: number } | null>(null)
     const isSwipingRef = useRef<boolean>(false)
@@ -602,6 +650,9 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <CenterPlayFlash flash={state.flash} />
 
+            {/* HUD flotante estilo OS (volumen y velocidad con spring physics) */}
+            <PlayerHudOverlay hud={hudData} />
+
             <StatsOverlay show={state.showStats} data={state.statsData} />
 
             <SkipIntroOverlay
@@ -647,8 +698,8 @@ export function PlayerUI(props: PlayerUIProps) {
                     // retiran despacio, porque ese momento no lo decide la persona.
                     "player-top-bar absolute top-0 inset-x-0 z-player-ui pointer-events-none transition-[opacity,transform] ease-out-strong",
                     controlsVisible
-                        ? "opacity-100 translate-y-0 duration-150"
-                        : "opacity-0 -translate-y-3 pointer-events-none duration-500"
+                        ? "opacity-100 translate-y-0 duration-fast"
+                        : "opacity-0 -translate-y-3 pointer-events-none duration-slow"
                 )}
             >
                 <PlayerTopBar
@@ -669,7 +720,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     "player-bottom-bar absolute bottom-0 inset-x-0 pointer-events-none transition-opacity ease-out-strong",
                     // Con ajustes abiertos la barra sube de capa para que el panel quede sobre los overlays
                     state.isSettingsOpen ? "z-player-settings" : "z-player-ui",
-                    controlsVisible ? "opacity-100 duration-150" : "opacity-0 pointer-events-none duration-500"
+                    controlsVisible ? "opacity-100 duration-fast" : "opacity-0 pointer-events-none duration-slow"
                 )}
             >
                 <PlayerBottomBar

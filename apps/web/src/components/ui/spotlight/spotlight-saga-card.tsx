@@ -65,9 +65,9 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
                 isFullTier
                     ? "transition-[border-color,box-shadow] duration-base ease-smooth-out"
                     : isSubtleTier
-                    ? "transition-[transform,border-color,box-shadow] duration-base ease-smooth-out hover:-translate-y-1 hover:scale-[1.015] active:scale-95"
+                    ? "transition-[transform,border-color,box-shadow] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-1 [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.015] active:scale-95"
                     : "transition-[border-color,box-shadow] duration-base ease-smooth-out",
-                "hover:z-10 hover:shadow-[0_15px_35px_rgba(0,0,0,0.9)]"
+                "[@media(hover:hover)_and_(pointer:fine)]:hover:z-10 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-[0_15px_35px_rgba(0,0,0,0.9)]"
             )}
             style={{
                 borderColor: `color-mix(in srgb, ${colors.glowStrong} 20%, rgba(255,255,255,0.1))`,
@@ -78,9 +78,9 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
             <DeferredImage
                 src={sagaImage}
                 alt={cleanTitle}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-slow ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
             />
-            <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-none group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-10 pointer-events-none" />
+            <div aria-hidden className="absolute inset-0 -translate-x-full [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-full transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-10 pointer-events-none" />
 
             {/* Top Badges (Ep Range & Filler/Arcs) — fondo opaco sin blur por rendimiento */}
             <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-2 z-20 pointer-events-none">
@@ -110,7 +110,7 @@ export const SpotlightSagaCard = React.memo(function SpotlightSagaCard({
                     de pantalla). El clic sube a la tarjeta. */}
                 <span
                     aria-hidden
-                    className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] transition-transform duration-150 group-hover:scale-110 group-active:scale-90"
+                    className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-[1.04] group-active:scale-95"
                 >
                     <IconMediaPlay size={18} fill="currentColor" className="ml-0.5" />
                 </span>

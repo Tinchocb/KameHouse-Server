@@ -7,7 +7,12 @@ import { getSagaBadgeConfig } from './utils/sagaBadge';
 import { getSagaFallbackImages } from './data/sagaImages';
 import { sounds } from './utils/audio';
 import { hexToRgbChannels } from './utils/eraColor';
-import { Play, CheckCircle2, PanelRightOpen, Maximize2 } from 'lucide-react';
+import {
+  IconMediaPlay,
+  IconUiCheckCircle2,
+  IconNavigationPanelRightOpen,
+  IconMediaMaximize,
+} from '@/components/ui/icons';
 
 export interface TimelineVolumeCardProps {
   volume: VolumeData;
@@ -139,11 +144,11 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
             startSec={preview?.seconds}
             fallbackSrc={sagaFallbacks[0]}
             fetchPriority="high"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            className="w-full h-full object-cover [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-500 ease-out"
           />
 
           {/* Viñeta: arriba oscurece para las etiquetas y abajo funde el arte con el cuerpo */}
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/25 to-black/45 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-black/45 pointer-events-none" />
 
           {/* Saga y caps arriba a la izquierda; inspeccionar arriba a la derecha */}
           <div className="absolute top-2.5 left-2.5 right-2.5 flex items-start justify-between gap-2 pointer-events-none">
@@ -167,9 +172,9 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                     onInspectThumbnail(volume);
                   }}
                   aria-label={`Inspeccionar arte de ${volume.title}`}
-                  className="w-11 h-11 rounded-full bg-black/70 hover:bg-black/85 border border-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-[background-color,color,transform] duration-150 ease-out-strong active:scale-[0.94]"
+                  className="w-11 h-11 rounded-full bg-black/70 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-black/85 border border-white/20 text-white/80 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center cursor-pointer transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95"
                 >
-                  <Maximize2 className="w-4 h-4" />
+                  <IconMediaMaximize className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -188,8 +193,8 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                 aria-hidden="true"
                 className="absolute inset-0 flex items-center justify-center pointer-events-none"
               >
-                <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-accent text-zinc-950 font-display font-extrabold text-xs uppercase tracking-wider shadow-elevation-3 transform scale-95 opacity-90 transition-[opacity,transform,filter] duration-200 ease-out group-hover/thumb:opacity-100 group-hover/thumb:scale-105 group-hover/thumb:brightness-110 group-focus-within/thumb:opacity-100 group-focus-within/thumb:scale-105 group-active/thumb:scale-95">
-                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-accent text-black font-display font-extrabold text-xs uppercase tracking-wider shadow-elevation-3 transform scale-95 opacity-90 transition-[opacity,transform,filter] duration-200 ease-out [@media(hover:hover)_and_(pointer:fine)]:group-hover/thumb:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/thumb:scale-105 [@media(hover:hover)_and_(pointer:fine)]:group-hover/thumb:brightness-110 group-focus-within/thumb:opacity-100 group-focus-within/thumb:scale-105 group-active/thumb:scale-95">
+                  <IconMediaPlay className="w-3.5 h-3.5 fill-current ml-0.5" />
                   <span>{playTarget.label}</span>
                 </span>
               </div>
@@ -234,7 +239,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
               <div className="flex items-center gap-1.5 shrink-0">
                 {isRead ? (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-3xs font-mono font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                    <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
+                    <IconUiCheckCircle2 className="w-3 h-3" aria-hidden="true" />
                     Visto
                   </span>
                 ) : showPartialProgress ? (
@@ -285,14 +290,14 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
               onClick={handleToggleDetails}
               aria-expanded={showDetails}
               aria-controls={`volume-details-${volume.id}`}
-              className={`min-h-[38px] px-3.5 rounded-full text-xs font-mono transition-[background-color,border-color,color,transform,box-shadow] duration-150 ease-out-strong border cursor-pointer select-none active:scale-[0.97] flex items-center gap-2 ${
+              className={`min-h-[38px] px-3.5 rounded-full text-xs font-mono transition-[background-color,border-color,color,transform,box-shadow] duration-fast ease-out-strong border cursor-pointer select-none active:scale-95 flex items-center gap-2 ${
                 showDetails
                   ? 'bg-brand-accent/20 border-brand-accent/50 text-brand-accent font-semibold shadow-[0_0_12px_rgba(var(--era)/0.25)]'
-                  : 'bg-white/[0.04] hover:bg-white/[0.08] text-on-surface-variant hover:text-white border-white/15'
+                  : 'bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white border-white/15'
               }`}
             >
               <span>Detalles</span>
-              <PanelRightOpen
+              <IconNavigationPanelRightOpen
                 className={`w-3.5 h-3.5 transition-transform duration-300 ease-out-strong motion-reduce:transition-none ${
                   showDetails ? 'text-brand-accent rotate-180' : ''
                 }`}

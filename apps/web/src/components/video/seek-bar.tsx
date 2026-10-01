@@ -128,6 +128,22 @@ export const SeekBar = React.memo(function SeekBar({
         }
     }, [])
 
+    const hoverSegmentLabel = React.useMemo(() => {
+        if (!hoverInfo || hoverInfo.time === null || duration <= 0) return null
+        const t = hoverInfo.time
+        if (skipTimesOp && t >= skipTimesOp.startTime && t <= skipTimesOp.endTime) {
+            return "Opening"
+        }
+        if (skipTimesEd && t >= skipTimesEd.startTime && t <= skipTimesEd.endTime) {
+            return "Ending"
+        }
+        if (!isMovie && Array.isArray(chapters)) {
+            const ch = chapters.find(c => t >= c.startTime && t <= c.endTime)
+            if (ch?.name) return ch.name
+        }
+        return null
+    }, [hoverInfo, duration, skipTimesOp, skipTimesEd, isMovie, chapters])
+
     return (
         <div className={cn("relative w-full group/seek", className)}>
             {/* Previsualización flotante aislada en este sub-árbol */}
@@ -135,6 +151,7 @@ export const SeekBar = React.memo(function SeekBar({
                 previewManager={previewManager || null}
                 hoverTime={hoverInfo?.time ?? null}
                 hoverPosPercent={hoverInfo?.percent ?? 0}
+                segmentLabel={hoverSegmentLabel}
             />
 
             {/* Hit-area de 20px alrededor de una línea fina: fácil de agarrar, liviana a la vista */}
@@ -147,14 +164,15 @@ export const SeekBar = React.memo(function SeekBar({
                 onMouseLeave={handleMouseLeave}
             >
                 {/* Track Background */}
-                <div className="w-full h-[3px] group-hover/seek:h-[5px] group-focus-within/seek:h-[5px] transition-[height] duration-fast bg-white/25 rounded-full relative flex items-center overflow-visible">
+                <div className="w-full h-[3px] [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:h-[5px] group-focus-within/seek:h-[5px] transition-[height] duration-fast ease-smooth-out bg-white/25 rounded-full relative flex items-center overflow-visible">
                     {/* Skip OP Marker */}
                     {duration > 0 && skipTimesOp && (
                         <div
                             data-marker="op"
                             className={cn(
-                                "absolute top-0 bottom-0 bg-white/25 pointer-events-none",
-                                skipTimesOp.source === "heuristic" && "opacity-40"
+                                "absolute top-0 bottom-0 pointer-events-none rounded-xs",
+                                "bg-amber-400/45 border-x border-amber-300/80 shadow-[0_0_8px_rgba(251,191,36,0.4)]",
+                                skipTimesOp.source === "heuristic" && "opacity-50"
                             )}
                             style={{
                                 left: `${(skipTimesOp.startTime / duration) * 100}%`,
@@ -168,8 +186,9 @@ export const SeekBar = React.memo(function SeekBar({
                         <div
                             data-marker="ed"
                             className={cn(
-                                "absolute top-0 bottom-0 bg-white/25 pointer-events-none",
-                                skipTimesEd.source === "heuristic" && "opacity-40"
+                                "absolute top-0 bottom-0 pointer-events-none rounded-xs",
+                                "bg-purple-400/45 border-x border-purple-300/80 shadow-[0_0_8px_rgba(192,132,252,0.4)]",
+                                skipTimesEd.source === "heuristic" && "opacity-50"
                             )}
                             style={{
                                 left: `${(skipTimesEd.startTime / duration) * 100}%`,
@@ -203,7 +222,7 @@ export const SeekBar = React.memo(function SeekBar({
                     {/* Thumb Indicator */}
                     <div
                         ref={thumbRef}
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-brand-accent pointer-events-none scale-50 opacity-0 group-hover/seek:scale-100 group-hover/seek:opacity-100 group-focus-within/seek:scale-100 group-focus-within/seek:opacity-100 transition-[transform,opacity] duration-fast ease-out-strong"
+                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-brand-accent pointer-events-none scale-50 opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:scale-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:opacity-100 group-focus-within/seek:scale-100 group-focus-within/seek:opacity-100 transition-[transform,opacity] duration-fast ease-out-strong"
                         style={{ left: "0%" }}
                     />
                 </div>

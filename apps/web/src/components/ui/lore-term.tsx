@@ -44,7 +44,7 @@ export const LoreTerm: React.FC<LoreTermProps> = ({
   const trigger = (
     <button
       type="button"
-      className={`inline-flex items-center gap-0.5 font-medium underline decoration-amber-400/50 decoration-dotted underline-offset-4 hover:decoration-amber-400 hover:text-amber-300 transition-colors cursor-pointer select-text text-inherit ${className}`}
+      className={`inline-flex items-center gap-0.5 font-medium underline decoration-amber-400/50 decoration-dotted underline-offset-4 hover:decoration-amber-400 hover:text-amber-300 active:scale-[0.97] transition-[color,text-decoration-color,transform] duration-fast ease-out-strong cursor-pointer select-text text-inherit ${className}`}
     >
       <span>{children ?? term.term}</span>
       <Sparkles className="w-2.5 h-2.5 text-amber-400 inline shrink-0 ml-0.5 opacity-80" />
@@ -101,7 +101,7 @@ export const LoreTerm: React.FC<LoreTermProps> = ({
       </div>
 
       {/* Source Citation */}
-      <div className="flex items-center gap-1.5 pt-1 border-t border-white/10 text-3xs font-mono text-zinc-400">
+      <div className="flex items-center gap-1.5 pt-1 border-t border-white/10 text-3xs font-mono text-on-surface-variant/80">
         <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
         <span className="truncate">Fuente: {term.sourceCitation}</span>
       </div>

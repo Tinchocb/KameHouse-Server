@@ -25,7 +25,7 @@ export const MagneticHover = React.forwardRef<HTMLDivElement, MagneticHoverProps
             <m.div
                 ref={ref}
                 whileHover={{ scale, x }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.96 }}
                 transition={cardSpring}
                 className={className}
                 {...props}

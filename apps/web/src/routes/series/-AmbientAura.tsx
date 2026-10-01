@@ -64,7 +64,7 @@ export const AmbientAura = memo(function AmbientAura({
                     aria-hidden="true"
                     draggable={false}
                     decoding="async"
-                    className="absolute inset-0 w-full h-full object-cover object-[center_20%] pointer-events-none transition-opacity duration-500 ease-out"
+                    className="absolute inset-0 w-full h-full object-cover object-[center_20%] pointer-events-none transition-opacity duration-slow ease-smooth-out"
                     style={{
                         opacity: incomingSrc && isIncomingLoaded ? 0 : targetOpacity,
                     }}
@@ -80,7 +80,7 @@ export const AmbientAura = memo(function AmbientAura({
                     loading="lazy"
                     onLoad={handleIncomingLoad}
                     onError={handleIncomingLoad}
-                    className="absolute inset-0 w-full h-full object-cover object-[center_20%] pointer-events-none transition-opacity duration-500 ease-out"
+                    className="absolute inset-0 w-full h-full object-cover object-[center_20%] pointer-events-none transition-opacity duration-slow ease-smooth-out"
                     style={{
                         opacity: isIncomingLoaded ? targetOpacity : 0,
                     }}

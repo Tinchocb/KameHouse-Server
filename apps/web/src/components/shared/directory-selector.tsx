@@ -116,7 +116,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
         <>
             <div className="space-y-1.5">
                 {label && (
-                    <div className="flex items-center justify-between gap-1 text-xs font-semibold text-zinc-300">
+                    <div className="flex items-center justify-between gap-1 text-xs font-semibold text-on-surface-variant">
                         <span>{label}</span>
                     </div>
                 )}
@@ -127,7 +127,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                     "transition duration-200 hover:border-white/30 hover:bg-white/[0.04]",
                     "focus-within:border-white/35 focus-within:bg-white/[0.06] focus-within:shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.1)]"
                 )}>
-                    <IconStatusFolder className="w-4 h-4 shrink-0 text-zinc-500 group-focus-within:text-zinc-300 transition-colors" />
+                    <IconStatusFolder className="w-4 h-4 shrink-0 text-on-surface-variant/70 group-focus-within:text-on-surface-variant transition-colors" />
                     <div className="flex-1 min-w-0">
                         <TextInput
                             {...rest}
@@ -136,16 +136,16 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             // no tenía nombre accesible (lectores de pantalla, TV).
                             aria-label={rest["aria-label"] ?? (typeof label === "string" ? label : undefined) ?? rest.placeholder ?? "Ruta de carpeta"}
                             value={input}
-                            className="h-9 border-0 bg-transparent px-0 font-mono text-xs text-white shadow-none placeholder:text-zinc-600 placeholder:font-sans focus-visible:border-0"
+                            className="h-9 border-0 bg-transparent px-0 font-mono text-xs text-white shadow-none placeholder:text-on-surface-variant/40 placeholder:font-sans focus-visible:border-0"
                             inputContainerClass="flex-1 min-w-0"
                             rightIcon={
                                 <div className="flex items-center pr-1">
                                     {isLoading ? (
-                                        <IconUiSpinner className="w-4 h-4 animate-spin text-zinc-500" />
+                                        <IconUiSpinner className="w-4 h-4 animate-spin text-on-surface-variant" />
                                     ) : data?.exists ? (
-                                        <IconUiCheck className="w-4 h-4 text-emerald-400" />
+                                        <IconUiCheck className="w-4 h-4 text-status-success" />
                                     ) : shouldExist && input.length > 0 ? (
-                                        <IconUiClose className="w-4 h-4 text-red-400" />
+                                        <IconUiClose className="w-4 h-4 text-status-error" />
                                     ) : null}
                                 </div>
                             }
@@ -167,7 +167,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             : <IconStatusFolderOpen className="w-4 h-4" />}
                         title={__isDesktop__ ? "Explorar carpetas (ventana del sistema)" : "Explorar carpetas en el servidor"}
                         aria-label={__isDesktop__ ? "Abrir explorador del sistema" : "Abrir explorador del servidor"}
-                        className="h-9 w-9 md:h-9 md:w-9 shrink-0 rounded-full border-white/10 bg-white/[0.06] text-zinc-300 hover:bg-white hover:text-zinc-950 hover:border-white active:scale-95"
+                        className="h-9 w-9 md:h-9 md:w-9 shrink-0 rounded-full border-white/10 bg-white/[0.06] text-on-surface-variant hover:bg-white hover:text-black hover:border-white active:scale-95"
                         onClick={handleExplorerClick}
                         disabled={isNativeOpening}
                     />
@@ -222,8 +222,8 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                         value={input}
                         placeholder='Ej. D:\Media\Movies o /media/peliculas'
                         rightIcon={isLoading ? null : (data?.exists ?
-                            <IconUiCheck className="text-emerald-400" /> : shouldExist ?
-                                <IconUiClose className="text-red-400" /> : null)}
+                            <IconUiCheck className="text-status-success" /> : shouldExist ?
+                                <IconUiClose className="text-status-error" /> : null)}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             setInput(e.target.value ?? "")
                         }}
@@ -237,7 +237,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             <button
                                 key={folder.Path}
                                 type="button"
-                                className="py-1.5 flex items-center gap-2 text-xs px-3 rounded-full border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/25 transition flex-none cursor-pointer active:scale-95 min-h-[32px]"
+                                className="py-1.5 flex items-center gap-2 text-xs px-3 rounded-full border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/25 transition-[background-color,border-color,transform] duration-fast ease-out-strong flex-none cursor-pointer active:scale-95 min-h-[32px]"
                                 onClick={() => setInput(folder.Path)}
                             >
                                 <IconStatusFolder className="w-3.5 h-3.5 text-on-surface-variant" />
@@ -258,7 +258,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             <button
                                 key={folder.Path}
                                 type="button"
-                                className="w-full flex items-center gap-2.5 py-2 px-3 min-h-[44px] cursor-pointer hover:bg-white/[0.06] transition-[color,background-color,border-color,transform] text-left active:scale-[0.99]"
+                                className="w-full flex items-center gap-2.5 py-2 px-3 min-h-[44px] cursor-pointer hover:bg-white/[0.06] transition-[color,background-color,border-color,transform] duration-fast ease-out-strong text-left active:scale-[0.99]"
                                 onClick={() => setInput(folder.Path)}
                                 title={folder.Path}
                             >
@@ -288,7 +288,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                 )}
 
                 {input.length > 0 && (
-                    <p className={`text-2xs font-mono truncate px-1 ${isValid ? "text-emerald-400/90" : "text-red-400/90"}`}>
+                    <p className={`text-2xs font-mono truncate px-1 ${isValid ? "text-status-success" : "text-status-error"}`}>
                         {isValid ? `✓ ${input}` : `✗ La ruta no existe en el servidor`}
                     </p>
                 )}

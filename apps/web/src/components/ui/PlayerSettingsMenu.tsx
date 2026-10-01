@@ -300,8 +300,8 @@ export function PlayerSettingsMenu({
                             <button
                                 onClick={() => { onHlsLevelChange?.(-1); setIsOpen(false) }}
                                 className={cn(
-                                    "flex items-center justify-between w-full min-h-10 py-2 px-3 rounded-full transition-colors duration-200",
-                                    activeHlsLevel === -1 ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
+                                    "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                    activeHlsLevel === -1 ? "bg-white/10 text-white" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white"
                                 )}
                             >
                                 <span className="text-xs font-bold">Auto</span>
@@ -312,8 +312,8 @@ export function PlayerSettingsMenu({
                                     key={level.index}
                                     onClick={() => { onHlsLevelChange?.(level.index); setIsOpen(false) }}
                                     className={cn(
-                                        "flex items-center justify-between w-full min-h-10 py-2 px-3 rounded-full transition-colors duration-200",
-                                        activeHlsLevel === level.index ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
+                                        "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                        activeHlsLevel === level.index ? "bg-white/10 text-white" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white"
                                     )}
                                 >
                                     <span className="text-xs font-bold">{level.label}</span>
@@ -353,13 +353,13 @@ export function PlayerSettingsMenu({
                             key={ratio}
                             onClick={() => onAspectRatioChange?.(ratio)}
                             className={cn(
-                                "flex items-center justify-between w-full min-h-10 py-2 px-3 rounded-full transition-colors duration-200",
-                                aspectRatio === ratio ? "bg-white/10 text-white" : "text-on-surface-variant hover:bg-white/10 hover:text-white"
+                                "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                aspectRatio === ratio ? "bg-white/10 text-white" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white"
                             )}
                         >
                             <div className="flex flex-col items-start">
                                 <span className="text-xs font-bold">{ASPECT_RATIO_LABELS[ratio]}</span>
-                                <span className="text-label-sm text-zinc-600 mt-0.5">
+                                <span className="text-label-sm text-on-surface-variant/70 mt-0.5">
                                     {ratio === "contain" && "Barras negras · conserva proporción"}
                                     {ratio === "cover" && "Rellena y recorta bordes"}
                                     {ratio === "fill" && "Estira la imagen sin recortar"}

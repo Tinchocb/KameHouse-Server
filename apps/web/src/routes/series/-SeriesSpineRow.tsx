@@ -68,7 +68,7 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                 aria-controls={regionId}
                 aria-label={`${item.title}, ${volLabel}, ${item.year}, ${watched} de ${item.eps} episodios vistos`}
                 onClick={handleToggle}
-                className="relative w-full flex items-center gap-3 min-h-[72px] pl-4 pr-3 py-2.5 text-left cursor-pointer active:bg-white/[0.04]"
+                className="relative w-full flex items-center gap-3 min-h-[72px] pl-4 pr-3 py-2.5 text-left cursor-pointer active:bg-white/[0.04] active:scale-[0.985] transition-[background-color,transform] duration-fast ease-out-strong"
             >
                 {/* Velo de era muy suave sobre el lomo */}
                 <span
@@ -175,14 +175,14 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                             )}
                             <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#07080c] via-[#07080c]/80 to-[#07080c]/40 pointer-events-none" />
 
-                            <p className="relative text-sm leading-relaxed text-white/75 line-clamp-3">{item.desc}</p>
+                            <p className="relative text-sm leading-relaxed text-white/75 line-clamp-3 text-pretty">{item.desc}</p>
 
                             <div className="relative flex gap-2">
                                 {nextEpisode !== null && (
                                     <button
                                         type="button"
                                         onClick={() => onPlay(item.id, nextEpisode)}
-                                        className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-full font-display text-xs font-bold uppercase tracking-wider text-black active:scale-[0.97] transition-transform cursor-pointer"
+                                        className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-full font-display text-xs font-bold uppercase tracking-wider text-black active:scale-95 transition-[transform,filter] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 cursor-pointer"
                                         style={{ background: accent }}
                                     >
                                         <IconMediaPlay className="h-4 w-4" aria-hidden />
@@ -193,7 +193,7 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                                     type="button"
                                     onClick={() => onNavigate(item.id.toString())}
                                     className={cn(
-                                        'inline-flex items-center justify-center min-h-[44px] px-4 rounded-full border border-white/20 bg-white/[0.06] font-display text-xs font-bold uppercase tracking-wider text-white active:scale-[0.97] transition-transform cursor-pointer',
+                                        'inline-flex items-center justify-center min-h-[44px] px-4 rounded-full border border-white/20 bg-white/[0.06] font-display text-xs font-bold uppercase tracking-wider text-white active:scale-95 transition-[transform,background-color,border-color] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.12] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 cursor-pointer',
                                         nextEpisode === null && 'flex-1'
                                     )}
                                 >

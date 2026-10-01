@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
-import { IconUiSpinner, IconUiAlert, IconMediaPlay } from "@/components/ui/icons"
+import { IconUiSpinner, IconUiAlert, IconMediaPlay, IconMediaVolume2, IconMediaVolumeX, IconStatusZap } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { ElasticCounter } from "@/components/ui/kinetics/elastic-counter"
 import { PLAYER_EYEBROW, PLAYER_GLASS, PLAYER_PRIMARY_BTN, PLAYER_SECONDARY_BTN } from "./player-theme"
@@ -195,8 +195,8 @@ export function SkipIntroOverlay({
                     "relative isolate flex items-center gap-2.5 h-11 pl-4 pr-1.5 overflow-hidden rounded-full",
                     PLAYER_GLASS,
                     "text-white text-xs font-semibold tracking-wide",
-                    "hover:bg-white/95 hover:text-black",
-                    "transition-[color,background-color,border-color,transform] duration-200 active:scale-[0.97] cursor-pointer group",
+                    "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/95 [@media(hover:hover)_and_(pointer:fine)]:hover:text-black",
+                    "transition-[color,background-color,border-color,transform] duration-fast active:scale-95 ease-out-strong cursor-pointer group",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 )}
             >
@@ -204,7 +204,7 @@ export function SkipIntroOverlay({
                 <div
                     aria-hidden
                     className={cn(
-                        "absolute inset-0 -z-10 origin-left transition-transform duration-slow ease-linear group-hover:opacity-0",
+                        "absolute inset-0 -z-10 origin-left transition-transform duration-slow ease-linear [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-0",
                         isOutro ? "bg-brand-secondary/30" : "bg-brand-accent/30"
                     )}
                     style={{ transform: `scaleX(${Math.min(100, Math.max(0, fillProgress)) / 100})` }}
@@ -217,7 +217,7 @@ export function SkipIntroOverlay({
                 <span className="whitespace-nowrap">{label}</span>
 
                 {remainingSeconds !== undefined && remainingSeconds > 0 && (
-                    <span className="tabular-nums text-on-surface-variant group-hover:text-black/50">
+                    <span className="tabular-nums text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-black/50">
                         <ElasticCounter value={remainingSeconds} />s
                     </span>
                 )}
@@ -225,7 +225,7 @@ export function SkipIntroOverlay({
                 <kbd className={cn(
                     "hidden sm:inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full",
                     "text-2xs font-mono font-semibold",
-                    "bg-white/10 text-on-surface-variant group-hover:bg-black/10 group-hover:text-black/60"
+                    "bg-white/10 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-black/10 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-black/60"
                 )}>
                     {shortcutKey}
                 </kbd>
@@ -407,3 +407,67 @@ export function NextEpisodeOverlay({
         </AnimatePresence>
     )
 }
+
+export interface PlayerHudData {
+    type: "volume" | "speed" | "brightness"
+    value: number
+    isMuted?: boolean
+    text?: string
+}
+
+export function PlayerHudOverlay({ hud }: { hud: PlayerHudData | null }) {
+    const reduceMotion = useReducedMotion()
+
+    return (
+        <AnimatePresence>
+            {hud && (
+                <div className="absolute top-12 sm:top-14 left-1/2 -translate-x-1/2 z-player-overlay pointer-events-none">
+                    <m.div
+                        key={`hud-${hud.type}`}
+                        initial={{ opacity: 0, y: reduceMotion ? 0 : -8, scale: 0.94 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: reduceMotion ? 0 : -6, scale: 0.96 }}
+                        transition={{ type: "spring", stiffness: 480, damping: 34 }}
+                        className={cn(
+                            "flex items-center gap-2.5 h-10 px-4 rounded-full text-white text-xs font-semibold tracking-wide select-none",
+                            PLAYER_GLASS,
+                            "shadow-[0_8px_24px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.2)] border border-white/20"
+                        )}
+                    >
+                        {hud.type === "volume" && (
+                            <>
+                                {hud.isMuted || hud.value === 0 ? (
+                                    <IconMediaVolumeX className="w-4 h-4 text-brand-error shrink-0" />
+                                ) : (
+                                    <IconMediaVolume2 className="w-4 h-4 text-brand-accent shrink-0" />
+                                )}
+                                <div className="w-20 sm:w-24 h-1.5 bg-white/20 rounded-full overflow-hidden shrink-0">
+                                    <div
+                                        className="h-full bg-brand-accent rounded-full transition-all duration-75 ease-out"
+                                        style={{ width: `${hud.isMuted ? 0 : Math.round(hud.value * 100)}%` }}
+                                    />
+                                </div>
+                                <span className="font-mono tabular-nums text-3xs font-extrabold min-w-[28px] text-right">
+                                    {hud.isMuted ? "0%" : `${Math.round(hud.value * 100)}%`}
+                                </span>
+                            </>
+                        )}
+
+                        {hud.type === "speed" && (
+                            <>
+                                <IconStatusZap className="w-4 h-4 text-brand-accent shrink-0" />
+                                <span className="font-mono tabular-nums font-bold text-xs">
+                                    {hud.value}x
+                                </span>
+                                <span className="text-3xs uppercase font-mono tracking-wider text-on-surface-variant font-medium">
+                                    Velocidad
+                                </span>
+                            </>
+                        )}
+                    </m.div>
+                </div>
+            )}
+        </AnimatePresence>
+    )
+}
+

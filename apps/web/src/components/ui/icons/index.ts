@@ -8,6 +8,8 @@ import {
   ArrowLeftRight,
   ArrowRight,
   Bell,
+  Bookmark,
+  BookOpen,
   Check,
   CheckCircle,
   CheckCircle2,
@@ -18,6 +20,7 @@ import {
   Clapperboard,
   Clock,
   Cloud,
+  Compass,
   Cpu,
   Database,
   Download,
@@ -27,6 +30,7 @@ import {
   File,
   FileVideo,
   Film,
+  Flame,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -58,9 +62,11 @@ import {
   MoreHorizontal,
   Music,
   Palette,
+  PanelRightOpen,
   Pause,
   Play,
   Plus,
+  Quote,
   Radar,
   RefreshCw,
   Repeat,
@@ -71,6 +77,7 @@ import {
   Server,
   Settings,
   Shield,
+  ShieldAlert,
   SkipBack,
   SkipForward,
   SlidersHorizontal,
@@ -78,6 +85,7 @@ import {
   Square,
   Star,
   Subtitles,
+  Swords,
   Tag,
   Trash2,
   Tv,
@@ -189,3 +197,11 @@ export const IconStatusRadar = Radar;
 export const IconTimeClock = Clock;
 export const IconArrowRight = ArrowRight;
 export const IconArrowDownUp = ArrowDownUp;
+export const IconUiBookOpen = BookOpen;
+export const IconUiBookmark = Bookmark;
+export const IconStatusFlame = Flame;
+export const IconNavigationPanelRightOpen = PanelRightOpen;
+export const IconUiShieldAlert = ShieldAlert;
+export const IconStatusSwords = Swords;
+export const IconStatusCompass = Compass;
+export const IconUiQuote = Quote;

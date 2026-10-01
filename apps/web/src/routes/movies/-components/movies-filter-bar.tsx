@@ -73,11 +73,11 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                                 initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.7 }}
                                 animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
                                 exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.7 }}
-                                whileTap={reduceMotion ? undefined : { scale: 0.82 }}
+                                whileTap={reduceMotion ? undefined : { scale: 0.95 }}
                                 transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
                                 onClick={() => setSearchQuery("")}
                                 aria-label="Limpiar búsqueda"
-                                className="absolute right-0.5 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-on-surface-variant hover:text-white transition-colors"
+                                className="absolute right-0.5 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-colors duration-fast ease-smooth-out cursor-pointer"
                             >
                                 <IconUiClose className="w-3.5 h-3.5" />
                             </m.button>
@@ -92,7 +92,7 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                         onClick={() => setSortOpen((o) => !o)}
                         aria-haspopup="true"
                         aria-expanded={sortOpen}
-                        className="sectionbar sectionbar-pill flex items-center gap-1.5 px-3.5 min-h-11 hover:bg-surface-container-high/60 text-xs font-mono font-bold text-on-surface-variant hover:text-white active:scale-[0.97] transition-[background-color,color,border-color,box-shadow,transform] duration-150 ease-out-strong cursor-pointer"
+                        className="sectionbar sectionbar-pill flex items-center gap-1.5 px-3.5 min-h-11 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/60 text-xs font-mono font-bold text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white active:scale-95 transition-[background-color,color,border-color,box-shadow,transform] duration-fast ease-out-strong cursor-pointer"
                     >
                         <IconArrowDownUp className="w-3 h-3 text-on-surface-variant" />
                         <span className="hidden md:inline">{SORT_OPTIONS.find((s) => s.value === sortBy)?.label}</span>
@@ -121,10 +121,10 @@ export const MoviesFilterBar = React.memo(function MoviesFilterBar({
                                             setSortOpen(false)
                                         }}
                                         className={cn(
-                                            "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono font-medium transition-colors cursor-pointer",
+                                            "w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono font-medium transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer",
                                             sortBy === opt.value
                                                 ? "text-black bg-white/95 font-bold shadow-[0_2px_10px_rgba(255,255,255,0.3)]"
-                                                : "text-on-surface-variant hover:text-white hover:bg-white/10"
+                                                : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10"
                                         )}
                                     >
                                         <span>{opt.label}</span>

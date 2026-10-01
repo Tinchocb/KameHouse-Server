@@ -290,7 +290,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
 
                         <div
                             className={cn(
-                                "h-10 flex items-center overflow-hidden transition-[width,opacity] duration-200 ease-smooth-out",
+                                "h-10 flex items-center overflow-hidden transition-[width,opacity] duration-fast ease-smooth-out",
                                 volumeExpanded ? "w-[92px] opacity-100" : "w-0 opacity-0"
                             )}
                         >

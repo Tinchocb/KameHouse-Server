@@ -1,8 +1,16 @@
 import React from 'react';
 import { VolumeData, AspectRatioType } from './types';
 import { PosterArtwork } from './PosterArtwork';
-import { Sparkles, RotateCw, ShieldAlert, Flame, CheckCircle2, Bookmark, Check } from 'lucide-react';
 import { m } from 'framer-motion';
+import {
+  IconStatusSparkles,
+  IconUiRotate,
+  IconUiShieldAlert,
+  IconStatusFlame,
+  IconUiCheckCircle2,
+  IconUiBookmark,
+  IconUiCheck,
+} from '@/components/ui/icons';
 import { sounds } from './utils/audio';
 
 interface PosterCardProps {
@@ -103,10 +111,10 @@ export const PosterCard: React.FC<PosterCardProps> = ({
     >
       {/* Physical Bookshelf Ledge Depth Shadow (simulates pulling volume from shelf) */}
       <div
-        className={`absolute -bottom-2 inset-x-3 h-2.5 rounded-full transition duration-300 pointer-events-none ${
+        className={`absolute -bottom-2 inset-x-3 h-2.5 rounded-full transition-[transform,opacity,background-color] duration-base ease-smooth-out pointer-events-none ${
           isSelected
             ? 'bg-brand-accent/40 translate-y-2 scale-x-105 opacity-90 shadow-elevation-2'
-            : 'bg-black/70 opacity-60 group-hover:scale-x-105 group-hover:opacity-85 shadow-elevation-1'
+            : 'bg-black/70 opacity-60 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-x-105 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-85 shadow-elevation-1'
         }`}
       />
 
@@ -139,7 +147,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
           {isRead && (
             <div className="absolute top-0 right-7 z-40 flex flex-col items-center pointer-events-none animate-in fade-in zoom-in duration-300">
               <div className="bg-status-success text-white px-2 py-1 shadow-elevation-1 text-4xs font-mono font-black uppercase tracking-wider flex items-center gap-1 rounded-b-md">
-                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                <IconUiCheck className="w-2.5 h-2.5 stroke-[3]" />
                 <span>LEÍDO</span>
               </div>
               <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[4px] border-t-status-success" />
@@ -158,8 +166,8 @@ export const PosterCard: React.FC<PosterCardProps> = ({
               </span>
 
               {/* Era en el calendario oficial (Año 762) */}
-              <span className="text-3xs font-mono font-bold tracking-widest px-2 py-0.5 rounded-md bg-surface-container-low text-brand-accent border border-brand-accent/40 shadow-sm flex items-center gap-1">
-                <Flame className="w-3 h-3 text-brand-accent inline" />
+              <span className="text-3xs font-mono font-bold tracking-widest px-2 py-0.5 rounded-md bg-surface-container-low text-brand-accent border border-brand-accent/40 shadow-elevation-1 flex items-center gap-1">
+                <IconStatusFlame className="w-3 h-3 text-brand-accent inline" />
                 {volume.officialYear}
               </span>
             </div>
@@ -202,7 +210,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
             {/* Featured Collector Seal */}
             {volume.isFeaturedExample && (
               <div className="absolute top-4 left-5 z-20 flex items-center gap-1 bg-brand-accent/90 text-on-primary px-2 py-0.5 rounded-full font-mono text-4xs font-black uppercase tracking-wider shadow-elevation-2">
-                <Sparkles className="w-2.5 h-2.5" /> Tomo Maestro
+                <IconStatusSparkles className="w-2.5 h-2.5" /> Tomo Maestro
               </div>
             )}
           </div>
@@ -235,21 +243,21 @@ export const PosterCard: React.FC<PosterCardProps> = ({
                       sounds.playSelect();
                       onToggleRead();
                     }}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-3xs font-mono font-bold uppercase transition ${
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-3xs font-mono font-bold uppercase transition-[background-color,border-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer ${
                       isRead
-                        ? 'bg-status-success/90 text-white border border-status-success/50 shadow-sm'
-                        : 'bg-black/70 text-on-surface-variant hover:text-white border border-white/10 hover:border-white/30'
+                        ? 'bg-status-success/90 text-white border border-status-success/50 shadow-elevation-1'
+                        : 'bg-black/70 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30'
                     }`}
                     title={isRead ? 'Tomo marcado como leído' : 'Marcar como leído'}
                   >
                     {isRead ? (
                       <>
-                        <CheckCircle2 className="w-3 h-3 text-status-success" />
+                        <IconUiCheckCircle2 className="w-3 h-3 text-status-success" />
                         <span>Leído</span>
                       </>
                     ) : (
                       <>
-                        <Bookmark className="w-3 h-3 text-on-surface-variant" />
+                        <IconUiBookmark className="w-3 h-3 text-on-surface-variant" />
                         <span>Marcar</span>
                       </>
                     )}
@@ -269,9 +277,9 @@ export const PosterCard: React.FC<PosterCardProps> = ({
             <button
               id={`btn-flip-front-${volume.id}`}
               onClick={handleFlipClick}
-              className="w-full mt-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-surface-container/90 hover:bg-surface-container-high text-brand-accent border border-brand-accent/40 text-xs font-mono font-bold tracking-wider transition duration-200 shadow-md group/btn"
+              className="w-full mt-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-surface-container/90 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-brand-accent border border-brand-accent/40 text-xs font-mono font-bold tracking-wider transition-[background-color,border-color,color,transform] duration-fast ease-out-strong active:scale-95 shadow-elevation-1 group/btn cursor-pointer"
             >
-              <RotateCw className="w-3.5 h-3.5 transition-transform duration-500 group-hover/btn:rotate-180 text-brand-accent" />
+              <IconUiRotate className="w-3.5 h-3.5 transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover/btn:rotate-180 text-brand-accent" />
               <span>GIRAR AL DORSO: ARCHIVO DE LORE</span>
             </button>
           </div>
@@ -289,7 +297,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
           <div className="relative z-10 flex items-center justify-between border-b border-brand-accent/30 pb-2.5">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-status-error/80 border border-status-error/60 flex items-center justify-center">
-                <ShieldAlert className="w-4 h-4 text-status-error" />
+                <IconUiShieldAlert className="w-4 h-4 text-status-error" />
               </div>
               <div>
                 <span className="text-3xs font-mono tracking-widest text-status-error font-bold uppercase block leading-none">
@@ -310,7 +318,7 @@ export const PosterCard: React.FC<PosterCardProps> = ({
                     sounds.playSelect();
                     onToggleRead();
                   }}
-                  className={`px-1.5 py-0.5 rounded text-4xs font-mono font-bold uppercase border transition ${
+                  className={`px-1.5 py-0.5 rounded text-4xs font-mono font-bold uppercase border transition-[background-color,border-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer ${
                     isRead
                       ? 'bg-status-success text-white border-status-success/50'
                       : 'bg-black/60 text-on-surface-variant border-white/10'
@@ -378,9 +386,9 @@ export const PosterCard: React.FC<PosterCardProps> = ({
             <button
               id={`btn-flip-back-${volume.id}`}
               onClick={handleFlipClick}
-              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/50 text-xs font-mono font-bold tracking-wider transition duration-200"
+              className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-lg bg-brand-accent/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/50 text-xs font-mono font-bold tracking-wider transition-[background-color,border-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer"
             >
-              <RotateCw className="w-3.5 h-3.5 rotate-180 text-brand-accent" />
+              <IconUiRotate className="w-3.5 h-3.5 rotate-180 text-brand-accent" />
               <span>VOLVER A LA PORTADA FRONTAL</span>
             </button>
           </div>

@@ -366,7 +366,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={handleBackup}
                             disabled={isBackingUp || isDownloadingBackup}
-                            className="shrink-0 px-3 py-1.5 rounded-lg bg-brand-accent text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-elevation-1 transition-[filter,transform,opacity] duration-fast ease-smooth-out hover:brightness-110 active:scale-95 disabled:opacity-50"
+                            className="shrink-0 px-3 py-1.5 rounded-lg bg-brand-accent text-on-primary text-xs font-bold flex items-center gap-1.5 shadow-elevation-1 transition-[filter,transform,opacity] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                         >
                             {isBackingUp || isDownloadingBackup ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconStatusArchive className="w-3.5 h-3.5" />}
                             <span>{isBackingUp ? "Creando..." : isDownloadingBackup ? "Descargando..." : "Crear Copia"}</span>
@@ -389,7 +389,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                                         type="button"
                                         onClick={handleCancelWarm}
                                         title="Detener pre-generación"
-                                        className="px-2.5 py-1.5 rounded-lg bg-status-error/15 border border-status-error/25 hover:bg-status-error/25 text-xs font-bold text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95"
+                                        className="px-2.5 py-1.5 rounded-lg bg-status-error/15 border border-status-error/25 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-status-error/25 text-xs font-bold text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                                     >
                                         <IconMediaStop className="w-3.5 h-3.5" />
                                         <span className="hidden sm:inline">Detener</span>
@@ -399,7 +399,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                                         type="button"
                                         onClick={handleWarmCache}
                                         title="Pre-generar miniaturas para toda la biblioteca"
-                                        className="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface-variant hover:text-on-surface flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95"
+                                        className="px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                                     >
                                         <IconUiRotate className="w-3.5 h-3.5" />
                                         <span className="hidden sm:inline">Pre-generar</span>
@@ -408,7 +408,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                                 <button
                                     type="button"
                                     onClick={() => setIsClearModalOpen(true)}
-                                    className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95"
+                                    className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                                 >
                                     <IconUiTrash className="w-3.5 h-3.5 text-on-surface-variant" />
                                     <span>Gestionar</span>
@@ -578,7 +578,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={() => handleClearCache("all")}
                             disabled={isClearingTarget !== null}
-                            className="px-3.5 py-1.5 rounded-lg bg-status-error/15 border border-status-error/25 hover:bg-status-error/20 text-xs font-bold text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50"
+                            className="px-3.5 py-1.5 rounded-lg bg-status-error/15 border border-status-error/25 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-status-error/20 text-xs font-bold text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "all" ? "Limpiando..." : "Limpiar Toda la Caché"}</span>
@@ -606,7 +606,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={() => handleClearCache("thumbnails")}
                             disabled={isClearingTarget !== null}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0"
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "thumbnails" ? "Limpiando..." : "Limpiar"}</span>
@@ -625,7 +625,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={() => handleClearCache("videofiles")}
                             disabled={isClearingTarget !== null}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0"
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "videofiles" ? "Limpiando..." : "Limpiar"}</span>
@@ -644,7 +644,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={() => handleClearCache("keyframes")}
                             disabled={isClearingTarget !== null}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0"
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "keyframes" ? "Limpiando..." : "Limpiar"}</span>
@@ -663,7 +663,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={() => handleClearCache("fingerprints")}
                             disabled={isClearingTarget !== null}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0"
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "fingerprints" ? "Limpiando..." : "Limpiar"}</span>
@@ -682,7 +682,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={() => handleClearCache("images")}
                             disabled={isClearingTarget !== null}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0"
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "images" ? "Limpiando..." : "Limpiar"}</span>
@@ -704,7 +704,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={() => handleClearCache("drive")}
                             disabled={isClearingTarget !== null}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0"
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "drive" ? "Limpiando..." : "Limpiar"}</span>
@@ -723,7 +723,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             type="button"
                             onClick={() => handleClearCache("metadata")}
                             disabled={isClearingTarget !== null}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 text-xs font-bold text-on-surface hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0"
+                            className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error flex items-center gap-1.5 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer disabled:cursor-not-allowed"
                         >
                             <IconUiTrash className="w-3.5 h-3.5" />
                             <span>{isClearingTarget === "metadata" ? "Limpiando..." : "Limpiar"}</span>

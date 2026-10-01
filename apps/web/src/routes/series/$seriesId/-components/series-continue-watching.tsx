@@ -42,7 +42,7 @@ export function SeriesContinueWatching({
                 onClick={onResume}
                 className={cn(
                     "sectionbar sectionbar-strong rounded-2xl group/continue relative w-full flex items-center gap-3.5 sm:gap-5 p-3 sm:p-4 select-none text-left cursor-pointer",
-                    "transition-[transform,border-color] duration-base ease-smooth-out hover:border-white/25 active:scale-[0.995] active:duration-100",
+                    "transition-[transform,border-color] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/25 active:scale-[0.985]",
                 )}
             >
                 {/* Destino de teclado y lectores de pantalla. Antes la tarjeta era role="button"
@@ -64,7 +64,7 @@ export function SeriesContinueWatching({
                             loading="lazy"
                             decoding="async"
                             className="w-full h-full"
-                            imgClassName="w-full h-full object-cover transition-transform duration-500 group-hover/continue:scale-105"
+                            imgClassName="w-full h-full object-cover transition-transform duration-500 ease-out [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:scale-105"
                             showSkeleton={true}
                             onError={handleThumbnailError}
                             fallback={
@@ -94,7 +94,7 @@ export function SeriesContinueWatching({
 
                     {/* Play button hover indicator */}
                     <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/70 group-hover/continue:bg-brand-accent border border-white/20 group-hover/continue:border-brand-accent flex items-center justify-center text-white group-hover/continue:text-on-primary transition-[transform,background-color,border-color,color] duration-base ease-smooth-out shadow-elevation-3 group-hover/continue:scale-110">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/70 [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:bg-brand-accent border border-white/20 [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:border-brand-accent flex items-center justify-center text-white [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:text-on-primary transition-[transform,background-color,border-color,color] duration-fast ease-out-strong shadow-elevation-3 [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:scale-110">
                             <IconMediaPlay className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-0.5 fill-current" />
                         </div>
                     </div>
@@ -125,24 +125,24 @@ export function SeriesContinueWatching({
                         </div>
 
                         {onGoToEpisode && (
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    onGoToEpisode()
-                                }}
-                                className="relative inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-3xs sm:text-2xs font-mono font-medium text-on-surface-variant hover:text-on-surface bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 hover:border-white/20 transition-[color,background-color,border-color] duration-base cursor-pointer shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-accent"
-                                title="Ver este episodio en la lista"
-                            >
-                                <span>Ver en lista</span>
-                                <IconNavigationChevronDown className="w-3 h-3 text-on-surface-variant group-hover/continue:text-on-surface transition-transform group-hover/continue:translate-y-0.5" />
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        onGoToEpisode()
+                                    }}
+                                    className="relative inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-3xs sm:text-2xs font-mono font-medium text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface bg-white/[0.06] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.12] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-accent"
+                                    title="Ver este episodio en la lista"
+                                >
+                                    <span>Ver en lista</span>
+                                    <IconNavigationChevronDown className="w-3 h-3 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:text-on-surface transition-transform duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:translate-y-0.5" />
+                                </button>
                         )}
                     </div>
 
                     {/* Title */}
                     <div>
-                        <h2 className="font-display text-xs sm:text-sm md:text-base font-bold uppercase tracking-wide leading-snug text-on-surface group-hover/continue:text-brand-accent transition-colors truncate">
+                        <h2 className="font-display text-xs sm:text-sm md:text-base font-bold uppercase tracking-wide leading-snug text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:text-brand-accent transition-colors duration-fast ease-smooth-out truncate">
                             Ep {continueWatching.episodeNumber} — {continueWatching.title}
                         </h2>
                     </div>
@@ -168,7 +168,7 @@ export function SeriesContinueWatching({
                             e.stopPropagation()
                             onResume()
                         }}
-                        className="relative inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-wider font-bold hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        className="relative inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-wider font-bold [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-fast ease-out-strong shadow-brand-primary cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                     >
                         <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
                         <span>Reanudar</span>

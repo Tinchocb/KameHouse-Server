@@ -390,7 +390,7 @@ function SeriesFullscreenIndex() {
                                         <button
                                             type="button"
                                             onClick={() => navigate({ to: '/settings' })}
-                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-elevation-1 cursor-pointer"
+                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-elevation-1 cursor-pointer"
                                         >
                                             Configurar Biblioteca
                                         </button>
@@ -467,7 +467,7 @@ function SeriesFullscreenIndex() {
                                         <button
                                             type="button"
                                             onClick={() => navigate({ to: '/settings' })}
-                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-elevation-1 cursor-pointer"
+                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-elevation-1 cursor-pointer"
                                         >
                                             Configurar Biblioteca
                                         </button>

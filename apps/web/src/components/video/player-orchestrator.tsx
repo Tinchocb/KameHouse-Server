@@ -61,6 +61,10 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
     // Traduce el rechazo del servidor a un mensaje claro para el overlay de error.
     const streamRequestError = useMemo(() => {
         if (!streamRequestFailure) return null
+        const serverMsg = streamRequestFailure.message?.toLowerCase() || ""
+        if (serverMsg.includes("transcoder not initialized") || serverMsg.includes("transcoder could not be initialized")) {
+            return "La transcodificación no está habilitada o FFmpeg no está disponible en el servidor. Podés activarla en Ajustes → Streaming."
+        }
         switch (streamRequestFailure.status) {
             case 404:
                 return STREAM_FILE_MISSING_MSG

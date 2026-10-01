@@ -9,6 +9,7 @@ interface PlayerSeekPreviewProps {
     previewManager: PlayerPreviewManager | null
     hoverTime: number | null
     hoverPosPercent: number
+    segmentLabel?: string | null
 }
 
 const formatTime = (secs: number) => {
@@ -20,7 +21,7 @@ const formatTime = (secs: number) => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
-export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }: PlayerSeekPreviewProps) {
+export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent, segmentLabel }: PlayerSeekPreviewProps) {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [rendered, setRendered] = useState<{ segment: number; url: string } | null>(null)
     const spring = useSpringPreset("entrance")
@@ -91,8 +92,13 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent }
                     </div>
                     
                     {/* Time badge */}
-                    <div className={cn("mt-1.5 px-2.5 py-1 rounded-full text-2xs font-semibold tracking-wide tabular-nums text-white", PLAYER_GLASS)}>
-                        {formatTime(hoverTime)}
+                    <div className={cn("mt-1.5 px-2.5 py-1 rounded-full text-2xs font-semibold tracking-wide tabular-nums text-white inline-flex items-center gap-1.5", PLAYER_GLASS)}>
+                        {segmentLabel && (
+                            <span className="font-mono text-3xs font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30">
+                                {segmentLabel}
+                            </span>
+                        )}
+                        <span>{formatTime(hoverTime)}</span>
                     </div>
                     
                 </m.div>

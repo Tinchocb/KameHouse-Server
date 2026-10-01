@@ -57,7 +57,7 @@ export const MediaMetadataCapsule = React.memo(function MediaMetadataCapsule({
 
     const Wrapper = variants ? m.div : "div"
 
-    const standardTagClass = "relative z-10 bg-white/[0.08] text-zinc-200 text-3xs font-mono font-semibold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase"
+    const standardTagClass = "relative z-10 bg-white/[0.08] text-white/90 text-3xs font-mono font-semibold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase"
 
     return (
         <Wrapper
@@ -124,7 +124,7 @@ export const MediaMetadataCapsule = React.memo(function MediaMetadataCapsule({
 
             {/* Age Rating (PG-13, 18+, etc.) */}
             {ageRating && (
-                <span className="relative z-10 bg-white/[0.08] text-zinc-200 text-3xs font-bold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase">
+                <span className="relative z-10 bg-white/[0.08] text-white/80 text-3xs font-bold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase">
                     {ageRating}
                 </span>
             )}

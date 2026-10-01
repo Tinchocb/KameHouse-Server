@@ -122,7 +122,7 @@ export function SagaSelector({
             onClick={onToggleCollapse}
             title="Expandir panel de sagas"
             aria-label="Expandir panel de sagas"
-            className="w-10 h-10 mb-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant hover:text-white flex items-center justify-center transition-[background-color,color,transform] active:scale-95 duration-150 cursor-pointer"
+            className="w-10 h-10 mb-3 rounded-xl bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center transition-[background-color,color,transform] active:scale-95 duration-150 cursor-pointer"
           >
             <IconNavigationChevronRight className="w-4 h-4 text-brand-accent" />
           </button>
@@ -169,11 +169,11 @@ export function SagaSelector({
                 aria-label={title}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "relative w-10 h-10 rounded-xl flex items-center justify-center shrink-0 cursor-pointer border transition-[background-color,border-color,color,transform,box-shadow] duration-200 text-xs font-mono font-bold select-none",
-                  "hover:scale-105 active:scale-95",
+                  "relative w-10 h-10 rounded-xl flex items-center justify-center shrink-0 cursor-pointer border transition-[background-color,border-color,color,transform,box-shadow] duration-fast ease-out-strong text-xs font-mono font-bold select-none",
+                  "[@media(hover:hover)_and_(pointer:fine)]:hover:scale-105 active:scale-95",
                   isActive
                     ? "text-white border-brand-accent/40"
-                    : "bg-white/[0.02] hover:bg-white/[0.06] text-on-surface-variant hover:text-white border-white/[0.05] hover:border-white/15"
+                    : "bg-white/[0.02] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white border-white/[0.05] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/15"
                 )}
               >
                 {isActive && (
@@ -225,7 +225,7 @@ export function SagaSelector({
                   onClick={onToggleCollapse}
                   title="Colapsar panel de sagas"
                   aria-label="Colapsar panel de sagas"
-                  className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant hover:text-white transition-[background-color,color,transform] active:scale-95 duration-150 cursor-pointer"
+                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[background-color,color,transform] active:scale-95 duration-150 cursor-pointer"
                 >
                   <IconNavigationChevronLeft className="w-4 h-4" />
                 </button>
@@ -311,7 +311,7 @@ export function SagaSelector({
                 }}
                 aria-label="Volver a sagas"
                 title="Volver a sagas"
-                className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant hover:text-white transition-[background-color,color,transform] duration-150 active:scale-95 cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                className="min-h-[36px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer flex items-center gap-1 text-xs font-semibold"
               >
                 <IconNavigationChevronLeft className="w-4 h-4 text-brand-accent" />
                 <span>Sagas</span>
@@ -329,7 +329,7 @@ export function SagaSelector({
                   onClick={() => {
                     if (onSelectSubSaga) onSelectSubSaga("")
                   }}
-                  className="text-2xs font-mono font-semibold text-brand-accent hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-2xs font-mono font-semibold text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:underline active:scale-95 transition-transform duration-fast ease-out-strong flex items-center gap-1 cursor-pointer"
                 >
                   <span>✕ Quitar filtro de sub-arco</span>
                 </button>

@@ -1,6 +1,7 @@
 import type { CardProps } from "@/components/ui/card"
 import { cn } from "@/components/ui/core/styling"
 import { m } from "framer-motion"
+import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { IconStatusFolder, IconStatusZap, IconMediaPlay, IconUiSettings, IconUiCheck } from "@/components/ui/icons"
 import { itemVariants } from "./variants"
 
@@ -36,6 +37,7 @@ export const STEPS = [
 ]
 
 export function StepIndicator({ currentStep, onStepClick }: { currentStep: number; onStepClick: (step: number) => void }) {
+    const tabIndicatorSpring = useSpringPreset("tabIndicator")
     return (
         <div className="w-full mb-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-2xl mx-auto">
@@ -47,27 +49,27 @@ export function StepIndicator({ currentStep, onStepClick }: { currentStep: numbe
                             type="button"
                             key={step.id}
                             whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => onStepClick(i)}
                             className={cn(
-                                "flex items-center gap-2.5 px-3 py-2 rounded-xl border transition duration-200 text-left relative overflow-hidden cursor-pointer",
+                                "flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out text-left relative overflow-hidden cursor-pointer",
                                 isActive
                                     ? "bg-brand-accent/15 border-brand-accent/50 text-on-surface shadow-elevation-1"
                                     : isCompleted
-                                        ? "bg-surface-container/70 border-border-subtle text-on-surface-variant hover:border-border-strong"
-                                        : "bg-surface-container/40 border-border-subtle/50 text-on-surface-variant/70 hover:border-border-subtle"
+                                        ? "bg-surface-container/70 border-border-subtle text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:border-border-strong"
+                                        : "bg-surface-container/40 border-border-subtle/50 text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:hover:border-border-subtle"
                             )}
                         >
                             {isActive && (
                                 <m.div
                                     layoutId="step-active-indicator"
                                     className="absolute inset-0 bg-brand-accent/10 pointer-events-none rounded-xl"
-                                    transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                                    transition={tabIndicatorSpring}
                                 />
                             )}
                             <div
                                 className={cn(
-                                    "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold transition duration-200",
+                                    "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold transition-[background-color,border-color,color,box-shadow] duration-fast ease-out-strong",
                                     isActive
                                         ? "bg-brand-accent text-on-primary shadow-md shadow-brand-accent/30"
                                         : isCompleted

@@ -235,13 +235,13 @@ export function DeferredImage(props: DeferredImageProps) {
             )}
 
             {hasError && (
-                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gradient-to-b from-zinc-900 to-zinc-950 text-zinc-400 p-4 border border-white/5">
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gradient-to-b from-surface-container-high to-surface-container-lowest text-on-surface-variant p-4 border border-white/5">
                     {fallback ? (
                         fallback
                     ) : (
                         <>
-                            <IconStatusImageOff className="mb-2 h-7 w-7 text-zinc-500 opacity-60" />
-                            <span className="px-2 text-center text-2xs font-bold tracking-wider text-zinc-300 line-clamp-2 uppercase">
+                            <IconStatusImageOff className="mb-2 h-7 w-7 text-on-surface-variant/60" />
+                            <span className="px-2 text-center text-2xs font-bold tracking-wider text-on-surface-variant line-clamp-2 uppercase">
                                 {alt || "Portada no disponible"}
                             </span>
                         </>

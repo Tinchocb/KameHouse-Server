@@ -120,7 +120,7 @@ export function PlayerTopBar({
                             type="button"
                             onClick={handleFixMoment}
                             disabled={saveMomentMutation.isPending}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-white border border-white/20 text-xs font-medium cursor-pointer active:scale-95 transition duration-150 backdrop-blur-md shadow-elevation-1 disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high/80 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-highest text-on-surface border border-white/20 text-xs font-medium cursor-pointer active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-out-strong backdrop-blur-md shadow-elevation-1 disabled:opacity-50"
                         >
                             <LoadSwap
                                 loading={saveMomentMutation.isPending}
@@ -134,10 +134,10 @@ export function PlayerTopBar({
                             type="button"
                             onClick={handleResetMoment}
                             disabled={saveMomentMutation.isPending}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 text-xs font-medium cursor-pointer active:scale-95 transition duration-150 backdrop-blur-md shadow-sm disabled:opacity-50"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-high/60 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-highest text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white border border-white/10 text-xs font-medium cursor-pointer active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-out-strong backdrop-blur-md shadow-elevation-1 disabled:opacity-50"
                             title="Restablecer minuto original"
                         >
-                            <IconUiRotateCcw className="w-3 h-3 text-zinc-400" />
+                            <IconUiRotateCcw className="w-3 h-3 text-on-surface-variant" />
                             <span>Restablecer</span>
                         </button>
                     </div>

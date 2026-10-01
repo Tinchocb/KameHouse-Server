@@ -255,79 +255,73 @@ export function GettingStarted({
             <div className="w-full relative z-20 bg-surface/90 backdrop-blur-overlay-xl border-t border-border-subtle px-4 sm:px-8 py-3.5 flex justify-between items-center max-w-3xl mx-auto rounded-t-2xl shadow-modal mt-2">
                 <div className="flex items-center gap-2">
                     {currentStep > 0 && (
-                        <m.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                            <Button
-                                type="button"
-                                intent="gray-outline"
-                                size="sm"
-                                onClick={e => {
-                                    e.preventDefault()
-                                    prevStep()
-                                }}
-                                className="rounded-xl text-xs sm:text-sm px-4 h-10 border-border-subtle hover:border-border-strong hover:bg-surface-container transition cursor-pointer"
-                                leftIcon={<IconNavigationChevronLeft className="w-4 h-4" />}
-                            >
-                                Anterior
-                            </Button>
-                        </m.div>
+                        <Button
+                            type="button"
+                            intent="gray-outline"
+                            size="sm"
+                            onClick={e => {
+                                e.preventDefault()
+                                prevStep()
+                            }}
+                            className="rounded-xl text-xs sm:text-sm px-4 h-10 border-border-subtle [@media(hover:hover)_and_(pointer:fine)]:hover:border-border-strong [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out cursor-pointer"
+                            leftIcon={<IconNavigationChevronLeft className="w-4 h-4" />}
+                        >
+                            Anterior
+                        </Button>
                     )}
                 </div>
 
                 <div className="flex items-center gap-3">
                     {currentStep === STEPS.length - 1 ? (
-                        <m.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                            <Button
-                                type="button"
-                                intent="primary"
-                                size="sm"
-                                onClick={() => {
-                                    if (formRef.current) {
-                                        formRef.current.handleSubmit((data) => {
-                                            const payload = getDefaultSettings(data, currentSettings)
-                                            if (payload.library) {
-                                                payload.library.autoDetectSkipTimes = playbackFeatures.autoDetectSkipTimes
-                                                payload.library.autoPlayNextEpisode = playbackFeatures.autoPlayNextEpisode
-                                                payload.library.enableWatchContinuity = playbackFeatures.enableWatchContinuity
-                                                payload.library.autoScan = playbackFeatures.autoScan
-                                                payload.library.tmdbLanguage = selectedLanguage
-                                                payload.library.scannerStrictStructure = !flexibleMatching
+                        <Button
+                            type="button"
+                            intent="primary"
+                            size="sm"
+                            onClick={() => {
+                                if (formRef.current) {
+                                    formRef.current.handleSubmit((data) => {
+                                        const payload = getDefaultSettings(data, currentSettings)
+                                        if (payload.library) {
+                                            payload.library.autoDetectSkipTimes = playbackFeatures.autoDetectSkipTimes
+                                            payload.library.autoPlayNextEpisode = playbackFeatures.autoPlayNextEpisode
+                                            payload.library.enableWatchContinuity = playbackFeatures.enableWatchContinuity
+                                            payload.library.autoScan = playbackFeatures.autoScan
+                                            payload.library.tmdbLanguage = selectedLanguage
+                                            payload.library.scannerStrictStructure = !flexibleMatching
+                                        }
+                                        mutateStart(payload, {
+                                            onSuccess: () => {
+                                                syncLocalPlaybackModes(data.library)
+                                                toast.success("Configuración actualizada con éxito")
+                                                handleGoToHome()
+                                            },
+                                            onError: () => {
+                                                toast.error("Error al guardar la configuración")
                                             }
-                                            mutateStart(payload, {
-                                                onSuccess: () => {
-                                                    syncLocalPlaybackModes(data.library)
-                                                    toast.success("Configuración actualizada con éxito")
-                                                    handleGoToHome()
-                                                },
-                                                onError: () => {
-                                                    toast.error("Error al guardar la configuración")
-                                                }
-                                            })
-                                        })()
-                                    }
-                                }}
-                                className="rounded-full font-bold uppercase tracking-wider px-6 h-10 text-xs sm:text-sm shadow-elevation-2 bg-brand-accent hover:bg-brand-accent/90 text-on-primary cursor-pointer border-none"
-                                loading={isPending}
-                                rightIcon={<IconNavigationRocket className="w-4 h-4" />}
-                            >
-                                Guardar y Comenzar
-                            </Button>
-                        </m.div>
+                                        })
+                                    })()
+                                }
+                            }}
+                            className="rounded-full font-bold uppercase tracking-wider px-6 h-10 text-xs sm:text-sm shadow-elevation-2 bg-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 text-on-primary cursor-pointer border-none transition-[filter,transform] duration-fast ease-smooth-out"
+                            loading={isPending}
+                            rightIcon={<IconNavigationRocket className="w-4 h-4" />}
+                        >
+                            Guardar y Comenzar
+                        </Button>
                     ) : (
-                        <m.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                            <Button
-                                type="button"
-                                intent="primary"
-                                size="sm"
-                                onClick={e => {
-                                    e.preventDefault()
-                                    nextStep()
-                                }}
-                                className="rounded-xl font-bold uppercase tracking-wider px-5 h-10 text-xs sm:text-sm bg-brand-accent text-on-primary hover:bg-brand-accent/90 shadow-md shadow-brand-accent/25 cursor-pointer"
-                                rightIcon={<IconNavigationChevronRight className="w-4 h-4" />}
-                            >
-                                Siguiente
-                            </Button>
-                        </m.div>
+                        <Button
+                            type="button"
+                            intent="primary"
+                            size="sm"
+                            onClick={e => {
+                                e.preventDefault()
+                                nextStep()
+                            }}
+                            className="rounded-xl font-bold uppercase tracking-wider px-5 h-10 text-xs sm:text-sm bg-brand-accent text-on-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 shadow-md shadow-brand-accent/25 cursor-pointer transition-[filter,transform] duration-fast ease-smooth-out"
+                            rightIcon={<IconNavigationChevronRight className="w-4 h-4" />}
+                        >
+                            Siguiente
+                        </Button>
                     )}
                 </div>
             </div>

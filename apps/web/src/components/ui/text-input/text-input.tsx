@@ -1,4 +1,5 @@
 import { IconUiEyeOff, IconUiEye } from "@/components/ui/icons";
+import { IconSwap } from "@/components/ui/kinetics";
 import { cn } from "../core/styling"
 import * as React from "react"
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
@@ -60,12 +61,18 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
         setShowPassword(prev => !prev)
     }, [])
 
-    const finalRightAddon = isPasswordInput
-        ? (showPassword ? <IconUiEyeOff className="cursor-pointer" onClick={togglePasswordVisibility} /> : <IconUiEye
-            className="cursor-pointer"
+    const finalRightAddon = isPasswordInput ? (
+        <button
+            type="button"
             onClick={togglePasswordVisibility}
-        />)
-        : rightAddon
+            aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+            className="cursor-pointer text-on-surface-variant/70 hover:text-on-surface active:scale-90 transition-[color,transform] duration-fast ease-out-strong p-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-accent flex items-center justify-center"
+        >
+            <IconSwap swapKey={showPassword ? "hide" : "show"}>
+                {showPassword ? <IconUiEyeOff className="w-4 h-4" /> : <IconUiEye className="w-4 h-4" />}
+            </IconSwap>
+        </button>
+    ) : rightAddon
 
     return (
         <BasicField{...basicFieldProps}>

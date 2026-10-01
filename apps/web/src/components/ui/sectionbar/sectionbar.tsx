@@ -127,12 +127,12 @@ export function SectionBar({
       <button
         type="button"
         onClick={handleToggle}
-        className="w-full px-4 sm:px-5 py-3 flex items-center justify-between text-left hover:bg-white/[0.04] transition-colors group select-none cursor-pointer"
+        className="w-full px-4 sm:px-5 py-3 flex items-center justify-between text-left hover:bg-white/[0.04] active:scale-[0.995] transition-[background-color,transform] duration-fast ease-out-strong group select-none cursor-pointer"
         aria-expanded={isOpen}
       >
         <div className="flex items-center gap-3.5 min-w-0 pr-4">
           {Icon ? (
-            <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/15 border-t-white/30 flex items-center justify-center text-on-surface shrink-0 group-hover:scale-105 transition-transform duration-200 ease-out shadow-inner">
+            <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/15 border-t-white/30 flex items-center justify-center text-on-surface shrink-0 group-hover:scale-105 transition-transform duration-fast ease-out-strong shadow-inner">
               <Icon className="w-3.5 h-3.5 text-on-surface" />
             </div>
           ) : (

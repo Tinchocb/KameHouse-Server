@@ -31,12 +31,12 @@ export function TvNavBar() {
                         key={to}
                         to={to}
                         className={cn(
-                            "flex flex-col items-center gap-1 px-7 py-2.5 rounded-full transition duration-200",
+                            "flex flex-col items-center gap-1 px-7 py-2.5 rounded-full transition-[color,background-color,transform] duration-fast ease-smooth-out active:scale-95",
                             "focus:outline-none focus-visible:outline-none",
                             "tv-focusable",
                             isActive
                                 ? "bg-white text-surface shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.8),0_4px_12px_rgba(0,0,0,0.5)] font-black"
-                                : "text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08]"
+                                : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08]"
                         )}
                     >
                         <Icon className="w-5 h-5 shrink-0" />
@@ -52,8 +52,8 @@ export function TvNavBar() {
                     usePlayerStore.setState({ tvMode: false })
                 }}
                 className={cn(
-                    "flex flex-col items-center gap-1 px-7 py-2.5 rounded-full transition duration-200 cursor-pointer",
-                    "text-on-surface-variant hover:text-brand-destructive hover:bg-brand-destructive/15 active:scale-95",
+                    "flex flex-col items-center gap-1 px-7 py-2.5 rounded-full transition-[color,background-color,transform] duration-fast ease-smooth-out cursor-pointer",
+                    "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-brand-destructive [@media(hover:hover)_and_(pointer:fine)]:hover:bg-brand-destructive/15 active:scale-95",
                     "focus:outline-none focus-visible:outline-none tv-focusable"
                 )}
                 title="Salir de Modo TV (Volver al modo normal)"

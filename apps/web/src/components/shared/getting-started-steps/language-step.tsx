@@ -77,7 +77,7 @@ export function LanguageStep({
                                     aria-checked={isSelected}
                                     aria-label={lang.label}
                                     whileHover={{ scale: 1.015 }}
-                                    whileTap={{ scale: 0.985 }}
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={() => setSelectedLanguage(lang.code)}
                                     onKeyDown={e => {
                                         if (e.key === "Enter" || e.key === " ") {
@@ -86,10 +86,10 @@ export function LanguageStep({
                                         }
                                     }}
                                     className={cn(
-                                        "cursor-pointer p-3 rounded-xl border transition duration-200 flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                        "cursor-pointer p-3 rounded-xl border transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                         isSelected
                                             ? "bg-brand-accent/20 border-brand-accent text-on-surface shadow-md shadow-brand-accent/15"
-                                            : "bg-glass-bg border-border-subtle hover:border-border-strong text-on-surface-variant"
+                                            : "bg-glass-bg border-border-subtle [@media(hover:hover)_and_(pointer:fine)]:hover:border-border-strong text-on-surface-variant"
                                     )}
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
@@ -122,7 +122,7 @@ export function LanguageStep({
                     aria-checked={flexibleMatching}
                     aria-label="Detección Flexible de Fansubs"
                     whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setFlexibleMatching(prev => !prev)}
                     onKeyDown={e => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -131,7 +131,7 @@ export function LanguageStep({
                         }
                     }}
                     className={cn(
-                        "cursor-pointer p-3.5 rounded-xl border transition duration-200 flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                        "cursor-pointer p-3.5 rounded-xl border transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out flex items-center justify-between select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                         flexibleMatching
                             ? "bg-surface border-brand-accent/40"
                             : "bg-glass-bg border-border-subtle opacity-75"

@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useAppStore } from "@/lib/store"
 import { Link, useRouterState } from "@tanstack/react-router"
-import { IconNavigationSearch, IconNavigationMenu, IconNavigationHome, IconNavigationTv, IconNavigationFilm, IconStatusSparkles, IconUiAdmin } from "@/components/ui/icons"
+import { IconNavigationSearch, IconNavigationMenu, IconNavigationHome, IconNavigationTv, IconNavigationFilm, IconStatusSparkles, IconNavigationSettings } from "@/components/ui/icons"
 import { MagneticIndicator, MagneticHover } from "@/components/ui/kinetics"
 import { cn } from "@/components/ui/core/styling"
 import { NotificationBell } from "./notification-center"
@@ -66,8 +66,8 @@ const NAV_ITEMS = [
     { to: "/home", label: "Inicio", icon: IconNavigationHome },
     { to: "/series", label: "Series", icon: IconNavigationTv },
     { to: "/movies", label: "Películas", icon: IconNavigationFilm },
-    { to: "/admin", label: "Admin", icon: IconUiAdmin },
-    { to: "/chronology", label: "Sagas", icon: IconStatusSparkles },
+    { to: "/chronology", label: "Cronología", icon: IconStatusSparkles },
+    { to: "/settings", label: "Ajustes", icon: IconNavigationSettings },
 ] as const
 
 export const AppBottomNav = () => {

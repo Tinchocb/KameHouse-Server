@@ -32,7 +32,7 @@ export function SecretField({ label, value, onChange, placeholder, id }: SecretF
                     type="button"
                     onClick={() => setShow(!show)}
                     aria-label={show ? "Ocultar contenido" : "Mostrar contenido"}
-                    className="absolute right-3 text-zinc-400 hover:text-white transition-[color,transform,background-color] duration-fast ease-smooth-out p-1.5 rounded-full hover:bg-white/10 active:scale-90"
+                    className="absolute right-3 text-on-surface-variant hover:text-white transition-[color,transform,background-color] duration-fast ease-smooth-out p-1.5 rounded-full hover:bg-white/10 active:scale-95"
                 >
                     <AnimatePresence mode="wait" initial={false}>
                         <m.span

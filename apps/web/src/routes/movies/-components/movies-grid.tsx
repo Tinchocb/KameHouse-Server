@@ -172,7 +172,7 @@ export const MoviesGrid = memo(function MoviesGrid({
                                     <button
                                         type="button"
                                         onClick={onResetFilters}
-                                        className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
+                                        className="px-4 py-2 rounded-full bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-[background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                                     >
                                         Restablecer filtros
                                     </button>

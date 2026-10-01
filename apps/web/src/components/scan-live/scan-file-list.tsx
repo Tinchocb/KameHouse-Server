@@ -178,7 +178,7 @@ function FilterChip({ label, count, active, onClick }: { label: string; count: n
             aria-pressed={active}
             onClick={onClick}
             className={cn(
-                "inline-flex items-center gap-1.5 shrink-0 px-2.5 py-1 rounded-full text-3xs font-medium border transition-colors whitespace-nowrap",
+                "inline-flex items-center gap-1.5 shrink-0 px-2.5 py-1 rounded-full text-3xs font-medium border whitespace-nowrap cursor-pointer select-none active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-out-strong focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-accent",
                 active
                     ? "bg-brand-accent/15 border-brand-accent/45 text-on-surface"
                     : "bg-white/[0.03] border-white/10 text-on-surface-variant hover:text-on-surface hover:border-white/20",

@@ -211,7 +211,7 @@ export function GoogleDriveCard() {
                                 type="button"
                                 onClick={() => disconnectDrive()}
                                 disabled={isDisconnecting}
-                                className="px-3 py-1.5 rounded-lg bg-status-error/10 hover:bg-status-error/20 text-status-error border border-status-error/20 text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                                className="px-3 py-1.5 rounded-lg bg-status-error/10 hover:bg-status-error/20 text-status-error border border-status-error/20 text-xs font-medium flex items-center gap-1.5 transition-[background-color,border-color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                             >
                                 <Unlink className="w-3.5 h-3.5" />
                                 Desconectar
@@ -251,9 +251,9 @@ export function GoogleDriveCard() {
                                     navigator.clipboard.writeText(uris)
                                     toast.success("URIs copiados al portapapeles")
                                 }}
-                                className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/15 text-white text-xs font-medium flex items-center gap-1 transition-colors border border-white/10"
+                                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 active:scale-95 text-white text-xs font-medium flex items-center gap-1 transition-[background-color,transform] duration-fast ease-out-strong border border-white/10 cursor-pointer"
                             >
-                                <Copy className="w-3 h-3" />
+                                <Copy className="w-3.5 h-3.5" />
                                 Copiar URIs
                             </button>
                         </div>

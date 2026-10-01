@@ -10,6 +10,8 @@ import { useChronologyProgress, useShowInterludes } from './-hooks/use-timeline-
 import { Header } from '@/components/chronology/Header';
 import { ChronologyBackdrop } from '@/components/chronology/ChronologyBackdrop';
 import { AlternatingTimeline } from '@/components/chronology/AlternatingTimeline';
+import { TimelineScrubberNav } from '@/components/chronology/TimelineScrubberNav';
+import { groupVolumesByEra } from '@/components/chronology/data/spansToVolumes';
 import { type MomentPlayInfo } from '@/components/chronology/MomentStrip';
 import { useSpring, useReducedMotion } from '@/components/ui/kinetics/hooks';
 
@@ -340,6 +342,8 @@ function ChronologyPage() {
     });
   }, [enrichedVolumes, eraFilter, searchQuery]);
 
+  const eraGroups = useMemo(() => groupVolumesByEra(filteredVolumes), [filteredVolumes]);
+
 
   const inspectedIndex = useMemo(() => {
     if (!inspectedVolume) return -1;
@@ -439,7 +443,9 @@ function ChronologyPage() {
         />
 
         {/* La línea de tiempo queda en una columna de lectura */}
-        <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 space-y-4 pt-4 pb-8">
+        <div className="w-full max-w-6xl 2xl:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 space-y-4 pt-4 pb-8 relative">
+          {/* Minimapa / Scrubber lateral interactivo de Eras (solo desktop) */}
+          <TimelineScrubberNav eraGroups={eraGroups} />
 
           {/* Main Single-Focus Content: The Alternating Timeline */}
           <div className="flex-1 w-full py-2 flex flex-col gap-6">
@@ -462,7 +468,7 @@ function ChronologyPage() {
                       onClick={() => {
                         setEraFilter('all');
                       }}
-                      className="min-h-[44px] px-6 py-2 rounded-full bg-brand-accent hover:brightness-110 text-xs font-display tracking-widest font-black uppercase text-black shadow-brand-primary cursor-pointer active:scale-95 transition"
+                      className="min-h-[44px] px-6 py-2 rounded-full bg-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 text-xs font-display tracking-widest font-black uppercase text-black shadow-brand-primary cursor-pointer active:scale-95 transition-[transform,filter] duration-fast ease-smooth-out"
                     >
                       Restablecer filtros
                     </button>

@@ -86,14 +86,14 @@ export function MediaEngineStep() {
                         {!isBothAvailable && (
                             <m.button
                                 whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                                whileTap={{ scale: 0.95 }}
                                 type="button"
                                 onClick={() => installFFmpeg()}
                                 disabled={isDownloading}
                                 className={cn(
-                                    "px-4 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition shrink-0",
-                                    "bg-brand-accent text-on-primary hover:bg-brand-accent/90 shadow-md shadow-brand-accent/20",
-                                    isDownloading && "opacity-60 cursor-not-allowed"
+                                    "px-4 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-[filter,transform,opacity] duration-fast ease-smooth-out shrink-0 cursor-pointer",
+                                    "bg-brand-accent text-on-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 shadow-md shadow-brand-accent/20",
+                                    isDownloading && "opacity-60 cursor-not-allowed pointer-events-none"
                                 )}
                             >
                                 {isDownloading ? (

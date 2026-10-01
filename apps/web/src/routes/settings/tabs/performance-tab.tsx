@@ -126,7 +126,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             type="button"
                             onClick={handleRefreshHardware}
                             disabled={isDetecting}
-                            className="text-xs font-mono text-on-surface-variant/80 hover:text-brand-accent flex items-center gap-1.5 transition-colors"
+                            className="text-xs font-mono text-on-surface-variant/80 [@media(hover:hover)_and_(pointer:fine)]:hover:text-brand-accent flex items-center gap-1.5 transition-[color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer disabled:pointer-events-none disabled:opacity-50"
                         >
                             <IconUiRefresh className={cn("w-3.5 h-3.5", isDetecting && "animate-spin text-brand-accent")} />
                             <span className="hidden sm:inline">Re-analizar</span>
@@ -137,7 +137,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                 <div className="p-5 md:p-6 space-y-5">
                     {/* Tarjetas de Telemetría */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
                             <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">GPU</span>
                             <p className="text-xs font-bold text-on-surface truncate tabular-nums" title={hardwareSpecs?.gpuRenderer || "GPU"}>
                                 {hardwareSpecs?.gpuRenderer || "Predeterminada"}
@@ -147,7 +147,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             </span>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
                             <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">CPU</span>
                             <p className="text-xs font-bold text-on-surface truncate tabular-nums">
                                 {hardwareSpecs?.cpuCores ? `${hardwareSpecs.cpuCores} Núcleos` : "Compatible"}
@@ -155,7 +155,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             <span className="text-4xs font-mono text-cyan-400">Hilos: Auto</span>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
                             <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">RAM</span>
                             <p className="text-xs font-bold text-on-surface truncate tabular-nums">
                                 {hardwareSpecs?.deviceMemoryGB ? `${hardwareSpecs.deviceMemoryGB} GB` : "RAM OK"}
@@ -163,7 +163,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                             <span className="text-4xs font-mono text-purple-400">Buffer Dinámico</span>
                         </div>
 
-                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
+                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[border-color,background-color] duration-fast ease-smooth-out space-y-0.5">
                             <span className="text-3xs font-mono uppercase text-on-surface-variant/60 block">Modo Activo</span>
                             <p key={performanceProfile} className="text-xs font-bold text-on-surface uppercase truncate animate-text-swap-in">
                                 {performanceProfile}
@@ -188,7 +188,7 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                                 key={p.id}
                                                 type="button"
                                                 whileHover={{ scale: 1.025, y: -2 }}
-                                                whileTap={{ scale: 0.97 }}
+                                                whileTap={{ scale: 0.96 }}
                                                 transition={cardSpring}
                                                 onClick={() => {
                                                     field.onChange(p.id)
@@ -199,13 +199,13 @@ export function PerformanceTab({ control, searchQuery }: PerformanceTabProps) {
                                                     "flex flex-col p-3.5 rounded-xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                                     isSelected
                                                         ? "bg-brand-accent/10 border-brand-accent shadow-[0_0_16px_hsl(var(--brand-accent)/0.25)] ring-1 ring-brand-accent/40"
-                                                        : "bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
+                                                        : "bg-white/[0.02] border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04]"
                                                 )}
                                             >
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div className={cn(
                                                         "w-7 h-7 rounded-lg flex items-center justify-center border transition-[background-color,border-color,color,box-shadow] duration-fast ease-smooth-out",
-                                                        isSelected ? "bg-brand-accent/20 border-brand-accent/40 text-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.3)]" : "bg-white/5 border-white/10 text-on-surface-variant group-hover:scale-105"
+                                                        isSelected ? "bg-brand-accent/20 border-brand-accent/40 text-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.3)]" : "bg-white/5 border-white/10 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
                                                     )}>
                                                         <ProfileIcon className="w-3.5 h-3.5" />
                                                     </div>
@@ -393,7 +393,7 @@ function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormValues
                         key={opt.value}
                         type="button"
                         whileHover={{ scale: 1.015, y: -1 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileTap={{ scale: 0.96 }}
                         transition={cardSpring}
                         onClick={() => setPolicy(opt.value)}
                         aria-pressed={isSelected}
@@ -401,7 +401,7 @@ function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormValues
                             "flex flex-col p-4 rounded-xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                             isSelected
                                 ? "bg-brand-accent/10 border-brand-accent shadow-[0_0_15px_hsl(var(--brand-accent)/0.2)] ring-1 ring-brand-accent/40"
-                                : "bg-white/[0.02] border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
+                                : "bg-white/[0.02] border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04]"
                         )}
                     >
                         <div className="flex items-center justify-between mb-2">
@@ -478,7 +478,7 @@ function FFmpegStatusSection() {
                     type="button"
                     onClick={handleInstall}
                     disabled={isInstalling}
-                    className="shrink-0 px-3.5 py-2 rounded-lg bg-brand-accent text-on-primary font-bold text-xs flex items-center gap-1.5 shadow-elevation-1 active:scale-95 disabled:opacity-50"
+                    className="shrink-0 px-3.5 py-2 rounded-lg bg-brand-accent text-on-primary font-bold text-xs flex items-center gap-1.5 shadow-elevation-1 transition-[filter,transform,opacity] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                 >
                     {isInstalling ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconUiDownload className="w-3.5 h-3.5" />}
                     <span>{isInstalling ? "Instalando..." : "Descargar e Instalar FFmpeg"}</span>

@@ -47,11 +47,11 @@ export const MomentDetailsModal: React.FC<MomentDetailsModalProps> = ({
       }}
       title={<span className="sr-only">Detalles del momento: {milestone.title}</span>}
       hideCloseButton
-      contentClass="max-w-xl p-0 overflow-hidden bg-zinc-950/95 border border-white/15 backdrop-blur-2xl rounded-2xl shadow-elevation-5"
+      contentClass="max-w-xl p-0 overflow-hidden bg-surface-container-lowest/95 border border-white/15 backdrop-blur-2xl rounded-2xl shadow-elevation-5"
     >
       <div className="flex flex-col">
         {/* Cabecera visual con miniatura ampliada 16:9 */}
-        <div className="relative w-full aspect-video bg-zinc-900 overflow-hidden">
+        <div className="relative w-full aspect-video bg-surface-container-high overflow-hidden">
           <EpisodeThumbnailImg
             volume={volume}
             milestone={milestone}
@@ -59,7 +59,7 @@ export const MomentDetailsModal: React.FC<MomentDetailsModalProps> = ({
             tmdbSize="w780"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-black/60 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/30 to-black/60 pointer-events-none" />
 
           {/* Badges superiores */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
@@ -79,7 +79,7 @@ export const MomentDetailsModal: React.FC<MomentDetailsModalProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Cerrar detalles del momento"
-              className="pointer-events-auto w-11 h-11 rounded-full bg-black/70 hover:bg-black/90 border border-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-transform active:scale-90"
+              className="pointer-events-auto w-11 h-11 rounded-full bg-black/70 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-black/90 border border-white/20 text-white/80 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center cursor-pointer transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95"
             >
               <X className="w-4 h-4" />
             </button>
@@ -90,7 +90,7 @@ export const MomentDetailsModal: React.FC<MomentDetailsModalProps> = ({
             type="button"
             onClick={handlePlay}
             aria-label={`Reproducir momento en ${formattedTime ?? 'inicio'}`}
-            className="group/center-play absolute inset-0 m-auto w-14 h-14 rounded-full bg-brand-accent/90 hover:bg-brand-accent text-zinc-950 flex items-center justify-center shadow-brand-primary cursor-pointer transition-transform duration-200 hover:scale-110 active:scale-95"
+            className="group/center-play absolute inset-0 m-auto w-14 h-14 rounded-full bg-brand-accent/90 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-brand-accent text-black flex items-center justify-center shadow-brand-primary cursor-pointer transition-[transform,background-color] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:scale-105 active:scale-95"
           >
             <Play className="w-6 h-6 fill-current ml-0.5" />
           </button>
@@ -154,14 +154,14 @@ export const MomentDetailsModal: React.FC<MomentDetailsModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="min-h-[38px] px-4 rounded-full border border-white/15 bg-white/[0.04] hover:bg-white/10 text-white/80 hover:text-white text-xs font-mono transition-colors active:scale-95"
+                className="cursor-pointer min-h-[38px] px-4 rounded-full border border-white/15 bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 text-white/80 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white text-xs font-mono transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95"
               >
                 Cerrar
               </button>
               <button
                 type="button"
                 onClick={handlePlay}
-                className="min-h-[38px] px-5 rounded-full bg-brand-accent hover:brightness-110 text-zinc-950 font-display font-black uppercase text-xs flex items-center gap-2 cursor-pointer shadow-brand-primary active:scale-95 transition-transform"
+                className="min-h-[38px] px-5 rounded-full bg-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 text-black font-display font-black uppercase text-xs flex items-center gap-2 cursor-pointer shadow-brand-primary active:scale-95 transition-[transform,filter] duration-fast ease-out-strong"
               >
                 <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                 <span>Reproducir{formattedTime ? ` · ${formattedTime}` : ''}</span>

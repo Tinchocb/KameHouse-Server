@@ -10,7 +10,7 @@ import { useThemeSettings } from "@/lib/theme/theme-hooks"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { WatchProgressBar } from "@/components/ui/watch-progress-bar"
-import { MagneticIndicator, ElasticCounter } from "@/components/ui/kinetics"
+import { MagneticIndicator, ElasticCounter, IconSwap } from "@/components/ui/kinetics"
 import { useRevealRef } from "@/components/ui/kinetics/scroll-reveal"
 import { useQueueStore } from "@/lib/store"
 import { isImageLoaded } from "@/lib/helpers/images"
@@ -70,6 +70,23 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
     },
   })
 
+  const filterCounts = React.useMemo(() => {
+    let canonCount = 0
+    let fillerCount = 0
+    let unwatchedCount = 0
+    for (const ep of episodes) {
+      if (ep.episodeType === "Filler") fillerCount++
+      else canonCount++
+      if (!ep.isWatched) unwatchedCount++
+    }
+    return {
+      all: episodes.length,
+      canon: canonCount,
+      filler: fillerCount,
+      unwatched: unwatchedCount,
+    }
+  }, [episodes])
+
   const filteredEpisodes = React.useMemo(() => {
     let result = episodes
     if (typeFilter === "canon") result = result.filter(ep => ep.episodeType !== "Filler")
@@ -116,10 +133,10 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
     <div className="flex flex-col gap-4">
       {/* ── Saga Metrics Header ──────────────────────────────────────────────── */}
       {sagaProgress && sagaProgress.total > 0 && (
-        <div className="flex items-center justify-between gap-4 px-4 py-3 min-h-[60px] rounded-2xl bg-gradient-to-r from-zinc-900/60 via-zinc-900/40 to-zinc-950/60 border border-white/[0.12] shadow-[0_4px_20px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-4 px-4 py-3 min-h-[60px] rounded-2xl bg-gradient-to-r from-surface-container-high/60 via-surface-container/40 to-surface-container-lowest/60 border border-white/[0.12] shadow-[0_4px_20px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))] animate-pulse shrink-0" />
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-300 truncate inline-flex items-center gap-1">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-on-surface-variant truncate inline-flex items-center gap-1">
               <span className="text-white font-extrabold"><ElasticCounter value={sagaProgress.watched} /></span> / {sagaProgress.total} EPISODIOS VISTOS
             </span>
             {fillerStats && fillerStats.filler > 0 && (
@@ -151,7 +168,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
           <button
             type="button"
             onClick={() => setTypeFilter("all")}
-            className="text-3xs font-mono font-bold text-on-surface-variant hover:text-white uppercase tracking-wider shrink-0 transition-colors cursor-pointer"
+            className="text-3xs font-mono font-bold text-on-surface-variant hover:text-white uppercase tracking-wider shrink-0 transition-[color,transform] duration-fast active:scale-95 cursor-pointer"
           >
             Ver todos
           </button>
@@ -165,7 +182,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
           {/* z-10: el input tiene backdrop-blur (contexto de apilamiento propio) y,
               al venir después en el DOM, se pintaba encima del ícono. */}
           <div
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 w-4 h-4 text-zinc-400 pointer-events-none"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 w-4 h-4 text-on-surface-variant/70 pointer-events-none"
           >
             <IconNavigationSearch className="w-4 h-4" />
           </div>
@@ -178,17 +195,17 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
             onBlur={() => setIsSearchFocused(false)}
             className={cn(
               "w-full pl-10 pr-10 py-2.5 rounded-full text-xs font-medium",
-              "bg-zinc-900/50 border border-white/[0.12] backdrop-blur-xl text-white placeholder:text-zinc-500 shadow-glass-highlight-sm",
-              "focus:outline-none focus:ring-0 focus:border-white/40 focus:bg-zinc-900/80",
+              "bg-surface-container-lowest/50 border border-white/[0.12] backdrop-blur-xl text-white placeholder:text-on-surface-variant/50 shadow-glass-highlight-sm",
+              "focus:outline-none focus:ring-0 focus:border-white/40 focus:bg-surface-container-lowest/80",
               "hover:border-white/25",
               "transition-[background-color,border-color,box-shadow] duration-200 ease-out",
-              isSearchFocused && "bg-zinc-900/90 border-white/50 shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.08)]",
+              isSearchFocused && "bg-surface-container-lowest/90 border-white/50 shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.08)]",
             )}
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors cursor-pointer animate-scale-in"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white active:scale-95 transition-[color,transform] duration-fast ease-smooth-out cursor-pointer animate-scale-in"
               aria-label="Limpiar búsqueda"
             >
               <IconUiClose className="w-4 h-4" />
@@ -197,12 +214,12 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
         </div>
 
         {/* Type Filter Capsule */}
-        <div className="flex bg-zinc-900/50 border border-white/[0.12] rounded-full p-1 shadow-glass-highlight-sm backdrop-blur-xl overflow-x-auto hide-scrollbar shrink-0 gap-1">
+        <div className="flex bg-surface-container-lowest/50 border border-white/[0.12] rounded-full p-1 shadow-glass-highlight-sm backdrop-blur-xl overflow-x-auto hide-scrollbar shrink-0 gap-1">
           {[
-            { id: "all" as const, label: "Todos" },
-            { id: "canon" as const, label: "Canon" },
-            { id: "filler" as const, label: "Relleno" },
-            { id: "unwatched" as const, label: "No vistos" }
+            { id: "all" as const, label: "Todos", count: filterCounts.all },
+            { id: "canon" as const, label: "Canon", count: filterCounts.canon },
+            { id: "filler" as const, label: "Relleno", count: filterCounts.filler },
+            { id: "unwatched" as const, label: "No vistos", count: filterCounts.unwatched }
           ].map(f => {
             const isSelected = typeFilter === f.id
             return (
@@ -210,10 +227,10 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
                 key={f.id}
                 onClick={() => setTypeFilter(f.id)}
                 className={cn(
-                  "relative px-3.5 py-1 text-xs font-mono font-bold uppercase tracking-wider rounded-full transition-colors whitespace-nowrap cursor-pointer select-none",
+                  "relative px-3 sm:px-3.5 py-1 text-xs font-mono font-bold uppercase tracking-wider rounded-full transition-[color,background-color,transform] duration-fast ease-out-strong active:scale-95 whitespace-nowrap cursor-pointer select-none inline-flex items-center gap-1.5",
                   isSelected
-                    ? "text-zinc-950 font-extrabold"
-                    : "text-zinc-400 hover:text-white hover:bg-white/[0.08]"
+                    ? "text-black font-extrabold"
+                    : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08]"
                 )}
               >
                 {isSelected && (
@@ -223,6 +240,16 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
                   />
                 )}
                 <span className="relative z-10">{f.label}</span>
+                <span
+                  className={cn(
+                    "relative z-10 text-3xs font-mono tabular-nums px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center font-bold leading-none transition-colors duration-fast",
+                    isSelected
+                      ? "bg-black/15 text-black"
+                      : "bg-white/[0.08] text-on-surface-variant/80 group-hover:text-white"
+                  )}
+                >
+                  <ElasticCounter value={f.count} />
+                </span>
               </button>
             )
           })}
@@ -303,7 +330,7 @@ interface EpisodeVirtualRowProps {
  */
 function ThumbnailPlaceholder({ number, loading = false }: { number: number; loading?: boolean }) {
     return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-zinc-900 overflow-hidden">
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-surface-container-high overflow-hidden">
             {loading && (
                 <div
                     aria-hidden
@@ -311,9 +338,9 @@ function ThumbnailPlaceholder({ number, loading = false }: { number: number; loa
                 />
             )}
             <div className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center mb-1.5 shadow-sm">
-                <IconMediaPlay className="w-4 h-4 ml-0.5 text-zinc-300" />
+                <IconMediaPlay className="w-4 h-4 ml-0.5 text-on-surface-variant" />
             </div>
-            <span className="text-2xs font-mono font-bold uppercase tracking-wider text-zinc-400">EP {number}</span>
+            <span className="text-2xs font-mono font-bold uppercase tracking-wider text-on-surface-variant">EP {number}</span>
         </div>
     )
 }
@@ -431,15 +458,15 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                             "group h-full w-full flex items-stretch gap-2 p-3 sm:p-3.5 rounded-2xl select-none",
                             "border transition-colors duration-200",
                             isHighlighted
-                                ? "bg-zinc-900/95 border-brand-accent/50 shadow-[0_6px_28px_rgba(0,0,0,0.7),0_0_16px_hsl(var(--brand-accent)/0.2)] ring-1 ring-brand-accent/30"
-                                : "bg-gradient-to-r from-zinc-900/50 via-zinc-900/35 to-zinc-950/50 border-white/[0.09] hover:border-white/20 hover:bg-zinc-900/70 shadow-[shadow:0_6px_24px_rgba(0,0,0,0.5),var(--glass-highlight-sm)]"
+                                ? "bg-surface-container-highest/95 border-brand-accent/50 shadow-[0_6px_28px_rgba(0,0,0,0.7),0_0_16px_hsl(var(--brand-accent)/0.2)] ring-1 ring-brand-accent/30"
+                                : "bg-gradient-to-r from-surface-container-high/50 via-surface-container/35 to-surface-container-lowest/50 border-white/[0.09] hover:border-white/20 hover:bg-surface-container-high/70 shadow-[shadow:0_6px_24px_rgba(0,0,0,0.5),var(--glass-highlight-sm)]"
                         )}
                     >
                         <button
                             type="button"
                             onClick={handlePlay}
                             aria-label={`Reproducir episodio ${ep.number}, ${displayTitle}${ep.isWatched ? ", visto" : ""}`}
-                            className="flex flex-1 min-w-0 items-stretch gap-3.5 sm:gap-5 text-left cursor-pointer rounded-xl transition-transform duration-150 ease-out-strong active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
+                            className="flex flex-1 min-w-0 items-stretch gap-3.5 sm:gap-5 text-left cursor-pointer rounded-xl transition-transform duration-fast ease-out-strong active:scale-[0.985] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
                         >
                         {/* Thumbnail en proporción cinematográfica 16/9 */}
                         <div className="relative aspect-[16/9] w-32 sm:w-48 md:w-56 lg:w-60 shrink-0 rounded-xl overflow-hidden border border-white/10 bg-surface-container-high shadow-elevation-2">
@@ -461,7 +488,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                     // La miniatura mide 128–240 px: sin esto el srcSet de TMDB
                                     // bajaba la variante de 500/780 px y cada foto tardaba el doble.
                                     sizes={THUMBNAIL_SIZES}
-                                    imgClassName="w-full h-full object-cover group-hover:scale-105"
+                                    imgClassName="w-full h-full object-cover [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
                                     // Opacidad (entrada) y transform (hover) juntas. En línea porque
                                     // las clases de duración/curva chocaban con las de DeferredImage
                                     // y ganaba la que venía después en el CSS: la foto aparecía de golpe.
@@ -483,14 +510,14 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                 aria-hidden
                                 className="absolute inset-0 z-20 hidden [@media(hover:hover)_and_(pointer:fine)]:flex items-center justify-center pointer-events-none"
                             >
-                                <span className="w-10 h-10 rounded-full bg-black/60 border border-white/25 text-white flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100 transition-[opacity,transform] duration-200 ease-out-strong">
+                                <span className="w-10 h-10 rounded-full bg-black/60 border border-white/25 text-white flex items-center justify-center opacity-0 scale-90 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100 transition-[opacity,transform] duration-200 ease-out-strong">
                                     <IconMediaPlay className="w-4 h-4 ml-0.5" />
                                 </span>
                             </div>
 
                             {/* Badge de "VISTO" si ya fue reproducido */}
                             {ep.isWatched && (
-                                <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/85 border border-emerald-500/30 text-3xs font-mono font-bold text-emerald-400 flex items-center gap-1 shadow-sm">
+                                <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/85 border border-status-success/30 text-3xs font-mono font-bold text-status-success flex items-center gap-1 shadow-sm">
                                     <svg className="w-3 h-3 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
@@ -512,7 +539,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                         {/* Episode Info */}
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                             {/* Title over Episode */}
-                            <span id={`episode-title-${ep.number}`} className="block font-display text-sm sm:text-base font-bold uppercase tracking-wide leading-snug line-clamp-1 sm:line-clamp-2 text-zinc-100 group-hover:text-white transition-colors">
+                            <span id={`episode-title-${ep.number}`} className="block font-display text-sm sm:text-base font-bold uppercase tracking-wide leading-snug line-clamp-1 sm:line-clamp-2 text-white group-hover:text-white transition-colors">
                                 {displayTitle}
                             </span>
 
@@ -521,7 +548,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                 <span className="px-2 py-0.5 rounded-md bg-brand-accent/15 border border-brand-accent/30 text-brand-accent text-2xs font-mono font-bold tracking-wider">
                                     EP {ep.number}
                                 </span>
-                                <span className="text-zinc-500 text-xs font-mono font-medium">
+                                <span className="text-on-surface-variant text-xs font-mono font-medium">
                                     {ep.duration ? `${ep.duration} min` : "24 min"}
                                 </span>
 
@@ -540,7 +567,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
 
                             {/* Description */}
                             {!themeUseLegacyEpisodeCard && !themeHideEpisodeCardDescription && ep.description && (
-                                <span className="text-xs sm:text-sm text-zinc-400 line-clamp-2 leading-relaxed mt-1">
+                                <span className="text-xs sm:text-sm text-on-surface-variant line-clamp-2 leading-relaxed mt-1">
                                     {ep.description}
                                 </span>
                             )}
@@ -554,33 +581,26 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                         aria-label={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
                                         title="Añadir a la cola"
                                         className={cn(
-                                            "relative min-w-[44px] min-h-[44px] w-11 h-11 rounded-full border flex items-center justify-center active:scale-[0.94] transition-[transform,color,background-color,border-color] duration-base ease-out-strong cursor-pointer",
+                                            "relative min-w-[44px] min-h-[44px] w-11 h-11 rounded-full border flex items-center justify-center active:scale-95 transition-[transform,color,background-color,border-color] duration-fast ease-out-strong cursor-pointer",
                                             justQueued
-                                                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                                                : "bg-white/[0.06] border-white/15 text-zinc-300 hover:bg-white/[0.12] hover:text-white hover:border-white/30"
+                                                ? "bg-status-success/15 border-status-success/40 text-status-success"
+                                                : "bg-white/[0.06] border-white/15 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.12] [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30"
                                         )}
                                     >
-                                        {/* Cambio de ícono con fundido, escala y un poco de blur para que se lea como una sola transformación */}
-                                        <IconUiListPlus
-                                            className={cn(
-                                                "absolute w-4 h-4 transition-[opacity,transform,filter] duration-200 ease-out-strong",
-                                                justQueued ? "opacity-0 scale-50 blur-[2px]" : "opacity-100 scale-100 blur-0"
+                                        <IconSwap swapKey={justQueued ? "check" : "queue"} className="flex items-center justify-center">
+                                            {justQueued ? (
+                                                <IconUiCheck className="w-4 h-4" />
+                                            ) : (
+                                                <IconUiListPlus className="w-4 h-4" />
                                             )}
-                                        />
-                                        <IconUiCheck
-                                            aria-hidden
-                                            className={cn(
-                                                "absolute w-4 h-4 transition-[opacity,transform,filter] duration-200 ease-out-strong",
-                                                justQueued ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-50 blur-[2px]"
-                                            )}
-                                        />
+                                        </IconSwap>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handlePlay}
                                         aria-label="Reproducir episodio"
                                         title="Reproducir"
-                                        className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-brand-accent text-on-primary flex items-center justify-center hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
+                                        className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-brand-accent text-on-primary flex items-center justify-center [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-fast ease-out-strong shadow-brand-primary cursor-pointer"
                                     >
                                         <IconMediaPlay className="w-4 h-4 ml-px" />
                                     </button>

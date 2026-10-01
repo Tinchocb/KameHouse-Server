@@ -9,7 +9,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const InputAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Input__root",
-        "flex h-12 w-full rounded-none border border-white/15 bg-surface-container-lowest/60 backdrop-blur-overlay-sm px-3 py-2 text-base md:text-sm text-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:border-white/50 focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 transition duration-base"
+        "flex h-12 w-full rounded-none border border-white/15 bg-surface-container-lowest/60 backdrop-blur-overlay-sm px-3 py-2 text-base md:text-sm text-white placeholder:text-on-surface-variant/50 focus-visible:outline-none focus-visible:border-white/50 focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 transition-[border-color,background-color,box-shadow] duration-fast ease-smooth-out"
     ], {
         variants: {
             size: {
@@ -18,13 +18,13 @@ export const InputAnatomy = defineStyleAnatomy({
                 lg: "h-14 px-4 py-3 text-base",
             },
             intent: {
-                basic: "hover:border-white/40",
+                basic: "[@media(hover:hover)_and_(pointer:fine)]:hover:border-white/40",
                 filled: "bg-surface-container-low border-transparent focus-within:bg-surface-container-lowest focus-within:border-white shadow-none",
                 unstyled: "bg-transparent hover:bg-transparent border-0 shadow-none focus-within:ring-0 rounded-none p-0 text-base",
             },
             hasError: {
                 false: null,
-                true: "border-status-error hover:border-status-error focus-within:border-status-error",
+                true: "border-status-error [@media(hover:hover)_and_(pointer:fine)]:hover:border-status-error focus-within:border-status-error",
             },
             isDisabled: {
                 false: null,
@@ -116,7 +116,7 @@ export type InputStyling = Omit<VariantProps<typeof InputAnatomy.root>,
 export const InputAddonsAnatomy = defineStyleAnatomy({
     icon: cva([
         "UI-Input__addons--icon",
-        "pointer-events-none absolute inset-y-0 grid place-content-center text-zinc-500",
+        "pointer-events-none absolute inset-y-0 grid place-content-center text-on-surface-variant",
         "!z-[1]",
     ], {
         variants: {
@@ -131,7 +131,7 @@ export const InputAddonsAnatomy = defineStyleAnatomy({
     }),
     addon: cva([
         "UI-Input__addons--addon",
-        "bg-zinc-900 inline-flex items-center flex-none px-3 border border-white/10 text-white shadow-none text-sm sm:text-base",
+        "bg-surface-container-high inline-flex items-center flex-none px-3 border border-white/10 text-white shadow-none text-sm sm:text-base",
     ], {
         variants: {
             size: { sm: "text-sm", md: "text-base", lg: "text-lg" },

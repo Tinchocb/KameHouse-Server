@@ -63,8 +63,8 @@ export const VolumeDetailsTabs: React.FC<VolumeDetailsTabsProps> = memo(({
                 sounds.playSelect();
                 setActiveTab(tab);
               }}
-              className={`relative min-h-[44px] px-3.5 rounded-full text-xs font-mono uppercase font-bold tracking-wider transition-colors duration-150 cursor-pointer select-none flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
-                isActive ? 'text-brand-accent' : 'text-on-surface-variant hover:text-on-surface hover:bg-white/10'
+              className={`relative min-h-[44px] px-3.5 rounded-full text-xs font-mono uppercase font-bold tracking-wider transition-[color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer select-none flex items-center justify-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
+                isActive ? 'text-brand-accent' : 'text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10'
               }`}
             >
               <MagneticIndicator

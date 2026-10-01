@@ -64,7 +64,7 @@ export const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
                 }}
                 onMouseEnter={handlePrefetch}
                 onFocus={handlePrefetch}
-                className="relative block aspect-[2/3] w-full text-left overflow-hidden rounded-2xl border border-white/15 border-t-white/35 border-b-white/10 bg-surface-container/20 shadow-elevation-2 cursor-pointer transition-[transform,border-color,box-shadow] duration-base ease-smooth-out hover:-translate-y-1 active:scale-95"
+                className="relative block aspect-[2/3] w-full text-left overflow-hidden rounded-2xl border border-white/15 border-t-white/35 border-b-white/10 bg-surface-container/20 shadow-elevation-2 cursor-pointer transition-[transform,border-color,box-shadow] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-1 active:scale-95"
             >
                 {posterSrc ? (
                     <DeferredImage
@@ -72,15 +72,15 @@ export const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
                         lowResSrc={posterLowSrc}
                         alt={item.title}
                         priority={index < 2}
-                        className="h-full w-full object-cover transition-transform duration-base ease-smooth-out group-hover:scale-105"
+                        className="h-full w-full object-cover transition-transform duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
                     />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-surface-container-high to-surface-container p-4 text-center font-display text-lg uppercase tracking-wide text-on-surface-variant">
                         {item.title}
                     </div>
                 )}
-                <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent opacity-80 transition-opacity duration-base group-hover:opacity-90" />
-                <div aria-hidden className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-none group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/15 to-transparent z-10 pointer-events-none" />
+                <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent opacity-80 transition-opacity duration-base [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-90" />
+                <div aria-hidden className="absolute inset-0 -translate-x-full [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-full transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover:transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-white/15 to-transparent z-10 pointer-events-none" />
 
                 <div className="absolute top-2.5 left-2.5 rounded-full border border-white/15 bg-black/75 px-2.5 py-1 font-mono text-3xs font-bold uppercase tracking-widest text-white shadow-sm">
                     {volLabel}
@@ -107,7 +107,7 @@ export const SeriesPosterGridItem = memo(function SeriesPosterGridItem({
 
                 <div className="absolute inset-x-0 bottom-0 h-1 bg-white/15 overflow-hidden">
                     <div
-                        className="h-full w-full rounded-full origin-left transition-transform duration-300 ease-out"
+                        className="h-full w-full rounded-full origin-left transition-transform duration-base ease-smooth-out"
                         style={{
                             transform: `scaleX(${Math.min(Math.max(item.progress, 0), 100) / 100})`,
                             background: getSeriesEraAccent(item.seriesId),

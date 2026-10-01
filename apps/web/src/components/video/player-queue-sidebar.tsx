@@ -55,7 +55,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                 transition={itemSpring}
                                 className={cn(
                                     "w-full flex items-center gap-1 p-2 rounded-xl transition-colors duration-150 group relative",
-                                    isCurrent ? "bg-white/10" : "hover:bg-white/[0.06]"
+                                    isCurrent ? "bg-white/10" : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06]"
                                 )}
                             >
                                 {/* Clickable Area to play */}
@@ -67,7 +67,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                     }}
                                     aria-label={`Reproducir ${item.title}`}
                                     aria-current={isCurrent ? "true" : undefined}
-                                    className="flex-1 min-w-0 flex items-center gap-3 cursor-pointer text-left"
+                                    className="flex-1 min-w-0 flex items-center gap-3 cursor-pointer text-left active:scale-[0.985] transition-transform duration-fast ease-out-strong"
                                 >
                                     {/* Thumbnail */}
                                     <div className="relative w-24 aspect-video rounded-sm overflow-hidden shrink-0 bg-white/5">
@@ -105,7 +105,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                         useQueueStore.getState().removeFromQueue(idx)
                                     }}
                                     aria-label={`Eliminar ${item.title} de la cola`}
-                                    className="w-9 h-9 shrink-0 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 rounded-full transition-[color,background-color,border-color,transform] duration-150 cursor-pointer active:scale-90"
+                                    className="w-9 h-9 shrink-0 flex items-center justify-center text-white/40 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 rounded-full transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out cursor-pointer active:scale-95"
                                     title="Eliminar de la cola"
                                 >
                                     <IconUiClose className="w-4 h-4" />
@@ -135,7 +135,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                         onConfirm={() => {
                             useQueueStore.getState().clearQueue()
                         }}
-                        className="w-full h-10 rounded-full text-xs font-semibold tracking-wide text-on-surface-variant hover:text-white hover:bg-white/10 transition-colors duration-200 cursor-pointer"
+                        className="w-full h-10 rounded-full text-xs font-semibold tracking-wide text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 transition-[color,background-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                     />
                 </div>
             )}

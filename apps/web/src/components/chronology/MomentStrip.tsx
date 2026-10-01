@@ -156,7 +156,7 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
                   aria-controls={`moments-${volume.id}`}
                   disabled={disabled}
                   onClick={() => scrollByPage(direction)}
-                  className="w-8 h-8 rounded-full border border-white/15 bg-white/[0.04] text-white/80 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer transition-all duration-150 active:scale-90 disabled:opacity-25 disabled:pointer-events-none"
+                  className="w-8 h-8 rounded-full border border-white/15 bg-white/[0.04] text-white/80 hover:text-white hover:bg-white/10 flex items-center justify-center cursor-pointer transition-[color,background-color,border-color,transform] duration-fast ease-out-strong active:scale-95 disabled:opacity-25 disabled:pointer-events-none"
                 >
                   <Icon className="w-4 h-4" />
                 </button>
@@ -229,7 +229,7 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
                 className="group/moment flex flex-col w-[184px] sm:w-[204px] shrink-0 snap-start text-left select-none rounded-xl"
               >
                 {/* Miniatura 16:9 con badges limpios desacoplados y botón de detalles */}
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 transition-[box-shadow,transform] duration-200 ease-out group-hover/moment:-translate-y-0.5 group-hover/moment:ring-2 group-hover/moment:ring-[rgb(var(--era,245_158_11)/0.75)] group-hover/moment:shadow-[0_6px_20px_rgba(var(--era,245_158_11)/0.25)] shadow-sm">
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-surface-container-high ring-1 ring-white/10 transition-[box-shadow,transform] duration-fast ease-out-strong group-active/moment:scale-95 [@media(hover:hover)_and_(pointer:fine)]:group-hover/moment:-translate-y-0.5 [@media(hover:hover)_and_(pointer:fine)]:group-hover/moment:ring-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover/moment:ring-[rgb(var(--era,245_158_11)/0.75)] [@media(hover:hover)_and_(pointer:fine)]:group-hover/moment:shadow-[0_6px_20px_rgba(var(--era,245_158_11)/0.25)] shadow-sm">
                   {/* Botón principal de reproducción sobre la miniatura */}
                   <button
                     type="button"
@@ -243,7 +243,7 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
                       startSec={effectiveSeconds}
                       fetchPriority="low"
                       tmdbSize="w300"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover/moment:scale-105"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out [@media(hover:hover)_and_(pointer:fine)]:group-hover/moment:scale-105"
                     />
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
@@ -251,7 +251,7 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
                     {/* Play que emerge en el centro al hacer hover */}
                     <span
                       aria-hidden="true"
-                      className="absolute inset-0 m-auto w-9 h-9 rounded-full bg-brand-accent text-zinc-950 flex items-center justify-center shadow-brand-primary opacity-0 scale-90 transition-[opacity,transform] duration-150 ease-out group-hover/moment:opacity-100 group-hover/moment:scale-100 motion-reduce:transition-none"
+                      className="absolute inset-0 m-auto w-9 h-9 rounded-full bg-brand-accent text-black flex items-center justify-center shadow-brand-primary opacity-0 scale-90 transition-[opacity,transform] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover/moment:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/moment:scale-100 motion-reduce:transition-none"
                     >
                       <Play className="w-4 h-4 fill-current ml-0.5" />
                     </span>
@@ -268,7 +268,7 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
                     onClick={handleOpenDetails}
                     aria-label={`Ver detalles de ${milestone.title}`}
                     title="Ver detalles de la escena"
-                    className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-black/65 hover:bg-black/90 backdrop-blur-md border border-white/20 text-white/80 hover:text-white flex items-center justify-center cursor-pointer transition-all duration-150 hover:scale-105 active:scale-90"
+                    className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-black/65 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-black/90 backdrop-blur-md border border-white/20 text-white/80 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center cursor-pointer transition-[color,background-color,border-color,transform] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:scale-105 active:scale-95"
                   >
                     <Info className="w-3.5 h-3.5" />
                   </button>
@@ -286,7 +286,7 @@ export const MomentStrip: React.FC<MomentStripProps> = memo(
                 <button
                   type="button"
                   onClick={handleClickPlay}
-                  className="mt-2 px-0.5 text-xs font-semibold text-white/95 line-clamp-2 min-h-[2.25rem] leading-snug text-left cursor-pointer transition-colors duration-150 group-hover/moment:text-[rgb(var(--era,245_158_11))] focus-visible:outline-none focus-visible:underline"
+                  className="mt-2 px-0.5 text-xs font-semibold text-white/95 line-clamp-2 min-h-[2.25rem] leading-snug text-left cursor-pointer transition-[color,transform] duration-fast ease-out-strong active:scale-95 [@media(hover:hover)_and_(pointer:fine)]:group-hover/moment:text-[rgb(var(--era,245_158_11))] focus-visible:outline-none focus-visible:underline"
                 >
                   {milestone.title}
                 </button>

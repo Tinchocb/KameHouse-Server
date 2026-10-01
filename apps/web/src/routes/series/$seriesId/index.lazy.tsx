@@ -310,7 +310,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         <button
                             type="button"
                             onClick={() => navigate({ to: "/series" })}
-                            className="min-h-11 px-5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors duration-base cursor-pointer"
+                            className="min-h-11 px-5 rounded-full bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-[background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                         >
                             Volver a Series
                         </button>
@@ -336,7 +336,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 type="button"
                 onClick={() => navigate({ to: "/series" })}
                 aria-label="Volver a series"
-                className="glass-frosted-pill absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-11 h-11 text-white/90 hover:text-white flex items-center justify-center transition hover:scale-105 active:scale-95 cursor-pointer"
+                className="glass-frosted-pill absolute top-4 left-4 sm:left-6 md:left-8 lg:left-10 z-30 w-11 h-11 text-white/90 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center transition-[transform,color,background-color] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:scale-105 active:scale-95 cursor-pointer"
             >
                 <IconNavigationChevronLeft className="w-4 h-4" />
             </button>
@@ -429,7 +429,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         </h3>
                         <button
                             onClick={() => setMobileSagasOpen(false)}
-                            className="p-1.5 rounded-full text-on-surface-variant hover:text-on-surface active:scale-95 cursor-pointer"
+                            aria-label="Cerrar panel de sagas"
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface transition-[color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer"
                         >
                             <IconUiClose className="w-5 h-5" />
                         </button>

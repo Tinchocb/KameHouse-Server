@@ -46,7 +46,7 @@ export const BlurText = React.memo(function BlurText({
             return (
                 <button
                     type="button"
-                    className={cn("text-left bg-transparent border-0 p-0 [font:inherit] cursor-pointer", className)}
+                    className={cn("text-left bg-transparent border-0 p-0 [font:inherit] cursor-pointer active:scale-[0.98] transition-transform duration-fast ease-out-strong focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-accent/50 rounded-sm", className)}
                     style={style}
                     onClick={onClick}
                 >
@@ -94,7 +94,7 @@ export const BlurText = React.memo(function BlurText({
         return (
             <button
                 type="button"
-                className={cn("inline-flex flex-wrap text-left bg-transparent border-0 p-0 [font:inherit] cursor-pointer", className)}
+                className={cn("inline-flex flex-wrap text-left bg-transparent border-0 p-0 [font:inherit] cursor-pointer active:scale-[0.98] transition-transform duration-fast ease-out-strong focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-accent/50 rounded-sm", className)}
                 style={style}
                 onClick={onClick}
             >

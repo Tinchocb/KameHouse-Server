@@ -151,7 +151,7 @@ export function LoadingOverlayWithLogo({
                                 }}
                                 intent="primary-glass"
                                 size="sm"
-                                className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold hover:bg-white/15"
+                                className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/15 cursor-pointer active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out"
                                 leftIcon={<IconUiRefresh className="w-3.5 h-3.5" />}
                             >
                                 Reintentar
@@ -160,7 +160,7 @@ export function LoadingOverlayWithLogo({
                                 onClick={() => { window.location.href = "/settings" }}
                                 intent="gray-glass"
                                 size="sm"
-                                className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold"
+                                className="flex-1 rounded-xl uppercase tracking-wider text-xs font-semibold cursor-pointer active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out"
                                 leftIcon={<IconNavigationSettings className="w-3.5 h-3.5" />}
                             >
                                 Ajustes

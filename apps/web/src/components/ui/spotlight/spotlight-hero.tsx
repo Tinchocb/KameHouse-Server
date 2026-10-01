@@ -265,14 +265,14 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                     className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] sm:[mask-image:none]"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <span className="text-3xs font-mono uppercase tracking-wider text-zinc-400 font-bold mr-1 flex items-center gap-1 shrink-0">
+                                    <span className="text-3xs font-mono uppercase tracking-wider text-on-surface-variant font-bold mr-1 flex items-center gap-1 shrink-0">
                                         <IconNavigationLayers size={11} className="text-[var(--spotlight-title-hover)]" /> Sagas:
                                     </span>
                                     {activeEraSagas.slice(0, 4).map((saga) => (
                                         <button
                                             key={saga.id}
                                             onClick={() => onNavigateSaga(activeEraSeriesId, saga.id)}
-                                            className="px-2.5 py-1 rounded-full text-3xs sm:text-2xs font-semibold sectionbar sectionbar-pill hover:border-white/30 hover:border-t-white/50 text-zinc-300 hover:text-white transition-[color,background-color,border-color,transform,box-shadow] cursor-pointer select-none active:scale-95 truncate max-w-[160px] shrink-0"
+                                            className="px-2.5 py-1 rounded-full text-3xs sm:text-2xs font-semibold sectionbar sectionbar-pill hover:border-white/30 hover:border-t-white/50 text-on-surface-variant hover:text-white transition-[color,background-color,border-color,transform,box-shadow] cursor-pointer select-none active:scale-95 truncate max-w-[160px] shrink-0"
                                             title={`Ir a ${saga.title}`}
                                         >
                                             {shortSagaTitle(saga.title)}
@@ -292,7 +292,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                     onNavigateHero()
                                 }}
                                 rippleColor="rgba(0, 0, 0, 0.22)"
-                                className="flex items-center justify-center bg-white hover:bg-zinc-100 text-zinc-950 font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-5 sm:px-7 rounded-full font-display gap-2 cursor-pointer whitespace-nowrap border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
+                                className="flex items-center justify-center bg-white hover:bg-white/90 text-black font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-5 sm:px-7 rounded-full font-display gap-2 cursor-pointer whitespace-nowrap border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
                             >
                                 <IconMediaPlay size={15} fill="currentColor" className="shrink-0" />
                                 <span>Reproducir</span>
@@ -304,7 +304,7 @@ export const SpotlightHero = React.memo(function SpotlightHero({
                                     onNavigateHero()
                                 }}
                                 rippleColor="rgba(255, 255, 255, 0.2)"
-                                className="glass-frosted-pill flex items-center justify-center text-white font-bold text-xs sm:text-sm uppercase tracking-wider font-display py-2.5 px-4 sm:px-5 gap-2 cursor-pointer whitespace-nowrap shadow-glass-highlight-md transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
+                                className="glass-frosted-pill flex items-center justify-center text-white font-bold text-xs sm:text-sm uppercase tracking-wider font-display py-2.5 px-4 sm:px-5 gap-2 cursor-pointer whitespace-nowrap shadow-glass-highlight-md transition-[transform,box-shadow,background-color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.03] active:scale-[0.97] active:duration-100 select-none"
                             >
                                 <IconUiInfo size={15} className="shrink-0" />
                                 <span>Más información</span>

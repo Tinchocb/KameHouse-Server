@@ -2,6 +2,7 @@ import React from "react"
 import { useShallow } from "zustand/react/shallow"
 import { useUIStore } from "@/lib/store"
 import { IconMediaPause, IconMediaPlay } from "@/components/ui/icons";
+import { IconSwap } from "@/components/ui/kinetics";
 import { cn } from "@/components/ui/core/styling"
 import { getEraOpening, ERA_OPENINGS_SUBDIR } from "@/lib/config/era_openings"
 import { getServerBaseUrl } from "@/api/client/server-url"
@@ -104,19 +105,21 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
         <button
             onClick={togglePlay}
             className={cn(
-                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm transition duration-base group",
+                "inline-flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-full border shadow-sm transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer group",
                 isPlaying
                     ? "bg-brand-accent/15 border-brand-accent/30 text-brand-accent"
-                    : "bg-surface-container-high/50 border-white/5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container",
+                    : "bg-surface-container-high/50 border-white/5 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container",
                 className
             )}
             title={`Tema de la saga — ${opening.title}`}
         >
-            {isPlaying ? (
-                <IconMediaPause size={14} className="shrink-0" />
-            ) : (
-                <IconMediaPlay size={14} className="shrink-0 ml-0.5 group-hover:text-brand-accent transition-colors" />
-            )}
+            <IconSwap swapKey={isPlaying ? "pause" : "play"} className="shrink-0 flex items-center justify-center">
+                {isPlaying ? (
+                    <IconMediaPause size={14} className="shrink-0" />
+                ) : (
+                    <IconMediaPlay size={14} className="shrink-0 ml-0.5 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent transition-colors duration-fast ease-smooth-out" />
+                )}
+            </IconSwap>
 
             <span className="text-xs font-bold uppercase tracking-wider">
                 {opening.title}
@@ -127,7 +130,7 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
                     {BAR_HEIGHTS.map((height, i) => (
                         <div
                             key={i}
-                            className="w-[2px] bg-brand-accent rounded-full animate-music-bars"
+                            className="w-[2px] bg-brand-accent rounded-full animate-music-bars motion-reduce:animate-none"
                             style={{
                                 animationDelay: `${i * 0.15}s`,
                                 height

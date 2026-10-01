@@ -25,7 +25,8 @@ import { MediaHero } from "@/components/ui/media-hero"
 import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
-import { IconUiListPlus, IconUiCheck, IconUiPlus, IconUiHeart } from "@/components/ui/icons"
+import { IconUiListPlus, IconUiCheck, IconUiPlus, IconUiHeart, IconStatusFileVideo } from "@/components/ui/icons"
+import { SectionBar } from "@/components/ui/sectionbar/sectionbar"
 import { cleanMovieTitle } from "./-MovieCard"
 import { getEntryEraId, getEntryTitle, getMovieLore, getMovieSynopsis } from "./-components/movies-utils"
 import { ERAS, ERA_COLOR_MAP } from "@/lib/config/eras"
@@ -46,6 +47,31 @@ const formatFileSize = (bytes: number) => {
         return `${(mb / 1024).toFixed(2)} GB`
     }
     return `${mb.toFixed(0)} MB`
+}
+
+const getFriendlyLanguage = (lang?: string | null) => {
+    if (!lang) return "Desconocido"
+    const lower = lang.trim().toLowerCase()
+    if (lower === "und" || lower === "unknown") return "Desconocido"
+
+    const codeMap: Record<string, string> = {
+        spa: "es", jpn: "ja", eng: "en", fra: "fr", fre: "fr",
+        ger: "de", deu: "de", ita: "it", por: "pt", rus: "ru",
+        chi: "zh", zho: "zh", kor: "ko", cat: "ca", eus: "eu", glg: "gl",
+    }
+    const normalized = codeMap[lower] || lower
+
+    try {
+        if (typeof Intl !== "undefined" && Intl.DisplayNames) {
+            const dn = new Intl.DisplayNames(["es"], { type: "language", fallback: "none" })
+            const name = dn.of(normalized)
+            if (name) {
+                return name.charAt(0).toUpperCase() + name.slice(1)
+            }
+        }
+    } catch {}
+
+    return lang.toUpperCase()
 }
 
 function MovieDetailPage() {
@@ -156,7 +182,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                         <button
                             type="button"
                             onClick={() => navigate({ to: "/movies" })}
-                            className="min-h-11 px-5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-colors duration-base cursor-pointer"
+                            className="min-h-11 px-5 rounded-full bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/15 border border-white/20 text-xs font-semibold text-white transition-[background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                         >
                             Volver a Películas
                         </button>
@@ -331,12 +357,12 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                 </span>
             )}
             {technicalData?.videoCodec && (
-                <span className="relative z-10 bg-white/[0.08] text-zinc-200 text-3xs font-mono font-semibold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase">
+                <span className="relative z-10 bg-white/[0.08] text-white/90 text-3xs font-mono font-semibold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase">
                     {technicalData.videoCodec}
                 </span>
             )}
             {technicalData?.hasSubtitles && (
-                <span className="relative z-10 bg-white/[0.08] text-zinc-200 text-3xs font-mono font-semibold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase">
+                <span className="relative z-10 bg-white/[0.08] text-white/90 text-3xs font-mono font-semibold tracking-wider px-2.5 py-1 rounded-full border border-white/15 border-t-white/30 border-b-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] uppercase">
                     CC
                 </span>
             )}
@@ -441,6 +467,177 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             {continuityData?.item?.currentTime && continuityData.item.duration && (
                 <div className="w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 -mt-16 mb-6 relative z-20 pointer-events-none">
                     <WatchProgressBar percent={progressPercent} size="hero" animateOnMount />
+                </div>
+            )}
+
+            {/* Secciones estructuradas inferiores con SectionBar */}
+            {(techInfo || eraId) && (
+                <div className="page-container py-8 pb-24 space-y-6 relative z-10">
+                    {/* Ficha técnica y pistas de reproducción (solo con datos reales) */}
+                    {techInfo && (
+                        <SectionBar
+                            label="Especificaciones del Archivo"
+                            description="Detalles de video, pistas de audio y subtítulos del archivo local"
+                            icon={IconStatusFileVideo}
+                            variant="default"
+                        >
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                                {/* Video */}
+                                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-2">
+                                    <span className="text-3xs font-mono font-bold uppercase tracking-wider text-on-surface-variant/70">
+                                        Video
+                                    </span>
+                                    <div className="text-xs font-bold text-on-surface font-mono">
+                                        {streamWidth > 0 && techInfo.videoStream?.height
+                                            ? `${streamWidth} × ${techInfo.videoStream.height}`
+                                            : "Resolución desconocida"}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                        {technicalData?.videoCodec && (
+                                            <span className="px-2 py-0.5 rounded-md text-3xs font-mono font-semibold bg-white/[0.06] text-on-surface-variant border border-white/10">
+                                                {technicalData.videoCodec}
+                                            </span>
+                                        )}
+                                        {technicalData?.hdrLabel ? (
+                                            <span className="px-2 py-0.5 rounded-md text-3xs font-mono font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                                {technicalData.hdrLabel}
+                                            </span>
+                                        ) : (
+                                            <span className="px-2 py-0.5 rounded-md text-3xs font-mono font-semibold bg-white/[0.06] text-on-surface-variant border border-white/10">
+                                                SDR
+                                            </span>
+                                        )}
+                                        {techInfo.videoStream?.frameRate && (
+                                            <span className="px-2 py-0.5 rounded-md text-3xs font-mono font-semibold bg-white/[0.06] text-on-surface-variant border border-white/10">
+                                                {Number(techInfo.videoStream.frameRate).toFixed(2)} fps
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Archivo y Contenedor */}
+                                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-2">
+                                    <span className="text-3xs font-mono font-bold uppercase tracking-wider text-on-surface-variant/70">
+                                        Archivo & Tamaño
+                                    </span>
+                                    <div className="text-xs font-bold text-on-surface font-mono">
+                                        {technicalData?.fileSize || formatFileSize(techInfo.size || 0)}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                        {techInfo.format && (
+                                            <span className="px-2 py-0.5 rounded-md text-3xs font-mono font-semibold bg-white/[0.06] text-on-surface-variant border border-white/10 uppercase">
+                                                {techInfo.format.split(",")[0]}
+                                            </span>
+                                        )}
+                                        {techInfo.bitrate && techInfo.bitrate > 0 && (
+                                            <span className="px-2 py-0.5 rounded-md text-3xs font-mono font-semibold bg-white/[0.06] text-on-surface-variant border border-white/10">
+                                                {techInfo.bitrate >= 1_000_000
+                                                    ? `${(techInfo.bitrate / 1_000_000).toFixed(1)} Mbps`
+                                                    : `${Math.round(techInfo.bitrate / 1000)} kbps`}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Pistas de Audio */}
+                                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-2 sm:col-span-2 lg:col-span-1">
+                                    <span className="text-3xs font-mono font-bold uppercase tracking-wider text-on-surface-variant/70">
+                                        Pistas de Audio ({techInfo.audioStreams?.length ?? 0})
+                                    </span>
+                                    {techInfo.audioStreams && techInfo.audioStreams.length > 0 ? (
+                                        <div className="space-y-1.5 max-h-28 overflow-y-auto no-scrollbar">
+                                            {techInfo.audioStreams.map((audio, i) => (
+                                                <div key={i} className="flex items-center justify-between text-2xs font-mono">
+                                                    <span className="font-semibold text-on-surface truncate">
+                                                        {audio.title || getFriendlyLanguage(audio.language)}
+                                                    </span>
+                                                    <span className="text-on-surface-variant/70 text-3xs ml-2 shrink-0">
+                                                        {[audio.codec?.toUpperCase(), audio.language?.toUpperCase()].filter(Boolean).join(" · ")}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-2xs text-on-surface-variant/50">Sin pistas de audio detectadas</p>
+                                    )}
+                                </div>
+
+                                {/* Subtítulos */}
+                                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-2 sm:col-span-2 lg:col-span-1">
+                                    <span className="text-3xs font-mono font-bold uppercase tracking-wider text-on-surface-variant/70">
+                                        Subtítulos ({(techInfo.subtitleStreams?.length ?? 0) + (techInfo.externalSubtitles?.length ?? 0)})
+                                    </span>
+                                    {((techInfo.subtitleStreams?.length ?? 0) + (techInfo.externalSubtitles?.length ?? 0)) > 0 ? (
+                                        <div className="space-y-1.5 max-h-28 overflow-y-auto no-scrollbar">
+                                            {techInfo.subtitleStreams?.map((sub, i) => (
+                                                <div key={`sub-${i}`} className="flex items-center justify-between text-2xs font-mono">
+                                                    <span className="font-semibold text-on-surface truncate">
+                                                        {sub.title || getFriendlyLanguage(sub.language)}
+                                                    </span>
+                                                    <span className="text-on-surface-variant/70 text-3xs ml-2 shrink-0">
+                                                        {sub.codec?.toUpperCase() || "SUB"}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {techInfo.externalSubtitles?.map((ext, i) => (
+                                                <div key={`ext-${i}`} className="flex items-center justify-between text-2xs font-mono">
+                                                    <span className="font-semibold text-on-surface truncate">
+                                                        {getFriendlyLanguage(ext.language)} (Ext)
+                                                    </span>
+                                                    <span className="text-on-surface-variant/70 text-3xs ml-2 shrink-0 uppercase">
+                                                        {ext.format}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-2xs text-on-surface-variant/50">Sin subtítulos detectados</p>
+                                    )}
+                                </div>
+                            </div>
+                        </SectionBar>
+                    )}
+
+                    {/* Ubicación en la Cronología de Dragon Ball */}
+                    {eraId && (
+                        <SectionBar
+                            label="Ubicación en la Cronología"
+                            description={`Lapso histórico correspondiente a ${eraLabel}`}
+                            icon={Compass}
+                            variant="default"
+                            badge={
+                                <span
+                                    className="px-2.5 py-0.5 rounded-full text-3xs font-mono font-bold uppercase border"
+                                    style={{
+                                        color: eraAccent,
+                                        borderColor: `color-mix(in srgb, ${eraAccent} 35%, transparent)`,
+                                        backgroundColor: `color-mix(in srgb, ${eraAccent} 10%, transparent)`,
+                                    }}
+                                >
+                                    {eraLabel}
+                                </span>
+                            }
+                        >
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4.5 rounded-xl bg-white/[0.03] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-colors duration-fast ease-smooth-out">
+                                <div className="space-y-1">
+                                    <h4 className="text-xs font-bold text-on-surface font-mono uppercase tracking-wider">
+                                        Línea Temporal Universal
+                                    </h4>
+                                    <p className="text-2xs text-on-surface-variant/75 max-w-xl font-medium leading-relaxed">
+                                        Ubicá este filme dentro de los arcos, períodos y eventos de la Cronología oficial de Dragon Ball.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate({ to: "/chronology", search: { era: eraId } })}
+                                    className="inline-flex items-center gap-2 px-5 py-2 rounded-full font-display font-bold text-xs uppercase tracking-wider bg-brand-accent text-on-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-fast ease-out-strong cursor-pointer shrink-0 shadow-elevation-1"
+                                >
+                                    <Compass className="w-4 h-4" />
+                                    Ver en Cronología
+                                </button>
+                            </div>
+                        </SectionBar>
+                    )}
                 </div>
             )}
 

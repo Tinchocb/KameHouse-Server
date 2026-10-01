@@ -84,7 +84,7 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
             <h2 className="text-2xl font-display tracking-widest text-white mb-4 uppercase text-balance">
                 {isChunkLoadError ? "Actualización disponible" : "Error en el cliente"}
             </h2>
-            <p className="text-on-surface-variant mb-6 leading-relaxed text-sm max-w-md">
+            <p className="text-on-surface-variant mb-6 leading-relaxed text-sm max-w-md text-pretty">
                 {isChunkLoadError 
                     ? "La aplicación ha sido actualizada. Haz click para recargar y obtener la última versión." 
                     : "Ha ocurrido un error inesperado en la interfaz que impidió cargar el módulo."}
@@ -98,7 +98,7 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
             )}
             <button
                 onClick={handleReset}
-                className="px-8 py-3 bg-white text-black font-black text-xs uppercase tracking-ultra rounded-full hover:bg-zinc-200 active:scale-95 transition shadow-elevation-2"
+                className="px-8 py-3 bg-white text-black font-black text-xs uppercase tracking-ultra rounded-full hover:bg-white/90 active:scale-95 transition-[background-color,transform] duration-fast ease-out-strong shadow-elevation-2 cursor-pointer"
             >
                 {isChunkLoadError ? "RECARGAR AHORA" : "REINTENTAR ACCESO"}
             </button>

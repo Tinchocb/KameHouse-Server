@@ -1,7 +1,7 @@
 import * as React from "react"
 import { DeferredImage, getTmdbHeroSrcSet } from "@/components/shared/deferred-image"
 import { cn } from "@/components/ui/core/styling"
-import { useImagePalette } from "@/hooks/use-image-palette"
+import { type ImagePalette, useImagePalette, ZONE_COLS, ZONE_ROWS } from "@/hooks/use-image-palette"
 import { HERO_ART_ASPECT, HERO_COMPACT_MAX_WIDTH, heroObjectPosition, type HeroArt } from "@/lib/config/hero-art"
 import { getLargeResImage, getLowResImage } from "@/lib/helpers/images"
 
@@ -158,18 +158,39 @@ export function easedMask(fromPx: number, toPx: number, steps = 10): string {
 
 /**
  * Borde (px) en que la imagen nítida se funde con el desenfoque: corto, solo
- * para que no se vea el corte; nunca tapa personajes.
+ * para que no se vea el corte; nunca tapa personajes. Es el fundido base y el
+ * de los bordes de arriba/abajo/derecha; el de la izquierda puede ser más
+ * largo (ver `seamFadePx`).
  */
 const EDGE_FADE_PX = 120
+/** Tope del fundido largo de la costura izquierda. */
+const SEAM_FADE_MAX_PX = 420
+/** Fracción del ancho del arte que ocupa, a cada lado del foco, el sujeto principal. */
+const SUBJECT_HALF_WIDTH = 0.2
 
 type Rect = { left: number; top: number; width: number; height: number }
 
-/** Máscara de la imagen nítida: fundido corto en los bordes que tocan el desenfoque. */
-function sharpMask(rect: Rect, box: Box): React.CSSProperties {
+/**
+ * Largo (px) del fundido de la costura izquierda. Con el sujeto a la derecha hay
+ * margen para un fundido largo (sin escalón de luz entre relleno e imagen), que
+ * se corta antes de llegar a los personajes; con sujeto a la izquierda o grupo
+ * queda el corto de siempre. `cropPx`: parte de la imagen oculta a la izquierda
+ * (el foco se mide sobre la imagen entera).
+ */
+export function seamFadePx(art: Pick<HeroArt, "focal" | "subject">, visibleWidth: number, cropPx = 0): number {
+    const short = Math.min(EDGE_FADE_PX, visibleWidth * 0.12)
+    if (art.subject !== "right") return short
+    const fullWidth = visibleWidth + cropPx
+    const subjectStart = (art.focal.x / 100 - SUBJECT_HALF_WIDTH) * fullWidth - cropPx
+    return Math.round(Math.max(short, Math.min(subjectStart, SEAM_FADE_MAX_PX, visibleWidth * 0.3)))
+}
+
+/** Máscara de la imagen nítida: fundido en los bordes que tocan el desenfoque. */
+function sharpMask(rect: Rect, box: Box, seamFade: number): React.CSSProperties {
     const fade = Math.min(EDGE_FADE_PX, rect.width * 0.12)
     const layers: string[] = []
     // Izquierda: siempre que la imagen no arranque en el borde del stage.
-    layers.push(rect.left > 0 ? easedMask(0, fade) : "linear-gradient(black, black)")
+    layers.push(rect.left > 0 ? easedMask(0, seamFade) : "linear-gradient(black, black)")
     // Arriba/abajo/derecha: solo si la imagen no llega a ese borde (compacta o achicada).
     const top = rect.top > 0 ? `transparent 0px, black ${fade * 0.6}px` : "black 0px"
     const bottom = rect.top + rect.height < box.height ? `black calc(100% - ${fade * 0.6}px), transparent 100%` : "black 100%"
@@ -181,54 +202,91 @@ function sharpMask(rect: Rect, box: Box): React.CSSProperties {
 
 // La fuente es la miniatura (w185 / LQIP): ampliada ya es blanda, así que alcanza
 // con un blur chico; uno grande sobre capas del tamaño del stage traba el pintado.
-const BLUR_FILTER = "blur(14px) brightness(0.4) saturate(105%)"
+const BLUR_FILTER = "blur(14px) brightness(0.5) saturate(140%)"
 
 /**
- * Relleno desenfocado de modo `right`. Base: la imagen en `cover`, muy
- * desenfocada, para todo lo que la nítida no cubre (incluidos arriba/abajo
- * cuando va achicada). Encima, a la izquierda de su borde, la misma imagen
- * espejada y desenfocada: la columna de la costura es la misma de los dos
- * lados, así que el color sigue sin manchas.
- *
- * `imageWidth`: ancho de la imagen completa (con `cropLeft`, `rect` es solo la
- * parte visible y el espejo arranca en el borde del recorte).
+ * Cuánta luz del color real de la imagen conserva el relleno (el resto lo oscurece).
+ * Pegado a la costura casi no se oscurece, para que no haya escalón de luz contra
+ * la imagen; los scrims de texto lo oscurecen hacia la izquierda.
  */
-function HeroBlurFill({ src, rect, imageWidth, box, mirror }: { src: string; rect: Rect; imageWidth: number; box: Box; mirror: boolean }) {
-    const bleed = 48
-    // En coordenadas del wrapper: la costura está en x = rect.width; el reflejo
-    // se desvanece desde ahí hacia el borde izquierdo del stage.
-    const reflectionMask = easedMask(Math.max(0, rect.width - rect.left), rect.width - Math.min(rect.left * 0.5, rect.width * 0.3))
-    const tile = {
-        position: "absolute" as const,
-        top: 0,
-        bottom: 0,
-        width: rect.width,
-        backgroundImage: `url(${src})`,
-        backgroundSize: `${imageWidth}px 100%`,
-        backgroundPosition: "right top",
+const FILL_LEVEL_EDGE = 0.88
+const FILL_LEVEL = 0.75
+/** Realce de saturación del relleno: sin esto el color oscurecido se ve gris. */
+const FILL_SATURATION = 1.4
+/** Nivel del color de fondo bajo los degradados (más oscuro: deja que los focos resalten). */
+const FILL_BASE_LEVEL = 0.32
+
+function parseRgb(rgb: string): [number, number, number] | null {
+    const m = rgb.match(/(\d+),\s*(\d+),\s*(\d+)/)
+    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null
+}
+
+/**
+ * Color de relleno a partir del color real de una zona: realza la saturación
+ * (alrededor del gris de su misma luminancia) y lo oscurece a `level`.
+ */
+export function fillTone(rgb: string, level = FILL_LEVEL, saturation = FILL_SATURATION): [number, number, number] {
+    const [r, g, b] = parseRgb(rgb) ?? [20, 20, 24]
+    const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    const tone = (v: number) => Math.min(255, Math.max(0, Math.round((gray + (v - gray) * saturation) * level)))
+    return [tone(r), tone(g), tone(b)]
+}
+
+/**
+ * Relleno de modo `right` hecho solo de color: un foco radial por cada zona de
+ * las dos columnas izquierdas de la imagen (las que tocan la costura), puesto
+ * donde está esa zona y extendido hacia la izquierda. Sin formas ni
+ * reflejos, y sin `filter: blur`; empalma con el color real del borde.
+ */
+export function auroraBackground(palette: Pick<ImagePalette, "left" | "zones">, rect: Rect): { backgroundImage: string; backgroundColor: string } | null {
+    if (palette.zones.length < ZONE_COLS * ZONE_ROWS) return null
+    const cw = rect.width / ZONE_COLS
+    const rh = rect.height / ZONE_ROWS
+    const layers: string[] = []
+    // La columna 0 va arriba (se ve más que la 1, que solo aporta profundidad bajo el fundido).
+    for (const col of [1, 0]) {
+        for (let row = 0; row < ZONE_ROWS; row++) {
+            const [r, g, b] = fillTone(palette.zones[row * ZONE_COLS + col], col === 0 ? FILL_LEVEL_EDGE : FILL_LEVEL)
+            const x = Math.round(rect.left + (col + 0.5) * cw)
+            const y = Math.round(rect.top + (row + 0.5) * rh)
+            const rx = Math.round(Math.max(x, cw * 1.6))
+            const ry = Math.round(rh * 1.3)
+            const a = col === 0 ? 1 : 0.7
+            const stop = (k: number, pos: number) => `rgba(${r},${g},${b},${(a * k).toFixed(2)}) ${pos}%`
+            layers.push(`radial-gradient(ellipse ${rx}px ${ry}px at ${x}px ${y}px, ${stop(1, 0)}, ${stop(0.6, 40)}, ${stop(0.22, 70)}, ${stop(0, 100)})`)
+        }
     }
+    const [br, bg, bb] = fillTone(palette.left, FILL_BASE_LEVEL)
+    return { backgroundImage: layers.join(", "), backgroundColor: `rgb(${br},${bg},${bb})` }
+}
+
+// Ruido blanco de 160px (alfa = canal rojo del ruido): a baja opacidad rompe el
+// banding de los degradados oscuros. `data:` inline, se rasteriza una sola vez.
+const GRAIN_URL = `url("data:image/svg+xml;utf8,${encodeURIComponent(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1 0 0 0 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>"
+)}")`
+
+/**
+ * Relleno de modo `right` para todo lo que la imagen nítida no cubre. Con la
+ * paleta de la imagen (y `mirror`): degradados con el color real de cada zona
+ * del borde (`auroraBackground`) + grano. Sin paleta todavía, o con
+ * `reflect: false` (borde con destello que ensuciaría el texto): la imagen en
+ * `cover` muy desenfocada.
+ */
+function HeroBlurFill({ src, rect, palette, mirror }: { src: string; rect: Rect; palette: ImagePalette | null; mirror: boolean }) {
+    const aurora = mirror && palette ? auroraBackground(palette, rect) : null
     return (
         <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
-            <div
-                className="absolute -inset-12"
-                style={{ backgroundImage: `url(${src})`, backgroundSize: "cover", backgroundPosition: "right center", filter: BLUR_FILTER }}
-            />
-            {mirror && rect.left > 0 && (
+            {aurora ? (
+                <>
+                    <div className="absolute inset-0 animate-fade-in" style={aurora} />
+                    <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: GRAIN_URL, backgroundSize: "160px 160px" }} />
+                </>
+            ) : (
                 <div
-                    className="absolute"
-                    style={{
-                        left: rect.left - rect.width,
-                        top: Math.min(0, rect.top) - bleed,
-                        width: rect.width * 2,
-                        height: Math.max(box.height, rect.height) + bleed * 2,
-                        filter: BLUR_FILTER,
-                        maskImage: reflectionMask,
-                        WebkitMaskImage: reflectionMask,
-                    }}
-                >
-                    <div style={{ ...tile, left: 0, transform: "scaleX(-1)" }} />
-                    <div style={{ ...tile, left: rect.width }} />
-                </div>
+                    className="absolute -inset-12"
+                    style={{ backgroundImage: `url(${src})`, backgroundSize: "cover", backgroundPosition: "right center", filter: BLUR_FILTER }}
+                />
             )}
         </div>
     )
@@ -294,6 +352,8 @@ export function HeroBackdrop({
     // Imagen visible en modo `right` (normal, recortada o compacta).
     const placed = shown ?? compact
     const frame = fit ?? compact ?? right
+    // Colores reales del borde para el relleno (solo modo `right`; comparte caché con `useHeroTone`).
+    const palette = useImagePalette(wide === "right" ? src : null)
     // Arte claro o con sujeto bajo el texto: el scrim estándar no alcanza (solo `cover`).
     const needsBoost = variant === "stage" && !placed && (tone === "light" || softMask)
 
@@ -312,13 +372,13 @@ export function HeroBackdrop({
                     }}
                 />
             )}
-            {placed && box && <HeroBlurFill src={lowSrc} rect={placed} imageWidth={right?.width ?? placed.width} box={box} mirror={art.reflect !== false} />}
+            {placed && box && <HeroBlurFill src={lowSrc} rect={placed} palette={palette} mirror={art.reflect !== false && !cropPx} />}
             <div
                 className="absolute"
                 style={fit
                     ? { ...fit, maskImage: FIT_EDGE_MASK, WebkitMaskImage: FIT_EDGE_MASK }
                     : placed && box
-                        ? { ...placed, overflow: "hidden", ...sharpMask(placed, box) }
+                        ? { ...placed, overflow: "hidden", ...sharpMask(placed, box, seamFadePx(art, placed.width, cropPx)) }
                         : { inset: 0 }}
             >
                 <div className="absolute right-0 top-0 h-full" style={{ width: right?.width ?? "100%" }}>

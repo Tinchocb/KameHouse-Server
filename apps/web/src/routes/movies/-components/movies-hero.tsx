@@ -348,7 +348,7 @@ export function MoviesHero({
                                                     handleMovieClick(currentMovie.mediaId)
                                                 }
                                             }}
-                                            className="cursor-pointer hover:text-brand-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded"
+                                            className="cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:text-brand-accent transition-colors duration-fast ease-smooth-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded"
                                         >
                                             {movieTitle}
                                         </span>
@@ -378,7 +378,7 @@ export function MoviesHero({
                                     {plainDescription && (
                                         <m.p
                                             variants={heroItemVariants}
-                                            className="text-on-surface text-xs sm:text-sm leading-relaxed font-normal select-none line-clamp-3 max-w-xl drop-shadow"
+                                            className="text-on-surface text-xs sm:text-sm leading-relaxed font-normal select-none line-clamp-3 max-w-xl drop-shadow text-pretty"
                                         >
                                             {plainDescription}
                                         </m.p>
@@ -395,7 +395,7 @@ export function MoviesHero({
                                             if (currentMovie.mediaId == null) return
                                             handleMovieClick(currentMovie.mediaId)
                                         }}
-                                        className="flex items-center justify-center bg-white text-black font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out hover:scale-[1.04] hover:-translate-y-px active:scale-95"
+                                        className="flex items-center justify-center bg-white text-black font-black text-xs sm:text-sm uppercase tracking-wider py-2.5 px-6 sm:px-7 rounded-full font-display gap-2 cursor-pointer border border-white/40 border-t-white/80 border-b-white/20 shadow-hero-cta [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-hero-cta-hover transition-[transform,box-shadow,background-color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.04] [@media(hover:hover)_and_(pointer:fine)]:hover:-translate-y-px active:scale-95"
                                     >
                                         <IconMediaPlay size={15} fill="currentColor" className="shrink-0" />
                                         <span className="whitespace-nowrap">{hasProgress ? "Reanudar" : "Ver Película"}</span>
@@ -407,7 +407,7 @@ export function MoviesHero({
                                             onClick={handleAddToQueue}
                                             title="Añadir a la cola de reproducción"
                                             aria-label={justQueued ? "Añadida a la cola" : "Añadir a la cola"}
-                                            className="py-2.5 pl-4 pr-3 hover:bg-white/[0.08] text-on-surface-variant hover:text-white cursor-pointer transition-colors flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider font-display rounded-l-full"
+                                            className="py-2.5 pl-4 pr-3 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white cursor-pointer transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider font-display rounded-l-full"
                                         >
                                             <IconSwap swapKey={justQueued ? "queued" : "add"}>
                                                 {justQueued ? <IconUiCheck size={15} /> : <IconUiPlus size={15} />}
@@ -424,7 +424,7 @@ export function MoviesHero({
                                             }}
                                             title="Ver detalles de la película"
                                             aria-label="Ver detalles"
-                                            className="py-2.5 pr-4 pl-3 hover:bg-white/[0.08] text-on-surface-variant hover:text-white cursor-pointer transition-colors flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider font-display rounded-r-full"
+                                            className="py-2.5 pr-4 pl-3 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white cursor-pointer transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider font-display rounded-r-full"
                                         >
                                             <IconUiInfo size={15} />
                                             <span>Detalles</span>

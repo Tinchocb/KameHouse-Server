@@ -34,7 +34,7 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect 
                 aria-label={roleTag ? `${name}, ${roleTag}` : name}
                 onClick={handleSelect}
                 className={cn(
-                    "flex flex-col items-center text-center gap-2.5 group cursor-pointer rounded-xl active:scale-95 transition-transform duration-150",
+                    "flex flex-col items-center text-center gap-2.5 group cursor-pointer rounded-xl active:scale-95 transition-transform duration-fast ease-out-strong",
                     "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70",
                     className
                 )}
@@ -42,8 +42,8 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect 
                 <div
                     className={cn(
                         "w-24 h-24 rounded-2xl overflow-hidden border border-white/20 border-t-white/40 border-b-white/10 relative shadow-[shadow:var(--glass-highlight-lg),0_8px_20px_rgba(0,0,0,0.6)] bg-surface-container-lowest/80 transform-gpu",
-                        "group-hover:border-brand-accent/50 group-hover:shadow-[0_0_22px_hsl(var(--brand-accent)/0.35)] group-hover:-translate-y-1",
-                        "transition-[border-color,box-shadow,transform] duration-300 ease-out"
+                        "[@media(hover:hover)_and_(pointer:fine)]:group-hover:border-brand-accent/50 [@media(hover:hover)_and_(pointer:fine)]:group-hover:shadow-[0_0_22px_hsl(var(--brand-accent)/0.35)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:-translate-y-1",
+                        "transition-[border-color,box-shadow,transform] duration-base ease-smooth-out"
                     )}
                 >
                     {avatarUrl && (
@@ -51,21 +51,21 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect 
                             src={avatarUrl}
                             alt={name}
                             loading="lazy"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out transform-gpu"
+                            className="w-full h-full object-cover [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-base ease-smooth-out transform-gpu"
                         />
                     )}
                     <div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-base"
+                        className="absolute inset-0 opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 transition-opacity duration-fast ease-smooth-out"
                         style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 40%, transparent)" }}
                     />
                 </div>
                 <div className="flex flex-col w-full px-1">
-                    <p className="text-sm font-bold text-on-surface group-hover:text-brand-accent transition-colors duration-base line-clamp-1">
+                    <p className="text-sm font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent transition-colors duration-fast ease-smooth-out line-clamp-1">
                         {name}
                     </p>
                     {roleTag && (
                         <p className={cn(
-                            "text-badge font-medium uppercase tracking-widest mt-0.5 transition-colors duration-base",
+                            "text-badge font-medium uppercase tracking-widest mt-0.5 transition-colors duration-fast ease-smooth-out",
                             roleToneClass(roleTag)
                         )}>
                             {roleTag}

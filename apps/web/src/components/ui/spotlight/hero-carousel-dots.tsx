@@ -191,7 +191,7 @@ export function HeroCarouselDots({
                                     "block h-1.5 rounded-full overflow-hidden transition-[width,background-color,box-shadow,transform] duration-base ease-smooth-out",
                                     isCurrent
                                         ? "w-7 bg-white/25 shadow-hero-dot"
-                                        : "w-1.5 bg-white/45 group-hover:bg-white/85 group-hover:scale-125 group-active:scale-90",
+                                        : "w-1.5 bg-white/45 group-hover:bg-white/85 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-110 group-active:scale-95",
                                 ].join(" ")}
                             >
                                 {isCurrent && showProgress && (

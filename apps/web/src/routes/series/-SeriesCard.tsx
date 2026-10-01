@@ -328,7 +328,7 @@ export const SeriesCard = memo(function SeriesCard({
                             fetchPriority="low"
                             className={cn(
                                 "pointer-events-none absolute z-[3] select-none object-contain origin-bottom bottom-0 right-1/2 translate-x-1/2 h-[66%] transform-gpu will-change-transform",
-                                "translate-y-0 opacity-95 scale-100 saturate-[1.05] group-hover/card:opacity-100 group-hover/card:scale-[1.08] group-hover/card:translate-y-[-6px] group-hover/card:saturate-[1.12]"
+                                "translate-y-0 opacity-95 scale-100 saturate-[1.05] [@media(hover:hover)_and_(pointer:fine)]:group-hover/card:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/card:scale-[1.08] [@media(hover:hover)_and_(pointer:fine)]:group-hover/card:translate-y-[-6px] [@media(hover:hover)_and_(pointer:fine)]:group-hover/card:saturate-[1.12]"
                             )}
                             style={{
                                 filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.9))',
@@ -398,7 +398,7 @@ export const SeriesCard = memo(function SeriesCard({
 
                         {/* Sinopsis */}
                         {isSelected && (
-                            <p className="font-sans text-on-surface-variant text-xs leading-relaxed font-medium line-clamp-2 delay-250 transition-opacity duration-base [@media(max-height:640px)]:hidden">
+                            <p className="font-sans text-on-surface-variant text-xs leading-relaxed font-medium line-clamp-2 text-pretty delay-250 transition-opacity duration-base [@media(max-height:640px)]:hidden">
                                 {item.desc || canonicalInfo?.description}
                             </p>
                         )}
@@ -451,13 +451,13 @@ export const SeriesCard = memo(function SeriesCard({
                                 la cinta: seleccionada → abre la ficha. */}
                             <div
                                 aria-hidden
-                                className="w-full min-h-11 text-zinc-950 font-display font-black uppercase tracking-display rounded-full text-label-sm py-2.5 transition duration-base ease-out flex justify-center items-center gap-2 relative overflow-hidden group/btn hover:brightness-110 active:scale-95 cursor-pointer"
+                                className="w-full min-h-11 text-black font-display font-black uppercase tracking-display rounded-full text-label-sm py-2.5 transition-[transform,filter] duration-fast ease-out-strong flex justify-center items-center gap-2 relative overflow-hidden group/btn [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 cursor-pointer"
                                 style={{
                                     background: eraAccent,
                                     boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.45)',
                                 }}
                             >
-                                <div className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-none group-hover/btn:transition-transform duration-slower ease-out bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none" />
+                                <div className="absolute inset-0 -translate-x-full [@media(hover:hover)_and_(pointer:fine)]:group-hover/btn:translate-x-full transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover/btn:transition-transform duration-slower ease-out bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none" />
                                 <IconMediaPlay className="w-3.5 h-3.5 fill-current drop-shadow-sm" />
                                 {item.progress <= 0
                                     ? 'Ver serie'

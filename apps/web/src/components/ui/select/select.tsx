@@ -12,12 +12,12 @@ import { extractInputPartProps, hiddenInputStyles, InputAddon, InputAnatomy, Inp
 
 export const SelectAnatomy = defineStyleAnatomy({
     root: cva([
-        "UI-Select__root",
-        "inline-flex items-center justify-between relative whitespace-nowrap truncate",
+        "UI-Select__root group",
+        "inline-flex items-center justify-between relative whitespace-nowrap truncate cursor-pointer select-none transition-[background-color,border-color,box-shadow,transform] duration-fast ease-out-strong active:scale-[0.99]",
     ]),
     chevronIcon: cva([
         "UI-Combobox__chevronIcon",
-        "ml-2 h-4 w-4 shrink-0 opacity-50",
+        "ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform duration-200 group-data-[state=open]:rotate-180",
     ]),
     scrollButton: cva([
         "UI-Select__scrollButton",
@@ -37,7 +37,7 @@ export const SelectAnatomy = defineStyleAnatomy({
     item: cva([
         "UI-Select__item",
         "text-base leading-none rounded-md flex items-center h-8 pr-2 pl-8 relative text-on-surface",
-        "select-none disabled:opacity-50 disabled:pointer-events-none transition-colors",
+        "select-none disabled:opacity-50 disabled:pointer-events-none transition-[background-color,color] duration-fast cursor-pointer",
         "data-highlighted:outline-none data-highlighted:bg-surface-container-high data-highlighted:text-on-surface",
         "data-[disabled=true]:opacity-50 data-[disabled=true]:pointer-events-none",
     ]),

@@ -81,7 +81,7 @@ export function PlaybackStep({
                             aria-checked={isEnabled}
                             aria-label={item.title}
                             whileHover={{ scale: 1.015, y: -2 }}
-                            whileTap={{ scale: 0.985 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => setFeatures(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
                             onKeyDown={e => {
                                 if (e.key === "Enter" || e.key === " ") {
@@ -90,14 +90,14 @@ export function PlaybackStep({
                                 }
                             }}
                             className={cn(
-                                "cursor-pointer p-4 rounded-xl border transition duration-200 text-left flex items-start space-x-3 select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                "cursor-pointer p-4 rounded-xl border transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out text-left flex items-start space-x-3 select-none outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                 isEnabled
                                     ? "bg-surface border-brand-accent/50 shadow-md shadow-brand-accent/10"
-                                    : "bg-glass-bg border-border-subtle hover:border-border-strong opacity-70 hover:opacity-100"
+                                    : "bg-glass-bg border-border-subtle [@media(hover:hover)_and_(pointer:fine)]:hover:border-border-strong opacity-70 [@media(hover:hover)_and_(pointer:fine)]:hover:opacity-100"
                             )}
                         >
                             <div className={cn(
-                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br transition duration-200 shadow-md",
+                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br transition-[opacity,transform] duration-fast ease-smooth-out shadow-md",
                                 item.color,
                                 isEnabled ? "opacity-100 scale-100" : "opacity-40 scale-95"
                             )}>
@@ -110,7 +110,7 @@ export function PlaybackStep({
                                     </h4>
                                     <div
                                         className={cn(
-                                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-3xs transition-colors duration-200",
+                                            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 text-3xs transition-[background-color,border-color,color] duration-fast ease-smooth-out",
                                             isEnabled ? "bg-brand-accent border-brand-accent text-on-primary" : "border-border-subtle"
                                         )}
                                     >

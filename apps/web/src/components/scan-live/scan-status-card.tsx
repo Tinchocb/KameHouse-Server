@@ -125,10 +125,10 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                         onClick={onScan}
                         disabled={!canScan || running}
                         className={cn(
-                            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider whitespace-nowrap transition duration-200",
+                            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-[filter,transform,background-color] duration-fast ease-smooth-out",
                             !canScan || running
                                 ? "bg-white/[0.04] text-on-surface-variant/50 border border-white/10 cursor-not-allowed"
-                                : "bg-brand-accent hover:brightness-110 text-on-primary shadow-sm active:scale-95",
+                                : "bg-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 text-on-primary shadow-sm active:scale-95 cursor-pointer",
                         )}
                     >
                         <RefreshCw className="size-3.5" />
@@ -140,7 +140,7 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                             onClick={secondaryAction.onClick}
                             disabled={secondaryAction.disabled || running}
                             title={secondaryAction.title}
-                            className="text-3xs text-on-surface-variant/70 hover:text-on-surface underline-offset-2 hover:underline disabled:opacity-40 disabled:no-underline"
+                            className="text-3xs text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface underline-offset-2 hover:underline disabled:opacity-40 disabled:no-underline cursor-pointer disabled:cursor-not-allowed active:scale-95 transition-[color,transform] duration-fast"
                         >
                             {secondaryAction.label}
                         </button>

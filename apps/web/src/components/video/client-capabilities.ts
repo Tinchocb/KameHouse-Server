@@ -36,14 +36,20 @@ export function getClientCapabilities(): Mediastream_ClientCapabilities {
     }
     const video = document.createElement("video")
 
-    // Matroska solo si el contenedor + codecs base son decodificables de verdad.
-    // El hack anterior (isChromium → true siempre) marcaba MKV/HEVC como direct-play
-    // aunque el codec interno no fuera soportado → pantalla negra + fallback tardío.
+    // Chromium y WebView2 (Tauri/Edge) demuxean Matroska nativamente mediante su
+    // pipeline WebM/MKV en <video>, pero HTMLMediaElement.canPlayType responde ""
+    // ante el MIME "video/x-matroska". El backend ya audita los códecs individuales
+    // (HEVC, perfiles 10-bit, audio AC3/DTS), por lo que matroska solo indica soporte
+    // del contenedor.
+    const isChromium = typeof window !== "undefined" && (
+        typeof (window as Window & { chrome?: unknown }).chrome !== "undefined" ||
+        /chrome|chromium|edg\//i.test(navigator.userAgent)
+    )
     const matroskaByCodec =
         canPlay(video, 'video/x-matroska; codecs="avc1.42E01E, mp4a.40.2"') ||
         canPlay(video, 'video/x-matroska; codecs="avc1.42E01E"')
     const h264 = canPlay(video, 'video/mp4; codecs="avc1.42E01E"')
-    const matroska = matroskaByCodec && h264
+    const matroska = matroskaByCodec || (isChromium && h264)
 
     cached = {
         // hvc1.1.6.L123.B0 = Main profile (8-bit); hvc1.2.4.L123.B0 = Main 10.

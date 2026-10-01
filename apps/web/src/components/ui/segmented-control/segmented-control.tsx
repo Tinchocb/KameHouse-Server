@@ -139,7 +139,7 @@ export function SegmentedControl<T extends string>({
                             className={cn(
                                 "border-t border-t-white/80",
                                 allowFx && "shadow-[0_2px_14px_rgba(255,255,255,0.35),inset_0_1px_1px_rgba(255,255,255,0.9)]",
-                                tone === "accent" ? "bg-brand-accent text-zinc-950" : "bg-[var(--control-primary-bg)]"
+                                tone === "accent" ? "bg-brand-accent text-black font-black" : "bg-[var(--control-primary-bg)]"
                             )}
                         />
                         <span className="relative z-10 flex items-center gap-2">

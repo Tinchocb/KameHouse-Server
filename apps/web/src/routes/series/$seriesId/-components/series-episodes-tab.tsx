@@ -110,7 +110,7 @@ export function SeriesEpisodesTab({
                     <button
                         type="button"
                         onClick={onOpenMobileSagas}
-                        className="min-h-[44px] inline-flex items-center justify-center px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-mono font-bold uppercase tracking-wider text-white active:scale-95 [transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),scale_var(--duration-fast)_var(--ease-smooth-out)] cursor-pointer shrink-0"
+                        className="min-h-[44px] inline-flex items-center justify-center px-3.5 py-1.5 rounded-full bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/20 border border-white/15 text-xs font-mono font-bold uppercase tracking-wider text-white active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out cursor-pointer shrink-0"
                     >
                         Cambiar
                     </button>

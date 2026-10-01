@@ -251,7 +251,7 @@ export function CommandPalette() {
                                             key={cmd.id}
                                             value={cmd.id}
                                             onSelect={() => cmd.run()}
-                                            className="rounded-2xl border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.08] transition-colors p-0 overflow-hidden cursor-pointer"
+                                            className="rounded-2xl border border-white/10 hover:border-white/25 bg-white/[0.03] hover:bg-white/[0.08] active:scale-[0.99] transition-[background-color,border-color,transform] duration-fast ease-out-strong p-0 overflow-hidden cursor-pointer"
                                         >
                                             <div className="flex w-full items-center justify-between gap-5 p-3">
                                                 <span className="text-sm font-bold text-on-surface">{cmd.label}</span>
@@ -325,14 +325,14 @@ export function CommandPalette() {
                                                         navigateToResult(result)
                                                     }
                                                 }}
-                                                className={`rounded-2xl border border-white/10 hover:border-white/25 border-t-white/20 bg-white/[0.03] hover:bg-white/[0.08] transition-[background-color,border-color,transform] duration-150 p-0 overflow-hidden group cursor-pointer shadow-glass-highlight-sm ${hasActions ? "pr-[5.5rem]" : ""}`}
+                                                className={`rounded-2xl border border-white/10 hover:border-white/25 border-t-white/20 bg-white/[0.03] hover:bg-white/[0.08] active:scale-[0.99] transition-[background-color,border-color,transform] duration-fast ease-out-strong p-0 overflow-hidden group cursor-pointer shadow-glass-highlight-sm ${hasActions ? "pr-[5.5rem]" : ""}`}
                                             >
                                                 {"isUnlinked" in result && result.isUnlinked ? (
                                                     <div className="flex w-full items-center gap-5 p-3 text-left">
                                                         <div className="flex flex-1 items-center gap-5 min-w-0 text-left">
                                                             <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-outline-variant/50 group-hover:scale-105 transition-transform duration-base bg-brand-accent/10 flex items-center justify-center overflow-hidden relative">
                                                                 <div className="absolute inset-0 bg-gradient-to-tr from-brand-accent/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                                <IconNavigationFilm className="h-7 w-7 text-brand-accent group-hover:scale-110 transition-transform duration-base z-10" />
+                                                                <IconNavigationFilm className="h-7 w-7 text-brand-accent transition-colors duration-base z-10" />
                                                             </div>
                                                             <div className="flex flex-col overflow-hidden text-left py-1 min-w-0">
                                                                 <span className="truncate text-lg font-bold text-on-surface group-hover:text-brand-accent transition-colors leading-tight" title={title}>
@@ -360,12 +360,12 @@ export function CommandPalette() {
                                                                     className="w-full h-full object-cover relative z-10"
                                                                 />
                                                             ) : (
-                                                                <IconStatusSparkles className="h-7 w-7 text-amber-400 group-hover:scale-110 transition-transform duration-base z-10" />
+                                                                <IconStatusSparkles className="h-7 w-7 text-amber-400 transition-colors duration-base z-10" />
                                                             )}
                                                         </div>
                                                         <div className="flex flex-col overflow-hidden text-left py-1 min-w-0">
                                                             <span className="truncate text-lg font-bold text-on-surface group-hover:text-amber-400 transition-colors leading-tight" title={title}>
-                                                                {title}
+                                                                    {title}
                                                             </span>
                                                             <p className="text-label-sm text-on-surface-variant truncate mt-1">
                                                                 {result.media?.description || result.media?.titleEnglish}
@@ -389,7 +389,7 @@ export function CommandPalette() {
                                                         <div className="flex w-full items-center gap-5 p-3">
                                                             <div className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-brand-accent/30 group-hover:scale-105 transition-transform duration-base bg-brand-accent/10 flex items-center justify-center overflow-hidden relative">
                                                                 <div className="absolute inset-0 bg-gradient-to-tr from-brand-accent/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                                <IconStatusSparkles className="h-7 w-7 text-brand-accent group-hover:scale-110 transition-transform duration-base z-10" />
+                                                                <IconStatusSparkles className="h-7 w-7 text-brand-accent transition-colors duration-base z-10" />
                                                             </div>
                                                             <div className="flex flex-col overflow-hidden text-left py-1 min-w-0">
                                                                 <span className="truncate text-lg font-bold text-on-surface group-hover:text-brand-accent transition-colors leading-tight" title={title}>

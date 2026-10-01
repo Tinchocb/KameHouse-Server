@@ -116,7 +116,7 @@ export function CharacterDetailModal({
                         <button 
                             onClick={onClose}
                             aria-label="Cerrar detalles del personaje"
-                            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-11 h-11 flex items-center justify-center rounded-full bg-zinc-900/80 hover:bg-zinc-800 border border-white/20 border-t-white/40 text-white transition-[background-color,border-color,transform] duration-200 active:scale-95 cursor-pointer shadow-glass-highlight-lg"
+                            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-11 h-11 flex items-center justify-center rounded-full bg-surface-container-high/80 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-highest border border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 border-t-white/40 text-on-surface transition-[background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer shadow-glass-highlight-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                         >
                             <IconUiClose className="w-4 h-4" />
                         </button>
@@ -127,19 +127,22 @@ export function CharacterDetailModal({
                             {avatarUrl ? (
                                 <img src={avatarUrl} alt={charInfo.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full bg-surface-container-high flex items-center justify-center text-zinc-500 font-bold uppercase">DB</div>
+                                <div className="w-full h-full bg-surface-container-high flex items-center justify-center text-on-surface-variant/60 font-bold uppercase">DB</div>
                             )}
                         </div>
 
                         <h3 className="text-lg sm:text-xl font-black text-center text-white tracking-wide uppercase font-display">{charInfo.name}</h3>
                         {charInfo.alias && charInfo.alias.length > 0 && (
-                            <p className="text-xs text-zinc-400 text-center mt-1">Alias: {charInfo.alias.join(", ")}</p>
+                            <p className="text-xs text-on-surface-variant text-center mt-1">Alias: {charInfo.alias.join(", ")}</p>
                         )}
 
                         {/* Scouter Ki Level HUD */}
                         <div className="w-full mt-3 p-2.5 rounded-2xl bg-surface-container-lowest/60 border border-white/15 border-t-white/30 shadow-glass-highlight-md flex items-center justify-between text-caption font-mono text-emerald-400">
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                            <div className="flex items-center gap-2">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                </span>
                                 <span className="font-bold tracking-wider uppercase text-caption">SCOUTER KI:</span>
                             </div>
                             <span className="font-black text-emerald-400 tracking-widest text-xs">
@@ -147,7 +150,7 @@ export function CharacterDetailModal({
                             </span>
                         </div>
 
-                        <div className="w-full mt-3 sm:mt-4 space-y-2 sm:space-y-3 font-mono text-label-sm text-zinc-400">
+                        <div className="w-full mt-3 sm:mt-4 space-y-2 sm:space-y-3 font-mono text-label-sm text-on-surface-variant">
                             <div className="flex justify-between border-b border-white/10 pb-1">
                                 <span>Raza</span>
                                 <span className="font-bold text-white uppercase">{charInfo.race || "N/A"}</span>
@@ -175,13 +178,13 @@ export function CharacterDetailModal({
                     <div className="flex-grow p-4 sm:p-8 space-y-5 sm:space-y-6 overflow-y-auto max-h-[85dvh] no-scrollbar">
                         <div>
                             <span className="text-label-sm font-black text-white uppercase tracking-ultra mb-2 block">Biografía</span>
-                            <p className="text-zinc-300 text-sm leading-relaxed">{charInfo.biography}</p>
+                            <p className="text-on-surface-variant text-sm leading-relaxed text-pretty">{charInfo.biography}</p>
                         </div>
 
                         {charInfo.personality && (
                             <div>
                                 <span className="text-label-sm font-black text-white uppercase tracking-ultra mb-2 block">Personalidad</span>
-                                <p className="text-zinc-400 text-xs leading-relaxed">{charInfo.personality}</p>
+                                <p className="text-on-surface-variant text-xs leading-relaxed text-pretty">{charInfo.personality}</p>
                             </div>
                         )}
 
@@ -190,7 +193,7 @@ export function CharacterDetailModal({
                                 <span className="text-label-sm font-black text-white uppercase tracking-ultra mb-2 block">Técnicas</span>
                                 <div className="flex flex-wrap gap-2">
                                     {charInfo.techniques.map((tech: string, i: number) => (
-                                        <span key={`${tech}-${i}`} className="px-3 py-1 bg-zinc-900/60 border border-white/15 border-t-white/30 text-white text-label-sm rounded-full font-bold shadow-glass-highlight-sm">
+                                        <span key={`${tech}-${i}`} className="px-3 py-1 bg-surface-container-high/60 border border-white/15 border-t-white/30 text-on-surface text-label-sm rounded-full font-bold shadow-glass-highlight-sm">
                                             {tech}
                                         </span>
                                     ))}
@@ -203,7 +206,7 @@ export function CharacterDetailModal({
                                 <span className="text-label-sm font-black text-white uppercase tracking-ultra mb-3 block">Transformaciones / Estados</span>
                                 <div className="space-y-3">
                                     {charInfo.transformations.map((trans, i) => (
-                                        <div key={`${trans.name}-${i}`} className="p-3.5 bg-zinc-900/50 border border-white/15 border-t-white/35 rounded-2xl flex flex-col gap-1.5 hover:border-white/30 transition-colors duration-200 shadow-glass-highlight-sm">
+                                        <div key={`${trans.name}-${i}`} className="p-3.5 bg-surface-container-high/50 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70 border border-white/15 border-t-white/35 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 rounded-2xl flex flex-col gap-1.5 transition-[background-color,border-color] duration-fast ease-smooth-out shadow-glass-highlight-sm">
                                             <div className="flex items-center justify-between gap-4">
                                                 <span className="font-bold text-xs text-white uppercase flex items-center gap-1.5">
                                                     <IconStatusSparkles className="w-3.5 h-3.5 text-white" /> {trans.name}
@@ -214,7 +217,7 @@ export function CharacterDetailModal({
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-zinc-400 text-xs leading-relaxed">{trans.description}</p>
+                                            <p className="text-on-surface-variant text-xs leading-relaxed text-pretty">{trans.description}</p>
                                         </div>
                                     ))}
                                 </div>

@@ -96,11 +96,11 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
                 onClick={handleScan}
                 disabled={status === "running"}
                 className={cn(
-                    "h-8 px-3.5 rounded-full text-xs font-semibold tracking-wide transition-colors duration-200",
+                    "min-h-[36px] px-3.5 rounded-full text-xs font-semibold tracking-wide transition-[background-color,color,transform] duration-fast ease-smooth-out cursor-pointer active:scale-95 disabled:cursor-not-allowed",
                     status === "running" && "bg-brand-accent/20 text-brand-accent animate-pulse",
                     status === "done" && "bg-emerald-500/20 text-emerald-400",
                     status === "error" && "bg-rose-500/20 text-rose-400",
-                    status === "idle" && "bg-white/95 text-black hover:bg-white active:scale-95"
+                    status === "idle" && "bg-white/95 text-black [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white"
                 )}
             >
                 {status === "running" ? `${percent}%` : status === "done" ? "¡Listo!" : status === "error" ? "Error" : "Escanear"}
@@ -140,9 +140,9 @@ function ToggleRow({
             aria-checked={enabled}
             aria-label={label}
             className={cn(
-                "flex items-center justify-between w-full min-h-10 py-2 px-3 rounded-full transition-colors duration-200 group text-left relative overflow-hidden outline-none hover:bg-white/10 focus-visible:bg-white/10",
+                "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,transform] duration-fast ease-smooth-out group text-left relative overflow-hidden outline-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 focus-visible:bg-white/10 active:scale-95 cursor-pointer",
                 enabled ? "text-white" : "text-on-surface-variant",
-                disabled && "opacity-60 cursor-default hover:text-white"
+                disabled && "opacity-60 cursor-default pointer-events-none"
             )}
         >
             
@@ -201,11 +201,11 @@ export function PlaybackSettings({
                                 key={rate}
                                 onClick={() => onPlaybackRateChange(rate)}
                                 className={cn(
-                                    "px-2.5 py-1.5 rounded-full text-xs font-medium tabular-nums transition duration-base active:scale-95",
-                                    "focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
+                                    "px-2.5 py-1.5 rounded-full text-xs font-medium tabular-nums transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer",
+                                    "focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black",
                                     isActive
                                         ? "bg-white/95 text-black"
-                                        : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+                                        : "bg-white/5 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white"
                                 )}
                             >
                                 {rate}x

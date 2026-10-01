@@ -31,7 +31,7 @@ export function SettingsLayout({ title, onBack, onClose, children }: SettingsLay
                         <button
                             onClick={onBack}
                             aria-label="Volver"
-                            className="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-[color,background-color,border-color,transform] duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                            className="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 transition-[color,background-color,border-color,transform] duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                         >
                             <IconNavigationChevronLeft className="w-4 h-4" />
                         </button>
@@ -43,7 +43,7 @@ export function SettingsLayout({ title, onBack, onClose, children }: SettingsLay
                 <button
                     onClick={onClose}
                     aria-label="Cerrar menú"
-                    className="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 transition-[color,background-color,border-color,transform] duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                    className="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 transition-[color,background-color,border-color,transform] duration-200 cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                 >
                     <IconUiClose className="w-4 h-4" />
                 </button>
@@ -69,13 +69,13 @@ export function MenuButton({ icon, label, value, onClick, rightElement }: MenuBu
     return (
         <button
             onClick={onClick}
-            className="w-full h-10 flex items-center gap-3 px-3 rounded-full hover:bg-white/10 transition-colors duration-200 group text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+            className="w-full min-h-[44px] h-11 flex items-center gap-3 px-3 rounded-full [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 active:scale-95 transition-[background-color,transform] duration-fast ease-out-strong group text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
         >
-            <span className="text-on-surface-variant group-hover:text-brand-accent transition-colors duration-200">{icon}</span>
+            <span className="text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent transition-colors duration-200">{icon}</span>
             <span className="flex-1 text-xs font-semibold tracking-wide text-white">{label}</span>
             {value && <span className="text-xs text-on-surface-variant truncate max-w-[45%]">{value}</span>}
             {rightElement || (
-                <IconNavigationChevronLeft className="w-4 h-4 rotate-180 text-white/30 group-hover:text-white/60 transition-colors duration-150 shrink-0" />
+                <IconNavigationChevronLeft className="w-4 h-4 rotate-180 text-white/30 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white/60 transition-colors duration-150 shrink-0" />
             )}
         </button>
     )

@@ -49,6 +49,83 @@ function DynamicBackdropLocalToggles() {
     )
 }
 
+function AppearanceThemeLivePreview({
+    isEraMode,
+    activePreset,
+    blurEnabled,
+}: {
+    isEraMode: boolean
+    activePreset: typeof THEME_PRESETS[number]
+    blurEnabled: boolean
+}) {
+    const accentColor = isEraMode ? activePreset.accent : "#FFFFFF"
+
+    return (
+        <div className="sectionbar p-4 sm:p-5 relative overflow-hidden group">
+            {/* Fondo ambiental sutil simulando el DynamicBackdrop */}
+            <div
+                className="absolute inset-0 opacity-20 pointer-events-none transition-all duration-500 -z-10"
+                style={{
+                    background: `radial-gradient(circle at 80% 20%, ${accentColor} 0%, transparent 60%)`,
+                }}
+            />
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                        <span
+                            className="w-2 h-2 rounded-full animate-pulse"
+                            style={{ backgroundColor: accentColor, boxShadow: `0 0 8px ${accentColor}` }}
+                        />
+                        <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-on-surface">
+                            Previsualización de Estilo en Vivo
+                        </h4>
+                    </div>
+                    <p className="text-2xs text-on-surface-variant font-medium">
+                        {isEraMode ? `${activePreset.name} (${activePreset.subtitle})` : "Clásico AMOLED Puro"} · {blurEnabled ? "Efectos de vidrio esmerilado activos" : "Superficie sólida (Modo Flat)"}
+                    </p>
+                </div>
+
+                {/* Miniaturas de componentes representativos */}
+                <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+                    <span
+                        className="px-2.5 py-1 rounded-full text-3xs font-mono font-extrabold uppercase border transition-all duration-300"
+                        style={{
+                            color: accentColor,
+                            borderColor: `color-mix(in srgb, ${accentColor} 40%, transparent)`,
+                            backgroundColor: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
+                        }}
+                    >
+                        {isEraMode ? activePreset.name : "AMOLED"}
+                    </span>
+
+                    <div className="w-20 h-1.5 rounded-full bg-white/10 overflow-hidden shrink-0">
+                        <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                                width: "65%",
+                                backgroundColor: accentColor,
+                                boxShadow: `0 0 6px ${accentColor}`,
+                            }}
+                        />
+                    </div>
+
+                    <button
+                        type="button"
+                        className="px-4 py-1.5 rounded-full font-display text-2xs font-extrabold uppercase tracking-wider active:scale-95 transition-all duration-fast cursor-pointer shrink-0 shadow-elevation-1"
+                        style={{
+                            backgroundColor: accentColor,
+                            color: "#000000",
+                        }}
+                    >
+                        Ejemplo CTA
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 interface AppearanceTabProps {
     control: Control<SettingsFormValues>
 }
@@ -136,6 +213,13 @@ export const AppearanceTab = React.memo(function AppearanceTab({ control }: Appe
 return (
         <div className="w-full space-y-7 animate-in fade-in duration-base pb-8">
 
+            {/* Muestra interactiva en vivo del tema, acentos y contraste */}
+            <AppearanceThemeLivePreview
+                isEraMode={isEraMode}
+                activePreset={activePresetObj}
+                blurEnabled={!!blurEffectsValue}
+            />
+
             {/* ═════════════════════════════════════════════════════════════════
                 1. PERSONALIZACIÓN Y SELECCIÓN DE TEMA
                ════════════════════════════════════════════════════════════════ */}
@@ -162,7 +246,7 @@ return (
                                 key={mode.id}
                                 type="button"
                                 whileHover={{ scale: 1.015, y: -2 }}
-                                whileTap={{ scale: 0.98 }}
+                                whileTap={{ scale: 0.96 }}
                                 transition={cardSpring}
                                 onClick={() => setMode(mode.id)}
                                 aria-pressed={isActive}
@@ -170,14 +254,14 @@ return (
                                     "flex items-center gap-3.5 p-4 rounded-2xl border text-left transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out cursor-pointer",
                                     isActive
                                         ? "bg-surface-container-high/80 border-white/30 border-t-white/50 shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_rgba(0,0,0,0.6)] ring-1 ring-white/30"
-                                        : "bg-surface-container-lowest/60 border-white/10 border-t-white/25 hover:border-white/20 hover:bg-white/[0.04] shadow-glass-highlight-sm"
+                                        : "bg-surface-container-lowest/60 border-white/10 border-t-white/25 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04] shadow-glass-highlight-sm"
                                 )}
                             >
                                 <div className={cn(
                                     "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-smooth-out",
                                     isActive
                                         ? "bg-white text-black border-white shadow-[0_0_12px_rgba(255,255,255,0.6)] font-black"
-                                        : "bg-white/5 border-white/10 text-on-surface-variant group-hover:scale-105"
+                                        : "bg-white/5 border-white/10 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
                                 )}>
                                     <ModeIcon className="w-4 h-4" />
                                 </div>
@@ -230,7 +314,7 @@ return (
                                                     preset.bg,
                                                     isActive
                                                         ? "border-brand-accent bg-white/[0.08] shadow-[0_0_15px_hsl(var(--brand-accent)/0.35)] ring-1 ring-brand-accent/50"
-                                                        : "border-white/10 hover:border-white/20 hover:bg-white/[0.04]"
+                                                        : "border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04]"
                                                 )}
                                             >
                                                 <div className="flex items-center justify-between mb-1">

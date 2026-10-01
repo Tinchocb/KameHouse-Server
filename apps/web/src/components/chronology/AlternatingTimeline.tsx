@@ -113,7 +113,8 @@ export const AlternatingTimeline: React.FC<AlternatingTimelineProps> = memo(({
           return (
             <section
               key={`era-section-${eraGroup.seriesId}`}
-              className="relative isolate w-full flex flex-col [content-visibility:auto] [contain-intrinsic-size:auto_800px]"
+              id={`era-section-${eraGroup.seriesId}`}
+              className="relative isolate w-full flex flex-col [content-visibility:auto] [contain-intrinsic-size:auto_800px] scroll-mt-28"
               aria-label={`Era ${eraGroup.seriesTag}`}
             >
               {/* Hilo entre eras: el eje pasa del color de la era que termina al de la que empieza */}
@@ -290,9 +291,9 @@ const TimelineRow = memo(function TimelineRow({
           <>
             {/* Mobile spine node (< md) centered on axis line */}
             <div
-              className={`lg:hidden absolute left-3 -translate-x-1/2 top-0 w-6 h-6 rounded-full border flex items-center justify-center z-10 transition-transform duration-150 ${
+              className={`lg:hidden absolute left-3 -translate-x-1/2 top-0 w-6 h-6 rounded-full border flex items-center justify-center z-10 transition-transform duration-fast ease-out-strong ${
                 isHighlighted
-                  ? 'bg-brand-accent border-white text-zinc-950 scale-125'
+                  ? 'bg-brand-accent border-white text-surface font-black scale-125'
                   : isRead
                     ? 'bg-emerald-600 border-emerald-400 text-white'
                     : 'bg-surface-container-lowest border-white/25 text-brand-accent'
@@ -309,12 +310,12 @@ const TimelineRow = memo(function TimelineRow({
 
             {/* Desktop central spine node (md+) */}
             <div
-              className={`hidden lg:flex absolute left-1/2 -translate-x-1/2 top-7 w-8 h-8 rounded-full border-2 items-center justify-center z-10 transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out-strong shadow-elevation-1 ${
+              className={`hidden lg:flex absolute left-1/2 -translate-x-1/2 top-7 w-8 h-8 rounded-full border-2 items-center justify-center z-10 transition-[transform,background-color,border-color,box-shadow] duration-fast ease-out-strong shadow-elevation-1 ${
                 isHighlighted
-                  ? 'bg-brand-accent border-white text-zinc-950 scale-125 shadow-elevation-3'
+                  ? 'bg-brand-accent border-white text-surface font-black scale-125 shadow-elevation-3'
                   : isRead
-                    ? 'bg-emerald-600 border-emerald-400 text-white group-hover:scale-110'
-                    : 'bg-surface-container-lowest border-white/20 text-brand-accent group-hover:scale-110 group-hover:border-brand-accent/60'
+                    ? 'bg-emerald-600 border-emerald-400 text-white [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105'
+                    : 'bg-surface-container-lowest border-white/20 text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-brand-accent/60'
               }`}
             >
               {isRead ? (
@@ -329,8 +330,8 @@ const TimelineRow = memo(function TimelineRow({
             {/* Desktop horizontal stem connecting central node to card */}
             <div
               aria-hidden="true"
-              className={`hidden lg:block absolute top-11 h-px pointer-events-none transition-opacity duration-200 ${
-                isDetailsOpen ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'
+              className={`hidden lg:block absolute top-11 h-px pointer-events-none transition-opacity duration-fast ease-smooth-out ${
+                isDetailsOpen ? 'opacity-100' : 'opacity-40 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100'
               } ${
                 isLeft ? 'right-1/2 w-12' : 'left-1/2 w-12'
               }`}
@@ -397,7 +398,7 @@ const TimelineRow = memo(function TimelineRow({
                         type="button"
                         onClick={() => onToggleDetails(volume.id)}
                         aria-label={`Cerrar detalles de ${volume.title}`}
-                        className="w-8 h-8 rounded-full bg-white/[0.05] hover:bg-white/[0.12] border border-white/15 text-white/70 hover:text-white flex items-center justify-center cursor-pointer transition-[color,background-color,border-color,transform] duration-150 active:scale-95 shrink-0"
+                        className="w-8 h-8 rounded-full bg-white/[0.05] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.12] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 border border-white/15 text-white/70 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center cursor-pointer transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>

@@ -84,10 +84,10 @@ export function SeriesSourcePicker({ mediaId, className }: { mediaId: number | u
                             disabled={opt.disabled || isPending}
                             onClick={() => !checked && setSource({ mediaId, source: opt.value })}
                             className={cn(
-                                "relative flex min-h-11 items-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-colors duration-base",
+                                "relative flex min-h-11 items-center gap-1.5 rounded-full px-4 text-xs font-semibold cursor-pointer select-none active:scale-95 transition-[color,transform] duration-base ease-smooth-out",
                                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
-                                checked ? "text-zinc-950 font-bold" : "text-on-surface-variant hover:text-on-surface",
-                                (opt.disabled || isPending) && "cursor-not-allowed opacity-50 hover:text-on-surface-variant",
+                                checked ? "text-black font-bold" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface",
+                                (opt.disabled || isPending) && "cursor-not-allowed opacity-50 [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface-variant active:scale-100",
                             )}
                         >
                             <MagneticIndicator
