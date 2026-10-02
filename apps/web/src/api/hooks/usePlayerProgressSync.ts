@@ -55,7 +55,6 @@ export function usePlayerProgressSync({
                 duration: durationRef.current,
                 filepath,
                 kind: "mediastream",
-                predictive: false,
             },
         })
 

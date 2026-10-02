@@ -215,39 +215,6 @@ func TestValueContainsIgnoredKeywords(t *testing.T) {
 	}
 }
 
-func TestValueContainsBatchKeywords(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected bool
-	}{
-		{
-			name:     "Contains 'BATCH' in uppercase",
-			input:    "BATCH",
-			expected: true,
-		},
-		{
-			name:     "Contains 'batch' in lowercase",
-			input:    "batch",
-			expected: true,
-		},
-		{
-			name:     "Does not contain batch keywords",
-			input:    "This is a test",
-			expected: false,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			result := ValueContainsBatchKeywords(test.input)
-			if result != test.expected {
-				t.Errorf("ValueContainsBatchKeywords() with args %v, expected %v, but got %v.", test.input, test.expected, result)
-			}
-		})
-	}
-}
-
 func TestValueContainsNC(t *testing.T) {
 	tests := []struct {
 		input    string

@@ -541,8 +541,6 @@ Fuente: [kinetics.colorion.co](https://kinetics.colorion.co) — 153 interaccion
 ```
 apps/web/src/components/ui/kinetics/
 ├── magnetic-indicator.tsx      # Era pills — indicator magnético con layoutId
-├── rubber-slider.tsx           # Seek bar — rubber-band + snap-back
-├── swipe-reveal.tsx            # Episode rows — swipe left actions
 ├── reorder-list.tsx            # Playlists/Queue — drag handle reorder
 ├── hold-confirm.tsx            # Destructive actions — SVG ring progress
 ├── ripple-feedback.tsx         # Play CTA — radial burst from click point

@@ -89,6 +89,8 @@ func (w *Watcher) StartWatching(
 	// Start a goroutine to handle file system events
 	go func() {
 		triggerAction := func(path string) {
+			// Corre en el goroutine del timer del debouncer: un pánico aquí tumbaría el proceso.
+			defer util.HandlePanicInModuleThen("scanner/watcherAction", func() {})
 			w.Logger.Debug().Str("path", path).Msg("watcher: Debounce timer triggered, calling onFileAction")
 			onFileAction(path)
 		}

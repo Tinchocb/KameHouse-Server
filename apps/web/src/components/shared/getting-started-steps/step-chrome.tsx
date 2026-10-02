@@ -1,4 +1,3 @@
-import type { CardProps } from "@/components/ui/card"
 import { cn } from "@/components/ui/core/styling"
 import { m } from "framer-motion"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
@@ -95,7 +94,12 @@ export function StepIndicator({ currentStep, onStepClick }: { currentStep: numbe
     )
 }
 
-export function StepCard({ children, className }: CardProps) {
+export interface StepCardProps {
+    children?: React.ReactNode
+    className?: string
+}
+
+export function StepCard({ children, className }: StepCardProps) {
     return (
         <m.div
             variants={itemVariants}

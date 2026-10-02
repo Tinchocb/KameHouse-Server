@@ -2,7 +2,6 @@ package simulated_platform
 
 import (
 	"context"
-	"kamehouse/internal/database/db"
 	"kamehouse/internal/platforms/platform"
 
 	"github.com/rs/zerolog"
@@ -10,13 +9,11 @@ import (
 
 type SimulatedPlatform struct {
 	logger *zerolog.Logger
-	db     *db.Database
 }
 
-func NewSimulatedPlatform(logger *zerolog.Logger, db *db.Database) *SimulatedPlatform {
+func NewSimulatedPlatform(logger *zerolog.Logger) *SimulatedPlatform {
 	return &SimulatedPlatform{
 		logger: logger,
-		db:     db,
 	}
 }
 

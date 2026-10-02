@@ -7,12 +7,10 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/samber/mo"
 )
 
 const (
-	MediastreamKind    Kind = "mediastream"
-	ExternalPlayerKind Kind = "external_player"
+	MediastreamKind Kind = "mediastream"
 )
 
 type (
@@ -24,19 +22,9 @@ type (
 
 		TelemetryManager *TelemetryManager
 
-		externalPlayerEpisodeDetails mo.Option[*ExternalPlayerEpisodeDetails]
-
 		logger   *zerolog.Logger
 		settings *Settings
 		mu       sync.RWMutex
-	}
-
-	// ExternalPlayerEpisodeDetails is used to store the episode details when using an external player.
-	// Since the media player module only cares about the filepath, the PlaybackManager will store the episode number and media id here when playback starts.
-	ExternalPlayerEpisodeDetails struct {
-		EpisodeNumber int    `json:"episodeNumber"`
-		MediaID       int    `json:"mediaId"`
-		Filepath      string `json:"filepath"`
 	}
 
 	Settings struct {
@@ -66,7 +54,6 @@ func NewManager(opts *NewManagerOptions) *Manager {
 		settings: &Settings{
 			WatchContinuityEnabled: false,
 		},
-		externalPlayerEpisodeDetails: mo.None[*ExternalPlayerEpisodeDetails](),
 	}
 
 	ret.logger.Info().Msg("continuity: Initialized manager")

@@ -31,7 +31,7 @@ func TestFfprobeGetInfo_1(t *testing.T) {
 		t.Fatalf("Error getting media info: %v", err)
 	}
 
-	util.Spew(mi)
+	t.Logf("%+v", mi)
 }
 
 func TestExtractAttachment(t *testing.T) {
@@ -44,7 +44,7 @@ func TestExtractAttachment(t *testing.T) {
 		t.Fatalf("Error getting media info: %v", err)
 	}
 
-	util.Spew(mi)
+	t.Logf("%+v", mi)
 
 	err = ExtractAttachment(context.Background(), "", testFilePath, "1", mi, testDir, util.NewLogger())
 	if err != nil {

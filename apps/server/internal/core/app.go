@@ -33,9 +33,9 @@ import (
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/platforms/simulated_platform"
 	"kamehouse/internal/skipdetect"
-	"kamehouse/internal/user"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/cache"
+	"kamehouse/internal/util/crashlog"
 	"kamehouse/internal/util/ffmpegutil"
 	"kamehouse/internal/util/filecache"
 )
@@ -99,7 +99,6 @@ type (
 		IsDesktopSidecar bool
 		Flags            KameHouseFlags
 
-		user                 *user.User
 		previousVersion      string
 		moduleMu             sync.Mutex
 		ServerReady          bool
@@ -161,7 +160,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// DynamicProvider envuelve el provider activo con conmutación atómica
 	dynamicProvider := metadata_provider.NewDynamicProvider(metadataProvider)
 
-	simulatedPlatform := initSimulatedPlatform(logger, database)
+	simulatedPlatform := initSimulatedPlatform(logger)
 	// DynamicPlatform envuelve la plataforma activa con conmutación atómica
 	dynamicPlatform := platform.NewDynamicPlatform(simulatedPlatform)
 
@@ -334,6 +333,7 @@ func initServerPassword(cfg *Config) (string, string, error) {
 func initLogsDir(cfg *Config, logger *zerolog.Logger) {
 	logger.Trace().Str("dir", cfg.Logs.Dir).Msg("app: Creating logs directory")
 	_ = os.MkdirAll(cfg.Logs.Dir, 0755)
+	crashlog.GlobalCrashLogger.SetLogDir(cfg.Logs.Dir)
 }
 
 func startLogTrimmer(cfg *Config, logger *zerolog.Logger) {
@@ -406,8 +406,8 @@ func initMetadataProvider(cfg *Config, logger *zerolog.Logger, fileCacher *filec
 	})
 }
 
-func initSimulatedPlatform(logger *zerolog.Logger, database *db.Database) platform.Platform {
-	simulatedPlatform := simulated_platform.NewSimulatedPlatform(logger, database)
+func initSimulatedPlatform(logger *zerolog.Logger) platform.Platform {
+	simulatedPlatform := simulated_platform.NewSimulatedPlatform(logger)
 	if simulatedPlatform == nil {
 		logger.Fatal().Err(nil).Msgf("app: Failed to initialize simulated platform")
 	}
@@ -488,10 +488,6 @@ func (a *KameHouse) Cleanup(ctx context.Context) {
 	case <-ctx.Done():
 		a.Logger.Warn().Msg("app: Shutdown timed out — forcing exit")
 	}
-}
-
-func (a *KameHouse) GetUser() *user.User {
-	return a.user
 }
 
 func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedCollection, error) {

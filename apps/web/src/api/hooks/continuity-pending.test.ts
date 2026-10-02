@@ -9,7 +9,7 @@ import {
 } from "./continuity-pending"
 
 const vars = (mediaId: number, currentTime: number) => ({
-    options: { mediaId, episodeNumber: 1, currentTime, duration: 1400, kind: "mediastream" as const, predictive: false },
+    options: { mediaId, episodeNumber: 1, currentTime, duration: 1400, kind: "mediastream" as const },
 })
 
 describe("continuity-pending", () => {

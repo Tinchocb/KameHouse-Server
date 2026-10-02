@@ -42,7 +42,7 @@ export function matchPendingAudioTrack(
  * Puntaje de calidad de una pista de audio: primero el codec (sin pérdida >
  * surround con pérdida > estéreo comprimido), después la cantidad de canales.
  */
-export function audioQualityScore(track: AudioTrack): number {
+function audioQualityScore(track: AudioTrack): number {
     const codec = (track.codec || "").toLowerCase()
     let codecScore = 1
     if (["flac", "truehd", "mlp", "alac"].includes(codec) || codec.startsWith("pcm") || codec.includes("dts-hd") || codec === "dtshd") {

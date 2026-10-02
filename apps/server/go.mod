@@ -18,7 +18,6 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/imroc/req/v3 v3.57.0
-	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.15.3
 	github.com/mileusna/useragent v1.3.5
 	github.com/rs/zerolog v1.34.0
@@ -69,7 +68,6 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.22

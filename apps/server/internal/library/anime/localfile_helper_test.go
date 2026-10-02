@@ -38,7 +38,7 @@ func TestLocalFile_GetNormalizedPath(t *testing.T) {
 			if assert.NotNil(t, lf) {
 
 				if assert.Equal(t, tt.expectedResult, lf.GetNormalizedPath()) {
-					util.Spew(lf.GetNormalizedPath())
+					t.Log(lf.GetNormalizedPath())
 				}
 			}
 
@@ -82,7 +82,7 @@ func TestLocalFile_IsInDir(t *testing.T) {
 			if assert.NotNil(t, lf) {
 
 				if assert.Equal(t, tt.expectedResult, lf.IsInDir(tt.dir)) {
-					util.Spew(lf.IsInDir(tt.dir))
+					t.Log(lf.IsInDir(tt.dir))
 				}
 			}
 
@@ -204,7 +204,7 @@ func TestLocalFile_GetTitleVariations(t *testing.T) {
 				tv := lo.Map(lf.GetTitleVariations(), func(item *string, _ int) string { return *item })
 
 				if assert.ElementsMatch(t, tt.expectedTitles, tv) {
-					util.Spew(lf.GetTitleVariations())
+					t.Log(lf.GetTitleVariations())
 				}
 			}
 
@@ -273,7 +273,7 @@ func TestLocalFile_GetParsedTitle(t *testing.T) {
 			if assert.NotNil(t, lf) {
 
 				if assert.Equal(t, tt.expectedParsedTitle, lf.GetParsedTitle()) {
-					util.Spew(lf.GetParsedTitle())
+					t.Log(lf.GetParsedTitle())
 				}
 			}
 
@@ -308,7 +308,7 @@ func TestLocalFile_GetFolderTitle(t *testing.T) {
 			if assert.NotNil(t, lf) {
 
 				if assert.Equal(t, tt.expectedFolderTitle, lf.GetFolderTitle()) {
-					util.Spew(lf.GetFolderTitle())
+					t.Log(lf.GetFolderTitle())
 				}
 			}
 

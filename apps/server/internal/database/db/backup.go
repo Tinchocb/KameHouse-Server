@@ -48,7 +48,9 @@ func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
 	}
 
 	// Enforce 0600 permissions on the created backup file
-	_ = os.Chmod(backupPath, 0600)
+	if err := os.Chmod(backupPath, 0600); err != nil {
+		db.Logger.Warn().Err(err).Str("path", backupPath).Msg("db: could not restrict backup file permissions")
+	}
 
 	// Validate integrity of the resulting backup
 	var integrityResult string
@@ -71,7 +73,9 @@ func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
 	}
 
 	if keep > 0 {
-		_ = rotateBackups(backupDir, keep)
+		if err := rotateBackups(backupDir, keep); err != nil {
+			db.Logger.Warn().Err(err).Msg("db: backup rotation failed; old backups were not pruned")
+		}
 	}
 
 	return res, nil

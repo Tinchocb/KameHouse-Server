@@ -46,22 +46,3 @@ func (c *Map[K, V]) Range(callback func(key K, value V) bool) {
 		return callback(key.(K), ci.value)
 	})
 }
-
-func (c *Map[K, V]) Values() []V {
-	values := make([]V, 0)
-	c.store.Range(func(key, value interface{}) bool {
-		item := value.(*mapItem[K, V]) // Correct type assertion
-		values = append(values, item.value)
-		return true
-	})
-	return values
-}
-
-func (c *Map[K, V]) Keys() []K {
-	keys := make([]K, 0)
-	c.store.Range(func(key, value interface{}) bool {
-		keys = append(keys, key.(K))
-		return true
-	})
-	return keys
-}

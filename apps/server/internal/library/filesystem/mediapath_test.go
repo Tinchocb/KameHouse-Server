@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"fmt"
-	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
 	"testing"
@@ -100,7 +99,7 @@ func TestGetVideoFilePathsFromDir_WithSymlinks(t *testing.T) {
 		t.Fatalf("Unexpected error: %s", err)
 	}
 
-	util.Spew(filePaths)
+	t.Log(filePaths)
 
 	// Check results
 	for _, expected := range expectedPaths {

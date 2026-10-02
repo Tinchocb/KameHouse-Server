@@ -102,6 +102,7 @@ func (a *App) initModulesOnce() {
 	// +---------------------+
 	// Clean up old transcode directories periodically
 	go func() {
+		defer util.HandlePanicInModuleThen("core/transcodeCleanup", func() {})
 		ticker := time.NewTicker(10 * time.Minute)
 		defer ticker.Stop()
 		for {
@@ -128,6 +129,7 @@ func (a *App) initModulesOnce() {
 		LogsDir:          a.Config.Logs.Dir,
 		OnRefreshCollection: func() {
 			go func() {
+				defer util.HandlePanicInModuleThen("core/refreshAfterAutoScan", func() {})
 				a.Logger.Info().Msg("app: Refreshing anime collection after auto-scan")
 				_, _ = a.GetAnimeCollection(true)
 				anime.InvalidateCuratedHomeCache()
@@ -320,6 +322,7 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 	a.MediastreamRepository.InitializeModules(settings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)
 
 	go func() {
+		defer util.HandlePanicInModuleThen("core/trimMediastreamCache", func() {})
 		if settings.TranscodeEnabled {
 			_ = a.FileCacher.TrimMediastreamVideoFiles()
 		} else {
@@ -345,12 +348,14 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 
 func (a *App) performActionsOnce() {
 	go func() {
+		defer util.HandlePanicInModuleThen("core/performActionsOnce", func() {})
 		if a.Settings == nil {
 			return
 		}
 
 		if a.Settings.GetLibrary().RefreshLibraryOnStart {
 			go func() {
+				defer util.HandlePanicInModuleThen("core/refreshLibraryOnStart", func() {})
 				a.Logger.Debug().Msg("app: Refreshing library")
 				a.AutoScanner.TriggerScan(nil)
 			}()

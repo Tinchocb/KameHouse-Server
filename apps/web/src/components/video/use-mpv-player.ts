@@ -74,7 +74,6 @@ export function useMpvPlayer(options: UseMpvPlayerOptions) {
                 duration,
                 filepath: path,
                 kind: "mediastream",
-                predictive: false,
             },
         })
     }, [mediaId, episodeNumber, path, saveProgress])

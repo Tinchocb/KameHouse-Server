@@ -55,7 +55,6 @@ type (
 		Database            *db.Database
 		PlatformRef         platform.Platform
 		MetadataProviderRef metadata_provider.Provider
-		IsSimulated         bool // If the account is simulated
 		LibraryEpisodes     map[string]*models.LibraryEpisode
 		IntelligenceSvc     *IntelligenceService
 	}

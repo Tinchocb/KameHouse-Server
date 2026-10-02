@@ -2,6 +2,7 @@ package db
 
 import (
 	"errors"
+	"fmt"
 	"kamehouse/internal/database/models"
 
 	"gorm.io/gorm"
@@ -90,7 +91,9 @@ func (db *Database) GetStoredSettings() (*models.Settings, error) {
 				settings.Library.PreferredAudioProfile = "latino"
 			}
 			settings.Library.AutoDisableSubtitlesWhenDubbed = true
-			_ = db.gormdb.Create(&settings)
+			if err := db.gormdb.Create(&settings).Error; err != nil {
+				return nil, fmt.Errorf("db: creating default settings: %w", err)
+			}
 			db.currSettings.Store(&settings)
 			return &settings, nil
 		}

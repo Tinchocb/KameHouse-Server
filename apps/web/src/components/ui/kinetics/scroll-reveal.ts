@@ -29,7 +29,7 @@ export interface RevealConfig {
 }
 
 /** Curva ease-out fuerte del sistema (--ease-out en animation.css). */
-export const REVEAL_EASING = "cubic-bezier(0.23, 1, 0.32, 1)"
+const REVEAL_EASING = "cubic-bezier(0.23, 1, 0.32, 1)"
 
 /**
  * `list`: filas de listas largas que se recorren rápido (episodios). Entrada más

@@ -78,7 +78,6 @@ export function useAnimeTracking({
                         duration,
                         filepath,
                         kind: "mediastream",
-                        predictive: false,
                     },
                 }, {
                     onSuccess: () => {

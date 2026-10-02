@@ -56,6 +56,11 @@ func NewCrashLogger() *CrashLogger {
 	}
 }
 
+// SetLogDir sets the directory where crash logs are written.
+func (c *CrashLogger) SetLogDir(dir string) {
+	c.logDir = mo.Some(dir)
+}
+
 // InitArea creates a new CrashLoggerArea instance.
 // This instance can be used to log crashes in a specific area.
 func (c *CrashLogger) InitArea(area string) *CrashLoggerArea {

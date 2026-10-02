@@ -382,7 +382,10 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 		if err := db.Migrator().DropIndex(&models.LibraryMedia{}, "idx_library_media_tmdb_id"); err != nil {
 			logger.Warn().Err(err).Msg("db: notice while dropping idx_library_media_tmdb_id")
 		}
-		_ = db.AutoMigrate(&models.LibraryMedia{})
+		// Si falla, el índice viejo ya se eliminó: seguir en silencio dejaría la tabla sin su restricción única.
+		if err := db.AutoMigrate(&models.LibraryMedia{}); err != nil {
+			return fmt.Errorf("db: re-migrating library_media after index update: %w", err)
+		}
 	}
 
 	return nil

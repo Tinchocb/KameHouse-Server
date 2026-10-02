@@ -29,9 +29,6 @@ var (
 	// ValueContainsIgnoredKeywords regex
 	ignoredKeywordsRegex = regexp.MustCompile(`(?i)^\s?[({\[]?\s?(EXTRAS?|OVAS?|OTHERS?|SPECIALS|MOVIES|SEASONS|NC|PELICULAS?|PELÍCULAS?|TEMPORADAS?|CAPITULOS?|CAPÍTULOS?|EPISODIOS?|DESCARGAS?|NUEVOS?|CORTOS?)\s?[])}]?\s?$`)
 
-	// ValueContainsBatchKeywords regex
-	batchKeywordsRegex = regexp.MustCompile(`(?i)[({\[]?\s?(EXTRAS|OVAS|OTHERS|SPECIALS|MOVIES|SEASONS|BATCH|COMPLETE|COMPLETE SERIES|PELICULAS?|PELÍCULAS?|TEMPORADAS?)\s?[])}]?\s?`)
-
 	// ValueContainsNC regexes
 	ncRegex1 = regexp.MustCompile(`(?i)(^|(?P<show>.*?)[ _.\-(]+)\b(OP|NCOP|OPED)\b ?(?P<ep>\d{1,2}[a-z]?)? ?([ _.\-)]+(?P<title>.*))?`)
 	ncRegex2 = regexp.MustCompile(`(?i)(^|(?P<show>.*?)[ _.\-(]+)\b(ED|NCED)\b ?(?P<ep>\d{1,2}[a-z]?)? ?([ _.\-)]+(?P<title>.*))?`)
@@ -161,10 +158,6 @@ func ValueContainsSpecial(val string) bool {
 
 func ValueContainsIgnoredKeywords(val string) bool {
 	return ignoredKeywordsRegex.MatchString(val)
-}
-
-func ValueContainsBatchKeywords(val string) bool {
-	return batchKeywordsRegex.MatchString(val)
 }
 
 func ValueContainsNC(val string) bool {

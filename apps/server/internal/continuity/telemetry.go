@@ -75,7 +75,6 @@ func (tm *TelemetryManager) UpdateProgress(accountID uint, mediaID, episodeNumbe
 			MediaID:       mediaID,
 			EpisodeNumber: episodeNumber,
 			Kind:          MediastreamKind,
-			Predictive:    false,
 		})
 	}
 }

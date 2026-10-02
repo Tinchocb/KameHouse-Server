@@ -9,7 +9,7 @@ export type StreamSwitchReason = "audio" | "source" | "fallback"
  * pista o de fuente): al cambiar el src el <video> se vacía y, debajo del overlay
  * semitransparente, se veía negro hasta el primer cuadro del stream nuevo.
  */
-export function freezeCurrentFrame(video: HTMLVideoElement | null) {
+function freezeCurrentFrame(video: HTMLVideoElement | null) {
     if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth) return
     try {
         const scale = Math.min(1, 1280 / video.videoWidth)

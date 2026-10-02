@@ -2,11 +2,10 @@ package continuity
 
 import (
 	"fmt"
+	"time"
 
-	"kamehouse/internal/database/db"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
-	"time"
 )
 
 const (
@@ -54,7 +53,6 @@ type (
 		MediaID       int     `json:"mediaId"`
 		EpisodeNumber int     `json:"episodeNumber"`
 		Filepath      string  `json:"filepath,omitempty"`
-		Predictive    bool    `json:"predictive"`
 		Kind          Kind    `json:"kind"`
 	}
 
@@ -165,11 +163,6 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 		_ = m.trimWatchHistoryItems()
 	}
 
-	// Predictive Cache trigger
-	if opts.Predictive && opts.Duration > 0 && (opts.CurrentTime/opts.Duration) > 0.8 {
-		go m.triggerPredictiveCache(opts.MediaID, opts.EpisodeNumber)
-	}
-
 	return nil
 }
 
@@ -233,32 +226,4 @@ func (m *Manager) trimWatchHistoryItems() error {
 	}
 
 	return nil
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// triggerPredictiveCache is called when a user has watched > 80% of an episode.
-// It checks if the next episode exists locally, and if not, triggers a PredictiveCacheEpisodeRequestedEvent.
-func (m *Manager) triggerPredictiveCache(mediaID int, currentEpisode int) {
-	defer util.HandlePanicInModuleThen("continuity/triggerPredictiveCache", func() {})
-
-	nextEpisode := currentEpisode + 1
-
-	// Check if next episode is downloaded
-	lfs, _, err := db.GetLocalFiles(m.db)
-	if err != nil {
-		return
-	}
-
-	for _, lf := range lfs {
-		if lf.MediaID == mediaID && lf.GetEpisodeNumber() == nextEpisode {
-			m.logger.Debug().Int("mediaID", mediaID).Int("episode", nextEpisode).Msg("continuity: Next episode already exists locally, skipping predictive cache")
-			return
-		}
-	}
-
-	m.logger.Info().Int("mediaID", mediaID).Int("episode", nextEpisode).Msg("continuity: Triggering predictive cache download for next episode")
-
-	// Emit hook to start the download
-
 }

@@ -370,7 +370,7 @@ export type GovernorStats = {
  * - Filename: manager.go
  * - Package: continuity
  */
-export type Continuity_Kind = "mediastream" | "external_player"
+export type Continuity_Kind = "mediastream"
 
 /**
  * - Filepath: internal/continuity/history.go
@@ -383,7 +383,6 @@ export type Continuity_UpdateWatchHistoryItemOptions = {
     mediaId: number
     episodeNumber: number
     filepath?: string
-    predictive: boolean
     kind: Continuity_Kind
 }
 

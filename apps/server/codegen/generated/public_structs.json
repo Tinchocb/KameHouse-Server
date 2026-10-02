@@ -4495,15 +4495,6 @@
         "comments": []
       },
       {
-        "name": "Predictive",
-        "jsonName": "predictive",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "Kind",
         "jsonName": "kind",
         "goType": "Kind",
@@ -4573,15 +4564,6 @@
         "comments": []
       },
       {
-        "name": "externalPlayerEpisodeDetails",
-        "jsonName": "externalPlayerEpisodeDetails",
-        "goType": "",
-        "typescriptType": "any",
-        "required": true,
-        "public": false,
-        "comments": []
-      },
-      {
         "name": "logger",
         "jsonName": "logger",
         "goType": "zerolog.Logger",
@@ -4622,43 +4604,6 @@
   {
     "filepath": "../internal/continuity/manager.go",
     "filename": "manager.go",
-    "name": "ExternalPlayerEpisodeDetails",
-    "formattedName": "Continuity_ExternalPlayerEpisodeDetails",
-    "package": "continuity",
-    "fields": [
-      {
-        "name": "EpisodeNumber",
-        "jsonName": "episodeNumber",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "MediaID",
-        "jsonName": "mediaId",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Filepath",
-        "jsonName": "filepath",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
-    "filepath": "../internal/continuity/manager.go",
-    "filename": "manager.go",
     "name": "Settings",
     "formattedName": "Continuity_Settings",
     "package": "continuity",
@@ -4686,8 +4631,7 @@
       "goType": "string",
       "typescriptType": "string",
       "declaredValues": [
-        "\"mediastream\"",
-        "\"external_player\""
+        "\"mediastream\""
       ]
     },
     "comments": []
@@ -5273,18 +5217,6 @@
         "usedStructName": "core.KameHouseFlags",
         "required": true,
         "public": true,
-        "comments": []
-      },
-      {
-        "name": "user",
-        "jsonName": "user",
-        "goType": "user.User",
-        "typescriptType": "User",
-        "usedTypescriptType": "User",
-        "usedStructName": "user.User",
-        "required": false,
-        "nilable": true,
-        "public": false,
         "comments": []
       },
       {
@@ -16569,17 +16501,6 @@
         "required": false,
         "public": true,
         "comments": []
-      },
-      {
-        "name": "IsSimulated",
-        "jsonName": "IsSimulated",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": true,
-        "comments": [
-          " If the account is simulated"
-        ]
       },
       {
         "name": "LibraryEpisodes",
@@ -29947,18 +29868,6 @@
         "typescriptType": "Logger",
         "usedTypescriptType": "Logger",
         "usedStructName": "zerolog.Logger",
-        "required": false,
-        "nilable": true,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "db",
-        "jsonName": "db",
-        "goType": "db.Database",
-        "typescriptType": "DB_Database",
-        "usedTypescriptType": "DB_Database",
-        "usedStructName": "db.Database",
         "required": false,
         "nilable": true,
         "public": false,
