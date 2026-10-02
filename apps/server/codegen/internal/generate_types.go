@@ -16,23 +16,9 @@ const (
 	typescriptFileName = "types.ts"
 )
 
-// Structs that are not directly referenced by the API routes but are needed for the Typescript file.
 var additionalStructNames = []string{
-
-	"extension_repo.TrayPluginExtensionItem",
-	"vendor_habari.Metadata",
-	"nativeplayer.PlaybackInfo",
-	"nativeplayer.ServerEvent",
-	"nativeplayer.ClientEvent",
 	"mkvparser.SubtitleEvent",
-	"nakama.NakamaStatus",
 	"core.FeatureKey",
-	"videocore.ClientEventType",
-	"videocore.ServerEvent",
-	"videocore.PlaybackState",
-	"plugin_ui.WebviewSlot",
-	"plugin_ui.WebviewOptions",
-	"videocore.InSightData",
 }
 
 // GenerateTypescriptFile generates a Typescript file containing the types for the API routes parameters and responses based on the Docs struct.
@@ -202,7 +188,6 @@ func GenerateTypescriptFile(docsFilePath string, publicStructsFilePath string, o
 	file.WriteString("export type Platform_MediaStatus = MediaStatus\n")
 	file.WriteString("export type Platform_MediaFormat = MediaFormat\n")
 	file.WriteString("export type Platform_UnifiedMedia = UnifiedMedia\n")
-	file.WriteString("export type Platform_BaseAnime = UnifiedMedia\n")
 }
 
 // getReferencedStructsRecursively returns a map of GoStructs that are referenced by the fields of sharedStructs and otherStructs.

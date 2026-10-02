@@ -112,7 +112,7 @@ func (cw *ConfigWatcher) reload() {
 	}
 
 	// Only apply hot-reloadable fields
-	// Non-reloadable: Database, TLS, Server.Host, Server.Port, Server.Offline, Server.UseBinaryPath, Server.Systray, Server.DoHUrl, Server.Password
+	// Non-reloadable: Database, TLS, Server.Host, Server.Port, Server.UseBinaryPath, Server.Systray, Server.DoHUrl, Server.Password
 	// Hot-reloadable: CorsOrigins, AuthTokenTTL, LogLevel (via Logs.Dir), FeatureFlags (via Library), TMDB API key
 
 	cw.mu.RLock()

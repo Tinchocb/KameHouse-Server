@@ -28,8 +28,6 @@ export interface PlayerState {
     setPreferredSubtitleLang: (lang: string) => void
     subtitlesEnabled: boolean
     setSubtitlesEnabled: (enabled: boolean) => void
-    filterFillers: boolean
-    setFilterFillers: (enabled: boolean) => void
     aspectRatio: "contain" | "fill" | "cover" | "16/9" | "21/9"
     setAspectRatio: (ratio: "contain" | "fill" | "cover" | "16/9" | "21/9") => void
     aspectRatioBySeries: Record<number, "contain" | "fill" | "cover" | "16/9" | "21/9">
@@ -76,8 +74,6 @@ export const usePlayerStore = create<PlayerState>()(
                     setPreferredSubtitleLang: (preferredSubtitleLang) => set({ preferredSubtitleLang }),
                     subtitlesEnabled: true,
                     setSubtitlesEnabled: (subtitlesEnabled) => set({ subtitlesEnabled }),
-                    filterFillers: false,
-                    setFilterFillers: (filterFillers) => set({ filterFillers }),
                     aspectRatio: "contain",
                     setAspectRatio: (aspectRatio) => set({ aspectRatio }),
                     aspectRatioBySeries: {},
@@ -153,7 +149,6 @@ export const usePlayerStore = create<PlayerState>()(
                         // Sin esto, tras recargar con el modo TV activo, al apagarlo se
                         // restauraban los valores por defecto y no los del usuario.
                         tvModePrevPrefs: state.tvModePrevPrefs,
-                        filterFillers: state.filterFillers,
                     }),
                 }
             )

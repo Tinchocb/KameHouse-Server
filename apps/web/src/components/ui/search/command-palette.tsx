@@ -14,7 +14,7 @@ import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
 import { useBackupDatabase, useDownloadDatabaseBackup } from "@/api/hooks/system.hooks"
 import { useEnqueuePreTranscode } from "@/api/hooks/pretranscode.hooks"
 import { useUpdateAnimeEntryProgress } from "@/api/hooks/anime_entries.hooks"
-import { buildSeaQuery } from "@/api/client/requests"
+import { buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { MATCH_PRESELECT_KEY } from "@/lib/match-preselect"
 
@@ -83,7 +83,7 @@ export function CommandPalette() {
         setOpen(false)
         toast.loading("Limpiando caché del sistema...", { id: "palette-cache" })
         try {
-            await buildSeaQuery({
+            await buildApiQuery({
                 endpoint: API_ENDPOINTS.CACHE_HANDLERS.ClearSystemCache.endpoint,
                 method: "POST",
             })
@@ -97,7 +97,7 @@ export function CommandPalette() {
         setOpen(false)
         toast.loading("Pre-generando miniaturas...", { id: "palette-warm" })
         try {
-            const res = await buildSeaQuery<{ status: string; totalFiles?: number }>({
+            const res = await buildApiQuery<{ status: string; totalFiles?: number }>({
                 endpoint: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.endpoint,
                 method: "POST",
             })

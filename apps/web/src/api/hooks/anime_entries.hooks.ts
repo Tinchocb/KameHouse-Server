@@ -1,4 +1,4 @@
-import { useServerMutation, useServerQuery, buildSeaQuery } from "@/api/client/requests"
+import { useServerMutation, useServerQuery, buildApiQuery } from "@/api/client/requests"
 import {
     SetAnimeEntrySource_Variables,
     UpdateAnimeEntryProgress_Variables,
@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 export const fetchAnimeEntry = async (id: string | number) => {
-    return buildSeaQuery<Anime_Entry>({
+    return buildApiQuery<Anime_Entry>({
         endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.endpoint.replace("{id}", String(id)),
         method: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.methods[0],
     })
@@ -18,7 +18,7 @@ export const fetchAnimeEntry = async (id: string | number) => {
 export const fetchAnimeEntryLocalFiles = async (id: string | number) => {
     // Avoids generating endpoint types and uses the base path directly.
     const endpoint = API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.endpoint.replace("{id}", String(id)) + "/local-files"
-    return buildSeaQuery<Anime_LocalFile[]>({
+    return buildApiQuery<Anime_LocalFile[]>({
         endpoint,
         method: "GET",
     })

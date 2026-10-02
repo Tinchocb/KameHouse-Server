@@ -3,7 +3,6 @@ package library_explorer
 import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util"
 	"sync"
 
@@ -11,11 +10,10 @@ import (
 )
 
 type LibraryExplorer struct {
-	mu              sync.RWMutex
-	animeCollection *platform.UnifiedCollection
-	libraryPaths    []string
-	logger          *zerolog.Logger
-	database        *db.Database
+	mu           sync.RWMutex
+	libraryPaths []string
+	logger       *zerolog.Logger
+	database     *db.Database
 
 	fileTree  *FileTree
 	filePaths map[string][]string // latest scanned file paths, keyed by library path
@@ -31,12 +29,6 @@ func NewLibraryExplorer(opts NewLibraryExplorerOptions) *LibraryExplorer {
 		logger:   opts.Logger,
 		database: opts.Database,
 	}
-}
-
-func (l *LibraryExplorer) SetAnimeCollection(collection *platform.UnifiedCollection) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.animeCollection = collection
 }
 
 func (l *LibraryExplorer) SetLibraryPaths(paths []string) {

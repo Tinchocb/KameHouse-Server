@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { useServerQuery, useServerMutation, buildSeaQuery } from "../client/requests"
+import { useServerQuery, useServerMutation, buildApiQuery } from "../client/requests"
 import { API_ENDPOINTS } from "../generated/endpoints"
 import type { ChronologyProgressResponse } from "../generated/types"
 
@@ -17,14 +17,14 @@ export interface SaveChronologySpanOverridesVariables {
 const PROGRESS_QUERY_KEY = [API_ENDPOINTS.CHRONOLOGY_PROGRESS.GetChronologyProgress.key]
 
 export const fetchChronologyProgress = async () => {
-    return buildSeaQuery<ChronologyProgressResponse>({
+    return buildApiQuery<ChronologyProgressResponse>({
         endpoint: API_ENDPOINTS.CHRONOLOGY_PROGRESS.GetChronologyProgress.endpoint,
         method: API_ENDPOINTS.CHRONOLOGY_PROGRESS.GetChronologyProgress.methods[0],
     })
 }
 
 export const fetchChronologyMomentTimes = async () => {
-    return buildSeaQuery<Record<string, number>>({
+    return buildApiQuery<Record<string, number>>({
         endpoint: API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.endpoint,
         method: API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.methods[0],
     })

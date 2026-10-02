@@ -1,5 +1,5 @@
 import type { UpdateContinuityWatchHistoryItem_Variables } from "@/api/generated/endpoint.types"
-import { ApiError, buildSeaQuery, isTransientStatus } from "@/api/client/requests"
+import { ApiError, buildApiQuery, isTransientStatus } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { confirmLocalProgress } from "./continuity-local"
 
@@ -108,7 +108,7 @@ export async function flushPendingContinuity(
  * PATCH). Si falla estando aún viva la página, queda en la cola.
  */
 export function sendContinuityOnExit(variables: UpdateContinuityWatchHistoryItem_Variables): void {
-    buildSeaQuery<boolean, UpdateContinuityWatchHistoryItem_Variables>({
+    buildApiQuery<boolean, UpdateContinuityWatchHistoryItem_Variables>({
         endpoint: API_ENDPOINTS.CONTINUITY.UpdateContinuityWatchHistoryItem.endpoint,
         method: API_ENDPOINTS.CONTINUITY.UpdateContinuityWatchHistoryItem.methods[0],
         data: variables,

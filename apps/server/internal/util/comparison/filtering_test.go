@@ -1,7 +1,6 @@
 package comparison
 
 import (
-	"kamehouse/internal/util"
 	"testing"
 )
 
@@ -91,59 +90,6 @@ func TestExtractSeasonNumber(t *testing.T) {
 			result := ExtractSeasonNumber(test.input)
 			if result != test.expected {
 				t.Errorf("ExtractSeasonNumber() with args %v, expected %v, but got %v.", test.input, test.expected, result)
-			}
-		})
-	}
-}
-
-func TestExtractResolutionInt(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected int
-	}{
-		{
-			name:     "Contains '4K' in uppercase",
-			input:    "4K",
-			expected: 2160,
-		},
-		{
-			name:     "Contains '4k' in lowercase",
-			input:    "4k",
-			expected: 2160,
-		},
-		{
-			name:     "Contains '2160'",
-			input:    "2160",
-			expected: 2160,
-		},
-		{
-			name:     "Contains '1080'",
-			input:    "1080",
-			expected: 1080,
-		},
-		{
-			name:     "Contains '720'",
-			input:    "720",
-			expected: 720,
-		},
-		{
-			name:     "Contains '480'",
-			input:    "480",
-			expected: 480,
-		},
-		{
-			name:     "Does not contain a resolution",
-			input:    "This is a test",
-			expected: 0,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			result := util.ExtractResolutionInt(test.input)
-			if result != test.expected {
-				t.Errorf("ExtractResolutionInt() with args %v, expected %v, but got %v.", test.input, test.expected, result)
 			}
 		})
 	}
@@ -262,33 +208,6 @@ func TestValueContainsNC(t *testing.T) {
 			result := ValueContainsNC(test.input)
 			if result != test.expected {
 				t.Errorf("ValueContainsNC() with args %v, expected %v, but got %v.", test.input, test.expected, result)
-			}
-		})
-	}
-}
-
-func TestNormalizeResolution(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{name: "1080p", input: "1080p", expected: "1080p"},
-		{name: "1080p case insensitive", input: "1080P", expected: "1080p"},
-		{name: "1080 in string", input: "1920x1080", expected: "1080p"},
-		{name: "4k", input: "4k", expected: "2160p"},
-		{name: "2160p", input: "2160p", expected: "2160p"},
-		{name: "720p", input: "720p", expected: "720p"},
-		{name: "540p", input: "540p", expected: "540p"},
-		{name: "480p", input: "480p", expected: "480p"},
-		{name: "No resolution", input: "Unknown", expected: "Unknown"},
-		{name: "1080 isolated", input: "1080", expected: "1080p"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := util.NormalizeResolution(tt.input); got != tt.expected {
-				t.Errorf("NormalizeResolution() = %v, want %v", got, tt.expected)
 			}
 		})
 	}

@@ -34,7 +34,6 @@ export interface ThemeVisualPatch {
 
 export interface UIState {
     sidebarOpen: boolean
-    sidebarMode: "expanded" | "collapsed" | "hidden"
     searchQuery: string
     isVideoActive: boolean
     bgMusicEnabled: boolean
@@ -54,7 +53,6 @@ export interface UIState {
     hideAudienceScore: boolean | undefined
     scrollBlurEnabled: boolean
     setSidebarOpen: (open: boolean) => void
-    setSidebarMode: (mode: "expanded" | "collapsed" | "hidden") => void
     setSearchQuery: (query: string) => void
     setVideoActive: (active: boolean) => void
     setBgMusicEnabled: (enabled: boolean) => void
@@ -72,7 +70,6 @@ export interface UIState {
     setActiveSeriesContext: (context: string | null) => void
     setSeriesSoundtrackMode: (enabled: boolean) => void
     setThemeVisual: (patch: Partial<ThemeVisualPatch>) => void
-    clearThemeVisual: () => void
     setHideAudienceScore: (hide: boolean) => void
 }
 
@@ -82,7 +79,6 @@ export const useUIStore = create<UIState>()(
             persist(
                 (set) => ({
                     sidebarOpen: false,
-                    sidebarMode: "collapsed",
                     searchQuery: "",
                     isVideoActive: false,
                     bgMusicEnabled: true,
@@ -102,7 +98,6 @@ export const useUIStore = create<UIState>()(
                     themeVisual: {},
                     hideAudienceScore: undefined,
                     setSidebarOpen: (open) => set({ sidebarOpen: open }),
-                    setSidebarMode: (mode) => set({ sidebarMode: mode }),
                     setSearchQuery: (query) => set({ searchQuery: query }),
                     setVideoActive: (active) => set({ isVideoActive: active }),
                     setBgMusicEnabled: (enabled) => set({ bgMusicEnabled: enabled }),
@@ -120,7 +115,6 @@ export const useUIStore = create<UIState>()(
                     setActiveSeriesContext: (context) => set((state) => (state.activeSeriesContext === context ? state : { activeSeriesContext: context })),
                     setSeriesSoundtrackMode: (enabled) => set({ seriesSoundtrackMode: enabled }),
                     setThemeVisual: (patch) => set((state) => ({ themeVisual: { ...state.themeVisual, ...patch } })),
-                    clearThemeVisual: () => set({ themeVisual: {} }),
                     setHideAudienceScore: (hide) => set({ hideAudienceScore: hide }),
                 }),
                 {

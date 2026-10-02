@@ -1,4 +1,4 @@
-import { useServerQuery, buildSeaQuery } from "@/api/client/requests"
+import { useServerQuery, buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { ChronologyEpisodeFile } from "@/api/generated/types"
 import { buildVideoThumbnailUrl } from "@/lib/helpers/images"
@@ -26,7 +26,7 @@ export const CHRONOLOGY_EPISODE_FILES_QUERY_KEY = [
 const EPISODE_FILES_STALE_MS = 24 * 60 * 60 * 1000
 
 export const fetchChronologyEpisodeFiles = async () => {
-    return buildSeaQuery<ChronologyEpisodeFile[], { tmdbIds: string }>({
+    return buildApiQuery<ChronologyEpisodeFile[], { tmdbIds: string }>({
         endpoint: API_ENDPOINTS.CHRONOLOGY_FRAMES.GetChronologyEpisodeFiles.endpoint,
         method: API_ENDPOINTS.CHRONOLOGY_FRAMES.GetChronologyEpisodeFiles.methods[0],
         params: { tmdbIds: CHRONOLOGY_TMDB_IDS.join(",") },

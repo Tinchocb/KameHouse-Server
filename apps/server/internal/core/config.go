@@ -21,7 +21,6 @@ type Config struct {
 	Server  struct {
 		Host          string   `mapstructure:"host"`
 		Port          int      `mapstructure:"port"`
-		Offline       bool     `mapstructure:"offline"`
 		UseBinaryPath bool     `mapstructure:"useBinaryPath"`
 		Systray       bool     `mapstructure:"systray"`
 		DoHUrl        string   `mapstructure:"dohUrl"`
@@ -54,17 +53,10 @@ type Config struct {
 			CleanupInterval  string `mapstructure:"cleanupInterval"`
 		} `mapstructure:"thumbnails"`
 	} `mapstructure:"cache"`
-	Offline struct {
-		Dir      string `mapstructure:"dir"`
-		AssetDir string `mapstructure:"assetDir"`
-	} `mapstructure:"offline"`
 	Data struct {
 		AppDataDir string
 		WorkingDir string
 	} `mapstructure:"-"`
-	Extensions struct {
-		Dir string `mapstructure:"dir"`
-	} `mapstructure:"extensions"`
 	Metadata struct {
 		Provider     string `mapstructure:"provider"` // "jikan" (default) or "tmdb"
 		TMDBApiKey   string `mapstructure:"tmdbApiKey"`
@@ -189,7 +181,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("version", constants.Version)
 	v.SetDefault("server.host", "127.0.0.1")
 	v.SetDefault("server.port", 43211)
-	v.SetDefault("server.offline", false)
 	v.SetDefault("server.useBinaryPath", true)
 	v.SetDefault("database.name", "kamehouse")
 	v.SetDefault("web.assetDir", "$KAMEHOUSE_DATA_DIR/assets")
@@ -201,14 +192,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("cache.thumbnails.diskTTLHours", 720)     // 30 days
 	v.SetDefault("cache.thumbnails.cleanupInterval", "12h")
 	v.SetDefault("logs.dir", "$KAMEHOUSE_DATA_DIR/logs")
-	v.SetDefault("offline.dir", "$KAMEHOUSE_DATA_DIR/offline")
-	v.SetDefault("offline.assetDir", "$KAMEHOUSE_DATA_DIR/offline/assets")
-	v.SetDefault("extensions.dir", "$KAMEHOUSE_DATA_DIR/extensions")
 	v.SetDefault("metadata.provider", "jikan")
 	v.SetDefault("metadata.tmdbApiKey", "")
 	v.SetDefault("metadata.tmdbLanguage", "es-MX")
 	v.SetDefault("server.authTokenTTL", "24h")
-
 }
 
 func initAppDataDir(defined string, logger *zerolog.Logger) (string, string, error) {
@@ -246,7 +233,6 @@ func validateConfig(cfg *Config) error {
 		{cfg.Cache.Dir == "" || !filepath.IsAbs(cfg.Cache.Dir), "cache.dir must be an absolute path"},
 		{cfg.Cache.TranscodeDir == "" || !filepath.IsAbs(cfg.Cache.TranscodeDir), "cache.transcodeDir must be an absolute path"},
 		{cfg.Logs.Dir == "" || !filepath.IsAbs(cfg.Logs.Dir), "logs.dir must be an absolute path"},
-		{cfg.Extensions.Dir == "" || !filepath.IsAbs(cfg.Extensions.Dir), "extensions.dir must be an absolute path"},
 	}
 
 	for _, check := range checks {
@@ -297,9 +283,6 @@ func expandEnvironmentValues(cfg *Config) {
 	cfg.Cache.Dir = expandPath(cfg.Cache.Dir)
 	cfg.Cache.TranscodeDir = expandPath(cfg.Cache.TranscodeDir)
 	cfg.Logs.Dir = expandPath(cfg.Logs.Dir)
-	cfg.Offline.Dir = expandPath(cfg.Offline.Dir)
-	cfg.Offline.AssetDir = expandPath(cfg.Offline.AssetDir)
-	cfg.Extensions.Dir = expandPath(cfg.Extensions.Dir)
 	cfg.Server.TLS.CertPath = expandPath(cfg.Server.TLS.CertPath)
 	cfg.Server.TLS.KeyPath = expandPath(cfg.Server.TLS.KeyPath)
 }
@@ -359,7 +342,6 @@ version = "%s"
 [server]
 host = "127.0.0.1"
 port = 43211
-offline = false
 useBinaryPath = true
 password = ""
 
@@ -380,13 +362,6 @@ dir = "$KAMEHOUSE_DATA_DIR/logs"
 [cache]
 dir = "$KAMEHOUSE_DATA_DIR/cache"
 transcodeDir = "$KAMEHOUSE_DATA_DIR/cache/transcode"
-
-[offline]
-dir = "$KAMEHOUSE_DATA_DIR/offline"
-assetDir = "$KAMEHOUSE_DATA_DIR/offline/assets"
-
-[extensions]
-dir = "$KAMEHOUSE_DATA_DIR/extensions"
 
 [metadata]
 provider = "jikan"

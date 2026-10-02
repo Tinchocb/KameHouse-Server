@@ -32,7 +32,7 @@ const PerformanceTab = React.lazy(() => tabLoaders.performance().then(m => ({ de
 const SystemTab = React.lazy(() => tabLoaders.system().then(m => ({ default: m.SystemTab })))
 
 import { findIgnoredBinaryPaths, settingsSchema, type SettingsFormValues } from "@/lib/server/settings"
-import { ApiError, buildSeaQuery } from "@/api/client/requests"
+import { ApiError, buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { Models_Settings } from "@/api/generated/types"
 import { useAppStore, usePlayerStore, useUIStore } from "@/lib/store"
@@ -379,7 +379,7 @@ function SettingsPage() {
     // seguras (fuera de la carpeta bin de KameHouse o del PATH): avisarlo.
     const warnIgnoredBinaryPaths = async (sent: SettingsFormValues) => {
         try {
-            const fresh = await buildSeaQuery<Models_Settings>({
+            const fresh = await buildApiQuery<Models_Settings>({
                 endpoint: API_ENDPOINTS.SETTINGS.GetSettings.endpoint,
                 method: API_ENDPOINTS.SETTINGS.GetSettings.methods[0],
             })

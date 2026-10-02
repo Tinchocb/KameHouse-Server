@@ -31,21 +31,13 @@ var staticPathFeatureRules = []pathFeatureRule{
 	{"/api/v1/start", core.UpdateSettings, updateMethodsMap, nil},
 	{"/api/v1/settings", core.UpdateSettings, updateMethodsMap, nil},
 	{"/api/v1/mediastream/settings", core.UpdateSettings, updateMethodsMap, nil},
-	{"/api/v1/theme", core.UpdateSettings, updateMethodsMap, nil},
 	{"/api/v1/memory", core.UpdateSettings, nil, nil},
-	{"/api/v1/filecache", core.UpdateSettings, nil, nil},
-	// lists
-	{"/api/v1/platform/list-entry", core.ManageLists, updateMethodsMap, nil},
-	{"/api/v1/library/anime-entry/update-progress", core.ManageLists, updateMethodsMap, nil},
-	{"/api/v1/library/anime-entry/update-repeat", core.ManageLists, updateMethodsMap, nil},
+	// lists & progress
+	{"/api/v1/library/anime-entry/progress", core.ManageLists, updateMethodsMap, nil},
 	{"/api/v1/library/scan", core.RefreshMetadata, updateMethodsMap, map[string]struct{}{
 		"/api/v1/library/scan":           {},
 		"/api/v1/library/scan-summaries": {},
 	}},
-	// playback
-	{"/api/v1/playback-manager", core.WatchingLocalAnime, updateMethodsMap, nil},
-	{"/api/v1/media-player/start", core.WatchingLocalAnime, updateMethodsMap, nil},
-
 	// proxy
 	{"/api/v1/proxy", core.Proxy, nil, nil},
 	{"/api/v1/image-proxy", core.Proxy, nil, nil},
@@ -53,7 +45,7 @@ var staticPathFeatureRules = []pathFeatureRule{
 	{"/api/v1/log", core.ViewLogs, nil, nil},
 	{"/api/v1/logs", core.ViewLogs, nil, nil},
 	{"/api/v1/logs", core.UpdateSettings, deleteMethodMap, nil},
-	// transcode
+	// transcode & stream
 	{"/api/v1/mediastream", core.WatchingLocalAnime, updateMethodsMap, map[string]struct{}{
 		"/api/v1/mediastream/settings": {},
 	}},
@@ -61,13 +53,11 @@ var staticPathFeatureRules = []pathFeatureRule{
 	{"/api/v1/mediastream", core.WatchingLocalAnime, nil, nil},
 	{"/api/v1/metadata-provider", core.ManageLocalAnimeLibrary, updateMethodsMap, nil},
 	{"/api/v1/library", core.ManageLocalAnimeLibrary, updateMethodsMap, map[string]struct{}{
-		"/api/v1/library/anime-entry/update-progress": {},
-		"/api/v1/library/anime-entry/update-repeat":   {},
-		"/api/v1/library/scan":                        {},
-		"/api/v1/library/scan-summaries":              {},
-		"/api/v1/library/explorer/file-tree":          {},
-		"/api/v1/library/explorer/file-tree/refresh":  {},
-		"/api/v1/library/explorer/directory-children": {},
+		"/api/v1/library/anime-entry/progress":       {},
+		"/api/v1/library/scan":                       {},
+		"/api/v1/library/scan-summaries":             {},
+		"/api/v1/library/explorer/file-tree":         {},
+		"/api/v1/library/explorer/file-tree/refresh": {},
 	}},
 }
 
@@ -94,16 +84,6 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 				if _, match := rule.methods[method]; match {
 					return h.RespondWithCodeError(c, 403, ErrFeatureDisabled)
-				}
-			}
-		}
-
-		if h.App.FeatureManager.IsDisabled(core.PushRequests) {
-			if strings.HasPrefix(path, "/api/v1/platform/list-anime") ||
-				strings.HasPrefix(path, "/api/v1/platform/list-recent-anime") ||
-				strings.HasPrefix(path, "/api/v1/announcements") {
-				if _, match := updateMethodsMap[method]; match {
-					return h.RespondWithData(c, nil)
 				}
 			}
 		}

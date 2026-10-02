@@ -1,6 +1,6 @@
 import { errorText } from "@/api/client/error-messages"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { buildSeaQuery, useServerMutation, useServerQuery } from "@/api/client/requests"
+import { buildApiQuery, useServerMutation, useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { EnqueuePreTranscode_Variables } from "@/api/generated/endpoint.types"
 import type { PreTranscodeJob } from "@/api/generated/types"
@@ -41,7 +41,7 @@ export function useCancelPreTranscode() {
     const queryClient = useQueryClient()
     return useMutation<boolean | undefined, Error, string>({
         mutationFn: (hash) =>
-            buildSeaQuery<boolean, void>({
+            buildApiQuery<boolean, void>({
                 endpoint: API_ENDPOINTS.PRETRANSCODE.CancelPreTranscode.endpoint.replace(":hash", hash),
                 method: "DELETE",
             }),

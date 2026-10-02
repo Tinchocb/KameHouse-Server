@@ -1,8 +1,8 @@
-// Package notifier centralizes in-app and OS notifications (modeled on
-// Seanime's notifier). It persists notifications, broadcasts them to web
-// clients over WebSocket, and shows a best-effort OS toast on the server
-// machine. Access is through a global singleton so deeply nested modules
-// (scanner, transcoder) can emit notifications without constructor threading.
+// Package notifier centralizes in-app and OS notifications in KameHouse.
+// It persists notifications, broadcasts them to web clients over WebSocket,
+// and shows a best-effort OS toast on the server machine. Access is through a
+// global singleton so deeply nested modules (scanner, transcoder) can emit
+// notifications without constructor threading.
 package notifier
 
 import (

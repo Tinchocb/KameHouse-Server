@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"kamehouse/internal/api/tmdb"
@@ -44,9 +43,7 @@ type Status struct {
 	Version             string                      `json:"version"`
 	VersionName         string                      `json:"versionName"`
 	ThemeSettings       *models.Theme               `json:"themeSettings"`
-	IsOffline           bool                        `json:"isOffline"`
 	MediastreamSettings *models.MediastreamSettings `json:"mediastreamSettings"`
-	// PlatformClientID       string                        `json:"PlatformClientId"`
 	Updating           bool              `json:"updating"`         // If true, a new screen will be displayed
 	IsDesktopSidecar   bool              `json:"isDesktopSidecar"` // The server is running as a desktop sidecar
 	FeatureFlags       core.FeatureFlags `json:"featureFlags"`
@@ -70,7 +67,6 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 	currentUser := user.NewSimulatedUser()
 	var settings *models.Settings
 	var theme *models.Theme
-	//var mal *models.Mal
 
 	if settings, _ = h.App.Database.GetSettings(); settings == nil {
 		settings = &models.Settings{}
@@ -98,9 +94,7 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		Version:             h.App.Version,
 		VersionName:         constants.VersionName,
 		ThemeSettings:       theme,
-		IsOffline:           h.App.IsOffline(),
 		MediastreamSettings: h.App.SecondarySettings.Mediastream,
-		// PlatformClientID:       h.App.Config.Platform.ClientID,
 		Updating:          false,
 		IsDesktopSidecar:  h.App.IsDesktopSidecar,
 		FeatureFlags:      h.App.FeatureFlags,
@@ -322,10 +316,6 @@ func (h *Handler) HandleGetLatestLogContent(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 	return h.RespondWithData(c, string(contentB))
-}
-
-func (h *Handler) HandleGetAnnouncements(c echo.Context) error {
-	return h.RespondWithCodeError(c, 501, errors.New("announcements not implemented"))
 }
 
 type MemoryStatsResponse struct {

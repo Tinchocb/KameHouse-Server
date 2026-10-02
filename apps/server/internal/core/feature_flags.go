@@ -38,7 +38,6 @@ const (
 	RefreshMetadata    FeatureKey = "RefreshMetadata"
 	WatchingLocalAnime FeatureKey = "WatchingLocalAnime"
 	Proxy              FeatureKey = "Proxy"
-	PushRequests       FeatureKey = "PushRequests"
 )
 
 func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureManager {
@@ -56,7 +55,6 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 			RefreshMetadata,
 			WatchingLocalAnime,
 			Proxy,
-			PushRequests,
 		}
 	}
 

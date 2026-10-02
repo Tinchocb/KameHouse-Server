@@ -98,7 +98,6 @@ export const useAppStore = create<CombinedState>()(
                         loopEnabled: state.loopEnabled,
                         marathonMode: state.marathonMode,
                         tvMode: state.tvMode,
-                        filterFillers: state.filterFillers,
                         // Queue state
                         playlistQueue: Array.isArray(state.playlistQueue) ? state.playlistQueue.slice(0, 50) : [],
                         currentQueueIndex: typeof state.currentQueueIndex === 'number' ? Math.min(state.currentQueueIndex, 49) : -1,

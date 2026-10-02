@@ -1,7 +1,7 @@
 import { errorText } from "@/api/client/error-messages"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { buildSeaQuery } from "@/api/client/requests"
+import { buildApiQuery } from "@/api/client/requests"
 import type { DriveScanProgress } from "@/lib/server/ws-events"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
@@ -22,7 +22,7 @@ export interface DriveStatusResponse {
 }
 
 async function fetchDriveStatus(): Promise<DriveStatusResponse> {
-    const res = await buildSeaQuery<DriveStatusResponse | { data?: DriveStatusResponse }>({
+    const res = await buildApiQuery<DriveStatusResponse | { data?: DriveStatusResponse }>({
         endpoint: API_ENDPOINTS.DRIVE.DriveStatus.endpoint,
         method: API_ENDPOINTS.DRIVE.DriveStatus.methods[0],
     })
@@ -45,7 +45,7 @@ export function useDriveStatus() {
 export function useTriggerDriveScan() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: () => buildSeaQuery({ endpoint: API_ENDPOINTS.DRIVE.DriveScan.endpoint, method: API_ENDPOINTS.DRIVE.DriveScan.methods[0] }),
+        mutationFn: () => buildApiQuery({ endpoint: API_ENDPOINTS.DRIVE.DriveScan.endpoint, method: API_ENDPOINTS.DRIVE.DriveScan.methods[0] }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: DRIVE_STATUS_QUERY_KEY }),
         onError: (err: unknown) => {
             toast.error(errorText(err, "No se pudo iniciar el escaneo de Drive"))

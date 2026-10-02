@@ -4,7 +4,6 @@ import (
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/util"
-	"kamehouse/internal/util/comparison"
 
 	"github.com/rs/zerolog"
 )
@@ -27,9 +26,6 @@ type (
 		// Inverted Index for fast candidate lookup
 		// Token -> media that contain this token in their title
 		TokenIndex map[string][]*dto.NormalizedMedia
-		engTitles  []*string // legacy
-		romTitles  []*string // legacy
-		synonyms   []*string // legacy
 	}
 )
 
@@ -128,42 +124,9 @@ func NewMediaContainer(opts *MediaContainerOptions) *MediaContainer {
 		seenTokens = nil
 	}
 
-	// ------------------------------------------
-
-	// Legacy stuff (used for legacy matching)
-	// should've been maps instead of slices
-	engTitles := make([]*string, 0, len(mc.NormalizedMedia))
-	romTitles := make([]*string, 0, len(mc.NormalizedMedia))
-	synonymsSlice := make([]*string, 0, len(mc.NormalizedMedia)*2)
-
-	for _, m := range mc.NormalizedMedia {
-		if m.Title != nil {
-			if m.Title.English != nil && len(*m.Title.English) > 0 {
-				engTitles = append(engTitles, m.Title.English)
-			}
-			if m.Title.Romaji != nil && len(*m.Title.Romaji) > 0 {
-				romTitles = append(romTitles, m.Title.Romaji)
-			}
-		}
-		if m.Synonyms != nil {
-			for _, syn := range m.Synonyms {
-				if syn != nil && comparison.ValueContainsSeason(*syn) {
-					synonymsSlice = append(synonymsSlice, syn)
-				}
-			}
-		}
-	}
-
-	mc.engTitles = engTitles
-	mc.romTitles = romTitles
-	mc.synonyms = synonymsSlice
-
-	// ------------------------------------------
-
 	if mc.ScanLogger != nil {
 		mc.ScanLogger.LogMediaContainer(zerolog.InfoLevel).
 			Any("mediaCount", len(mc.NormalizedMedia)).
-			Any("legacyTitleCount", len(mc.engTitles)+len(mc.romTitles)+len(mc.synonyms)).
 			Any("tokenIndexSize", len(mc.TokenIndex)).
 			Msg("Created media container")
 	}

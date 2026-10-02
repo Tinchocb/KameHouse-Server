@@ -6,8 +6,6 @@ import (
 
 // RegisterStreamingRoutes registers all media streaming, direct stream, and mediastream routes.
 func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
-	// Old Playback Manager / HLS (removed)
-
 	// Media Stream
 	v1Mediastream := v1.Group("/mediastream")
 	v1Mediastream.GET("/settings", h.HandleGetMediastreamSettings)

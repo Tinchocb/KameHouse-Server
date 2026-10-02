@@ -78,7 +78,7 @@ export interface PlayerBottomBarProps {
     settingsOpen?: boolean
     onToggleSettings?: (open?: boolean) => void
 
-    // Seanime features
+    // Opciones de reproducción
     playbackRate?: number
     onPlaybackRateChange?: (rate: number) => void
     autoSkipIntro?: boolean

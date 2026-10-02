@@ -4,13 +4,13 @@
  * API docs: https://api.aniskip.com/v2
  *
  * Strategy: KameHouse uses Platform IDs (AniList). AniSkip requires MAL IDs.
- * We use `idMal` from `Platform_BaseAnime` if available.
+ * We use `idMal` from `UnifiedMedia` if available.
  * If not available, we fall back to undefined (no skip times).
  */
 
 import { useQuery } from "@tanstack/react-query"
 import { z } from "zod"
-import { buildSeaQuery } from "@/api/client/requests"
+import { buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ function fireAndForgetCacheAniSkipTimes({
         resolvedEdEnd = ed.endTime ?? (episodeDuration ?? 0)
     }
 
-    buildSeaQuery<unknown, {
+    buildApiQuery<unknown, {
         mediaId?: number
         malId?: number
         episodeNumber: number
@@ -250,7 +250,7 @@ export async function getAniSkipTimes({
 
     // 1. Try local KameHouse server database first
     try {
-        const localData = await buildSeaQuery<LocalSkipTimeResponse, { mediaId?: number; malId?: number; episodeNumber: number }>({
+        const localData = await buildApiQuery<LocalSkipTimeResponse, { mediaId?: number; malId?: number; episodeNumber: number }>({
             endpoint: API_ENDPOINTS.MEDIASTREAM.GetEpisodeSkipTimes.endpoint,
             method: API_ENDPOINTS.MEDIASTREAM.GetEpisodeSkipTimes.methods[0],
             params: {
@@ -302,7 +302,7 @@ export async function getAniSkipTimes({
 
     if (!activeMalId && mediaId) {
         try {
-            const res = await buildSeaQuery<{ malId?: number }, { mediaId: number }>({
+            const res = await buildApiQuery<{ malId?: number }, { mediaId: number }>({
                 endpoint: API_ENDPOINTS.MEDIASTREAM.ResolveMAL.endpoint,
                 method: "GET",
                 params: { mediaId: mediaId },

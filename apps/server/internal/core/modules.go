@@ -240,34 +240,32 @@ func (a *App) InitOrRefreshModules() {
 		WatchContinuityEnabled: settings.Library.EnableWatchContinuity,
 	})
 
-	if !a.IsOffline() {
-		a.Logger.Info().Msg("app: Using Jikan platform")
-		a.Metadata.Platform.SetPlatform(jikan_platform.NewPlatform(a.Logger))
+	a.Logger.Info().Msg("app: Using Jikan platform")
+	a.Metadata.Platform.SetPlatform(jikan_platform.NewPlatform(a.Logger))
 
-		tmdbAPIKey, tmdbReason := tmdb.ResolveToken(settings.Library.TmdbApiKey, a.Config.Metadata.TMDBApiKey)
-		tmdbLanguage := settings.Library.TmdbLanguage
-		if tmdbLanguage == "" {
-			tmdbLanguage = "es-MX"
-		}
-		if tmdbAPIKey == "" {
-			if tmdbReason == "placeholder" {
-				a.Logger.Warn().Msg("app: TMDB token is an unreplaced placeholder - TMDB features degraded, using default provider")
-			} else {
-				a.Logger.Warn().Msg("app: No TMDB API key configured - TMDB features degraded, using default provider")
-			}
-		}
-		tmdbClient := tmdb.NewClient(tmdbAPIKey, tmdbLanguage)
-		if a.Database != nil {
-			tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: a.Database})
-		}
-		a.Metadata.TMDBClient = tmdbClient
-		a.Metadata.Provider.SetProvider(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
-			Logger:     a.Logger,
-			FileCacher: a.FileCacher,
-			Database:   a.Database,
-			TMDBClient: a.Metadata.TMDBClient,
-		}))
+	tmdbAPIKey, tmdbReason := tmdb.ResolveToken(settings.Library.TmdbApiKey, a.Config.Metadata.TMDBApiKey)
+	tmdbLanguage := settings.Library.TmdbLanguage
+	if tmdbLanguage == "" {
+		tmdbLanguage = "es-MX"
 	}
+	if tmdbAPIKey == "" {
+		if tmdbReason == "placeholder" {
+			a.Logger.Warn().Msg("app: TMDB token is an unreplaced placeholder - TMDB features degraded, using default provider")
+		} else {
+			a.Logger.Warn().Msg("app: No TMDB API key configured - TMDB features degraded, using default provider")
+		}
+	}
+	tmdbClient := tmdb.NewClient(tmdbAPIKey, tmdbLanguage)
+	if a.Database != nil {
+		tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: a.Database})
+	}
+	a.Metadata.TMDBClient = tmdbClient
+	a.Metadata.Provider.SetProvider(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
+		Logger:     a.Logger,
+		FileCacher: a.FileCacher,
+		Database:   a.Database,
+		TMDBClient: a.Metadata.TMDBClient,
+	}))
 
 	if a.DriveService != nil {
 		_ = a.DriveService.UpdateConfig(

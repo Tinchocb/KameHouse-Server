@@ -6,7 +6,7 @@ import { SectionBar } from "@/components/ui/sectionbar"
 import { Cloud, ExternalLink, CheckCircle2, AlertCircle, Unlink, Copy } from "lucide-react"
 import { IconUiSpinner } from "@/components/ui/icons"
 import { toast } from "sonner"
-import { buildSeaQuery } from "@/api/client/requests"
+import { buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { useDriveStatus } from "@/lib/drive-status"
 import type { SettingsFormValues } from "../index"
@@ -89,7 +89,7 @@ export function GoogleDriveCard() {
 
         try {
             // First save credentials
-            await buildSeaQuery({
+            await buildApiQuery({
                 endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
                 method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0] as "PATCH",
                 data: {
@@ -101,7 +101,7 @@ export function GoogleDriveCard() {
                 },
             })
 
-            const authRes = await buildSeaQuery<{ data?: { url?: string }; url?: string }, { clientId: string }>({
+            const authRes = await buildApiQuery<{ data?: { url?: string }; url?: string }, { clientId: string }>({
                 endpoint: API_ENDPOINTS.DRIVE.DriveAuthURL.endpoint,
                 method: API_ENDPOINTS.DRIVE.DriveAuthURL.methods[0],
                 params: { clientId: cleanClientId },
@@ -124,7 +124,7 @@ export function GoogleDriveCard() {
     // 3. Disconnect Drive
     const { mutate: disconnectDrive, isPending: isDisconnecting } = useMutation({
         mutationFn: async () => {
-            await buildSeaQuery({
+            await buildApiQuery({
                 endpoint: API_ENDPOINTS.DRIVE.DriveDisconnect.endpoint,
                 method: API_ENDPOINTS.DRIVE.DriveDisconnect.methods[0],
             })
@@ -146,7 +146,7 @@ export function GoogleDriveCard() {
     // escaneo (en la sección Escáner) usa la carpeta vigente sin Guardar global.
     const { mutate: saveFolderId, isPending: isSavingFolder } = useMutation({
         mutationFn: async (nextFolderId: string) => {
-            await buildSeaQuery({
+            await buildApiQuery({
                 endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
                 method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0] as "PATCH",
                 data: { googleDrive: { folderId: nextFolderId } },

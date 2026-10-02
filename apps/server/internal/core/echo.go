@@ -31,7 +31,7 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			path := c.Request().URL.Path
-			if strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/offline-assets/") || strings.HasPrefix(path, "/static/") {
+			if strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/static/") {
 				c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 			} else if path == "/" || path == "/index.html" || path == "/sw.js" || path == "/manifest.json" || strings.HasSuffix(path, ".html") {
 				c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -63,8 +63,7 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 			cURL := c.Request().URL
 			if strings.HasPrefix(cURL.RequestURI(), "/api") ||
 				strings.HasPrefix(cURL.RequestURI(), "/events") ||
-				strings.HasPrefix(cURL.RequestURI(), "/assets") ||
-				strings.HasPrefix(cURL.RequestURI(), "/offline-assets") {
+				strings.HasPrefix(cURL.RequestURI(), "/assets") {
 				return true
 			}
 			cleanPath := strings.TrimPrefix(cURL.Path, "/")
@@ -86,10 +85,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	// Serve web assets
 	app.Logger.Info().Msgf("app: Web assets path: %s", app.Config.Web.AssetDir)
 	e.Static("/assets", app.Config.Web.AssetDir)
-
-	// Serve offline assets
-	app.Logger.Info().Msgf("app: Offline assets path: %s", app.Config.Offline.AssetDir)
-	e.Static("/offline-assets", app.Config.Offline.AssetDir)
 
 	return e
 }

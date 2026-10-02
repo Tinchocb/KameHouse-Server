@@ -28,7 +28,6 @@ type (
 		MetadataIssue         string               `json:"metadataIssue,omitempty"`   // Alerts the user that there is a discrepancy between platform and metadata provider
 		SagaName              string               `json:"sagaName,omitempty"`
 		SagaId                string               `json:"sagaId,omitempty"`
-		BaseAnime             *models.LibraryMedia `json:"baseAnime,omitempty"`
 		Intelligence          *EpisodeIntelligence `json:"intelligence,omitempty"`
 		Watched               bool                 `json:"watched"`
 		TitleSpanish          string               `json:"titleSpanish,omitempty"`
@@ -87,7 +86,6 @@ type (
 // `LocalFile` is optional.
 func NewEpisode(opts *NewEpisodeOptions) *Episode {
 	entryEp := new(Episode)
-	entryEp.BaseAnime = opts.Media
 	entryEp.DisplayTitle = ""
 	entryEp.EpisodeTitle = ""
 
@@ -340,7 +338,6 @@ func NewEpisodeMetadata(
 // NewSimpleEpisode creates a Episode without AniDB metadata.
 func NewSimpleEpisode(opts *NewSimpleEpisodeOptions) *Episode {
 	entryEp := new(Episode)
-	entryEp.BaseAnime = opts.Media
 	entryEp.DisplayTitle = ""
 	entryEp.EpisodeTitle = ""
 	entryEp.EpisodeMetadata = new(EpisodeMetadata)

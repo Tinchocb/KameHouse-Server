@@ -149,21 +149,9 @@ export type Anime_Episode = {
     metadataIssue?: string
     sagaName?: string
     sagaId?: string
-    baseAnime?: Models_LibraryMedia
     intelligence?: Anime_EpisodeIntelligence
     watched: boolean
     titleSpanish?: string
-}
-
-/**
- * - Filepath: internal/library/anime/episode_collection.go
- * - Filename: episode_collection.go
- * - Package: anime
- */
-export type Anime_EpisodeCollection = {
-    hasMappingError: boolean
-    episodes: Array<Anime_Episode> | null
-    metadata: Metadata_AnimeMetadata | null
 }
 
 /**
@@ -426,8 +414,7 @@ export type INTERNAL_FeatureKey = "ViewSettings" |
     "ManageLists" |
     "RefreshMetadata" |
     "WatchingLocalAnime" |
-    "Proxy" |
-    "PushRequests"
+    "Proxy"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Db
@@ -1165,7 +1152,6 @@ export type Status = {
     version: string
     versionName: string
     themeSettings: Models_Theme | null
-    isOffline: boolean
     mediastreamSettings: Models_MediastreamSettings | null
     /**
      * If true, a new screen will be displayed
@@ -1454,96 +1440,6 @@ export type Mediastream_MediaContainer = {
  * - Package: mediastream
  */
 export type Mediastream_StreamType = "transcode" | "optimized" | "direct"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Metadata
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/api/metadata/types.go
- * - Filename: types.go
- * - Package: metadata
- */
-export type Metadata_AnimeMappings = {
-    animeplanetId?: string
-    kitsuId?: number
-    type?: string
-    anisearchId?: number
-    anidbId?: number
-    notifymoeId?: string
-    livechartId?: number
-    thetvdbId?: number
-    imdbId?: string
-    themoviedbId?: string
-    anilistId?: number
-    myanimelistId?: number
-}
-
-/**
- * - Filepath: internal/api/metadata/types.go
- * - Filename: types.go
- * - Package: metadata
- */
-export type Metadata_AnimeMetadata = {
-    titles: Record<string, string> | null
-    description: string
-    episodes: Record<string, Metadata_EpisodeMetadata> | null
-    episodeCount: number
-    specialCount: number
-    mappings: Metadata_AnimeMappings | null
-    status?: string
-    rating?: string
-    score?: number
-    duration?: string
-    genres?: Array<string>
-    studios?: Array<string>
-    demographics?: Array<string>
-    openings?: Array<string>
-    endings?: Array<string>
-    characters?: Array<Metadata_CharacterMetadata>
-}
-
-/**
- * - Filepath: internal/api/metadata/types.go
- * - Filename: types.go
- * - Package: metadata
- */
-export type Metadata_CharacterMetadata = {
-    name: string
-    role: string
-    imageUrl: string
-}
-
-/**
- * - Filepath: internal/api/metadata/types.go
- * - Filename: types.go
- * - Package: metadata
- */
-export type Metadata_EpisodeMetadata = {
-    anidbId: number
-    tvdbId: number
-    title: string
-    image: string
-    airDate: string
-    length: number
-    summary: string
-    overview: string
-    episodeNumber: number
-    episode: string
-    seasonNumber: number
-    absoluteEpisodeNumber: number
-    anidbEid: number
-    /**
-     * Indicates if the episode has a real image
-     */
-    hasImage: boolean
-    /**
-     * Indicates if this is a filler episode
-     */
-    isFiller?: boolean
-    sagaId?: string
-    sagaName?: string
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mkvparser
@@ -2373,4 +2269,3 @@ export type Summary_ScanSummary = ScanSummary
 export type Platform_MediaStatus = MediaStatus
 export type Platform_MediaFormat = MediaFormat
 export type Platform_UnifiedMedia = UnifiedMedia
-export type Platform_BaseAnime = UnifiedMedia

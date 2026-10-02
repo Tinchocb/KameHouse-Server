@@ -1,5 +1,5 @@
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { buildSeaQuery } from "@/api/client/requests"
+import { buildApiQuery } from "@/api/client/requests"
 
 /**
  * Refleja el parche en la caché de GetSettings. La query tiene staleTime de 5 min:
@@ -31,7 +31,7 @@ function patchSettingsCache(section: "library" | "theme", patch: Record<string, 
 export function persistLibraryPatch(patch: Record<string, unknown>): void {
     patchSettingsCache("library", patch)
     try {
-        void buildSeaQuery({
+        void buildApiQuery({
             endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
             method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0] as "PATCH",
             data: { library: patch },
@@ -48,7 +48,7 @@ export function persistLibraryPatch(patch: Record<string, unknown>): void {
 export function persistThemePatch(patch: Record<string, unknown>): void {
     patchSettingsCache("theme", patch)
     try {
-        void buildSeaQuery({
+        void buildApiQuery({
             endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
             method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0] as "PATCH",
             data: { theme: patch },

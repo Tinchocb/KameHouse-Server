@@ -53,8 +53,6 @@ func TestIsSensitiveEndpointByMethod(t *testing.T) {
 		{http.MethodGet, "/api/v1/status", false},
 		{http.MethodPatch, "/api/v1/settings", true},
 		{http.MethodGet, "/api/v1/settings", false},
-		{http.MethodPatch, "/api/v1/settings/media-player", false},
-		{http.MethodPatch, "/api/v1/theme", false},
 		{http.MethodPost, "/api/v1/start", true},
 		{http.MethodPatch, "/api/v1/mediastream/settings", true},
 		{http.MethodPost, "/api/v1/drive/callback", true},
@@ -94,7 +92,6 @@ func TestIsRestrictedWrite(t *testing.T) {
 		{http.MethodPost, "/api/v1/library/scan", true},
 		{http.MethodPost, "/api/v1/drive/scan", true},
 		{http.MethodPost, "/api/v1/mediastream/pretranscode", true},
-		{http.MethodPost, "/api/v1/local/offline", true},
 		{http.MethodPost, "/api/v1/library/anime-entry/source", true},
 		{http.MethodPut, "/api/v1/ruta-nueva-sin-registrar", true},
 	}

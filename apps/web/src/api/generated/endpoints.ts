@@ -31,19 +31,6 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/anilist/episode/:anilistId/:absolute",
         },
     },
-    ANIME: {
-        /**
-         *  @description
-         *  Route gets list of main episodes
-         *  This returns a list of main episodes for the given anime media id (Platform or TMDB).
-         *  It also loads the episode list into the different modules.
-         */
-        GetAnimeEpisodeCollection: {
-            key: "ANIME-get-anime-episode-collection",
-            methods: ["GET"],
-            endpoint: "/api/v1/anime/episode-collection/{id}",
-        },
-    },
     ANIME_COLLECTION: {
         /**
          *  @description
@@ -101,16 +88,6 @@ export const API_ENDPOINTS = {
             key: "ANIME-ENTRIES-update-anime-entry-progress",
             methods: ["POST"],
             endpoint: "/api/v1/library/anime-entry/progress",
-        },
-        /**
-         *  @description
-         *  Route updates the repeat count of an anime entry.
-         *  This is used when the user manually updates the repeat count of an anime.
-         */
-        UpdateAnimeEntryRepeat: {
-            key: "ANIME-ENTRIES-update-anime-entry-repeat",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/anime-entry/repeat",
         },
         /**
          *  @description

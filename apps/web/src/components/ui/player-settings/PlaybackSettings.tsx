@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { SpringSwitch } from "@/components/ui/switch/spring-switch"
-import { buildSeaQuery } from "@/api/client/requests"
+import { buildApiQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { useApiWebSocketUrl } from "@/api/client/use-api-websocket-url"
 import { WSEvents, type WebSocketMessage } from "@/lib/server/ws-events"
@@ -69,7 +69,7 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
         setMessage("Iniciando detección...")
         setPercent(0)
         try {
-            await buildSeaQuery<unknown, { mediaId: number }>({
+            await buildApiQuery<unknown, { mediaId: number }>({
                 endpoint: API_ENDPOINTS.MEDIASTREAM.ScanEpisodeSkipTimes.endpoint,
                 method: API_ENDPOINTS.MEDIASTREAM.ScanEpisodeSkipTimes.methods[0],
                 data: { mediaId },

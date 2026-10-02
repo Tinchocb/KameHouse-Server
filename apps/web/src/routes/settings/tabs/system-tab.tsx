@@ -8,7 +8,7 @@ import { useGetSettings, useSaveSettings } from "@/api/hooks/settings.hooks"
 import { settingsSchema } from "@/lib/server/settings"
 import { useAppStore, usePlayerStore, useQueueStore, useUIStore } from "@/lib/store"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
-import { buildSeaQuery } from "@/api/client/requests"
+import { buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { SecretField } from "@/components/settings/secret-field"
@@ -116,7 +116,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
      */
     const patchSettingsNow = React.useCallback(async (patch: Record<string, unknown>, revert: () => void) => {
         try {
-            await buildSeaQuery({
+            await buildApiQuery({
                 endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
                 method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0] as "PATCH",
                 data: patch,
@@ -201,7 +201,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
         queryKey: ["system-cache-stats"],
         queryFn: async () => {
             try {
-                const res = await buildSeaQuery<CacheStats>({
+                const res = await buildApiQuery<CacheStats>({
                     endpoint: API_ENDPOINTS.CACHE_HANDLERS.GetCacheStats.endpoint,
                     method: API_ENDPOINTS.CACHE_HANDLERS.GetCacheStats.methods[0],
                 })
@@ -251,7 +251,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
         const label = labels[target] || "caché"
         toast.loading(`Limpiando ${label}...`, { id: "cache-toast" })
         try {
-            const res = await buildSeaQuery<{ freedBytes: number; freedCount: number }, { target: string }>({
+            const res = await buildApiQuery<{ freedBytes: number; freedCount: number }, { target: string }>({
                 endpoint: API_ENDPOINTS.CACHE_HANDLERS.ClearSystemCache.endpoint,
                 method: API_ENDPOINTS.CACHE_HANDLERS.ClearSystemCache.methods[0],
                 params: { target },
@@ -270,7 +270,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
         setIsWarming(true)
         toast.loading("Iniciando pre-generación de miniaturas...", { id: "warm-toast" })
         try {
-            const res = await buildSeaQuery<{ status: string; totalFiles?: number; message?: string }>({
+            const res = await buildApiQuery<{ status: string; totalFiles?: number; message?: string }>({
                 endpoint: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.endpoint,
                 method: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.methods[0],
             })
@@ -289,7 +289,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
     const handleCancelWarm = async () => {
         toast.loading("Cancelando pre-generación...", { id: "warm-toast" })
         try {
-            await buildSeaQuery<{ status: string; message?: string }, { action: string }>({
+            await buildApiQuery<{ status: string; message?: string }, { action: string }>({
                 endpoint: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.endpoint,
                 method: API_ENDPOINTS.CACHE_HANDLERS.WarmThumbnailCache.methods[0],
                 params: { action: "cancel" },

@@ -133,7 +133,6 @@ func NewEpisodeCollection(opts NewEpisodeCollectionOptions) (ec *EpisodeCollecti
 				FileMetadata:  nil,
 				IsInvalid:     false,
 				MetadataIssue: "",
-				BaseAnime:     opts.Media,
 			}
 			ec.Episodes = append(ec.Episodes, episode)
 		}

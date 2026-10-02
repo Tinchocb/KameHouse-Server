@@ -6,7 +6,7 @@ import { PathList, OsToggle, OsSelect } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
 import { IconStatusFolder, IconNavigationTv, IconNavigationFilm, IconStatusRadar, IconStatusZap, IconUiSpinner, IconStatusDatabase, IconUiTag, IconNavigationLayers } from "@/components/ui/icons";
 import { toast } from "sonner"
-import { buildSeaQuery } from "@/api/client/requests"
+import { buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { useQueryClient } from "@tanstack/react-query"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
@@ -53,7 +53,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
      */
     const patchLibraryNow = async (patch: Record<string, unknown>, revert: () => void) => {
         try {
-            await buildSeaQuery({
+            await buildApiQuery({
                 endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
                 method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0] as "PATCH",
                 data: { library: patch },
@@ -424,7 +424,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                                     // carrera, el escáner re-fetchearía con caché vieja.
                                     if (prev && prev !== val) {
                                         try {
-                                            await buildSeaQuery({
+                                            await buildApiQuery({
                                                 endpoint: API_ENDPOINTS.METADATA.ClearMetadataCache.endpoint,
                                                 method: API_ENDPOINTS.METADATA.ClearMetadataCache.methods[0] as "DELETE",
                                             })

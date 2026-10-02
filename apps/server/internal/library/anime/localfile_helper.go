@@ -88,31 +88,3 @@ func IsLocalFileGroupValidEntry(lfs []*dto.LocalFile) bool {
 	}
 	return flag
 }
-
-// FindLatestLocalFileFromGroup returns the "main" episode with the highest episode number.
-// Returns false if there are no episodes.
-func FindLatestLocalFileFromGroup(lfs []*dto.LocalFile) (*dto.LocalFile, bool) {
-	// Check if there are any main episodes with valid parsed data
-	if !IsLocalFileGroupValidEntry(lfs) {
-		return nil, false
-	}
-	if len(lfs) == 0 {
-		return nil, false
-	}
-	// Get the episode with the highest progress number
-	latest, found := lo.Find(lfs, func(lf *dto.LocalFile) bool {
-		return lf.GetType() == dto.LocalFileTypeMain && lf.IsParsedEpisodeValid()
-	})
-	if !found {
-		return nil, false
-	}
-	for _, lf := range lfs {
-		if lf.GetType() == dto.LocalFileTypeMain && lf.GetEpisodeNumber() > latest.GetEpisodeNumber() {
-			latest = lf
-		}
-	}
-	if latest == nil || latest.GetType() != dto.LocalFileTypeMain {
-		return nil, false
-	}
-	return latest, true
-}

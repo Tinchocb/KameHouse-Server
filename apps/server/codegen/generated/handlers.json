@@ -87,73 +87,6 @@
     }
   },
   {
-    "name": "getTMDBEpisodeCollection",
-    "trimmedName": "getTMDBEpisodeCollection",
-    "comments": [
-      "getTMDBEpisodeCollection builds an EpisodeCollection from local LibraryEpisode records.",
-      "Used for TMDB-only media that don't have Platform metadata.",
-      ""
-    ],
-    "filepath": "internal/handlers/anime.go",
-    "filename": "anime.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetAnimeEpisodeCollection",
-    "trimmedName": "GetAnimeEpisodeCollection",
-    "comments": [
-      "HandleGetAnimeEpisodeCollection ...",
-      "",
-      "\t@summary gets list of main episodes",
-      "\t@desc This returns a list of main episodes for the given anime media id (Platform or TMDB).",
-      "\t@desc It also loads the episode list into the different modules.",
-      "\t@returns anime.EpisodeCollection",
-      "\t@param id - int - true - \"Anime media ID (positive=Platform, negative=TMDB)\"",
-      "\t@route /api/v1/anime/episode-collection/{id} [GET]",
-      ""
-    ],
-    "filepath": "internal/handlers/anime.go",
-    "filename": "anime.go",
-    "api": {
-      "summary": "gets list of main episodes",
-      "descriptions": [
-        "This returns a list of main episodes for the given anime media id (Platform or TMDB).",
-        "It also loads the episode list into the different modules."
-      ],
-      "endpoint": "/api/v1/anime/episode-collection/{id}",
-      "methods": [
-        "GET"
-      ],
-      "params": [
-        {
-          "name": "id",
-          "jsonName": "id",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": [
-            "Anime media ID (positive=Platform, negative=TMDB)"
-          ]
-        }
-      ],
-      "bodyFields": [],
-      "returns": "anime.EpisodeCollection",
-      "returnGoType": "anime.EpisodeCollection",
-      "returnTypescriptType": "Anime_EpisodeCollection"
-    }
-  },
-  {
     "name": "HandleGetLibraryCollection",
     "trimmedName": "GetLibraryCollection",
     "comments": [
@@ -301,31 +234,6 @@
       "returns": "anime.Entry",
       "returnGoType": "anime.Entry",
       "returnTypescriptType": "Anime_Entry"
-    }
-  },
-  {
-    "name": "entryForResponse",
-    "trimmedName": "entryForResponse",
-    "comments": [
-      "entryForResponse devuelve una copia superficial de la entrada sin",
-      "Episode.BaseAnime: repite entry.Media en cada episodio (~250 KB de los",
-      "~750 KB de una serie de 153 episodios) y ningún cliente lo lee. Pesaba en la",
-      "red, en el parseo y en la caché persistida del front (IndexedDB). La entrada",
-      "original no se toca: puede venir de una caché compartida del servidor.",
-      ""
-    ],
-    "filepath": "internal/handlers/anime_entries.go",
-    "filename": "anime_entries.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -513,80 +421,6 @@
         {
           "name": "Progress",
           "jsonName": "progress",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleUpdateAnimeEntryRepeat",
-    "trimmedName": "UpdateAnimeEntryRepeat",
-    "comments": [
-      "HandleUpdateAnimeEntryRepeat updates the repeat count of an anime entry.",
-      "",
-      "\t@summary updates the repeat count of an anime entry.",
-      "\t@desc This is used when the user manually updates the repeat count of an anime.",
-      "\t@route /api/v1/library/anime-entry/repeat [POST]",
-      "\t@param mediaID - int - true - \"Anime media ID\"",
-      "\t@param repeat - int - true - \"New repeat count\"",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/anime_entries.go",
-    "filename": "anime_entries.go",
-    "api": {
-      "summary": "updates the repeat count of an anime entry.",
-      "descriptions": [
-        "This is used when the user manually updates the repeat count of an anime."
-      ],
-      "endpoint": "/api/v1/library/anime-entry/repeat",
-      "methods": [
-        "POST"
-      ],
-      "params": [
-        {
-          "name": "mediaID",
-          "jsonName": "mediaID",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": [
-            "Anime media ID"
-          ]
-        },
-        {
-          "name": "repeat",
-          "jsonName": "repeat",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": [
-            "New repeat count"
-          ]
-        }
-      ],
-      "bodyFields": [
-        {
-          "name": "MediaID",
-          "jsonName": "mediaId",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": []
-        },
-        {
-          "name": "Repeat",
-          "jsonName": "repeat",
           "goType": "int",
           "usedStructType": "",
           "typescriptType": "number",
@@ -968,27 +802,6 @@
       "methods": [
         "POST"
       ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetConfigMetadata",
-    "trimmedName": "GetConfigMetadata",
-    "comments": [
-      "HandleGetConfigMetadata returns the TMDB ID → series_id mapping used by the lore system.",
-      ""
-    ],
-    "filepath": "internal/handlers/config.go",
-    "filename": "config.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -1790,27 +1603,6 @@
     ],
     "filepath": "internal/handlers/home.go",
     "filename": "home.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "TestStubEndpointsReturn501",
-    "trimmedName": "TestStubEndpointsReturn501",
-    "comments": [
-      "Los stubs eliminados deben responder 501 honesto, no 200 con datos falsos.",
-      ""
-    ],
-    "filepath": "internal/handlers/honesty_test.go",
-    "filename": "honesty_test.go",
     "api": {
       "summary": "",
       "descriptions": [],

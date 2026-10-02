@@ -7,7 +7,6 @@ import (
 	"os"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -102,7 +101,6 @@ type (
 		previousVersion      string
 		moduleMu             sync.Mutex
 		ServerReady          bool
-		isOffline            *atomic.Bool
 		ServerPasswordHash   string
 		ServerPasswordSHA256 string
 		FallbackHMACSecret   string
@@ -164,9 +162,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// DynamicPlatform envuelve la plataforma activa con conmutación atómica
 	dynamicPlatform := platform.NewDynamicPlatform(simulatedPlatform)
 
-	isOffline := &atomic.Bool{}
-	isOffline.Store(cfg.Server.Offline)
-
 	continuityManager := initContinuityManager(fileCacher, logger, database)
 
 	thumbnailCache := initThumbnailCache(cfg, logger)
@@ -208,7 +203,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			Mediastream *models.MediastreamSettings
 		}{Mediastream: nil},
 		moduleMu:                          sync.Mutex{},
-		isOffline:                         isOffline,
 		ServerPasswordHash:                serverPasswordHash,
 		ServerPasswordSHA256:              serverPasswordSHA256,
 		FallbackHMACSecret:                fallbackSecret,
@@ -437,10 +431,6 @@ func initThumbnailCache(cfg *Config, logger *zerolog.Logger) *cache.ThumbnailCac
 		logger.Fatal().Err(err).Msg("app: Failed to initialize thumbnail cache")
 	}
 	return thumbnailCache
-}
-
-func (a *KameHouse) IsOffline() bool {
-	return a.isOffline.Load()
 }
 
 func (a *KameHouse) AddCleanupFunction(f func()) {

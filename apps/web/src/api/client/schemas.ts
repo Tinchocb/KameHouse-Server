@@ -3,7 +3,7 @@ import type { Continuity_WatchHistoryItemResponse, Mediastream_MediaContainer } 
 import { ApiError } from "@/api/client/requests"
 
 // ─── Validación en runtime de DTOs críticos ───────────────────────────────────
-// buildSeaQuery castea `as T` sin validar. Estos dos DTOs deciden desde dónde
+// buildApiQuery castea `as T` sin validar. Estos dos DTOs deciden desde dónde
 // se reproduce y qué se reproduce, así que se validan en el borde. Solo se
 // comprueban los campos que consumimos; .passthrough() tolera campos nuevos.
 

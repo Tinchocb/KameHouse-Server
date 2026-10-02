@@ -11,13 +11,14 @@ import { pluginImageCompress } from "@rsbuild/plugin-image-compress"
 
 const require = createRequire(import.meta.url)
 
-const { publicVars } = loadEnv({ prefixes: ["SEA_"] })
+const { publicVars } = loadEnv({ prefixes: ["KAMEHOUSE_PUBLIC_", "SEA_"] })
 
 /** Puerto del API en desarrollo (proxy `/api` y `getServerBaseUrl` en desktop dev).
  *  El sidecar de Tauri usa 43212 en desarrollo; aseguramos que el proxy apunte al puerto correcto. */
 const devBackendPort =
     process.env.KAMEHOUSE_DEV_API_PORT ||
     process.env.KAMEHOUSE_PORT ||
+    process.env.KAMEHOUSE_PUBLIC_DEV_API_PORT ||
     process.env.SEA_PUBLIC_DEV_API_PORT ||
     "43212"
 const devBackendTarget = `http://127.0.0.1:${devBackendPort}`
@@ -53,6 +54,7 @@ const config: RsbuildConfig = {
         },
         define: {
             ...publicVars,
+            "import.meta.env.KAMEHOUSE_PUBLIC_DEV_API_PORT": JSON.stringify(devBackendPort),
             "import.meta.env.SEA_PUBLIC_DEV_API_PORT": JSON.stringify(devBackendPort),
         },
     },

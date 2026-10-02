@@ -1,10 +1,10 @@
-import { useServerQuery, buildSeaQuery } from "@/api/client/requests"
+import { useServerQuery, buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { Anime_LibraryCollection } from "@/api/generated/types"
 
 
 export const fetchLibraryCollection = async () => {
-    return buildSeaQuery<Anime_LibraryCollection>({
+    return buildApiQuery<Anime_LibraryCollection>({
         endpoint: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.endpoint,
         method: API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.methods[0],
     })

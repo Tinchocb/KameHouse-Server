@@ -5249,18 +5249,6 @@
         "comments": []
       },
       {
-        "name": "isOffline",
-        "jsonName": "isOffline",
-        "goType": "atomic.Bool",
-        "typescriptType": "Bool",
-        "usedTypescriptType": "Bool",
-        "usedStructName": "atomic.Bool",
-        "required": false,
-        "nilable": true,
-        "public": false,
-        "comments": []
-      },
-      {
         "name": "ServerPasswordHash",
         "jsonName": "ServerPasswordHash",
         "goType": "string",
@@ -5417,9 +5405,9 @@
         "name": "Server",
         "jsonName": "Server",
         "goType": "INTERNAL_Config_Server",
-        "inlineStructType": "struct{\nHost string `mapstructure:\"host\"`\nPort int `mapstructure:\"port\"`\nOffline bool `mapstructure:\"offline\"`\nUseBinaryPath bool `mapstructure:\"useBinaryPath\"`\nSystray bool `mapstructure:\"systray\"`\nDoHUrl string `mapstructure:\"dohUrl\"`\nPassword string `mapstructure:\"password\"`\nCorsOrigins []string `mapstructure:\"corsOrigins\"`\nAuthTokenTTL string `mapstructure:\"authTokenTTL\"`\nTLS __STRUCT__ `mapstructure:\"tls\"`}",
+        "inlineStructType": "struct{\nHost string `mapstructure:\"host\"`\nPort int `mapstructure:\"port\"`\nUseBinaryPath bool `mapstructure:\"useBinaryPath\"`\nSystray bool `mapstructure:\"systray\"`\nDoHUrl string `mapstructure:\"dohUrl\"`\nPassword string `mapstructure:\"password\"`\nCorsOrigins []string `mapstructure:\"corsOrigins\"`\nAuthTokenTTL string `mapstructure:\"authTokenTTL\"`\nTLS __STRUCT__ `mapstructure:\"tls\"`}",
         "typescriptType": "INTERNAL_Config_Server",
-        "usedTypescriptType": "{ Host: string; Port: number; Offline: boolean; UseBinaryPath: boolean; Systray: boolean; DoHUrl: string; Password: string; CorsOrigins: Array\u003cstring\u003e; AuthTokenTTL: string; TLS: { Enabled: boolean; CertPath: string; KeyPath: string; }; }",
+        "usedTypescriptType": "{ Host: string; Port: number; UseBinaryPath: boolean; Systray: boolean; DoHUrl: string; Password: string; CorsOrigins: Array\u003cstring\u003e; AuthTokenTTL: string; TLS: { Enabled: boolean; CertPath: string; KeyPath: string; }; }",
         "usedStructName": "core.Config_Server",
         "required": true,
         "public": true,
@@ -5474,18 +5462,6 @@
         "comments": []
       },
       {
-        "name": "Offline",
-        "jsonName": "Offline",
-        "goType": "INTERNAL_Config_Offline",
-        "inlineStructType": "struct{\nDir string `mapstructure:\"dir\"`\nAssetDir string `mapstructure:\"assetDir\"`}",
-        "typescriptType": "INTERNAL_Config_Offline",
-        "usedTypescriptType": "{ Dir: string; AssetDir: string; }",
-        "usedStructName": "core.Config_Offline",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "Data",
         "jsonName": "Data",
         "goType": "INTERNAL_Config_Data",
@@ -5493,18 +5469,6 @@
         "typescriptType": "INTERNAL_Config_Data",
         "usedTypescriptType": "{ AppDataDir: string; WorkingDir: string; }",
         "usedStructName": "core.Config_Data",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Extensions",
-        "jsonName": "Extensions",
-        "goType": "INTERNAL_Config_Extensions",
-        "inlineStructType": "struct{\nDir string `mapstructure:\"dir\"`}",
-        "typescriptType": "INTERNAL_Config_Extensions",
-        "usedTypescriptType": "{ Dir: string; }",
-        "usedStructName": "core.Config_Extensions",
         "required": true,
         "public": true,
         "comments": []
@@ -5559,15 +5523,6 @@
         "jsonName": "Port",
         "goType": "int",
         "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Offline",
-        "jsonName": "Offline",
-        "goType": "bool",
-        "typescriptType": "boolean",
         "required": true,
         "public": true,
         "comments": []
@@ -5752,36 +5707,6 @@
   {
     "filepath": "../internal/core/config.go",
     "filename": "config.go",
-    "name": "Config_Offline",
-    "formattedName": "INTERNAL_Config_Offline",
-    "package": "core",
-    "fields": [
-      {
-        "name": "Dir",
-        "jsonName": "Dir",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "AssetDir",
-        "jsonName": "AssetDir",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": [
-      " Config represents the strictly-typed application configuration."
-    ]
-  },
-  {
-    "filepath": "../internal/core/config.go",
-    "filename": "config.go",
     "name": "Config_Data",
     "formattedName": "INTERNAL_Config_Data",
     "package": "core",
@@ -5798,27 +5723,6 @@
       {
         "name": "WorkingDir",
         "jsonName": "WorkingDir",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": [
-      " Config represents the strictly-typed application configuration."
-    ]
-  },
-  {
-    "filepath": "../internal/core/config.go",
-    "filename": "config.go",
-    "name": "Config_Extensions",
-    "formattedName": "INTERNAL_Config_Extensions",
-    "package": "core",
-    "fields": [
-      {
-        "name": "Dir",
-        "jsonName": "Dir",
         "goType": "string",
         "typescriptType": "string",
         "required": true,
@@ -6026,8 +5930,7 @@
         "\"ManageLists\"",
         "\"RefreshMetadata\"",
         "\"WatchingLocalAnime\"",
-        "\"Proxy\"",
-        "\"PushRequests\""
+        "\"Proxy\""
       ]
     },
     "comments": []
@@ -14645,15 +14548,6 @@
         "comments": []
       },
       {
-        "name": "IsOffline",
-        "jsonName": "isOffline",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "MediastreamSettings",
         "jsonName": "mediastreamSettings",
         "goType": "models.MediastreamSettings",
@@ -17080,19 +16974,6 @@
         "typescriptType": "string",
         "required": false,
         "omitEmpty": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "BaseAnime",
-        "jsonName": "baseAnime",
-        "goType": "models.LibraryMedia",
-        "typescriptType": "Models_LibraryMedia",
-        "usedTypescriptType": "Models_LibraryMedia",
-        "usedStructName": "models.LibraryMedia",
-        "required": false,
-        "omitEmpty": true,
-        "nilable": true,
         "public": true,
         "comments": []
       },
@@ -19966,42 +19847,6 @@
         "nilable": true,
         "public": true,
         "comments": []
-      },
-      {
-        "name": "engTitles",
-        "jsonName": "engTitles",
-        "goType": "[]string",
-        "typescriptType": "Array\u003cstring\u003e",
-        "required": false,
-        "nilable": true,
-        "public": false,
-        "comments": [
-          " legacy"
-        ]
-      },
-      {
-        "name": "romTitles",
-        "jsonName": "romTitles",
-        "goType": "[]string",
-        "typescriptType": "Array\u003cstring\u003e",
-        "required": false,
-        "nilable": true,
-        "public": false,
-        "comments": [
-          " legacy"
-        ]
-      },
-      {
-        "name": "synonyms",
-        "jsonName": "synonyms",
-        "goType": "[]string",
-        "typescriptType": "Array\u003cstring\u003e",
-        "required": false,
-        "nilable": true,
-        "public": false,
-        "comments": [
-          " legacy"
-        ]
       }
     ],
     "comments": []
@@ -21775,18 +21620,6 @@
         "usedTypescriptType": "RWMutex",
         "usedStructName": "sync.RWMutex",
         "required": false,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "animeCollection",
-        "jsonName": "animeCollection",
-        "goType": "platform.UnifiedCollection",
-        "typescriptType": "UnifiedCollection",
-        "usedTypescriptType": "UnifiedCollection",
-        "usedStructName": "platform.UnifiedCollection",
-        "required": false,
-        "nilable": true,
         "public": false,
         "comments": []
       },
@@ -28496,15 +28329,6 @@
         "comments": []
       },
       {
-        "name": "username",
-        "jsonName": "username",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": false,
-        "comments": []
-      },
-      {
         "name": "logger",
         "jsonName": "logger",
         "goType": "zerolog.Logger",
@@ -29532,83 +29356,6 @@
         "\"REPEATING\""
       ]
     },
-    "comments": []
-  },
-  {
-    "filepath": "../internal/platforms/platform/models.go",
-    "filename": "models.go",
-    "name": "MediaSort",
-    "formattedName": "MediaSort",
-    "package": "platform",
-    "fields": [],
-    "aliasOf": {
-      "goType": "string",
-      "typescriptType": "string",
-      "declaredValues": []
-    },
-    "comments": []
-  },
-  {
-    "filepath": "../internal/platforms/platform/models.go",
-    "filename": "models.go",
-    "name": "UnifiedMediaList",
-    "formattedName": "UnifiedMediaList",
-    "package": "platform",
-    "fields": [
-      {
-        "name": "Media",
-        "jsonName": "media",
-        "goType": "[]UnifiedMedia",
-        "typescriptType": "Array\u003cUnifiedMedia\u003e",
-        "usedTypescriptType": "UnifiedMedia",
-        "usedStructName": "platform.UnifiedMedia",
-        "required": false,
-        "nilable": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
-    "filepath": "../internal/platforms/platform/models.go",
-    "filename": "models.go",
-    "name": "UnifiedAiringSchedule",
-    "formattedName": "UnifiedAiringSchedule",
-    "package": "platform",
-    "fields": [
-      {
-        "name": "Media",
-        "jsonName": "media",
-        "goType": "[]UnifiedMedia",
-        "typescriptType": "Array\u003cUnifiedMedia\u003e",
-        "usedTypescriptType": "UnifiedMedia",
-        "usedStructName": "platform.UnifiedMedia",
-        "required": false,
-        "nilable": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
-    "filepath": "../internal/platforms/platform/models.go",
-    "filename": "models.go",
-    "name": "UnifiedViewerStats",
-    "formattedName": "UnifiedViewerStats",
-    "package": "platform",
-    "fields": [
-      {
-        "name": "AnimeCount",
-        "jsonName": "animeCount",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
     "comments": []
   },
   {

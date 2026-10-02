@@ -28,7 +28,7 @@ export function isBackendUnavailableError(error: unknown): boolean {
     return error instanceof ApiError && isTransientStatus(error.status)
 }
 
-type SeaQuery<D> = {
+export type ApiQuery<D> = {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
     data?: D
@@ -38,9 +38,11 @@ type SeaQuery<D> = {
     keepalive?: boolean
 }
 
+export type SeaQuery<D> = ApiQuery<D>
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export async function buildSeaQuery<T, D = void>(
+export async function buildApiQuery<T, D = void>(
     {
         endpoint,
         method,
@@ -48,7 +50,7 @@ export async function buildSeaQuery<T, D = void>(
         params,
         signal,
         keepalive,
-    }: SeaQuery<D>): Promise<T | undefined> {
+    }: ApiQuery<D>): Promise<T | undefined> {
 
     const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
     let url: URL
@@ -168,6 +170,8 @@ export async function buildSeaQuery<T, D = void>(
     return undefined;
 }
 
+export const buildSeaQuery = buildApiQuery;
+
 type ServerMutationProps<R, V = void, C = unknown> = Omit<UseMutationOptions<R | undefined, ApiError, V, C>, "mutationFn"> & {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
@@ -196,7 +200,7 @@ export function useServerMutation<R = void, V = void, C = unknown>(
                 toast.error("Sesión no autorizada o expirada", { id: "mutation-err-unauth" })
                 navigate({ to: "/settings", search: { tab: "system" }, replace: true }).catch(() => {})
             } else if (!options.onError) {
-                const errorMsg = _handleSeaError(error.data)
+                const errorMsg = _handleApiError(error.data)
                 if (errorMsg === FEATURE_DISABLED_MESSAGE) {
                     toast.warning(errorMsg)
                 } else {
@@ -206,7 +210,7 @@ export function useServerMutation<R = void, V = void, C = unknown>(
             return options.onError?.(...args)
         },
         mutationFn: async (variables) => {
-            return buildSeaQuery<R, V>({
+            return buildApiQuery<R, V>({
                 endpoint: endpoint,
                 method: method,
                 data: variables,
@@ -238,7 +242,7 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
 
     const props = useQuery<R | undefined, ApiError, TData>({
         queryFn: async ({ signal }) => {
-            return buildSeaQuery<R, V>({
+            return buildApiQuery<R, V>({
                 endpoint: endpoint,
                 method: method,
                 params: params,
@@ -261,7 +265,7 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
                 navigate({ to: "/settings", search: { tab: "system" }, replace: true }).catch(() => {})
                 return
             }
-            const errorMsg = _handleSeaError(props.error.data || props.error.message)
+            const errorMsg = _handleApiError(props.error.data || props.error.message)
             if (errorMsg === FEATURE_DISABLED_MESSAGE) {
                 return
             }
@@ -278,7 +282,7 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
 
 const FEATURE_DISABLED_MESSAGE = "Esta función está desactivada en la configuración."
 
-function _handleSeaError(data: unknown): string {
+function _handleApiError(data: unknown): string {
     if (typeof data === "string") {
         return isFeatureDisabledError(data) ? FEATURE_DISABLED_MESSAGE : translateServerError(data)
     }
@@ -313,5 +317,7 @@ function _handleSeaError(data: unknown): string {
         return translateServerError(err)
     }
 }
+
+export const _handleSeaError = _handleApiError;
 
 

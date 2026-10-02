@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"kamehouse/internal/database/db"
@@ -14,9 +13,6 @@ import (
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/util/result"
 	"net/http"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -113,35 +109,7 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	return h.RespondWithData(c, entryForResponse(entry))
-}
-
-// entryForResponse devuelve una copia superficial de la entrada sin
-// Episode.BaseAnime: repite entry.Media en cada episodio (~250 KB de los
-// ~750 KB de una serie de 153 episodios) y ningún cliente lo lee. Pesaba en la
-// red, en el parseo y en la caché persistida del front (IndexedDB). La entrada
-// original no se toca: puede venir de una caché compartida del servidor.
-func entryForResponse(e *anime.Entry) *anime.Entry {
-	if e == nil {
-		return nil
-	}
-	out := *e
-	strip := func(ep *anime.Episode) *anime.Episode {
-		if ep == nil || ep.BaseAnime == nil {
-			return ep
-		}
-		cp := *ep
-		cp.BaseAnime = nil
-		return &cp
-	}
-	if len(e.Episodes) > 0 {
-		out.Episodes = make([]*anime.Episode, len(e.Episodes))
-		for i, ep := range e.Episodes {
-			out.Episodes[i] = strip(ep)
-		}
-	}
-	out.NextEpisode = strip(e.NextEpisode)
-	return &out
+	return h.RespondWithData(c, entry)
 }
 
 // HandleGetAnimeEntryLocalFiles returns only the local files for the given anime media id.
@@ -327,43 +295,6 @@ func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleUpdateAnimeEntryRepeat updates the repeat count of an anime entry.
-//
-//	@summary updates the repeat count of an anime entry.
-//	@desc This is used when the user manually updates the repeat count of an anime.
-//	@route /api/v1/library/anime-entry/repeat [POST]
-//	@param mediaID - int - true - "Anime media ID"
-//	@param repeat - int - true - "New repeat count"
-//	@returns bool
-func (h *Handler) HandleUpdateAnimeEntryRepeat(c echo.Context) error {
-
-	type body struct {
-		MediaID int `json:"mediaId"`
-		Repeat  int `json:"repeat"`
-	}
-	b := new(body)
-	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if b.MediaID <= 0 {
-		return h.RespondWithCodeError(c, 400, errors.New("invalid mediaId"))
-	}
-	if b.Repeat < 0 {
-		return h.RespondWithCodeError(c, 400, errors.New("invalid repeat: must be >= 0"))
-	}
-
-	err := h.App.Metadata.Platform.UpdateEntryRepeat(c.Request().Context(), b.MediaID, b.Repeat)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
-	ClearLibraryCollectionCache()
-
-	return h.RespondWithData(c, true)
-}
-
 // HandleAnimeEntryManualMatch is used to manually match a group of local files to a media.
 //
 //	@summary manually match a group of local files to a media.
@@ -473,107 +404,6 @@ func (h *Handler) HandleAnimeEntryUnmatch(c echo.Context) error {
 	// Refresh the collection (mirror manual-match so unlinked lists update)
 	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
-
-	return h.RespondWithData(c, true)
-}
-
-// --- Anime Entry Actions ---
-
-func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
-	type body struct {
-		MediaID int    `json:"mediaId"`
-		Action  string `json:"action"`
-	}
-	var b body
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
-	}
-	if b.MediaID <= 0 {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive mediaId is required"))
-	}
-
-	validActions := map[string]bool{
-		"lock": true, "unlock": true, "ignore": true, "unignore": true,
-	}
-	if !validActions[b.Action] {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid action, expected 'lock', 'unlock', 'ignore', or 'unignore'"))
-	}
-
-	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, b.MediaID)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-	if len(lfs) == 0 {
-		return h.RespondWithData(c, true) // no-op
-	}
-
-	for _, lf := range lfs {
-		switch b.Action {
-		case "lock":
-			lf.Locked = true
-		case "unlock":
-			lf.Locked = false
-		case "ignore":
-			lf.Ignored = true
-			lf.Locked = false
-		case "unignore":
-			lf.Ignored = false
-		}
-	}
-
-	if _, err := db.SaveLocalFiles(h.App.Database, 0, lfs); err != nil {
-		return h.RespondWithError(c, err)
-	}
-	return h.RespondWithData(c, true)
-}
-
-func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
-	type body struct {
-		MediaID int `json:"mediaId"`
-	}
-	var b body
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
-	}
-	if b.MediaID <= 0 {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive mediaId is required"))
-	}
-
-	lfs, err := db.GetLocalFilesByMediaID(h.App.Database, b.MediaID)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	var targetPath string
-	for _, lf := range lfs {
-		if lf.Path != "" {
-			targetPath = lf.Path
-			break
-		}
-	}
-
-	if targetPath == "" {
-		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("no local files found for this media entry"))
-	}
-
-	// Reveal in file explorer
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("explorer", "/select,", targetPath)
-	case "darwin":
-		cmd = exec.Command("open", "-R", targetPath)
-	default: // linux, bsd, etc.
-		cmd = exec.Command("xdg-open", filepath.Dir(targetPath))
-	}
-
-	// Sin contexto a propósito: el de la petición muere al responder y un
-	// timeout mataría el gestor de archivos (xdg-open puede convertirse en él).
-	if err := cmd.Start(); err != nil {
-		return h.RespondWithError(c, fmt.Errorf("failed to open file explorer: %w", err))
-	}
-	// Recoger el proceso al terminar para no dejar zombis en Linux/macOS.
-	go func() { _ = cmd.Wait() }()
 
 	return h.RespondWithData(c, true)
 }

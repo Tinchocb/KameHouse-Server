@@ -36,16 +36,10 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.POST("/anime-entry/suggestions", h.HandleGetAnimeEntrySuggestions)
 	v1Library.POST("/anime-entry/manual-match", h.HandleAnimeEntryManualMatch)
 	v1Library.POST("/anime-entry/unmatch", h.HandleAnimeEntryUnmatch)
-	v1Library.PATCH("/anime-entry/bulk-action", h.HandleAnimeEntryBulkAction)
-	v1Library.POST("/anime-entry/open-in-explorer", h.HandleOpenAnimeEntryInExplorer)
 	v1Library.POST("/anime-entry/progress", h.HandleUpdateAnimeEntryProgress)
-	v1Library.POST("/anime-entry/repeat", h.HandleUpdateAnimeEntryRepeat)
 
 	// Library Explorer
 	v1LibraryExplorer := v1Library.Group("/explorer")
 	v1LibraryExplorer.GET("/file-tree", h.HandleGetLibraryExplorerFileTree)
 	v1LibraryExplorer.POST("/file-tree/refresh", h.HandleRefreshLibraryExplorerFileTree)
-
-	// Anime
-	v1.GET("/anime/episode-collection/:id", h.HandleGetAnimeEpisodeCollection)
 }

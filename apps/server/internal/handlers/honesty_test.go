@@ -37,27 +37,6 @@ func doRequest(h *Handler, e *echo.Echo, method, path, body string, fn func(c ec
 	return rec
 }
 
-// Los stubs eliminados deben responder 501 honesto, no 200 con datos falsos.
-func TestStubEndpointsReturn501(t *testing.T) {
-	h, e := newBareHandler()
-	cases := []struct {
-		name   string
-		method string
-		path   string
-		fn     func(c echo.Context) error
-	}{
-		{"announcements", http.MethodPost, "/api/v1/announcements", h.HandleGetAnnouncements},
-		{"config metadata", http.MethodGet, "/api/v1/config/metadata", h.HandleGetConfigMetadata},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			rec := doRequest(h, e, tc.method, tc.path, "", tc.fn)
-			if rec.Code != http.StatusNotImplemented {
-				t.Errorf("expected 501, got %d (body: %s)", rec.Code, rec.Body.String())
-			}
-		})
-	}
-}
 
 func TestProgressValidation400(t *testing.T) {
 	h, e := newBareHandler()
@@ -68,16 +47,10 @@ func TestProgressValidation400(t *testing.T) {
 		{"mediaId zero", `{"mediaId":0,"progress":5}`},
 		{"mediaId negative", `{"mediaId":-3,"progress":5}`},
 		{"progress negative", `{"mediaId":12,"progress":-1}`},
-		{"repeat negative", `{"mediaId":12,"repeat":-1}`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			var rec *httptest.ResponseRecorder
-			if strings.HasPrefix(tc.name, "repeat") {
-				rec = doRequest(h, e, http.MethodPost, "/api/v1/library/anime-entry/repeat", tc.body, h.HandleUpdateAnimeEntryRepeat)
-			} else {
-				rec = doRequest(h, e, http.MethodPost, "/api/v1/library/anime-entry/progress", tc.body, h.HandleUpdateAnimeEntryProgress)
-			}
+			rec := doRequest(h, e, http.MethodPost, "/api/v1/library/anime-entry/progress", tc.body, h.HandleUpdateAnimeEntryProgress)
 			if rec.Code != http.StatusBadRequest {
 				t.Errorf("expected 400, got %d (body: %s)", rec.Code, rec.Body.String())
 			}

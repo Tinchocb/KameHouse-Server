@@ -4,7 +4,7 @@ import { type Control, Controller, useFormContext } from "react-hook-form"
 import { m } from "framer-motion"
 import { type SettingsFormValues } from "../index"
 import { usePlayerStore, useUIStore, type BackgroundMusicTrack } from "@/lib/store"
-import { ApiError, buildSeaQuery } from "@/api/client/requests"
+import { ApiError, buildApiQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { useApiWebSocketUrl } from "@/api/client/use-api-websocket-url"
 import { WSEvents, type WebSocketMessage } from "@/lib/server/ws-events"
@@ -51,7 +51,7 @@ function LibrarySkipScanRow() {
         setMessage("Iniciando escaneo de biblioteca...")
         setPercent(0)
         try {
-            await buildSeaQuery<unknown>({
+            await buildApiQuery<unknown>({
                 endpoint: API_ENDPOINTS.MEDIASTREAM.ScanAllSkipTimes.endpoint,
                 method: API_ENDPOINTS.MEDIASTREAM.ScanAllSkipTimes.methods[0],
             })
@@ -202,7 +202,7 @@ export function PlaybackTab({ control }: PlaybackTabProps) {
         setIsScanningMusic(true)
         try {
             type MusicScanPayload = { data?: { tracks?: BackgroundMusicTrack[] }; tracks?: BackgroundMusicTrack[] }
-            const payload = await buildSeaQuery<MusicScanPayload, { dir: string }>({
+            const payload = await buildApiQuery<MusicScanPayload, { dir: string }>({
                 endpoint: API_ENDPOINTS.MUSIC.ScanBackgroundMusic.endpoint,
                 method: API_ENDPOINTS.MUSIC.ScanBackgroundMusic.methods[0],
                 params: { dir },

@@ -12,7 +12,6 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/platforms/platform"
 	"sort"
-	"strconv"
 )
 
 type (
@@ -221,42 +220,4 @@ func (e *SimpleEntry) hydrateEntryEpisodeData(amw metadata_provider.AnimeMetadat
 		e.NextEpisode = nextEp
 	}
 
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func NewAnimeMetadataFromEntry(media *models.LibraryMedia, episodes []*Episode) *metadata.AnimeMetadata {
-	animeMetadata := &metadata.AnimeMetadata{
-		Titles:       make(map[string]string),
-		Episodes:     make(map[string]*metadata.EpisodeMetadata),
-		EpisodeCount: 0,
-		Mappings: &metadata.AnimeMappings{
-			ThemoviedbId: strconv.Itoa(int(media.ID)),
-		},
-	}
-	animeMetadata.Titles["en"] = media.TitleEnglish
-	animeMetadata.Titles["x-jat"] = media.TitleRomaji
-
-	// Hydrate episodes
-	for _, episode := range episodes {
-		animeMetadata.Episodes[episode.FileMetadata.AniDBEpisode] = &metadata.EpisodeMetadata{
-			AnidbId:               0,
-			TvdbId:                0,
-			Title:                 episode.DisplayTitle,
-			Image:                 episode.EpisodeMetadata.Image,
-			AirDate:               "",
-			Length:                0,
-			Summary:               "",
-			Overview:              "",
-			EpisodeNumber:         episode.EpisodeNumber,
-			Episode:               strconv.Itoa(episode.EpisodeNumber),
-			SeasonNumber:          0,
-			AbsoluteEpisodeNumber: episode.EpisodeNumber,
-			AnidbEid:              0,
-			HasImage:              true,
-		}
-		animeMetadata.EpisodeCount++
-	}
-
-	return animeMetadata
 }

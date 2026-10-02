@@ -152,22 +152,6 @@ type PlatformUser struct {
 	BannerImage *string `json:"bannerImage,omitempty"`
 }
 
-func (m *UnifiedMedia) GetCoverImageSafe() string {
-	if m.CoverImage == nil {
-		return ""
-	}
-	if m.CoverImage.ExtraLarge != nil {
-		return *m.CoverImage.ExtraLarge
-	}
-	if m.CoverImage.Large != nil {
-		return *m.CoverImage.Large
-	}
-	if m.CoverImage.Medium != nil {
-		return *m.CoverImage.Medium
-	}
-	return ""
-}
-
 type UnifiedCollectionEntry struct {
 	ID          int             `json:"id"`
 	Media       *UnifiedMedia   `json:"media"`
@@ -197,21 +181,6 @@ func (c *UnifiedCollection) GetListEntryFromMediaId(id int) (*UnifiedCollectionE
 	return nil, false
 }
 
-func (c *UnifiedCollection) GetAllAnime() []*UnifiedMedia {
-	if c == nil {
-		return nil
-	}
-	var res []*UnifiedMedia
-	for _, l := range c.Lists {
-		for _, e := range l.Entries {
-			if e.Media != nil && e.Media.Type == "ANIME" {
-				res = append(res, e.Media)
-			}
-		}
-	}
-	return res
-}
-
 type UnifiedCollectionList struct {
 	Name    string                    `json:"name"`
 	Status  MediaListStatus           `json:"status"`
@@ -232,16 +201,3 @@ const (
 	MediaListStatusPaused    MediaListStatus = "PAUSED"
 	MediaListStatusRepeating MediaListStatus = "REPEATING"
 )
-
-type MediaSort string
-type UnifiedMediaList struct {
-	Media []*UnifiedMedia `json:"media"`
-}
-
-type UnifiedAiringSchedule struct {
-	Media []*UnifiedMedia `json:"media"`
-}
-
-type UnifiedViewerStats struct {
-	AnimeCount int `json:"animeCount"`
-}
