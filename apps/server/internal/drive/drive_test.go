@@ -68,13 +68,13 @@ func TestResolveKaiSaga(t *testing.T) {
 
 func TestResolveDriveFile(t *testing.T) {
 	tests := []struct {
-		name          string
-		file          DriveFile
-		wantTmdbID    int
-		wantMovie     bool
-		wantEpisode   int
-		wantSagaID    string
-		wantType      string
+		name        string
+		file        DriveFile
+		wantTmdbID  int
+		wantMovie   bool
+		wantEpisode int
+		wantSagaID  string
+		wantType    string
 	}{
 		{
 			name: "Dragon Ball Z - Saiyajin Saga E001",

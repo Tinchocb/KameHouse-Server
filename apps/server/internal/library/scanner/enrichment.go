@@ -273,4 +273,3 @@ func (scn *Scanner) enrichSingleMedia(
 
 	return enrichWorkerResult{seasons: seasons, episodes: episodes}
 }
-

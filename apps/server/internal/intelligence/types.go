@@ -34,9 +34,8 @@ func DefaultWeights() ScoringWeights {
 
 // SelectionResult resultado de la selección inteligente.
 type SelectionResult struct {
-	Winner        *MediaCandidate  `json:"winner"`
+	Winner        *MediaCandidate   `json:"winner"`
 	AllCandidates []*MediaCandidate `json:"allCandidates"`
-	TotalScore    float64          `json:"totalScore"`
-	Reason        string           `json:"reason"`
+	TotalScore    float64           `json:"totalScore"`
+	Reason        string            `json:"reason"`
 }
-

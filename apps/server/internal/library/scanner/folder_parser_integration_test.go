@@ -10,15 +10,15 @@ func TestFolderStructureAndEpisodeIntegration(t *testing.T) {
 	libPaths := []string{"C:/Anime", "C:/Series", "C:/Peliculas", "C:/Videos"}
 
 	tests := []struct {
-		name              string
-		filePath          string
-		wantSeriesName    string
-		wantSeason        int
-		wantEpisode       int
-		wantEpisodeTitle  string
-		wantIsMulti       bool
-		wantTMDBID        int
-		wantIsMovie       bool
+		name             string
+		filePath         string
+		wantSeriesName   string
+		wantSeason       int
+		wantEpisode      int
+		wantEpisodeTitle string
+		wantIsMulti      bool
+		wantTMDBID       int
+		wantIsMovie      bool
 	}{
 		{
 			name:           "DBZ in Saga Saiyajin folder with bare number 001",

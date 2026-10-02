@@ -146,15 +146,6 @@ type LibrarySeason struct {
 	Image        string `gorm:"column:image" json:"image"` // Thumbnail path/URL
 }
 
-// ProviderMapping associates a LibraryMedia with external database IDs.
-type ProviderMapping struct {
-	BaseModel
-	LibraryMediaID uint          `gorm:"column:library_media_id;index" json:"libraryMediaId"`
-	LibraryMedia   *LibraryMedia `gorm:"foreignKey:LibraryMediaID" json:"-"`
-
-	Provider   string `gorm:"column:provider;index;index:idx_provider_external" json:"provider"` // "tmdb", "platform", "tvdb"
-	ExternalID string `gorm:"column:external_id;index;index:idx_provider_external" json:"externalId"`
-}
 
 // MediaEntryListData stores the user's progress and watch status for a specific LibraryMedia
 type MediaEntryListData struct {

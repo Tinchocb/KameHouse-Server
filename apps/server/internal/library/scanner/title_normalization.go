@@ -428,4 +428,3 @@ func GetSignificantTokens(tokens []string) []string {
 	}
 	return result
 }
-

@@ -84,7 +84,7 @@ func (l *LibraryExplorer) buildFileTree() (*FileTree, error) {
 	localFiles, _, err := db.GetLocalFiles(l.database)
 	if err == nil && len(localFiles) > 0 {
 		l.logger.Debug().Int("count", len(localFiles)).Msg("library explorer: Building tree from database records")
-		
+
 		allMediaFiles := make([]string, 0, len(localFiles))
 		for _, lf := range localFiles {
 			if !lf.Ignored {
@@ -94,7 +94,7 @@ func (l *LibraryExplorer) buildFileTree() (*FileTree, error) {
 
 		// Build the tree from DB paths
 		l.buildTreeFromFilePaths(ret.Root, allMediaFiles)
-		
+
 		// Sort all children recursively
 		l.sortTreeChildren(ret.Root)
 
@@ -106,7 +106,7 @@ func (l *LibraryExplorer) buildFileTree() (*FileTree, error) {
 
 	// 2. Fallback: Scan physical filesystem (Slow, only on first run or if DB is empty)
 	l.logger.Info().Msg("library explorer: Database empty or unavailable, performing physical filesystem scan")
-	
+
 	allMediaFiles := make([]string, 0)
 	var wg sync.WaitGroup
 	var mu sync.Mutex

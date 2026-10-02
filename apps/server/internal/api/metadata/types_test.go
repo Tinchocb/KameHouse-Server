@@ -9,10 +9,10 @@ func TestGetCurrentEpisodeCount_EmptyEpisodeString(t *testing.T) {
 	pastDate := "2000-01-01"
 	m := &AnimeMetadata{
 		Episodes: map[string]*EpisodeMetadata{
-			"empty":     {Episode: "", AirDate: pastDate},        // was the panic trigger
-			"numbered":  {Episode: "1", AirDate: pastDate},       // counts
-			"future":    {Episode: "2", AirDate: "2999-01-01"},   // aired in the future, does not count
-			"nonnumber": {Episode: "S", AirDate: pastDate},       // non-numeric prefix, does not count
+			"empty":     {Episode: "", AirDate: pastDate},      // was the panic trigger
+			"numbered":  {Episode: "1", AirDate: pastDate},     // counts
+			"future":    {Episode: "2", AirDate: "2999-01-01"}, // aired in the future, does not count
+			"nonnumber": {Episode: "S", AirDate: pastDate},     // non-numeric prefix, does not count
 		},
 	}
 

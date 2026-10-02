@@ -1,14 +1,14 @@
-﻿package anime
+package anime
 
 import (
 	"errors"
+	"github.com/samber/lo"
+	"github.com/sourcegraph/conc/pool"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models"
 	"strconv"
 	"time"
-	"github.com/samber/lo"
-	"github.com/sourcegraph/conc/pool"
 )
 
 type (
@@ -44,8 +44,6 @@ type (
 // NewEntryDownloadInfo returns a list of episodes to download or episodes for download info views
 // based on the options provided.
 func NewEntryDownloadInfo(opts *NewEntryDownloadInfoOptions) (*EntryDownloadInfo, error) {
-
-
 
 	if opts.Media.Status == "NOT_YET_RELEASED" {
 		return &EntryDownloadInfo{}, nil
@@ -290,5 +288,3 @@ func (s *episodeSlice) filterNew(filter func(*episodeSliceItem, int) bool) *epis
 func (s *episodeSlice) getSlice() []*episodeSliceItem {
 	return *s
 }
-
-

@@ -1,11 +1,5 @@
 package anime
 
-func (e *Episode) GetEpisodeNumber() int {
-	if e == nil {
-		return -1
-	}
-	return e.EpisodeNumber
-}
 func (e *Episode) GetProgressNumber() int {
 	if e == nil {
 		return -1

@@ -588,18 +588,18 @@ func (mp *MetadataParser) ExtractSubtitles(ctx context.Context, newReader io.Rea
 			// Process subtitle packet
 			subtitleData := packet.Data
 
-		// Decompress if needed (cap anti zip-bomb)
-		if track.contentEncodings != nil {
-			if zr, err := zlib.NewReader(bytes.NewReader(subtitleData)); err == nil {
-				lr := io.LimitReader(zr, 10*1024*1024)
-				if buf, err := io.ReadAll(lr); err == nil {
-					if len(buf) < 10*1024*1024 {
-						subtitleData = buf
+			// Decompress if needed (cap anti zip-bomb)
+			if track.contentEncodings != nil {
+				if zr, err := zlib.NewReader(bytes.NewReader(subtitleData)); err == nil {
+					lr := io.LimitReader(zr, 10*1024*1024)
+					if buf, err := io.ReadAll(lr); err == nil {
+						if len(buf) < 10*1024*1024 {
+							subtitleData = buf
+						}
 					}
+					_ = zr.Close()
 				}
-				_ = zr.Close()
 			}
-		}
 
 			milliseconds := float64(packet.StartTime) / 1e6 // Convert nanoseconds to milliseconds
 			duration := float64(packet.EndTime-packet.StartTime) / 1e6

@@ -285,7 +285,9 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	}
 
 	var startDate *dto.NormalizedMediaDate
-	if r.FirstAirDate != "" { startDate = parseTMDBDate(r.FirstAirDate) }
+	if r.FirstAirDate != "" {
+		startDate = parseTMDBDate(r.FirstAirDate)
+	}
 
 	tvFormat := dto.MediaFormatTV
 	format := &tvFormat
@@ -303,10 +305,14 @@ func TmdbTVResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia {
 	}
 
 	var description *string
-	if r.Overview != "" { description = &r.Overview }
+	if r.Overview != "" {
+		description = &r.Overview
+	}
 
 	var episodes *int
-	if r.NumberOfEpisodes > 0 { episodes = &r.NumberOfEpisodes }
+	if r.NumberOfEpisodes > 0 {
+		episodes = &r.NumberOfEpisodes
+	}
 
 	var score *float64
 	if r.VoteAverage > 0 {
@@ -361,7 +367,9 @@ func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails, englishTitle string) *dto
 	}
 
 	var startDate *dto.NormalizedMediaDate
-	if r.FirstAirDate != "" { startDate = parseTMDBDate(r.FirstAirDate) }
+	if r.FirstAirDate != "" {
+		startDate = parseTMDBDate(r.FirstAirDate)
+	}
 
 	tvFormat := dto.MediaFormatTV
 	format := &tvFormat
@@ -379,10 +387,14 @@ func TmdbTVDetailsToNormalizedMedia(r *tmdb.TVDetails, englishTitle string) *dto
 	}
 
 	var description *string
-	if r.Overview != "" { description = &r.Overview }
+	if r.Overview != "" {
+		description = &r.Overview
+	}
 
 	var episodes *int
-	if r.NumberOfEpisodes > 0 { episodes = &r.NumberOfEpisodes }
+	if r.NumberOfEpisodes > 0 {
+		episodes = &r.NumberOfEpisodes
+	}
 
 	var score *float64
 	if r.VoteAverage > 0 {
@@ -449,7 +461,9 @@ func TmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 	}
 
 	var startDate *dto.NormalizedMediaDate
-	if r.ReleaseDate != "" { startDate = parseTMDBDate(r.ReleaseDate) }
+	if r.ReleaseDate != "" {
+		startDate = parseTMDBDate(r.ReleaseDate)
+	}
 
 	movieFormat := dto.MediaFormatMovie
 	format := &movieFormat
@@ -467,7 +481,9 @@ func TmdbMovieResultToNormalizedMedia(r tmdb.SearchResult) *dto.NormalizedMedia 
 	}
 
 	var description *string
-	if r.Overview != "" { description = &r.Overview }
+	if r.Overview != "" {
+		description = &r.Overview
+	}
 
 	var score *float64
 	if r.VoteAverage > 0 {
@@ -521,7 +537,9 @@ func TmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails, englishTitle string
 	}
 
 	var startDate *dto.NormalizedMediaDate
-	if r.ReleaseDate != "" { startDate = parseTMDBDate(r.ReleaseDate) }
+	if r.ReleaseDate != "" {
+		startDate = parseTMDBDate(r.ReleaseDate)
+	}
 
 	movieFormat := dto.MediaFormatMovie
 	format := &movieFormat
@@ -539,7 +557,9 @@ func TmdbMovieDetailsToNormalizedMedia(r *tmdb.MovieDetails, englishTitle string
 	}
 
 	var description *string
-	if r.Overview != "" { description = &r.Overview }
+	if r.Overview != "" {
+		description = &r.Overview
+	}
 
 	var score *float64
 	if r.VoteAverage > 0 {

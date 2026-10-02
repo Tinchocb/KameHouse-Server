@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/sourcegraph/conc/pool"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/constants"
@@ -12,7 +13,6 @@ import (
 	"kamehouse/internal/platforms/platform"
 	"sort"
 	"strconv"
-	"github.com/sourcegraph/conc/pool"
 )
 
 type (
@@ -260,4 +260,3 @@ func NewAnimeMetadataFromEntry(media *models.LibraryMedia, episodes []*Episode) 
 
 	return animeMetadata
 }
-

@@ -50,4 +50,3 @@ func HashPasswordArgon2(password string) (string, error) {
 func CreateMD5(s string) string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(s)))
 }
-

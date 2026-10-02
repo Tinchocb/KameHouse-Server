@@ -24,7 +24,7 @@ func (e *Entry) FindNextEpisode() (*Episode, bool) {
 	}
 
 	currentProgress := e.GetCurrentProgress()
-	
+
 	// Try finding by absolute number first for cross-season continuity
 	ep, ok := lo.Find(eps, func(ep *Episode) bool {
 		return ep.AbsoluteEpisodeNumber == currentProgress+1
@@ -139,4 +139,3 @@ func (e *SimpleEntry) FindListData() (*EntryListData, bool) {
 	}
 	return e.EntryListData, true
 }
-

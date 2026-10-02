@@ -21,6 +21,7 @@ import (
 //   - ?token=<value> query parameter (legacy)
 //   - Authorization: Bearer <token> header (preferred)
 //   - Sec-WebSocket-Protocol header with token (preferred for browsers)
+//
 // wsMaxClientMessageBytes es el tamaño máximo de un mensaje que un cliente puede enviar.
 const wsMaxClientMessageBytes = 1 << 20 // 1 MiB
 

@@ -1,8 +1,10 @@
-﻿package anime
+package anime
 
 import (
 	"cmp"
 	"fmt"
+	"github.com/rs/zerolog"
+	"github.com/samber/lo"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/models"
@@ -10,16 +12,12 @@ import (
 	"slices"
 	"strconv"
 	"time"
-	"github.com/rs/zerolog"
-	"github.com/samber/lo"
 )
 
 var episodeCollectionCache = result.NewBoundedCache[int, *EpisodeCollection](10)
-var EpisodeCollectionFromLocalFilesCache = result.NewBoundedCache[int, *EpisodeCollection](10)
 
 func ClearEpisodeCollectionCache() {
 	episodeCollectionCache.Clear()
-	EpisodeCollectionFromLocalFilesCache.Clear()
 }
 
 type (

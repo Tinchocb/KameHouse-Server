@@ -3,9 +3,9 @@ package cassette
 import (
 	"context"
 	"fmt"
+	"kamehouse/internal/mediastream/videofile"
 	"os/exec"
 	"runtime"
-	"kamehouse/internal/mediastream/videofile"
 	"strings"
 	"time"
 
@@ -229,7 +229,6 @@ func qsvLowPowerProfile(device, preset string) HwAccelProfile {
 		ForcedIDR:     true,
 	}
 }
-
 
 func nvidiaProfile(preset string) HwAccelProfile {
 	// map to nvenc presets

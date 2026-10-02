@@ -67,22 +67,10 @@ var clientInfoCache = result.NewBoundedCache[string, util.ClientInfo](256)
 // NewStatus returns a new Status struct.
 // It uses the RouteCtx to get the App instance containing the Database instance.
 func (h *Handler) NewStatus(c echo.Context) *Status {
-	var dbAcc *models.Account
-	var currentUser *user.User
+	currentUser := user.NewSimulatedUser()
 	var settings *models.Settings
 	var theme *models.Theme
 	//var mal *models.Mal
-
-	// Get the user from the database (if logged in)
-	if dbAcc, _ = h.App.Database.GetAccount(); dbAcc != nil {
-		currentUser, _ = user.NewUser(dbAcc)
-		if currentUser != nil {
-			currentUser.Token = "HIDDEN"
-		}
-	} else {
-		// If the user is not logged in, create a simulated user
-		currentUser = user.NewSimulatedUser()
-	}
 
 	if settings, _ = h.App.Database.GetSettings(); settings == nil {
 		settings = &models.Settings{}
@@ -560,7 +548,6 @@ func (h *Handler) HandleForceGC(c echo.Context) error {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 // HandleShutdown handles graceful shutdown requests from local clients (e.g. desktop sidecar).
 //

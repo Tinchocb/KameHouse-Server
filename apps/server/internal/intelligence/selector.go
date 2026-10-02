@@ -16,19 +16,19 @@ import (
 
 // Selector es el motor de selección inteligente de archivos.
 type Selector struct {
-	db        *db.Database
-	cache     *ResultCache
-	logger    *zerolog.Logger
-	weights   ScoringWeights
+	db      *db.Database
+	cache   *ResultCache
+	logger  *zerolog.Logger
+	weights ScoringWeights
 }
 
 // NewSelector crea un nuevo selector inteligente.
 func NewSelector(database *db.Database, logger *zerolog.Logger) *Selector {
 	return &Selector{
-		db:       database,
-		cache:    NewResultCache(10*time.Minute, 500),
-		logger:   logger,
-		weights:  DefaultWeights(),
+		db:      database,
+		cache:   NewResultCache(10*time.Minute, 500),
+		logger:  logger,
+		weights: DefaultWeights(),
 	}
 }
 
@@ -341,4 +341,3 @@ func inferAudioLangsFromFilename(filename string) []string {
 
 	return langs
 }
-

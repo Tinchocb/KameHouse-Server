@@ -32,4 +32,3 @@ func main() {
 		codegen.GenerateTypescriptFile("./generated/handlers.json", "./generated/public_structs.json", "../../web/src/api/generated", goStructStrs)
 	}
 }
-

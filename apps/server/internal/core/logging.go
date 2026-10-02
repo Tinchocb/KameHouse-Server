@@ -18,8 +18,6 @@ func TrimLogEntries(dir string, logger *zerolog.Logger) {
 		return
 	}
 
-
-
 	var files []os.FileInfo
 	for _, entry := range entries {
 		if entry.IsDir() {

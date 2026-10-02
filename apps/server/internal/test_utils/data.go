@@ -36,17 +36,17 @@ type (
 	}
 
 	ProviderConfig struct {
-		MpcHost              string `mapstructure:"mpc_host"`
-		MpcPort              int    `mapstructure:"mpc_port"`
-		MpcPath              string `mapstructure:"mpc_path"`
-		VlcHost              string `mapstructure:"vlc_host"`
-		VlcPort              int    `mapstructure:"vlc_port"`
-		VlcPassword          string `mapstructure:"vlc_password"`
-		VlcPath              string `mapstructure:"vlc_path"`
-		MpvPath              string `mapstructure:"mpv_path"`
-		MpvSocket            string `mapstructure:"mpv_socket"`
-		IinaPath             string `mapstructure:"iina_path"`
-		IinaSocket           string `mapstructure:"iina_socket"`
+		MpcHost     string `mapstructure:"mpc_host"`
+		MpcPort     int    `mapstructure:"mpc_port"`
+		MpcPath     string `mapstructure:"mpc_path"`
+		VlcHost     string `mapstructure:"vlc_host"`
+		VlcPort     int    `mapstructure:"vlc_port"`
+		VlcPassword string `mapstructure:"vlc_password"`
+		VlcPath     string `mapstructure:"vlc_path"`
+		MpvPath     string `mapstructure:"mpv_path"`
+		MpvSocket   string `mapstructure:"mpv_socket"`
+		IinaPath    string `mapstructure:"iina_path"`
+		IinaSocket  string `mapstructure:"iina_socket"`
 	}
 	PathConfig struct {
 		DataDir string `mapstructure:"dataDir"`

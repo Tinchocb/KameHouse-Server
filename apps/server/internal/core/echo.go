@@ -45,7 +45,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	// NOTE: Recover(), CORS and Gzip middleware are registered in handlers.InitRoutes
 	// to avoid duplication and ensure the most complete config is used.
 
-
 	distFS, err := fs.Sub(webFS, "web")
 	if err != nil {
 		app.Logger.Fatal().Err(err).Msg("app: Failed to extract embedded web filesystem")
@@ -87,7 +86,6 @@ func NewEchoApp(app *App, webFS *embed.FS) *echo.Echo {
 	// Serve web assets
 	app.Logger.Info().Msgf("app: Web assets path: %s", app.Config.Web.AssetDir)
 	e.Static("/assets", app.Config.Web.AssetDir)
-
 
 	// Serve offline assets
 	app.Logger.Info().Msgf("app: Offline assets path: %s", app.Config.Offline.AssetDir)

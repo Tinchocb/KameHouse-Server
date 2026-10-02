@@ -6019,13 +6019,10 @@
       "goType": "string",
       "typescriptType": "string",
       "declaredValues": [
-        "\"ManageOfflineMode\"",
         "\"ViewSettings\"",
         "\"ViewLogs\"",
         "\"UpdateSettings\"",
         "\"ManageLocalAnimeLibrary\"",
-        "\"ManageAccount\"",
-        "\"ViewAccount\"",
         "\"ManageLists\"",
         "\"RefreshMetadata\"",
         "\"WatchingLocalAnime\"",
@@ -6695,26 +6692,6 @@
       " SlowTraceLogger records queries that exceed a configurable threshold",
       " to a `slow_traces.json` file for post-mortem analysis."
     ]
-  },
-  {
-    "filepath": "../internal/database/models/dto/autoselect_types.go",
-    "filename": "autoselect_types.go",
-    "name": "AutoSelectPreference",
-    "formattedName": "AutoSelectPreference",
-    "package": "dto",
-    "fields": [],
-    "aliasOf": {
-      "goType": "string",
-      "typescriptType": "string",
-      "declaredValues": [
-        "\"neutral\"",
-        "\"prefer\"",
-        "\"avoid\"",
-        "\"only\"",
-        "\"never\""
-      ]
-    },
-    "comments": []
   },
   {
     "filepath": "../internal/database/models/dto/continue_watching_dto.go",
@@ -9618,62 +9595,6 @@
   {
     "filepath": "../internal/database/models/library.go",
     "filename": "library.go",
-    "name": "ProviderMapping",
-    "formattedName": "Models_ProviderMapping",
-    "package": "models",
-    "fields": [
-      {
-        "name": "LibraryMediaID",
-        "jsonName": "libraryMediaId",
-        "goType": "uint",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "LibraryMedia",
-        "jsonName": "",
-        "goType": "LibraryMedia",
-        "typescriptType": "Models_LibraryMedia",
-        "usedTypescriptType": "Models_LibraryMedia",
-        "usedStructName": "models.LibraryMedia",
-        "required": false,
-        "nilable": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Provider",
-        "jsonName": "provider",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": [
-          " \"tmdb\", \"platform\", \"tvdb\""
-        ]
-      },
-      {
-        "name": "ExternalID",
-        "jsonName": "externalId",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": [
-      " ProviderMapping associates a LibraryMedia with external database IDs."
-    ],
-    "embeddedStructNames": [
-      "models.BaseModel"
-    ]
-  },
-  {
-    "filepath": "../internal/database/models/library.go",
-    "filename": "library.go",
     "name": "MediaEntryListData",
     "formattedName": "Models_MediaEntryListData",
     "package": "models",
@@ -9985,47 +9906,6 @@
       }
     ],
     "comments": []
-  },
-  {
-    "filepath": "../internal/database/models/models.go",
-    "filename": "models.go",
-    "name": "Account",
-    "formattedName": "Models_Account",
-    "package": "models",
-    "fields": [
-      {
-        "name": "Username",
-        "jsonName": "username",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Token",
-        "jsonName": "token",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Viewer",
-        "jsonName": "viewer",
-        "goType": "string",
-        "typescriptType": "Array\u003cstring\u003e",
-        "required": false,
-        "nilable": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": [],
-    "embeddedStructNames": [
-      "models.BaseModel"
-    ]
   },
   {
     "filepath": "../internal/database/models/models.go",
@@ -11251,46 +11131,6 @@
         "name": "Confidence",
         "jsonName": "confidence",
         "goType": "float64",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": [],
-    "embeddedStructNames": [
-      "models.BaseModel"
-    ]
-  },
-  {
-    "filepath": "../internal/database/models/models.go",
-    "filename": "models.go",
-    "name": "MediaMetadataParent",
-    "formattedName": "Models_MediaMetadataParent",
-    "package": "models",
-    "fields": [
-      {
-        "name": "MediaID",
-        "jsonName": "mediaId",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "ParentID",
-        "jsonName": "parentId",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "SpecialOffset",
-        "jsonName": "specialOffset",
-        "goType": "int",
         "typescriptType": "number",
         "required": true,
         "public": true,
@@ -17987,89 +17827,6 @@
         "usedStructName": "anime.LocalFile",
         "required": false,
         "nilable": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
-    "filepath": "../internal/library/anime/schedule.go",
-    "filename": "schedule.go",
-    "name": "ScheduleItem",
-    "formattedName": "Anime_ScheduleItem",
-    "package": "anime",
-    "fields": [
-      {
-        "name": "MediaID",
-        "jsonName": "mediaId",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Title",
-        "jsonName": "title",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Time",
-        "jsonName": "time",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "DateTime",
-        "jsonName": "dateTime",
-        "goType": "time.Time",
-        "typescriptType": "string",
-        "usedStructName": "time.Time",
-        "required": false,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Image",
-        "jsonName": "image",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "EpisodeNumber",
-        "jsonName": "episodeNumber",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "IsMovie",
-        "jsonName": "isMovie",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "IsSeasonFinale",
-        "jsonName": "isSeasonFinale",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
         "public": true,
         "comments": []
       }

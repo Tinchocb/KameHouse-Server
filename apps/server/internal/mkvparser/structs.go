@@ -31,4 +31,3 @@ type ContentCompression struct {
 	ContentCompAlgo     uint64
 	ContentCompSettings []byte
 }
-

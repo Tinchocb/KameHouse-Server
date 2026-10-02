@@ -476,6 +476,7 @@ func (h *Handler) HandleAnimeEntryUnmatch(c echo.Context) error {
 
 	return h.RespondWithData(c, true)
 }
+
 // --- Anime Entry Actions ---
 
 func (h *Handler) HandleAnimeEntryBulkAction(c echo.Context) error {
@@ -576,4 +577,3 @@ func (h *Handler) HandleOpenAnimeEntryInExplorer(c echo.Context) error {
 
 	return h.RespondWithData(c, true)
 }
-

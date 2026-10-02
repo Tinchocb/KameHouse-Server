@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"kamehouse/internal/library/anime"
 	"kamehouse/internal/platforms/platform"
 
@@ -94,79 +93,4 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 	libraryCollectionCache.SetT("main", libraryCollection, 5*time.Minute)
 
 	return h.RespondWithData(c, libraryCollection)
-}
-
-//----------------------------------------------------------------------------------------------------------------------------------------------------
-
-var animeScheduleCache = result.NewCache[int, []*anime.ScheduleItem]()
-
-func ClearAnimeScheduleCache() {
-	animeScheduleCache.Clear()
-}
-
-// HandleGetAnimeCollectionSchedule returns the anime collection schedule.
-//
-//	@summary returns anime collection schedule
-//	@desc This is used by the "Schedule" page to display the anime schedule.
-//	@route /api/v1/library/schedule [GET]
-//	@returns []anime.ScheduleItem
-func (h *Handler) HandleGetAnimeCollectionSchedule(c echo.Context) error {
-
-	if ret, ok := animeScheduleCache.Get(1); ok {
-		return h.RespondWithData(c, ret)
-	}
-
-	animeScheduleData, err := h.App.Metadata.Platform.GetAnimeAiringSchedule(c.Request().Context())
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-	animeSchedule, ok := animeScheduleData.(*platform.UnifiedAiringSchedule)
-	if !ok || animeSchedule == nil {
-		return h.RespondWithError(c, errors.New("handlers: unexpected or nil schedule data"))
-	}
-
-	animeCollection, err := h.App.GetAnimeCollection(false)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	ret := anime.GetScheduleItems(animeSchedule, animeCollection)
-
-	animeScheduleCache.SetT(1, ret, 1*time.Hour)
-
-	return h.RespondWithData(c, ret)
-}
-
-// HandleAddUnknownMedia adds the given media to the user's Platform planning collections.
-//
-//	@summary adds the given media to the user's Platform planning collections
-//	@desc Since media not found in the user's Platform collection are not displayed in the library, this route is used to add them.
-//	@desc The response is ignored in the frontend, the client should just refetch the entire library collection.
-//	@route /api/v1/library/unknown-media [POST]
-//	@returns Platform.AnimeCollection
-func (h *Handler) HandleAddUnknownMedia(c echo.Context) error {
-
-	type body struct {
-		MediaIds []int `json:"mediaIds"`
-	}
-
-	b := new(body)
-	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Add non-added media entries to Platform collection
-	if err := h.App.Metadata.Platform.AddMediaToCollection(c.Request().Context(), b.MediaIds); err != nil {
-		return h.RespondWithError(c, errors.New("error: Platform responded with an error, this is most likely a rate limit issue"))
-	}
-
-	// Bypass the cache
-	animeCollection, err := h.App.GetAnimeCollection(true)
-	if err != nil {
-		return h.RespondWithError(c, errors.New("error: Platform responded with an error, wait one minute before refreshing"))
-	}
-
-	// Clear cache to force refresh on next request
-	ClearLibraryCollectionCache()
-	return h.RespondWithData(c, animeCollection)
 }

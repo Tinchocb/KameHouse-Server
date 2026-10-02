@@ -258,4 +258,3 @@ func (lf *LocalFile) GetSeasonNumber() int {
 	}
 	return 1
 }
-

@@ -52,7 +52,7 @@ func NewClient(bearerToken string, language ...string) *Client {
 		bearerToken: SanitizeToken(bearerToken),
 		language:    lang,
 		cache:       cache.NewCache[any](time.Hour, 2000), // 1 hour TTL, capped at 2000 entries
-		limiter:     rate.NewLimiter(rate.Limit(30), 10), // 30 req/sec, burst of 10
+		limiter:     rate.NewLimiter(rate.Limit(30), 10),  // 30 req/sec, burst of 10
 		httpClient:  httputil.NewFastClient(),
 	}
 }

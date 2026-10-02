@@ -9,4 +9,3 @@ const (
 	// SourceTypeLocal indicates a file served from the local filesystem.
 	SourceTypeLocal SourceType = "local"
 )
-

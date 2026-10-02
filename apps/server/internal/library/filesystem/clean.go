@@ -36,7 +36,6 @@ func RemoveEmptyDirectories(root string, logger *zerolog.Logger) {
 	}
 }
 
-
 func isDirectoryEmpty(path string) (bool, error) {
 	dir, err := os.Open(path)
 	if err != nil {

@@ -1,6 +1,6 @@
 export { useUIStore, type UIState, type BackgroundMusicTrack } from "./ui-store"
-export { usePlayerStore, type PlayerState, type PlaylistItem } from "./player-store"
-export { useQueueStore, type QueueState, type QueueRepeatMode } from "./queue-store"
+export { usePlayerStore, type PlayerState } from "./player-store"
+export { useQueueStore, type QueueState, type QueueRepeatMode, type PlaylistItem } from "./queue-store"
 export { useSkipTimesStore, type SkipTimesState } from "./skip-times-store"
 export { useScannerStore, type ScanEvent, type ScannerState } from "./scanner-store"
 

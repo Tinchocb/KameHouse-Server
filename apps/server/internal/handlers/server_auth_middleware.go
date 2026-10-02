@@ -153,20 +153,20 @@ var sensitiveMethodRoutes = map[string][]string{
 // que usan POST solo por llevar cuerpo. Todo lo demás que escribe queda
 // restringido a este equipo; una ruta nueva nace cerrada hasta sumarla acá.
 var lanWriteRoutes = map[string]bool{
-	"/api/v1/progress":                            true,
-	"/api/v1/playback/sync":                       true,
-	"/api/v1/continuity/item":                     true,
-	"/api/v1/notifications/read":                  true,
+	"/api/v1/progress":                        true,
+	"/api/v1/playback/sync":                   true,
+	"/api/v1/continuity/item":                 true,
+	"/api/v1/notifications/read":              true,
 	"/api/v1/announcements":                   true,
 	"/api/v1/tmdb/search":                     true,
 	"/api/v1/tmdb/details":                    true,
 	"/api/v1/library/anime-entry/suggestions": true,
 	"/api/v1/library/anime-entry/progress":    true,
 	"/api/v1/library/anime-entry/repeat":      true,
-	"/api/v1/mediastream/request":                 true,
-	"/api/v1/mediastream/preload":                 true,
-	"/api/v1/mediastream/shutdown-transcode":      true,
-	"/api/v1/mediastream/skip-times":              true,
+	"/api/v1/mediastream/request":             true,
+	"/api/v1/mediastream/preload":             true,
+	"/api/v1/mediastream/shutdown-transcode":  true,
+	"/api/v1/mediastream/skip-times":          true,
 }
 
 // isRestrictedWrite indica si el pedido modifica estado y no figura entre las

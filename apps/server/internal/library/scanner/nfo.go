@@ -85,4 +85,3 @@ func (n *NfoFile) GetTmdbID() int {
 	}
 	return n.ID
 }
-

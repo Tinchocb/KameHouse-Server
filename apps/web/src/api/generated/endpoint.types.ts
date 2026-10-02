@@ -45,17 +45,6 @@ export type GetAnimeEpisodeCollection_Variables = {
 // anime_collection
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/**
- * - Filepath: internal/handlers/anime_collection.go
- * - Filename: anime_collection.go
- * - Endpoint: /api/v1/library/unknown-media
- * @description
- * Route adds the given media to the user's Platform planning collections
- */
-export type AddUnknownMedia_Variables = {
-    mediaIds: Array<number>
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // anime_enrichment
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -504,44 +493,6 @@ export type PopulateFillerData_Variables = {
  * Route removes filler data cache.
  */
 export type RemoveFillerData_Variables = {
-    mediaId: number
-}
-
-/**
- * - Filepath: internal/handlers/metadata.go
- * - Filename: metadata.go
- * - Endpoint: /api/v1/metadata/parent/{id}
- * @description
- * Route retrieves media metadata parent by media ID.
- */
-export type GetMediaMetadataParent_Variables = {
-    /**
-     *  The media ID
-     */
-    id: number
-}
-
-/**
- * - Filepath: internal/handlers/metadata.go
- * - Filename: metadata.go
- * - Endpoint: /api/v1/metadata/parent
- * @description
- * Route saves or updates media metadata parent.
- */
-export type SaveMediaMetadataParent_Variables = {
-    mediaId: number
-    parentId: number
-    specialOffset: number
-}
-
-/**
- * - Filepath: internal/handlers/metadata.go
- * - Filename: metadata.go
- * - Endpoint: /api/v1/metadata/parent
- * @description
- * Route deletes media metadata parent.
- */
-export type DeleteMediaMetadataParent_Variables = {
     mediaId: number
 }
 

@@ -182,8 +182,7 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			strings.EqualFold(newMedia.TitleSpanish, "Dragon Ball Serie") ||
 			strings.EqualFold(newMedia.TitleSpanish, "Dragon Ball Series")
 
-		isEnglishDescription := newMedia.Description != "" && (
-			strings.HasPrefix(strings.ToLower(newMedia.Description), "five years after") ||
+		isEnglishDescription := newMedia.Description != "" && (strings.HasPrefix(strings.ToLower(newMedia.Description), "five years after") ||
 			strings.HasPrefix(strings.ToLower(newMedia.Description), "the ") ||
 			strings.HasPrefix(strings.ToLower(newMedia.Description), "after ") ||
 			strings.HasPrefix(strings.ToLower(newMedia.Description), "during ") ||
@@ -287,7 +286,6 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 		}
 	}
 
-
 	missingAssocCount := 0
 	for _, lf := range localFiles {
 		if lf.MediaID != 0 {
@@ -311,4 +309,3 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 
 	return libraryMediaIdMap
 }
-

@@ -57,7 +57,7 @@ func NewGovernor(maxConcurrency int, hwAccelEnabled bool, logger *zerolog.Logger
 			maxConcurrency = max(numCPU-1, 1)
 		}
 	}
-	
+
 	nvencCap := nvencCapFromEnv()
 
 	gov := &Governor{

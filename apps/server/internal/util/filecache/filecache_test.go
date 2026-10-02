@@ -261,4 +261,3 @@ func TestMediastreamMediaInfoUnifiedAndMigration(t *testing.T) {
 	assert.True(t, genFound)
 	assert.Equal(t, "val1", genOut)
 }
-

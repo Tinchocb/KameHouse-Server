@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -103,7 +103,7 @@ type apiFileItem struct {
 	MimeType           string              `json:"mimeType"`
 	ModifiedTime       time.Time           `json:"modifiedTime"`
 	MD5Checksum        string              `json:"md5Checksum"`
-	VideoMediaMetadata *apiVideoMetadata  `json:"videoMediaMetadata"`
+	VideoMediaMetadata *apiVideoMetadata   `json:"videoMediaMetadata"`
 	ShortcutDetails    *apiShortcutDetails `json:"shortcutDetails"`
 }
 

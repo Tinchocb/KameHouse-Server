@@ -63,4 +63,3 @@ func getEnvOr(env, def string) string {
 	}
 	return def
 }
-

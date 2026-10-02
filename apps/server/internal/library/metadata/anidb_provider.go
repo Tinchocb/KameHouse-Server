@@ -40,9 +40,9 @@ type (
 
 	// AniDBProvider implements Provider using the AniDB title dump.
 	AniDBProvider struct {
-		cachePath string
-		logger    *zerolog.Logger
-		client    *http.Client
+		cachePath   string
+		logger      *zerolog.Logger
+		client      *http.Client
 		rateLimiter *limiter.Limiter
 
 		loaded bool

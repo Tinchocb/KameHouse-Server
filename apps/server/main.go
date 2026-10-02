@@ -70,7 +70,7 @@ func run(ctx context.Context) error {
 	app := core.NewKameHouse(configOpts)
 
 	e := core.NewEchoApp(app, &WebFS)
-	
+
 	if app.Flags.IsDesktopSidecar {
 		app.WSEventManager.ExitIfNoConnsAsDesktopSidecar()
 	}
@@ -113,9 +113,9 @@ func run(ctx context.Context) error {
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           e,
-		ReadHeaderTimeout: 10 * time.Second, // limits slow header sends (Slowloris)
-		ReadTimeout:       30 * time.Second, // full request body read limit
-		WriteTimeout:      0,                // 0 = no limit (required for long HLS/segmented responses); mitigated by ReadHeaderTimeout + IdleTimeout. When behind a reverse proxy (nginx/Caddy), set proxy_write_timeout there to bound it.
+		ReadHeaderTimeout: 10 * time.Second,  // limits slow header sends (Slowloris)
+		ReadTimeout:       30 * time.Second,  // full request body read limit
+		WriteTimeout:      0,                 // 0 = no limit (required for long HLS/segmented responses); mitigated by ReadHeaderTimeout + IdleTimeout. When behind a reverse proxy (nginx/Caddy), set proxy_write_timeout there to bound it.
 		IdleTimeout:       120 * time.Second, // keep-alive max lifetime
 	}
 

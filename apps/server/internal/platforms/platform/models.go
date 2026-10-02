@@ -80,10 +80,10 @@ type UnifiedMedia struct {
 	Relations         []*UnifiedMediaRelation `json:"relations,omitempty"`
 
 	// Extended fields for general (non-anime) media
-	Kind             MediaKind `json:"kind"` // "ANIME" or "GENERAL"
-	Description      *string   `json:"description,omitempty"`
-	Score            *float64  `json:"score,omitempty"`
-	IMDbID           *string   `json:"imdbId,omitempty"`
+	Kind        MediaKind `json:"kind"` // "ANIME" or "GENERAL"
+	Description *string   `json:"description,omitempty"`
+	Score       *float64  `json:"score,omitempty"`
+	IMDbID      *string   `json:"imdbId,omitempty"`
 	// BelongsToCollection holds the TMDB franchise/saga ID if the media belongs to one.
 	CollectionID   *int    `json:"collectionId,omitempty"`
 	CollectionName *string `json:"collectionName,omitempty"`
@@ -213,9 +213,9 @@ func (c *UnifiedCollection) GetAllAnime() []*UnifiedMedia {
 }
 
 type UnifiedCollectionList struct {
-	Name         string                    `json:"name"`
-	Status       MediaListStatus           `json:"status"`
-	Entries      []*UnifiedCollectionEntry `json:"entries"`
+	Name    string                    `json:"name"`
+	Status  MediaListStatus           `json:"status"`
+	Entries []*UnifiedCollectionEntry `json:"entries"`
 	// Collection-level metadata from TMDB /collection/{id}
 	Overview     string `json:"overview,omitempty"`
 	PosterPath   string `json:"posterPath,omitempty"`
@@ -245,4 +245,3 @@ type UnifiedAiringSchedule struct {
 type UnifiedViewerStats struct {
 	AnimeCount int `json:"animeCount"`
 }
-

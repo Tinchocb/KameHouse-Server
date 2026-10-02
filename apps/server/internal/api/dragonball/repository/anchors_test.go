@@ -14,10 +14,10 @@ func TestGoldenAnchors(t *testing.T) {
 
 	// We'll rewrite the struct to be simpler for partial matches.
 	type anchor struct {
-		seriesID    string
-		epNum       int
-		keyword     string // Keyword to find in Title or Milestone
-		sourceURL   string
+		seriesID  string
+		epNum     int
+		keyword   string // Keyword to find in Title or Milestone
+		sourceURL string
 	}
 
 	anchors := []anchor{

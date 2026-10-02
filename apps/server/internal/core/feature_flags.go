@@ -22,8 +22,6 @@ type (
 )
 
 const (
-	// ManageOfflineMode allows switching to offline mode.
-	ManageOfflineMode FeatureKey = "ManageOfflineMode"
 	// ViewSettings allows viewing the settings page.
 	ViewSettings FeatureKey = "ViewSettings"
 	// ViewLogs allows viewing the logs.
@@ -33,18 +31,14 @@ const (
 	// ManageLocalAnimeLibrary encompasses all updates to the local anime library.
 	//	- Refreshing library, update local files, opening directory etc.
 	ManageLocalAnimeLibrary FeatureKey = "ManageLocalAnimeLibrary"
-	// ManageAccount allows logging in and out of the user account.
-	ManageAccount FeatureKey = "ManageAccount"
-	// ViewAccount allows viewing the user account info.
-	ViewAccount FeatureKey = "ViewAccount"
 	// ManageLists allows managing Platform/Custom source/Local lists.
 	//	- Adding/updating/removing entries
 	ManageLists FeatureKey = "ManageLists"
 	// RefreshMetadata allows refreshing anime metadata from Platform and custom sources.
-	RefreshMetadata      FeatureKey = "RefreshMetadata"
-	WatchingLocalAnime   FeatureKey = "WatchingLocalAnime"
-	Proxy             FeatureKey = "Proxy"
-	PushRequests      FeatureKey = "PushRequests"
+	RefreshMetadata    FeatureKey = "RefreshMetadata"
+	WatchingLocalAnime FeatureKey = "WatchingLocalAnime"
+	Proxy              FeatureKey = "Proxy"
+	PushRequests       FeatureKey = "PushRequests"
 )
 
 func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureManager {
@@ -56,7 +50,6 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 
 	if flags.LockDown {
 		ret.DisabledFeatures = []FeatureKey{
-			ManageOfflineMode,
 			ViewSettings,
 			ViewLogs,
 			UpdateSettings,
@@ -128,7 +121,6 @@ func (m *FeatureManager) UpdateFromSettings(library *models.LibrarySettings) {
 type (
 	FeatureFlags struct {
 	}
-
 )
 
 // NewFeatureFlags initializes the feature flags

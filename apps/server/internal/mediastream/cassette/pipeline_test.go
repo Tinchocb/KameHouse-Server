@@ -42,9 +42,9 @@ func TestPipeline_Initialization(t *testing.T) {
 	gov := NewGovernor(2, false, &logger)
 
 	cfg := PipelineConfig{
-		Kind:    VideoKind,
-		Label:   "video (1080p)",
-		Session: session,
+		Kind:     VideoKind,
+		Label:    "video (1080p)",
+		Session:  session,
 		Settings: settings,
 		Governor: gov,
 		Logger:   &logger,
@@ -96,9 +96,9 @@ func TestPipeline_GetSegment_Concurrent_ThreadSafety(t *testing.T) {
 	gov := NewGovernor(4, false, &logger)
 
 	cfg := PipelineConfig{
-		Kind:    VideoKind,
-		Label:   "video (1080p)",
-		Session: session,
+		Kind:     VideoKind,
+		Label:    "video (1080p)",
+		Session:  session,
 		Settings: settings,
 		Governor: gov,
 		Logger:   &logger,
@@ -169,9 +169,9 @@ func TestPipeline_Heads_SlotReuse(t *testing.T) {
 	gov := NewGovernor(4, false, &logger)
 
 	cfg := PipelineConfig{
-		Kind:    VideoKind,
-		Label:   "video (1080p)",
-		Session: session,
+		Kind:     VideoKind,
+		Label:    "video (1080p)",
+		Session:  session,
 		Settings: settings,
 		Governor: gov,
 		Logger:   &logger,

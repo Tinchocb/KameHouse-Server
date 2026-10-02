@@ -14,12 +14,6 @@ type BaseModel struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-type Account struct {
-	BaseModel
-	Username string `gorm:"column:username" json:"username"`
-	Token    string `gorm:"column:token" json:"token"`
-	Viewer   []byte `gorm:"column:viewer" json:"viewer"`
-}
 
 type WatchHistory struct {
 	BaseModel
@@ -61,30 +55,30 @@ type LibrarySettings struct {
 	// AutoDetectSkipTimes habilita el scan oportunista de OP/ED en segundo plano
 	// cuando se abre un episodio sin marcas. El botón manual de detección funciona
 	// siempre, independientemente de este flag.
-	AutoDetectSkipTimes      bool      `gorm:"column:auto_detect_skip_times" json:"autoDetectSkipTimes"`
-	EnableWatchContinuity    bool      `gorm:"column:enable_watch_continuity" json:"enableWatchContinuity"`
-	ScannerMatchingThreshold float64   `gorm:"column:scanner_matching_threshold" json:"scannerMatchingThreshold"`
-	PrimaryMetadataProvider  string    `gorm:"column:primary_metadata_provider" json:"primaryMetadataProvider"`
-	TmdbApiKey               string    `gorm:"column:tmdb_api_key" json:"tmdbApiKey"`
-	TmdbLanguage             string    `gorm:"column:tmdb_language" json:"tmdbLanguage"`
-	ScannerStrictStructure   bool      `gorm:"column:scanner_strict_structure" json:"scannerStrictStructure"`
-	ScannerProvider          string    `gorm:"column:scanner_provider" json:"scannerProvider"`
-	DisableLocalScanning     bool      `gorm:"column:disable_local_scanning" json:"disableLocalScanning"`
+	AutoDetectSkipTimes      bool    `gorm:"column:auto_detect_skip_times" json:"autoDetectSkipTimes"`
+	EnableWatchContinuity    bool    `gorm:"column:enable_watch_continuity" json:"enableWatchContinuity"`
+	ScannerMatchingThreshold float64 `gorm:"column:scanner_matching_threshold" json:"scannerMatchingThreshold"`
+	PrimaryMetadataProvider  string  `gorm:"column:primary_metadata_provider" json:"primaryMetadataProvider"`
+	TmdbApiKey               string  `gorm:"column:tmdb_api_key" json:"tmdbApiKey"`
+	TmdbLanguage             string  `gorm:"column:tmdb_language" json:"tmdbLanguage"`
+	ScannerStrictStructure   bool    `gorm:"column:scanner_strict_structure" json:"scannerStrictStructure"`
+	ScannerProvider          string  `gorm:"column:scanner_provider" json:"scannerProvider"`
+	DisableLocalScanning     bool    `gorm:"column:disable_local_scanning" json:"disableLocalScanning"`
 	// DisableCloudSource pausa Google Drive como origen sin desconectar la cuenta:
 	// los archivos gdrive:// se ocultan de la biblioteca y vuelven al reactivar.
-	DisableCloudSource bool `gorm:"column:disable_cloud_source" json:"disableCloudSource"`
+	DisableCloudSource       bool      `gorm:"column:disable_cloud_source" json:"disableCloudSource"`
 	ScannerUseLegacyMatching bool      `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
 	LastScanAt               time.Time `gorm:"column:last_scan_at" json:"lastScanAt"`
 	AutoScan                 bool      `gorm:"column:auto_scan" json:"autoScan"`
 	UnifiedScan              bool      `gorm:"column:unified_scan" json:"unifiedScan"`
 	// Preferencias de reproducción (antes solo-localStorage, ahora persistidas).
-	PreferredAudioProfile            string `gorm:"column:preferred_audio_profile;default:latino" json:"preferredAudioProfile"`
-	AutoSkipIntro                    bool   `gorm:"column:auto_skip_intro" json:"autoSkipIntro"`
-	AutoSkipOutro                    bool   `gorm:"column:auto_skip_outro" json:"autoSkipOutro"`
-	AutoSkipFiller                   bool   `gorm:"column:auto_skip_filler" json:"autoSkipFiller"`
-	AutoDisableSubtitlesWhenDubbed   bool   `gorm:"column:auto_disable_subtitles_when_dubbed;default:true" json:"autoDisableSubtitlesWhenDubbed"`
-	MarathonMode                     bool   `gorm:"column:marathon_mode" json:"marathonMode"`
-	TvMode                           bool   `gorm:"column:tv_mode" json:"tvMode"`
+	PreferredAudioProfile          string `gorm:"column:preferred_audio_profile;default:latino" json:"preferredAudioProfile"`
+	AutoSkipIntro                  bool   `gorm:"column:auto_skip_intro" json:"autoSkipIntro"`
+	AutoSkipOutro                  bool   `gorm:"column:auto_skip_outro" json:"autoSkipOutro"`
+	AutoSkipFiller                 bool   `gorm:"column:auto_skip_filler" json:"autoSkipFiller"`
+	AutoDisableSubtitlesWhenDubbed bool   `gorm:"column:auto_disable_subtitles_when_dubbed;default:true" json:"autoDisableSubtitlesWhenDubbed"`
+	MarathonMode                   bool   `gorm:"column:marathon_mode" json:"marathonMode"`
+	TvMode                         bool   `gorm:"column:tv_mode" json:"tvMode"`
 }
 
 func (s *LibrarySettings) GetAllPaths() []string {
@@ -318,12 +312,6 @@ type GhostAssociatedMedia struct {
 	Confidence      float64 `json:"confidence"`
 }
 
-type MediaMetadataParent struct {
-	BaseModel
-	MediaID       int `gorm:"column:media_id;uniqueIndex" json:"mediaId"`
-	ParentID      int `json:"parentId"`
-	SpecialOffset int `json:"specialOffset"`
-}
 
 // MediaSourcePreference fija de qué origen se reproduce una serie.
 // Sin fila = automático (local primero, luego nube).
@@ -399,4 +387,3 @@ type ChronologySpanOverride struct {
 	SpanID    string `gorm:"column:span_id;uniqueIndex:idx_chronology_span_account;not null" json:"spanId"`
 	Watched   bool   `gorm:"column:watched;not null" json:"watched"`
 }
-

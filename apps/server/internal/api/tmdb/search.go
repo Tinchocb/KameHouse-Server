@@ -124,4 +124,3 @@ func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult,
 	SetCached(c, "movie:"+query, results, 7*24*time.Hour)
 	return results, nil
 }
-

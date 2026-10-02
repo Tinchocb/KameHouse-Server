@@ -60,10 +60,10 @@ type (
 		// ProgressOffset will offset the ProgressNumber for a specific MAIN file
 		// This is used when there is a discrepancy between providers
 		// When this is -1, it means that a re-mapping of AniDB Episode is needed
-		ProgressOffset   int
-		IsDownloaded     bool
-		LibraryEpisode   *models.LibraryEpisode     // optional
-		IntelligenceSvc  *IntelligenceService       // optional
+		ProgressOffset  int
+		IsDownloaded    bool
+		LibraryEpisode  *models.LibraryEpisode // optional
+		IntelligenceSvc *IntelligenceService   // optional
 	}
 
 	// NewSimpleEpisodeOptions hold data used to create a new Episode.
@@ -289,7 +289,6 @@ func NewEpisode(opts *NewEpisodeOptions) *Episode {
 			entryEp.AbsoluteEpisodeNumber = dbEp.AbsoluteNumber
 		}
 	}
-
 
 	// If for some reason the episode is not hydrated, set it as invalid
 	if !hydrated {

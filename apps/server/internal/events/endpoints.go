@@ -2,7 +2,6 @@
 package events
 
 const (
-	AddUnknownMediaEndpoint                    = "ANIME-COLLECTION-add-unknown-media"
 	AniListEpisodeThumbnailEndpoint            = "ANILIST-ani-list-episode-thumbnail"
 	AnimeEntryManualMatchEndpoint              = "ANIME-ENTRIES-anime-entry-manual-match"
 	AnimeEntryUnmatchEndpoint                  = "ANIME-ENTRIES-anime-entry-unmatch"
@@ -13,7 +12,6 @@ const (
 	ClearSystemCacheEndpoint                   = "CACHE-HANDLERS-clear-system-cache"
 	DeleteLocalFilesEndpoint                   = "LOCALFILES-delete-local-files"
 	DeleteLogsEndpoint                         = "STATUS-delete-logs"
-	DeleteMediaMetadataParentEndpoint          = "METADATA-delete-media-metadata-parent"
 	DirectorySelectorEndpoint                  = "DIRECTORY-SELECTOR-directory-selector"
 	DownloadDatabaseBackupEndpoint             = "SYSTEM-download-database-backup"
 	DriveAuthURLEndpoint                       = "DRIVE-drive-auth-u-r-l"
@@ -22,7 +20,6 @@ const (
 	DriveStatusEndpoint                        = "DRIVE-drive-status"
 	EnqueuePreTranscodeEndpoint                = "PRETRANSCODE-enqueue-pre-transcode"
 	ForceGCEndpoint                            = "STATUS-force-g-c"
-	GetAnimeCollectionScheduleEndpoint         = "ANIME-COLLECTION-get-anime-collection-schedule"
 	GetAnimeEntryEndpoint                      = "ANIME-ENTRIES-get-anime-entry"
 	GetAnimeEntryLocalFilesEndpoint            = "ANIME-ENTRIES-get-anime-entry-local-files"
 	GetAnimeEntrySourceEndpoint                = "MEDIA-SOURCE-get-anime-entry-source"
@@ -50,7 +47,6 @@ const (
 	GetLocalFilesEndpoint                      = "LOCALFILES-get-local-files"
 	GetLogContentEndpoint                      = "STATUS-get-log-content"
 	GetLogFilenamesEndpoint                    = "STATUS-get-log-filenames"
-	GetMediaMetadataParentEndpoint             = "METADATA-get-media-metadata-parent"
 	GetMediastreamSettingsEndpoint             = "MEDIASTREAM-get-mediastream-settings"
 	GetMemoryProfileEndpoint                   = "STATUS-get-memory-profile"
 	GetMemoryStatsEndpoint                     = "STATUS-get-memory-stats"
@@ -83,7 +79,6 @@ const (
 	SaveChronologyMomentTimeEndpoint           = "CHRONOLOGY-MOMENTS-save-chronology-moment-time"
 	SaveChronologySpanOverridesEndpoint        = "CHRONOLOGY-PROGRESS-save-chronology-span-overrides"
 	SaveEpisodeSkipTimesEndpoint               = "MEDIASTREAM-save-episode-skip-times"
-	SaveMediaMetadataParentEndpoint            = "METADATA-save-media-metadata-parent"
 	SaveMediastreamSettingsEndpoint            = "MEDIASTREAM-save-mediastream-settings"
 	SaveSettingsEndpoint                       = "SETTINGS-save-settings"
 	ScanAllSkipTimesEndpoint                   = "MEDIASTREAM-scan-all-skip-times"

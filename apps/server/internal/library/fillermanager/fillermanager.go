@@ -13,7 +13,6 @@ import (
 )
 
 type (
-
 	FillerManager struct {
 		db        *db.Database
 		logger    *zerolog.Logger

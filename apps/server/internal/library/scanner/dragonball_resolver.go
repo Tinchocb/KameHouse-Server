@@ -811,4 +811,3 @@ func isDragonBallGTSagaTitle(ct string) bool {
 		strings.Contains(ct, " saga de las esferas de las estrellas negras ") ||
 		strings.Contains(ct, " saga el gran viaje ")
 }
-

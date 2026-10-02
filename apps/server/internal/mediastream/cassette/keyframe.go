@@ -20,8 +20,8 @@ import (
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/httprange"
 
-	"github.com/rs/zerolog"
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/rs/zerolog"
 )
 
 // loopbackHTTPClient lee fuentes remotas servidas por el propio servidor (Drive por
@@ -205,6 +205,7 @@ func getOrExtractKeyframes(
 	ki.ready.Wait()
 	return ki, ki.GetError()
 }
+
 // keyframeExtractionTimeout bounds the ffprobe packet scan of a single file.
 const keyframeExtractionTimeout = 20 * time.Minute
 
@@ -338,6 +339,7 @@ func extractKeyframes(
 	ki.SetDone()
 	return nil
 }
+
 // makeDummyKeyframes at 2s intervals
 func makeDummyKeyframes(ffprobePath, path, hash string) ([]float64, error) {
 	const interval = 2.0

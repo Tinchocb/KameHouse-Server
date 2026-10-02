@@ -6,12 +6,12 @@ import "testing"
 // ffmpeg exit should disable hardware acceleration and fall back to CPU.
 //
 // Key invariants:
-//  - Only a hardware-specific keyword in stderr (cuda, nvenc, vaapi, …) combined
-//    with a failure indicator ("failed" / "error") disables the GPU.
-//  - A generic ffmpeg crash that has nothing to do with the GPU must NOT disable
-//    hardware acceleration: the cause is file-level (corrupt input, unsupported
-//    codec path, etc.) and the GPU is still healthy.
-//  - Intentional kills (seek head-switch, teardown, ctx cancel) are never failures.
+//   - Only a hardware-specific keyword in stderr (cuda, nvenc, vaapi, …) combined
+//     with a failure indicator ("failed" / "error") disables the GPU.
+//   - A generic ffmpeg crash that has nothing to do with the GPU must NOT disable
+//     hardware acceleration: the cause is file-level (corrupt input, unsupported
+//     codec path, etc.) and the GPU is still healthy.
+//   - Intentional kills (seek head-switch, teardown, ctx cancel) are never failures.
 func TestIsGenuineHwAccelFailure(t *testing.T) {
 	tests := []struct {
 		name            string

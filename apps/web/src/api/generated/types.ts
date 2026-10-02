@@ -293,22 +293,6 @@ export type Anime_LibraryCollectionStats = {
 }
 
 /**
- * - Filepath: internal/library/anime/schedule.go
- * - Filename: schedule.go
- * - Package: anime
- */
-export type Anime_ScheduleItem = {
-    mediaId: number
-    title: string
-    time: string
-    dateTime: string
-    image: string
-    episodeNumber: number
-    isMovie: boolean
-    isSeasonFinale: boolean
-}
-
-/**
  * - Filepath: internal/library/anime/collection.go
  * - Filename: collection.go
  * - Package: anime
@@ -435,13 +419,10 @@ export type INTERNAL_FeatureFlags = Record<string, never>
  * - Filename: feature_flags.go
  * - Package: core
  */
-export type INTERNAL_FeatureKey = "ManageOfflineMode" |
-    "ViewSettings" |
+export type INTERNAL_FeatureKey = "ViewSettings" |
     "ViewLogs" |
     "UpdateSettings" |
     "ManageLocalAnimeLibrary" |
-    "ManageAccount" |
-    "ViewAccount" |
     "ManageLists" |
     "RefreshMetadata" |
     "WatchingLocalAnime" |
@@ -1897,20 +1878,6 @@ export type Models_LibrarySettings = {
     autoDisableSubtitlesWhenDubbed: boolean
     marathonMode: boolean
     tvMode: boolean
-}
-
-/**
- * - Filepath: internal/database/models/models.go
- * - Filename: models.go
- * - Package: models
- */
-export type Models_MediaMetadataParent = {
-    mediaId: number
-    parentId: number
-    specialOffset: number
-    id: number
-    createdAt: string
-    updatedAt: string
 }
 
 /**

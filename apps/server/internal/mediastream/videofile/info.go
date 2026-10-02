@@ -325,7 +325,6 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 		}
 	})
 
-
 	// [DIAGNOSTIC] Log all subtitle streams before filtering so we can see
 	// which codecs are present in the file (visible in server logs at Info level).
 	for _, sub := range mi.Subtitles {
@@ -333,7 +332,9 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 		fmt.Printf("[mediastream diag] subtitle stream index=%d codec=%q lang=%v hasExt=%v isImageBased=%v\n",
 			sub.Index, sub.Codec,
 			func() string {
-				if sub.Language != nil { return *sub.Language }
+				if sub.Language != nil {
+					return *sub.Language
+				}
 				return "und"
 			}(),
 			hasExt, sub.IsImageBased)

@@ -24,7 +24,6 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.PATCH("/local-files/super-update", h.HandleSuperUpdateLocalFiles)
 
 	v1Library.GET("/collection", h.HandleGetLibraryCollection)
-	v1Library.GET("/schedule", h.HandleGetAnimeCollectionSchedule)
 	v1Library.GET("/scan-summaries", h.HandleGetScanSummaries)
 	v1Library.GET("/episode-file", h.HandleGetLibraryEpisodeFile)
 	v1Library.GET("/chronology-episode-files", h.HandleGetChronologyEpisodeFiles)
@@ -41,8 +40,6 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.POST("/anime-entry/open-in-explorer", h.HandleOpenAnimeEntryInExplorer)
 	v1Library.POST("/anime-entry/progress", h.HandleUpdateAnimeEntryProgress)
 	v1Library.POST("/anime-entry/repeat", h.HandleUpdateAnimeEntryRepeat)
-
-	v1Library.POST("/unknown-media", h.HandleAddUnknownMedia)
 
 	// Library Explorer
 	v1LibraryExplorer := v1Library.Group("/explorer")

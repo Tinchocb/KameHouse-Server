@@ -219,8 +219,6 @@ func (r *Repository) TranscoderStats() (cassette.GovernorStats, bool) {
 	return cassette.GovernorStats{}, false
 }
 
-
-
 // WarmMediaInfo pre-extracts and caches media info (ffprobe) for the given files
 // using a small worker pool, so the first play of any file skips the cold-start
 // ffprobe. GetInfo is cache-aware (30-day disk TTL keyed by path hash), so
@@ -344,7 +342,7 @@ func (r *Repository) ClearTranscodeDir() {
 // This is used by the filecacher to avoid pruning actively playing video files.
 func (r *Repository) ActiveVideoFileHashes() map[string]struct{} {
 	hashes := make(map[string]struct{})
-	
+
 	// Collect from mediaContainers
 	r.playbackManager.mediaContainers.Range(func(_ string, mc *MediaContainer) bool {
 		if mc != nil && mc.MediaInfo != nil {

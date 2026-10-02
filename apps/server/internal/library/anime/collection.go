@@ -64,15 +64,15 @@ type (
 	// LibraryCollectionEntry holds the data for a single entry in a LibraryCollectionList.
 	// It is a slimmed down version of Entry. It holds the media, media id, library data, and list data.
 	LibraryCollectionEntry struct {
-		Media                  *models.LibraryMedia    `json:"media"`
-		MediaID                int                     `json:"mediaId"`
-		Episode                *models.LibraryEpisode  `json:"episode,omitempty"` // For episode-specific swimlanes
-		AvailabilityType       string                  `json:"availabilityType"`            // FULL_LOCAL, HYBRID, ONLY_ONLINE
-		EntryLibraryData       *EntryLibraryData       `json:"libraryData"`  // Library data
-		EntryListData          *EntryListData          `json:"listData"`     // Local list data
-		Vibes                  []string                `json:"vibes"`        // Emotional or thematic tags
-		Tags                   []string                `json:"tags"`         // AI-derived intelligence tags
-		DominantVibe           string                  `json:"dominantVibe"` // Primary AI-derived vibe
+		Media            *models.LibraryMedia   `json:"media"`
+		MediaID          int                    `json:"mediaId"`
+		Episode          *models.LibraryEpisode `json:"episode,omitempty"` // For episode-specific swimlanes
+		AvailabilityType string                 `json:"availabilityType"`  // FULL_LOCAL, HYBRID, ONLY_ONLINE
+		EntryLibraryData *EntryLibraryData      `json:"libraryData"`       // Library data
+		EntryListData    *EntryListData         `json:"listData"`          // Local list data
+		Vibes            []string               `json:"vibes"`             // Emotional or thematic tags
+		Tags             []string               `json:"tags"`              // AI-derived intelligence tags
+		DominantVibe     string                 `json:"dominantVibe"`      // Primary AI-derived vibe
 	}
 
 	// UnmatchedGroup holds the data for a group of unmatched local files.
@@ -710,4 +710,3 @@ func (e *LibraryCollectionEntry) DeriveVibes() {
 
 	e.Vibes = vibes
 }
-

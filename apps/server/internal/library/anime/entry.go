@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/samber/lo"
+	"github.com/sourcegraph/conc/pool"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/database/db"
@@ -12,8 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"github.com/samber/lo"
-	"github.com/sourcegraph/conc/pool"
 )
 
 type (
@@ -91,7 +91,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	var err error
 
 	// 1. Try to find the LibraryMediaId from local files first.
-	// This is the most reliable way because LocalFiles explicitly stores the primary key 
+	// This is the most reliable way because LocalFiles explicitly stores the primary key
 	// for TMDB associations (where the NormalizedMedia.ID is different from the DB primary key).
 	for _, lf := range opts.LocalFiles {
 		if lf.MediaID == opts.MediaID && lf.LibraryMediaId > 0 {
@@ -136,9 +136,9 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 		}
 	}
 
-	// 3. Fallback: If still nil, it means the LocalFile points to a MediaID that does not exist 
+	// 3. Fallback: If still nil, it means the LocalFile points to a MediaID that does not exist
 	// in the LibraryMedia table (e.g., leftover from AniList or unlinked).
-	// We create a "Dummy" entry to prevent the frontend from crashing, allowing the user to 
+	// We create a "Dummy" entry to prevent the frontend from crashing, allowing the user to
 	// view the page and use "Unmatch" or "Identify".
 	if fetchedMedia == nil {
 		opts.Database.Logger.Warn().Int("mediaID", opts.MediaID).Msg("anime/entry: MediaID not found in LibraryMedia, creating dummy entry for frontend fallback")

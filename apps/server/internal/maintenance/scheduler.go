@@ -72,11 +72,11 @@ func (s *Scheduler) Start(ctx context.Context) {
 
 func (s *Scheduler) runJob(ctx context.Context, job Job) {
 	defer util.RecoverInModule("maintenance/" + job.Name)
-	
+
 	start := time.Now()
 	s.logger.Debug().Str("job", job.Name).Msg("maintenance: Running job")
 
 	job.Run(ctx)
-	
+
 	s.logger.Debug().Str("job", job.Name).Dur("took", time.Since(start)).Msg("maintenance: Job completed")
 }

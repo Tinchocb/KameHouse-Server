@@ -4,17 +4,6 @@ import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
 import { persistLibraryPatch } from "@/lib/server/persist-settings"
 
-export interface PlaylistItem {
-    id: string | number
-    title: string
-    subtitle?: string
-    playableUrl: string
-    thumbnail?: string
-    mediaId: number
-    episodeNumber?: number
-    malId?: number | null
-    mediaFormat?: string | null
-}
 
 export interface PlayerState {
     playerVolume: number

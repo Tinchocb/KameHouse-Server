@@ -464,12 +464,12 @@ func decodeRLE(data []byte, pix []byte, width, height int) error {
 					}
 				}
 
-			// Fill pixels with bounds checking: RLE corrupto que excede se rechaza,
-			// no se trunca en silencio (ocultaba PGS falsos).
-			endIdx := idx + runLength
-			if endIdx > limit {
-				return fmt.Errorf("RLE run exceeds frame at idx %d (run %d, limit %d)", idx, runLength, limit)
-			}
+				// Fill pixels with bounds checking: RLE corrupto que excede se rechaza,
+				// no se trunca en silencio (ocultaba PGS falsos).
+				endIdx := idx + runLength
+				if endIdx > limit {
+					return fmt.Errorf("RLE run exceeds frame at idx %d (run %d, limit %d)", idx, runLength, limit)
+				}
 				for idx < endIdx {
 					if idx >= len(pix) {
 						return fmt.Errorf("pixel buffer overflow at idx %d during run fill", idx)
@@ -597,4 +597,3 @@ func (d *PgsDecoder) IsClearCommand() bool {
 
 	return false
 }
-

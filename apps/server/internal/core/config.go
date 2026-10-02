@@ -19,15 +19,15 @@ import (
 type Config struct {
 	Version string `mapstructure:"version"`
 	Server  struct {
-		Host          string `mapstructure:"host"`
-		Port          int    `mapstructure:"port"`
-		Offline       bool   `mapstructure:"offline"`
-		UseBinaryPath bool   `mapstructure:"useBinaryPath"`
-		Systray       bool   `mapstructure:"systray"`
-		DoHUrl        string `mapstructure:"dohUrl"`
-		Password      string `mapstructure:"password"`
+		Host          string   `mapstructure:"host"`
+		Port          int      `mapstructure:"port"`
+		Offline       bool     `mapstructure:"offline"`
+		UseBinaryPath bool     `mapstructure:"useBinaryPath"`
+		Systray       bool     `mapstructure:"systray"`
+		DoHUrl        string   `mapstructure:"dohUrl"`
+		Password      string   `mapstructure:"password"`
 		CorsOrigins   []string `mapstructure:"corsOrigins"`
-		AuthTokenTTL  string `mapstructure:"authTokenTTL"` // e.g. "24h", "1h", "30m" (min 5m)
+		AuthTokenTTL  string   `mapstructure:"authTokenTTL"` // e.g. "24h", "1h", "30m" (min 5m)
 		TLS           struct {
 			Enabled  bool   `mapstructure:"enabled"`
 			CertPath string `mapstructure:"certPath"`
@@ -197,8 +197,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("cache.transcodeDir", "$KAMEHOUSE_DATA_DIR/cache/transcode")
 	v.SetDefault("cache.thumbnails.memoryMaxItems", 1000)
 	v.SetDefault("cache.thumbnails.memoryMaxBytesMB", 256) // 256MB
-	v.SetDefault("cache.thumbnails.diskMaxSizeMB", 5120) // 5GB
-	v.SetDefault("cache.thumbnails.diskTTLHours", 720)   // 30 days
+	v.SetDefault("cache.thumbnails.diskMaxSizeMB", 5120)   // 5GB
+	v.SetDefault("cache.thumbnails.diskTTLHours", 720)     // 30 days
 	v.SetDefault("cache.thumbnails.cleanupInterval", "12h")
 	v.SetDefault("logs.dir", "$KAMEHOUSE_DATA_DIR/logs")
 	v.SetDefault("offline.dir", "$KAMEHOUSE_DATA_DIR/offline")

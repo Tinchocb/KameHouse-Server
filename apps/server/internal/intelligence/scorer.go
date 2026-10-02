@@ -144,17 +144,17 @@ func normalizeLang(lang string) string {
 	lang = strings.ToLower(strings.TrimSpace(lang))
 	// Mapeos comunes
 	langMap := map[string]string{
-		"spa":    "es",
-		"span":   "es",
-		"spanish": "es",
-		"español": "es",
-		"es-la":  "es",
-		"spa-lat": "es",
-		"eng":    "en",
-		"english": "en",
-		"jpn":    "ja",
+		"spa":      "es",
+		"span":     "es",
+		"spanish":  "es",
+		"español":  "es",
+		"es-la":    "es",
+		"spa-lat":  "es",
+		"eng":      "en",
+		"english":  "en",
+		"jpn":      "ja",
 		"japanese": "ja",
-		"jap":    "ja",
+		"jap":      "ja",
 	}
 	if mapped, ok := langMap[lang]; ok {
 		return mapped

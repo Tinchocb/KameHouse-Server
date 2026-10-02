@@ -250,9 +250,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	app.AddOnRefreshAnimeCollectionFunc("ClearLibraryCollectionCache", func() {
 		ClearLibraryCollectionCache()
 	})
-	app.AddOnRefreshAnimeCollectionFunc("ClearAnimeScheduleCache", func() {
-		ClearAnimeScheduleCache()
-	})
 	app.AddOnRefreshAnimeCollectionFunc("ClearEpisodeCollectionCache", func() {
 		anime.ClearEpisodeCollectionCache()
 	})

@@ -3,11 +3,16 @@ package db
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 type BackupResult struct {
@@ -52,13 +57,12 @@ func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
 		db.Logger.Warn().Err(err).Str("path", backupPath).Msg("db: could not restrict backup file permissions")
 	}
 
-	// Validate integrity of the resulting backup
-	var integrityResult string
-	row := db.gormdb.Raw("PRAGMA integrity_check;").Row()
-	if row != nil {
-		if err := row.Scan(&integrityResult); err != nil || integrityResult != "ok" {
-			db.Logger.Warn().Str("result", integrityResult).Msg("db: integrity_check warning on database")
-		}
+	// Validar el archivo recién creado (no la base en uso): un backup corrupto
+	// se descarta antes de rotar, para que no desplace a uno bueno.
+	if err := verifyBackupIntegrity(backupPath); err != nil {
+		db.Logger.Error().Err(err).Str("path", backupPath).Msg("db: backup failed integrity check; discarding it")
+		_ = os.Remove(backupPath)
+		return nil, fmt.Errorf("backup integrity check failed: %w", err)
 	}
 
 	info, err := os.Stat(backupPath)
@@ -79,6 +83,30 @@ func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
 	}
 
 	return res, nil
+}
+
+// verifyBackupIntegrity abre el archivo de backup en solo lectura y corre
+// PRAGMA integrity_check sobre él.
+func verifyBackupIntegrity(path string) error {
+	dsn := (&url.URL{Scheme: "file", Opaque: filepath.ToSlash(path), RawQuery: "mode=ro"}).String()
+	g, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{Logger: gormlogger.Discard})
+	if err != nil {
+		return fmt.Errorf("open backup: %w", err)
+	}
+	sqlDB, err := g.DB()
+	if err != nil {
+		return fmt.Errorf("open backup: %w", err)
+	}
+	defer sqlDB.Close()
+
+	var result string
+	if err := g.Raw("PRAGMA integrity_check;").Row().Scan(&result); err != nil {
+		return fmt.Errorf("integrity_check: %w", err)
+	}
+	if result != "ok" {
+		return fmt.Errorf("integrity_check reported: %s", result)
+	}
+	return nil
 }
 
 func rotateBackups(backupDir string, keep int) error {
@@ -110,4 +138,3 @@ func rotateBackups(backupDir string, keep int) error {
 
 	return nil
 }
-

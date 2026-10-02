@@ -85,7 +85,6 @@ func SeparateFilePathS(path string, potentialPrefixes []string) *SeparatedFilePa
 	}
 }
 
-
 // GetMediaFilePathsFromDirS returns a slice of strings containing the paths of all the video files in a directory.
 // Unlike GetMediaFilePathsFromDir, it follows symlinks.
 func GetMediaFilePathsFromDirS(oDirPath string) ([]string, error) {

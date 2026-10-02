@@ -51,4 +51,3 @@ type SagaDTO struct {
 	KeyCharacters []CharacterDTO `json:"keyCharacters"`
 	SubSagas      []SubSagaDTO   `json:"subSagas,omitempty"`
 }
-

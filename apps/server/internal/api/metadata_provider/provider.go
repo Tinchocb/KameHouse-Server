@@ -175,4 +175,3 @@ func NewProvider(opts *NewProviderImplOptions) Provider {
 	}
 	return &ProviderImpl{}
 }
-

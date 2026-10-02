@@ -27,8 +27,6 @@ var (
 )
 
 var staticPathFeatureRules = []pathFeatureRule{
-	// offline mode
-	{"/api/v1/local", core.ManageOfflineMode, updateMethodsMap, nil},
 	// settings
 	{"/api/v1/start", core.UpdateSettings, updateMethodsMap, nil},
 	{"/api/v1/settings", core.UpdateSettings, updateMethodsMap, nil},
@@ -36,8 +34,6 @@ var staticPathFeatureRules = []pathFeatureRule{
 	{"/api/v1/theme", core.UpdateSettings, updateMethodsMap, nil},
 	{"/api/v1/memory", core.UpdateSettings, nil, nil},
 	{"/api/v1/filecache", core.UpdateSettings, nil, nil},
-	// account
-	{"/api/v1/auth", core.ManageAccount, updateMethodsMap, nil},
 	// lists
 	{"/api/v1/platform/list-entry", core.ManageLists, updateMethodsMap, nil},
 	{"/api/v1/library/anime-entry/update-progress", core.ManageLists, updateMethodsMap, nil},

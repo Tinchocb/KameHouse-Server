@@ -2,10 +2,10 @@ package cassette
 
 import (
 	"errors"
-	"math"
-	"strconv"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util"
+	"math"
+	"strconv"
 	"strings"
 )
 
@@ -273,6 +273,7 @@ type AudioTranscodeDecision struct {
 // AAC stereo, porque el remux a MPEG-TS sin resample causa deriva de sync
 // (los PTS del audio copiado no se ajustan a las variaciones del encoder de video).
 //   - ≤ 2 canales: AAC estéreo @ 128k
+//
 // DecideAudioTranscode determines how an audio track should be processed for HLS delivery.
 func DecideAudioTranscode(audio *videofile.Audio) AudioTranscodeDecision {
 	channels := 2

@@ -133,4 +133,3 @@ func splitToken(token string) []string {
 	}
 	return []string{token}
 }
-

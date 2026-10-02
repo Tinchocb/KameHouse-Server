@@ -290,7 +290,6 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 	if err := db.WithContext(ctx).AutoMigrate(
 		&models.LocalFile{},
 		&models.Settings{},
-		&models.Account{},
 		&models.ScanSummary{},
 
 		&models.MediaSourcePreference{},
@@ -298,12 +297,10 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 
 		&models.MediastreamSettings{},
 		&models.MediaFiller{},
-		&models.MediaMetadataParent{},
 		&models.GhostAssociatedMedia{},
 		&models.LibraryMedia{},
 		&models.LibraryEpisode{},
 		&models.LibrarySeason{},
-		&models.ProviderMapping{},
 		&models.MediaEntryListData{},
 		&models.WatchHistory{},
 		&models.UserMediaProgress{},

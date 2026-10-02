@@ -110,7 +110,7 @@ func (t *ClientTracker) handleRemoveClient(client string) {
 	if info, ok := t.clients[client]; ok {
 		delete(t.clients, client)
 		delete(t.visitDate, client)
-		
+
 		if !t.killSessionIfDead(info.Path) {
 			t.killOrphanedHeads(info.Path, info.Quality, info.Audio)
 		}

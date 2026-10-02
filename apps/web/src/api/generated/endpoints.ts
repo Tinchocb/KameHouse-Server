@@ -58,27 +58,6 @@ export const API_ENDPOINTS = {
             methods: ["GET", "POST"],
             endpoint: "/api/v1/library/collection",
         },
-        /**
-         *  @description
-         *  Route returns anime collection schedule
-         *  This is used by the "Schedule" page to display the anime schedule.
-         */
-        GetAnimeCollectionSchedule: {
-            key: "ANIME-COLLECTION-get-anime-collection-schedule",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/schedule",
-        },
-        /**
-         *  @description
-         *  Route adds the given media to the user's Platform planning collections
-         *  Since media not found in the user's Platform collection are not displayed in the library, this route is used to add them.
-         *  The response is ignored in the frontend, the client should just refetch the entire library collection.
-         */
-        AddUnknownMedia: {
-            key: "ANIME-COLLECTION-add-unknown-media",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/unknown-media",
-        },
     },
     ANIME_ENTRIES: {
         /**
@@ -636,26 +615,6 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route retrieves media metadata parent by media ID.
-         *  Returns the media metadata parent information for the given media ID.
-         */
-        GetMediaMetadataParent: {
-            key: "METADATA-get-media-metadata-parent",
-            methods: ["GET"],
-            endpoint: "/api/v1/metadata/parent/{id}",
-        },
-        /**
-         *  @description
-         *  Route saves or updates media metadata parent.
-         *  Creates or updates the media metadata parent information.
-         */
-        SaveMediaMetadataParent: {
-            key: "METADATA-save-media-metadata-parent",
-            methods: ["POST"],
-            endpoint: "/api/v1/metadata/parent",
-        },
-        /**
-         *  @description
          *  Route clears provider metadata cache.
          *  Deletes persisted TMDB/Jikan/AniList episode & media detail caches (all
          *  language variants) so the next scan re-fetches them — e.g. after changing
@@ -666,16 +625,6 @@ export const API_ENDPOINTS = {
             key: "METADATA-clear-metadata-cache",
             methods: ["DELETE"],
             endpoint: "/api/v1/metadata/cache",
-        },
-        /**
-         *  @description
-         *  Route deletes media metadata parent.
-         *  Removes the media metadata parent information for the given media ID.
-         */
-        DeleteMediaMetadataParent: {
-            key: "METADATA-delete-media-metadata-parent",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/metadata/parent",
         },
     },
     MUSIC: {

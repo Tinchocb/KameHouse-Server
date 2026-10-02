@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	httputil "kamehouse/internal/util/http"
 	"github.com/rs/zerolog"
 	"golang.org/x/time/rate"
+	httputil "kamehouse/internal/util/http"
 )
 
 const graphQLEndpoint = "https://graphql.anilist.co"

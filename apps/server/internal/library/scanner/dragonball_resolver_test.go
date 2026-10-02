@@ -217,10 +217,10 @@ func TestGetDragonBallSagas(t *testing.T) {
 		episode  int
 		wantSaga string
 	}{
-		{episode: 23, wantSaga: "saiyajin"},       // Muerte de Yamcha
-		{episode: 24, wantSaga: "saiyajin"},       // Muerte de Tien y Chaoz
-		{episode: 95, wantSaga: "namek-freezer"},  // Despertar del Super Saiyajin (Goku vs Freezer)
-		{episode: 232, wantSaga: "majin-buu"},     // Saga de Majin Buu
+		{episode: 23, wantSaga: "saiyajin"},      // Muerte de Yamcha
+		{episode: 24, wantSaga: "saiyajin"},      // Muerte de Tien y Chaoz
+		{episode: 95, wantSaga: "namek-freezer"}, // Despertar del Super Saiyajin (Goku vs Freezer)
+		{episode: 232, wantSaga: "majin-buu"},    // Saga de Majin Buu
 	}
 
 	for _, tt := range milestoneTests {
@@ -259,10 +259,10 @@ func TestGetDragonBallSagaInfo(t *testing.T) {
 
 func TestCreatePrehydratedDragonBallMedia(t *testing.T) {
 	specialIDs := []struct {
-		id          int
-		wantTitle   string
-		wantYear    int
-		checkMovie  bool
+		id         int
+		wantTitle  string
+		wantYear   int
+		checkMovie bool
 	}{
 		{id: 39321, wantTitle: "El Cuerpo de Bomberos de Goku", wantYear: 1988},
 		{id: 1039321, wantTitle: "El Cuerpo de Bomberos de Goku", wantYear: 1988, checkMovie: true},
@@ -305,4 +305,3 @@ func TestCreatePrehydratedDragonBallMedia(t *testing.T) {
 		t.Errorf("expected unknown ID 9999999 to return nil, got %+v", unknown)
 	}
 }
-

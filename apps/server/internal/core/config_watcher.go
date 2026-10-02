@@ -126,4 +126,3 @@ func (cw *ConfigWatcher) reload() {
 
 	cw.logger.Info().Msg("config reloaded successfully")
 }
-

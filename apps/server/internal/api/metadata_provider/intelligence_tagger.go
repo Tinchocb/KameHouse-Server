@@ -449,7 +449,6 @@ func (t *IntelligenceTagger) suggestSwimlane(tags []string) string {
 	return ""
 }
 
-
 // ExtractAbstractTags generates exactly 5 to 6 thematic tags by reading the synopsis and title, applying fallbacks if necessary.
 func (t *IntelligenceTagger) ExtractAbstractTags(synopsis string, title string) []string {
 	combined := strings.ToLower(title + " " + synopsis)

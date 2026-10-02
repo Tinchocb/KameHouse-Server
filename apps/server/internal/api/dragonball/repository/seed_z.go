@@ -323,6 +323,5 @@ func zEpisodes() []domain.Episode {
 		{SeriesID: s, SagaID: "majin-buu", NumberStart: 289, NumberEnd: 289, Title: "10 años después: El 28° Torneo", Milestone: "Salto temporal de 10 años; presentación de Pan (4 años) y la nueva generación."},
 		{SeriesID: s, SagaID: "majin-buu", NumberStart: 290, NumberEnd: 290, Title: "La reencarnación de Buu: Uub", Milestone: "Goku enfrenta al niño Uub (10 años), reencarnación de Kid Buu, en la primera ronda del torneo."},
 		{SeriesID: s, SagaID: "majin-buu", NumberStart: 291, NumberEnd: 291, Title: "La partida de Goku con Uub", Milestone: "Goku toma a Uub sobre sus espaldas y parte volando a entrenarlo a su aldea natal como el nuevo protector de la Tierra."},
-
 	}
 }

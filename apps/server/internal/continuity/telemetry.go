@@ -190,5 +190,3 @@ func (tm *TelemetryManager) Stop() {
 		tm.wg.Wait()
 	})
 }
-
-

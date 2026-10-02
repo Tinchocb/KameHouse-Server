@@ -100,4 +100,3 @@ func franchiseMatchesMapping(ct string, keywords, anyOf, excluded []string) bool
 	}
 	return true
 }
-

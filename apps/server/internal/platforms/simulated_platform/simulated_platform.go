@@ -81,7 +81,7 @@ func (p *SimulatedPlatform) ListRecentAnime(ctx context.Context, page *int, perP
 }
 
 func (p *SimulatedPlatform) SetUsername(username string) {}
-func (p *SimulatedPlatform) Close()                       {}
-func (p *SimulatedPlatform) ClearCache()                  {}
+func (p *SimulatedPlatform) Close()                      {}
+func (p *SimulatedPlatform) ClearCache()                 {}
 
 var _ platform.Platform = (*SimulatedPlatform)(nil)

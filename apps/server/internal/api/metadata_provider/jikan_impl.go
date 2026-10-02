@@ -46,8 +46,8 @@ type JikanProviderImpl struct {
 type jikanCall struct {
 	start time.Time
 	done  chan struct{}
-	res  *apiMetadata.AnimeMetadata
-	err  error
+	res   *apiMetadata.AnimeMetadata
+	err   error
 }
 
 // jikanInlineWait es cuánto espera una apertura a Jikan antes de seguir sin sus

@@ -46,14 +46,22 @@ func (c *Client) fetchTVSeason(ctx context.Context, tvID int, seasonNumber int, 
 			fallbackParams := url.Values{}
 			fallbackParams.Set("language", "en-US")
 			if fallbackResp, err := executeWithRetry[TVSeasonDetails](ctx, c, fmt.Sprintf("/tv/%d/season/%d?%s", tvID, seasonNumber, fallbackParams.Encode())); err == nil {
-				if resp.Overview == "" { resp.Overview = fallbackResp.Overview }
-				if resp.Name == "" { resp.Name = fallbackResp.Name }
+				if resp.Overview == "" {
+					resp.Overview = fallbackResp.Overview
+				}
+				if resp.Name == "" {
+					resp.Name = fallbackResp.Name
+				}
 				for i, ep := range resp.Episodes {
 					if ep.Overview == "" || ep.Name == "" {
 						for _, fEp := range fallbackResp.Episodes {
 							if ep.EpisodeNumber == fEp.EpisodeNumber {
-								if ep.Overview == "" { resp.Episodes[i].Overview = fEp.Overview }
-								if ep.Name == "" { resp.Episodes[i].Name = fEp.Name }
+								if ep.Overview == "" {
+									resp.Episodes[i].Overview = fEp.Overview
+								}
+								if ep.Name == "" {
+									resp.Episodes[i].Name = fEp.Name
+								}
 								break
 							}
 						}

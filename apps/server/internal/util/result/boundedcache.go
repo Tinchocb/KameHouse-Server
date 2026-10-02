@@ -130,4 +130,3 @@ func (c *BoundedCache[K, V]) evictOldest() {
 		c.delete(item.key)
 	}
 }
-

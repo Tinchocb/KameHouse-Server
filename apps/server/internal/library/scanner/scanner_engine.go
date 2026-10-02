@@ -156,7 +156,7 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 				scn.Logger.Error().Interface("panic", r).Msg("scanner: panic clearing episode collection cache")
 			}
 		}()
-		anime.EpisodeCollectionFromLocalFilesCache.Clear()
+		anime.ClearEpisodeCollectionCache()
 	}()
 
 	// ── Non-blocking telemetry ────────────────────────────────────────────────

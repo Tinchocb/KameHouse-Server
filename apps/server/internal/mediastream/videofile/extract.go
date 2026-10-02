@@ -87,7 +87,7 @@ func ExtractAttachment(ctx context.Context, ffmpegPath string, path string, hash
 		}
 		args = append(args, fmt.Sprintf("-dump_attachment:t:%d", i), filepath.Join(attachmentPath, safeFontName))
 	}
-	
+
 	args = append(args, "-i", path)
 
 	// Cap the run even if the caller's ctx has no deadline.
@@ -97,7 +97,7 @@ func ExtractAttachment(ctx context.Context, ffmpegPath string, path string, hash
 	cmd := util.NewCmdCtx(
 		ctx,
 		ffmpegPath,
-		args...
+		args...,
 	)
 	// The working directory for the command is the attachment directory
 	cmd.Dir = attachmentPath

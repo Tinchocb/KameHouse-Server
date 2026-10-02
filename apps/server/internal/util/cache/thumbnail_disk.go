@@ -39,10 +39,10 @@ func PruneDiskCache(cacheDir string, maxAge time.Duration, maxSizeBytes int64) (
 }
 
 // PruneDirectory cleans up any cache directory (thumbnails, keyframes, skipdetect fingerprints).
-// 1. Removes stale temporary files (*.tmp*) older than 1 hour.
-// 2. Removes files matching target extension whose ModTime is older than maxAge (if maxAge > 0).
-// 3. If the remaining total size exceeds maxSizeBytes (if maxSizeBytes > 0),
-//    evicts oldest-accessed files until the directory size reaches the low-water mark (80% of maxSizeBytes).
+//  1. Removes stale temporary files (*.tmp*) older than 1 hour.
+//  2. Removes files matching target extension whose ModTime is older than maxAge (if maxAge > 0).
+//  3. If the remaining total size exceeds maxSizeBytes (if maxSizeBytes > 0),
+//     evicts oldest-accessed files until the directory size reaches the low-water mark (80% of maxSizeBytes).
 func PruneDirectory(cacheDir string, ext string, maxAge time.Duration, maxSizeBytes int64) (freedBytes int64, removedCount int, err error) {
 	entries, err := os.ReadDir(cacheDir)
 	if err != nil {

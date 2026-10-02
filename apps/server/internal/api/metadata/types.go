@@ -15,16 +15,16 @@ type (
 		Mappings     *AnimeMappings              `json:"mappings"`
 
 		// Extended Jikan fields
-		Status       string                      `json:"status,omitempty"`
-		Rating       string                      `json:"rating,omitempty"`
-		Score        float64                     `json:"score,omitempty"`
-		Duration     string                      `json:"duration,omitempty"`
-		Genres       []string                    `json:"genres,omitempty"`
-		Studios      []string                    `json:"studios,omitempty"`
-		Demographics []string                    `json:"demographics,omitempty"`
-		Openings     []string                    `json:"openings,omitempty"`
-		Endings      []string                    `json:"endings,omitempty"`
-		Characters   []CharacterMetadata         `json:"characters,omitempty"`
+		Status       string              `json:"status,omitempty"`
+		Rating       string              `json:"rating,omitempty"`
+		Score        float64             `json:"score,omitempty"`
+		Duration     string              `json:"duration,omitempty"`
+		Genres       []string            `json:"genres,omitempty"`
+		Studios      []string            `json:"studios,omitempty"`
+		Demographics []string            `json:"demographics,omitempty"`
+		Openings     []string            `json:"openings,omitempty"`
+		Endings      []string            `json:"endings,omitempty"`
+		Characters   []CharacterMetadata `json:"characters,omitempty"`
 
 		currentEpisodeCount int `json:"-"`
 	}
@@ -65,8 +65,8 @@ type (
 		SeasonNumber          int    `json:"seasonNumber"`
 		AbsoluteEpisodeNumber int    `json:"absoluteEpisodeNumber"`
 		AnidbEid              int    `json:"anidbEid"`
-		HasImage              bool   `json:"hasImage"`             // Indicates if the episode has a real image
-		IsFiller              bool   `json:"isFiller,omitempty"`   // Indicates if this is a filler episode
+		HasImage              bool   `json:"hasImage"`           // Indicates if the episode has a real image
+		IsFiller              bool   `json:"isFiller,omitempty"` // Indicates if this is a filler episode
 		SagaId                string `json:"sagaId,omitempty"`
 		SagaName              string `json:"sagaName,omitempty"`
 	}

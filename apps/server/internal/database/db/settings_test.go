@@ -27,19 +27,19 @@ func TestSettingsPersistence(t *testing.T) {
 			UpdatedAt: time.Now(),
 		},
 		Library: models.LibrarySettings{
-			SeriesPaths:                      []string{"/path/to/series1", "/path/to/series2"},
-			MoviePaths:                       []string{"/path/to/movies"},
-			ScannerProvider:                  "tmdb",
-			PrimaryMetadataProvider:          "tmdb",
-			TmdbApiKey:                       "test_tmdb_api_key",
-			ScannerUseLegacyMatching:         true,
-			PreferredAudioProfile:            "latino",
-			AutoSkipIntro:                    true,
-			AutoSkipOutro:                    false,
-			AutoSkipFiller:                   true,
-			AutoDisableSubtitlesWhenDubbed:   true,
-			MarathonMode:                     true,
-			TvMode:                           false,
+			SeriesPaths:                    []string{"/path/to/series1", "/path/to/series2"},
+			MoviePaths:                     []string{"/path/to/movies"},
+			ScannerProvider:                "tmdb",
+			PrimaryMetadataProvider:        "tmdb",
+			TmdbApiKey:                     "test_tmdb_api_key",
+			ScannerUseLegacyMatching:       true,
+			PreferredAudioProfile:          "latino",
+			AutoSkipIntro:                  true,
+			AutoSkipOutro:                  false,
+			AutoSkipFiller:                 true,
+			AutoDisableSubtitlesWhenDubbed: true,
+			MarathonMode:                   true,
+			TvMode:                         false,
 		},
 		MediaPlayer: models.MediaPlayerSettings{},
 		Notifications: models.NotificationSettings{
@@ -103,11 +103,11 @@ func TestSettingsPersistence(t *testing.T) {
 
 	// B. Mediastream playback defaults (antes solo-localStorage).
 	ms := &models.MediastreamSettings{
-		BaseModel:            models.BaseModel{ID: 1, UpdatedAt: time.Now()},
-		PerformanceProfile:   "balanced",
-		AutoGovernorEnabled:  true,
-		TranscodeHwAccel:     "auto",
-		TranscodePreset:      "fast",
+		BaseModel:           models.BaseModel{ID: 1, UpdatedAt: time.Now()},
+		PerformanceProfile:  "balanced",
+		AutoGovernorEnabled: true,
+		TranscodeHwAccel:    "auto",
+		TranscodePreset:     "fast",
 	}
 	if _, err := database.UpsertMediastreamSettings(ms); err != nil {
 		t.Fatalf("Failed to save mediastream settings: %v", err)

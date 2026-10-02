@@ -220,4 +220,3 @@ func (s *Service) StreamMedia(ctx context.Context, fileID string, rangeHeader st
 
 	return client.GetMediaStream(ctx, fileID, rangeHeader)
 }
-
