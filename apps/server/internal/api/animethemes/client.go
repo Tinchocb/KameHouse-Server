@@ -196,7 +196,6 @@ func flattenThemes(parsed apiResponse) []skipdetect.Theme {
 			out = append(out, skipdetect.Theme{
 				Slug:     t.Slug,
 				Type:     t.Type,
-				Sequence: e.Version,
 				Episodes: e.Episodes,
 				AudioURL: audioURL,
 			})

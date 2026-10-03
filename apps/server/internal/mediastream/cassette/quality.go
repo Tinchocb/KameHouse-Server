@@ -129,8 +129,6 @@ type QualityLadderEntry struct {
 	Quality Quality
 	Width   int32
 	Height  int32
-	// Whether this quality tier requires transcoding (vs transmux/copy).
-	NeedsTranscode bool
 	// Whether the source's codec already matches the output codec so the
 	// original tier can transmux (copy) the video stream.
 	OriginalCanTransmux bool
@@ -199,10 +197,9 @@ func BuildQualityLadder(info *videofile.MediaInfo) []QualityLadderEntry {
 		}
 
 		ladder = append(ladder, QualityLadderEntry{
-			Quality:        q,
-			Width:          util.ClosestEven(int32(float64(h) * aspectRatio)),
-			Height:         int32(h),
-			NeedsTranscode: true,
+			Quality: q,
+			Width:   util.ClosestEven(int32(float64(h) * aspectRatio)),
+			Height:  int32(h),
 		})
 	}
 
@@ -211,10 +208,9 @@ func BuildQualityLadder(info *videofile.MediaInfo) []QualityLadderEntry {
 	// first so quality doesn't drop to the next tier down.
 	if srcHeight <= MaxTranscodeHeight && (len(ladder) == 0 || uint32(ladder[0].Height) < srcHeight) {
 		ladder = append([]QualityLadderEntry{{
-			Quality:        Original,
-			Width:          int32(srcWidth),
-			Height:         int32(srcHeight),
-			NeedsTranscode: true,
+			Quality: Original,
+			Width:   int32(srcWidth),
+			Height:  int32(srcHeight),
 		}}, ladder...)
 	}
 

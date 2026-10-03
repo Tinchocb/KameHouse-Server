@@ -1,16 +1,16 @@
 import React from "react";
 import { cn } from "./core/styling";
 
-export type ProgressBarVariant = "hero" | "panel" | "card" | "compact";
+export type ProgressBarVariant = "hero" | "compact";
 
 export interface WatchProgressBarProps {
     percent: number;
     className?: string;
     animateOnMount?: boolean;
-    /** Variante de diseño. "hero", "panel", "card" o "compact". Retrocompatible con `size`. */
+    /** Variante de diseño. "hero" o "compact". Retrocompatible con `size`. */
     variant?: ProgressBarVariant;
     /** Alias retrocompatible para variant. */
-    size?: "hero" | "panel";
+    size?: "hero";
     /** Identificador de era (ej: 'era-db', 'era-dbz', 'era-dbs') para tintado temático */
     era?: string | null;
     /** Color o degradado directo para la barra activa */
@@ -33,32 +33,25 @@ export function WatchProgressBar({
     className,
     animateOnMount = false,
     variant,
-    size = "hero",
     era,
     color,
     showLabel = false,
 }: WatchProgressBarProps) {
-    const activeVariant: ProgressBarVariant = variant || (size === "panel" ? "panel" : "hero");
+    const activeVariant: ProgressBarVariant = variant || "hero";
     const clampedPercent = Math.max(0, Math.min(100, Math.round(percent)));
 
     const eraColor = era ? ERA_COLOR_MAP[era] : undefined;
     const activeColor = color || eraColor;
 
     // Track styles per variant
-    const trackClass = {
-        hero: "h-[5px] rounded-full",
-        panel: "h-2 rounded-full bg-white/10 border border-white/5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)]",
-        card: "h-1 rounded-none bg-black/50",
-        compact: "h-1 rounded-full bg-black/60 p-[1px] border border-white/15",
-    }[activeVariant];
+    const trackClass = activeVariant === "compact"
+        ? "h-1 rounded-full bg-black/60 p-[1px] border border-white/15"
+        : "h-[5px] rounded-full";
 
     // Bar fill styles per variant
-    const defaultFillClass = {
-        hero: "bg-brand-secondary",
-        panel: "bg-gradient-to-r from-brand-secondary via-brand-accent to-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.6)]",
-        card: "bg-brand-accent shadow-[0_0_6px_hsl(var(--brand-accent)/0.5)]",
-        compact: "bg-gradient-to-r from-amber-500 to-orange-400",
-    }[activeVariant];
+    const defaultFillClass = activeVariant === "compact"
+        ? "bg-gradient-to-r from-amber-500 to-orange-400"
+        : "bg-brand-secondary";
 
     const trackStyle = activeVariant === "hero"
         ? { background: "color-mix(in srgb, var(--md-sys-color-surface-container) 20%, transparent)" }

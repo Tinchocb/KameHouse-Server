@@ -22,7 +22,6 @@ import (
 	"kamehouse/internal/core"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/intelligence"
-	"kamehouse/internal/library/anime"
 	util "kamehouse/internal/util/proxies"
 )
 
@@ -250,9 +249,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	app.AddOnRefreshAnimeCollectionFunc("ClearLibraryCollectionCache", func() {
 		ClearLibraryCollectionCache()
 	})
-	app.AddOnRefreshAnimeCollectionFunc("ClearEpisodeCollectionCache", func() {
-		anime.ClearEpisodeCollectionCache()
-	})
 
 	h.StartPlaybackHeartbeatSubscriber()
 
@@ -296,7 +292,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.POST("/notifications/read", h.HandleMarkNotificationsRead)
 	v1.DELETE("/notifications", h.HandleClearNotifications)
 	v1.POST("/directory-selector", h.HandleDirectorySelector)
-	v1.POST("/open-in-explorer", h.HandleOpenInExplorer)
 	v1.POST("/shutdown", h.HandleShutdown)
 	v1.GET("/lore/dragonball", h.HandleGetDragonballLore)
 	v1.GET("/music/scan", h.HandleScanBackgroundMusic)

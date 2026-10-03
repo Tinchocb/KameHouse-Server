@@ -70,17 +70,6 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route returns anime suggestions for the given local files.
-         *  Accepts either a directory path (dir) or explicit file paths (paths[]).
-         *  The frontend codegen contract sends dir; the legacy backend contract sends paths.
-         */
-        GetAnimeEntrySuggestions: {
-            key: "ANIME-ENTRIES-get-anime-entry-suggestions",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/anime-entry/suggestions",
-        },
-        /**
-         *  @description
          *  Route updates the progress of an anime entry.
          *  This is used when the user manually updates the progress of an anime.
          */
@@ -88,26 +77,6 @@ export const API_ENDPOINTS = {
             key: "ANIME-ENTRIES-update-anime-entry-progress",
             methods: ["POST"],
             endpoint: "/api/v1/library/anime-entry/progress",
-        },
-        /**
-         *  @description
-         *  Route manually match a group of local files to a media.
-         *  It will create a new scanner and run it for the selected files.
-         */
-        AnimeEntryManualMatch: {
-            key: "ANIME-ENTRIES-anime-entry-manual-match",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/anime-entry/manual-match",
-        },
-        /**
-         *  @description
-         *  Route unmatch the given local files.
-         *  It will set the mediaID of the files to 0 and remove the metadata.
-         */
-        AnimeEntryUnmatch: {
-            key: "ANIME-ENTRIES-anime-entry-unmatch",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/anime-entry/unmatch",
         },
     },
     CACHE_HANDLERS: {
@@ -341,80 +310,6 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/library/local-files",
         },
-        /**
-         *  @description
-         *  Route imports local files from the given path.
-         *  This will import local files from the given path.
-         *  The response is ignored, the client should refetch the entire library collection and media entry.
-         */
-        ImportLocalFiles: {
-            key: "LOCALFILES-import-local-files",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/local-files/import",
-        },
-        /**
-         *  @description
-         *  Route performs an action on all local files.
-         *  This will perform the given action on all local files.
-         *  The response is ignored, the client should refetch the entire library collection and media entry.
-         */
-        LocalFileBulkAction: {
-            key: "LOCALFILES-local-file-bulk-action",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/local-files",
-        },
-        /**
-         *  @description
-         *  Route updates the local file with the given path.
-         *  This will update the local file with the given path.
-         *  The response is ignored, the client should refetch the entire library collection and media entry.
-         */
-        UpdateLocalFileData: {
-            key: "LOCALFILES-update-local-file-data",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/library/local-file",
-        },
-        /**
-         *  @description
-         *  Route updates local files with the given paths.
-         *  The client should refetch the entire library collection and media entry.
-         */
-        SuperUpdateLocalFiles: {
-            key: "LOCALFILES-super-update-local-files",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/library/local-files/super-update",
-        },
-        /**
-         *  @description
-         *  Route updates local files with the given paths.
-         *  The client should refetch the entire library collection and media entry.
-         */
-        UpdateLocalFiles: {
-            key: "LOCALFILES-update-local-files",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/library/local-files",
-        },
-        /**
-         *  @description
-         *  Route deletes local files with the given paths.
-         *  This will delete the local files with the given paths.
-         *  The client should refetch the entire library collection and media entry.
-         */
-        DeleteLocalFiles: {
-            key: "LOCALFILES-delete-local-files",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/library/local-files",
-        },
-        /**
-         *  @description
-         *  Route removes empty directories.
-         *  This will remove empty directories in the library path.
-         */
-        RemoveEmptyDirectories: {
-            key: "LOCALFILES-remove-empty-directories",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/library/empty-directories",
-        },
     },
     LORE: {
         GetDragonballLore: {
@@ -570,26 +465,6 @@ export const API_ENDPOINTS = {
         },
     },
     METADATA: {
-        /**
-         *  @description
-         *  Route fetches and caches filler data for the given media.
-         *  This will fetch and cache filler data for the given media.
-         */
-        PopulateFillerData: {
-            key: "METADATA-populate-filler-data",
-            methods: ["POST"],
-            endpoint: "/api/v1/metadata-provider/filler",
-        },
-        /**
-         *  @description
-         *  Route removes filler data cache.
-         *  This will remove the filler data cache for the given media.
-         */
-        RemoveFillerData: {
-            key: "METADATA-remove-filler-data",
-            methods: ["DELETE"],
-            endpoint: "/api/v1/metadata-provider/filler",
-        },
         /**
          *  @description
          *  Route clears provider metadata cache.

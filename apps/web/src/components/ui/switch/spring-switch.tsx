@@ -11,21 +11,6 @@ export const variantTrackColors = {
         thumb: "bg-on-primary text-brand-accent shadow-[0_2px_5px_rgba(0,0,0,0.45)]",
         dot: "bg-brand-accent opacity-90",
     },
-    success: {
-        checked: "bg-emerald-500 border-emerald-400/50",
-        thumb: "bg-white text-emerald-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)]",
-        dot: "bg-emerald-600 opacity-90",
-    },
-    warning: {
-        checked: "bg-amber-500 border-amber-400/50",
-        thumb: "bg-white text-amber-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)]",
-        dot: "bg-amber-600 opacity-90",
-    },
-    danger: {
-        checked: "bg-rose-500 border-rose-400/50",
-        thumb: "bg-white text-rose-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)]",
-        dot: "bg-rose-600 opacity-90",
-    },
 }
 
 export interface SpringSwitchProps {
@@ -37,7 +22,7 @@ export interface SpringSwitchProps {
     id?: string
     className?: string
     size?: "sm" | "md"
-    variant?: "default" | "success" | "warning" | "danger"
+    variant?: "default"
     ariaHidden?: boolean
     tabIndex?: number
     isPressingExternal?: boolean

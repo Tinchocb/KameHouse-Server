@@ -3,24 +3,16 @@ package handlers
 import (
 	"context"
 	"errors"
-	"strings"
-
-	"kamehouse/internal/database/db"
-	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/library/anime"
-	librarymetadata "kamehouse/internal/library/metadata"
-
-	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/util/result"
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
 
+	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
+	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/library/anime"
 
 	"github.com/labstack/echo/v4"
-	"github.com/samber/lo"
 )
 
 var fillerFetchAttempts sync.Map
@@ -135,129 +127,6 @@ func (h *Handler) HandleGetAnimeEntryLocalFiles(c echo.Context) error {
 	return h.RespondWithData(c, lfs)
 }
 
-//----------------------------------------------------------------------------------------------------------------------------------------------------
-
-var entriesSuggestionsCache = result.NewCache[string, []*platform.UnifiedMedia]()
-
-// HandleGetAnimeEntrySuggestions returns anime suggestions for the given local files.
-//
-//	@summary returns anime suggestions for the given local files.
-//	@desc Accepts either a directory path (dir) or explicit file paths (paths[]).
-//	@desc The frontend codegen contract sends dir; the legacy backend contract sends paths.
-//	@route /api/v1/library/anime-entry/suggestions [POST]
-//	@param dir - string - false - "Directory of the local files (frontend contract)"
-//	@param paths - []string - false - "Explicit file paths (legacy contract)"
-//	@returns []*platform.UnifiedMedia
-func (h *Handler) HandleGetAnimeEntrySuggestions(c echo.Context) error {
-
-	type body struct {
-		// Frontend codegen sends dir (a directory path)
-		Dir   string   `json:"dir"`
-		Paths []string `json:"paths"`
-	}
-	b := new(body)
-	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	var selectedLfs []*dto.LocalFile
-
-	if b.Dir != "" {
-		dir := strings.ReplaceAll(b.Dir, "\\", "/")
-		selectedLfs = lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-			norm := strings.ReplaceAll(lf.Path, "\\", "/")
-			return strings.HasPrefix(norm, dir)
-		})
-	} else if len(b.Paths) > 0 {
-		selectedLfs = lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-			return matchesAnyRequestedPath(lf.Path, b.Paths)
-		})
-	} else {
-		return h.RespondWithError(c, errors.New("provide either dir or paths"))
-	}
-
-	if len(selectedLfs) == 0 {
-		return h.RespondWithError(c, errors.New("no local files found for the given location"))
-	}
-
-	title := selectedLfs[0].GetParsedTitle()
-
-	if res, ok := entriesSuggestionsCache.Get(title); ok {
-		return h.RespondWithData(c, res)
-	}
-
-	h.App.Logger.Info().Str("title", title).Msg("handlers: Fetching anime suggestions")
-
-	if h.App.Metadata.TMDBClient == nil {
-		return h.RespondWithError(c, errors.New("tmdb client is not configured"))
-	}
-
-	provider := librarymetadata.NewTMDBProviderWithClient(h.App.Metadata.TMDBClient, h.App.Database)
-
-	res, err := provider.SearchMedia(c.Request().Context(), title)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Fake UnifiedMedia array for frontend compatibility
-	var newSuggestions []*platform.UnifiedMedia
-	for _, nm := range res {
-		title := &platform.MediaTitle{}
-		if nm.Title != nil {
-			title.English = nm.Title.English
-			title.Romaji = nm.Title.Romaji
-			title.Native = nm.Title.Native
-		}
-
-		var cover *platform.MediaCoverImage
-		if nm.CoverImage != nil {
-			cover = &platform.MediaCoverImage{
-				ExtraLarge: nm.CoverImage.ExtraLarge,
-				Large:      nm.CoverImage.Large,
-				Medium:     nm.CoverImage.Medium,
-				Color:      nm.CoverImage.Color,
-			}
-		}
-
-		var startDate *platform.FuzzyDate
-		if nm.StartDate != nil {
-			startDate = &platform.FuzzyDate{
-				Year:  nm.StartDate.Year,
-				Month: nm.StartDate.Month,
-				Day:   nm.StartDate.Day,
-			}
-		}
-
-		var format platform.MediaFormat
-		if nm.Format != nil {
-			format = platform.MediaFormat(*nm.Format)
-		}
-
-		var status platform.MediaStatus
-		if nm.Status != nil {
-			status = platform.MediaStatus(*nm.Status)
-		}
-
-		newSuggestions = append(newSuggestions, &platform.UnifiedMedia{
-			ID:         nm.ID,
-			Title:      title,
-			CoverImage: cover,
-			Format:     format,
-			StartDate:  startDate,
-			Status:     status,
-		})
-	}
-
-	entriesSuggestionsCache.SetT(title, newSuggestions, 1*time.Hour)
-
-	return h.RespondWithData(c, newSuggestions)
-}
-
 // HandleUpdateAnimeEntryProgress updates the progress of an anime entry.
 //
 //	@summary updates the progress of an anime entry.
@@ -295,115 +164,3 @@ func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 	return h.RespondWithData(c, true)
 }
 
-// HandleAnimeEntryManualMatch is used to manually match a group of local files to a media.
-//
-//	@summary manually match a group of local files to a media.
-//	@desc It will create a new scanner and run it for the selected files.
-//	@route /api/v1/library/anime-entry/manual-match [POST]
-//	@returns bool
-func (h *Handler) HandleAnimeEntryManualMatch(c echo.Context) error {
-	type body struct {
-		MediaID int      `json:"mediaId"`
-		Paths   []string `json:"paths"`
-	}
-	b := new(body)
-	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Get the local files that are being matched
-	selectedLfs := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-		return matchesAnyRequestedPath(lf.Path, b.Paths)
-	})
-	if len(selectedLfs) == 0 {
-		return h.RespondWithError(c, errors.New("no local files found for the given paths"))
-	}
-
-	// Clear metadata cache to ensure fresh data
-	_ = db.DeleteMetadataCache(h.App.Database, "jikan-anime-episodes", strconv.Itoa(b.MediaID))
-	_ = db.DeleteMetadataCache(h.App.Database, "tmdb-tv-details", strconv.Itoa(b.MediaID))
-	_ = db.DeleteMetadataCache(h.App.Database, "tmdb-movie-details", strconv.Itoa(b.MediaID))
-	h.App.Metadata.Provider.ClearCache()
-
-	libraryMediaID, err := h.ensureLibraryMediaForManualMatch(c.Request().Context(), b.MediaID, lfs)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	for _, lf := range selectedLfs {
-		lf.MediaID = b.MediaID
-		lf.LibraryMediaId = libraryMediaID
-		lf.Locked = true
-		lf.Ignored = false
-		ensureManualMatchMetadata(lf)
-	}
-
-	if lfsID == 0 {
-		_, err = db.InsertLocalFiles(h.App.Database, lfs)
-	} else {
-		_, err = db.SaveLocalFiles(h.App.Database, lfsID, lfs)
-	}
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Refresh the collection
-	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
-	ClearLibraryCollectionCache()
-
-	return h.RespondWithData(c, true)
-}
-
-// HandleAnimeEntryUnmatch will unmatch the given local files.
-//
-//	@summary unmatch the given local files.
-//	@desc It will set the mediaID of the files to 0 and remove the metadata.
-//	@route /api/v1/library/anime-entry/unmatch [POST]
-//	@returns bool
-func (h *Handler) HandleAnimeEntryUnmatch(c echo.Context) error {
-	type body struct {
-		Paths []string `json:"paths"`
-	}
-	b := new(body)
-	if err := c.Bind(b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Get the local files that are being unmatched
-	selectedLfs := lo.Filter(lfs, func(lf *dto.LocalFile, _ int) bool {
-		return matchesAnyRequestedPath(lf.Path, b.Paths)
-	})
-	if len(selectedLfs) == 0 {
-		return h.RespondWithError(c, errors.New("no local files found for the given paths"))
-	}
-
-	// Unmatch the files
-	for _, lf := range selectedLfs {
-		lf.MediaID = 0
-		lf.Metadata = nil
-		lf.Locked = false
-		lf.Ignored = false
-	}
-
-	// Save local files
-	_, err = db.SaveLocalFiles(h.App.Database, lfsID, lfs)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// Refresh the collection (mirror manual-match so unlinked lists update)
-	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
-	ClearLibraryCollectionCache()
-
-	return h.RespondWithData(c, true)
-}

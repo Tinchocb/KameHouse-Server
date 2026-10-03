@@ -47,7 +47,7 @@ interface ToggleProps {
   onCheckedChange?: (checked: boolean) => void
   onChange?: (checked: boolean) => void
   className?: string
-  variant?: 'default' | 'success' | 'warning' | 'danger'
+  variant?: 'default'
   disabled?: boolean
   size?: 'sm' | 'md'
   ariaHidden?: boolean
@@ -90,7 +90,7 @@ export interface OsToggleProps {
     disabled?: boolean
     icon?: React.ElementType
     className?: string
-    variant?: 'default' | 'success' | 'warning' | 'danger'
+    variant?: 'default'
     /** Muestra pill "Requiere Guardar". Solo para controles Solo-RHF. */
     dirty?: boolean
 }

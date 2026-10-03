@@ -14,8 +14,6 @@ func (h *Handler) RegisterSettingsRoutes(v1 *echo.Group) {
 	v1.POST("/progress", h.HandleSaveProgress)
 
 	// Metadata
-	v1.POST("/metadata-provider/filler", h.HandlePopulateFillerData)
-	v1.DELETE("/metadata-provider/filler", h.HandleRemoveFillerData)
 	v1.DELETE("/metadata/cache", h.HandleClearMetadataCache)
 
 	// TMDB

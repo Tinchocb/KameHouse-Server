@@ -7,7 +7,6 @@ package skipdetect
 type Theme struct {
 	Slug     string // "OP1", "OP2", "ED1"...
 	Type     string // "OP" | "ED"
-	Sequence int
 	// Episodes es la lista de rangos de episodios a los que aplica el theme,
 	// tal como los expone AnimeThemes ("1-12", "1, 3-5", "" = todos).
 	Episodes string

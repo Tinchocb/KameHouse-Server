@@ -7,7 +7,6 @@ fn main() {
     let target = env::var("TARGET").unwrap_or_default();
     let ext = if target.contains("windows") { ".exe" } else { "" };
     let sidecar_dest = PathBuf::from(format!("binaries/kamehouse-server-{}{}", target, ext));
-    let sidecar_root_dest = PathBuf::from(format!("kamehouse-server-{}{}", target, ext));
 
     let _ = fs::create_dir_all("binaries");
     if !sidecar_dest.exists() {
@@ -29,11 +28,6 @@ fn main() {
     // write a placeholder dummy file so tauri_build doesn't abort compilation.
     if !sidecar_dest.exists() {
         let _ = fs::write(&sidecar_dest, b"");
-    }
-
-    // Mirror to root if not present
-    if !sidecar_root_dest.exists() && sidecar_dest.exists() {
-        let _ = fs::copy(&sidecar_dest, &sidecar_root_dest);
     }
 
     tauri_build::build();

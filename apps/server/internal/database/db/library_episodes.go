@@ -25,12 +25,3 @@ func UpsertLibraryEpisodeBatch(d *Database, episodes []*models.LibraryEpisode, b
 		}),
 	}).CreateInBatches(episodes, batchSize).Error
 }
-
-// GetLibraryEpisodesByMediaID retrieves all episodes for a given LibraryMedia.
-func GetLibraryEpisodesByMediaID(d *Database, libraryMediaID uint) ([]models.LibraryEpisode, error) {
-	var episodes []models.LibraryEpisode
-	err := d.Gorm().Where("library_media_id = ?", libraryMediaID).
-		Order("season_number ASC, episode_number ASC").
-		Find(&episodes).Error
-	return episodes, err
-}

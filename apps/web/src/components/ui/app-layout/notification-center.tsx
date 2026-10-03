@@ -32,7 +32,7 @@ function relativeTime(dateStr?: string): string {
  * everything as read. New notifications arrive via the WebSocket provider, which
  * invalidates the query this component reads.
  */
-export function NotificationBell({ sidebarOpen = false, compact = false }: { sidebarOpen?: boolean; compact?: boolean }) {
+export function NotificationBell({ compact = false }: { compact?: boolean }) {
     const { isMobile } = useResponsive()
     const [open, setOpen] = React.useState(false)
     const panelSpring = useSpringPreset("tabContent")
@@ -88,8 +88,7 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
                         compact
                             ? "h-11 w-11 justify-center rounded-full text-on-surface-variant hover:text-on-surface"
                             : [
-                                "h-14 rounded-xl px-4 border border-white/[0.06] hover:border-white/[0.12] w-full",
-                                sidebarOpen ? "justify-start gap-4 px-5" : "justify-center md:w-14 md:px-0",
+                                "h-14 rounded-xl px-4 border border-white/[0.06] hover:border-white/[0.12] w-full justify-center md:w-14 md:px-0",
                                 open
                                     ? "text-on-surface bg-white/[0.08]"
                                     : "text-on-surface-variant hover:text-on-surface bg-white/[0.03] hover:bg-white/[0.07]",
@@ -116,7 +115,7 @@ export function NotificationBell({ sidebarOpen = false, compact = false }: { sid
                     {!compact && (
                         <span className={cn(
                             "uppercase tracking-ultra text-label-sm font-black z-10 text-left transition-colors whitespace-nowrap",
-                            (sidebarOpen || isMobile) ? "block" : "hidden md:hidden",
+                            isMobile ? "block" : "hidden md:hidden",
                             open ? "text-on-surface" : "group-hover:text-on-surface"
                         )}>
                             Notificaciones

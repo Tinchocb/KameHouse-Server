@@ -30,7 +30,6 @@ type (
 		waiting             bool
 		missedAction        bool
 		mu                  sync.Mutex
-		scannedCh           chan struct{}
 		waitTime            time.Duration
 		enabled             bool
 		settings            models.LibrarySettings
@@ -39,7 +38,6 @@ type (
 		wsEventManager      events.WSEventManagerInterface
 		db                  *db.Database
 		metadataProvider    metadata_provider.Provider
-		logsDir             string
 		scanning            atomic.Bool
 		onRefreshCollection func()
 		eventDispatcher     events.Dispatcher
@@ -58,7 +56,6 @@ type (
 		Enabled             bool
 		WaitTime            time.Duration
 		MetadataProvider    metadata_provider.Provider
-		LogsDir             string
 		OnRefreshCollection func()
 		EventDispatcher     events.Dispatcher
 		BackgroundQueue     *scanner.BackgroundQueue
@@ -84,7 +81,6 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		waiting:             false,
 		missedAction:        false,
 		mu:                  sync.Mutex{},
-		scannedCh:           make(chan struct{}, 1),
 		waitTime:            wt,
 		enabled:             opts.Enabled,
 		platform:            opts.Platform,
@@ -92,7 +88,6 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		wsEventManager:      opts.WSEventManager,
 		db:                  opts.Database,
 		metadataProvider:    opts.MetadataProvider,
-		logsDir:             opts.LogsDir,
 		onRefreshCollection: opts.OnRefreshCollection,
 		eventDispatcher:     opts.EventDispatcher,
 		backgroundQueue:     opts.BackgroundQueue,
@@ -301,12 +296,6 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		as.Notify("")
 	} else {
 		as.mu.Unlock()
-	}
-
-	// Notify that the scan is completed
-	select {
-	case as.scannedCh <- struct{}{}:
-	default:
 	}
 }
 

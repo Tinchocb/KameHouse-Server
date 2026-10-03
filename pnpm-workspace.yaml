@@ -4,5 +4,3 @@ packages:
 allowBuilds:
   core-js: true
   esbuild: true
-patchedDependencies:
-  jassub@2.5.1: patches/jassub@2.5.1.patch

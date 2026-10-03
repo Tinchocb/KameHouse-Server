@@ -11,17 +11,8 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.GET("/unlinked", h.HandleGetUnlinkedFiles)
 	v1Library.POST("/unlinked/resolve", h.HandleResolveUnlinkedFile)
 
-	v1Library.DELETE("/empty-directories", h.HandleRemoveEmptyDirectories)
-
 	v1Library.GET("/local-files", h.HandleGetLocalFiles)
-	v1Library.POST("/local-files", h.HandleLocalFileBulkAction)
-	v1Library.PATCH("/local-files", h.HandleUpdateLocalFiles)
-	v1Library.DELETE("/local-files", h.HandleDeleteLocalFiles)
-	v1Library.GET("/local-files/dump", h.HandleDumpLocalFilesToFile)
-	v1Library.POST("/local-files/import", h.HandleImportLocalFiles)
 	v1Library.POST("/local-files/tmdb-assign", h.HandleTMDBAssign)
-	v1Library.PATCH("/local-file", h.HandleUpdateLocalFileData)
-	v1Library.PATCH("/local-files/super-update", h.HandleSuperUpdateLocalFiles)
 
 	v1Library.GET("/collection", h.HandleGetLibraryCollection)
 	v1Library.GET("/scan-summaries", h.HandleGetScanSummaries)
@@ -33,13 +24,5 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.GET("/anime-entry/:id/local-files", h.HandleGetAnimeEntryLocalFiles)
 	v1Library.GET("/anime-entry/:id/source", h.HandleGetAnimeEntrySource)
 	v1Library.POST("/anime-entry/source", h.HandleSetAnimeEntrySource)
-	v1Library.POST("/anime-entry/suggestions", h.HandleGetAnimeEntrySuggestions)
-	v1Library.POST("/anime-entry/manual-match", h.HandleAnimeEntryManualMatch)
-	v1Library.POST("/anime-entry/unmatch", h.HandleAnimeEntryUnmatch)
 	v1Library.POST("/anime-entry/progress", h.HandleUpdateAnimeEntryProgress)
-
-	// Library Explorer
-	v1LibraryExplorer := v1Library.Group("/explorer")
-	v1LibraryExplorer.GET("/file-tree", h.HandleGetLibraryExplorerFileTree)
-	v1LibraryExplorer.POST("/file-tree/refresh", h.HandleRefreshLibraryExplorerFileTree)
 }

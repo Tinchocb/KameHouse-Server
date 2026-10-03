@@ -65,7 +65,6 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
         bgMusicDir,
         bgMusicTracks,
         isVideoActive,
-        sidebarOpen,
         eraOpeningPlaying,
         activeSeriesContext,
         seriesSoundtrackMode,
@@ -79,7 +78,6 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
             bgMusicDir: state.bgMusicDir,
             bgMusicTracks: state.bgMusicTracks,
             isVideoActive: state.isVideoActive,
-            sidebarOpen: state.sidebarOpen,
             eraOpeningPlaying: state.eraOpeningPlaying,
             activeSeriesContext: state.activeSeriesContext,
             seriesSoundtrackMode: state.seriesSoundtrackMode,
@@ -270,8 +268,7 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
                 title={audioMasterOn ? "Silenciar audio" : "Activar audio"}
                 className={cn(
                     "flex items-center h-14 rounded-xl group px-4 relative transition-[background-color,border-color,color,transform] duration-fast ease-out-strong w-full",
-                    "active:scale-95 font-bold",
-                    sidebarOpen ? "w-full justify-start gap-4 px-5" : "justify-center md:w-14 w-full md:px-0",
+                    "active:scale-95 font-bold justify-center md:w-14 w-full md:px-0",
                     audioMasterOn
                         ? "text-on-surface bg-white/[0.08]"
                         : "bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/[0.12] text-on-surface-variant hover:text-on-surface"
@@ -294,10 +291,7 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
                     )}
                 </span>
 
-                <div className={cn(
-                    "flex flex-col text-left transition-colors whitespace-nowrap min-w-0 flex-1",
-                    (sidebarOpen) ? "block" : "hidden md:hidden",
-                )}>
+                <div className="flex flex-col text-left transition-colors whitespace-nowrap min-w-0 flex-1 hidden md:hidden">
                     <span className={cn(
                         "uppercase tracking-ultra text-label-sm font-black z-10",
                         audioMasterOn ? "text-on-surface" : "group-hover:text-on-surface"

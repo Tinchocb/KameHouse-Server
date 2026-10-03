@@ -53,11 +53,12 @@ export const useAppStore = create<CombinedState>()(
                         return p as CombinedState
                     },
                     merge: (persistedState, currentState) => {
-                        const p = persistedState as Partial<CombinedState> | undefined
-                        if (p) {
-                            if (typeof p.sidebarOpen !== 'undefined') delete p.sidebarOpen
-                            if (typeof p.globalQueueOpen !== 'undefined') delete p.globalQueueOpen
-                            if (typeof p.activeQueuePlayItem !== 'undefined') delete p.activeQueuePlayItem
+                        const rec = persistedState as Record<string, unknown> | undefined
+                        const p = (rec ?? {}) as Partial<CombinedState>
+                        if (rec) {
+                            if ('sidebarOpen' in rec) delete rec.sidebarOpen
+                            if ('globalQueueOpen' in rec) delete rec.globalQueueOpen
+                            if ('activeQueuePlayItem' in rec) delete rec.activeQueuePlayItem
                             if (Array.isArray(p.playlistQueue)) {
                                 p.playlistQueue = p.playlistQueue.slice(0, 50)
                                 if (typeof p.currentQueueIndex === 'number' && p.currentQueueIndex >= p.playlistQueue.length) {

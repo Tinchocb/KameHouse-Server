@@ -98,7 +98,7 @@ impl SettingsManager {
                     .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
                     .join("KameHouse")
             });
-        app_data.join("denshi-settings.json")
+        app_data.join("kamehouse-settings.json")
     }
 
     pub fn load<R: Runtime>(&self, app_handle: &AppHandle<R>) -> DesktopSettings {
@@ -109,8 +109,20 @@ impl SettingsManager {
     pub fn load_from_path(&self, path: &PathBuf) -> DesktopSettings {
         let mut settings = self.settings.write().unwrap();
 
-        if path.exists() {
-            match std::fs::read_to_string(path) {
+        let effective_path = if path.exists() {
+            path.clone()
+        } else {
+            let legacy_path = path.with_file_name("denshi-settings.json");
+            if legacy_path.exists() {
+                info!("[Settings] Found legacy denshi settings at {:?}, will migrate to {:?}", legacy_path, path);
+                legacy_path
+            } else {
+                path.clone()
+            }
+        };
+
+        if effective_path.exists() {
+            match std::fs::read_to_string(&effective_path) {
                 Ok(content) => {
                     match serde_json::from_str::<DesktopSettings>(&content) {
                         Ok(loaded) => {

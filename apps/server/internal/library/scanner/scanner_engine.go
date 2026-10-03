@@ -8,7 +8,6 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
-	"kamehouse/internal/library/anime"
 	librarymetadata "kamehouse/internal/library/metadata"
 	"kamehouse/internal/library/summary"
 	"kamehouse/internal/platforms/platform"
@@ -149,15 +148,6 @@ func NewScanner(opts *ScannerOptions) *Scanner {
 // Scan will scan the directory and return a list of dto.LocalFile.
 func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) {
 	defer util.HandlePanicWithError(&err)
-
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				scn.Logger.Error().Interface("panic", r).Msg("scanner: panic clearing episode collection cache")
-			}
-		}()
-		anime.ClearEpisodeCollectionCache()
-	}()
 
 	// ── Non-blocking telemetry ────────────────────────────────────────────────
 	// All WSEventManager calls are routed through a buffered channel so workers

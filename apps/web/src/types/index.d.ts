@@ -1,5 +1,4 @@
-import "@total-typescript/ts-reset"
-import type { DesktopSettings } from "@/lib/desktop-bridge"
+import type { DesktopAPI } from "@/lib/desktop-bridge"
 
 declare global {
     interface AudioTrack {
@@ -23,58 +22,6 @@ declare global {
 
     interface HTMLMediaElement {
         readonly audioTracks: AudioTrackList | undefined;
-    }
-
-    export interface DesktopAPI {
-        window: {
-            minimize: () => void;
-            maximize: () => void;
-            close: () => void;
-            isMaximized: () => Promise<boolean>;
-            isMinimizable: () => Promise<boolean>;
-            isMaximizable: () => Promise<boolean>;
-            isClosable: () => Promise<boolean>;
-            isFullscreen: () => Promise<boolean>;
-            setFullscreen: (fullscreen: boolean) => void;
-            toggleMaximize: () => void;
-            hide: () => void;
-            show: () => void;
-            isVisible: () => Promise<boolean>;
-            getCurrentWindow: () => Promise<string>;
-            isMainWindow: () => Promise<boolean>;
-        };
-        localServer: {
-            getPort: () => Promise<number>;
-        };
-        startup: {
-            ready: () => void;
-        };
-        on: (channel: string, callback: (...args: unknown[]) => void) => (() => void) | undefined;
-        platform: NodeJS.Platform;
-        shell: {
-            open: (url: string) => Promise<void>;
-        };
-        clipboard: {
-            writeText: (text: string) => Promise<boolean>;
-        };
-        checkForUpdates: () => Promise<unknown>;
-        installUpdate: () => Promise<unknown>;
-        killServer: () => Promise<unknown>;
-        settings: {
-            get: () => Promise<DesktopSettings>;
-            set: (settings: Partial<DesktopSettings>) => Promise<DesktopSettings>;
-        };
-        mpv: {
-            isAvailable: () => Promise<boolean>;
-            play: (request: {
-                path: string;
-                title?: string;
-                startTime?: number;
-                mediaId?: number;
-                episodeNumber?: number;
-            }) => Promise<void>;
-            stop: () => Promise<void>;
-        };
     }
 
     interface Window {

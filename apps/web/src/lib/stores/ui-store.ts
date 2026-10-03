@@ -33,7 +33,6 @@ export interface ThemeVisualPatch {
 }
 
 export interface UIState {
-    sidebarOpen: boolean
     searchQuery: string
     isVideoActive: boolean
     bgMusicEnabled: boolean
@@ -52,7 +51,6 @@ export interface UIState {
     themeVisual: ThemeVisualPatch
     hideAudienceScore: boolean | undefined
     scrollBlurEnabled: boolean
-    setSidebarOpen: (open: boolean) => void
     setSearchQuery: (query: string) => void
     setVideoActive: (active: boolean) => void
     setBgMusicEnabled: (enabled: boolean) => void
@@ -78,7 +76,6 @@ export const useUIStore = create<UIState>()(
         subscribeWithSelector(
             persist(
                 (set) => ({
-                    sidebarOpen: false,
                     searchQuery: "",
                     isVideoActive: false,
                     bgMusicEnabled: true,
@@ -97,7 +94,6 @@ export const useUIStore = create<UIState>()(
                     seriesSoundtrackMode: true,
                     themeVisual: {},
                     hideAudienceScore: undefined,
-                    setSidebarOpen: (open) => set({ sidebarOpen: open }),
                     setSearchQuery: (query) => set({ searchQuery: query }),
                     setVideoActive: (active) => set({ isVideoActive: active }),
                     setBgMusicEnabled: (enabled) => set({ bgMusicEnabled: enabled }),

@@ -30,7 +30,7 @@ const getPlatform = (): NodeJS.Platform => {
 
 let pendingUpdate: Awaited<ReturnType<typeof check>> | null = null;
 
-interface DesktopAPI {
+export interface DesktopAPI {
   window: {
     minimize: () => void;
     maximize: () => void;

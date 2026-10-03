@@ -2,8 +2,6 @@
 
 import type {
     Continuity_UpdateWatchHistoryItemOptions,
-    LibraryExplorer_SuperUpdateFileOptions,
-    LocalFileMetadata,
     Mediastream_ClientCapabilities,
     Mediastream_StreamType,
     Models_GoogleDriveSettings,
@@ -66,23 +64,6 @@ export type GetAnimeEntryLocalFiles_Variables = {
 /**
  * - Filepath: internal/handlers/anime_entries.go
  * - Filename: anime_entries.go
- * - Endpoint: /api/v1/library/anime-entry/suggestions
- * @description
- * Route returns anime suggestions for the given local files.
- */
-export type GetAnimeEntrySuggestions_Variables = {
-    /**
-     *  Frontend codegen sends dir (a directory path)
-     *
-     *  Frontend codegen sends dir (a directory path)
-     */
-    dir: string
-    paths: Array<string>
-}
-
-/**
- * - Filepath: internal/handlers/anime_entries.go
- * - Filename: anime_entries.go
  * - Endpoint: /api/v1/library/anime-entry/progress
  * @description
  * Route updates the progress of an anime entry.
@@ -90,29 +71,6 @@ export type GetAnimeEntrySuggestions_Variables = {
 export type UpdateAnimeEntryProgress_Variables = {
     mediaId: number
     progress: number
-}
-
-/**
- * - Filepath: internal/handlers/anime_entries.go
- * - Filename: anime_entries.go
- * - Endpoint: /api/v1/library/anime-entry/manual-match
- * @description
- * Route manually match a group of local files to a media.
- */
-export type AnimeEntryManualMatch_Variables = {
-    mediaId: number
-    paths: Array<string>
-}
-
-/**
- * - Filepath: internal/handlers/anime_entries.go
- * - Filename: anime_entries.go
- * - Endpoint: /api/v1/library/anime-entry/unmatch
- * @description
- * Route unmatch the given local files.
- */
-export type AnimeEntryUnmatch_Variables = {
-    paths: Array<string>
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -227,85 +185,8 @@ export type OpenInExplorer_Variables = {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// local_files_delete_test
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // localfiles
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/handlers/localfiles.go
- * - Filename: localfiles.go
- * - Endpoint: /api/v1/library/local-files/import
- * @description
- * Route imports local files from the given path.
- */
-export type ImportLocalFiles_Variables = {
-    dataFilePath: string
-}
-
-/**
- * - Filepath: internal/handlers/localfiles.go
- * - Filename: localfiles.go
- * - Endpoint: /api/v1/library/local-files
- * @description
- * Route performs an action on all local files.
- */
-export type LocalFileBulkAction_Variables = {
-    action: string
-}
-
-/**
- * - Filepath: internal/handlers/localfiles.go
- * - Filename: localfiles.go
- * - Endpoint: /api/v1/library/local-file
- * @description
- * Route updates the local file with the given path.
- */
-export type UpdateLocalFileData_Variables = {
-    path: string
-    metadata?: LocalFileMetadata
-    locked: boolean
-    ignored: boolean
-    mediaId: number
-}
-
-/**
- * - Filepath: internal/handlers/localfiles.go
- * - Filename: localfiles.go
- * - Endpoint: /api/v1/library/local-files/super-update
- * @description
- * Route updates local files with the given paths.
- */
-export type SuperUpdateLocalFiles_Variables = {
-    files: Array<LibraryExplorer_SuperUpdateFileOptions>
-}
-
-/**
- * - Filepath: internal/handlers/localfiles.go
- * - Filename: localfiles.go
- * - Endpoint: /api/v1/library/local-files
- * @description
- * Route updates local files with the given paths.
- */
-export type UpdateLocalFiles_Variables = {
-    paths: Array<string>
-    action: string
-    mediaId?: number
-    mediaID?: number
-}
-
-/**
- * - Filepath: internal/handlers/localfiles.go
- * - Filename: localfiles.go
- * - Endpoint: /api/v1/library/local-files
- * @description
- * Route deletes local files with the given paths.
- */
-export type DeleteLocalFiles_Variables = {
-    paths: Array<string>
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // lore
@@ -435,28 +316,6 @@ export type ScanEpisodeSkipTimes_Variables = {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // metadata
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/handlers/metadata.go
- * - Filename: metadata.go
- * - Endpoint: /api/v1/metadata-provider/filler
- * @description
- * Route fetches and caches filler data for the given media.
- */
-export type PopulateFillerData_Variables = {
-    mediaId: number
-}
-
-/**
- * - Filepath: internal/handlers/metadata.go
- * - Filename: metadata.go
- * - Endpoint: /api/v1/metadata-provider/filler
- * @description
- * Route removes filler data cache.
- */
-export type RemoveFillerData_Variables = {
-    mediaId: number
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // music

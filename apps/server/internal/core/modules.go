@@ -126,7 +126,6 @@ func (a *App) initModulesOnce() {
 		Enabled:          true,
 		MetadataProvider: a.Metadata.Provider,
 		Platform:         a.Metadata.Platform,
-		LogsDir:          a.Config.Logs.Dir,
 		OnRefreshCollection: func() {
 			go func() {
 				defer util.HandlePanicInModuleThen("core/refreshAfterAutoScan", func() {})
@@ -262,7 +261,6 @@ func (a *App) InitOrRefreshModules() {
 	a.Metadata.TMDBClient = tmdbClient
 	a.Metadata.Provider.SetProvider(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
 		Logger:     a.Logger,
-		FileCacher: a.FileCacher,
 		Database:   a.Database,
 		TMDBClient: a.Metadata.TMDBClient,
 	}))

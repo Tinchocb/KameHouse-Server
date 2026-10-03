@@ -1,7 +1,6 @@
 import { useServerMutation } from "@/api/client/requests"
 import { ScanLocalFiles_Variables } from "@/api/generated/endpoint.types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { useRefreshLibraryExplorerFileTree } from "@/api/generated/library_explorer.hooks"
 import { Anime_LocalFile } from "@/api/generated/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -14,7 +13,6 @@ export const scanQueryKeys = {
 
 export function useScanLocalFiles(onSuccess?: () => void) {
     const queryClient = useQueryClient()
-    const { mutate: refreshLibraryExplorerTree } = useRefreshLibraryExplorerFileTree()
 
     return useServerMutation<Array<Anime_LocalFile>, ScanLocalFiles_Variables>({
         endpoint: API_ENDPOINTS.SCAN.ScanLocalFiles.endpoint,
@@ -23,7 +21,6 @@ export function useScanLocalFiles(onSuccess?: () => void) {
         onSuccess: async (data) => {
             await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
             toast.success("Escaneo iniciado en segundo plano")
-            refreshLibraryExplorerTree()
             if (data && data.length > 0) {
                 const mediaIds = [...new Set(data.map(f => f.mediaId).filter(id => !!id))]
                 for (const id of mediaIds) {

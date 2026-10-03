@@ -20,7 +20,6 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
     const [showPicker, setShowPicker] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState<"movie" | "episode" | false>(false)
     const tvMode = useAppStore(state => state.tvMode)
-    const sidebarOpen = useAppStore(state => state.sidebarOpen)
     const setTvMode = usePlayerStore(state => state.setTvMode)
 
     const { data: collection } = useGetLibraryCollection()
@@ -252,7 +251,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                         className={cn(
                             "group relative flex items-center rounded-2xl transition-[width,height,padding,gap,background-color,border-color,color,box-shadow,transform] duration-300 w-full outline-none overflow-hidden",
                             "border shadow-elevation-2",
-                            sidebarOpen ? "h-16 px-4 justify-start gap-3.5" : "h-14 md:w-14 w-full justify-center px-0",
+                            "h-14 md:w-14 w-full justify-center px-0",
                             tvMode || showPicker
                                 ? "bg-brand-accent/20 border-brand-accent/50 text-on-surface shadow-brand-accent/20"
                                 : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.08] text-on-surface-variant hover:text-on-surface"
@@ -272,8 +271,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                         
                         {/* Icon with glowing badge */}
                         <div className={cn(
-                            "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-fast ease-out-strong",
-                            sidebarOpen ? "w-10 h-10" : "w-10 h-10",
+                            "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-fast ease-out-strong w-10 h-10",
                             (tvMode || showPicker)
                                 ? "bg-brand-accent text-on-primary shadow-brand-primary scale-105"
                                 : "bg-white/[0.06] group-hover:bg-brand-accent/20 group-hover:text-brand-accent text-on-surface-variant"
@@ -287,10 +285,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                         </div>
                         
                         {/* Text Label */}
-                        <div className={cn(
-                            "z-10 flex flex-col text-left transition-colors duration-fast ease-out-strong whitespace-nowrap overflow-hidden",
-                            sidebarOpen ? "block" : "hidden md:hidden"
-                        )}>
+                        <div className="z-10 flex flex-col text-left transition-colors duration-fast ease-out-strong whitespace-nowrap overflow-hidden hidden md:hidden">
                             <span className="uppercase tracking-ultra text-label-md font-black text-on-surface leading-tight">
                                 Modo TV
                             </span>
@@ -298,13 +293,6 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                 {tvMode ? "Activado" : "TV / Maratón"}
                             </span>
                         </div>
-
-                        {/* Badge Pill for TV Mode active state */}
-                        {tvMode && sidebarOpen && (
-                            <div className="ml-auto z-10 px-2 py-0.5 rounded-full bg-brand-accent/20 border border-brand-accent/40 text-brand-accent text-4xs font-black uppercase tracking-widest">
-                                TV
-                            </div>
-                        )}
                     </m.button>
                 </div>
             )}

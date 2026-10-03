@@ -1375,17 +1375,6 @@ export type LibraryExplorer_FileTreeNodeJSON = {
  */
 export type LibraryExplorer_NodeKind = "directory" | "file"
 
-/**
- * - Filepath: internal/library_explorer/superupdate.go
- * - Filename: superupdate.go
- * - Package: library_explorer
- */
-export type LibraryExplorer_SuperUpdateFileOptions = {
-    path: string
-    newName?: string
-    metadata?: LocalFileMetadata
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mediastream
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2237,7 +2226,6 @@ export type Subtitle = {
     extension: string | null
     isDefault: boolean
     isForced: boolean
-    isExternal: boolean
     link: string | null
     isImageBased: boolean
 }

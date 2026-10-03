@@ -67,7 +67,6 @@ type (
 // It has the following properties:
 //   - EntryListData: Details of the platform entry (if any)
 //   - EntryLibraryData: Details of the local files (if any)
-//   - EntryDownloadInfo: Details of the download status
 //   - Episodes: List of episodes (if any)
 //   - NextEpisode: Next episode to watch (if any)
 //   - LocalFiles: List of local files (if any)
@@ -256,7 +255,6 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 			Media:               simpleAnimeEntry.Media,
 			EntryListData:       simpleAnimeEntry.EntryListData,
 			EntryLibraryData:    simpleAnimeEntry.EntryLibraryData,
-			EntryDownloadInfo:   nil,
 			Episodes:            simpleAnimeEntry.Episodes,
 			NextEpisode:         simpleAnimeEntry.NextEpisode,
 			LocalFiles:          simpleAnimeEntry.LocalFiles,
@@ -437,30 +435,12 @@ func (e *Entry) hydrateEntryEpisodeData(
 	e.Episodes = episodes
 
 	progress := 0
-	status := ""
 	if listData != nil {
 		progress = listData.Progress
-		status = listData.Status
 	}
 
 	for _, ep := range e.Episodes {
 		ep.Watched = progress > 0 && ((ep.AbsoluteEpisodeNumber > 0 && ep.AbsoluteEpisodeNumber <= progress) || (ep.EpisodeNumber > 0 && ep.EpisodeNumber <= progress))
-	}
-
-	// +---------------------+
-	// |    Download Info    |
-	// +---------------------+
-
-	info, err := NewEntryDownloadInfo(&NewEntryDownloadInfoOptions{
-		LocalFiles:          e.LocalFiles,
-		AnimeMetadata:       animeMetadata,
-		Progress:            progress,
-		Status:              status,
-		Media:               e.Media,
-		MetadataProviderRef: metadataProviderRef,
-	})
-	if err == nil {
-		e.EntryDownloadInfo = info
 	}
 
 	nextEp, found := e.FindNextEpisode()

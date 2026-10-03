@@ -37,10 +37,8 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const debouncedInvalidateLibrary = useCallback(() => {
         if (invalidationTimeout.current) clearTimeout(invalidationTimeout.current)
         invalidationTimeout.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LOCALFILES.GetLocalFiles.key] })
             queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
             queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
-            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.LIBRARY_EXPLORER.GetLibraryExplorerFileTree.key] })
             invalidationTimeout.current = null
         }, 1200)
     }, [queryClient])

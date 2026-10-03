@@ -3152,24 +3152,6 @@
         "comments": []
       },
       {
-        "name": "FileCacher",
-        "jsonName": "FileCacher",
-        "goType": "",
-        "typescriptType": "any",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "ExtensionBankRef",
-        "jsonName": "ExtensionBankRef",
-        "goType": "",
-        "typescriptType": "any",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "TMDBClient",
         "jsonName": "TMDBClient",
         "goType": "tmdb.Client",
@@ -4155,25 +4137,6 @@
     ],
     "comments": [
       " MovieBelongsToCollection is the minimal collection stub embedded in MovieDetails."
-    ]
-  },
-  {
-    "filepath": "../internal/api/tmdb/types.go",
-    "filename": "types.go",
-    "name": "ExternalIDSource",
-    "formattedName": "ExternalIDSource",
-    "package": "tmdb",
-    "fields": [],
-    "aliasOf": {
-      "goType": "string",
-      "typescriptType": "string",
-      "declaredValues": [
-        "\"tvdb_id\"",
-        "\"imdb_id\""
-      ]
-    },
-    "comments": [
-      " ExternalIDSource represents the type of external ID source for cross-referencing."
     ]
   },
   {
@@ -17893,15 +17856,6 @@
         "comments": []
       },
       {
-        "name": "scannedCh",
-        "jsonName": "scannedCh",
-        "goType": "",
-        "typescriptType": "any",
-        "required": true,
-        "public": false,
-        "comments": []
-      },
-      {
         "name": "waitTime",
         "jsonName": "waitTime",
         "goType": "time.Duration",
@@ -17985,15 +17939,6 @@
         "usedTypescriptType": "Provider",
         "usedStructName": "metadata_provider.Provider",
         "required": false,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "logsDir",
-        "jsonName": "logsDir",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
         "public": false,
         "comments": []
       },
@@ -18144,15 +18089,6 @@
         "usedTypescriptType": "Provider",
         "usedStructName": "metadata_provider.Provider",
         "required": false,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "LogsDir",
-        "jsonName": "LogsDir",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
         "public": true,
         "comments": []
       },
@@ -24759,15 +24695,6 @@
         "comments": []
       },
       {
-        "name": "NeedsTranscode",
-        "jsonName": "NeedsTranscode",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "OriginalCanTransmux",
         "jsonName": "OriginalCanTransmux",
         "goType": "bool",
@@ -26751,15 +26678,6 @@
       {
         "name": "IsForced",
         "jsonName": "isForced",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "IsExternal",
-        "jsonName": "isExternal",
         "goType": "bool",
         "typescriptType": "boolean",
         "required": true,
@@ -29705,15 +29623,6 @@
         "comments": [
           " \"OP\" | \"ED\""
         ]
-      },
-      {
-        "name": "Sequence",
-        "jsonName": "Sequence",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
       },
       {
         "name": "Episodes",

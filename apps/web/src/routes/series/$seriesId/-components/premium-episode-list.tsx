@@ -314,7 +314,6 @@ interface EpisodeVirtualRowProps {
     rowIndex: number
     measureRef: (node: HTMLElement | null) => void
     priority?: boolean
-    themeUseLegacyEpisodeCard?: boolean
     themeHideEpisodeCardDescription?: boolean
     themeHideDownloadedEpisodeCardFilename?: boolean
     onPlay?: (episodeNumber: number) => void
@@ -362,7 +361,6 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
     rowIndex,
     measureRef,
     priority = false,
-    themeUseLegacyEpisodeCard,
     themeHideEpisodeCardDescription,
     themeHideDownloadedEpisodeCardFilename: _themeHideDownloadedEpisodeCardFilename,
     onPlay,
@@ -566,7 +564,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                             </div>
 
                             {/* Description */}
-                            {!themeUseLegacyEpisodeCard && !themeHideEpisodeCardDescription && ep.description && (
+                            {!themeHideEpisodeCardDescription && ep.description && (
                                 <span className="text-xs sm:text-sm text-on-surface-variant line-clamp-2 leading-relaxed mt-1">
                                     {ep.description}
                                 </span>
@@ -678,14 +676,13 @@ function EpisodeVirtualList({
     }, [scrollElement])
 
     const estimateSize = React.useCallback(() => {
-        if (ts.themeUseLegacyEpisodeCard) return 96 + ROW_GAP_PX
         if (typeof window !== "undefined") {
             if (window.innerWidth < 640) return 90 + ROW_GAP_PX
             if (window.innerWidth < 768) return 134 + ROW_GAP_PX
             return 164 + ROW_GAP_PX
         }
         return 164 + ROW_GAP_PX
-    }, [ts.themeUseLegacyEpisodeCard])
+    }, [])
 
     // eslint-disable-next-line react-hooks/incompatible-library -- useVirtualizer devuelve funciones no memoizables por diseño; React Compiler lo omite a proposito.
     const virtualizer = useVirtualizer({
@@ -733,7 +730,6 @@ function EpisodeVirtualList({
                         rowIndex={virtualRow.index}
                         measureRef={virtualizer.measureElement}
                         priority={virtualRow.index < 4}
-                        themeUseLegacyEpisodeCard={ts.themeUseLegacyEpisodeCard}
                         themeHideEpisodeCardDescription={ts.themeHideEpisodeCardDescription}
                         themeHideDownloadedEpisodeCardFilename={ts.themeHideDownloadedEpisodeCardFilename}
                         onPlay={onPlay}

@@ -75,10 +75,8 @@ func (w *SimpleAnimeMetadataWrapper) GetEpisodeMetadata(ep string) metadata.Epis
 
 // NewProviderImplOptions configures the metadata provider.
 type NewProviderImplOptions struct {
-	Database         *db.Database
-	Logger           *zerolog.Logger
-	FileCacher       interface{}
-	ExtensionBankRef interface{}
+	Database *db.Database
+	Logger   *zerolog.Logger
 	// If set, enables real episode metadata enrichment via TMDB.
 	TMDBClient      *tmdb.Client
 	DefaultProvider string

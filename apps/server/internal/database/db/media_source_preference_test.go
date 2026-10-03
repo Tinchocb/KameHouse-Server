@@ -14,8 +14,12 @@ func TestMediaSourcePreferenceRoundTrip(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = database.Close() }) // Windows no borra un .db abierto
 
-	if got := database.GetMediaSourcePreference(10); got != MediaSourceAuto {
-		t.Fatalf("sin fila = %q, want auto", got)
+	prefs, err := database.GetMediaSourcePreferences()
+	if err != nil {
+		t.Fatalf("GetMediaSourcePreferences: %v", err)
+	}
+	if len(prefs) != 0 {
+		t.Fatalf("sin fila = %v, want empty map", prefs)
 	}
 
 	for _, step := range []struct{ set, want string }{
@@ -26,14 +30,22 @@ func TestMediaSourcePreferenceRoundTrip(t *testing.T) {
 		if err := database.SetMediaSourcePreference(10, step.set); err != nil {
 			t.Fatalf("Set(%q): %v", step.set, err)
 		}
-		if got := database.GetMediaSourcePreference(10); got != step.want {
-			t.Errorf("después de Set(%q) = %q, want %q", step.set, got, step.want)
+		p, err := database.GetMediaSourcePreferences()
+		if err != nil {
+			t.Fatalf("GetMediaSourcePreferences: %v", err)
+		}
+		if step.want == MediaSourceAuto {
+			if _, ok := p[10]; ok {
+				t.Errorf("después de Set(auto), preferencia aún existe: %v", p[10])
+			}
+		} else if p[10] != step.want {
+			t.Errorf("después de Set(%q) = %q, want %q", step.set, p[10], step.want)
 		}
 	}
 
 	_ = database.SetMediaSourcePreference(10, MediaSourceLocal)
 	_ = database.SetMediaSourcePreference(20, MediaSourceCloud)
-	prefs, err := database.GetMediaSourcePreferences()
+	prefs, err = database.GetMediaSourcePreferences()
 	if err != nil {
 		t.Fatal(err)
 	}

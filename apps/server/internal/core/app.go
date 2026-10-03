@@ -153,7 +153,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	_, wsEventManager := initEventSystem(logger, database, shutdownCtx)
 	notifier.Global().Init(database, wsEventManager, logger)
 	fileCacher := initFileCacher(cfg, logger)
-	metadataProvider := initMetadataProvider(cfg, logger, fileCacher, database, tmdbClient)
+	metadataProvider := initMetadataProvider(cfg, logger, database, tmdbClient)
 
 	// DynamicProvider envuelve el provider activo con conmutación atómica
 	dynamicProvider := metadata_provider.NewDynamicProvider(metadataProvider)
@@ -390,10 +390,9 @@ func initFileCacher(cfg *Config, logger *zerolog.Logger) *filecache.Cacher {
 	return fileCacher
 }
 
-func initMetadataProvider(cfg *Config, logger *zerolog.Logger, fileCacher *filecache.Cacher, database *db.Database, tmdbClient *tmdb.Client) metadata_provider.Provider {
+func initMetadataProvider(cfg *Config, logger *zerolog.Logger, database *db.Database, tmdbClient *tmdb.Client) metadata_provider.Provider {
 	return metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
 		Logger:          logger,
-		FileCacher:      fileCacher,
 		Database:        database,
 		TMDBClient:      tmdbClient,
 		DefaultProvider: cfg.Metadata.Provider,

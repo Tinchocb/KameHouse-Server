@@ -34,15 +34,6 @@ func (db *Database) GetMediaSourcePreferences() (map[int]string, error) {
 	return out, nil
 }
 
-// GetMediaSourcePreference devuelve el origen de una serie ("auto" si no tiene).
-func (db *Database) GetMediaSourcePreference(mediaID int) string {
-	var row models.MediaSourcePreference
-	if err := db.gormdb.Where("media_id = ?", mediaID).Limit(1).Find(&row).Error; err != nil || row.MediaID == 0 {
-		return MediaSourceAuto
-	}
-	return row.Source
-}
-
 // SetMediaSourcePreference guarda el origen de una serie; "auto" borra la fila.
 func (db *Database) SetMediaSourcePreference(mediaID int, source string) error {
 	if source == MediaSourceAuto {

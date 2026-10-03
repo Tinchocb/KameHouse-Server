@@ -32,8 +32,6 @@ const enum ThemeMediaPageInfoBoxSize {
 
 export type ThemeSettings = Omit<Models_Theme, "id" | "createdAt" | "updatedAt"> & {
     sidebarBackgroundColor?: string
-    themeAnimeEntryScreenLayout?: string
-    themeUseLegacyEpisodeCard?: boolean
     homeItems?: string[]
 }
 
@@ -64,9 +62,6 @@ const THEME_DEFAULT_VALUES: ThemeSettings = {
     themeMode: "",
     themeEnableLiquidGlass: false,
     homeItems: [],
-    // "side-by-side" is what the detail page has always rendered (saga selector
-    // beside the episode list); "stacked" is the opt-in that pushes it above.
-    themeAnimeEntryScreenLayout: "side-by-side",
     themeSmallerEpisodeCarouselSize: false,
     themeExpandSidebarOnHover: false,
     themeDisableSidebarTransparency: false,
@@ -76,7 +71,6 @@ const THEME_DEFAULT_VALUES: ThemeSettings = {
     themeEnableBlurringEffects: true,
     themeEnableCinematicGrain: false,
     themeDisableCarouselAutoScroll: false,
-    themeUseLegacyEpisodeCard: false,
     themeLibraryScreenBannerType: ThemeLibraryScreenBannerType.Dynamic,
     themeLibraryScreenCustomBannerImage: "",
     themeLibraryScreenCustomBannerPosition: "50% 50%",
@@ -177,7 +171,6 @@ export function useThemeSettings(): ThemeSettingsHook {
             // opciones reales (fluid/boxed) — normalizarlo evita que el form guarde
             // un valor que el selector no ofrece.
             themeMediaPageBannerInfoBoxSize: normalizeInfoBoxSize(theme.themeMediaPageBannerInfoBoxSize),
-            themeAnimeEntryScreenLayout: theme.themeAnimeEntryScreenLayout || THEME_DEFAULT_VALUES.themeAnimeEntryScreenLayout,
             themeAnimeLibraryCollectionDefaultSorting: theme.themeAnimeLibraryCollectionDefaultSorting || THEME_DEFAULT_VALUES.themeAnimeLibraryCollectionDefaultSorting,
         }
 

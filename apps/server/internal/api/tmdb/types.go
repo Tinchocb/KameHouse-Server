@@ -107,14 +107,6 @@ type MovieBelongsToCollection struct {
 	Name string `json:"name"`
 }
 
-// ExternalIDSource represents the type of external ID source for cross-referencing.
-type ExternalIDSource string
-
-const (
-	ExternalSourceTvdb ExternalIDSource = "tvdb_id"
-	ExternalSourceImdb ExternalIDSource = "imdb_id"
-)
-
 // TMDBImage represents a backdrop, poster, or logo from TMDb.
 type TMDBImage struct {
 	AspectRatio float64 `json:"aspect_ratio"`

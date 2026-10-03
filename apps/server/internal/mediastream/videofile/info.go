@@ -115,8 +115,6 @@ type Subtitle struct {
 	IsDefault bool `json:"isDefault"`
 	// Is this stream tagged as forced? (useful only for subtitles)
 	IsForced bool `json:"isForced"`
-	// Is this subtitle file external?
-	IsExternal bool `json:"isExternal"`
 	// The link to access this subtitle
 	Link *string `json:"link"`
 	// IsImageBased indicates a bitmap/image subtitle (PGS, DVB, XSUB).

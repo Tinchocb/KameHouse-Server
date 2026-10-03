@@ -159,7 +159,6 @@ var lanWriteRoutes = map[string]bool{
 	"/api/v1/notifications/read":              true,
 	"/api/v1/tmdb/search":                     true,
 	"/api/v1/tmdb/details":                    true,
-	"/api/v1/library/anime-entry/suggestions": true,
 	"/api/v1/library/anime-entry/progress":    true,
 	"/api/v1/mediastream/request":             true,
 	"/api/v1/mediastream/preload":             true,

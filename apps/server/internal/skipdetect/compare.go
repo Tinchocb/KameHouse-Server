@@ -27,7 +27,7 @@ const (
 // [0..1], útil para rankear varios candidatos (p. ej. OP1 vs OP2).
 type MatchWindow struct {
 	Start1, End1   float64
-	Start2, End2   float64
+	Start2         float64
 	MatchedSeconds float64
 	Score          float64
 	OK             bool
@@ -149,7 +149,6 @@ func CompareFingerprints(f1, f2 []int) MatchWindow {
 	start1 := float64(firstMatchIdx) * chromaprintHopSeconds
 	end1 := float64(lastMatchIdx) * chromaprintHopSeconds
 	start2 := float64(firstMatchIdx-bestOffset) * chromaprintHopSeconds
-	end2 := float64(lastMatchIdx-bestOffset) * chromaprintHopSeconds
 	if start1 < 0 {
 		start1 = 0
 	}
@@ -161,7 +160,6 @@ func CompareFingerprints(f1, f2 []int) MatchWindow {
 		Start1:         start1,
 		End1:           end1,
 		Start2:         start2,
-		End2:           end2,
 		MatchedSeconds: matchedSeconds,
 		Score:          score,
 		OK:             true,

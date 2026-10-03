@@ -14,7 +14,6 @@ import (
 )
 
 var localFilesMutex sync.RWMutex
-var CurrLocalFilesDbId uint
 var CurrLocalFiles mo.Option[[]*dto.LocalFile]
 var localFilesSingleFlight singleflight.Group
 
@@ -24,7 +23,7 @@ func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
 	localFilesMutex.RLock()
 	if cached, ok := CurrLocalFiles.Get(); ok {
 		localFilesMutex.RUnlock()
-		return cached, CurrLocalFilesDbId, nil
+		return cached, 0, nil
 	}
 	localFilesMutex.RUnlock()
 
@@ -44,7 +43,6 @@ func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
 
 		localFilesMutex.Lock()
 		CurrLocalFiles = mo.Some(lfs)
-		CurrLocalFilesDbId = 0
 		localFilesMutex.Unlock()
 
 		return lfs, nil
