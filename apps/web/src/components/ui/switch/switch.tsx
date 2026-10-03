@@ -14,7 +14,7 @@ const hiddenInputStyles = cn(
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
-export const SwitchAnatomy = defineStyleAnatomy({
+const SwitchAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Switch__root",
         "group/switch peer inline-flex shrink-0 cursor-pointer items-center rounded-full border border-outline-variant transition-colors duration-200",

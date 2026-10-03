@@ -231,18 +231,6 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/drive/scan",
         },
     },
-    EXPLORER: {
-        /**
-         *  @description
-         *  Route opens the given directory in the file explorer.
-         *  It returns 'true' whether the operation was successful or not.
-         */
-        OpenInExplorer: {
-            key: "EXPLORER-open-in-explorer",
-            methods: ["POST"],
-            endpoint: "/api/v1/open-in-explorer",
-        },
-    },
     INTELLIGENCE: {
         /**
          *  @description
@@ -273,30 +261,6 @@ export const API_ENDPOINTS = {
             key: "INTELLIGENCE-semantic-search",
             methods: ["GET"],
             endpoint: "/api/v1/intelligence/search",
-        },
-    },
-    LIBRARY_EXPLORER: {
-        /**
-         *  @description
-         *  Route returns the file tree structure of the library directories.
-         *  This returns a hierarchical representation of all directories and media files in the library.
-         *  The tree includes LocalFile associations and media IDs for each file and directory.
-         */
-        GetLibraryExplorerFileTree: {
-            key: "LIBRARY-EXPLORER-get-library-explorer-file-tree",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/explorer/file-tree",
-        },
-        /**
-         *  @description
-         *  Route refreshes the file tree structure of the library directories.
-         *  This clears the cached file tree and rebuilds it from the current library state.
-         *  Use this when the library structure has changed and you want to update the tree.
-         */
-        RefreshLibraryExplorerFileTree: {
-            key: "LIBRARY-EXPLORER-refresh-library-explorer-file-tree",
-            methods: ["POST"],
-            endpoint: "/api/v1/library/explorer/file-tree/refresh",
         },
     },
     LOCALFILES: {

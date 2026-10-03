@@ -72,7 +72,7 @@ export const hiddenInputStyles = cn(
  * InputContainer
  * -----------------------------------------------------------------------------------------------*/
 
-export const InputContainerAnatomy = defineStyleAnatomy({
+const InputContainerAnatomy = defineStyleAnatomy({
     inputContainer: cva([
         "UI-Input__inputContainer",
         "flex relative",
@@ -87,7 +87,7 @@ export type InputContainerProps = {
 export const InputContainer = ({ className, children }: InputContainerProps) => {
 
     return (
-        <div className={cn("UI-Input__inputContainer flex relative", className)}>
+        <div className={cn(InputContainerAnatomy.inputContainer(), className)}>
             {children}
         </div>
     )

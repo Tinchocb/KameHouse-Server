@@ -6,7 +6,7 @@ import { cn, defineStyleAnatomy } from "../core/styling"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const SkeletonAnatomy = defineStyleAnatomy({
+const SkeletonAnatomy = defineStyleAnatomy({
     root: cva([
         "relative overflow-hidden rounded-md w-full h-12 bg-bg-primary border border-white/[0.13] shadow-glass-highlight-sm",
         // Shimmer effect — luz blanca sutil barriendo sobre negro

@@ -26,7 +26,6 @@ import (
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library/scanner"
-	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/notifier"
 	"kamehouse/internal/platforms/platform"
@@ -65,7 +64,6 @@ type (
 	LibraryServices struct {
 		FillerManager       *fillermanager.FillerManager
 		AutoScanner         *autoscanner.AutoScanner
-		LibraryExplorer     *library_explorer.LibraryExplorer
 		IntelligenceService *anime.IntelligenceService
 		BackgroundQueue     *scanner.BackgroundQueue
 	}
@@ -183,7 +181,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		LibraryServices: LibraryServices{
 			FillerManager:   nil,
 			AutoScanner:     nil,
-			LibraryExplorer: nil,
 			BackgroundQueue: nil,
 		},
 		Flags:          configOpts.Flags,

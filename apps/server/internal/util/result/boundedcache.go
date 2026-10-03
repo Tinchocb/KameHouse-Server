@@ -102,22 +102,6 @@ func (c *BoundedCache[K, V]) delete(key K) {
 	}
 }
 
-// Clear removes all items from the cache
-func (c *BoundedCache[K, V]) Clear() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.items = make(map[K]*list.Element)
-	c.order.Init()
-}
-
-// Size returns the current number of items in the cache
-func (c *BoundedCache[K, V]) Size() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	return len(c.items)
-}
-
 // evictOldest removes the least recently used item (assumes lock is held)
 func (c *BoundedCache[K, V]) evictOldest() {
 	if c.order.Len() == 0 {

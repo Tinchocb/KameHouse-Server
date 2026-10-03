@@ -1314,46 +1314,6 @@
     }
   },
   {
-    "name": "HandleOpenInExplorer",
-    "trimmedName": "OpenInExplorer",
-    "comments": [
-      "HandleOpenInExplorer opens the given directory in the file explorer.",
-      "",
-      "\t@summary opens the given directory in the file explorer.",
-      "\t@desc It returns 'true' whether the operation was successful or not.",
-      "\t@route /api/v1/open-in-explorer [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/explorer.go",
-    "filename": "explorer.go",
-    "api": {
-      "summary": "opens the given directory in the file explorer.",
-      "descriptions": [
-        "It returns 'true' whether the operation was successful or not."
-      ],
-      "endpoint": "/api/v1/open-in-explorer",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Path",
-          "jsonName": "path",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "HandleGetHomeCurated",
     "trimmedName": "GetHomeCurated",
     "comments": [
@@ -1556,70 +1516,6 @@
       "returns": "[]intelligence.SemanticSearchResult",
       "returnGoType": "intelligence.SemanticSearchResult",
       "returnTypescriptType": "Array\u003cSemanticSearchResult\u003e"
-    }
-  },
-  {
-    "name": "HandleGetLibraryExplorerFileTree",
-    "trimmedName": "GetLibraryExplorerFileTree",
-    "comments": [
-      "HandleGetLibraryExplorerFileTree ...",
-      "",
-      "\t@summary returns the file tree structure of the library directories.",
-      "\t@desc This returns a hierarchical representation of all directories and media files in the library.",
-      "\t@desc The tree includes LocalFile associations and media IDs for each file and directory.",
-      "\t@route /api/v1/library/explorer/file-tree [GET]",
-      "\t@returns library_explorer.FileTreeJSON",
-      ""
-    ],
-    "filepath": "internal/handlers/library_explorer.go",
-    "filename": "library_explorer.go",
-    "api": {
-      "summary": "returns the file tree structure of the library directories.",
-      "descriptions": [
-        "This returns a hierarchical representation of all directories and media files in the library.",
-        "The tree includes LocalFile associations and media IDs for each file and directory."
-      ],
-      "endpoint": "/api/v1/library/explorer/file-tree",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "library_explorer.FileTreeJSON",
-      "returnGoType": "library_explorer.FileTreeJSON",
-      "returnTypescriptType": "LibraryExplorer_FileTreeJSON"
-    }
-  },
-  {
-    "name": "HandleRefreshLibraryExplorerFileTree",
-    "trimmedName": "RefreshLibraryExplorerFileTree",
-    "comments": [
-      "HandleRefreshLibraryExplorerFileTree ...",
-      "",
-      "\t@summary refreshes the file tree structure of the library directories.",
-      "\t@desc This clears the cached file tree and rebuilds it from the current library state.",
-      "\t@desc Use this when the library structure has changed and you want to update the tree.",
-      "\t@route /api/v1/library/explorer/file-tree/refresh [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/library_explorer.go",
-    "filename": "library_explorer.go",
-    "api": {
-      "summary": "refreshes the file tree structure of the library directories.",
-      "descriptions": [
-        "This clears the cached file tree and rebuilds it from the current library state.",
-        "Use this when the library structure has changed and you want to update the tree."
-      ],
-      "endpoint": "/api/v1/library/explorer/file-tree/refresh",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
     }
   },
   {
@@ -3512,9 +3408,9 @@
     "name": "TestOptionalAuthMiddleware_LANWritesRestricted",
     "trimmedName": "TestOptionalAuthMiddleware_LANWritesRestricted",
     "comments": [
-      "Sin contraseña, un equipo de la LAN puede reportar progreso o iniciar una",
-      "reproducción, pero no disparar escaneos, borrar notificaciones ni tocar la",
-      "cronología: solo localhost.",
+      "Sin contraseÃ±a, un equipo de la LAN puede reportar progreso o iniciar una",
+      "reproducciÃ³n, pero no disparar escaneos, borrar notificaciones ni tocar la",
+      "cronologÃ­a: solo localhost.",
       ""
     ],
     "filepath": "internal/handlers/security_p0_test.go",

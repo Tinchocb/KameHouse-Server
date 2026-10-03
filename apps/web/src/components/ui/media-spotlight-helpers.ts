@@ -236,7 +236,7 @@ export function isMovieItem(item: SwimlaneItem): boolean {
  * Core thumbnail resolver for any episode range (saga or sub-saga).
  * Priority: TMDB still > local video frame > fallback.
  */
-export function resolveRangeDynamicThumbnail({
+function resolveRangeDynamicThumbnail({
     startEp,
     endEp,
     iconicEp,

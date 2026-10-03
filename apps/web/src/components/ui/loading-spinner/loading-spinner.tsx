@@ -8,7 +8,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const LoadingSpinnerAnatomy = defineStyleAnatomy({
+const LoadingSpinnerAnatomy = defineStyleAnatomy({
     container: cva([
         "UI-LoadingSpinner__container",
         "flex flex-col w-full items-center h-24 justify-center",

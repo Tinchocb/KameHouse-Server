@@ -188,26 +188,3 @@ func isSeasonOrSagaFolderNameDTO(name string) bool {
 	return reSeasonFolderInDTO.MatchString(clean) || reSagaFolderInDTO.MatchString(clean)
 }
 
-// getAllFolderTitles returns all valid folder titles (not just the closest one).
-func (f *LocalFile) getAllFolderTitles() []string {
-	if len(f.ParsedFolderData) == 0 {
-		return nil
-	}
-	titles := make([]string, 0, len(f.ParsedFolderData))
-	for _, fpd := range f.ParsedFolderData {
-		cleanTitle := strings.TrimSpace(strings.ToLower(fpd.Title))
-		if len(cleanTitle) == 0 {
-			continue
-		}
-		if _, ok := comparison.IgnoredFilenames[cleanTitle]; ok {
-			continue
-		}
-		// Also check the original folder name for ignored keywords
-		if comparison.ValueContainsIgnoredKeywords(fpd.Original) {
-			continue
-		}
-		titles = append(titles, fpd.Title)
-	}
-	return titles
-}
-

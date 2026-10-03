@@ -9,7 +9,7 @@ import { hiddenInputStyles } from "../input"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const RadioGroupAnatomy = defineStyleAnatomy({
+const RadioGroupAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-RadioGroup__root",
     ]),

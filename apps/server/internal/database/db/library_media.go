@@ -93,20 +93,6 @@ func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.Librar
 	return media, nil
 }
 
-// TrimLocalFileEntries removes old legacy local file entries (blob storage) from the database,
-// keeping only the latest entry. This is only for the legacy local_files table.
-func TrimLocalFileEntries(d *Database) {
-	var count int64
-	d.Gorm().Model(&models.LocalFiles{}).Count(&count)
-	if count > 1 {
-		// Keep only the latest entry
-		var latest models.LocalFiles
-		if err := d.Gorm().Last(&latest).Error; err == nil {
-			d.Gorm().Where("id != ?", latest.ID).Delete(&models.LocalFiles{})
-		}
-	}
-}
-
 // UpsertLibraryMediaBatch inserts or updates a slice of LibraryMedia atomically in a single transaction.
 // All affected TMDB IDs are evicted from the in-memory cache after the write.
 func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSize int) error {

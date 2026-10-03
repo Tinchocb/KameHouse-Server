@@ -288,42 +288,6 @@ func SyncPartialLocalFilesRelational(d *Database, files []*dto.LocalFile, target
 	return nil
 }
 
-// UpdateSingleLocalFileRelational actualiza un único archivo local en SQLite sin re-escribir toda la tabla.
-// Devuelve (true, nil) si la fila existía y fue actualizada, (false, nil) si
-// no había fila con ese path (el caller decide si insertar).
-func UpdateSingleLocalFileRelational(d *Database, f *dto.LocalFile) (bool, error) {
-	if f == nil || f.Path == "" {
-		return false, nil
-	}
-	m, err := LocalFileDtoToModel(f)
-	if err != nil {
-		return false, fmt.Errorf("update local file %q: %w", f.Path, err)
-	}
-	res := d.gormdb.Model(&models.LocalFile{}).Where("path = ?", f.Path).Updates(map[string]interface{}{
-		"name":               m.Name,
-		"file_hash":          m.FileHash,
-		"locked":             m.Locked,
-		"ignored":            m.Ignored,
-		"library_media_id":   m.LibraryMediaId,
-		"media_id":           m.MediaID,
-		"file_size":          m.FileSize,
-		"file_mod_time":      m.FileModTime,
-		"parsed_data":        m.ParsedData,
-		"parsed_folder_data": m.ParsedFolderData,
-		"embedded_metadata":  m.EmbeddedMetadata,
-		"metadata":           m.Metadata,
-		"technical_info":     m.TechnicalInfo,
-	})
-	if res.Error != nil {
-		return false, res.Error
-	}
-	if res.RowsAffected == 0 {
-		return false, nil
-	}
-	InvalidateLocalFilesCache()
-	return true, nil
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Converters
 // ─────────────────────────────────────────────────────────────────────────────

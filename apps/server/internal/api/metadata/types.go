@@ -64,7 +64,6 @@ type (
 		Episode               string `json:"episode"`
 		SeasonNumber          int    `json:"seasonNumber"`
 		AbsoluteEpisodeNumber int    `json:"absoluteEpisodeNumber"`
-		AnidbEid              int    `json:"anidbEid"`
 		HasImage              bool   `json:"hasImage"`           // Indicates if the episode has a real image
 		IsFiller              bool   `json:"isFiller,omitempty"` // Indicates if this is a filler episode
 		SagaId                string `json:"sagaId,omitempty"`

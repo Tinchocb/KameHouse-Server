@@ -10,7 +10,7 @@ import { hiddenInputStyles } from "../input"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const CheckboxAnatomy = defineStyleAnatomy({
+const CheckboxAnatomy = defineStyleAnatomy({
     container: cva("UI-Checkbox__container inline-flex gap-2 items-center"),
     root: cva([
         "UI-Checkbox__root",

@@ -7,7 +7,7 @@ import { LoadingSpinner } from "./loading-spinner"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const LoadingOverlayAnatomy = defineStyleAnatomy({
+const LoadingOverlayAnatomy = defineStyleAnatomy({
     overlay: cva([
         "UI-LoadingOverlay__overlay overflow-hidden",
         "absolute bg-[hsl(var(--background)/0.5)] w-full h-full z-10 inset-0 pt-4 flex flex-col items-center justify-center backdrop-blur-overlay-sm",

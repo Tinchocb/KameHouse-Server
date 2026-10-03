@@ -7,7 +7,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const ScrollAreaAnatomy = defineStyleAnatomy({
+const ScrollAreaAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-ScrollArea__root",
         "relative overflow-hidden",

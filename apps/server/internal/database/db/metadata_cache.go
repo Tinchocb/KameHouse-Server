@@ -64,11 +64,6 @@ func DeleteMetadataCacheByProvider(d *Database, provider string) error {
 	return d.Gorm().Where("provider = ?", provider).Delete(&models.MetadataCache{}).Error
 }
 
-// DeleteMetadataCache removes a specific cached entry.
-func DeleteMetadataCache(d *Database, provider, key string) error {
-	return d.Gorm().Where("provider = ? AND key = ?", provider, key).Delete(&models.MetadataCache{}).Error
-}
-
 // DeleteExpiredMetadataCache removes all cached entries that have expired.
 // Entries with ExpiresAt set to the zero value (no TTL) are preserved.
 func DeleteExpiredMetadataCache(d *Database) (int64, error) {

@@ -1311,45 +1311,6 @@ export type SemanticSearchResult = {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// LibraryExplorer
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * - Filepath: internal/library_explorer/filetree.go
- * - Filename: filetree.go
- * - Package: library_explorer
- */
-export type LibraryExplorer_FileTreeJSON = {
-    root: LibraryExplorer_FileTreeNodeJSON | null
-    localFiles: Record<string, LocalFile> | null
-}
-
-/**
- * - Filepath: internal/library_explorer/filetree.go
- * - Filename: filetree.go
- * - Package: library_explorer
- */
-export type LibraryExplorer_FileTreeNodeJSON = {
-    name: string
-    path: string
-    normalizedPath: string
-    kind: LibraryExplorer_NodeKind
-    children: Array<LibraryExplorer_FileTreeNodeJSON> | null
-    size?: number
-    localFile?: LocalFile
-    mediaIds?: Array<number>
-    localFileCount?: number
-    matchedLocalFileCount?: number
-}
-
-/**
- * - Filepath: internal/library_explorer/filetree.go
- * - Filename: filetree.go
- * - Package: library_explorer
- */
-export type LibraryExplorer_NodeKind = "directory" | "file"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Mediastream
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

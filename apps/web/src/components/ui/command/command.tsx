@@ -9,7 +9,7 @@ import { Modal, ModalProps } from "../modal"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const CommandAnatomy = defineStyleAnatomy({
+const CommandAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Command__root",
         "flex h-full w-full flex-col overflow-hidden rounded-container bg-surface-container text-on-surface border border-outline-variant/30",

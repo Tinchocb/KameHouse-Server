@@ -76,15 +76,3 @@ func GroupLocalFilesByMediaID(lfs []*dto.LocalFile) (groupedLfs map[int][]*dto.L
 	return
 }
 
-// IsLocalFileGroupValidEntry checks if there are any main episodes with valid episodes
-func IsLocalFileGroupValidEntry(lfs []*dto.LocalFile) bool {
-	// Check if there are any main episodes with valid parsed data
-	flag := false
-	for _, lf := range lfs {
-		if lf.GetType() == dto.LocalFileTypeMain && lf.IsParsedEpisodeValid() {
-			flag = true
-			break
-		}
-	}
-	return flag
-}

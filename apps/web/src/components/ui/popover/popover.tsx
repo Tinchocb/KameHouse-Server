@@ -7,7 +7,7 @@ import { cn, defineStyleAnatomy } from "../core/styling"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const PopoverAnatomy = defineStyleAnatomy({
+const PopoverAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Popover__root",
         "z-popover w-72 rounded-xl border border-white/[0.08] bg-[var(--glass-bg)] backdrop-blur-overlay-md p-4 text-base shadow-2xl outline-none",

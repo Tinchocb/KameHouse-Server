@@ -96,7 +96,7 @@ type Box = { width: number; height: number }
  * 16:9 a una franja, la imagen se muestra casi entera con el punto focal
  * centrado y el resto se rellena con la misma imagen desenfocada.
  */
-export function heroFitRect(art: Pick<HeroArt, "focal" | "aspect">, box: Box | null) {
+function heroFitRect(art: Pick<HeroArt, "focal" | "aspect">, box: Box | null) {
     if (!box || box.width <= 0 || box.height <= 0 || box.width / box.height >= FIT_MAX_RATIO) return null
     const width = box.width * FIT_ZOOM
     const height = width / (art.aspect ?? HERO_ART_ASPECT)
@@ -146,7 +146,7 @@ export function heroCompactRect(art: Pick<HeroArt, "aspect">, box: Box | null) {
  * Gradiente de máscara con curva smoothstep entre dos posiciones (px): sin la
  * "línea" que deja un lineal de 2 paradas ni escalones visibles en oscuro.
  */
-export function easedMask(fromPx: number, toPx: number, steps = 10): string {
+function easedMask(fromPx: number, toPx: number, steps = 10): string {
     const stops: string[] = []
     for (let i = 0; i <= steps; i++) {
         const t = i / steps

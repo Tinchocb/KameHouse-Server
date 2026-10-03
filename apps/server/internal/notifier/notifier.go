@@ -12,7 +12,6 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
 
-	"github.com/gen2brain/beeep"
 	"github.com/rs/zerolog"
 )
 
@@ -52,7 +51,6 @@ func (n *Notifier) Init(database *db.Database, ws events.WSEventManagerInterface
 func (n *Notifier) Notify(ntype NotificationType, title string, message string) {
 	n.mu.RLock()
 	database, ws, logger := n.database, n.ws, n.logger
-	appName := n.appName
 	n.mu.RUnlock()
 
 	if database == nil {
@@ -83,11 +81,6 @@ func (n *Notifier) Notify(ntype NotificationType, title string, message string) 
 	if ws != nil {
 		ws.SendEvent(events.NotificationReceived, notification)
 	}
-
-	// OS toast (server machine) — best effort, off the caller's goroutine.
-	go func() {
-		_ = beeep.Notify(appName+" — "+title, message, "")
-	}()
 }
 
 // enabledFor checks the user's notification settings for the given type.

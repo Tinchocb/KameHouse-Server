@@ -1,4 +1,4 @@
-package handlers
+﻿package handlers
 
 import (
 	"bytes"
@@ -105,9 +105,9 @@ func TestOptionalAuthMiddleware_SensitiveEndpointsRestricted(t *testing.T) {
 	}
 }
 
-// Sin contraseña, un equipo de la LAN puede reportar progreso o iniciar una
-// reproducción, pero no disparar escaneos, borrar notificaciones ni tocar la
-// cronología: solo localhost.
+// Sin contraseÃ±a, un equipo de la LAN puede reportar progreso o iniciar una
+// reproducciÃ³n, pero no disparar escaneos, borrar notificaciones ni tocar la
+// cronologÃ­a: solo localhost.
 func TestOptionalAuthMiddleware_LANWritesRestricted(t *testing.T) {
 	app, _ := setupTestApp(t)
 	h := &Handler{App: app}
@@ -126,10 +126,10 @@ func TestOptionalAuthMiddleware_LANWritesRestricted(t *testing.T) {
 		{"LAN inicia streaming", http.MethodPost, "/api/v1/mediastream/request", "192.168.1.50:1", http.StatusOK},
 		{"LAN lee la biblioteca", http.MethodGet, "/api/v1/library/local-files", "192.168.1.50:1", http.StatusOK},
 		{"LAN no dispara escaneo", http.MethodPost, "/api/v1/library/scan", "192.168.1.50:1", http.StatusForbidden},
-		{"LAN no toca la cronología", http.MethodPost, "/api/v1/intelligence/chronology/overrides", "192.168.1.50:1", http.StatusForbidden},
+		{"LAN no toca la cronologÃ­a", http.MethodPost, "/api/v1/intelligence/chronology/overrides", "192.168.1.50:1", http.StatusForbidden},
 		{"LAN no borra notificaciones", http.MethodDelete, "/api/v1/notifications", "192.168.1.50:1", http.StatusForbidden},
 		{"LAN no calienta miniaturas", http.MethodPost, "/api/v1/cache/thumbnails/warm", "192.168.1.50:1", http.StatusForbidden},
-		{"localhost sí escanea", http.MethodPost, "/api/v1/library/scan", "127.0.0.1:1", http.StatusOK},
+		{"localhost sÃ­ escanea", http.MethodPost, "/api/v1/library/scan", "127.0.0.1:1", http.StatusOK},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -144,62 +144,6 @@ func TestOptionalAuthMiddleware_LANWritesRestricted(t *testing.T) {
 				t.Errorf("%s %s desde %s: esperaba %d, obtuve %d", tc.method, tc.path, tc.remote, tc.want, rec.Code)
 			}
 		})
-	}
-}
-
-func TestHandleOpenInExplorer_Confinement(t *testing.T) {
-	app, tempDir := setupTestApp(t)
-	h := &Handler{App: app}
-	e := echo.New()
-	e.HTTPErrorHandler = CustomHTTPErrorHandler
-
-	// No abrir el Explorer real: solo registrar qué carpeta se abriría.
-	var opened []string
-	prevOpen := openDirInExplorer
-	openDirInExplorer = func(dir string) { opened = append(opened, dir) }
-	t.Cleanup(func() { openDirInExplorer = prevOpen })
-
-	// Register a library path in settings
-	libraryDir := filepath.Join(tempDir, "anime_library")
-	_ = os.MkdirAll(libraryDir, 0755)
-	_, _ = app.Database.UpsertSettings(&models.Settings{
-		BaseModel: models.BaseModel{ID: 1},
-		Library: models.LibrarySettings{
-			SeriesPaths: []string{libraryDir},
-		},
-	})
-
-	// Request with path inside library -> Should be allowed (stat ok)
-	bodyInside := map[string]string{"path": libraryDir}
-	bodyInsideBytes, _ := json.Marshal(bodyInside)
-	reqInside := httptest.NewRequest(http.MethodPost, "/api/v1/open-in-explorer", bytes.NewReader(bodyInsideBytes))
-	reqInside.Header.Set("Content-Type", "application/json")
-	recInside := httptest.NewRecorder()
-	cInside := e.NewContext(reqInside, recInside)
-
-	_ = h.HandleOpenInExplorer(cInside)
-	if recInside.Code != http.StatusOK {
-		t.Errorf("expected 200 for path inside library, got %d: %s", recInside.Code, recInside.Body.String())
-	}
-
-	// Request with path outside library and app data -> Should return 403
-	outsideDir := filepath.Join(tempDir, "random_outside_dir")
-	_ = os.MkdirAll(outsideDir, 0755)
-	bodyOutside := map[string]string{"path": outsideDir}
-	bodyOutsideBytes, _ := json.Marshal(bodyOutside)
-	reqOutside := httptest.NewRequest(http.MethodPost, "/api/v1/open-in-explorer", bytes.NewReader(bodyOutsideBytes))
-	reqOutside.Header.Set("Content-Type", "application/json")
-	recOutside := httptest.NewRecorder()
-	cOutside := e.NewContext(reqOutside, recOutside)
-
-	_ = h.HandleOpenInExplorer(cOutside)
-	if recOutside.Code != http.StatusForbidden {
-		t.Errorf("expected 403 for path outside library, got %d: %s", recOutside.Code, recOutside.Body.String())
-	}
-
-	// Solo la carpeta permitida llega al lanzador.
-	if len(opened) != 1 || filepath.Clean(opened[0]) != filepath.Clean(libraryDir) {
-		t.Errorf("opened = %v, want solo %q", opened, libraryDir)
 	}
 }
 

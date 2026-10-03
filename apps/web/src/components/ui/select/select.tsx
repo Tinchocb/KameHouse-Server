@@ -10,7 +10,7 @@ import { extractInputPartProps, hiddenInputStyles, InputAddon, InputAnatomy, Inp
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const SelectAnatomy = defineStyleAnatomy({
+const SelectAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Select__root group",
         "inline-flex items-center justify-between relative whitespace-nowrap truncate cursor-pointer select-none transition-[background-color,border-color,box-shadow,transform] duration-fast ease-out-strong active:scale-[0.99]",

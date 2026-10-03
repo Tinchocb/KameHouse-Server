@@ -38,8 +38,6 @@ export type ApiQuery<D> = {
     keepalive?: boolean
 }
 
-export type SeaQuery<D> = ApiQuery<D>
-
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function buildApiQuery<T, D = void>(
@@ -169,8 +167,6 @@ export async function buildApiQuery<T, D = void>(
 
     return undefined;
 }
-
-export const buildSeaQuery = buildApiQuery;
 
 type ServerMutationProps<R, V = void, C = unknown> = Omit<UseMutationOptions<R | undefined, ApiError, V, C>, "mutationFn"> & {
     endpoint: string
@@ -317,7 +313,5 @@ function _handleApiError(data: unknown): string {
         return translateServerError(err)
     }
 }
-
-export const _handleSeaError = _handleApiError;
 
 

@@ -18,7 +18,6 @@ import (
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library/scanner"
-	"kamehouse/internal/library_explorer"
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/platforms/jikan_platform"
 	"kamehouse/internal/skipdetect"
@@ -141,14 +140,6 @@ func (a *App) initModulesOnce() {
 	})
 
 	// +---------------------+
-	// |   Anime Library     |
-	// +---------------------+
-	a.LibraryExplorer = library_explorer.NewLibraryExplorer(library_explorer.NewLibraryExplorerOptions{
-		Logger:   a.Logger,
-		Database: a.Database,
-	})
-
-	// +---------------------+
 	// |    Intelligence     |
 	// +---------------------+
 	a.IntelligenceService = anime.NewIntelligenceService(a.Database, a.FillerManager, a.Logger)
@@ -216,12 +207,6 @@ func (a *App) InitOrRefreshModules() {
 	if len(allPaths) > 0 {
 		a.LibraryDir = allPaths[0]
 		a.FeatureManager.UpdateFromSettings(&settings.Library)
-	}
-
-	if a.LibraryExplorer != nil {
-		go util.HandlePanicInModuleThen("core/modules/SetLibraryPaths", func() {
-			a.LibraryExplorer.SetLibraryPaths(settings.GetLibrary().GetAllPaths())
-		})
 	}
 
 	if a.AutoScanner != nil {
