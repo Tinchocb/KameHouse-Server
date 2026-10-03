@@ -34,7 +34,6 @@ export type Anime_Entry = {
     media: Models_LibraryMedia | null
     listData: Anime_EntryListData | null
     libraryData: Anime_EntryLibraryData | null
-    downloadInfo?: Anime_EntryDownloadInfo
     episodes: Array<Anime_Episode> | null
     nextEpisode: Anime_Episode | null
     localFiles: Array<Anime_LocalFile> | null
@@ -43,31 +42,6 @@ export type Anime_Entry = {
     currentEpisodeCount: number
     seasons?: Array<Models_LibrarySeason>
     vibes?: Array<string>
-}
-
-/**
- * - Filepath: internal/library/anime/entry_download_info.go
- * - Filename: entry_download_info.go
- * - Package: anime
- */
-export type Anime_EntryDownloadEpisode = {
-    episodeNumber: number
-    aniDBEpisode: string
-    episode: Anime_Episode | null
-}
-
-/**
- * - Filepath: internal/library/anime/entry_download_info.go
- * - Filename: entry_download_info.go
- * - Package: anime
- */
-export type Anime_EntryDownloadInfo = {
-    episodesToDownload: Array<Anime_EntryDownloadEpisode> | null
-    canBatch: boolean
-    batchAll: boolean
-    hasInaccurateSchedule: boolean
-    rewatch: boolean
-    absoluteOffset: number
 }
 
 /**

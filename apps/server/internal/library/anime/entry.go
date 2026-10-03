@@ -24,7 +24,6 @@ type (
 		Media               *models.LibraryMedia    `json:"media"`
 		EntryListData       *EntryListData          `json:"listData"`
 		EntryLibraryData    *EntryLibraryData       `json:"libraryData"`
-		EntryDownloadInfo   *EntryDownloadInfo      `json:"downloadInfo,omitempty"`
 		Episodes            []*Episode              `json:"episodes"`
 		NextEpisode         *Episode                `json:"nextEpisode"`
 		LocalFiles          []*LocalFile            `json:"localFiles"`
