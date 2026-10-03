@@ -1,10 +1,8 @@
 package anime_test
 
 import (
-	"cmp"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,7 +56,7 @@ func TestLocalFileWrapperEntry(t *testing.T) {
 	lfw := anime.NewLocalFileWrapper(lfs)
 
 	// Not empty
-	if assert.Greater(t, len(lfw.GetLocalEntries()), 0) {
+	if assert.Greater(t, len(lfw.LocalEntries), 0) {
 
 		for _, tt := range tests {
 
@@ -66,7 +64,7 @@ func TestLocalFileWrapperEntry(t *testing.T) {
 			entry, ok := lfw.GetLocalEntryById(tt.mediaID)
 			if assert.Truef(t, ok, "could not find entry for %s", tt.name) {
 
-				assert.Equalf(t, tt.mediaID, entry.GetMediaId(), "media id does not match for %s", tt.name)
+				assert.Equalf(t, tt.mediaID, entry.MediaID, "media id does not match for %s", tt.name)
 
 				// Can get main local files
 				mainLfs, ok := entry.GetMainLocalFiles()
@@ -74,24 +72,11 @@ func TestLocalFileWrapperEntry(t *testing.T) {
 
 					// Number of main local files matches
 					assert.Equalf(t, tt.expectedNbMainLocalFiles, len(mainLfs), "number of main local files does not match for %s", tt.name)
-
-					// Can find latest episode
-					latest, ok := entry.FindLatestLocalFile()
-					if assert.Truef(t, ok, "could not find latest local file for %s", tt.name) {
-						assert.Equalf(t, tt.expectedLatestEpisode, latest.GetEpisodeNumber(), "latest episode does not match for %s", tt.name)
-					}
-
-					// Can find successive episodes
-					firstEp, ok := entry.FindLocalFileWithEpisodeNumber(tt.expectedEpisodeNumberAfterEpisode[0])
-					if assert.True(t, ok) {
-						secondEp, ok := entry.FindNextEpisode(firstEp)
-						if assert.True(t, ok) {
-							assert.Equal(t, tt.expectedEpisodeNumberAfterEpisode[1], secondEp.GetEpisodeNumber(), "second episode does not match for %s", tt.name)
-						}
-					}
-
 				}
 
+				// Can get unwatched files
+				unwatched := entry.GetUnwatchedLocalFiles(0)
+				assert.Equalf(t, tt.expectedNbMainLocalFiles, len(unwatched), "all main files should be unwatched at progress 0 for %s", tt.name)
 			}
 
 		}
@@ -100,97 +85,3 @@ func TestLocalFileWrapperEntry(t *testing.T) {
 
 }
 
-func TestLocalFileWrapperEntryProgressNumber(t *testing.T) {
-
-	lfs := anime.MockHydratedLocalFiles(
-		anime.MockGenerateHydratedLocalFileGroupOptions("/mnt/anime/", "/mnt/anime/Kimi ni Todoke/Kimi ni Todoke - %ep.mkv", 9656, []anime.MockHydratedLocalFileWrapperOptionsMetadata{
-			{MetadataEpisode: 0, MetadataAniDbEpisode: "S1", MetadataType: dto.LocalFileTypeMain},
-			{MetadataEpisode: 1, MetadataAniDbEpisode: "1", MetadataType: dto.LocalFileTypeMain},
-			{MetadataEpisode: 2, MetadataAniDbEpisode: "2", MetadataType: dto.LocalFileTypeMain},
-		}),
-		anime.MockGenerateHydratedLocalFileGroupOptions("/mnt/anime/", "/mnt/anime/Kimi ni Todoke/Kimi ni Todoke - %ep.mkv", 9656_2, []anime.MockHydratedLocalFileWrapperOptionsMetadata{
-			{MetadataEpisode: 1, MetadataAniDbEpisode: "S1", MetadataType: dto.LocalFileTypeMain},
-			{MetadataEpisode: 2, MetadataAniDbEpisode: "1", MetadataType: dto.LocalFileTypeMain},
-			{MetadataEpisode: 3, MetadataAniDbEpisode: "2", MetadataType: dto.LocalFileTypeMain},
-		}),
-	)
-
-	tests := []struct {
-		name                              string
-		mediaID                           int
-		expectedNbMainLocalFiles          int
-		expectedLatestEpisode             int
-		expectedEpisodeNumberAfterEpisode []int
-		expectedProgressNumbers           []int
-	}{
-		{
-			name:                              "Kimi ni Todoke",
-			mediaID:                           9656,
-			expectedNbMainLocalFiles:          3,
-			expectedLatestEpisode:             2,
-			expectedEpisodeNumberAfterEpisode: []int{1, 2},
-			expectedProgressNumbers:           []int{1, 2, 3}, // S1 -> 1, 1 -> 2, 2 -> 3
-		},
-		{
-			name:                              "Kimi ni Todoke 2",
-			mediaID:                           9656_2,
-			expectedNbMainLocalFiles:          3,
-			expectedLatestEpisode:             3,
-			expectedEpisodeNumberAfterEpisode: []int{2, 3},
-			expectedProgressNumbers:           []int{1, 2, 3}, // S1 -> 1, 1 -> 2, 2 -> 3
-		},
-	}
-
-	lfw := anime.NewLocalFileWrapper(lfs)
-
-	// Not empty
-	if assert.Greater(t, len(lfw.GetLocalEntries()), 0) {
-
-		for _, tt := range tests {
-
-			// Can get by id
-			entry, ok := lfw.GetLocalEntryById(tt.mediaID)
-			if assert.Truef(t, ok, "could not find entry for %s", tt.name) {
-
-				assert.Equalf(t, tt.mediaID, entry.GetMediaId(), "media id does not match for %s", tt.name)
-
-				// Can get main local files
-				mainLfs, ok := entry.GetMainLocalFiles()
-				if assert.Truef(t, ok, "could not find main local files for %s", tt.name) {
-
-					// Number of main local files matches
-					assert.Equalf(t, tt.expectedNbMainLocalFiles, len(mainLfs), "number of main local files does not match for %s", tt.name)
-
-					// Can find latest episode
-					latest, ok := entry.FindLatestLocalFile()
-					if assert.Truef(t, ok, "could not find latest local file for %s", tt.name) {
-						assert.Equalf(t, tt.expectedLatestEpisode, latest.GetEpisodeNumber(), "latest episode does not match for %s", tt.name)
-					}
-
-					// Can find successive episodes
-					firstEp, ok := entry.FindLocalFileWithEpisodeNumber(tt.expectedEpisodeNumberAfterEpisode[0])
-					if assert.True(t, ok) {
-						secondEp, ok := entry.FindNextEpisode(firstEp)
-						if assert.True(t, ok) {
-							assert.Equal(t, tt.expectedEpisodeNumberAfterEpisode[1], secondEp.GetEpisodeNumber(), "second episode does not match for %s", tt.name)
-						}
-					}
-
-					slices.SortStableFunc(mainLfs, func(i *dto.LocalFile, j *dto.LocalFile) int {
-						return cmp.Compare(i.GetEpisodeNumber(), j.GetEpisodeNumber())
-					})
-					for idx, lf := range mainLfs {
-						progressNum := entry.GetProgressNumber(lf)
-
-						assert.Equalf(t, tt.expectedProgressNumbers[idx], progressNum, "progress number does not match for %s", tt.name)
-					}
-
-				}
-
-			}
-
-		}
-
-	}
-
-}

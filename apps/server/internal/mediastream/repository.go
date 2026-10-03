@@ -300,12 +300,6 @@ func (r *Repository) WarmMediaInfo(paths []string) {
 		Msg("mediastream: Media-info cache warming complete")
 }
 
-// CacheWasCleared should be called when the cache directory is manually cleared.
-func (r *Repository) CacheWasCleared() {
-	r.playbackManager.mediaContainers.Clear()
-	r.playbackManager.clientMediaContainers.Clear()
-}
-
 func (r *Repository) ClearTranscodeDir() {
 	r.reqMu.Lock()
 	defer r.reqMu.Unlock()

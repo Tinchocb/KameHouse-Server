@@ -1,15 +1,10 @@
 package dto
 
 import (
-	"bytes"
 	"cmp"
-	"fmt"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/comparison"
-	"path"
-	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/samber/lo"
@@ -93,21 +88,6 @@ func (f *LocalFile) GetPath() string {
 
 func (f *LocalFile) HasSamePath(path string) bool {
 	return f.GetNormalizedPath() == util.NormalizePath(path)
-}
-
-// IsInDir returns true if the LocalFile is in the given directory.
-func (f *LocalFile) IsInDir(dirPath string) bool {
-	dirPath = util.NormalizePath(dirPath)
-	if !filepath.IsAbs(dirPath) {
-		return false
-	}
-	return strings.HasPrefix(f.GetNormalizedPath(), dirPath)
-}
-
-// IsAtRootOf returns true if the LocalFile is at the root of the given directory.
-func (f *LocalFile) IsAtRootOf(dirPath string) bool {
-	dirPath = strings.TrimSuffix(util.NormalizePath(dirPath), "/")
-	return filepath.ToSlash(path.Dir(f.GetNormalizedPath())) == dirPath
 }
 
 // getRegexCompFilename returns a normalized filename without words that could mess up regex comparisons
@@ -231,172 +211,3 @@ func (f *LocalFile) getAllFolderTitles() []string {
 	return titles
 }
 
-// GetTitleVariations returns title variations for the local file.
-func (f *LocalFile) GetTitleVariations() []*string {
-
-	folderSeason := 0
-
-	// Get the season from the folder data
-	if len(f.ParsedFolderData) > 0 {
-		v, found := lo.Find(f.ParsedFolderData, func(fpd *LocalFileParsedData) bool {
-			return len(fpd.Season) > 0
-		})
-		if found {
-			if res, ok := util.StringToInt(v.Season); ok {
-				folderSeason = res
-			}
-		}
-	}
-
-	// Get the season from the filename
-	season := 0
-	if len(f.ParsedData.Season) > 0 {
-		if res, ok := util.StringToInt(f.ParsedData.Season); ok {
-			season = res
-		}
-	}
-
-	part := 0
-
-	// Get the part from the folder data
-	if len(f.ParsedFolderData) > 0 {
-		v, found := lo.Find(f.ParsedFolderData, func(fpd *LocalFileParsedData) bool {
-			return len(fpd.Part) > 0
-		})
-		if found {
-			if res, ok := util.StringToInt(v.Part); ok {
-				part = res
-			}
-		}
-	}
-
-	folderTitle := f.GetFolderTitle()
-
-	// Collect all valid folder titles (not just the closest one)
-	allFolderTitles := f.getAllFolderTitles()
-
-	// shortcircuit if there are no titles
-	if len(f.ParsedData.Title) == 0 && len(folderTitle) == 0 && len(allFolderTitles) == 0 {
-		return make([]*string, 0)
-	}
-
-	titleVariations := make([]string, 0, 10)
-
-	bothTitles := len(f.ParsedData.Title) > 0 && len(folderTitle) > 0
-	bothTitlesSimilar := bothTitles && strings.Contains(folderTitle, f.ParsedData.Title)
-	eitherSeason := folderSeason > 0 || season > 0
-
-	// Collect base titles to use
-	baseTitles := make([]string, 0, 4)
-	if len(f.ParsedData.Title) > 0 {
-		baseTitles = append(baseTitles, f.ParsedData.Title)
-	}
-	if len(folderTitle) > 0 && folderTitle != f.ParsedData.Title {
-		baseTitles = append(baseTitles, folderTitle)
-	}
-	// Add other folder titles that aren't already in baseTitles
-	for _, ft := range allFolderTitles {
-		alreadyAdded := false
-		for _, bt := range baseTitles {
-			if ft == bt {
-				alreadyAdded = true
-				break
-			}
-		}
-		if !alreadyAdded {
-			baseTitles = append(baseTitles, ft)
-		}
-	}
-
-	// Always add the raw base titles
-	titleVariations = append(titleVariations, baseTitles...)
-
-	// Part variations
-	if part > 0 {
-		for _, t := range baseTitles {
-			titleVariations = append(titleVariations,
-				buildTitle(t, "Part", strconv.Itoa(part)),
-				buildTitle(t, "Part", util.IntegerToOrdinal(part)),
-				buildTitle(t, "Cour", strconv.Itoa(part)),
-			)
-			// Roman numerals for parts 1-3
-			if partRoman := intToRoman(part); partRoman != "" {
-				titleVariations = append(titleVariations, buildTitle(t, "Part", partRoman))
-			}
-		}
-	}
-
-	// Season variations
-	if eitherSeason {
-		seas := folderSeason
-		if season > 0 {
-			seas = season
-		}
-
-		for _, t := range baseTitles {
-			// Standard formats
-			titleVariations = append(titleVariations,
-				buildTitle(t, "Season", strconv.Itoa(seas)),          // "Title Season 2"
-				buildTitle(t, "S"+strconv.Itoa(seas)),                // "Title S2"
-				buildTitle(t, fmt.Sprintf("S%02d", seas)),            // "Title S02"
-				buildTitle(t, util.IntegerToOrdinal(seas), "Season"), // "Title 2nd Season"
-				fmt.Sprintf("%s %d", t, seas),                        // "Title 2" (common pattern)
-			)
-		}
-
-		// Combined with part
-		if part > 0 {
-			for _, t := range baseTitles {
-				titleVariations = append(titleVariations,
-					buildTitle(t, "Season", strconv.Itoa(seas), "Part", strconv.Itoa(part)),
-					buildTitle(t, fmt.Sprintf("S%d", seas), fmt.Sprintf("Part %d", part)),
-				)
-			}
-		}
-	}
-
-	// Combined folder + filename title variations
-	if bothTitles && !bothTitlesSimilar {
-		combined := fmt.Sprintf("%s %s", folderTitle, f.ParsedData.Title)
-		titleVariations = append(titleVariations, combined)
-	}
-
-	// Deduplicate
-	titleVariations = lo.Uniq(titleVariations)
-
-	// If there are still no title variations, fall back to raw titles
-	if len(titleVariations) == 0 {
-		if len(folderTitle) > 0 {
-			titleVariations = append(titleVariations, folderTitle)
-		}
-		if len(f.ParsedData.Title) > 0 {
-			titleVariations = append(titleVariations, f.ParsedData.Title)
-		}
-	}
-
-	return lo.ToSlicePtr(titleVariations)
-}
-
-// buildTitle concatenates the given strings into a single string.
-func buildTitle(vals ...string) string {
-	buf := bytes.NewBuffer([]byte{})
-	for i, v := range vals {
-		buf.WriteString(v)
-		if i != len(vals)-1 {
-			buf.WriteString(" ")
-		}
-	}
-	return buf.String()
-}
-
-// intToRoman converts small integers (1-10) to Roman numerals
-func intToRoman(n int) string {
-	romans := map[int]string{
-		1: "I", 2: "II", 3: "III", 4: "IV", 5: "V",
-		6: "VI", 7: "VII", 8: "VIII", 9: "IX", 10: "X",
-	}
-	if r, ok := romans[n]; ok {
-		return r
-	}
-	return ""
-}

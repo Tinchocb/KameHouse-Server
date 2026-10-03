@@ -34,7 +34,7 @@ export type FieldProps = React.ComponentPropsWithRef<"div">
 /**
  * @description This wrapper makes it easier to work with custom form components by controlling their state.
  */
-export function withControlledInput<T extends FieldBaseProps>(InputComponent: React.FC<T>) {
+function withControlledInput<T extends FieldBaseProps>(InputComponent: React.FC<T>) {
     const ControlledComponent = forwardRef<FieldProps, T>(
         (inputProps, ref) => {
             const { control, formState } = useFormContext()
@@ -280,13 +280,13 @@ Field.displayName = "Field"
  * Utils
  * -----------------------------------------------------------------------------------------------*/
 
-export const getFormError = (name: string, formState: FormState<Record<string, unknown>>) => {
+const getFormError = (name: string, formState: FormState<Record<string, unknown>>) => {
     return get(formState.errors, name)
 }
 
-export type ReactRef<T> = React.RefCallback<T> | React.MutableRefObject<T>
+type ReactRef<T> = React.RefCallback<T> | React.MutableRefObject<T>
 
-export function assignRef<T = unknown>(
+function assignRef<T = unknown>(
     ref: ReactRef<T> | null | undefined,
     value: T,
 ) {
@@ -305,7 +305,7 @@ export function assignRef<T = unknown>(
     }
 }
 
-export function mergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
+function mergeRefs<T>(...refs: (ReactRef<T> | null | undefined)[]) {
     return (node: T | null) => {
         refs.forEach((ref) => {
             assignRef(ref, node)

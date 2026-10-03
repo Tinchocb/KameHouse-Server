@@ -29,7 +29,6 @@ type Matcher struct { // Keep struct name 'Matcher' for backwards compatibility
 	Logger            *zerolog.Logger
 	Database          *db.Database
 	Threshold         float64
-	MatchingAlgorithm string
 	StrictStructure   bool
 }
 

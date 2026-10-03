@@ -19719,15 +19719,6 @@
         "comments": []
       },
       {
-        "name": "MatchingAlgorithm",
-        "jsonName": "MatchingAlgorithm",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "StrictStructure",
         "jsonName": "StrictStructure",
         "goType": "bool",

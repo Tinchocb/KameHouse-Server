@@ -251,7 +251,6 @@ func (scn *Scanner) fetchAndMatchMedia(ctx context.Context, localFiles []*dto.Lo
 			Logger:            scn.Logger,
 			Database:          scn.Database,
 			Threshold:         scn.MatchingThreshold,
-			MatchingAlgorithm: scn.MatchingAlgorithm,
 			StrictStructure:   scn.StrictStructure,
 		}
 

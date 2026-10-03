@@ -33,7 +33,6 @@ export interface QueueState {
     clearQueue: () => void
     setCurrentQueueIndex: (index: number) => void
     setActiveQueuePlayItem: (item: PlaylistItem | null) => void
-    playNext: (item: PlaylistItem) => void
     shuffleQueue: () => void
     playPrevious: () => void
     moveQueueItem: (fromIndex: number, toIndex: number) => void
@@ -93,16 +92,6 @@ export const useQueueStore = create<QueueState>()(
                         }
                         const idx = state.playlistQueue.findIndex(i => i.id === item.id && i.episodeNumber === item.episodeNumber);
                         return { activeQueuePlayItem: item, currentQueueIndex: idx };
-                    }),
-                    playNext: (item) => set((state) => {
-                        const nextQueue = [...state.playlistQueue];
-                        const existingIdx = nextQueue.findIndex(i => i.id === item.id && i.episodeNumber === item.episodeNumber);
-                        if (existingIdx !== -1) {
-                            nextQueue.splice(existingIdx, 1);
-                        }
-                        const insertIdx = state.currentQueueIndex + 1;
-                        nextQueue.splice(insertIdx, 0, item);
-                        return { playlistQueue: nextQueue };
                     }),
                     shuffleQueue: () => set((state) => {
                         if (state.playlistQueue.length <= 1) return {}
