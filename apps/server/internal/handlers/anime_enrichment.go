@@ -45,7 +45,7 @@ func getActiveProvider(settings *models.Settings, dbInstance *db.Database, logge
 }
 
 // enrichEpisodesWithTMDB fetches episode-level metadata from TMDB or Jikan and fills in
-// any fields that AniDB/Animap left empty (title, overview/summary, still image, runtime).
+// any fields that AniDB/local metadata left empty (title, overview/summary, still image, runtime).
 // Supports multi-season series by fetching all available seasons in parallel.
 // This is purely additive — never overwrites existing non-empty values.
 func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry, settings *models.Settings) {
