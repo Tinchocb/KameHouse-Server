@@ -1,23 +1,19 @@
 package events
 
 import (
-	"kamehouse/internal/util/result"
-
 	"github.com/rs/zerolog"
 )
 
 type (
 	MockWSEventManager struct {
-		Conn                   interface{}
-		Logger                 *zerolog.Logger
-		ClientEventSubscribers *result.Map[string, *ClientEventSubscriber]
+		Conn   interface{}
+		Logger *zerolog.Logger
 	}
 )
 
 func NewMockWSEventManager(logger *zerolog.Logger) *MockWSEventManager {
 	return &MockWSEventManager{
-		Logger:                 logger,
-		ClientEventSubscribers: result.NewMap[string, *ClientEventSubscriber](),
+		Logger: logger,
 	}
 }
 
@@ -30,24 +26,4 @@ func (m *MockWSEventManager) SendEventTo(clientID string, t string, payload inte
 	if len(noLog) == 0 || !noLog[0] {
 		m.Logger.Trace().Any("payload", payload).Str("type", t).Str("clientID", clientID).Msg("ws: Sent message to client")
 	}
-}
-
-func (m *MockWSEventManager) SubscribeToClientEvents(id string) *ClientEventSubscriber {
-	subscriber := &ClientEventSubscriber{
-		Channel: make(chan *WebsocketClientEvent),
-	}
-	m.ClientEventSubscribers.Set(id, subscriber)
-	return subscriber
-}
-
-func (m *MockWSEventManager) SubscribeToClientNativePlayerEvents(id string) *ClientEventSubscriber {
-	subscriber := &ClientEventSubscriber{
-		Channel: make(chan *WebsocketClientEvent),
-	}
-	m.ClientEventSubscribers.Set(id, subscriber)
-	return subscriber
-}
-
-func (m *MockWSEventManager) UnsubscribeFromClientEvents(id string) {
-	m.ClientEventSubscribers.Delete(id)
 }

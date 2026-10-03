@@ -31,10 +31,6 @@ func NewBucket(name string, ttl time.Duration) Bucket {
 	return Bucket{name: name, ttl: ttl}
 }
 
-func (b *Bucket) Name() string {
-	return b.name
-}
-
 // Cacher represents a single-process, file-based, key/value cache.
 type Cacher struct {
 	dir    string
@@ -237,17 +233,6 @@ func (c *Cacher) Delete(bucket Bucket, key string) error {
 	return store.saveToFile()
 }
 
-// Remove removes the given bucket.
-func (c *Cacher) Remove(bucketName string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	delete(c.stores, bucketName)
-
-	_ = os.Remove(filepath.Join(c.dir, bucketName+".cache"))
-
-	return nil
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

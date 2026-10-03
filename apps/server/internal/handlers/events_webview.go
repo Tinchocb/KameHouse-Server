@@ -56,8 +56,4 @@ func (h *Handler) HandleClientEvents(event *events.WebsocketClientEvent) {
 			}
 		}
 	}
-
-	if h.App.WSEventManager != nil {
-		h.App.WSEventManager.OnClientEvent(event)
-	}
 }

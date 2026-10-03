@@ -71,21 +71,3 @@ func TestIsFileUnderDir(t *testing.T) {
 	}
 }
 
-func TestSameDir(t *testing.T) {
-	tests := []struct {
-		dir1     string
-		dir2     string
-		expected bool
-	}{
-		{dir1: "C:\\dir", dir2: "C:\\dir", expected: true},
-		{dir1: "C:\\dir", dir2: "C:\\DIR", expected: true},
-		{dir1: "C:\\dir1", dir2: "C:\\dir2", expected: false},
-	}
-
-	for _, test := range tests {
-		t.Run(test.dir2, func(t *testing.T) {
-			result := IsSameDir(test.dir1, test.dir2)
-			require.Equal(t, test.expected, result)
-		})
-	}
-}

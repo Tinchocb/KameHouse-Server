@@ -88,6 +88,13 @@ func (a *App) initModulesOnce() {
 		a.MediastreamRepository.OnCleanup()
 	})
 
+	if a.ContinuityManager != nil && a.ContinuityManager.TelemetryManager != nil {
+		a.AddCleanupFunction(func() {
+			a.Logger.Info().Msg("telemetry: Flushing and stopping TelemetryManager...")
+			a.ContinuityManager.TelemetryManager.Stop()
+		})
+	}
+
 	// +---------------------+
 	// |   Skip Detector     |
 	// +---------------------+

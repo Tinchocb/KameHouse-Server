@@ -223,7 +223,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	}
 
 	// +---------------------+
-	// |       Animap        |
+	// |   Anime Metadata    |
 	// +---------------------+
 
 	// Fetch AniDB data and cache it for 30 minutes
@@ -232,10 +232,10 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 
 		// +---------------- Start
 		// +---------------------+
-		// |   Without Animap    |
+		// |  Without Metadata   |
 		// +---------------------+
 
-		// If Animap data is not found, we will still create the Entry without it
+		// If metadata is not found, we will still create the Entry without it
 		simpleAnimeEntry, err := NewSimpleEntry(ctx, &NewSimpleAnimeEntryOptions{
 			MediaID:             opts.MediaID,
 			LocalFiles:          opts.LocalFiles,

@@ -4,54 +4,6 @@ import (
 	"testing"
 )
 
-func TestValueContainsSeason(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected bool
-	}{
-		{
-			name:     "Contains 'season' in lowercase",
-			input:    "JJK season 2",
-			expected: true,
-		},
-		{
-			name:     "Contains 'season' in uppercase",
-			input:    "JJK SEASON 2",
-			expected: true,
-		},
-		{
-			name:     "Contains '2nd S' in lowercase",
-			input:    "Spy x Family 2nd Season",
-			expected: true,
-		},
-		{
-			name:     "Contains '2nd S' in uppercase",
-			input:    "Spy x Family 2ND SEASON",
-			expected: true,
-		},
-		{
-			name:     "Does not contain 'season' or '1st S'",
-			input:    "This is a test",
-			expected: false,
-		},
-		{
-			name:     "Contains special characters",
-			input:    "JJK season 2 (OVA)",
-			expected: false,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			result := ValueContainsSeason(test.input)
-			if result != test.expected {
-				t.Errorf("ValueContainsSeason() with args %v, expected %v, but got %v.", test.input, test.expected, result)
-			}
-		})
-	}
-}
-
 func TestExtractSeasonNumber(t *testing.T) {
 	tests := []struct {
 		name     string

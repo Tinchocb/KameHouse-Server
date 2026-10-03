@@ -529,59 +529,6 @@ func (d *PgsDecoder) GetCurrentComposition() *PgsComposition {
 	return d.currentComposition
 }
 
-// ListPgsSegments returns a list of all segment types in a PGS packet
-func ListPgsSegments(packet []byte) []string {
-	var segments []string
-	offset := 0
-
-	for offset < len(packet) {
-		if offset+3 > len(packet) {
-			break
-		}
-
-		segType := packet[offset]
-		segSize := binary.BigEndian.Uint16(packet[offset+1 : offset+3])
-
-		if offset+3+int(segSize) > len(packet) {
-			break
-		}
-
-		var segName string
-		switch segType {
-		case SegPDS:
-			segName = "PDS"
-		case SegODS:
-			segName = "ODS"
-			// Add sequence flag info
-			if offset+3+4 < len(packet) {
-				seqFlag := packet[offset+3+3]
-				if seqFlag == 0xC0 {
-					segName += "(single)"
-				} else if seqFlag&0x80 != 0 {
-					segName += "(first)"
-				} else if seqFlag&0x40 != 0 {
-					segName += "(last)"
-				} else {
-					segName += "(middle)"
-				}
-			}
-		case SegPCS:
-			segName = "PCS"
-		case SegWDS:
-			segName = "WDS"
-		case SegEND:
-			segName = "END"
-		default:
-			segName = fmt.Sprintf("0x%02X", segType)
-		}
-
-		segments = append(segments, segName)
-		offset += 3 + int(segSize)
-	}
-
-	return segments
-}
-
 // IsClearCommand checks if the current composition is a clear command
 // A clear command is a PCS with Normal state (0x00) or Acquisition Point state (0x40) with no objects
 func (d *PgsDecoder) IsClearCommand() bool {

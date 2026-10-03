@@ -72,31 +72,6 @@ func IsSubdirectory(parent, child string) bool {
 	return rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
-func IsSameDir(dir1, dir2 string) bool {
-	realDir1, err := filepath.EvalSymlinks(dir1)
-	if err != nil {
-		realDir1 = dir1
-	}
-	realDir2, err := filepath.EvalSymlinks(dir2)
-	if err != nil {
-		realDir2 = dir2
-	}
-	if runtime.GOOS == "windows" {
-		realDir1 = strings.ToLower(realDir1)
-		realDir2 = strings.ToLower(realDir2)
-	}
-
-	absDir1, err := filepath.Abs(realDir1)
-	if err != nil {
-		return false
-	}
-	absDir2, err := filepath.Abs(realDir2)
-	if err != nil {
-		return false
-	}
-	return absDir1 == absDir2
-}
-
 func IsFileUnderDir(dir, filePath string) bool {
 	cleanDir := filepath.Clean(dir)
 	cleanPath := filepath.Clean(filePath)

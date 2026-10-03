@@ -7,9 +7,6 @@ import (
 )
 
 var (
-	// ValueContainsSeason regex
-	seasonOrdinalRegex = regexp.MustCompile(`\d(st|nd|rd|th) [Ss].*`)
-
 	// ExtractSeasonNumber regexes
 	seasonExplicitRegex   = regexp.MustCompile(`(?i)(?:season|temporada|temp)\s*0*(\d+)`)
 	seasonFormatRegex     = regexp.MustCompile(`(?i)\b[st]0?(\d{1,2})(?:e\d|$|\s|\.)`)
@@ -51,27 +48,6 @@ var (
 		"temporada": {}, "temporadas": {}, "capitulo": {}, "capitulos": {}, "capítulo": {}, "capítulos": {}, "episodio": {}, "episodios": {}, "descargas": {}, "nuevos": {}, "cortos": {},
 	}
 )
-
-func ValueContainsSeason(val string) bool {
-	val = strings.ToLower(val)
-
-	if strings.ContainsRune(val, '第') {
-		return false
-	}
-	if ValueContainsSpecial(val) {
-		return false
-	}
-
-	if strings.Contains(val, "season") || strings.Contains(val, "temporada") {
-		return true
-	}
-
-	if seasonOrdinalRegex.MatchString(val) {
-		return true
-	}
-
-	return false
-}
 
 func ExtractSeasonNumber(val string) int {
 	val = strings.ToLower(val)

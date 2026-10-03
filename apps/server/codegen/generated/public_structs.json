@@ -12740,82 +12740,12 @@
         "comments": []
       },
       {
-        "name": "eventMu",
-        "jsonName": "eventMu",
-        "goType": "sync.RWMutex",
-        "typescriptType": "RWMutex",
-        "usedTypescriptType": "RWMutex",
-        "usedStructName": "sync.RWMutex",
-        "required": false,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "clientEventSubscribers",
-        "jsonName": "clientEventSubscribers",
-        "goType": "",
-        "typescriptType": "any",
-        "required": false,
-        "nilable": true,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "clientNativePlayerEventSubscribers",
-        "jsonName": "clientNativePlayerEventSubscribers",
-        "goType": "",
-        "typescriptType": "any",
-        "required": false,
-        "nilable": true,
-        "public": false,
-        "comments": []
-      },
-      {
         "name": "dispatcher",
         "jsonName": "dispatcher",
         "goType": "Dispatcher",
         "typescriptType": "Events_Dispatcher",
         "usedTypescriptType": "Events_Dispatcher",
         "usedStructName": "events.Dispatcher",
-        "required": true,
-        "public": false,
-        "comments": []
-      }
-    ],
-    "comments": []
-  },
-  {
-    "filepath": "../internal/events/websocket.go",
-    "filename": "websocket.go",
-    "name": "ClientEventSubscriber",
-    "formattedName": "Events_ClientEventSubscriber",
-    "package": "events",
-    "fields": [
-      {
-        "name": "Channel",
-        "jsonName": "Channel",
-        "goType": "",
-        "typescriptType": "any",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "mu",
-        "jsonName": "mu",
-        "goType": "sync.RWMutex",
-        "typescriptType": "RWMutex",
-        "usedTypescriptType": "RWMutex",
-        "usedStructName": "sync.RWMutex",
-        "required": false,
-        "public": false,
-        "comments": []
-      },
-      {
-        "name": "closed",
-        "jsonName": "closed",
-        "goType": "bool",
-        "typescriptType": "boolean",
         "required": true,
         "public": false,
         "comments": []
@@ -12937,16 +12867,6 @@
         "typescriptType": "Logger",
         "usedTypescriptType": "Logger",
         "usedStructName": "zerolog.Logger",
-        "required": false,
-        "nilable": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "ClientEventSubscribers",
-        "jsonName": "ClientEventSubscribers",
-        "goType": "",
-        "typescriptType": "any",
         "required": false,
         "nilable": true,
         "public": true,
@@ -26602,93 +26522,6 @@
     ],
     "comments": [
       " Metadata holds all extracted metadata."
-    ]
-  },
-  {
-    "filepath": "../internal/mkvparser/mkvparser.go",
-    "filename": "mkvparser.go",
-    "name": "SubtitleEvent",
-    "formattedName": "MKVParser_SubtitleEvent",
-    "package": "mkvparser",
-    "fields": [
-      {
-        "name": "TrackNumber",
-        "jsonName": "trackNumber",
-        "goType": "uint64",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "Text",
-        "jsonName": "text",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": [
-          " Content"
-        ]
-      },
-      {
-        "name": "StartTime",
-        "jsonName": "startTime",
-        "goType": "float64",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": [
-          " Start time in seconds"
-        ]
-      },
-      {
-        "name": "Duration",
-        "jsonName": "duration",
-        "goType": "float64",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": [
-          " Duration in seconds"
-        ]
-      },
-      {
-        "name": "CodecID",
-        "jsonName": "codecID",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": [
-          " e.g., \"S_TEXT/ASS\", \"S_TEXT/UTF8\""
-        ]
-      },
-      {
-        "name": "ExtraData",
-        "jsonName": "extraData",
-        "goType": "map[string]string",
-        "typescriptType": "Record\u003cstring, string\u003e",
-        "required": false,
-        "omitEmpty": true,
-        "nilable": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "HeadPos",
-        "jsonName": "",
-        "goType": "int64",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": [
-          " Position in the stream"
-        ]
-      }
-    ],
-    "comments": [
-      " SubtitleEvent holds information for a single subtitle entry."
     ]
   },
   {

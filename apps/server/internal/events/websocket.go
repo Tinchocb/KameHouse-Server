@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"kamehouse/internal/util"
-	"kamehouse/internal/util/result"
 	"sync"
 	"time"
 
@@ -15,10 +14,6 @@ import (
 type WSEventManagerInterface interface {
 	SendEvent(t string, payload interface{})
 	SendEventTo(clientID string, t string, payload interface{}, noLog ...bool)
-	SubscribeToClientEvents(id string) *ClientEventSubscriber
-	SubscribeToClientNativePlayerEvents(id string) *ClientEventSubscriber
-
-	UnsubscribeFromClientEvents(id string)
 }
 
 type (
@@ -45,19 +40,7 @@ type (
 		// Use RLock for reads, Lock for writes.
 		connsMu sync.RWMutex
 
-		// eventMu protects the subscriber maps.
-		eventMu sync.RWMutex
-
-		clientEventSubscribers             *result.Map[string, *ClientEventSubscriber]
-		clientNativePlayerEventSubscribers *result.Map[string, *ClientEventSubscriber]
-
 		dispatcher Dispatcher
-	}
-
-	ClientEventSubscriber struct {
-		Channel chan *WebsocketClientEvent
-		mu      sync.RWMutex
-		closed  bool
 	}
 
 	WSConn struct {
@@ -83,13 +66,11 @@ var wsEventPool = sync.Pool{
 // NewWSEventManager creates a new WSEventManager instance for App.
 func NewWSEventManager(logger *zerolog.Logger, dispatcher Dispatcher, shutdownCtx context.Context) *WSEventManager {
 	ret := &WSEventManager{
-		Logger:                             logger,
-		Conns:                              make([]*WSConn, 0),
-		ShutdownSignal:                     make(chan struct{}, 1),
-		clientEventSubscribers:             result.NewMap[string, *ClientEventSubscriber](),
-		clientNativePlayerEventSubscribers: result.NewMap[string, *ClientEventSubscriber](),
-		dispatcher:                         dispatcher,
-		shutdownCtx:                        shutdownCtx,
+		Logger:         logger,
+		Conns:          make([]*WSConn, 0),
+		ShutdownSignal: make(chan struct{}, 1),
+		dispatcher:     dispatcher,
+		shutdownCtx:    shutdownCtx,
 	}
 
 	// Start bridging internal events to WebSockets
@@ -219,9 +200,6 @@ func (m *WSEventManager) RemoveConn(id string) {
 	if connToClose != nil {
 		_ = connToClose.Conn.Close()
 	}
-
-	// Cleanup subscribers after releasing connsMu to avoid lock ordering issues
-	m.UnsubscribeFromClientEvents(id)
 }
 
 // WritePong writes a pong control frame safely synchronized with writeMu.
@@ -367,76 +345,3 @@ func (m *WSEventManager) SendEventTo(clientID string, t string, payload interfac
 	}
 }
 
-func (m *WSEventManager) OnClientEvent(event *WebsocketClientEvent) {
-	m.eventMu.RLock()
-	defer m.eventMu.RUnlock()
-
-	onEvent := func(key string, subscriber *ClientEventSubscriber) bool {
-		subscriber.mu.RLock()
-		defer subscriber.mu.RUnlock()
-		if !subscriber.closed {
-			select {
-			case subscriber.Channel <- event:
-			default:
-				// Channel is blocked, skip sending
-				m.Logger.Warn().Msgf("ws: Client event channel is blocked, event dropped, %v", subscriber)
-			}
-		}
-		return true
-	}
-
-	switch event.Type {
-	case NativePlayerEventType:
-		m.clientNativePlayerEventSubscribers.Range(onEvent)
-	default:
-		m.clientEventSubscribers.Range(onEvent)
-	}
-}
-
-func (m *WSEventManager) SubscribeToClientEvents(id string) *ClientEventSubscriber {
-	subscriber := &ClientEventSubscriber{
-		Channel: make(chan *WebsocketClientEvent, 100), // Reduced from 900 → 100
-	}
-	m.clientEventSubscribers.Set(id, subscriber)
-	return subscriber
-}
-
-func (m *WSEventManager) SubscribeToClientNativePlayerEvents(id string) *ClientEventSubscriber {
-	subscriber := &ClientEventSubscriber{
-		Channel: make(chan *WebsocketClientEvent, 100),
-	}
-	m.clientNativePlayerEventSubscribers.Set(id, subscriber)
-	return subscriber
-}
-
-func (m *WSEventManager) UnsubscribeFromClientEvents(id string) {
-	m.eventMu.Lock()
-	defer m.eventMu.Unlock()
-	defer func() {
-		if r := recover(); r != nil {
-			m.Logger.Warn().Msg("ws: Failed to unsubscribe from client events")
-		}
-	}()
-
-	// Check ALL maps independently — a client may appear in more than one due to
-	// partial re-registration. Using else-if would leak closed channels.
-	var toClose []*ClientEventSubscriber
-
-	if s, found := m.clientEventSubscribers.Get(id); found {
-		m.clientEventSubscribers.Delete(id)
-		toClose = append(toClose, s)
-	}
-	if s, found := m.clientNativePlayerEventSubscribers.Get(id); found {
-		m.clientNativePlayerEventSubscribers.Delete(id)
-		toClose = append(toClose, s)
-	}
-
-	for _, subscriber := range toClose {
-		subscriber.mu.Lock()
-		if !subscriber.closed {
-			subscriber.closed = true
-			close(subscriber.Channel)
-		}
-		subscriber.mu.Unlock()
-	}
-}

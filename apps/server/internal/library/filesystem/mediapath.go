@@ -2,8 +2,6 @@ package filesystem
 
 import (
 	"errors"
-	"fmt"
-	"io/fs"
 	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
@@ -83,83 +81,6 @@ func SeparateFilePathS(path string, potentialPrefixes []string) *SeparatedFilePa
 		Dirnames:   dirs,
 		PrefixPath: prefixPath,
 	}
-}
-
-// GetMediaFilePathsFromDirS returns a slice of strings containing the paths of all the video files in a directory.
-// Unlike GetMediaFilePathsFromDir, it follows symlinks.
-func GetMediaFilePathsFromDirS(oDirPath string) ([]string, error) {
-	filePaths := make([]string, 0)
-	visited := make(map[string]bool)
-
-	// Normalize the initial directory path
-	dirPath, err := filepath.Abs(oDirPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not resolve path: %w", err)
-	}
-
-	var walkDir func(string) error
-	walkDir = func(oCurrentPath string) error {
-
-		currentPath := oCurrentPath
-
-		// Normalize current path
-		resolvedPath, err := filepath.EvalSymlinks(oCurrentPath)
-		if err == nil {
-			currentPath = resolvedPath
-		}
-
-		if visited[currentPath] {
-			return nil
-		}
-		visited[currentPath] = true
-
-		return filepath.WalkDir(currentPath, func(path string, d fs.DirEntry, err error) error {
-
-			if err != nil {
-				return nil
-			}
-
-			// If it's a symlink directory, resolve and walk the symlink
-			info, err := os.Lstat(path)
-			if err != nil {
-				return nil
-			}
-
-			if info.Mode()&os.ModeSymlink != 0 {
-				linkPath, err := os.Readlink(path)
-				if err != nil {
-					return nil
-				}
-
-				// Resolve the symlink to an absolute path
-				if !filepath.IsAbs(linkPath) {
-					linkPath = filepath.Join(filepath.Dir(path), linkPath)
-				}
-
-				// Only follow the symlink if we can access it
-				if _, err := os.Stat(linkPath); err == nil {
-					return walkDir(linkPath)
-				}
-				return nil
-			}
-
-			if d.IsDir() {
-				return nil
-			}
-
-			ext := strings.ToLower(filepath.Ext(path))
-			if util.IsValidMediaFile(path) && util.IsValidVideoExtension(ext) {
-				filePaths = append(filePaths, path)
-			}
-			return nil
-		})
-	}
-
-	if err = walkDir(dirPath); err != nil {
-		return nil, fmt.Errorf("could not traverse directory %s: %w", dirPath, err)
-	}
-
-	return filePaths, nil
 }
 
 //----------------------------------------------------------------------------------------------------------------------

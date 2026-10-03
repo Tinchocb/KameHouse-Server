@@ -17,7 +17,6 @@ const (
 )
 
 var additionalStructNames = []string{
-	"mkvparser.SubtitleEvent",
 	"core.FeatureKey",
 }
 
