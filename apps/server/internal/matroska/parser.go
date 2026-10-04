@@ -56,7 +56,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
 )
 
 // MatroskaParser represents a parser for Matroska and WebM files.
@@ -615,95 +614,12 @@ func (mp *MatroskaParser) GetCues() []*Cue {
 	return mp.cues
 }
 
-// GetSegment returns the segment position
-func (mp *MatroskaParser) GetSegment() uint64 {
-	return mp.segmentPos
-}
-
-// GetSegmentTop returns the segment top position
-func (mp *MatroskaParser) GetSegmentTop() uint64 {
-	return mp.segmentTopPos
-}
-
-// GetCuesPos returns the cues position
+// GetCuesPos returns the byte position of the cues element.
 func (mp *MatroskaParser) GetCuesPos() uint64 {
 	return mp.cuesPos
 }
 
-// GetCuesTopPos returns the cues top position
-func (mp *MatroskaParser) GetCuesTopPos() uint64 {
-	return mp.cuesTopPos
-}
 
-func (mp *MatroskaParser) Seek(timecode uint64, flags uint32) error {
-	if mp.noSeeking {
-		return fmt.Errorf("seeking not supported in streaming mode")
-	}
-
-	if len(mp.cues) == 0 {
-		return fmt.Errorf("no cues available for seeking")
-	}
-
-	// Find the right cue point. Cues are sorted by time.
-	// We want to find the last cue point with time <= timecode.
-	i := sort.Search(len(mp.cues), func(i int) bool {
-		return mp.cues[i].Time >= timecode
-	})
-
-	if i > 0 && (i == len(mp.cues) || mp.cues[i].Time > timecode) {
-		// sort.Search finds the first element >= timecode.
-		// We want the one before it, which is <= timecode for a keyframe seek.
-		i--
-	}
-
-	if i >= len(mp.cues) {
-		i = len(mp.cues) - 1
-	}
-
-	// We have a cue point, now seek to the cluster position.
-	cue := mp.cues[i]
-	if _, err := mp.reader.Seek(int64(mp.segmentPos+cue.Position), io.SeekStart); err != nil {
-		return fmt.Errorf("failed to seek to cue position: %w", err)
-	}
-
-	// Reset cluster parsing state so ReadPacket will look for a new cluster
-	mp.clusterTimestamp = 0
-	return nil
-}
-
-func (mp *MatroskaParser) SkipToKeyframe() {
-	// If we can't seek, we can't really skip efficiently
-	if mp.noSeeking {
-		return
-	}
-
-	// Store current position in case we need to restore it
-	currentPos := mp.reader.Position()
-
-	for {
-		packet, err := mp.ReadPacket()
-		if err != nil {
-			// If we hit an error, restore position and return
-			_, _ = mp.reader.Seek(currentPos, io.SeekStart)
-			return
-		}
-
-		// Check if this is a keyframe and the track is not masked
-		isKeyframe := (packet.Flags & KF) != 0
-		isTrackEnabled := mp.currentTrackMask == 0 || (1<<(packet.Track-1))&mp.currentTrackMask == 0
-
-		if isKeyframe && isTrackEnabled {
-			// Don't seek back - we've already consumed this packet
-			// The next ReadPacket call will read the next packet naturally
-			return
-		}
-	}
-}
-
-func (mp *MatroskaParser) SetTrackMask(mask uint64) {
-	mp.currentTrackMask = mask
-	// Here we could discard queued packets if we had a queue
-}
 
 func (mp *MatroskaParser) parseSeekHead(size uint64) error {
 	// Leer a través del EBMLReader (con buffer), no de mp.reader.r: el bufio ya

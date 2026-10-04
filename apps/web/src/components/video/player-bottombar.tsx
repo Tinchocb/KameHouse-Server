@@ -22,21 +22,13 @@ import { PLAYER_GLASS, PLAYER_ICON_BTN, PLAYER_ICON_BTN_ACTIVE, PLAYER_PLAY_BTN 
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { PlayerPreviewManager } from "./player-preview"
 import type { EpisodeSource } from "@/api/types/unified.types"
+import { formatPlaybackTime } from "./format-playback-time"
 
 export interface Chapter {
     startTime: number
     endTime: number
     name: string
     type?: string
-}
-
-const formatTime = (secs: number) => {
-    if (!secs || isNaN(secs)) return "00:00"
-    const h = Math.floor(secs / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    const s = Math.floor(secs % 60)
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
 export interface PlayerBottomBarProps {
@@ -143,9 +135,9 @@ const CONTROL_BTN = PLAYER_ICON_BTN
 const CONTROL_BTN_ACTIVE = PLAYER_ICON_BTN_ACTIVE
 
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
-    title: _title, episodeNumber, episodeLabel: _episodeLabel, mediaFormat,
+    episodeNumber, mediaFormat,
     duration, progressBarRef, thumbRef, progressInputRef, handleSeek, handleSeekStart, handleSeekEnd,
-    isPlaying, togglePlay, skipTime: _skipTime,
+    isPlaying, togglePlay,
     isMuted, toggleMute, volume, handleVolume,
     timeTextRef,
     audioTracks, activeAudioIndex, onSelectAudio,
@@ -315,7 +307,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     <div className="flex items-center min-w-0 overflow-hidden pl-1.5 pr-3 text-xs font-semibold tracking-wide tabular-nums text-white/55 whitespace-nowrap">
                         <span ref={timeTextRef} className="text-white">00:00</span>
                         <span className="mx-1 opacity-50">/</span>
-                        <span>{formatTime(duration)}</span>
+                        <span>{formatPlaybackTime(duration)}</span>
                         {!isMovie && activeChapter && (
                             <span className="hidden sm:inline ml-2.5 pl-2.5 border-l border-white/15 text-brand-accent truncate max-w-[150px] md:max-w-[240px]" title={activeChapter}>
                                 {activeChapter}

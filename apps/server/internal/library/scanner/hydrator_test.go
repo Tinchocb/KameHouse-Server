@@ -10,10 +10,24 @@ import (
 	"kamehouse/internal/platforms/platform"
 	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
+	"os"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
+
+// NewConsoleScanLogger creates a new mock ScanLogger for test usage.
+func NewConsoleScanLogger() (*ScanLogger, error) {
+	output := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: time.DateTime,
+	}
+	logger := zerolog.New(output).With().Logger()
+	return &ScanLogger{logger: &logger, logFile: nil, buffer: nil, mu: &sync.Mutex{}}, nil
+}
 
 type mockMetadataProvider struct {
 	metadata_provider.Provider

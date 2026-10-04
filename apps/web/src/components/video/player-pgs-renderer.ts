@@ -45,17 +45,6 @@ export class VideoCorePgsRenderer {
         this._startRenderLoop()
     }
 
-    addEvent(event: PgsEvent) {
-        if (!this._worker) {
-            return
-        }
-
-        this._worker.postMessage({
-            type: "addEvent",
-            payload: event,
-        })
-    }
-
     addEvents(events: PgsEvent[]) {
         if (!this._worker || events.length === 0) {
             return
@@ -65,66 +54,6 @@ export class VideoCorePgsRenderer {
             type: "addEvents",
             payload: events,
         })
-    }
-
-    resize() {
-        if (!this._canvas || !this._worker) {
-            return
-        }
-
-        const videoContentSize = this._getRenderedVideoContentSize(
-            this._videoElement.clientWidth,
-            this._videoElement.clientHeight,
-        )
-        if (!videoContentSize) {
-            return
-        }
-
-        const { displayedWidth, displayedHeight, offsetX, offsetY } = videoContentSize
-
-        // Store dimensions for render loop
-        this._canvasWidth = displayedWidth
-        this._canvasHeight = displayedHeight
-
-        // Update canvas style (position and display size)
-        // devnote: can't modify width/height after transferControlToOffscreen
-        this._canvas.style.width = `${displayedWidth}px`
-        this._canvas.style.height = `${displayedHeight}px`
-        this._canvas.style.left = `${offsetX}px`
-        this._canvas.style.top = `${offsetY}px`
-
-        // Notify worker of resize to update internal canvas dimensions
-        this._worker.postMessage({
-            type: "resize",
-            payload: {
-                width: displayedWidth,
-                height: displayedHeight,
-            },
-        })
-
-        if (this._debug) {
-            log.info("Resized canvas", {
-                width: displayedWidth,
-                height: displayedHeight,
-                left: offsetX,
-                top: offsetY,
-            })
-        }
-    }
-
-    setTimeOffset(offset: number) {
-        if (!this._worker) {
-            return
-        }
-
-        this._worker.postMessage({
-            type: "setTimeOffset",
-            payload: { offset },
-        })
-    }
-
-    stop() {
-        // no-op
     }
 
     clear() {

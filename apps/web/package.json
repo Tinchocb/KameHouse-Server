@@ -37,7 +37,6 @@
         "@tanstack/react-router": "^1.168.40",
         "@tanstack/react-virtual": "^3.13.21",
         "@tauri-apps/api": "^2.0.0",
-        "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
         "@tauri-apps/plugin-dialog": "^2.7.3",
         "@tauri-apps/plugin-updater": "^2.0.0",
         "@total-typescript/ts-reset": "^0.6.1",

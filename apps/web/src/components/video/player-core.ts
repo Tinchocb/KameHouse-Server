@@ -72,7 +72,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
-    const canvasRef = useRef<HTMLCanvasElement>(null)
     const hlsRef = useRef<Hls | null>(null)
     const jassubRef = useRef<JASSUB | null>(null)
     const streamSwitchResumeRef = useRef<number | null>(null)
@@ -349,7 +348,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     // JASSUB Subtitle renderer hook
     usePlayerJassub({
         videoRef,
-        canvasRef,
         jassubRef,
         activeSubtitleIndex,
         subtitleTracks,
@@ -545,7 +543,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const domElements = useMemo(() => ({
         videoElement: videoRef as React.RefObject<HTMLVideoElement>,
         containerElement: containerRef as React.RefObject<HTMLDivElement>,
-        canvasElement: canvasRef as React.RefObject<HTMLCanvasElement>,
         progressBarElement: progressBarRef as React.RefObject<HTMLDivElement>,
         thumbElement: thumbRef as React.RefObject<HTMLDivElement>,
         progressInputElement: progressInputRef as React.RefObject<HTMLInputElement>,

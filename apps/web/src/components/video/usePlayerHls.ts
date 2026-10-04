@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react"
 import Hls from "hls.js"
 import { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import { probeDriveQuotaError } from "./drive-quota"
+import { __isTV__ } from "@/types/constants"
 
 /**
  * Inicia la reproducción y clasifica el fallo de la promesa de `play()`.
@@ -277,12 +278,6 @@ export function usePlayerHls({
         })()
 
         let listenersAdded = false
-        const isTv = typeof navigator !== "undefined" && (
-            /SmartTV/i.test(navigator.userAgent) ||
-            /Tizen/i.test(navigator.userAgent) ||
-            /WebOS/i.test(navigator.userAgent) ||
-            /Web0S/i.test(navigator.userAgent)
-        )
         if (isHlsUrl && Hls.isSupported()) {
             // Capturar errores nativos del <video> también en HLS (ej. MEDIA_ERR_DECODE
             // en un fragmento que hls.js no clasifica como fatal). Sin esto la UI
@@ -297,7 +292,7 @@ export function usePlayerHls({
             video.addEventListener("canplay", handleCanPlay)
             listenersAdded = true
             const hls = new Hls({
-                enableWorker: !isTv,
+                enableWorker: !__isTV__,
 
                 // VOD buffer strategy (Netflix/Plex style).
                 // lowLatencyMode is intentionally omitted — it is designed for live
@@ -423,6 +418,18 @@ export function usePlayerHls({
                 if (data.fatal) {
                     console.error("Fatal HLS error:", data)
                     if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        // Sin manifiesto no hay nada que reanudar: hls.js ya reintentó la carga y
+                        // startLoad() no vuelve a emitir error, así que el contador de abajo nunca
+                        // llegaba a 5 y el overlay quedaba cargando para siempre.
+                        if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                            const code = data.response?.code
+                            console.error("HLS: no se pudo cargar el manifiesto", data.details, code)
+                            setStatus("error")
+                            setErrorMsg(`El servidor no pudo preparar el video${code ? ` (error ${code})` : ""}. Revisá que el archivo esté disponible y reintentá.`)
+                            setIsBuffering(false)
+                            destroyOnce()
+                            return
+                        }
                         networkRecoveryAttempt++
                         if (networkRecoveryAttempt <= 5) {
                             console.warn(`HLS: Fatal network error (attempt ${networkRecoveryAttempt}/5), attempting recovery...`)

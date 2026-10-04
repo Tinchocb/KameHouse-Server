@@ -359,13 +359,6 @@ func (h *Handler) HandleMediastreamServeOptimizedStatic(c echo.Context) error {
 	return h.App.MediastreamRepository.ServeEchoOptimizedStream(c, client)
 }
 
-func (h *Handler) HandleMediastreamFile(c echo.Context) error {
-	client := h.getClientID(c)
-	fp := c.QueryParam("path")
-	libraryPaths := h.App.Settings.GetLibrary().GetAllPaths()
-	return h.App.MediastreamRepository.ServeEchoFile(c, fp, client, libraryPaths)
-}
-
 // HandleGetEpisodeSkipTimes returns the custom/saved skip times for a given episode.
 //
 //	@summary get episode skip times.

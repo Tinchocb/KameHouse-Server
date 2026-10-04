@@ -323,21 +323,6 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 		}
 	})
 
-	// [DIAGNOSTIC] Log all subtitle streams before filtering so we can see
-	// which codecs are present in the file (visible in server logs at Info level).
-	for _, sub := range mi.Subtitles {
-		hasExt := sub.Extension != nil && *sub.Extension != ""
-		fmt.Printf("[mediastream diag] subtitle stream index=%d codec=%q lang=%v hasExt=%v isImageBased=%v\n",
-			sub.Index, sub.Codec,
-			func() string {
-				if sub.Language != nil {
-					return *sub.Language
-				}
-				return "und"
-			}(),
-			hasExt, sub.IsImageBased)
-	}
-
 	// Remove subtitles that are neither text-based nor image-based.
 	// Text-based tracks (subrip/ass/vtt/ssa) have a link; image-based tracks
 	// (PGS/DVB) are kept but served differently (burn-in during transcode).

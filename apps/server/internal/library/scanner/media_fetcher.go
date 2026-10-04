@@ -40,8 +40,6 @@ type MediaFetcherOptions struct {
 	Logger                 *zerolog.Logger
 	DisableAnimeCollection bool
 	ScanLogger             *ScanLogger
-	// used for adding custom sources
-	OptionalAnimeCollection interface{}
 	// TMDB mode
 	TMDBProvider *librarymetadata.TMDBProvider
 	SeriesPaths  []string

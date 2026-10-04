@@ -135,7 +135,6 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		SeriesPaths:                h.App.Settings.GetLibrary().SeriesPaths,
 		MoviePaths:                 h.App.Settings.GetLibrary().MoviePaths,
 		Enhanced:                   true,
-		EnhanceWithOfflineDatabase: true,
 		ScanMode:                   b.Mode, // Pass the mode
 		PlatformRef:                h.App.Metadata.Platform,
 		Logger:                     h.App.Logger,

@@ -3,10 +3,10 @@ import { useEffect, useRef } from "react"
 import type JASSUB from "jassub"
 import { SubtitleTrack } from "@/components/ui/track-types"
 import { convertToAss, scaleAssStyles } from "./subtitle-convert"
+import { __isTV__ } from "@/types/constants"
 
 interface UsePlayerJassubProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
-    canvasRef: React.RefObject<HTMLCanvasElement | null>
     jassubRef: React.MutableRefObject<JASSUB | null>
     activeSubtitleIndex: number | null
     subtitleTracks: SubtitleTrack[]
@@ -22,7 +22,6 @@ function setRefValue<T>(ref: React.MutableRefObject<T>, value: T) {
 
 export function usePlayerJassub({
     videoRef,
-    canvasRef: _canvasRef,
     jassubRef,
     activeSubtitleIndex,
     subtitleTracks,
@@ -60,12 +59,6 @@ export function usePlayerJassub({
             return
         }
 
-        const isTv = typeof navigator !== "undefined" && (
-            /SmartTV/i.test(navigator.userAgent) ||
-            /Tizen/i.test(navigator.userAgent) ||
-            /WebOS/i.test(navigator.userAgent) ||
-            /Web0S/i.test(navigator.userAgent)
-        )
         // Supported codec families:
         //   ass/ssa   → native ASS (full styling support)
         //   subrip    → SRT text (libass handles .srt content via subContent)
@@ -75,7 +68,7 @@ export function usePlayerJassub({
         const codec = trackCodec?.toLowerCase() ?? ""
         const isSupported = codec === "ass" || codec === "ssa" || codec === "subrip" || codec === "vtt"
 
-        if (!isSupported || isTv) {
+        if (!isSupported || __isTV__) {
             if (currentJassubRef.current) {
                 currentJassubRef.current.destroy()
                 setRefValue(currentJassubRef, null)

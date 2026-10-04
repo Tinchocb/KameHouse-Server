@@ -78,8 +78,6 @@ export function SagaSelector({
   className,
   isCollapsed = false,
   onToggleCollapse,
-  episodes: _episodes = [],
-  heroBackdrop: _heroBackdrop = null,
 }: SagaSelectorProps) {
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(() => {
     return !!activeSubSagaId
@@ -131,9 +129,9 @@ export function SagaSelector({
         <div className="w-8 h-px bg-white/[0.06] my-1 shrink-0" />
 
         <div className="flex-1 w-full overflow-y-auto no-scrollbar flex flex-col items-center gap-2 pt-2 pb-2">
-          {sagas.map((saga, _index) => {
+          {sagas.map((saga, index) => {
             const isActive = saga.id === activeSagaId
-            const orderNum = _index + 1
+            const orderNum = index + 1
             const orderFormatted = orderNum < 10 ? `0${orderNum}` : `${orderNum}`
             const localSaga = localSagas?.find(s => s.id === saga.id)
             const title = localSaga?.title || saga.name

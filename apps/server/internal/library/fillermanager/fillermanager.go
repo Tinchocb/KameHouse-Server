@@ -85,16 +85,6 @@ func (fm *FillerManager) fetchAndStoreFillerDataFromSlug(mediaID int, slug strin
 	return nil
 }
 
-func (fm *FillerManager) RemoveFillerData(mediaID int) error {
-
-	defer util.HandlePanicInModuleThen("library/fillermanager/RemoveFillerData", func() {
-	})
-
-	fm.logger.Debug().Int("mediaID", mediaID).Msg("fillermanager: Removing filler data")
-
-	return fm.db.DeleteMediaFiller(mediaID)
-}
-
 func (fm *FillerManager) IsEpisodeFiller(mediaID int, episodeNumber int) bool {
 
 	defer util.HandlePanicInModuleThen("library/fillermanager/IsEpisodeFiller", func() {

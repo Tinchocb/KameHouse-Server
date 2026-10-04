@@ -19,10 +19,9 @@ import (
 type ContentTag string
 
 const (
-	TagFiller  ContentTag = "FILLER"  // Non-canon padding content
-	TagEpic    ContentTag = "EPIC"    // Outstanding episode (score > 8.5 / 85 on 0-100 scale)
-	TagCanon   ContentTag = "CANON"   // Default canon episode
-	TagSpecial ContentTag = "SPECIAL" // OVA / special / movie
+	TagFiller ContentTag = "FILLER" // Non-canon padding content
+	TagEpic   ContentTag = "EPIC"   // Outstanding episode (score > 8.5 / 85 on 0-100 scale)
+	TagCanon  ContentTag = "CANON"  // Default canon episode
 )
 
 // ArcName is the narrative saga an episode belongs to.

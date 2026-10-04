@@ -25,7 +25,6 @@ type Scanner struct {
 	SeriesPaths                []string
 	MoviePaths                 []string
 	Enhanced                   bool
-	EnhanceWithOfflineDatabase bool
 	PlatformRef                platform.Platform
 	Logger                     *zerolog.Logger
 	WSEventManager             events.WSEventManagerInterface
@@ -73,7 +72,6 @@ type ScannerOptions struct {
 	SeriesPaths                []string
 	MoviePaths                 []string
 	Enhanced                   bool
-	EnhanceWithOfflineDatabase bool
 	PlatformRef                platform.Platform
 	Logger                     *zerolog.Logger
 	WSEventManager             events.WSEventManagerInterface
@@ -113,7 +111,6 @@ func NewScanner(opts *ScannerOptions) *Scanner {
 		SeriesPaths:                opts.SeriesPaths,
 		MoviePaths:                 opts.MoviePaths,
 		Enhanced:                   opts.Enhanced,
-		EnhanceWithOfflineDatabase: opts.EnhanceWithOfflineDatabase,
 		PlatformRef:                opts.PlatformRef,
 		Logger:                     opts.Logger,
 		WSEventManager:             opts.WSEventManager,

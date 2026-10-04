@@ -19,7 +19,6 @@ const STREAM_SWITCH_COPY = {
 export function LoadingErrorOverlay({
     status,
     errorMsg,
-    streamType: _streamType,
     isBuffering,
     isSeeking,
     isStreamSwitching,
@@ -301,15 +300,12 @@ export function AutoSkipToastOverlay({
 
 export function NextEpisodeOverlay({
     show,
-    tvMode: _tvMode,
-    marathonMode: _marathonMode = false,
     showCountdown,
     countdownSeconds,
     nextEpisodeTitle,
     nextEpisodeImage,
     nextEpisodeNumber,
     onNext,
-    duration: _duration,
     remainingProgress
 }: {
     show: boolean

@@ -73,21 +73,11 @@ func TestVintEncode_AllLengths(t *testing.T) {
 		{"len8_max", 0x00FFFFFFFFFFFFFF, 8}, // < 0x100000000000000
 	}
 
-	mp := &MatroskaParser{}
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			enc := vintEncode(tc.value)
 			if len(enc) != tc.expLen {
 				t.Fatalf("vintEncode(%#x) length = %d, want %d", tc.value, len(enc), tc.expLen)
-			}
-
-			v, n := mp.parseVInt(enc)
-			if n != tc.expLen {
-				t.Fatalf("parseVInt length = %d, want %d (value=%#x)", n, tc.expLen, tc.value)
-			}
-			if v != tc.value {
-				t.Fatalf("parseVInt value = %#x, want %#x", v, tc.value)
 			}
 		})
 	}
@@ -110,10 +100,5 @@ func TestVintEncode_Length9(t *testing.T) {
 		if enc[1+i] != b {
 			t.Fatalf("vintEncode[%d] = %#x, want %#x (val=%#x)", 1+i, enc[1+i], b, val)
 		}
-	}
-	// parseVInt cannot decode 9-byte (leading 0) by design; ensure it refuses
-	mp := &MatroskaParser{}
-	if v, n := mp.parseVInt(enc); n != 0 || v != 0 {
-		t.Fatalf("parseVInt should fail for 9-byte encoding, got v=%#x n=%d", v, n)
 	}
 }

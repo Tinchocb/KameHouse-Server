@@ -49,7 +49,6 @@ var staticPathFeatureRules = []pathFeatureRule{
 	{"/api/v1/mediastream", core.WatchingLocalAnime, updateMethodsMap, map[string]struct{}{
 		"/api/v1/mediastream/settings": {},
 	}},
-	{"/api/v1/mediastream/file", core.WatchingLocalAnime, nil, nil},
 	{"/api/v1/mediastream", core.WatchingLocalAnime, nil, nil},
 	{"/api/v1/metadata-provider", core.ManageLocalAnimeLibrary, updateMethodsMap, nil},
 	{"/api/v1/library", core.ManageLocalAnimeLibrary, updateMethodsMap, map[string]struct{}{

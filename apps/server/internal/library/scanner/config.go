@@ -25,21 +25,7 @@ type LogsConfig struct {
 }
 
 type MatchingConfig struct {
-	Rules           []*MatchingRule `json:"rules"`
-	StrictStructure bool            `json:"strictStructure"`
-}
-
-// MatchingRule defines a rule for matching a filename or folder name to a Media ID
-//
-//	Example:
-//		{
-//			"pattern": "(?i)(.*)/(Mob Psycho)/(Season 1)"
-//			"mediaID": 12345
-//		}
-type MatchingRule struct {
-	Pattern string `json:"pattern"`
-	// The Media ID to force match to
-	MediaID int `json:"mediaId"`
+	StrictStructure bool `json:"strictStructure"`
 }
 
 type HydrationConfig struct {

@@ -12,9 +12,10 @@ import { DeferredImage } from "@/components/shared/deferred-image"
 import { WatchProgressBar } from "@/components/ui/watch-progress-bar"
 import { MagneticIndicator, ElasticCounter, IconSwap } from "@/components/ui/kinetics"
 import { useRevealRef } from "@/components/ui/kinetics/scroll-reveal"
-import { useQueueStore } from "@/lib/store"
 import { isImageLoaded } from "@/lib/helpers/images"
 import { toast } from "sonner"
+import { useQueueStore } from "@/lib/store"
+import { cleanEpisodeTitle } from "../-hooks/use-series-data"
 
 // Alto del `pb-4` de cada fila, que estimateSize tiene que contar junto con la tarjeta.
 const ROW_GAP_PX = 16
@@ -342,15 +343,6 @@ function ThumbnailPlaceholder({ number, loading = false }: { number: number; loa
             <span className="text-2xs font-mono font-bold uppercase tracking-wider text-on-surface-variant">EP {number}</span>
         </div>
     )
-}
-
-function cleanEpisodeTitle(title: string | undefined): string {
-    if (!title) return ""
-    return title
-        .replace(/^[«"'\s]+|[»"'\s]+$/g, "")
-        .replace(/^«\s*/, "")
-        .replace(/\s*»$/, "")
-        .trim()
 }
 
 const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({

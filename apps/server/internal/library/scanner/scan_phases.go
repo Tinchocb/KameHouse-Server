@@ -208,7 +208,6 @@ func (scn *Scanner) fetchAndMatchMedia(ctx context.Context, localFiles []*dto.Lo
 		Logger:                  scn.Logger,
 		DisableAnimeCollection:  false,
 		ScanLogger:              scn.ScanLogger,
-		OptionalAnimeCollection: scn.AnimeCollection,
 		TMDBProvider:            tmdbProvider,
 		SeriesPaths:             scn.SeriesPaths,
 		MoviePaths:              scn.MoviePaths,

@@ -9,23 +9,12 @@ import (
 )
 
 const (
-	LogFileNotMatched LogType = iota
-	LogComparison
-	LogSuccessfullyMatched
-	LogFailedMatch
-	LogMatchValidated
-	LogUnmatched
-	LogMetadataMediaTreeFetched
-	LogMetadataMediaTreeFetchFailed
-	LogMetadataEpisodeNormalized
-	LogMetadataEpisodeNormalizationFailed
+	LogMetadataEpisodeNormalizationFailed LogType = iota
 	LogMetadataEpisodeZero
 	LogMetadataNC
 	LogMetadataSpecial
 	LogMetadataMain
-	LogMetadataHydrated
 	LogPanic
-	LogDebug
 )
 
 type (
@@ -186,26 +175,8 @@ func (l *ScanSummaryLogger) logType(logType LogType, lf *dto.LocalFile, message 
 		return
 	}
 	switch logType {
-	case LogComparison:
-		l.log(lf, "info", message)
-	case LogSuccessfullyMatched:
-		l.log(lf, "info", message)
-	case LogFailedMatch:
-		l.log(lf, "warning", message)
-	case LogMatchValidated:
-		l.log(lf, "info", message)
-	case LogUnmatched:
-		l.log(lf, "warning", message)
-	case LogMetadataMediaTreeFetched:
-		l.log(lf, "info", message)
-	case LogMetadataMediaTreeFetchFailed:
-		l.log(lf, "error", message)
-	case LogMetadataEpisodeNormalized:
-		l.log(lf, "info", message)
 	case LogMetadataEpisodeNormalizationFailed:
 		l.log(lf, "error", message)
-	case LogMetadataHydrated:
-		l.log(lf, "info", message)
 	case LogMetadataNC:
 		l.log(lf, "info", message)
 	case LogMetadataSpecial:
@@ -214,12 +185,8 @@ func (l *ScanSummaryLogger) logType(logType LogType, lf *dto.LocalFile, message 
 		l.log(lf, "info", message)
 	case LogMetadataEpisodeZero:
 		l.log(lf, "warning", message)
-	case LogFileNotMatched:
-		l.log(lf, "warning", message)
 	case LogPanic:
 		l.log(lf, "error", message)
-	case LogDebug:
-		l.log(lf, "info", message)
 	}
 }
 

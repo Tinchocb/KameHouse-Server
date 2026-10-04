@@ -17,8 +17,6 @@ func NewSimulatedPlatform(logger *zerolog.Logger) *SimulatedPlatform {
 	}
 }
 
-func (p *SimulatedPlatform) GetName() string { return "Simulated" }
-
 func (p *SimulatedPlatform) GetAnimeCollection(ctx context.Context, bypassCache bool) (interface{}, error) {
 	return &platform.UnifiedCollection{}, nil
 }

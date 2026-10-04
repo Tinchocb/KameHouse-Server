@@ -24,7 +24,6 @@
     "core:window:allow-is-maximizable",
     "core:window:allow-is-closable",
     "core:window:allow-is-visible",
-    "clipboard-manager:allow-write-text",
     "dialog:allow-open",
     "opener:allow-open-url",
     "log:allow-log"

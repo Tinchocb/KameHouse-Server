@@ -3,20 +3,12 @@ import { cn } from "@/components/ui/core/styling"
 import { PlayerSeekPreview } from "./player-seek-preview"
 import type { PlayerPreviewManager } from "./player-preview"
 import type { Chapter } from "./player-bottombar"
+import { formatPlaybackTime } from "./format-playback-time"
 
 /** Teclas con las que el range nativo mueve la posición. Cualquier otra (Tab,
  * Espacio, F…) no es un seek: antes dejaba `isSeekingRef` trabado o provocaba
  * un micro-seek al soltarla. */
 const SEEK_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"])
-
-const formatTime = (secs: number) => {
-    if (!secs || isNaN(secs)) return "00:00"
-    const h = Math.floor(secs / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    const s = Math.floor(secs % 60)
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
 
 export interface SeekBarProps {
     duration: number
@@ -235,7 +227,7 @@ export const SeekBar = React.memo(function SeekBar({
                     max={duration || 0}
                     step="any"
                     aria-label="Línea de tiempo"
-                    aria-valuetext={duration ? `Posición actual de ${formatTime(duration)}` : "0:00"}
+                    aria-valuetext={duration ? `Posición actual de ${formatPlaybackTime(duration)}` : "0:00"}
                     onChange={handleSeek}
                     onMouseDown={handleSeekStart}
                     onTouchStart={handleSeekStart}

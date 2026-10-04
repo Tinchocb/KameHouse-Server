@@ -1,7 +1,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { check } from '@tauri-apps/plugin-updater';
 
 const getAppWindow = () => {
@@ -247,21 +246,12 @@ function createTauriBridge(): DesktopAPI {
     },
     clipboard: {
       writeText: async (text: string) => {
-        if (isTauri()) {
-          try {
-            await writeText(text);
-            return true;
-          } catch (e) {
-            console.error('[Bridge] Clipboard write failed:', e);
-            return false;
-          }
-        }
         if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
           try {
             await navigator.clipboard.writeText(text);
             return true;
           } catch (e) {
-            console.error('[Bridge] Fallback clipboard write failed:', e);
+            console.error('[Bridge] Clipboard write failed:', e);
             return false;
           }
         }

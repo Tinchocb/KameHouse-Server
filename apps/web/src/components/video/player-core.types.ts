@@ -67,7 +67,6 @@ export interface PlayerCore {
     domElements: {
         videoElement: React.RefObject<HTMLVideoElement>
         containerElement: React.RefObject<HTMLDivElement>
-        canvasElement: React.RefObject<HTMLCanvasElement>
         progressBarElement: React.RefObject<HTMLDivElement>
         thumbElement: React.RefObject<HTMLDivElement>
         progressInputElement: React.RefObject<HTMLInputElement>

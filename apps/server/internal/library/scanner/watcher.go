@@ -17,7 +17,6 @@ type Watcher struct {
 	Watcher        *fsnotify.Watcher
 	Logger         *zerolog.Logger
 	WSEventManager events.WSEventManagerInterface
-	TotalSize      string
 	Debouncer      *FileDebouncer
 	DebounceDelay  time.Duration
 }

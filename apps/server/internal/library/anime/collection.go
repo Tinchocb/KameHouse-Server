@@ -101,7 +101,7 @@ type (
 
 // NewLibraryCollection creates a new LibraryCollection.
 func NewLibraryCollection(ctx context.Context, opts *NewLibraryCollectionOptions) (lc *LibraryCollection, err error) {
-	defer util.HandlePanicInModuleWithError("entities/collection/NewLibraryCollection", &err)
+	defer util.HandlePanicInModuleWithError("library/anime/NewLibraryCollection", &err)
 	lc = new(LibraryCollection)
 
 	// Create lists using local SQLite DB

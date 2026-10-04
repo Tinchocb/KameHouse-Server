@@ -16986,8 +16986,7 @@
       "declaredValues": [
         "\"FILLER\"",
         "\"EPIC\"",
-        "\"CANON\"",
-        "\"SPECIAL\""
+        "\"CANON\""
       ]
     },
     "comments": [
@@ -18405,18 +18404,6 @@
     "package": "scanner",
     "fields": [
       {
-        "name": "Rules",
-        "jsonName": "rules",
-        "goType": "[]MatchingRule",
-        "typescriptType": "Array\u003cScanner_MatchingRule\u003e",
-        "usedTypescriptType": "Scanner_MatchingRule",
-        "usedStructName": "scanner.MatchingRule",
-        "required": false,
-        "nilable": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "StrictStructure",
         "jsonName": "strictStructure",
         "goType": "bool",
@@ -18427,42 +18414,6 @@
       }
     ],
     "comments": []
-  },
-  {
-    "filepath": "../internal/library/scanner/config.go",
-    "filename": "config.go",
-    "name": "MatchingRule",
-    "formattedName": "Scanner_MatchingRule",
-    "package": "scanner",
-    "fields": [
-      {
-        "name": "Pattern",
-        "jsonName": "pattern",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "MediaID",
-        "jsonName": "mediaId",
-        "goType": "int",
-        "typescriptType": "number",
-        "required": true,
-        "public": true,
-        "comments": []
-      }
-    ],
-    "comments": [
-      " MatchingRule defines a rule for matching a filename or folder name to a Media ID",
-      "",
-      "\tExample:",
-      "\t\t{",
-      "\t\t\t\"pattern\": \"(?i)(.*)/(Mob Psycho)/(Season 1)\"",
-      "\t\t\t\"mediaID\": 12345",
-      "\t\t}"
-    ]
   },
   {
     "filepath": "../internal/library/scanner/config.go",
@@ -19527,15 +19478,6 @@
         "comments": []
       },
       {
-        "name": "OptionalAnimeCollection",
-        "jsonName": "OptionalAnimeCollection",
-        "goType": "",
-        "typescriptType": "any",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "TMDBProvider",
         "jsonName": "TMDBProvider",
         "goType": "librarymetadata.TMDBProvider",
@@ -20144,15 +20086,6 @@
         "comments": []
       },
       {
-        "name": "EnhanceWithOfflineDatabase",
-        "jsonName": "EnhanceWithOfflineDatabase",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
         "name": "PlatformRef",
         "jsonName": "PlatformRef",
         "goType": "platform.Platform",
@@ -20518,15 +20451,6 @@
       {
         "name": "Enhanced",
         "jsonName": "Enhanced",
-        "goType": "bool",
-        "typescriptType": "boolean",
-        "required": true,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "EnhanceWithOfflineDatabase",
-        "jsonName": "EnhanceWithOfflineDatabase",
         "goType": "bool",
         "typescriptType": "boolean",
         "required": true,
@@ -20962,15 +20886,6 @@
         "usedTypescriptType": "Events_WSEventManagerInterface",
         "usedStructName": "events.WSEventManagerInterface",
         "required": false,
-        "public": true,
-        "comments": []
-      },
-      {
-        "name": "TotalSize",
-        "jsonName": "TotalSize",
-        "goType": "string",
-        "typescriptType": "string",
-        "required": true,
         "public": true,
         "comments": []
       },

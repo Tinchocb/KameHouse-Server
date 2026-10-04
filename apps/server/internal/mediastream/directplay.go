@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"kamehouse/internal/events"
-	"kamehouse/internal/util"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,43 +46,6 @@ func sanitizeHeaderFilename(filename string) string {
 	safe = strings.ReplaceAll(safe, "\r", "")
 	safe = strings.ReplaceAll(safe, "\n", "")
 	return safe
-}
-
-func (r *Repository) ServeEchoFile(c echo.Context, rawFilePath string, clientID string, libraryPaths []string) error {
-	// Unescape the file path, ignore errors
-	filePath, _ := url.PathUnescape(rawFilePath)
-
-	// If the file path is base64 encoded, decode it
-	if util.IsBase64(rawFilePath) {
-		var err error
-		filePath, err = util.Base64DecodeStr(rawFilePath)
-		if err != nil {
-			// this shouldn't happen, but just in case IsBase64 is wrong
-			filePath, _ = url.PathUnescape(rawFilePath)
-		}
-	}
-
-	// Make sure the file is in the library directories
-	inLibrary := false
-	for _, libraryPath := range libraryPaths {
-		if util.IsFileUnderDir(libraryPath, filePath) {
-			inLibrary = true
-			break
-		}
-	}
-
-	if !inLibrary {
-		return c.NoContent(http.StatusNotFound)
-	}
-
-	r.logger.Trace().Str("filepath", filePath).Str("payload", rawFilePath).Msg("mediastream: Served file")
-	ext := strings.ToLower(filepath.Ext(filePath))
-	c.Response().Header().Set("Content-Type", resolveVideoContentType(ext))
-	c.Response().Header().Set("Accept-Ranges", "bytes")
-	filename := sanitizeHeaderFilename(filepath.Base(filePath))
-	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
-
-	return c.File(filePath)
 }
 
 func (r *Repository) ServeEchoDirectPlay(c echo.Context, clientID string) error {

@@ -15,6 +15,7 @@ import { __isTV__ } from "@/types/constants"
 import { useFocusNavigation } from "@/hooks/use-focus-navigation"
 import { IconMediaPlay, IconMediaVolume2, IconUiStar } from "@/components/ui/icons";
 import { PLAYER_GLASS } from "./player-theme"
+import { formatPlaybackTime } from "./format-playback-time"
 
 
 function StatsOverlay({ show, data }: { show: boolean, data?: PlayerStats | null }) {
@@ -230,16 +231,6 @@ export function PlayerUI(props: PlayerUIProps) {
     const initialBrightnessRef = useRef<number>(1.0)
     const initialTimeRef = useRef<number>(0)
 
-    const formatTime = (secs: number) => {
-        if (!secs || isNaN(secs)) return "00:00"
-        const h = Math.floor(secs / 3600)
-        const m = Math.floor((secs % 3600) / 60)
-        const s = Math.floor(secs % 60)
-        const mm = m.toString().padStart(2, '0')
-        const ss = s.toString().padStart(2, '0')
-        return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
-    }
-
     const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
         const touch = e.touches[0]
         if (!touch) return
@@ -305,7 +296,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 const timeDiff = newTime - initialTimeRef.current
                 const prefix = timeDiff >= 0 ? ">>" : "<<"
                 const formattedDiff = `${prefix} ${Math.abs(Math.round(timeDiff))}s`
-                const formattedNewTime = formatTime(newTime)
+                const formattedNewTime = formatPlaybackTime(newTime)
                 
                 setSwipeIndicator({
                     type: "seek",

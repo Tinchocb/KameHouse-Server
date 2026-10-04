@@ -84,7 +84,6 @@ var streamTokenPathPrefixes = []string{
 	"/api/v1/mediastream/subs",
 	"/api/v1/mediastream/subtitles",
 	"/api/v1/mediastream/att/",
-	"/api/v1/mediastream/file",
 	"/api/v1/drive/play",
 	"/api/v1/video-thumbnail",
 	"/api/v1/music/stream",

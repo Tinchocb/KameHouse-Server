@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/modal"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { TextInput, TextInputProps } from "@/components/ui/text-input"
 import { useBoolean } from "@/hooks/use-disclosure"
-import { upath } from "@/lib/helpers/upath"
+import { normalizeSafe } from "@/lib/helpers/path"
 import { __isDesktop__ } from "@/types/constants"
 import React from "react"
 import { IconStatusFolder, IconUiSpinner, IconUiCheck, IconUiClose, IconStatusFolderOpen, IconNavigationChevronLeft, IconNavigationChevronRight } from "@/components/ui/icons";
@@ -33,7 +33,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
 
     const sanitizePath = React.useCallback((path: string) => {
         if (!path) return ""
-        return upath.normalizeSafe(path.replace(/[<>"]/g, ""))
+        return normalizeSafe(path.replace(/[<>"]/g, ""))
     }, [])
 
     const [input, setInputRaw] = React.useState(() => sanitizePath(value ?? ""))

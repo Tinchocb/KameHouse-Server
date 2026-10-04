@@ -22,7 +22,7 @@ export type Anime_ArcName = string
  * @description
  *  ContentTag classifies an episode's narrative role.
  */
-export type Anime_ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL"
+export type Anime_ContentTag = "FILLER" | "EPIC" | "CANON"
 
 /**
  * - Filepath: internal/library/anime/entry.go

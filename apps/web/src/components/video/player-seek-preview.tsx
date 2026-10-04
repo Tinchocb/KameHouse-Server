@@ -4,21 +4,13 @@ import { PlayerPreviewManager } from "./player-preview"
 import { cn } from "@/components/ui/core/styling"
 import { PLAYER_GLASS } from "./player-theme"
 import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { formatPlaybackTime } from "./format-playback-time"
 
 interface PlayerSeekPreviewProps {
     previewManager: PlayerPreviewManager | null
     hoverTime: number | null
     hoverPosPercent: number
     segmentLabel?: string | null
-}
-
-const formatTime = (secs: number) => {
-    if (!secs || isNaN(secs)) return "00:00"
-    const h = Math.floor(secs / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    const s = Math.floor(secs % 60)
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
 export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent, segmentLabel }: PlayerSeekPreviewProps) {
@@ -98,7 +90,7 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent, 
                                 {segmentLabel}
                             </span>
                         )}
-                        <span>{formatTime(hoverTime)}</span>
+                        <span>{formatPlaybackTime(hoverTime ?? 0)}</span>
                     </div>
                     
                 </m.div>
