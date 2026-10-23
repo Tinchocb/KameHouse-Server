@@ -2,8 +2,6 @@ package handlers
 
 import (
 	"kamehouse/internal/events"
-
-	"github.com/labstack/echo/v4"
 )
 
 // validPlaybackBeat es fail-soft para telemetría fire-and-forget (heartbeat 5s):
@@ -27,30 +25,6 @@ func validPlaybackBeat(mediaID, episodeNumber int, currentTime, duration float64
 	return true
 }
 
-// HandlePlaybackSync ...
-//
-//	@summary receives playback telemetry from the frontend.
-//	@desc    Updates continuity watch history and, when progress >= 85%,
-//	         automatically scrobbles the episode as watched to Platform.
-//	@route /api/v1/playback/sync [POST]
-//	@returns bool
-func (h *Handler) HandlePlaybackSync(c echo.Context) error {
-	var b PlaybackHeartbeatPayload
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if !validPlaybackBeat(b.MediaID, b.EpisodeNumber, b.CurrentTime, b.Duration) {
-		return h.RespondWithData(c, true)
-	}
-
-	if h.App.ContinuityManager != nil && h.App.ContinuityManager.TelemetryManager != nil {
-		h.App.ContinuityManager.TelemetryManager.UpdateProgress(currentAccountID(c), b.MediaID, b.EpisodeNumber, b.CurrentTime, b.Duration)
-	}
-
-	return h.RespondWithData(c, true)
-}
-
 // StartPlaybackHeartbeatSubscriber listens on the dispatcher for real-time
 // WebSocket playback progress events and updates the ContinuityManager.
 // This provides sub-second progress sync without HTTP request overhead.
@@ -72,6 +46,7 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 	ch := dispatcher.Subscribe(events.PlaybackHeartbeatProgress)
 
 	go func() {
+		defer dispatcher.Unsubscribe(events.PlaybackHeartbeatProgress, ch)
 		defer func() {
 			if r := recover(); r != nil {
 				h.App.Logger.Error().Interface("panic", r).Msg("playback_sync: panic in playback heartbeat subscriber")

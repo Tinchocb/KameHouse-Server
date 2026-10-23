@@ -66,9 +66,15 @@ func (cw *ConfigWatcher) Start(ctx context.Context) error {
 				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) != 0 {
 					if strings.HasSuffix(event.Name, filepath.Base(cw.configPath)) {
 						cw.logger.Info().Str("file", event.Name).Msg("config file changed, reloading")
-						// Debounce: wait a bit for the write to complete
-						time.Sleep(100 * time.Millisecond)
-						cw.reload()
+						// Debounce: espera a que termine la escritura, pero responde a la cancelación.
+						timer := time.NewTimer(100 * time.Millisecond)
+						select {
+						case <-ctx.Done():
+							timer.Stop()
+							return
+						case <-timer.C:
+							cw.reload()
+						}
 					}
 				}
 			case err, ok := <-watcher.Errors:

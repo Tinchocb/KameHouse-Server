@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"kamehouse/internal/api/tmdb"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/sync/singleflight"
 )
 
 type HealthCheckResult struct {
@@ -30,19 +31,24 @@ type HealthResponse struct {
 }
 
 // /api/health es anónimo y sin rate limit: cada llamada consultaba la DB y la
-// API de TMDB. Se reutiliza el último resultado un rato; el mutex hace que una
-// ráfaga concurrente espere al único cálculo en curso en vez de repetirlo.
+// API de TMDB. Se reutiliza el último resultado un rato. Las lecturas del caché
+// son lock-free (atomic.Pointer); una ráfaga que encuentra el caché vencido
+// comparte un único cálculo vía singleflight en vez de repetirlo.
 const (
 	healthCacheTTL         = 30 * time.Second
 	healthCacheTTLDegraded = 5 * time.Second
 )
 
-var healthCache struct {
-	mu        sync.Mutex
+type healthCacheEntry struct {
 	body      []byte
 	status    int
 	expiresAt time.Time
 }
+
+var (
+	healthCachePtr atomic.Pointer[healthCacheEntry]
+	healthFlight   singleflight.Group
+)
 
 func (h *Handler) HandleHealth(c echo.Context) error {
 	c.Response().Header().Set("Access-Control-Allow-Origin", "*")
@@ -53,12 +59,29 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 		return c.NoContent(200)
 	}
 
-	healthCache.mu.Lock()
-	defer healthCache.mu.Unlock()
-	if healthCache.body != nil && time.Now().Before(healthCache.expiresAt) {
-		return c.JSONBlob(healthCache.status, healthCache.body)
+	status, body := h.healthSnapshot()
+	return c.JSONBlob(status, body)
+}
+
+// healthSnapshot devuelve el ultimo resultado cacheado o lo recalcula. Sin locks en el camino
+// caliente. Si un chequeo entra en panico, singleflight libera la clave y el pedido siguiente
+// vuelve a intentar: nada queda bloqueado para siempre.
+func (h *Handler) healthSnapshot() (int, []byte) {
+	if e := healthCachePtr.Load(); e != nil && time.Now().Before(e.expiresAt) {
+		return e.status, e.body
 	}
 
+	v, _, _ := healthFlight.Do("health", func() (any, error) {
+		if e := healthCachePtr.Load(); e != nil && time.Now().Before(e.expiresAt) {
+			return e, nil
+		}
+		return h.computeHealth(), nil
+	})
+	e := v.(*healthCacheEntry)
+	return e.status, e.body
+}
+
+func (h *Handler) computeHealth() *healthCacheEntry {
 	// No el ctx del request: el resultado se comparte y se cachea, y un cliente
 	// que corta no debe dejar cacheado un "down" falso.
 	ctx, cancel := context.WithTimeout(h.App.ShutdownCtx(), 5*time.Second)
@@ -127,8 +150,9 @@ func (h *Handler) HandleHealth(c echo.Context) error {
 	if overallStatus != "ok" {
 		ttl = healthCacheTTLDegraded
 	}
-	healthCache.body, healthCache.status, healthCache.expiresAt = body, statusCode, time.Now().Add(ttl)
-	return c.JSONBlob(statusCode, body)
+	entry := &healthCacheEntry{body: body, status: statusCode, expiresAt: time.Now().Add(ttl)}
+	healthCachePtr.Store(entry)
+	return entry
 }
 
 func checkDB(ctx context.Context, database *db.Database) HealthCheckResult {

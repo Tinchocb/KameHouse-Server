@@ -8,7 +8,6 @@ import (
 	"io"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/cache"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -26,13 +25,16 @@ const imageProxyTouchMinAge = 24 * time.Hour
 var (
 	// Shared so upstream connections (TLS, keep-alive) are reused across images.
 	// El dialer rechaza IPs internas en cada conexión (redirects, DNS rebinding).
-	imageProxyClient = req.C().SetTimeout(30 * time.Second).SetDial(util.ProxySafeDialContext)
+	// DisableAutoReadResponse: por defecto req lee el cuerpo entero en memoria antes de
+	// devolver la respuesta, y el tope de 25 MB de fetchImage no protegería nada.
+	imageProxyClient = req.C().SetTimeout(30 * time.Second).SetDial(util.ProxySafeDialContext).DisableAutoReadResponse()
 	// Collapses concurrent cold fetches of the same URL into one download.
 	imageProxyFlights singleflight.Group
 )
 
 type ImageProxy struct {
-	CacheDir string
+	CacheDir  string
+	mkdirOnce sync.Once
 }
 
 type proxiedImage struct {
@@ -71,12 +73,56 @@ func readCachedImage(cachePath string) ([]byte, string, bool) {
 	return data, contentType, true
 }
 
-func (ip *ImageProxy) getCachePath(url string) string {
+// validateCachedImage inspecciona solo la cabecera (primeros 512 bytes) del archivo
+// en disco para determinar el tipo de imagen ráster segura y tocar el LRU sin
+// cargar todo el archivo en el heap. Si el archivo está corrupto o no es imagen,
+// se borra y se devuelve false.
+func validateCachedImage(cachePath string) (string, bool) {
+	f, err := os.Open(cachePath)
+	if err != nil {
+		return "", false
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil || info.Size() == 0 {
+		return "", false
+	}
+
+	buf := make([]byte, 512)
+	n, err := f.Read(buf)
+	if err != nil && err != io.EOF {
+		return "", false
+	}
+	header := buf[:n]
+
+	contentType := util.SafeImageContentType("", header)
+	if contentType == "" {
+		contentType = util.SafeImageContentType("image/avif", header)
+	}
+	if contentType == "" {
+		_ = f.Close()
+		_ = os.Remove(cachePath)
+		return "", false
+	}
+
+	cache.TouchDiskCacheIfOlder(cachePath, info, imageProxyTouchMinAge)
+	return contentType, true
+}
+
+func (ip *ImageProxy) ensureDir() string {
 	dir := ip.CacheDir
 	if dir == "" {
 		dir = filepath.Join(os.TempDir(), "kamehouse_image_cache")
 	}
-	_ = os.MkdirAll(dir, 0755)
+	ip.mkdirOnce.Do(func() {
+		_ = os.MkdirAll(dir, 0755)
+	})
+	return dir
+}
+
+func (ip *ImageProxy) getCachePath(url string) string {
+	dir := ip.ensureDir()
 	hash := sha256.Sum256([]byte(url))
 	return filepath.Join(dir, hex.EncodeToString(hash[:])+".cache")
 }
@@ -173,11 +219,11 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 	}
 
 	// Fast path: check local disk cache first. If already downloaded, serve immediately
-	// without any network or DNS lookup overhead.
+	// without any network or DNS lookup overhead and with zero heap copy.
 	cachePath := ip.getCachePath(url)
-	if data, contentType, ok := readCachedImage(cachePath); ok {
+	if contentType, ok := validateCachedImage(cachePath); ok {
 		ip.setHeaders(c, contentType)
-		return c.Blob(http.StatusOK, contentType, data)
+		return c.File(cachePath)
 	}
 
 	if !util.IsValidProxyURL(url) {
@@ -191,13 +237,15 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 		headers = util.FilterProxyRequestHeaders(headers)
 	}
 
-	imageBuffer, contentType, err := ip.GetImage(url, headers)
+	// GetImage persiste la imagen en cachePath antes de volver: se sirve desde disco
+	// (c.File, sin retener el buffer de hasta 25 MB en el heap durante la transferencia).
+	_, contentType, err := ip.GetImage(url, headers)
 	if err != nil {
 		return c.String(echo.ErrInternalServerError.Code, "Error fetching image")
 	}
 
 	ip.setHeaders(c, contentType)
-	return c.Blob(http.StatusOK, contentType, imageBuffer)
+	return c.File(ip.getCachePath(url))
 }
 
 // prewarmURLValid es la validación SSRF de Prewarm (reemplazable en tests,
