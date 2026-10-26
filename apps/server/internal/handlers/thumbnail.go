@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -66,11 +67,18 @@ func isLexicallyUnder(dir, path string) bool {
 }
 
 func thumbnailHash(videoPath string, videoStat os.FileInfo, offsetSec *int) string {
-	key := fmt.Sprintf("%s:%d:%d", videoPath, videoStat.ModTime().UnixNano(), videoStat.Size())
+	key := make([]byte, 0, len(videoPath)+64)
+	key = append(key, videoPath...)
+	key = append(key, ':')
+	key = strconv.AppendInt(key, videoStat.ModTime().UnixNano(), 10)
+	key = append(key, ':')
+	key = strconv.AppendInt(key, videoStat.Size(), 10)
 	if offsetSec != nil {
-		key = fmt.Sprintf("%s:t=%d", key, *offsetSec)
+		key = append(key, ":t="...)
+		key = strconv.AppendInt(key, int64(*offsetSec), 10)
 	}
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+	sum := sha256.Sum256(key)
+	return hex.EncodeToString(sum[:])
 }
 
 func thumbnailETag(hash string) string {
@@ -296,7 +304,9 @@ func (h *Handler) ensureThumbnailFile(parentCtx context.Context, videoPath strin
 		ctx, cancel := context.WithTimeout(baseCtx, 15*time.Second)
 		defer cancel()
 
-		tmpCacheFile := fmt.Sprintf("%s.%d.tmp", cacheFile, time.Now().UnixNano())
+		// Debe terminar en .jpg: ffmpeg elige el muxer por la extension y con ".tmp" falla
+		// ("Unable to choose an output format"). ".tmp" sigue en el nombre para PruneDirectory.
+		tmpCacheFile := fmt.Sprintf("%s.%d.tmp.jpg", cacheFile, time.Now().UnixNano())
 		cmd := util.NewCmdCtx(
 			ctx,
 			ffmpegPath,

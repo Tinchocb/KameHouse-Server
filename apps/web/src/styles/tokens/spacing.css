@@ -50,6 +50,10 @@
      ocupar todo el ancho disponible menos el sidebar. */
   --content-max-desktop: 100%;
 
+  /* Aire superior para no quedar bajo la barra flotante (solo md+: en móvil la nav es de flujo) */
+  --nav-clearance:           5rem;
+  --nav-clearance-mobile:    1rem;
+
   /* Alias semánticos para uso común */
   --space-xs:     var(--space-1);    /* 4px  */
   --space-sm:     var(--space-2);    /* 8px  */
@@ -67,8 +71,8 @@
   /* ─── Hero Stage Geometría y Zonas Seguras ──────────────────────────── */
   --hero-stage-min-h-mobile: 528px;
   --hero-stage-min-h-sm:     616px;
-  --hero-stage-min-h-lg:     min(682px, max(540px, calc(100dvh - 218px)));
-  --hero-stage-max-h:        min(748px, max(540px, calc(100dvh - 218px)));
+  --hero-stage-min-h-lg:     min(860px, max(540px, calc(100dvh - 170px)));
+  --hero-stage-max-h:        min(860px, max(540px, calc(100dvh - 170px)));
   --hero-stage-aspect:       16 / 9;
   --hero-stage-aspect-sm:    1.9 / 1;
   --hero-stage-aspect-lg:    1.85 / 1;

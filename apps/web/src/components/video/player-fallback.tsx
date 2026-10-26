@@ -20,8 +20,8 @@ export function PlayerFallback({ label, sublabel }: PlayerFallbackProps = {}) {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-secondary"></div>
             {label && (
                 <div className="flex flex-col items-center gap-1 px-6 text-center">
-                    <span className="font-display font-bold text-sm uppercase tracking-wider text-white">{label}</span>
-                    {sublabel && <span className="text-xs text-white/55 max-w-md line-clamp-2">{sublabel}</span>}
+                    <span className="font-display font-semibold text-base text-white">{label}</span>
+                    {sublabel && <span className="text-sm text-label-2 max-w-md line-clamp-2">{sublabel}</span>}
                 </div>
             )}
             {!label && <span className="sr-only">Cargando reproductor</span>}

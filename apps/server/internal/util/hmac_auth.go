@@ -43,23 +43,24 @@ func NewHMACAuth(secret string, ttl time.Duration) *HMACAuth {
 	}
 }
 
-// TTL returns the current TTL
-func (h *HMACAuth) TTL() time.Duration {
-	return h.ttl
-}
-
 // SetTTL sets a new TTL
 func (h *HMACAuth) SetTTL(ttl time.Duration) {
 	h.ttl = ttl
 }
 
-// GenerateToken generates an HMAC-signed token for the given endpoint
+// GenerateToken generates an HMAC-signed token for the given endpoint using default TTL
 func (h *HMACAuth) GenerateToken(endpoint string) (string, error) {
+	return h.GenerateTokenWithTTL(endpoint, h.ttl)
+}
+
+// GenerateTokenWithTTL generates an HMAC-signed token with an explicit TTL in a thread-safe manner
+// without mutating the shared HMACAuth instance.
+func (h *HMACAuth) GenerateTokenWithTTL(endpoint string, customTTL time.Duration) (string, error) {
 	now := time.Now().Unix()
 	claims := TokenClaims{
 		Endpoint:  endpoint,
 		IssuedAt:  now,
-		ExpiresAt: now + int64(h.ttl.Seconds()),
+		ExpiresAt: now + int64(customTTL.Seconds()),
 	}
 
 	// Serialize claims to JSON

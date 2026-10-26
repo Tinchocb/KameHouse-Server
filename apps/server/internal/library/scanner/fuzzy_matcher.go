@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // LevenshteinDistance calculates the minimum number of single-character edits
@@ -54,7 +55,7 @@ func LevenshteinDistance(s1, s2 string) int {
 
 // LevenshteinRatio returns a normalized similarity score between 0.0 and 1.0.
 func LevenshteinRatio(s1, s2 string) float64 {
-	len1, len2 := len([]rune(s1)), len([]rune(s2))
+	len1, len2 := utf8.RuneCountInString(s1), utf8.RuneCountInString(s2)
 	if len1 == 0 && len2 == 0 {
 		return 1.0
 	}
@@ -66,9 +67,30 @@ func LevenshteinRatio(s1, s2 string) float64 {
 	return (maxLen - float64(dist)) / maxLen
 }
 
+// runeBufLen es el tamaño de los buffers en pila de JaroWinklerSimilarity: cubre palabras y
+// títulos habituales sin asignar en el heap.
+const runeBufLen = 64
+
+// appendRunes agrega los runes de s a dst (equivale a []rune(s) reutilizando dst).
+func appendRunes(dst []rune, s string) []rune {
+	for _, r := range s {
+		dst = append(dst, r)
+	}
+	return dst
+}
+
+// zeroedBools devuelve un []bool en cero de largo n, apoyado en buf cuando entra.
+func zeroedBools(buf *[runeBufLen]bool, n int) []bool {
+	if n <= len(buf) {
+		return buf[:n]
+	}
+	return make([]bool, n)
+}
+
 // JaroWinklerSimilarity computes the Jaro-Winkler distance between s1 and s2 (score 0.0 to 1.0).
 func JaroWinklerSimilarity(s1, s2 string) float64 {
-	r1, r2 := []rune(s1), []rune(s2)
+	var runes1, runes2 [runeBufLen]rune
+	r1, r2 := appendRunes(runes1[:0], s1), appendRunes(runes2[:0], s2)
 	len1, len2 := len(r1), len(r2)
 	if len1 == 0 && len2 == 0 {
 		return 1.0
@@ -82,8 +104,8 @@ func JaroWinklerSimilarity(s1, s2 string) float64 {
 		matchDistance = 0
 	}
 
-	r1Matches := make([]bool, len1)
-	r2Matches := make([]bool, len2)
+	var m1, m2 [runeBufLen]bool
+	r1Matches, r2Matches := zeroedBools(&m1, len1), zeroedBools(&m2, len2)
 	matches := 0
 
 	for i := 0; i < len1; i++ {
@@ -138,12 +160,13 @@ func JaroWinklerSimilarity(s1, s2 string) float64 {
 	return jaro + float64(prefix)*0.1*(1.0-jaro)
 }
 
-// TokenSetRatio splits strings into unique sorted tokens and calculates similarity,
-// with soft token alignment for minor typos or variations.
-func TokenSetRatio(s1, s2 string) float64 {
-	tokens1 := extractUniqueTokens(s1)
-	tokens2 := extractUniqueTokens(s2)
+// tokenSetRatioClean calcula la similitud de tokens para cadenas que ya salieron de cleanFuzzyString:
+// salta la re-limpieza (idempotente) que repetía el mismo trabajo en cada llamada.
+func tokenSetRatioClean(c1, c2 string) float64 {
+	return tokenSetRatioTokens(uniqueSortedTokens(c1), uniqueSortedTokens(c2))
+}
 
+func tokenSetRatioTokens(tokens1, tokens2 []string) float64 {
 	if len(tokens1) == 0 && len(tokens2) == 0 {
 		return 1.0
 	}
@@ -213,13 +236,18 @@ func FuzzyMatchScore(query, target string) float64 {
 		return 1.0
 	}
 
-	// Expand standard acronyms (e.g. DBS -> Dragon Ball Super, DBZ -> Dragon Ball Z, DB -> Dragon Ball)
-	qExpanded := expandAcronyms(qNorm)
-	tExpanded := expandAcronyms(tNorm)
+	tokenRatio := tokenSetRatioClean(qNorm, tNorm)
+	jwSimilarity := JaroWinklerSimilarity(qNorm, tNorm)
+	levRatio := LevenshteinRatio(qNorm, tNorm)
 
-	tokenRatio := math.Max(TokenSetRatio(qNorm, tNorm), TokenSetRatio(qExpanded, tExpanded))
-	jwSimilarity := math.Max(JaroWinklerSimilarity(qNorm, tNorm), JaroWinklerSimilarity(qExpanded, tExpanded))
-	levRatio := math.Max(LevenshteinRatio(qNorm, tNorm), LevenshteinRatio(qExpanded, tExpanded))
+	// Expand standard acronyms (e.g. DBS -> Dragon Ball Super, DBZ -> Dragon Ball Z, DB -> Dragon Ball).
+	// Si ninguna cadena tiene acrónimos la versión expandida es idéntica y repetir las tres
+	// métricas daría el mismo máximo, así que solo se recalcula cuando algo cambió.
+	if qExpanded, tExpanded := expandAcronyms(qNorm), expandAcronyms(tNorm); qExpanded != qNorm || tExpanded != tNorm {
+		tokenRatio = math.Max(tokenRatio, tokenSetRatioClean(qExpanded, tExpanded))
+		jwSimilarity = math.Max(jwSimilarity, JaroWinklerSimilarity(qExpanded, tExpanded))
+		levRatio = math.Max(levRatio, LevenshteinRatio(qExpanded, tExpanded))
+	}
 
 	// Weighted ensemble: TokenSet (60%), Jaro-Winkler (25%), Levenshtein (15%)
 	score := (tokenRatio * 0.60) + (jwSimilarity * 0.25) + (levRatio * 0.15)
@@ -261,13 +289,20 @@ func min3(a, b, c int) int {
 	return c
 }
 
-func extractUniqueTokens(s string) []string {
-	words := strings.Fields(cleanFuzzyString(s))
-	seen := make(map[string]bool)
-	var unique []string
+// uniqueSortedTokens parte una cadena ya limpia en palabras únicas ordenadas. Los títulos tienen
+// pocas palabras, así que se deduplica in situ con búsqueda lineal en vez de crear un mapa.
+func uniqueSortedTokens(clean string) []string {
+	words := strings.Fields(clean)
+	unique := words[:0]
 	for _, w := range words {
-		if !seen[w] && len(w) > 0 {
-			seen[w] = true
+		dup := false
+		for _, u := range unique {
+			if u == w {
+				dup = true
+				break
+			}
+		}
+		if !dup {
 			unique = append(unique, w)
 		}
 	}

@@ -163,7 +163,7 @@ func NewProvider(opts *NewProviderImplOptions) Provider {
 			return NewAniListProviderImpl(aniClient, opts.Database, opts.Logger, opts.TMDBClient)
 		}
 
-		jikanClient := jikan.NewClient(opts.Logger)
+		jikanClient := jikan.Shared(opts.Logger)
 		jikanProv := NewJikanProviderImpl(jikanClient, opts.Database, opts.Logger, opts.TMDBClient)
 		if !opts.DisableTMDB && opts.TMDBClient != nil && opts.TMDBClient.HasApiKey() && opts.DefaultProvider != "jikan" {
 			tmdbProv := NewTMDBProviderImpl(opts.TMDBClient, opts.Database, opts.Logger)

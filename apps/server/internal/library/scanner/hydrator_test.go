@@ -4,11 +4,9 @@ import (
 	"context"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/summary"
 	"kamehouse/internal/platforms/platform"
-	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
 	"os"
 	"sync"
@@ -82,12 +80,6 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 	ptrFormat := func(f dto.MediaFormat) *dto.MediaFormat { return &f }
 
 	logger := util.NewLogger()
-	test_utils.InitTestProvider(t)
-	database, err := db.NewDatabase(context.Background(), test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
-	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-	_ = database
 	metadataProvider := &mockMetadataProvider{}
 	allMedia := []*dto.NormalizedMedia{
 		{

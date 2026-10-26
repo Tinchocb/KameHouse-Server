@@ -27,7 +27,7 @@ const EXCLUDED_KEY_PATTERNS = [
 /**
  * Determina si una query individual califica para ser persistida en IndexedDB.
  */
-export function shouldDehydrateQuery(query: Query): boolean {
+function shouldDehydrateQuery(query: Query): boolean {
     // Solo persistir queries exitosas y con datos válidos
     if (query.state.status !== "success" || query.state.data === undefined) {
         return false
@@ -45,13 +45,15 @@ export function shouldDehydrateQuery(query: Query): boolean {
 }
 
 /** Espera mínima entre escrituras de la caché completa en IndexedDB. */
-export const PERSIST_THROTTLE_MS = 1000
+const PERSIST_THROTTLE_MS = 1000
 
-function runWhenIdle(fn: () => void) {
+function runWhenIdle(fn: () => void): () => void {
     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-        window.requestIdleCallback(() => fn(), { timeout: 2000 })
+        const id = window.requestIdleCallback(() => fn(), { timeout: 2000 })
+        return () => window.cancelIdleCallback(id)
     } else {
-        setTimeout(fn, 0)
+        const id = setTimeout(fn, 0)
+        return () => clearTimeout(id)
     }
 }
 
@@ -68,6 +70,14 @@ function runWhenIdle(fn: () => void) {
 export function createIDBPersister(idbKey: string = IDB_KEY, throttleMs: number = PERSIST_THROTTLE_MS): Persister {
     let pending: PersistedClient | null = null
     let timer: ReturnType<typeof setTimeout> | null = null
+    let cancelIdle: (() => void) | null = null
+
+    const cancelScheduled = () => {
+        if (timer !== null) clearTimeout(timer)
+        timer = null
+        cancelIdle?.()
+        cancelIdle = null
+    }
 
     const write = async () => {
         const client = pending
@@ -81,10 +91,7 @@ export function createIDBPersister(idbKey: string = IDB_KEY, throttleMs: number 
     }
 
     const flushNow = () => {
-        if (timer) {
-            clearTimeout(timer)
-            timer = null
-        }
+        cancelScheduled()
         return write()
     }
 
@@ -100,10 +107,13 @@ export function createIDBPersister(idbKey: string = IDB_KEY, throttleMs: number 
     return {
         persistClient: async (client: PersistedClient) => {
             pending = client
-            if (timer) return
+            if (timer !== null || cancelIdle !== null) return
             timer = setTimeout(() => {
                 timer = null
-                runWhenIdle(() => void write())
+                cancelIdle = runWhenIdle(() => {
+                    cancelIdle = null
+                    void write()
+                })
             }, throttleMs)
         },
         restoreClient: async () => {
@@ -116,10 +126,7 @@ export function createIDBPersister(idbKey: string = IDB_KEY, throttleMs: number 
         },
         removeClient: async () => {
             pending = null
-            if (timer) {
-                clearTimeout(timer)
-                timer = null
-            }
+            cancelScheduled()
             try {
                 await del(idbKey)
             } catch (err) {
@@ -129,7 +136,7 @@ export function createIDBPersister(idbKey: string = IDB_KEY, throttleMs: number 
     }
 }
 
-export const idbPersister = createIDBPersister()
+const idbPersister = createIDBPersister()
 
 export const queryPersistOptions = {
     persister: idbPersister,

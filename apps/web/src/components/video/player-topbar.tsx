@@ -10,6 +10,7 @@ import { IconStatusMonitorPlay, IconUiClose, IconUiSpinner } from "@/components/
 import { AnimatedTooltip } from "@/components/ui/kinetics/animated-tooltip"
 import { LoadSwap } from "@/components/ui/kinetics/load-swap"
 import { cn } from "@/components/ui/core/styling"
+import { Button } from "@/components/ui/button"
 import { PLAYER_EYEBROW, PLAYER_GLASS, PLAYER_ICON_BTN } from "./player-theme"
 
 interface PlayerTopBarProps {
@@ -19,6 +20,8 @@ interface PlayerTopBarProps {
     mediaFormat?: string | null
     onClose: () => void
     onOpenInMpv?: () => void
+    /** mpv está conectando (hasta ~10 s): el botón se bloquea y muestra carga en vez de aceptar otro clic. */
+    mpvPending?: boolean
     momentKey?: string
     momentTitle?: string
     currentTime?: number
@@ -31,6 +34,7 @@ export function PlayerTopBar({
     mediaFormat,
     onClose,
     onOpenInMpv,
+    mpvPending,
     momentKey,
     momentTitle,
     currentTime,
@@ -99,60 +103,72 @@ export function PlayerTopBar({
             initial={{ opacity: 0, y: reduceMotion ? 0 : -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={reduceMotion ? { duration: 0.15 } : entranceSpring}
-            className="absolute inset-x-0 top-0 flex items-start justify-between gap-4 px-3 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-12 pointer-events-none z-player-ui bg-gradient-to-b from-black/75 via-black/30 to-transparent"
+            className="absolute inset-x-0 top-0 flex items-start justify-between gap-4 px-3 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-8 pointer-events-none z-player-ui bg-gradient-to-b from-black/65 via-black/25 to-transparent"
         >
             <div className="flex flex-col min-w-0 pl-1 pt-1 gap-1.5 pointer-events-auto select-none">
                 <span className={cn(PLAYER_EYEBROW, "tabular-nums truncate")}>
-                    {isMovie ? "Película" : (episodeNumber != null ? `Episodio ${episodeNumber}` : (cleanTitle || "Serie"))}
+                    {/* Serie · E5 (AVKit): contexto arriba, título del episodio debajo */}
+                    {isMovie
+                        ? "Película"
+                        : [cleanTitle && cleanTitle !== displayTitle ? cleanTitle : null, episodeNumber != null ? `E${episodeNumber}` : null]
+                            .filter(Boolean).join(" · ") || "Serie"}
                 </span>
-                <h2 className="font-display text-white text-lg sm:text-xl font-medium tracking-tight leading-tight truncate [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">
+                <h2 className="font-display text-label-1 text-lg sm:text-xl font-medium tracking-tight leading-tight truncate [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">
                     {displayTitle}
                 </h2>
                 {momentKey && (
                     <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-accent/20 border border-brand-accent/40 text-brand-accent text-xs font-semibold backdrop-blur-md shadow-sm">
+                        <span className={cn("inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-label-1 text-xs font-semibold", PLAYER_GLASS)}>
                             <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
                             <span className="truncate max-w-[200px] sm:max-w-xs">
-                                Momento: {momentTitle || "Hito seleccionado"}
+                                {momentTitle ? `Momento: ${momentTitle}` : "Momento de la cronología"}
                             </span>
                         </span>
-                        <button
-                            type="button"
+                        <Button
+                            intent="glass"
+                            size="xs"
                             onClick={handleFixMoment}
                             disabled={saveMomentMutation.isPending}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high/80 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-highest text-on-surface border border-white/20 text-xs font-medium cursor-pointer active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-out-strong backdrop-blur-md shadow-elevation-1 disabled:opacity-50"
+                            leftIcon={
+                                <LoadSwap
+                                    loading={saveMomentMutation.isPending}
+                                    skeleton={<IconUiSpinner className="w-3.5 h-3.5 animate-spin" />}
+                                >
+                                    <IconTimeClock className="w-3.5 h-3.5" />
+                                </LoadSwap>
+                            }
+                            iconSpacing="0.375rem"
                         >
-                            <LoadSwap
-                                loading={saveMomentMutation.isPending}
-                                skeleton={<IconUiSpinner className="w-3.5 h-3.5 animate-spin text-brand-accent" />}
-                            >
-                                <IconTimeClock className="w-3.5 h-3.5 text-brand-accent" />
-                            </LoadSwap>
-                            <span>Fijar este momento aquí ({formattedCurrentTime})</span>
-                        </button>
-                        <button
-                            type="button"
+                            Fijar aquí ({formattedCurrentTime})
+                        </Button>
+                        <Button
+                            intent="glass"
+                            size="xs"
                             onClick={handleResetMoment}
                             disabled={saveMomentMutation.isPending}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-high/60 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-highest text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white border border-white/10 text-xs font-medium cursor-pointer active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-out-strong backdrop-blur-md shadow-elevation-1 disabled:opacity-50"
-                            title="Restablecer minuto original"
+                            title="Volver al minuto original del momento"
+                            leftIcon={<IconUiRotateCcw className="w-3 h-3" />}
+                            iconSpacing="0.25rem"
                         >
-                            <IconUiRotateCcw className="w-3 h-3 text-on-surface-variant" />
-                            <span>Restablecer</span>
-                        </button>
+                            Restablecer
+                        </Button>
                     </div>
                 )}
             </div>
             <div className={cn("flex items-center shrink-0 gap-0.5 p-1 rounded-full pointer-events-auto", PLAYER_GLASS)}>
                 {onOpenInMpv && (
-                    <AnimatedTooltip content="Abrir en MPV" side="bottom">
+                    <AnimatedTooltip content={mpvPending ? "Abriendo en mpv…" : "Abrir en mpv"} side="bottom">
                         <button
                             tabIndex={0}
+                            disabled={mpvPending}
+                            aria-busy={mpvPending || undefined}
                             onClick={(e) => { e.stopPropagation(); onOpenInMpv(); }}
-                            aria-label="Abrir en mpv"
-                            className={iconBtn}
+                            aria-label={mpvPending ? "Abriendo en mpv" : "Abrir en mpv"}
+                            className={cn(iconBtn, mpvPending && "cursor-wait")}
                         >
-                            <IconStatusMonitorPlay className="w-4 h-4" />
+                            {mpvPending
+                                ? <IconUiSpinner className="w-4 h-4 animate-spin motion-reduce:animate-none" />
+                                : <IconStatusMonitorPlay className="w-4 h-4" />}
                         </button>
                     </AnimatedTooltip>
                 )}

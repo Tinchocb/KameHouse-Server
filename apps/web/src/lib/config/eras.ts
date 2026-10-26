@@ -63,7 +63,7 @@ export const ERA_COLOR_MAP: Record<EraId, { accent: string; glow: string; glowSt
     }
 }
 
-export interface EraDefaultInfo {
+interface EraDefaultInfo {
     title: string
     subtitle: string
     description: string

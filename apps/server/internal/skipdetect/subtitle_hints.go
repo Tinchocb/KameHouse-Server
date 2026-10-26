@@ -11,7 +11,23 @@ import (
 	"strings"
 
 	"kamehouse/internal/mediastream/videofile"
+	"kamehouse/internal/util"
 )
+
+// subsCacheHash devuelve la clave de la caché de subtítulos del archivo. Un archivo de Drive
+// usa la misma clave que la reproducción (MD5 de la ruta gdrive://, igual que
+// mediastream.DriveSubtitleHash), así se reutilizan las pistas que el playback ya dejó en disco.
+func subsCacheHash(videoPath string) (string, error) {
+	if isDrivePath(videoPath) {
+		return util.CreateMD5(videoPath), nil
+	}
+	return videofile.GetHashFromPath(videoPath)
+}
+
+// isDrivePath reporta si la ruta es un archivo de Google Drive (gdrive://).
+func isDrivePath(path string) bool {
+	return strings.HasPrefix(path, "gdrive://")
+}
 
 // Parámetros del Método C.
 const (
@@ -63,7 +79,7 @@ func (d *Detector) subtitleHints(ctx context.Context, episodes []episodeFile) ma
 
 		assPath := d.locateASS(ep.Path)
 		if assPath == "" && d.fileCacher != nil && onDemandUsed < subMaxOnDemand {
-			if d.extractSubsOnDemand(ep.Path) {
+			if d.extractSubsOnDemand(ctx, ep.Path) {
 				onDemandUsed++
 				assPath = d.locateASS(ep.Path)
 			} else {
@@ -90,7 +106,7 @@ func (d *Detector) subtitleHints(ctx context.Context, episodes []episodeFile) ma
 
 // locateASS devuelve la ruta del primer .ass extraído para el archivo, o "".
 func (d *Detector) locateASS(videoPath string) string {
-	hash, err := videofile.GetHashFromPath(videoPath)
+	hash, err := subsCacheHash(videoPath)
 	if err != nil {
 		return ""
 	}
@@ -104,17 +120,23 @@ func (d *Detector) locateASS(videoPath string) string {
 
 // extractSubsOnDemand corre la extracción de attachments (subs) para un archivo
 // que nunca se reprodujo. Devuelve true si se ejecutó sin error.
-func (d *Detector) extractSubsOnDemand(videoPath string) bool {
+func (d *Detector) extractSubsOnDemand(ctx context.Context, videoPath string) bool {
+	// En Drive la extracción con ffmpeg tendría que leer el archivo entero (las pistas de un
+	// mkv van intercaladas en todo el contenido). Con archivos de decenas de GB no compensa:
+	// en Drive solo se usan las pistas que la reproducción ya extrajo.
+	if isDrivePath(videoPath) {
+		return false
+	}
 	hash, err := videofile.GetHashFromPath(videoPath)
 	if err != nil {
 		return false
 	}
 	extractor := videofile.NewMediaInfoExtractor(d.fileCacher, d.logger)
-	mi, err := extractor.GetInfo(d.ffprobePath, videoPath)
+	mi, err := extractor.GetInfoContext(ctx, d.ffprobePath, videoPath)
 	if err != nil {
 		return false
 	}
-	if err := videofile.ExtractAttachment(context.Background(), d.ffmpegPath, videoPath, hash, mi, d.cacheDir, d.logger); err != nil {
+	if err := videofile.ExtractAttachment(ctx, d.ffmpegPath, videoPath, hash, mi, d.cacheDir, d.logger); err != nil {
 		d.logger.Debug().Err(err).Str("path", videoPath).Msg("skipdetect: extracción on-demand de subs falló")
 		return false
 	}

@@ -17,9 +17,9 @@ import type { EraId } from "./eras"
  * - `right`  → sujeto a la derecha: la izquierda puede fundirse a negro.
  * - `left` / `center` / `group` → hay personajes a la izquierda: máscara suave.
  */
-export type HeroSubject = "left" | "center" | "right" | "group"
+type HeroSubject = "left" | "center" | "right" | "group"
 
-export interface HeroFocal {
+interface HeroFocal {
     /** 0 (izquierda) – 100 (derecha) */
     x: number
     /** 0 (arriba) – 100 (abajo) */
@@ -45,9 +45,9 @@ export interface HeroArt {
     /** Ancho/alto real si no es 16:9 (póster de último recurso: 2/3). */
     aspect?: number
     /**
-     * Ancho real del mejor archivo disponible, solo si es chico (< `HERO_COMPACT_MAX_WIDTH`).
-     * En escritorio ese arte se ve blando a tamaño completo: `<HeroBackdrop wide="right">`
-     * lo muestra más chico a la derecha, flotando sobre la base oscura.
+     * Ancho real del archivo, solo si es chico (< `HERO_COMPACT_MAX_WIDTH`) y se quiere el
+     * modo compacto de `<HeroBackdrop wide="right">` (imagen más chica flotando a la derecha).
+     * El registro actual NO lo usa: el arte chico se muestra a ancho completo.
      */
     sourceWidth?: number
     /**
@@ -65,12 +65,12 @@ export interface HeroArt {
 }
 
 /** Encuadre por defecto para arte sin curar: sujeto típico a la derecha. */
-export const DEFAULT_SERIES_FOCAL: HeroFocal = { x: 70, y: 42 }
+const DEFAULT_SERIES_FOCAL: HeroFocal = { x: 70, y: 42 }
 export const DEFAULT_MOVIE_FOCAL: HeroFocal = { x: 70, y: 45 }
 /** Póster vertical usado como último recurso: cara arriba y centrada. */
 export const POSTER_FOCAL: HeroFocal = { x: 50, y: 25 }
 /** Arte sin curar: en el anime las cabezas suelen arrancar cerca del borde superior. */
-export const DEFAULT_SAFE_TOP = 10
+const DEFAULT_SAFE_TOP = 10
 /** Proporción del arte de hero (siempre 16:9, ver cabecera). */
 export const HERO_ART_ASPECT = 16 / 9
 /** Por debajo de este ancho de origen el arte se muestra compacto en escritorio. */
@@ -122,13 +122,16 @@ const tmdb = (path: string, framing: MovieFraming): HeroArt => ({
 
 // Dragon Ball Clásico
 // Seguridad Vial: TMDB solo tiene esta captura (1326 px), no hay alternativa sin texto.
-const DB_TRAFFIC = tmdb("/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg", { focal: { x: 55, y: 45 }, subject: "group", safeTop: 3, tone: "light", sourceWidth: 1326 })
-// Bomberos: no existe en TMDB; ilustración oficial de Goku niño (3840 px).
-const DB_FIRE = tmdb("/tZuNziXpjmOsDlmiT6adFPmmSKT.jpg", { focal: { x: 58, y: 35 }, subject: "center", safeTop: 5, tone: "light" })
+// Sin `sourceWidth`: ya no se usa el modo compacto (caja difusa flotante); se muestra a ancho completo.
+const DB_TRAFFIC = tmdb("/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg", { focal: { x: 55, y: 45 }, subject: "group", safeTop: 3, tone: "light" })
+// Bomberos: no existe en TMDB; Goku niño en el helicóptero amarillo (arte de la serie, 3840 px).
+// Antes repetía la acuarela de `db.webp`, el hero de la propia serie.
+const DB_FIRE = tmdb("/jvG78HMVujN8hV07smLTST1P6lv.jpg", { focal: { x: 50, y: 50 }, subject: "group", safeTop: 3, tone: "light" })
 const DB_M1 = tmdb("/trUoQPnQy3cAXDx5TknzuBTFiWX.jpg", { focal: { x: 45, y: 40 }, subject: "group", safeTop: 0, tone: "dark" })
 const DB_M2 = tmdb("/a7yu3kFNsKuDdXlpcElBvBvaoIk.jpg", { focal: { x: 50, y: 40 }, subject: "group", safeTop: 0 })
 const DB_M3 = tmdb("/mhwqI7dKEjVwhTbILHM3tZyarTD.jpg", { focal: { x: 50, y: 40 }, subject: "group", safeTop: 0, tone: "light" })
-const DB_M4 = tmdb("/cJ2CNxc1AQh5raZgxeQreGKxale.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 5 })
+// M4: Goku y Bulma junto al pozo (2752 px); la ilustración «realista» anterior desentonaba con el resto.
+const DB_M4 = tmdb("/2U1rqfTk5cXpzmE0e3UMAfQG7rU.jpg", { focal: { x: 68, y: 55 }, subject: "right", safeTop: 25, tone: "light" })
 // Dragon Ball Z
 const DBZ_M1 = tmdb("/6SFrBoiuioqljN42pbTmyRKccTp.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 0 })
 const DBZ_M2 = tmdb("/pLuoFuzygOdWBRJhLQWSbKeoZ0s.jpg", { focal: { x: 50, y: 35 }, subject: "group", safeTop: 3 })
@@ -138,27 +141,32 @@ const DBZ_M5 = tmdb("/16rQGkdxGNdEooRxSyNhGnqfnNb.jpg", { focal: { x: 55, y: 40 
 const DBZ_M6 = tmdb("/vBfE5L6p3iTrYxjokCHdwNRJ3HM.jpg", { focal: { x: 65, y: 45 }, subject: "right", safeTop: 0 })
 const DBZ_M7 = tmdb("/br9p5Liij0JVXUtrvZPUZQTy9Tt.jpg", { focal: { x: 65, y: 35 }, subject: "right", safeTop: 0 })
 const DBZ_M8 = tmdb("/Gsno5VK24rIMR1yVkfv6rDSl6E.jpg", { focal: { x: 65, y: 40 }, subject: "right", safeTop: 5 })
-const DBZ_M9 = tmdb("/k5ypSoY4Ze0Gfi8zkijhr6lV3yx.jpg", { focal: { x: 55, y: 40 }, subject: "group", safeTop: 0, sourceWidth: 1280 })
-const DBZ_M10 = tmdb("/2WTjYoswcKZTQrokeUOhY3Xb3mZ.jpg", { focal: { x: 52, y: 40 }, subject: "center", safeTop: 5, tone: "light", reflect: false })
+// M9: Gohan SSJ2 (1920 px); el collage anterior era de 1280 px y obligaba al modo compacto.
+const DBZ_M9 = tmdb("/rwSjtKuwiPA3ZaV3HNgnQCjmKOU.jpg", { focal: { x: 50, y: 40 }, subject: "center", safeTop: 3 })
+// M10: Broly sobre negro (3840 px). Reemplaza el fondo verde croma plano (ya no hace falta `reflect: false`).
+const DBZ_M10 = tmdb("/uNlz08xCsZ6AOy6259v1rHWy9M2.jpg", { focal: { x: 45, y: 35 }, subject: "center", safeTop: 0, tone: "dark" })
 const DBZ_M11 = tmdb("/w4AwSd8igVyAE1A1KsR4waa1KAW.jpg", { focal: { x: 72, y: 45 }, subject: "right", safeTop: 5, cropLeft: 0.44 })
 const DBZ_M12 = tmdb("/t9z8Wm8c0HnxfPN9YvXgmueG6De.jpg", { focal: { x: 50, y: 40 }, subject: "group", safeTop: 0, tone: "light" })
 const DBZ_M13 = tmdb("/orROcqUdNe3rdepse6nskbxovXJ.jpg", { focal: { x: 70, y: 40 }, subject: "right", safeTop: 0 })
 const DBZ_BARDOCK = tmdb("/yzAwIa8poIxtLB8MCuhs9jFQY9C.jpg", { focal: { x: 68, y: 40 }, subject: "right", safeTop: 8, tone: "dark" })
-const DBZ_TRUNKS = tmdb("/eoeHNfUCLsq12rIgTOHZ93cOOsR.jpg", { focal: { x: 62, y: 40 }, subject: "group", safeTop: 5, tone: "light" })
+// Un futuro diferente: los androides y Trunks entre las ruinas (2752 px); antes, un parque de diversiones soleado.
+const DBZ_TRUNKS = tmdb("/ycxzHH4iO3IqbHUKzcQDrL3MSHi.jpg", { focal: { x: 50, y: 45 }, subject: "group", safeTop: 5, tone: "dark" })
 // ¡Hola! Son Goku: todos los backdrops de TMDB son de 1280 px.
-const DBZ_YO_GOKU = tmdb("/wMQTjoScCPYttzRx04gQtZreWg.jpg", { focal: { x: 72, y: 40 }, subject: "right", safeTop: 3, tone: "light", sourceWidth: 1280 })
+const DBZ_YO_GOKU = tmdb("/wMQTjoScCPYttzRx04gQtZreWg.jpg", { focal: { x: 72, y: 40 }, subject: "right", safeTop: 3, tone: "light" })
 // ¡Todos reunidos! El mundo de Gokú (OVA 1992): único backdrop, 1280 px.
-const DBZ_GOKU_WORLD = tmdb("/cyL9OsDazviewaDbXtJJBynrRTw.jpg", { focal: { x: 55, y: 35 }, subject: "group", safeTop: 2, tone: "light", sourceWidth: 1280 })
+const DBZ_GOKU_WORLD = tmdb("/cyL9OsDazviewaDbXtJJBynrRTw.jpg", { focal: { x: 55, y: 35 }, subject: "group", safeTop: 2, tone: "light" })
 // Especial colaboración Toriko × One Piece × DBZ (2013)
 const DBZ_CROSSOVER = tmdb("/tZ1QM1D68g2KuqnBukigxU8rHzd.jpg", { focal: { x: 50, y: 35 }, subject: "group", safeTop: 3, tone: "light" })
 const DBZ_BARDOCK_OVA = tmdb("/kaLaBjygarZpRg8YzYu2mZqr952.jpg", { focal: { x: 50, y: 35 }, subject: "group", safeTop: 0 })
 const DBZ_PLAN = tmdb("/au3nAjeEjip1JWIzG8MdNtaGFF7.jpg", { focal: { x: 50, y: 45 }, subject: "center", safeTop: 20, tone: "dark" })
 // Dragon Ball GT
-const DBGT_100 = tmdb("/4l2f1JESuT9EE2En3TZ6qK3Tl69.jpg", { focal: { x: 70, y: 40 }, subject: "right", safeTop: 0, sourceWidth: 1440 })
+// 100 años después: Goku Jr. con la esfera (3840 px); la captura de 1440 px anterior era blanda.
+const DBGT_100 = tmdb("/lesSOGpRuJwebgtL4vNkoRFnbil.jpg", { focal: { x: 52, y: 35 }, subject: "center", safeTop: 0, tone: "dark" })
 // Dragon Ball Super
 const DBS_M1 = tmdb("/felXFRjJXF40NPzK1IPib8ojF2X.jpg", { focal: { x: 60, y: 35 }, subject: "group", safeTop: 5 })
 const DBS_M2 = tmdb("/usrUizny0dLNJTrrJSxsvu5V0z0.jpg", { focal: { x: 80, y: 30 }, subject: "right", safeTop: 0, tone: "dark" })
-const DBS_M3 = tmdb("/6OTRuxpwUUGbmCX3MKP25dOmo59.jpg", { focal: { x: 65, y: 45 }, subject: "right", safeTop: 5, tone: "dark" })
+// Broly: Goku y Vegeta azules sobre fondo negro (3840 px); el anterior tenía un borde izquierdo plano y saturado.
+const DBS_M3 = tmdb("/cVxHF3C7rLMgpC0IGLaaeWPlmEb.jpg", { focal: { x: 68, y: 45 }, subject: "right", safeTop: 5, tone: "dark" })
 const DBS_M4 = tmdb("/iItouOLw880qlICIffMYF664HkH.jpg", { focal: { x: 56, y: 40 }, subject: "group", safeTop: 5 })
 
 export const MOVIE_HERO_ART: Record<number, HeroArt> = {

@@ -4,6 +4,7 @@ import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { SagaDetailSearchParams } from "@/api/types/series.types"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
+import { prefetchSeriesDetailData } from "./-prefetch"
 
 export const Route = createFileRoute("/series/$seriesId/")({
     validateSearch: (search: Record<string, unknown>): SagaDetailSearchParams => ({
@@ -17,11 +18,17 @@ export const Route = createFileRoute("/series/$seriesId/")({
     }),
     loader: async ({ params: { seriesId }, context }) => {
         const qc = context.queryClient
-        await qc.prefetchQuery({
-            queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId],
+        // En paralelo con el entry (no se esperan): evita la cascada entry → montar → 4 pedidos.
+        prefetchSeriesDetailData(qc, seriesId)
+        const entryKey = [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, seriesId]
+        const entryPrefetch = qc.prefetchQuery({
+            queryKey: entryKey,
             queryFn: () => fetchAnimeEntry(seriesId),
             staleTime: 60000,
         })
+        // Con ficha en caché (aunque vencida) no se bloquea la navegación: el
+        // prefetch la revalida en segundo plano y el cliente se monta ya.
+        if (!qc.getQueryData(entryKey)) await entryPrefetch
         return { dehydrateState: dehydrate(qc) }
     },
     errorComponent: AppErrorBoundary,

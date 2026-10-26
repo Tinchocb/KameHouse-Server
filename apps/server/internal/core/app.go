@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -40,7 +41,8 @@ import (
 
 type (
 	MetadataProviders struct {
-		TMDBClient *tmdb.Client
+		mu         sync.RWMutex
+		tmdbClient *tmdb.Client
 		Provider   *metadata_provider.DynamicProvider
 		Platform   *platform.DynamicPlatform
 	}
@@ -59,6 +61,9 @@ type (
 		MediastreamRepository *mediastream.Repository
 		SkipDetector          *skipdetect.Detector
 		DriveService          *drive.Service
+		// DriveInputURL convierte gdrive://… en la URL de loopback que ffmpeg/ffprobe pueden abrir.
+		// La registran los handlers al montar las rutas (ver handlers.driveInputURL).
+		DriveInputURL func(path string) string
 	}
 
 	LibraryServices struct {
@@ -73,7 +78,10 @@ type (
 		StreamingServices
 		LibraryServices
 
-		Watcher *scanner.Watcher
+		// Watcher and TotalLibrarySize are protected by libraryWatcher.mu.
+		// Internal readers must use the accessors rather than reading snapshots directly.
+		Watcher        *scanner.Watcher
+		libraryWatcher libraryWatcherState
 
 		Metadata MetadataProviders
 
@@ -96,7 +104,6 @@ type (
 		IsDesktopSidecar bool
 		Flags            KameHouseFlags
 
-		previousVersion      string
 		moduleMu             sync.Mutex
 		ServerReady          bool
 		ServerPasswordHash   string
@@ -110,8 +117,6 @@ type (
 		shutdownCancel context.CancelFunc
 
 		configWatcher *ConfigWatcher
-
-		ShowTour string
 	}
 
 	App = KameHouse
@@ -122,10 +127,8 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	logger := initLogger()
 	initSystemInfo(logger)
 
-	previousVersion := constants.Version
 	configOpts.OnVersionChange = append(configOpts.OnVersionChange, func(oldVersion string, newVersion string) {
 		logger.Info().Str("prev", oldVersion).Str("current", newVersion).Msg("app: Version change detected")
-		previousVersion = oldVersion
 	})
 
 	cfg, v := initConfig(configOpts, logger)
@@ -148,7 +151,7 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	// Create shutdown context early so it can be passed to WSEventManager
 	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
 
-	_, wsEventManager := initEventSystem(logger, database, shutdownCtx)
+	_, wsEventManager := initEventSystem(logger, shutdownCtx)
 	notifier.Global().Init(database, wsEventManager, logger)
 	fileCacher := initFileCacher(cfg, logger)
 	metadataProvider := initMetadataProvider(cfg, logger, database, tmdbClient)
@@ -186,14 +189,12 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		Flags:          configOpts.Flags,
 		FeatureManager: NewFeatureManager(logger, configOpts.Flags),
 		Metadata: MetadataProviders{
-			TMDBClient: tmdbClient,
-			Provider:   dynamicProvider,
-			Platform:   dynamicPlatform,
+			Provider: dynamicProvider,
+			Platform: dynamicPlatform,
 		},
 		Version:           constants.Version,
 		ContinuityManager: continuityManager,
 		TelemetryManager:  continuityManager.TelemetryManager,
-		previousVersion:   previousVersion,
 		FeatureFlags:      NewFeatureFlags(cfg, logger),
 		IsDesktopSidecar:  configOpts.Flags.IsDesktopSidecar,
 		SecondarySettings: struct {
@@ -208,6 +209,8 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 		shutdownCancel:                    shutdownCancel,
 	}
 
+	app.Metadata.publishTMDB(tmdbClient, metadataProvider)
+
 	// Start config watcher for hot-reload
 	configWatcher := NewConfigWatcher(v, cfg.v.ConfigFileUsed(), logger)
 	if err := configWatcher.Start(app.shutdownCtx); err != nil {
@@ -220,7 +223,6 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 	app.configWatcher = configWatcher
 
 	app.initModulesOnce()
-	app.runMigrations()
 	app.InitOrRefreshModules()
 	// Las migraciones DML corren en background; /api/health reporta degraded
 	// hasta completarlas. No bloquear el arranque aquí.
@@ -262,12 +264,15 @@ func (a *KameHouse) handleConfigChange(newCfg *Config) {
 	if newCfg.Metadata.TMDBApiKey != "" {
 		a.Config.Metadata.TMDBApiKey = newCfg.Metadata.TMDBApiKey
 		a.Logger.Info().Msg("config: TMDB API key actualizada via hot-reload")
-		// Recrear TMDB client con nueva key
-		if a.Metadata.TMDBClient != nil {
-			a.Metadata.TMDBClient = tmdb.NewClient(newCfg.Metadata.TMDBApiKey)
-			if a.Database != nil {
-				a.Metadata.TMDBClient.SetPersistentCache(&TMDbCacheAdapter{db: a.Database})
+		// Refresh provider, language and persistent cache using effective settings.
+		if a.Database != nil {
+			if settings, err := a.Database.GetSettings(); err == nil {
+				a.refreshMetadata(settings)
+			} else {
+				a.Logger.Error().Err(err).Msg("config: Failed to refresh TMDB settings")
 			}
+		} else {
+			a.refreshMetadata(&models.Settings{})
 		}
 	}
 
@@ -325,6 +330,14 @@ func initLogsDir(cfg *Config, logger *zerolog.Logger) {
 	logger.Trace().Str("dir", cfg.Logs.Dir).Msg("app: Creating logs directory")
 	_ = os.MkdirAll(cfg.Logs.Dir, 0755)
 	crashlog.GlobalCrashLogger.SetLogDir(cfg.Logs.Dir)
+
+	// Sin archivo, los registros solo salían por stdout y la app de escritorio no los guarda:
+	// la pestaña Sistema de los ajustes los muestra desde aquí.
+	if path, err := util.AttachLogFile(cfg.Logs.Dir); err != nil {
+		logger.Warn().Err(err).Str("dir", cfg.Logs.Dir).Msg("app: No se pudo crear el archivo de registro")
+	} else {
+		logger.Info().Str("file", path).Msg("app: Escribiendo registros en archivo")
+	}
 }
 
 func startLogTrimmer(cfg *Config, logger *zerolog.Logger) {
@@ -368,19 +381,14 @@ func initTMDBClient(cfg *Config, database *db.Database, logger *zerolog.Logger) 
 	return tmdbClient
 }
 
-func initEventSystem(logger *zerolog.Logger, database *db.Database, shutdownCtx context.Context) (events.Dispatcher, *events.WSEventManager) {
+func initEventSystem(logger *zerolog.Logger, shutdownCtx context.Context) (events.Dispatcher, *events.WSEventManager) {
 	dispatcher := events.NewDispatcher()
 	wsEventManager := events.NewWSEventManager(logger, dispatcher, shutdownCtx)
-	database.SetOnError(func(err error) {
-		if wsEventManager != nil {
-			wsEventManager.SendEvent(events.ErrorToast, "DB Error: "+err.Error())
-		}
-	})
 	return dispatcher, wsEventManager
 }
 
 func initFileCacher(cfg *Config, logger *zerolog.Logger) *filecache.Cacher {
-	fileCacher, err := filecache.NewCacher(cfg.Cache.Dir)
+	fileCacher, err := filecache.NewCacherWithPersistentBucket(cfg.Cache.Dir, continuity.WatchHistoryBucketName, filepath.Join(cfg.Data.AppDataDir, "cache"))
 	if err != nil {
 		logger.Fatal().Err(err).Msgf("app: Failed to initialize file cacher")
 	}
@@ -435,6 +443,7 @@ func (a *KameHouse) AddCleanupFunction(f func()) {
 
 func (a *KameHouse) Cleanup(ctx context.Context) {
 	a.shutdownCancel()
+	a.stopLibraryWatcher()
 
 	// Stop config watcher
 	if a.configWatcher != nil {

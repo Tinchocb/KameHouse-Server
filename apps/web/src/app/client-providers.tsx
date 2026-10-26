@@ -9,7 +9,6 @@ import { LazyMotion, MotionConfig } from "framer-motion"
 import { loadMotionFeatures } from "@/lib/motion-features-loader"
 
 import React, { useEffect } from "react"
-import { CookiesProvider } from "react-cookie"
 import { usePlayerStore } from "@/lib/store"
 
 interface ClientProvidersProps {
@@ -55,18 +54,16 @@ export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) =>
         <MotionConfig reducedMotion="user">
             {/* Funciones de animación en un chunk aparte (ver motion-features-loader). */}
             <LazyMotion features={loadMotionFeatures} strict>
-                <CookiesProvider>
-                    <PersistQueryClientProvider
-                        client={queryClient}
-                        persistOptions={queryPersistOptions}
-                    >
-                        <WebsocketProvider>
-                            {children}
-                            <Toaster />
-                            <PwaRegistry />
-                        </WebsocketProvider>
-                    </PersistQueryClientProvider>
-                </CookiesProvider>
+                <PersistQueryClientProvider
+                    client={queryClient}
+                    persistOptions={queryPersistOptions}
+                >
+                    <WebsocketProvider>
+                        {children}
+                        <Toaster />
+                        <PwaRegistry />
+                    </WebsocketProvider>
+                </PersistQueryClientProvider>
             </LazyMotion>
         </MotionConfig>
     )

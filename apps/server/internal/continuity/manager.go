@@ -25,6 +25,11 @@ type (
 		logger   *zerolog.Logger
 		settings *Settings
 		mu       sync.RWMutex
+
+		// In-memory O(1) indices protected by mu
+		mediaLatestIndex map[int]*WatchHistoryItem
+		historyItemIndex map[string]*WatchHistoryItem
+		loadOnce         sync.Once
 	}
 
 	Settings struct {
@@ -54,6 +59,8 @@ func NewManager(opts *NewManagerOptions) *Manager {
 		settings: &Settings{
 			WatchContinuityEnabled: false,
 		},
+		mediaLatestIndex: make(map[int]*WatchHistoryItem),
+		historyItemIndex: make(map[string]*WatchHistoryItem),
 	}
 
 	ret.logger.Info().Msg("continuity: Initialized manager")

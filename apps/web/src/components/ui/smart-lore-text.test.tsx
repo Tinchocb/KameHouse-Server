@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import * as React from 'react';
 import { SmartLoreText } from './smart-lore-text';
 
 describe('SmartLoreText', () => {

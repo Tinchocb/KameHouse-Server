@@ -19,7 +19,6 @@ import (
 type AniListProvider struct {
 	client      *anilist.Client
 	db          *db.Database
-	logger      *zerolog.Logger
 	rateLimiter *limiter.Limiter
 }
 
@@ -28,7 +27,6 @@ func NewAniListProvider(database *db.Database, logger *zerolog.Logger) *AniListP
 	return &AniListProvider{
 		client:      anilist.NewClient(logger),
 		db:          database,
-		logger:      logger,
 		rateLimiter: limiter.NewPlatformLimiter(),
 	}
 }

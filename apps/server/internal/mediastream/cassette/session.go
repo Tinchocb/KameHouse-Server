@@ -2,12 +2,14 @@ package cassette
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/rs/zerolog"
 )
@@ -17,9 +19,13 @@ type Session struct {
 	// ready is closed once keyframes load (or fail to)
 	ready chan struct{}
 	// err is set if initialization fails; only read after ready is closed
-	err error
+	err         error
+	destroyed   atomic.Bool
+	destroyOnce sync.Once
 
-	Path      string
+	Path string
+	// hash identifica el archivo de origen; viaja en la URL de las listas HLS (linkQuery).
+	hash      string
 	Out       string
 	Keyframes *KeyframeIndex
 	Info      *videofile.MediaInfo
@@ -48,6 +54,7 @@ func NewSession(
 	s := &Session{
 		ready:    make(chan struct{}),
 		Path:     path,
+		hash:     hash,
 		Out:      filepath.Join(settings.StreamDir, hash),
 		videos:   make(map[Quality]*Pipeline),
 		audios:   make(map[int32]*Pipeline),
@@ -90,6 +97,18 @@ func (s *Session) WaitReady(ctx context.Context) error {
 	}
 }
 
+// linkQuery arma los parámetros de las URLs relativas de las listas HLS: el token de acceso
+// (si hay) y la versión del archivo. La URL de un segmento ("audio/1/segment-4.ts") es igual
+// para todos los episodios y se sirve como inmutable por un año, así que sin la versión el
+// navegador reutilizaba los segmentos de otro episodio al cambiar de pista de audio.
+func (s *Session) linkQuery(token string) string {
+	version := "v=" + s.hash
+	if token == "" {
+		return version
+	}
+	return "token=" + token + "&" + version
+}
+
 // master / index / segment accessors
 
 // GetMaster returns the hls master playlist. passthrough offers only the
@@ -101,14 +120,17 @@ func (s *Session) GetMaster(token string, passthrough bool) string {
 			Width:               int32(s.Info.Video.Width),
 			Height:              int32(s.Info.Video.Height),
 			OriginalCanTransmux: true,
-		}}, token)
+		}}, s.linkQuery(token))
 	}
-	return GenerateMasterPlaylist(s.Info, s.Ladder, token)
+	return GenerateMasterPlaylist(s.Info, s.Ladder, s.linkQuery(token))
 }
 
 // GetVideoIndex returns the hls variant playlist for a quality
 func (s *Session) GetVideoIndex(q Quality, token string) (string, error) {
 	p := s.getVideoPipeline(q)
+	if p == nil {
+		return "", errSessionDestroyed
+	}
 	return p.GetIndex(token)
 }
 
@@ -118,18 +140,27 @@ func (s *Session) GetVideoSegment(ctx context.Context, q Quality, seg int32) (st
 	// disconnect), so call it directly instead of leaving a detached goroutine
 	// running the encode after the client has gone away.
 	p := s.getVideoPipeline(q)
+	if p == nil {
+		return "", errSessionDestroyed
+	}
 	return p.GetSegment(ctx, seg)
 }
 
 // GetAudioIndex returns the hls variant playlist for an audio track
 func (s *Session) GetAudioIndex(audio int32, token string) (string, error) {
 	p := s.getAudioPipeline(audio)
+	if p == nil {
+		return "", errSessionDestroyed
+	}
 	return p.GetIndex(token)
 }
 
 // GetAudioSegment returns the path to an audio segment
 func (s *Session) GetAudioSegment(ctx context.Context, audio, seg int32) (string, error) {
 	p := s.getAudioPipeline(audio)
+	if p == nil {
+		return "", errSessionDestroyed
+	}
 	return p.GetSegment(ctx, seg)
 }
 
@@ -138,6 +169,9 @@ func (s *Session) GetAudioSegment(ctx context.Context, audio, seg int32) (string
 func (s *Session) getVideoPipeline(q Quality) *Pipeline {
 	s.videosMu.Lock()
 	defer s.videosMu.Unlock()
+	if s.destroyed.Load() {
+		return nil
+	}
 
 	if p, ok := s.videos[q]; ok {
 		return p
@@ -241,6 +275,9 @@ func (s *Session) getVideoPipeline(q Quality) *Pipeline {
 func (s *Session) getAudioPipeline(idx int32) *Pipeline {
 	s.audiosMu.Lock()
 	defer s.audiosMu.Unlock()
+	if s.destroyed.Load() {
+		return nil
+	}
 
 	if p, ok := s.audios[idx]; ok {
 		return p
@@ -383,7 +420,12 @@ func (s *Session) killAllPipelines() {
 
 // Destroy stops everything and removes output directory
 func (s *Session) Destroy() {
-	s.logger.Debug().Str("path", s.Path).Msg("cassette: destroying session")
-	s.Kill()
-	_ = os.RemoveAll(s.Out)
+	s.destroyOnce.Do(func() {
+		s.destroyed.Store(true)
+		s.logger.Debug().Str("path", s.Path).Msg("cassette: destroying session")
+		s.Kill()
+		_ = os.RemoveAll(s.Out)
+	})
 }
+
+var errSessionDestroyed = errors.New("cassette: session destroyed")

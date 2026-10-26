@@ -54,10 +54,16 @@ type jikanCall struct {
 // datos. Con Jikan sano responde antes; caído (504) cada intento tarda ~1 s más
 // el backoff, y la primera apertura tras arrancar el server esperaba ~3 s. La
 // consulta sigue en segundo plano y su resultado (o su fallo) queda en caché.
-var jikanInlineWait = 1500 * time.Millisecond
+var jikanInlineWait = 300 * time.Millisecond
 
 // errJikanSlow indica que Jikan no respondió dentro de jikanInlineWait.
 var errJikanSlow = errors.New("jikan_provider: sin respuesta a tiempo, se sigue sin sus datos")
+
+// IsMetadataPending dice si Jikan todavía no respondió a tiempo: la consulta sigue en segundo plano y
+// la ficha conviene completarla cuando llegue el resultado.
+func IsMetadataPending(err error) bool {
+	return errors.Is(err, errJikanSlow)
+}
 
 type jikanCachedEntry struct {
 	data      *apiMetadata.AnimeMetadata
@@ -69,8 +75,15 @@ const jikanMetadataTTL = 6 * time.Hour
 // jikanFailureTTL es cuánto se evita reintentar un ID cuya consulta falló.
 const jikanFailureTTL = 5 * time.Minute
 
+// jikanOutageProvider y jikanOutageKey identifican en la caché persistente el momento hasta el
+// que Jikan se considera caído: así un reinicio no vuelve a esperar el timeout de cada ficha.
+const (
+	jikanOutageProvider = "jikan-outage"
+	jikanOutageKey      = "until"
+)
+
 func NewJikanProviderImpl(client *jikan.Client, database *db.Database, logger *zerolog.Logger, tmdbClient *tmdb.Client) *JikanProviderImpl {
-	return &JikanProviderImpl{
+	p := &JikanProviderImpl{
 		client:      client,
 		db:          database,
 		logger:      logger,
@@ -79,6 +92,14 @@ func NewJikanProviderImpl(client *jikan.Client, database *db.Database, logger *z
 		failedUntil: make(map[int]time.Time),
 		inflight:    make(map[int]*jikanCall),
 	}
+	if database != nil {
+		var until time.Time
+		if found, err := db.GetMetadataCache(database, jikanOutageProvider, jikanOutageKey, &until); err == nil && found && time.Now().Before(until) {
+			p.unavailableUntil = until
+			client.RestoreOutage(until)
+		}
+	}
+	return p
 }
 
 func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata, error) {
@@ -131,13 +152,18 @@ func (p *JikanProviderImpl) runCall(id int, call *jikanCall) {
 	}()
 	p.mu.Lock()
 	delete(p.inflight, id)
+	var persistUntil time.Time
 	if call.err != nil {
 		p.failedUntil[id] = time.Now().Add(jikanFailureTTL)
 		if errors.Is(call.err, jikan.ErrUnavailable) {
 			p.unavailableUntil = time.Now().Add(jikanFailureTTL)
+			persistUntil = p.unavailableUntil
 		}
 	}
 	p.mu.Unlock()
+	if !persistUntil.IsZero() && p.db != nil {
+		_ = db.UpsertMetadataCache(p.db, jikanOutageProvider, jikanOutageKey, persistUntil, jikanFailureTTL)
+	}
 	close(call.done)
 }
 
@@ -378,8 +404,12 @@ func (p *JikanProviderImpl) getAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 	p.mu.Unlock()
 
 	// 3. Save to Database Persistent Cache
+	// Un fallo aquí no afecta la respuesta (la caché en memoria ya tiene el dato), pero sin
+	// registrarlo la caché persistente nunca se llena y cada reinicio vuelve a pagar a Jikan.
 	if p.db != nil {
-		_ = db.UpsertMetadataCache(p.db, "jikan-anime-episodes", strconv.Itoa(id), result, 7*24*time.Hour)
+		if err := db.UpsertMetadataCache(p.db, "jikan-anime-episodes", strconv.Itoa(id), result, 7*24*time.Hour); err != nil && p.logger != nil {
+			p.logger.Warn().Err(err).Int("mediaId", id).Msg("jikan_provider: no se pudo guardar la ficha en la caché persistente")
+		}
 	}
 
 	return result, nil

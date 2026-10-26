@@ -3,7 +3,7 @@ import { m, type HTMLMotionProps } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { useSpringPreset } from "./hooks"
 
-export interface MagneticIndicatorProps extends Omit<HTMLMotionProps<"div">, "children" | "style"> {
+interface MagneticIndicatorProps extends Omit<HTMLMotionProps<"div">, "children" | "style"> {
     layoutId: string
     active?: boolean
     disableAnimation?: boolean
@@ -46,7 +46,11 @@ export const MagneticIndicator: React.FC<MagneticIndicatorProps> = ({
                 "absolute inset-0 rounded-full pointer-events-none z-0 transform-gpu shadow-elevation-1",
                 className
             )}
-            style={style}
+            // El layoutId anima con scale entre pastillas de distinto ancho, y framer solo corrige el
+            // radio si está en `style`: con `rounded-full` por clase, los extremos se pellizcaban hasta
+            // que el spring se asentaba (G1-01). Un radio distinto se pasa por `style.borderRadius`,
+            // que gana sobre este valor; una clase `rounded-*` no alcanza.
+            style={{ borderRadius: 9999, ...style }}
             {...props}
         >
             {children}

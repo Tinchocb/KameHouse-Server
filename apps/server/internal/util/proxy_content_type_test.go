@@ -47,43 +47,6 @@ func TestSafeImageContentType(t *testing.T) {
 	}
 }
 
-func TestSafeProxyContentType(t *testing.T) {
-	const octet = "application/octet-stream"
-	cases := []struct{ in, want string }{
-		{"video/mp4", "video/mp4"},
-		{"video/x-matroska", "video/x-matroska"},
-		{"audio/mpeg", "audio/mpeg"},
-		{"application/vnd.apple.mpegurl", "application/vnd.apple.mpegurl"},
-		{"application/x-mpegURL", "application/x-mpegURL"},
-		{"Application/Vnd.Apple.MpegURL; charset=utf-8", "Application/Vnd.Apple.MpegURL; charset=utf-8"},
-		{"text/vtt; charset=utf-8", "text/vtt; charset=utf-8"},
-		{"text/plain", "text/plain"},
-		{"image/png", "image/png"},
-		{"application/octet-stream", "application/octet-stream"},
-
-		{"text/html", octet},
-		{"text/html; charset=utf-8", octet},
-		{"TEXT/HTML", octet},
-		{"application/xhtml+xml", octet},
-		{"image/svg+xml", octet},
-		{"Image/SVG+XML; charset=utf-8", octet},
-		{"application/xml", octet},
-		{"text/xml", octet},
-		{"application/javascript", octet},
-		{"text/javascript", octet},
-		{"application/json", octet},
-		{"multipart/x-mixed-replace", octet},
-		{"", octet},
-		{"esto no es un tipo", octet},
-		{"video/mp4, text/html", octet}, // lista inválida: no se interpreta
-	}
-	for _, tc := range cases {
-		if got := SafeProxyContentType(tc.in); got != tc.want {
-			t.Errorf("SafeProxyContentType(%q) = %q, want %q", tc.in, got, tc.want)
-		}
-	}
-}
-
 func TestHardenProxyResponse(t *testing.T) {
 	h := http.Header{}
 	HardenProxyResponse(h)

@@ -71,80 +71,45 @@ func (h *Handler) HandleDriveAuthURL(c echo.Context) error {
 }
 
 // HandleDriveCallback exchanges the authorization code for OAuth2 tokens and saves them in Settings.
-// Supports both browser redirect (GET) and programmatic POST.
+// Es el redirect del navegador (GET) con el que Google cierra la autorización.
 //
 //	@summary exchanges code and enables Google Drive integration.
-//	@route /api/v1/drive/callback [GET, POST]
+//	@route /api/v1/drive/callback [GET]
 func (h *Handler) HandleDriveCallback(c echo.Context) error {
-	var code, clientID, clientSecret, redirectURI string
-
-	if c.Request().Method == http.MethodGet {
-		state := c.QueryParam("state")
-		if _, err := h.App.GetServerPasswordHMACAuth().ValidateToken(state, "drive-oauth"); err != nil {
-			h.App.Logger.Warn().Err(err).Msg("drive: Invalid or expired OAuth state")
-			return c.HTML(http.StatusBadRequest, "<html><body style='font-family:sans-serif;background:#121212;color:#fff;padding:2rem;'><h3>Error de seguridad</h3><p>El token de estado OAuth es inválido o ha expirado. Por favor, intenta conectar nuevamente desde Ajustes.</p></body></html>")
-		}
-
-		code = c.QueryParam("code")
-		if code == "" {
-			errParam := c.QueryParam("error")
-			if errParam == "" {
-				errParam = "authorization failed"
-			}
-			return c.HTML(http.StatusBadRequest, fmt.Sprintf("<html><body><h3>Error de autorización: %s</h3></body></html>", html.EscapeString(errParam)))
-		}
-		// Read saved client credentials from settings
-		if s, err := h.App.Database.GetSettings(); err == nil && s != nil {
-			clientID = s.GoogleDrive.ClientID
-			clientSecret = s.GoogleDrive.ClientSecret
-		}
-		proto := "http"
-		if c.IsTLS() || c.Request().Header.Get("X-Forwarded-Proto") == "https" {
-			proto = "https"
-		}
-		redirectURI = fmt.Sprintf("%s://%s/api/v1/drive/callback", proto, c.Request().Host)
-	} else {
-		var req struct {
-			Code         string `json:"code"`
-			ClientID     string `json:"clientId"`
-			ClientSecret string `json:"clientSecret"`
-			RedirectURI  string `json:"redirectUri"`
-		}
-		if err := c.Bind(&req); err != nil {
-			return h.RespondWithError(c, err)
-		}
-		code = req.Code
-		clientID = req.ClientID
-		clientSecret = req.ClientSecret
-		// El formulario reenvía el secreto enmascarado que recibió: usar el guardado.
-		if models.IsMaskedSecret(clientSecret) {
-			clientSecret = ""
-		}
-		redirectURI = req.RedirectURI
-
-		if clientID == "" || clientSecret == "" {
-			if s, err := h.App.Database.GetSettings(); err == nil && s != nil {
-				if clientID == "" {
-					clientID = s.GoogleDrive.ClientID
-				}
-				if clientSecret == "" {
-					clientSecret = s.GoogleDrive.ClientSecret
-				}
-			}
-		}
+	state := c.QueryParam("state")
+	if _, err := h.App.GetServerPasswordHMACAuth().ValidateToken(state, "drive-oauth"); err != nil {
+		h.App.Logger.Warn().Err(err).Msg("drive: Invalid or expired OAuth state")
+		return c.HTML(http.StatusBadRequest, "<html><body style='font-family:sans-serif;background:#121212;color:#fff;padding:2rem;'><h3>Error de seguridad</h3><p>El token de estado OAuth es inválido o ha expirado. Por favor, intenta conectar nuevamente desde Ajustes.</p></body></html>")
 	}
 
-	if code == "" || clientID == "" || clientSecret == "" {
+	code := c.QueryParam("code")
+	if code == "" {
+		errParam := c.QueryParam("error")
+		if errParam == "" {
+			errParam = "authorization failed"
+		}
+		return c.HTML(http.StatusBadRequest, fmt.Sprintf("<html><body><h3>Error de autorización: %s</h3></body></html>", html.EscapeString(errParam)))
+	}
+	// Read saved client credentials from settings
+	var clientID, clientSecret string
+	if s, err := h.App.Database.GetSettings(); err == nil && s != nil {
+		clientID = s.GoogleDrive.ClientID
+		clientSecret = s.GoogleDrive.ClientSecret
+	}
+	proto := "http"
+	if c.IsTLS() || c.Request().Header.Get("X-Forwarded-Proto") == "https" {
+		proto = "https"
+	}
+	redirectURI := fmt.Sprintf("%s://%s/api/v1/drive/callback", proto, c.Request().Host)
+
+	if clientID == "" || clientSecret == "" {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("code, clientId and clientSecret are required"))
 	}
 
 	token, err := drive.ExchangeCode(c.Request().Context(), clientID, clientSecret, code, redirectURI)
 	if err != nil {
 		h.App.Logger.Error().Err(err).Msg("drive: Failed to exchange OAuth code")
-		if c.Request().Method == http.MethodGet {
-			return c.HTML(http.StatusBadRequest, fmt.Sprintf("<html><body><h3>Error al intercambiar código: %s</h3></body></html>", html.EscapeString(err.Error())))
-		}
-		return h.RespondWithError(c, err)
+		return c.HTML(http.StatusBadRequest, fmt.Sprintf("<html><body><h3>Error al intercambiar código: %s</h3></body></html>", html.EscapeString(err.Error())))
 	}
 
 	// Update Settings in DB
@@ -183,8 +148,7 @@ func (h *Handler) HandleDriveCallback(c echo.Context) error {
 	h.invalidateSettingsCache()
 	h.App.WSEventManager.SendEvent("settings", settings.Redacted())
 
-	if c.Request().Method == http.MethodGet {
-		return c.HTML(http.StatusOK, `
+	return c.HTML(http.StatusOK, `
 			<!DOCTYPE html>
 			<html>
 			<head><title>KameHouse - Google Drive Conectado</title></head>
@@ -200,11 +164,6 @@ func (h *Handler) HandleDriveCallback(c echo.Context) error {
 			</body>
 			</html>
 		`)
-	}
-
-	return h.RespondWithData(c, map[string]interface{}{
-		"success": true,
-	})
 }
 
 // HandleDriveStatus returns current Google Drive integration status.
@@ -292,7 +251,7 @@ func (h *Handler) HandleDrivePlay(c echo.Context) error {
 
 	if c.Request().Method == http.MethodHead {
 		var dbFile models.LocalFile
-		if err := h.App.Database.Gorm().Where("drive_file_id = ? OR path LIKE ?", fileID, "gdrive://"+fileID+"/%").First(&dbFile).Error; err == nil && dbFile.FileSize > 0 {
+		if err := h.App.Database.Gorm().Select("name", "file_size").Where("drive_file_id = ? OR path LIKE ?", fileID, "gdrive://"+fileID+"/%").First(&dbFile).Error; err == nil && dbFile.FileSize > 0 {
 			res := c.Response()
 			res.Header().Set("Accept-Ranges", "bytes")
 			res.Header().Set("Content-Length", strconv.FormatInt(dbFile.FileSize, 10))
@@ -530,6 +489,8 @@ func (h *Handler) HandleDriveScan(c echo.Context) error {
 		ClearLibraryCollectionCache()
 		anime.InvalidateCuratedHomeCache()
 		h.prewarmShelfImages(0) // series nuevas: sus fondos al disco local
+		// Frames de Drive que faltan, en segundo plano y de a uno.
+		h.warmThumbnailsAfterScan(2 * time.Second)
 
 		if err != nil {
 			h.App.Logger.Error().Err(err).Msg("drive: Google Drive scan failed")

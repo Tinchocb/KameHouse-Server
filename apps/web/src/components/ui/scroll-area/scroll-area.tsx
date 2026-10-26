@@ -42,7 +42,7 @@ const ScrollAreaAnatomy = defineStyleAnatomy({
  * ScrollArea
  * -----------------------------------------------------------------------------------------------*/
 
-export type ScrollAreaProps =
+type ScrollAreaProps =
     React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
     & ComponentAnatomy<typeof ScrollAreaAnatomy> &
     {

@@ -85,6 +85,28 @@ func (s *Service) RunScan(ctx context.Context, db *gorm.DB, emit func(*ScanProgr
 	// 1. Walk the folder tree, resolving each file's series for the live feed.
 	seriesIdx := make(map[string]int)
 	files, err := client.ListVideoFiles(ctx, folderID, func(folderPath string, found []DriveFile, pending int) {
+		// Resolver nombres (parser + regex) es CPU por archivo: se hace ANTES de tomar el lock
+		// del Service, que GetClient/IsEnabled/GetFolderID toman en cada reproduccion. Dentro
+		// de update solo se mutan contadores.
+		type foundItem struct {
+			group string
+			item  ScanItem
+		}
+		resolved := make([]foundItem, 0, len(found))
+		for _, df := range found {
+			r := ResolveDriveFile(df, 0)
+			group := r.SeriesTitle
+			if r.IsMovie {
+				group = scanMoviesGroupName
+			}
+			resolved = append(resolved, foundItem{group: group, item: ScanItem{
+				Name:    df.Name,
+				Folder:  folderPath,
+				Series:  r.SeriesTitle,
+				Episode: r.EpisodeNumber,
+				IsMovie: r.IsMovie,
+			}})
+		}
 		update(func(p *ScanProgress) {
 			p.FoldersScanned++
 			p.FoldersPending = pending
@@ -94,25 +116,14 @@ func (s *Service) RunScan(ctx context.Context, db *gorm.DB, emit func(*ScanProgr
 			} else {
 				p.CurrentFolder = folderPath
 			}
-			for _, df := range found {
-				r := ResolveDriveFile(df, 0)
-				group := r.SeriesTitle
-				if r.IsMovie {
-					group = scanMoviesGroupName
-				}
-				if i, ok := seriesIdx[group]; ok {
+			for _, f := range resolved {
+				if i, ok := seriesIdx[f.group]; ok {
 					p.Series[i].Count++
 				} else {
-					seriesIdx[group] = len(p.Series)
-					p.Series = append(p.Series, ScanSeriesCount{Title: group, Count: 1})
+					seriesIdx[f.group] = len(p.Series)
+					p.Series = append(p.Series, ScanSeriesCount{Title: f.group, Count: 1})
 				}
-				p.Items = pushItem(p.Items, ScanItem{
-					Name:    df.Name,
-					Folder:  folderPath,
-					Series:  r.SeriesTitle,
-					Episode: r.EpisodeNumber,
-					IsMovie: r.IsMovie,
-				})
+				p.Items = pushItem(p.Items, f.item)
 			}
 		})
 	})

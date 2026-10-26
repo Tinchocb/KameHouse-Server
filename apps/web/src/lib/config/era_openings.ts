@@ -6,7 +6,7 @@
 
 export const ERA_OPENINGS_SUBDIR = "openings"
 
-export interface EraOpening {
+interface EraOpening {
     /** Nombre de archivo (sin carpeta) dentro de <bgMusicDir>/openings/ */
     file: string
     /** Título mostrado en el pill */
@@ -23,7 +23,7 @@ const OPENINGS = {
     daima: { file: "jaka-jaan.mp3", title: "Jaka Jaan" },
 } satisfies Record<string, EraOpening>
 
-export const ERA_OPENINGS: Record<string, EraOpening> = {
+const ERA_OPENINGS: Record<string, EraOpening> = {
     // Dragon Ball
     "pilaf": OPENINGS.db,
     "torneo-21": OPENINGS.db,

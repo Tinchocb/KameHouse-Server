@@ -1,5 +1,26 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { getDotEdges, getDotWindow } from "./hero-carousel-dots"
+import { HERO_ROTATION_MS, getDotEdges, getDotInnerEdges, getDotWindow } from "./hero-carousel-dots"
+
+// La barra de progreso del carrusel termina en un token de texto del tema, no en blanco fijo.
+describe("barra de progreso del carrusel", () => {
+    const source = readFileSync(join(__dirname, "hero-carousel-dots.tsx"), "utf8")
+
+    it("no usa #ffffff fijo en el degradado", () => {
+        expect(source).not.toMatch(/#ffffff/i)
+    })
+
+    it("el degradado termina en var(--label-1) en el relleno animado y en el estático", () => {
+        expect(source.match(/var\(--dot-accent\) 0%, var\(--label-1\) 100%/g)).toHaveLength(2)
+    })
+})
+
+describe("HERO_ROTATION_MS", () => {
+    it("uses a 5-second rotation cycle", () => {
+        expect(HERO_ROTATION_MS).toBe(5000)
+    })
+})
 
 describe("getDotWindow", () => {
     it("shows every dot when the total fits", () => {
@@ -23,6 +44,13 @@ describe("getDotWindow", () => {
             for (const i of mobile) expect(desktop).toContain(i)
         }
     })
+
+    it("handles non-positive total or maxVisible gracefully", () => {
+        expect(getDotWindow(0, 0)).toEqual([])
+        expect(getDotWindow(0, -5)).toEqual([])
+        expect(getDotWindow(0, 10, 0)).toEqual([])
+        expect(getDotWindow(0, 10, -3)).toEqual([])
+    })
 })
 
 describe("getDotEdges", () => {
@@ -40,6 +68,27 @@ describe("getDotEdges", () => {
         for (let active = 0; active < 19; active++) {
             for (const size of [5, 7]) {
                 expect(getDotEdges(getDotWindow(active, 19, size), 19).has(active)).toBe(false)
+            }
+        }
+    })
+
+    it("handles empty window or non-positive total", () => {
+        expect([...getDotEdges([], 10)]).toEqual([])
+        expect([...getDotEdges([0, 1], 0)]).toEqual([])
+    })
+})
+
+describe("getDotInnerEdges", () => {
+    it("marks the second step inward only on sides with hidden dots", () => {
+        expect([...getDotInnerEdges(getDotWindow(0, 19), 19)]).toEqual([5])
+        expect([...getDotInnerEdges(getDotWindow(18, 19), 19)]).toEqual([13])
+        expect([...getDotInnerEdges(getDotWindow(9, 19), 19)]).toEqual([7, 11])
+    })
+
+    it("never shrinks the active dot", () => {
+        for (let active = 0; active < 19; active++) {
+            for (const size of [5, 7]) {
+                expect(getDotInnerEdges(getDotWindow(active, 19, size), 19).has(active)).toBe(false)
             }
         }
     })

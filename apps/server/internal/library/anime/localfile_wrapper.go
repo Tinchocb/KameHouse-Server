@@ -87,4 +87,3 @@ func (e *LocalFileWrapperEntry) GetUnwatchedLocalFiles(progress int) []*LocalFil
 
 	return ret
 }
-

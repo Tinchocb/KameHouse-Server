@@ -7,14 +7,14 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const AppLayoutAnatomy = defineStyleAnatomy({
+const AppLayoutAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayout__root appLayout",
         "flex h-dvh w-full overflow-hidden bg-transparent text-on-surface",
     ]),
 })
 
-export const AppLayoutContentAnatomy = defineStyleAnatomy({
+const AppLayoutContentAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-AppLayoutContent__root",
         "flex-1 min-w-0 h-full flex flex-col overflow-hidden relative w-full",
@@ -25,7 +25,7 @@ export const AppLayoutContentAnatomy = defineStyleAnatomy({
  * AppLayout
  * -----------------------------------------------------------------------------------------------*/
 
-export type AppLayoutProps = React.ComponentPropsWithRef<"div"> &
+type AppLayoutProps = React.ComponentPropsWithRef<"div"> &
     ComponentAnatomy<typeof AppLayoutAnatomy> &
     VariantProps<typeof AppLayoutAnatomy.root>
 
@@ -61,7 +61,7 @@ AppLayout.displayName = "AppLayout"
  * AppLayoutContent
  * -----------------------------------------------------------------------------------------------*/
 
-export type AppLayoutContentProps = React.ComponentPropsWithRef<"main">
+type AppLayoutContentProps = React.ComponentPropsWithRef<"main">
 
 export const AppLayoutContent = React.forwardRef<HTMLElement, AppLayoutContentProps>((props, ref) => {
 

@@ -7,15 +7,12 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library := v1.Group("/library")
 
 	v1Library.POST("/scan", h.HandleScanLocalFiles)
-	v1Library.GET("/scan/status", h.HandleGetScanStatus)
 	v1Library.GET("/unlinked", h.HandleGetUnlinkedFiles)
 	v1Library.POST("/unlinked/resolve", h.HandleResolveUnlinkedFile)
 
-	v1Library.GET("/local-files", h.HandleGetLocalFiles)
 	v1Library.POST("/local-files/tmdb-assign", h.HandleTMDBAssign)
 
 	v1Library.GET("/collection", h.HandleGetLibraryCollection)
-	v1Library.GET("/scan-summaries", h.HandleGetScanSummaries)
 	v1Library.GET("/episode-file", h.HandleGetLibraryEpisodeFile)
 	v1Library.GET("/chronology-episode-files", h.HandleGetChronologyEpisodeFiles)
 
@@ -25,4 +22,7 @@ func (h *Handler) RegisterLibraryRoutes(v1 *echo.Group) {
 	v1Library.GET("/anime-entry/:id/source", h.HandleGetAnimeEntrySource)
 	v1Library.POST("/anime-entry/source", h.HandleSetAnimeEntrySource)
 	v1Library.POST("/anime-entry/progress", h.HandleUpdateAnimeEntryProgress)
+
+	v1Library.GET("/audio-profiles", h.HandleGetAudioProfiles)
+	v1Library.POST("/audio-profile", h.HandleSetAudioProfile)
 }

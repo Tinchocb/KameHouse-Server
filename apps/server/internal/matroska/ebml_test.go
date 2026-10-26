@@ -453,57 +453,6 @@ func TestEBMLReader_ReadElementHeader(t *testing.T) {
 	})
 }
 
-func TestEBMLReader_SkipElement(t *testing.T) {
-	t.Run("Skip known size", func(t *testing.T) {
-		input := []byte{
-			// First element: ID: 0x4286, Size: 1, Data: 1
-			0x42, 0x86, 0x81, 0x01,
-			// Second element: ID: 0x4282, Size: 8, Data: "matroska"
-			0x42, 0x82, 0x88, 'm', 'a', 't', 'r', 'o', 's', 'k', 'a',
-		}
-		r := bytes.NewReader(input)
-		reader := NewEBMLReader(r)
-
-		// Read header of the first element
-		id1, size1, err := reader.ReadElementHeader()
-		if err != nil {
-			t.Fatalf("Failed to read first element header: %v", err)
-		}
-
-		// Skip the data of the first element
-		el1ToSkip := &EBMLElement{ID: id1, Size: size1}
-		err = reader.SkipElement(el1ToSkip)
-		if err != nil {
-			t.Fatalf("SkipElement() failed: %v", err)
-		}
-
-		// Now, the reader should be at the start of the second element.
-		// Let's read the second element to verify.
-		el2, err := reader.ReadElement()
-		if err != nil {
-			t.Fatalf("Failed to read second element after skip: %v", err)
-		}
-		if el2.ID != IDEBMLDocType { // 0x4282
-			t.Errorf("Expected second element ID 0x%X, got 0x%X", IDEBMLDocType, el2.ID)
-		}
-		if el2.ReadString() != "matroska" {
-			t.Errorf("Expected second element data 'matroska', got %q", el2.ReadString())
-		}
-	})
-
-	t.Run("Skip with failing seeker", func(t *testing.T) {
-		input := []byte{0x42, 0x86, 0x81, 0x01}
-		r := &failingSeeker{bytes.NewReader(input), true}
-		reader := NewEBMLReader(r)
-
-		el := &EBMLElement{ID: 0x4286, Size: 1}
-		err := reader.SkipElement(el)
-		if !errors.Is(err, io.ErrUnexpectedEOF) {
-			t.Errorf("Expected io.ErrUnexpectedEOF, got %v", err)
-		}
-	})
-}
-
 func TestEBMLReader_ReadElement_Advanced(t *testing.T) {
 	t.Run("Read different types", func(t *testing.T) {
 		input := []byte{

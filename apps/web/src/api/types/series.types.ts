@@ -7,7 +7,7 @@ import type {
 
 export type { CharacterDTO }
 
-export interface SubSagaDTO extends BaseSubSagaDTO {
+interface SubSagaDTO extends BaseSubSagaDTO {
   image?: string
   description?: string
 }

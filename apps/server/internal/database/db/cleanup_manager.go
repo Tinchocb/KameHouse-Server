@@ -171,9 +171,6 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 			if err := tx.Where("media_id = ?", row.ID).Delete(&models.WatchHistory{}).Error; err != nil {
 				return err
 			}
-			if err := tx.Where("media_id = ?", row.ID).Delete(&models.UserMediaProgress{}).Error; err != nil {
-				return err
-			}
 			if err := tx.Where("media_id = ?", row.ID).Delete(&models.EpisodeSkipTime{}).Error; err != nil {
 				return err
 			}

@@ -2,19 +2,20 @@ import type { SagaDTO } from "@/api/types/series.types"
 import type { SagaDefinition } from "@/lib/config/dragonball_sagas"
 import type { Anime_Episode } from "@/api/generated/types"
 import { cn } from "@/components/ui/core/styling"
+import { Button, IconButton } from "@/components/ui/button"
 import { ArcCinematicCard } from "./arc-cinematic-card"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useId } from "react"
 import { m } from "framer-motion"
 import { IconNavigationChevronRight, IconNavigationLayers, IconNavigationChevronLeft } from "@/components/ui/icons"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { ElasticCounter } from "@/components/ui/kinetics/elastic-counter"
+import { prewarmImages, buildVideoThumbnailUrl } from "@/lib/helpers/images"
 
-/** "(Relleno)" vive en los datos al final del título: se muestra como chip. */
+/** "(Relleno)" vive en los datos al final del título: se quita para mostrar solo el nombre. */
 const FILLER_SUFFIX_RE = /\s*\(relleno\)\s*$/i
 
-function splitFillerSuffix(title: string): { clean: string; isFiller: boolean } {
-  if (!FILLER_SUFFIX_RE.test(title)) return { clean: title, isFiller: false }
-  return { clean: title.replace(FILLER_SUFFIX_RE, "").trim(), isFiller: true }
+function stripFillerSuffix(title: string): string {
+  return title.replace(FILLER_SUFFIX_RE, "").trim()
 }
 
 const SCROLL_END_THRESHOLD = 4
@@ -40,7 +41,7 @@ function useScrollFadeMask() {
     if (!el) return
     const ro = new ResizeObserver(() => checkPosition())
     ro.observe(el)
-    window.addEventListener("resize", checkPosition)
+    window.addEventListener("resize", checkPosition, { passive: true })
     return () => {
       ro.disconnect()
       window.removeEventListener("resize", checkPosition)
@@ -78,6 +79,8 @@ export function SagaSelector({
   className,
   isCollapsed = false,
   onToggleCollapse,
+  episodes,
+  heroBackdrop: _heroBackdrop,
 }: SagaSelectorProps) {
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(() => {
     return !!activeSubSagaId
@@ -85,6 +88,9 @@ export function SagaSelector({
   const activeSaga = sagas.find(s => s.id === activeSagaId)
   const hasSubSagas = activeSaga?.subSagas && activeSaga.subSagas.length > 0
   const tabIndicatorSpring = useSpringPreset("tabIndicator")
+  // layoutId propio por instancia: por debajo de lg conviven el panel de
+  // escritorio (oculto) y el de la hoja Vaul, y framer compartiría el indicador.
+  const layoutGroupId = useId()
 
   const { ref: mainListRef, isAtBottom: mainListIsAtBottom, checkPosition: mainListCheckPosition } = useScrollFadeMask()
   const { ref: subListRef, isAtBottom: subListIsAtBottom, checkPosition: subListCheckPosition } = useScrollFadeMask()
@@ -107,6 +113,17 @@ export function SagaSelector({
     }
   }, [isSubMenuOpen, activeSagaId, subListCheckPosition])
 
+  const handleHoverSaga = useCallback((sagaId: string) => {
+    if (!episodes?.length) return
+    const sagaEps = episodes.filter(e => e.sagaId === sagaId)
+    const urls = sagaEps.slice(0, 8).map(e => {
+      if (e.episodeMetadata?.image) return e.episodeMetadata.image
+      if (e.localFile?.path) return buildVideoThumbnailUrl(e.localFile)
+      return undefined
+    }).filter((u): u is string => Boolean(u))
+    if (urls.length) prewarmImages(urls)
+  }, [episodes])
+
   // ── Colapsado: pastillas numéricas elegantes ──────────────────────────────
   if (isCollapsed) {
     return (
@@ -115,15 +132,15 @@ export function SagaSelector({
         className
       )}>
         {onToggleCollapse && (
-          <button
-            type="button"
+          <IconButton
+            intent="ghost"
+            size="md"
             onClick={onToggleCollapse}
             title="Expandir panel de sagas"
             aria-label="Expandir panel de sagas"
-            className="w-10 h-10 mb-3 rounded-xl bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center transition-[background-color,color,transform] active:scale-95 duration-150 cursor-pointer"
-          >
-            <IconNavigationChevronRight className="w-4 h-4 text-brand-accent" />
-          </button>
+            className="mb-3"
+            icon={<IconNavigationChevronRight className="w-4 h-4 text-brand-accent" />}
+          />
         )}
 
         <div className="w-8 h-px bg-white/[0.06] my-1 shrink-0" />
@@ -158,20 +175,21 @@ export function SagaSelector({
             }
 
             return (
-              <button
+              <Button
                 key={saga.id}
-                type="button"
+                intent="ghost"
+                size="icon"
                 onClick={handleCollapsedSelect}
                 onDoubleClick={hasArcs ? handleCollapsedOpenArcs : undefined}
+                onMouseEnter={() => handleHoverSaga(saga.id)}
                 title={hasArcs ? `${title} — doble click para ver arcos` : title}
                 aria-label={title}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "relative w-10 h-10 rounded-xl flex items-center justify-center shrink-0 cursor-pointer border transition-[background-color,border-color,color,transform,box-shadow] duration-fast ease-out-strong text-xs font-mono font-bold select-none",
-                  "[@media(hover:hover)_and_(pointer:fine)]:hover:scale-105 active:scale-95",
+                  "relative rounded-xl shrink-0 border font-mono font-bold text-xs select-none",
                   isActive
-                    ? "text-white border-brand-accent/40"
-                    : "bg-white/[0.02] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white border-white/[0.05] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/15"
+                    ? "text-on-surface border-brand-accent/40"
+                    : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface border-white/[0.05] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/15"
                 )}
               >
                 {isActive && (
@@ -182,7 +200,7 @@ export function SagaSelector({
                   />
                 )}
                 <span className="relative z-10">{orderFormatted}</span>
-              </button>
+              </Button>
             )
           })}
         </div>
@@ -192,7 +210,8 @@ export function SagaSelector({
 
   return (
       <div className={cn(
-      "sectionbar w-full max-h-[calc(100dvh-8rem)] flex flex-col p-4 overflow-hidden relative shadow-[shadow:0_12px_40px_rgba(0,0,0,0.85),var(--glass-highlight-sm)] rounded-2xl",
+      // Sin sombra propia: .sectionbar ya aporta --sectionbar-shadow (§2 y §9).
+      "sectionbar w-full max-h-[calc(100dvh-8rem)] flex flex-col p-4 overflow-hidden relative rounded-2xl",
       className
     )}>
       {/* Sin AnimatePresence mode="wait": el modo espera 200ms con el panel
@@ -218,15 +237,14 @@ export function SagaSelector({
                 </div>
               </div>
               {onToggleCollapse && (
-                <button
-                  type="button"
+                <IconButton
+                  intent="ghost"
+                  size="md"
                   onClick={onToggleCollapse}
                   title="Colapsar panel de sagas"
                   aria-label="Colapsar panel de sagas"
-                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[background-color,color,transform] active:scale-95 duration-150 cursor-pointer"
-                >
-                  <IconNavigationChevronLeft className="w-4 h-4" />
-                </button>
+                  icon={<IconNavigationChevronLeft className="w-4 h-4" />}
+                />
               )}
             </div>
 
@@ -235,7 +253,7 @@ export function SagaSelector({
                 ref={mainListRef}
                 onScroll={mainListCheckPosition}
                 className={cn(
-                  "flex flex-col gap-2.5 overflow-y-auto pr-0.5 no-scrollbar flex-grow min-h-0 pb-3 content-start",
+                  "flex flex-col gap-2.5 overflow-y-auto px-1 pt-1 no-scrollbar flex-grow min-h-0 pb-3 content-start",
                   !mainListIsAtBottom && "[-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]"
                 )}
               >
@@ -243,7 +261,7 @@ export function SagaSelector({
                   const isActive = saga.id === activeSagaId
                   const localSaga = localSagas?.find(s => s.id === saga.id)
                   const rawTitle = localSaga?.title || saga.name
-                  const { clean: sagaTitle, isFiller } = splitFillerSuffix(rawTitle)
+                  const sagaTitle = stripFillerSuffix(rawTitle)
                   const startEp = saga.startEp || localSaga?.startEp
                   const endEp = saga.endEp || localSaga?.endEp
                   const episodeRangeText = (startEp && endEp) ? `EP. ${startEp} — ${endEp}` : (saga.episodeRange ? `EP. ${saga.episodeRange}` : `EP. 1 — 1`)
@@ -274,19 +292,18 @@ export function SagaSelector({
                   return (
                     <ArcCinematicCard
                       key={saga.id}
-                      layoutId="activeSagaCard"
+                      layoutId={`${layoutGroupId}-saga`}
                       index={index}
                       topLeft={episodeRangeText}
-                      topRight={subSagasCount > 0 ? `${subSagasCount} ${subSagasCount === 1 ? "ARCO" : "ARCOS"}` : (isFiller ? "RELLENO" : undefined)}
+                      topRight={subSagasCount > 0 ? `${subSagasCount} ${subSagasCount === 1 ? "ARCO" : "ARCOS"}` : undefined}
                       title={sagaTitle}
                       metaLeft={`${epCount} eps`}
                       isActive={isActive}
                       progressPercent={progress?.percent}
-                      isFiller={isFiller}
                       onClick={handleClick}
                       onDoubleClick={subSagasCount > 0 ? handleDoubleClick : undefined}
                       nativeTitle={subSagasCount > 0 ? `${sagaTitle} — doble click para ver arcos` : sagaTitle}
-                      onHover={() => {}}
+                      onHover={() => handleHoverSaga(saga.id)}
                     />
                   )
                 })}
@@ -300,7 +317,9 @@ export function SagaSelector({
             style={{ animationDuration: "200ms" }}
           >
             <div className="flex items-center gap-2 mb-3 px-1 flex-shrink-0">
-              <button
+              <Button
+                intent="ghost"
+                size="sm"
                 onClick={() => {
                   setIsSubMenuOpen(false)
                   if (onSelectSubSaga && activeSubSagaId) {
@@ -309,44 +328,46 @@ export function SagaSelector({
                 }}
                 aria-label="Volver a sagas"
                 title="Volver a sagas"
-                className="min-h-[36px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] border border-white/[0.06] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                leftIcon={<IconNavigationChevronLeft className="w-4 h-4 text-brand-accent" />}
+                iconSpacing="0.25rem"
+                className="px-2.5 text-xs font-semibold"
               >
-                <IconNavigationChevronLeft className="w-4 h-4 text-brand-accent" />
-                <span>Sagas</span>
-              </button>
+                Sagas
+              </Button>
               <span className="text-xs text-on-surface-variant/40">/</span>
-              <span className="text-xs font-semibold text-white truncate min-w-0 flex-1">
+              <span className="text-xs font-semibold text-on-surface truncate min-w-0 flex-1">
                 {localSagas?.find(s => s.id === activeSaga?.id)?.title || activeSaga?.name}
               </span>
-            </div>
-
-            {activeSubSagaId && (
-              <div className="mb-2 px-1">
+              {/* En la fila de migas (alto fijo por el Button sm): aparecer o
+                  desaparecer no empuja la lista bajo el puntero. */}
+              {activeSubSagaId && (
                 <button
                   type="button"
                   onClick={() => {
                     if (onSelectSubSaga) onSelectSubSaga("")
                   }}
-                  className="text-2xs font-mono font-semibold text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:underline active:scale-95 transition-transform duration-fast ease-out-strong flex items-center gap-1 cursor-pointer"
+                  aria-label="Quitar filtro de sub-arco"
+                  title="Quitar filtro de sub-arco"
+                  className="ml-auto shrink-0 text-2xs font-mono font-semibold text-brand-accent-readable [@media(hover:hover)_and_(pointer:fine)]:hover:underline animate-fade-in [animation-duration:var(--duration-base)] [animation-timing-function:var(--ease-out)] active:scale-95 transition-transform duration-fast ease-out-strong cursor-pointer"
                 >
-                  <span>✕ Quitar filtro de sub-arco</span>
+                  ✕ Quitar filtro
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex-grow min-h-0 flex flex-col overflow-hidden relative">
               <div
                 ref={subListRef}
                 onScroll={subListCheckPosition}
                 className={cn(
-                  "flex flex-col gap-3 overflow-y-auto pr-0.5 no-scrollbar flex-grow min-h-0 pb-3 content-start",
+                  "flex flex-col gap-3 overflow-y-auto px-1 pt-1 no-scrollbar flex-grow min-h-0 pb-3 content-start",
                   !subListIsAtBottom && "[-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]"
                 )}
               >
                 {(activeSaga?.subSagas || []).map((sub, index) => {
                   const isActive = sub.id === activeSubSagaId
                   const localSub = localSagas?.find(s => s.id === activeSaga?.id)?.subSagas?.find(ss => ss.id === sub.id)
-                  const { clean: subTitle, isFiller } = splitFillerSuffix(localSub?.title || sub.name)
+                  const subTitle = stripFillerSuffix(localSub?.title || sub.name)
                   const startEp = sub.startEp || localSub?.startEp
                   const endEp = sub.endEp || localSub?.endEp
                   const episodeRangeText = (startEp && endEp) ? `EP. ${startEp} — ${endEp}` : (sub.episodeRange ? `EP. ${sub.episodeRange}` : `EP. 1 — 1`)
@@ -355,14 +376,12 @@ export function SagaSelector({
                   return (
                     <ArcCinematicCard
                       key={sub.id}
-                      layoutId="activeSubSagaCard"
+                      layoutId={`${layoutGroupId}-subsaga`}
                       index={index}
                       topLeft={episodeRangeText}
-                      topRight={isFiller ? "RELLENO" : undefined}
                       title={subTitle}
                       metaLeft={`${epCount} eps`}
                       isActive={isActive}
-                      isFiller={isFiller}
                       onClick={() => {
                         const isSubActive = sub.id === activeSubSagaId
                         if (onSelectSubSaga) {

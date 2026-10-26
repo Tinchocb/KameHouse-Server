@@ -2,19 +2,25 @@ import React, { memo, useState } from 'react';
 import { ElasticCounter } from '@/components/ui/kinetics/elastic-counter';
 import type { StorySpan } from '@/lib/config/dragonball_story_spans';
 import { CheckCircle2, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { eraTextColor } from './utils/eraColor';
 
-export interface EraHeroProps {
+interface EraHeroProps {
   seriesId: StorySpan['seriesId'];
   seriesTag: string;
   yearsLabel: string;
   accentHex: string;
   totalVolumes: number;
   readVolumes: number;
+  /** La línea de tiempo está filtrada a esta era. */
+  isSolo?: boolean;
+  /** Ver solo esta era, o volver a todas si ya está filtrada. */
+  onToggleSolo?: () => void;
   kanji?: string;
   className?: string;
 }
 
-export const BACKDROP_MAP: Record<StorySpan['seriesId'], string> = {
+const BACKDROP_MAP: Record<StorySpan['seriesId'], string> = {
   classic: '/backdrops/lq/db.webp',
   z: '/backdrops/lq/dbz.webp',
   daima: '/backdrops/lq/dbdaima.webp',
@@ -22,7 +28,7 @@ export const BACKDROP_MAP: Record<StorySpan['seriesId'], string> = {
   gt: '/backdrops/lq/dbgt.webp',
 };
 
-export const ERA_KANJI: Record<StorySpan['seriesId'], string> = {
+const ERA_KANJI: Record<StorySpan['seriesId'], string> = {
   classic: '亀',
   z: '界',
   daima: '大',
@@ -37,6 +43,8 @@ export const EraHero: React.FC<EraHeroProps> = memo(({
   accentHex,
   totalVolumes,
   readVolumes,
+  isSolo = false,
+  onToggleSolo,
   kanji,
   className = '',
 }) => {
@@ -57,8 +65,7 @@ export const EraHero: React.FC<EraHeroProps> = memo(({
   return (
     <div
       id={`era-${seriesId}`}
-      className={`relative w-full rounded-2xl overflow-hidden border border-white/10 bg-surface-container-lowest/80 my-6 scroll-mt-24 ${className}`}
-      style={{ boxShadow: `inset 0 1px 0 rgb(255 255 255 / 0.07), 0 24px 60px -32px ${accentHex}66` }}
+      className={`sectionbar relative w-full overflow-hidden my-6 scroll-mt-24 ${className}`}
     >
       {/* Filete superior con el color de la era, como en las tarjetas de lapso */}
       <span
@@ -109,42 +116,47 @@ export const EraHero: React.FC<EraHeroProps> = memo(({
               style={{
                 backgroundColor: `${accentHex}20`,
                 borderColor: `${accentHex}50`,
-                color: accentHex,
+                color: eraTextColor(accentHex),
               }}
             >
               {emblem}
             </div>
 
             <div className="flex flex-col">
-              <h2 className="font-display font-black text-xl sm:text-2xl text-white uppercase tracking-wider">
+              <h2 className="font-display font-black text-xl sm:text-2xl text-on-surface uppercase tracking-wider">
                 {seriesTag}
               </h2>
-              <span className="font-mono text-xs text-on-surface-variant font-bold tabular-nums">
+              <span className="text-xs text-label-2 font-semibold tabular-nums">
                 {yearsLabel}
               </span>
             </div>
           </div>
 
           {/* Era Progress Pill & Status */}
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {onToggleSolo && (
+              <Button intent="secondary" size="sm" onClick={onToggleSolo}>
+                {isSolo ? 'Ver todas las eras' : 'Ver solo esta era'}
+              </Button>
+            )}
             {isComplete ? (
               <span
                 key={celebration}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-xs font-bold shadow-sm ${celebration > 0 ? 'animate-success-pop' : ''}`}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-status-success/20 border border-status-success/40 text-status-success text-xs font-bold shadow-sm ${celebration > 0 ? 'animate-success-pop' : ''}`}
               >
                 <CheckCircle2
-                  className={`w-3.5 h-3.5 text-emerald-400 stroke-[2.5] ${celebration > 0 ? 'animate-success-check delay-150' : ''}`}
+                  className={`w-3.5 h-3.5 text-status-success stroke-[2.5] ${celebration > 0 ? 'animate-success-check delay-150' : ''}`}
                 />
-                <span>Era Completada</span>
+                <span>Era completada</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.06] border border-white/15 text-white/90 font-mono text-xs font-semibold tabular-nums">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.06] border border-white/15 text-on-surface text-xs font-semibold tabular-nums">
                 <Clock className="w-3.5 h-3.5 text-brand-accent" />
                 <span className="inline-flex items-baseline">
-                  <ElasticCounter value={readVolumes} />/{totalVolumes} lapsos
+                  <ElasticCounter value={readVolumes} />/{totalVolumes} {totalVolumes === 1 ? 'lapso' : 'lapsos'}
                 </span>
-                <span className="text-white/40">·</span>
-                <span className="inline-flex items-baseline text-brand-accent">
+                <span aria-hidden="true" className="text-white/40">·</span>
+                <span className="inline-flex items-baseline text-brand-accent-readable">
                   <ElasticCounter value={progressPercent} />%
                 </span>
               </span>
@@ -156,10 +168,10 @@ export const EraHero: React.FC<EraHeroProps> = memo(({
         <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
           {/* scaleX en vez de width: avanza por el compositor, sin recalcular layout */}
           <div
-            className="h-full w-full rounded-full origin-left transition-[transform,background-color] duration-500 ease-out-strong"
+            className="h-full w-full rounded-full origin-left transition-[transform,background-color] duration-very-slow ease-out-strong"
             style={{
               transform: `scaleX(${progressPercent / 100})`,
-              backgroundColor: isComplete ? '#10b981' : accentHex,
+              backgroundColor: isComplete ? 'var(--status-success)' : accentHex,
             }}
           />
         </div>

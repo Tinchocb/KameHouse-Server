@@ -1,8 +1,7 @@
 import React from "react"
 import {
-    IconMediaPause,
     IconMediaPlay,
-    IconMediaSkipPrevious,
+    IconMediaPause,
     IconMediaVolumeX,
     IconMediaVolume2,
     IconNavigationList,
@@ -10,15 +9,15 @@ import {
     IconMediaSkipNext,
     IconMediaMinimize,
     IconMediaMaximize,
-    IconNavigationRocket,
 } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
 
 import { AnimatedTooltip } from "@/components/ui/kinetics/animated-tooltip"
 import { IconSwap } from "@/components/ui/kinetics"
 import { PlayerSettingsMenu } from "@/components/ui/PlayerSettingsMenu"
+import { SkipTenIcon } from "./player-center-controls"
 import { SeekBar } from "./seek-bar"
-import { PLAYER_GLASS, PLAYER_ICON_BTN, PLAYER_ICON_BTN_ACTIVE, PLAYER_PLAY_BTN } from "./player-theme"
+import { PLAYER_GLASS, PLAYER_ICON_BTN, PLAYER_ICON_BTN_ACTIVE } from "./player-theme"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { PlayerPreviewManager } from "./player-preview"
 import type { EpisodeSource } from "@/api/types/unified.types"
@@ -31,7 +30,7 @@ export interface Chapter {
     type?: string
 }
 
-export interface PlayerBottomBarProps {
+interface PlayerBottomBarProps {
     title?: string
     episodeNumber?: number
     episodeLabel?: string
@@ -127,17 +126,46 @@ export interface PlayerBottomBarProps {
     mediaId?: number
 
     previewManager?: PlayerPreviewManager | null
+
+    /** Qué menú agrupado está abierto cuando `settingsOpen` es true. */
+    settingsPanel?: PlayerSettingsPanel
+    /** Abre un menú agrupado concreto (Audio y subtítulos / Más). */
+    onOpenSettingsPanel?: (panel: PlayerSettingsPanel) => void
+    /** <video> real, para calcular el tiempo restante sin re-renderizar toda la barra. */
+    mediaElementRef?: React.RefObject<HTMLVideoElement | null>
 }
 
-
+export type PlayerSettingsPanel = "media" | "more"
 
 const CONTROL_BTN = PLAYER_ICON_BTN
 const CONTROL_BTN_ACTIVE = PLAYER_ICON_BTN_ACTIVE
+const TIME_LABEL = "shrink-0 min-w-[3.25rem] text-xs font-semibold tracking-wide tabular-nums [text-shadow:0_1px_4px_rgba(0,0,0,0.7)] [[data-tv=true]_&]:text-base"
+
+/** Tiempo restante ("-12:34") como en AVKit. Escucha al <video> directamente y solo
+ * re-renderiza cuando cambia el segundo mostrado. */
+function RemainingTime({ mediaElementRef, duration }: { mediaElementRef?: React.RefObject<HTMLVideoElement | null>; duration: number }) {
+    const [current, setCurrent] = React.useState(0)
+    React.useEffect(() => {
+        const video = mediaElementRef?.current
+        if (!video) return
+        const sync = () => setCurrent(Math.floor(video.currentTime || 0))
+        sync()
+        const events = ["timeupdate", "seeking", "seeked", "loadedmetadata", "durationchange"] as const
+        events.forEach((ev) => video.addEventListener(ev, sync))
+        return () => events.forEach((ev) => video.removeEventListener(ev, sync))
+    }, [mediaElementRef])
+    const remaining = Math.max(0, Math.floor(duration) - current)
+    return (
+        <span className={cn(TIME_LABEL, "text-right text-label-1")} aria-label={`Quedan ${formatPlaybackTime(remaining)}`}>
+            -{formatPlaybackTime(remaining)}
+        </span>
+    )
+}
 
 export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     episodeNumber, mediaFormat,
     duration, progressBarRef, thumbRef, progressInputRef, handleSeek, handleSeekStart, handleSeekEnd,
-    isPlaying, togglePlay,
+    isPlaying, togglePlay, skipTime,
     isMuted, toggleMute, volume, handleVolume,
     timeTextRef,
     audioTracks, activeAudioIndex, onSelectAudio,
@@ -145,6 +173,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     isJassubLoading, episodeSources, activeStreamUrl, currentSourceType, handleSourceSwitch,
     isFullscreen, toggleFullscreen,
     settingsOpen, onToggleSettings,
+    settingsPanel: _settingsPanel = "more", onOpenSettingsPanel,
     playbackRate = 1, onPlaybackRateChange,
     autoSkipIntro = false, onAutoSkipIntroChange,
     autoSkipOutro = false, onAutoSkipOutroChange,
@@ -173,6 +202,7 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     malId,
     mediaId,
     previewManager,
+    mediaElementRef,
 }: PlayerBottomBarProps) {
     const isMovie = React.useMemo(() => {
         const formatUpper = mediaFormat?.toUpperCase()
@@ -182,149 +212,194 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
     const [isVolumeOpen, setIsVolumeOpen] = React.useState(false)
 
     const volumeExpanded = isVolumeOpen || tvMode
-    // Ancla del panel de ajustes: vive fuera de las cápsulas de vidrio (ver PlayerSettingsMenuProps.panelContainer)
+    // Ancla de los paneles: vive fuera de las cápsulas de vidrio (ver PlayerSettingsMenuProps.panelContainer)
     const [settingsPanelHost, setSettingsPanelHost] = React.useState<HTMLDivElement | null>(null)
 
+    const hasChapters = !isMovie && chapters.length > 0
+
+    // Un solo menú unificado de ajustes (Audio, Subtítulos, Calidad, Imagen y Reproducción)
+    const handleSettingsOpenChange = (open: boolean) => {
+        if (open) {
+            if (onOpenSettingsPanel) onOpenSettingsPanel("more")
+            else onToggleSettings?.(true)
+        } else {
+            onToggleSettings?.(false)
+        }
+    }
+
+    const sharedMenuProps = {
+        panelContainer: settingsPanelHost,
+        audioTracks, activeAudioIndex, onSelectAudio,
+        subtitleTracks, activeSubtitleIndex, onSelectSubtitle,
+        isLoadingSubtitle: isJassubLoading,
+        sources: episodeSources,
+        currentSourceUrl: activeStreamUrl,
+        currentSourceType,
+        onSourceChange: handleSourceSwitch,
+        playbackRate, onPlaybackRateChange,
+        autoSkipIntro, onAutoSkipIntroChange,
+        autoSkipOutro, onAutoSkipOutroChange,
+        hlsLevels, activeHlsLevel, onHlsLevelChange,
+        aspectRatio, onAspectRatioChange,
+        subtitleSize, onSubtitleSizeChange,
+        loopEnabled, onLoopEnabledChange,
+        autoDisableSubtitlesWhenDubbed, onAutoDisableSubtitlesWhenDubbedChange,
+        marathonMode, onMarathonModeChange,
+        tvMode, onTvModeChange,
+        videoRef, malId, mediaId, episodeNumber, duration, mediaFormat,
+    }
+
     return (
-        <div className="absolute inset-x-0 bottom-0 z-player-ui pointer-events-auto select-none pb-[max(0.25rem,env(safe-area-inset-bottom,0px))]">
-            {/* Scrim: gradiente plano, sin vidrio ni bordes */}
-            <div aria-hidden className="absolute inset-x-0 bottom-0 h-44 -z-10 pointer-events-none bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 z-player-ui pointer-events-auto select-none pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
+            {/* Scrim: gradiente suave y más corto para mantener la pureza del vídeo */}
+            <div aria-hidden className="absolute inset-x-0 bottom-0 h-40 -z-10 pointer-events-none bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
 
-            <div ref={setSettingsPanelHost} className="absolute right-3 sm:right-6 bottom-full mb-1" />
+            <div ref={setSettingsPanelHost} className="absolute right-3 sm:right-8 bottom-full mb-1" />
 
-            <div className="player-bar-fg relative flex flex-col w-full px-3 sm:px-6 pb-2 sm:pb-3">
+            <div className="player-bar-fg relative flex flex-col w-full px-3 sm:px-8 pb-2 sm:pb-4">
 
-            <SeekBar
-                duration={duration}
-                progressBarRef={progressBarRef}
-                thumbRef={thumbRef}
-                progressInputRef={progressInputRef}
-                handleSeek={handleSeek}
-                handleSeekStart={handleSeekStart}
-                handleSeekEnd={handleSeekEnd}
-                skipTimesOp={skipTimesOp}
-                skipTimesEd={skipTimesEd}
-                chapters={chapters}
-                isMovie={isMovie}
-                previewManager={previewManager}
-            />
+            {/* Línea de tiempo amplia: transcurrido · barra · restante */}
+            <div className="flex items-center gap-3 w-full">
+                <span ref={timeTextRef} className={cn(TIME_LABEL, "text-label-1")}>00:00</span>
+                <SeekBar
+                    className="flex-1 min-w-0"
+                    duration={duration}
+                    progressBarRef={progressBarRef}
+                    thumbRef={thumbRef}
+                    progressInputRef={progressInputRef}
+                    handleSeek={handleSeek}
+                    handleSeekStart={handleSeekStart}
+                    handleSeekEnd={handleSeekEnd}
+                    skipTimesOp={skipTimesOp}
+                    skipTimesEd={skipTimesEd}
+                    chapters={chapters}
+                    isMovie={isMovie}
+                    previewManager={previewManager}
+                />
+                <RemainingTime mediaElementRef={mediaElementRef} duration={duration} />
+            </div>
 
-            {/* Bottom Controls Row */}
-            <div className="flex items-center justify-between gap-2 sm:gap-3 w-full mt-1.5">
+            {/* Fila de controles agrupados */}
+            <div className="flex items-center justify-between gap-2 sm:gap-3 w-full mt-2">
 
-                {/* Left Wing — cápsula de vidrio como la navbar de la plataforma */}
-                <div className={cn("flex items-center min-w-0 gap-1 p-1 rounded-full", PLAYER_GLASS)}>
-
-                    <AnimatedTooltip side="top" content={isPlaying ? "Pausar [K]" : "Reproducir [K]"}>
-                        <button
-                            tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-                            aria-label={isPlaying ? "Pausar" : "Reproducir"}
-                            className={PLAYER_PLAY_BTN}>
-                            <IconSwap swapKey={isPlaying ? "pause" : "play"}>
-                                {isPlaying
-                                    ? <IconMediaPause className="fill-current" />
-                                    : <IconMediaPlay className="fill-current ml-0.5" />}
-                            </IconSwap>
-                        </button>
-                    </AnimatedTooltip>
-
-                    {!isMovie && chapters && chapters.length > 0 && (
-                        <>
-                            <AnimatedTooltip side="top" content="Capítulo anterior [[ ]">
-                                <button
-                                    tabIndex={0}
-                                    onClick={(e) => { e.stopPropagation(); skipToPrevChapter?.(); }}
-                                    aria-label="Capítulo anterior"
-                                    className={cn(CONTROL_BTN, "hidden md:flex")}>
-                                    <IconMediaSkipPrevious className="w-4 h-4 fill-current" />
-                                </button>
-                            </AnimatedTooltip>
-                            <AnimatedTooltip side="top" content="Siguiente capítulo [ ] ]">
-                                <button
-                                    tabIndex={0}
-                                    onClick={(e) => { e.stopPropagation(); skipToNextChapter?.(); }}
-                                    aria-label="Siguiente capítulo"
-                                    className={cn(CONTROL_BTN, "hidden md:flex")}>
-                                    <IconMediaSkipNext className="w-4 h-4 fill-current" />
-                                </button>
-                            </AnimatedTooltip>
-                        </>
-                    )}
-
-                    {/* Volumen: slider inline que se despliega al hover/foco, nada flota encima */}
+                {/* Izquierda: controles de reproducción y volumen unificados */}
+                <div className="flex items-center min-w-0 gap-2">
                     <div
                         role="group"
-                        aria-label="Control de volumen"
-                        className="hidden md:flex items-center"
-                        onMouseEnter={() => setIsVolumeOpen(true)}
-                        onMouseLeave={() => setIsVolumeOpen(false)}
-                        onFocus={() => setIsVolumeOpen(true)}
-                        onBlur={(e) => {
-                            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                                setIsVolumeOpen(false)
-                            }
-                        }}
+                        aria-label="Controles de reproducción y volumen"
+                        className={cn("flex items-center p-1 rounded-full", PLAYER_GLASS)}
                     >
-                        <button
-                            tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-                            aria-label={isMuted || volume === 0 ? "Activar sonido [M]" : "Silenciar [M]"}
-                            title={isMuted || volume === 0 ? "Activar sonido [M]" : "Silenciar [M]"}
-                            className={CONTROL_BTN}
-                        >
-                            <IconSwap swapKey={isMuted || volume === 0 ? "muted" : "unmuted"}>
-                                {isMuted || volume === 0
-                                    ? <IconMediaVolumeX className="w-4 h-4" />
-                                    : <IconMediaVolume2 className="w-4 h-4" />}
-                            </IconSwap>
-                        </button>
+                        {/* Play / Pausa */}
+                        <AnimatedTooltip side="top" content={isPlaying ? "Pausar [Espacio]" : "Reproducir [Espacio]"}>
+                            <button
+                                tabIndex={0}
+                                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                                aria-label={isPlaying ? "Pausar [Espacio]" : "Reproducir [Espacio]"}
+                                className={CONTROL_BTN}
+                            >
+                                <IconSwap swapKey={isPlaying ? "pause" : "play"}>
+                                    {isPlaying
+                                        ? <IconMediaPause className="w-4 h-4 fill-current" />
+                                        : <IconMediaPlay className="w-4 h-4 fill-current ml-0.5" />}
+                                </IconSwap>
+                            </button>
+                        </AnimatedTooltip>
 
+                        {/* Retroceder 10s */}
+                        <AnimatedTooltip side="top" content="Retroceder 10s [J / ←]">
+                            <button
+                                tabIndex={0}
+                                onClick={(e) => { e.stopPropagation(); skipTime(-10); }}
+                                aria-label="Retroceder 10s [←]"
+                                className={CONTROL_BTN}
+                            >
+                                <div className="w-4 h-4">
+                                    <SkipTenIcon direction="back" />
+                                </div>
+                            </button>
+                        </AnimatedTooltip>
+
+                        {/* Avanzar 10s */}
+                        <AnimatedTooltip side="top" content="Avanzar 10s [L / →]">
+                            <button
+                                tabIndex={0}
+                                onClick={(e) => { e.stopPropagation(); skipTime(10); }}
+                                aria-label="Avanzar 10s [→]"
+                                className={CONTROL_BTN}
+                            >
+                                <div className="w-4 h-4">
+                                    <SkipTenIcon direction="forward" />
+                                </div>
+                            </button>
+                        </AnimatedTooltip>
+
+                        {/* Separador vertical fino */}
+                        <div className="hidden sm:block h-4 w-px bg-white/15 mx-0.5" />
+
+                        {/* Volumen */}
                         <div
-                            className={cn(
-                                "h-10 flex items-center overflow-hidden transition-[width,opacity] duration-fast ease-smooth-out",
-                                volumeExpanded ? "w-[92px] opacity-100" : "w-0 opacity-0"
-                            )}
+                            className="hidden sm:flex items-center"
+                            onMouseEnter={() => setIsVolumeOpen(true)}
+                            onMouseLeave={() => setIsVolumeOpen(false)}
+                            onFocus={() => setIsVolumeOpen(true)}
+                            onBlur={(e) => {
+                                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                                    setIsVolumeOpen(false)
+                                }
+                            }}
                         >
-                            {/* Range nativo visible: el drag funciona sin trucos de inputs invisibles */}
-                            <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.02}
-                                value={isMuted ? 0 : volume}
-                                tabIndex={volumeExpanded ? 0 : -1}
-                                aria-label="Volumen"
-                                aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => { e.stopPropagation(); handleVolume(e); }}
-                                className="shrink-0 w-[80px] mx-1.5 h-1 cursor-pointer accent-[hsl(var(--brand-accent))]"
-                            />
+                            <button
+                                tabIndex={0}
+                                onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+                                aria-label={isMuted || volume === 0 ? "Activar sonido [M]" : "Silenciar [M]"}
+                                title={isMuted || volume === 0 ? "Activar sonido [M]" : "Silenciar [M]"}
+                                className={CONTROL_BTN}
+                            >
+                                <IconSwap swapKey={isMuted || volume === 0 ? "muted" : "unmuted"}>
+                                    {isMuted || volume === 0
+                                        ? <IconMediaVolumeX className="w-4 h-4" />
+                                        : <IconMediaVolume2 className="w-4 h-4" />}
+                                </IconSwap>
+                            </button>
+
+                            <div
+                                className={cn(
+                                    "h-10 flex items-center overflow-hidden transition-[width,opacity] duration-fast ease-smooth-out",
+                                    volumeExpanded ? "w-[92px] opacity-100" : "w-0 opacity-0"
+                                )}
+                            >
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={1}
+                                    step={0.02}
+                                    value={isMuted ? 0 : volume}
+                                    tabIndex={volumeExpanded ? 0 : -1}
+                                    aria-label="Volumen"
+                                    aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => { e.stopPropagation(); handleVolume(e); }}
+                                    className="shrink-0 w-[80px] mx-1.5 h-1 cursor-pointer accent-[hsl(var(--brand-accent))]"
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Tiempo */}
-                    <div className="flex items-center min-w-0 overflow-hidden pl-1.5 pr-3 text-xs font-semibold tracking-wide tabular-nums text-white/55 whitespace-nowrap">
-                        <span ref={timeTextRef} className="text-white">00:00</span>
-                        <span className="mx-1 opacity-50">/</span>
-                        <span>{formatPlaybackTime(duration)}</span>
-                        {!isMovie && activeChapter && (
-                            <span className="hidden sm:inline ml-2.5 pl-2.5 border-l border-white/15 text-brand-accent truncate max-w-[150px] md:max-w-[240px]" title={activeChapter}>
-                                {activeChapter}
-                            </span>
-                        )}
-                    </div>
+                    {hasChapters && activeChapter && (
+                        <span className="min-w-0 truncate max-w-[30vw] md:max-w-[240px] text-xs font-semibold tracking-wide text-label-2 [text-shadow:0_1px_4px_rgba(0,0,0,0.7)] ml-2" title={activeChapter}>
+                            {activeChapter}
+                        </span>
+                    )}
                 </div>
 
-                {/* Right Wing */}
+                {/* Derecha: controles unificados en una sola cápsula limpia */}
                 <div className={cn("flex items-center shrink-0 gap-0.5 p-1 rounded-full", PLAYER_GLASS)}>
-
                     {hasEpisodes && (
-                        <AnimatedTooltip side="top" content="Lista de episodios [E]">
+                        <AnimatedTooltip side="top" content="Episodios [E]">
                             <button
                                 tabIndex={0}
                                 onClick={(e) => { e.stopPropagation(); onToggleEpisodesSidebar?.(); }}
-                                aria-label="Lista de episodios [E]"
+                                aria-label="Episodios [E]"
                                 aria-expanded={isEpisodesSidebarOpen}
                                 className={cn(CONTROL_BTN, isEpisodesSidebarOpen && CONTROL_BTN_ACTIVE)}
                             >
@@ -334,11 +409,11 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                     )}
 
                     {hasQueue && (
-                        <AnimatedTooltip side="top" content="Ver cola de reproducción [Q]">
+                        <AnimatedTooltip side="top" content="Mi Lista [Q]">
                             <button
                                 tabIndex={0}
                                 onClick={(e) => { e.stopPropagation(); onToggleQueueSidebar?.(); }}
-                                aria-label="Ver cola de reproducción [Q]"
+                                aria-label="Mi Lista [Q]"
                                 aria-expanded={isQueueSidebarOpen}
                                 className={cn(CONTROL_BTN, isQueueSidebarOpen && CONTROL_BTN_ACTIVE)}
                             >
@@ -359,69 +434,14 @@ export const PlayerBottomBar = React.memo(function PlayerBottomBar({
                         </AnimatedTooltip>
                     )}
 
-                    {!isMovie && onMarathonModeChange && (
-                        <AnimatedTooltip
-                            side="top"
-                            content={marathonMode ? "Modo Maratón: Activado" : "Modo Maratón: Desactivado"}
-                        >
-                            <button
-                                type="button"
-                                tabIndex={0}
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    onMarathonModeChange(!marathonMode)
-                                }}
-                                aria-label={marathonMode ? "Desactivar modo maratón" : "Activar modo maratón"}
-                                aria-pressed={marathonMode}
-                                className={cn(CONTROL_BTN, marathonMode && CONTROL_BTN_ACTIVE)}
-                            >
-                                <IconNavigationRocket className="w-4 h-4" />
-                            </button>
-                        </AnimatedTooltip>
-                    )}
-
+                    {/* Menú de Configuración Unificado (Audio, Subtítulos, Calidad, Imagen y Reproducción) */}
                     <PlayerSettingsMenu
-                        panelContainer={settingsPanelHost}
-                        audioTracks={audioTracks}
-                        activeAudioIndex={activeAudioIndex}
-                        onSelectAudio={onSelectAudio}
-                        subtitleTracks={subtitleTracks}
-                        activeSubtitleIndex={activeSubtitleIndex}
-                        onSelectSubtitle={onSelectSubtitle}
-                        isLoadingSubtitle={isJassubLoading}
-                        sources={episodeSources}
-                        currentSourceUrl={activeStreamUrl}
-                        currentSourceType={currentSourceType}
-                        onSourceChange={handleSourceSwitch}
-                        open={settingsOpen}
-                        onOpenChange={onToggleSettings}
-                        playbackRate={playbackRate}
-                        onPlaybackRateChange={onPlaybackRateChange}
-                        autoSkipIntro={autoSkipIntro}
-                        onAutoSkipIntroChange={onAutoSkipIntroChange}
-                        autoSkipOutro={autoSkipOutro}
-                        onAutoSkipOutroChange={onAutoSkipOutroChange}
-                        hlsLevels={hlsLevels}
-                        activeHlsLevel={activeHlsLevel}
-                        onHlsLevelChange={onHlsLevelChange}
-                        aspectRatio={aspectRatio}
-                        onAspectRatioChange={onAspectRatioChange}
-                        subtitleSize={subtitleSize}
-                        onSubtitleSizeChange={onSubtitleSizeChange}
-                        loopEnabled={loopEnabled}
-                        onLoopEnabledChange={onLoopEnabledChange}
-                        autoDisableSubtitlesWhenDubbed={autoDisableSubtitlesWhenDubbed}
-                        onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange}
-                        marathonMode={marathonMode}
-                        onMarathonModeChange={onMarathonModeChange}
-                        tvMode={tvMode}
-                        onTvModeChange={onTvModeChange}
-                        videoRef={videoRef}
-                        malId={malId}
-                        mediaId={mediaId}
-                        episodeNumber={episodeNumber}
-                        duration={duration}
-                        mediaFormat={mediaFormat}
+                        {...sharedMenuProps}
+                        variant="all"
+                        onPrevChapter={hasChapters ? skipToPrevChapter : undefined}
+                        onNextChapter={hasChapters ? skipToNextChapter : undefined}
+                        open={Boolean(settingsOpen)}
+                        onOpenChange={handleSettingsOpenChange}
                     />
 
                     <AnimatedTooltip side="top" content={isFullscreen ? "Salir de pantalla completa [F]" : "Pantalla completa [F]"}>

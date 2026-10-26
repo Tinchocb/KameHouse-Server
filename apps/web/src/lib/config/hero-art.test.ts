@@ -3,6 +3,7 @@ import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
     DEFAULT_MOVIE_FOCAL,
+    HERO_COMPACT_MAX_WIDTH,
     MOVIE_HERO_ART,
     SERIES_HERO_ART,
     getMovieHeroArt,
@@ -59,6 +60,59 @@ describe("hero-art registry", () => {
         for (const art of Object.values(SERIES_HERO_ART)) {
             expect(art.safeTop).toBeGreaterThanOrEqual(0)
             expect(art.safeTop).toBeLessThanOrEqual(100)
+        }
+    })
+})
+
+// Auditoría del registro (reglas verificables sin red; la nitidez y la resolución real de
+// cada archivo se midieron aparte). Cada regla cierra una de las "rarezas" detectadas en
+// el escaneo de los hero: arte de estilo o formato ajeno, hacks por imagen incoherentes.
+describe("hero-art registry audit", () => {
+    const all = [...Object.entries(SERIES_HERO_ART), ...Object.entries(MOVIE_HERO_ART)] as [string, (typeof SERIES_HERO_ART)[keyof typeof SERIES_HERO_ART]][]
+
+    it.each(all)("%s: declares a valid composition", (_key, art) => {
+        expect(["left", "center", "right", "group"]).toContain(art.subject)
+        if (art.tone !== undefined) expect(["light", "dark"]).toContain(art.tone)
+        if (art.safeTop !== undefined) {
+            expect(art.safeTop).toBeGreaterThanOrEqual(0)
+            expect(art.safeTop).toBeLessThanOrEqual(100)
+        }
+    })
+
+    it("never registers a vertical poster as hero art", () => {
+        for (const [key, art] of all) {
+            // 2/3 es el póster de último recurso y se arma en runtime, no se registra.
+            expect(art.aspect === undefined || art.aspect >= 1.5, `${key} usa aspect ${art.aspect}`).toBe(true)
+        }
+    })
+
+    it("TMDB art always pins an explicit size segment", () => {
+        for (const [key, art] of all) {
+            if (/tmdb\.org/.test(art.src)) expect(art.src, key).toMatch(/\/t\/p\/(original|w\d+)\//)
+        }
+    })
+
+    it("sourceWidth is only declared for genuinely small sources", () => {
+        for (const [key, art] of all) {
+            if (art.sourceWidth === undefined) continue
+            expect(art.sourceWidth, `${key} sourceWidth`).toBeLessThan(HERO_COMPACT_MAX_WIDTH)
+            expect(art.sourceWidth, `${key} sourceWidth`).toBeGreaterThanOrEqual(640)
+        }
+    })
+
+    it("cropLeft stays sane and never contradicts reflect", () => {
+        for (const [key, art] of all) {
+            if (art.cropLeft === undefined) continue
+            expect(art.cropLeft, `${key} cropLeft`).toBeGreaterThan(0)
+            expect(art.cropLeft, `${key} cropLeft`).toBeLessThanOrEqual(0.6)
+            // cropLeft implica reflect:false: declararlo en true se ignoraría en silencio.
+            expect(art.reflect, `${key} reflect`).not.toBe(true)
+        }
+    })
+
+    it("local art is webp under /backdrops", () => {
+        for (const [key, art] of all) {
+            if (art.src.startsWith("/")) expect(art.src, key).toMatch(/^\/backdrops\/[\w-]+\.webp$/)
         }
     })
 })

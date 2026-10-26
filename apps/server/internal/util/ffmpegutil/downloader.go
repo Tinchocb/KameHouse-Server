@@ -312,8 +312,11 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, wantSHA2
 			resp.Body.Close()
 			return fmt.Errorf("error creando archivo temporal: %w", err)
 		}
-		defer os.Remove(tmpFile.Name())
-		defer tmpFile.Close()
+		tmpPath := tmpFile.Name()
+		cleanupTemp := func() {
+			_ = tmpFile.Close()
+			_ = os.Remove(tmpPath)
+		}
 
 		pr := &progressReader{
 			Reader: resp.Body,
@@ -329,10 +332,12 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, wantSHA2
 		written, err := io.Copy(io.MultiWriter(tmpFile, hasher), io.LimitReader(pr, maxDownloadBytes+1))
 		if err == nil && written > maxDownloadBytes {
 			resp.Body.Close()
+			cleanupTemp()
 			return fmt.Errorf("la descarga supera el máximo admitido de %d bytes", maxDownloadBytes)
 		}
 		if err != nil {
 			resp.Body.Close()
+			cleanupTemp()
 			lastErr = fmt.Errorf("error guardando archivo descargado: %w", err)
 			if attempt < maxAttempts {
 				waitTime := time.Duration(attempt*attempt) * 5 * time.Second
@@ -350,6 +355,7 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, wantSHA2
 
 		if wantSHA256 != "" {
 			if got := hex.EncodeToString(hasher.Sum(nil)); !strings.EqualFold(got, wantSHA256) {
+				cleanupTemp()
 				return fmt.Errorf("el hash SHA-256 del archivo descargado no coincide (esperado %s, obtenido %s): no se instaló nada", wantSHA256, got)
 			}
 		}
@@ -359,6 +365,7 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, wantSHA2
 		}
 
 		if _, err := tmpFile.Seek(0, 0); err != nil {
+			cleanupTemp()
 			return err
 		}
 
@@ -370,6 +377,7 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, wantSHA2
 		}
 
 		if extractErr != nil {
+			cleanupTemp()
 			lastErr = fmt.Errorf("error descomprimiendo: %w", extractErr)
 			if attempt < maxAttempts {
 				waitTime := time.Duration(attempt*attempt) * 5 * time.Second
@@ -383,6 +391,8 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, wantSHA2
 			}
 			return lastErr
 		}
+
+		cleanupTemp()
 
 		if onProgress != nil {
 			onProgress(100, "Binarios listos")

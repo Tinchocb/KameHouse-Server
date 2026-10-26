@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, afterEach } from "vitest"
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest"
+import { useState } from "react"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LazyMotion, domAnimation } from "framer-motion"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
+import { useAppStore } from "@/lib/stores"
 import { SegmentedControl, type SegmentedControlProps } from "./segmented-control"
 
 type Mode = "sagas" | "movies" | "specials"
@@ -44,6 +46,20 @@ describe("SegmentedControl", () => {
         expect(screen.getByRole("tab", { name: /Sagas/ })).toHaveAttribute("aria-selected", "true")
     })
 
+    it("asocia las pestañas con los identificadores provistos por el consumidor", () => {
+        renderControl({
+            semantics: "tablist",
+            options: options.map(option => ({ ...option, id: `tab-${option.value}`, panelId: "contenido-panel" })),
+        })
+        expect(screen.getByRole("tab", { name: /Sagas/ })).toHaveAttribute("id", "tab-sagas")
+        expect(screen.getByRole("tab", { name: /Películas/ })).toHaveAttribute("aria-controls", "contenido-panel")
+    })
+
+    it("no aplica asociaciones de panel a los filtros radiogroup", () => {
+        renderControl({ options: options.map(option => ({ ...option, id: `tab-${option.value}`, panelId: "panel" })) })
+        expect(screen.getByRole("radio", { name: /Sagas/ })).not.toHaveAttribute("aria-controls")
+    })
+
     it("solo la opción seleccionada entra en el orden de tabulación", () => {
         renderControl()
         expect(screen.getByRole("radio", { name: /Sagas/ })).toHaveAttribute("tabindex", "0")
@@ -67,24 +83,80 @@ describe("SegmentedControl", () => {
     })
 })
 
+describe("SegmentedControl: foco tras una flecha", () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    it("el radio seleccionado recibe el foco tras ArrowRight", () => {
+        function Controlled() {
+            const [value, setValue] = useState<Mode>("sagas")
+            return (
+                <LazyMotion features={domAnimation}>
+                    <SegmentedControl<Mode> options={options} value={value} onChange={setValue} layoutId="test-foco-misma" aria-label="Contenido" />
+                </LazyMotion>
+            )
+        }
+        render(<Controlled />)
+        const sagas = screen.getByRole("radio", { name: /Sagas/ })
+        sagas.focus()
+        fireEvent.keyDown(sagas, { key: "ArrowRight" })
+        expect(screen.getByRole("radio", { name: /Películas/ })).toHaveAttribute("aria-checked", "true")
+        expect(document.activeElement).toBe(screen.getByRole("radio", { name: /Películas/ }))
+    })
+
+    it("un control que se remonta tras una flecha recoge el foco en el radio seleccionado", () => {
+        const first = render(
+            <LazyMotion features={domAnimation}>
+                <SegmentedControl<Mode> options={options} value="sagas" onChange={vi.fn()} layoutId="test-foco-remonte" aria-label="Contenido" />
+            </LazyMotion>,
+        )
+        fireEvent.keyDown(screen.getByRole("radio", { name: /Sagas/ }), { key: "ArrowRight" })
+        first.unmount()
+        render(
+            <LazyMotion features={domAnimation}>
+                <SegmentedControl<Mode> options={options} value="movies" onChange={vi.fn()} layoutId="test-foco-remonte" aria-label="Contenido" />
+            </LazyMotion>,
+        )
+        expect(document.activeElement).toBe(screen.getByRole("radio", { name: /Películas/ }))
+    })
+
+    it("el encargo de foco caduca y no roba el foco más tarde", () => {
+        const now = vi.spyOn(Date, "now").mockReturnValue(1_000)
+        const first = render(
+            <LazyMotion features={domAnimation}>
+                <SegmentedControl<Mode> options={options} value="sagas" onChange={vi.fn()} layoutId="test-foco-caduca" aria-label="Contenido" />
+            </LazyMotion>,
+        )
+        fireEvent.keyDown(screen.getByRole("radio", { name: /Sagas/ }), { key: "ArrowRight" })
+        first.unmount()
+        now.mockReturnValue(1_000 + 6_000)
+        render(
+            <LazyMotion features={domAnimation}>
+                <SegmentedControl<Mode> options={options} value="movies" onChange={vi.fn()} layoutId="test-foco-caduca" aria-label="Contenido" />
+            </LazyMotion>,
+        )
+        expect(document.activeElement).not.toBe(screen.getByRole("radio", { name: /Películas/ }))
+    })
+})
+
 describe("SegmentedControl y el nivel de rendimiento", () => {
     const indicatorOf = (name: RegExp) =>
         screen.getByRole("radio", { name }).querySelector<HTMLElement>(".absolute.inset-0")
 
     afterEach(() => usePerformanceStore.setState({ performanceProfile: "auto", autoThrottleActive: false }))
 
-    it("con efectos permitidos la pill lleva el brillo", () => {
+    it("con efectos permitidos la pill usa la elevación y el fondo de selección, sin resplandor", () => {
         usePerformanceStore.setState({ performanceProfile: "ultra" })
         renderControl()
-        expect(indicatorOf(/Sagas/)?.className).toContain("shadow-[0_2px_14px")
+        const cls = indicatorOf(/Sagas/)?.className ?? ""
+        expect(cls).toContain("shadow-elevation-1")
+        expect(cls).toContain("--selected-bg")
+        expect(cls).not.toContain("shadow-[0_2px_14px")
     })
 
-    it("en el perfil eco la pill queda sin brillo", () => {
+    it("en el perfil eco la pill tampoco lleva resplandor", () => {
         usePerformanceStore.setState({ performanceProfile: "eco" })
         renderControl()
-        const cls = indicatorOf(/Sagas/)?.className ?? ""
-        expect(cls).not.toContain("shadow-[0_2px_14px")
-        expect(cls).not.toContain("shadow-elevation-1") // versión sin animación
+        expect(indicatorOf(/Sagas/)?.className ?? "").not.toContain("shadow-[0_2px_14px")
     })
 
     it("con el throttle automático activo también se apagan los efectos", () => {
@@ -99,5 +171,30 @@ describe("SegmentedControl y el nivel de rendimiento", () => {
         fireEvent.click(screen.getByRole("radio", { name: /Películas/ }))
         expect(onChange).toHaveBeenCalledWith("movies")
         expect(indicatorOf(/Sagas/)).not.toBeNull()
+    })
+})
+
+describe("SegmentedControl y el modo TV", () => {
+    // Antes de cada caso y no al salir: al salir el control sigue montado y el cambio de store lo re-renderiza fuera de act.
+    beforeEach(() => {
+        usePerformanceStore.setState({ performanceProfile: "auto", autoThrottleActive: false })
+        useAppStore.setState({ tvMode: false })
+    })
+
+    // La pill animada es un m.div con layoutId y su radio en style; sin animación es un div plano sin style.
+    const pillOf = (name: RegExp) =>
+        screen.getByRole("radio", { name }).querySelector<HTMLElement>(".absolute.inset-0")
+
+    it("con hardware capaz la pill es la capa animada", () => {
+        usePerformanceStore.setState({ performanceProfile: "ultra" })
+        renderControl()
+        expect(pillOf(/Sagas/)?.style.borderRadius).toBe("9999px")
+    })
+
+    it("con modo TV la pill no anima, aunque el hardware sea capaz", () => {
+        usePerformanceStore.setState({ performanceProfile: "ultra" })
+        useAppStore.setState({ tvMode: true })
+        renderControl()
+        expect(pillOf(/Sagas/)?.style.borderRadius).toBe("")
     })
 })

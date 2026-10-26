@@ -215,7 +215,6 @@ func TestDemuxer(t *testing.T) {
 
 }
 
-
 // createMockMatroskaFile creates a minimal valid Matroska file in memory.
 func createMockMatroskaFile() ([]byte, error) {
 	buf := new(bytes.Buffer)
@@ -328,8 +327,6 @@ func assertNoTracks(t *testing.T, d *Demuxer) {
 		t.Errorf("fallback demuxer has %d tracks, want 0", n)
 	}
 }
-
-
 
 // TestDemuxer_Close tests the Close method.
 func TestDemuxer_Close(t *testing.T) {
@@ -950,7 +947,3 @@ func TestDemuxer_GetCues(t *testing.T) {
 		}
 	})
 }
-
-
-
-

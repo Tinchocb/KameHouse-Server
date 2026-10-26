@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -156,92 +155,6 @@ impl SettingsManager {
         }
 
         settings.clone()
-    }
-
-    pub fn update_partial<R: Runtime>(
-        &self,
-        app_handle: &AppHandle<R>,
-        updates: HashMap<String, serde_json::Value>,
-    ) -> Result<DesktopSettings, String> {
-        let path = self.get_settings_path(app_handle);
-        let mut settings = self.load_from_path(&path);
-
-        for (key, value) in updates {
-            match key.as_str() {
-                "minimizeToTray" | "minimize_to_tray" => {
-                    if let Some(v) = value.as_bool() {
-                        settings.minimize_to_tray = v;
-                    }
-                }
-                "openInBackground" | "open_in_background" => {
-                    if let Some(v) = value.as_bool() {
-                        settings.open_in_background = v;
-                    }
-                }
-                "openAtLaunch" | "open_at_launch" => {
-                    if let Some(v) = value.as_bool() {
-                        settings.open_at_launch = v;
-                        // Update login item on macOS/Windows
-                        #[cfg(target_os = "macos")]
-                        {
-                            // app_handle.set_login_item_settings(...)
-                        }
-                        #[cfg(target_os = "windows")]
-                        {
-                            // Would use windows-registry or similar
-                        }
-                    }
-                }
-                "updateChannel" | "update_channel" => {
-                    if let Some(v) = value.as_str() {
-                        settings.update_channel = v.to_string();
-                    }
-                }
-                "disableHardwareAcceleration" | "disable_hardware_acceleration" => {
-                    if let Some(v) = value.as_bool() {
-                        settings.disable_hardware_acceleration = v;
-                    }
-                }
-                "enableAggressiveGpuFlags" | "enable_aggressive_gpu_flags" => {
-                    if let Some(v) = value.as_bool() {
-                        settings.enable_aggressive_gpu_flags = v;
-                    }
-                }
-                "windowBounds" | "window_bounds" => {
-                    if let Ok(bounds) = serde_json::from_value::<WindowBounds>(value) {
-                        if bounds.is_valid() {
-                            settings.window_bounds = Some(bounds);
-                        }
-                    }
-                }
-                "windowMaximized" | "window_maximized" => {
-                    if let Some(v) = value.as_bool() {
-                        settings.window_maximized = v;
-                    }
-                }
-                "mpvPath" | "mpv_path" => {
-                    // P0: allowlist — a hostile frontend value must never become Command::new(bin).
-                    match value.as_str() {
-                        Some(s) if !s.trim().is_empty() && is_allowed_mpv_binary(s) => {
-                            settings.mpv_path = Some(s.trim().to_string());
-                        }
-                        Some(s) if s.trim().is_empty() => {
-                            settings.mpv_path = None;
-                        }
-                        _ => {
-                            warn!("[Settings] Rejected unsafe mpv_path value, keeping previous");
-                        }
-                    }
-                }
-                _ => {
-                    warn!("[Settings] Unknown setting key: {}", key);
-                }
-            }
-        }
-
-        self.save_to_path(&path, &settings)?;
-        info!("[Settings] Updated: {:?}", settings);
-        Ok(settings)
     }
 
     pub fn save<R: Runtime>(&self, app_handle: &AppHandle<R>, settings: &DesktopSettings) -> Result<(), String> {

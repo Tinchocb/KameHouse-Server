@@ -3,70 +3,89 @@ import * as React from "react"
 import { cn, defineStyleAnatomy } from "../core/styling"
 
 /* -------------------------------------------------------------------------------------------------
+ * Qué intent usar (regla del sistema Neutro)
+ *
+ *  SOBRE IMAGEN (héroes, banners, carruseles, tarjetas con arte, controles sobre un póster)
+ *      → `glass`. Translúcido (un solo blur `overlay-sm`), legible sobre cielo claro y sobre negro.
+ *        NUNCA `ghost` ni `outline` sobre imagen: no tienen fondo y el texto se pierde.
+ *  SOBRE SUPERFICIE (paneles, tarjetas opacas, hojas, formularios, listas)
+ *      → `secondary` (relleno), `ghost` (sin relleno) u `outline` (borde). Sin blur ni transparencia.
+ *  ACCIÓN PRINCIPAL (una por vista)
+ *      → `primary` (pastilla `--selected-bg/fg`), sobre imagen o sobre superficie.
+ *  DESTRUCTIVA → `destructive`.
+ *  Con "Reducir transparencia" (`data-flat`) `glass` pasa a sólido `--neutral-elev-2` con borde y sin
+ *  `backdrop-filter`; el resto no cambia. Los nombres antiguos (`primary-glass`, `gray-outline`…) son
+ *  alias: no usarlos en código nuevo.
+ * -----------------------------------------------------------------------------------------------*/
+
+/** Receta común del vidrio: elev-1 al 60 %, canto superior especular, un solo blur y sólido con `data-flat`. */
+const GLASS = [
+    "text-on-surface border border-white/15 border-t-white/30 bg-[color-mix(in_srgb,var(--neutral-elev-1)_60%,transparent)] backdrop-blur-overlay-sm shadow-elevation-1",
+    "[[data-flat=true]_&]:bg-[var(--neutral-elev-2)] [[data-flat=true]_&]:border-[var(--neutral-separator)] [[data-flat=true]_&]:shadow-none",
+    "[[data-flat=true]_&]:[@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [[data-flat=true]_&]:active:bg-[var(--neutral-elev-3)]",
+].join(" ")
+
+/* -------------------------------------------------------------------------------------------------
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
 export const ButtonAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Button_root",
-        "shadow-sm whitespace-nowrap font-medium",
-        "inline-flex items-center transition-colors duration-fast text-center text-sm justify-center select-none transform-gpu cursor-pointer",
+        "whitespace-nowrap",
+        "inline-flex items-center transition-colors duration-fast text-center justify-center select-none transform-gpu cursor-pointer",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        "disabled:opacity-50 disabled:pointer-events-none disabled:transform-none disabled:cursor-not-allowed",
+        "disabled:opacity-50 disabled:pointer-events-none disabled:transform-none disabled:cursor-not-allowed motion-reduce:transition-none motion-reduce:transform-none",
     ], {
         variants: {
             intent: {
-                /* ─── MD3 Filled (Primary) ──────────────────────────────────────── */
-                "primary": "bg-brand-accent text-on-primary hover:bg-brand-accent/90 active:bg-brand-accent shadow-elevation-1",
+                /* ─── Sistema (6 intents) ───────────────────────────────────────── */
+                /* Primario: color de acento del modo. En Neutro el acento es blanco (pastilla blanca/negra); en Por era toma el color de la saga. */
+                "primary": "bg-brand-accent text-on-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95 active:brightness-90 shadow-none",
+                "secondary": "bg-[var(--neutral-elev-2)] text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:brightness-95 shadow-none",
+                /* `ghost` y `outline` son para SUPERFICIES (tarjetas, hojas, formularios): no tienen
+                   fondo propio, así que sobre una imagen o póster claro el texto blanco se pierde.
+                   Sobre imagen/póster usar `glass`; para la acción principal, `primary`. */
+                "ghost": "bg-transparent text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] active:bg-[var(--neutral-elev-2)] shadow-none",
+                "outline": "border border-[var(--neutral-separator)] bg-transparent text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] active:bg-[var(--neutral-elev-2)] shadow-none",
+                "destructive": "bg-destructive text-destructive-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:bg-destructive/90 active:bg-destructive shadow-none",
+                /* Solo chrome flotante (un único blur por superficie flotante) */
+                "glass": GLASS + " [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[color-mix(in_srgb,var(--neutral-elev-2)_70%,transparent)] active:bg-[var(--neutral-elev-2)]",
 
-                /* ─── MD3 Tonal (Secondary) ─────────────────────────────────────── */
-                "secondary": "bg-surface-container-high text-on-surface hover:bg-surface-container-highest active:bg-surface-container-high shadow-elevation-1",
-
-                /* ─── MD3 Outlined ──────────────────────────────────────────────── */
-                "outlined": "border border-outline bg-transparent text-brand-accent hover:bg-brand-accent/10 active:bg-brand-accent/10 shadow-none",
-
-                /* ─── MD3 Text (Tertiary) ───────────────────────────────────────── */
-                "text": "bg-transparent text-brand-accent hover:bg-brand-accent/10 active:bg-brand-accent/10 shadow-none",
-
-                /* ─── Legacy / Special ──────────────────────────────────────────── */
-                "destructive": "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive shadow-elevation-1",
-                "ghost": "bg-transparent text-on-surface hover:bg-accent active:bg-accent/50 shadow-none",
+                /* ─── Alias deprecados: apuntan a los 6 de arriba ───────────────── */
+                "outlined": "border border-[var(--neutral-separator)] bg-transparent text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
+                "text": "bg-transparent text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
                 "link": "bg-transparent text-brand-accent underline-offset-4 hover:underline shadow-none",
-
-                /* ─── Glass variants ────────────────────────────────────────────── */
-                "primary-glass": "text-white border border-white/15 border-t-white/35 border-b-white/5 bg-white/[0.08] hover:bg-white/[0.14] active:bg-white/[0.18] backdrop-blur-overlay-sm shadow-[shadow:var(--glass-highlight-lg),0_4px_16px_rgba(0,0,0,0.35)] transition-[transform,background-color,border-color,box-shadow] duration-fast ease-out-strong active:scale-95",
-                "gray-glass": "text-on-surface border border-outline-variant/30 bg-surface-container/60 backdrop-blur-overlay-md hover:bg-surface-container-high shadow-elevation-1",
-
-                /* Brand variants */
-                "brand-primary": "bg-brand-accent text-on-primary hover:bg-brand-accent/90 active:bg-brand-accent shadow-brand-primary",
+                "primary-glass": GLASS + " [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[color-mix(in_srgb,var(--neutral-elev-2)_70%,transparent)]",
+                "gray-glass": GLASS + " [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[color-mix(in_srgb,var(--neutral-elev-2)_70%,transparent)]",
+                "brand-primary": "bg-brand-accent text-on-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95 shadow-none",
+                "primary-glow": "bg-brand-accent text-on-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95 shadow-none",
+                "brand-destructive": "bg-destructive text-destructive-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:bg-destructive/90 shadow-none",
+                "alert": "bg-destructive text-destructive-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:bg-destructive/90 shadow-none",
                 "brand-secondary": "bg-brand-secondary text-on-secondary hover:bg-brand-secondary/90 active:bg-brand-secondary shadow-brand-secondary",
-                "brand-destructive": "bg-brand-destructive text-white hover:bg-brand-destructive/90 active:bg-brand-destructive shadow-brand-destructive",
-                "brand-success": "bg-brand-success text-white hover:bg-brand-success/90 active:bg-brand-success shadow-brand-success",
+                "brand-success": "bg-brand-success text-black hover:bg-brand-success/90 active:bg-brand-success shadow-brand-success",
                 "brand-magic": "bg-brand-magic text-white hover:bg-brand-magic/90 active:bg-brand-magic shadow-brand-magic",
-
-                /* Semantic Surface / Tone variants */
-                "gray": "bg-surface-container text-on-surface-variant/70 hover:bg-surface-container-high",
-                "gray-outline": "text-on-surface/70 border border-outline-variant bg-transparent hover:bg-surface-container",
-                "gray-subtle": "text-on-surface-variant/70 border border-transparent bg-surface-container-low hover:bg-surface-container",
-                "gray-basic": "shadow-none text-on-surface-variant/70 border-transparent bg-transparent hover:bg-surface-container",
-                "gray-link": "text-on-surface/70 border-transparent bg-transparent hover:underline",
-                "white": "text-on-primary bg-surface hover:bg-surface-container active:bg-surface-container-high",
-                "white-outline": "text-on-surface border border-outline bg-transparent hover:bg-surface-container",
-                "primary-basic": "shadow-none text-on-surface border-transparent bg-transparent hover:bg-surface-container active:bg-surface-container-high",
-                "primary-outline": "text-on-surface border border-outline bg-transparent hover:bg-surface-container active:bg-surface-container-high",
-                "primary-glow": "bg-brand-accent text-on-primary hover:bg-brand-accent/90 shadow-brand-focus",
-                "alert": "bg-status-error text-white hover:brightness-110",
-                "alert-outline": "text-status-error border border-status-error bg-transparent hover:bg-status-error/10",
-                "alert-subtle": "bg-status-error/10 text-status-error border border-status-error/30 hover:bg-status-error/20",
+                "gray": "bg-[var(--neutral-elev-1)] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] shadow-none",
+                "gray-outline": "text-label-2 border border-[var(--neutral-separator)] bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
+                "gray-subtle": "text-on-surface-variant border border-transparent bg-[var(--neutral-elev-1)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] shadow-none",
+                "gray-basic": "shadow-none text-on-surface-variant border-transparent bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)]",
+                "gray-link": "text-label-2 border-transparent bg-transparent hover:underline shadow-none",
+                "white": "bg-[var(--selected-bg)] text-[var(--selected-fg)] [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95 shadow-none",
+                "white-outline": "text-on-surface border border-[var(--neutral-separator)] bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
+                "primary-basic": "shadow-none text-on-surface border-transparent bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)]",
+                "primary-outline": "text-on-surface border border-[var(--neutral-separator)] bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
+                "alert-outline": "text-status-error border border-status-error bg-transparent hover:bg-status-error/10 shadow-none",
+                "alert-subtle": "bg-status-error/10 text-status-error border border-status-error/30 hover:bg-status-error/20 shadow-none",
             },
+            /* Sentence case con .type-label. Táctil 44 px; con puntero fino se compacta. */
             size: {
-                xs: "text-label-sm h-8 px-2 uppercase font-black tracking-widest rounded-pill",
-                sm: "text-label-sm h-10 px-3 uppercase font-black tracking-widest rounded-pill",
-                md: "text-xs h-12 px-4 uppercase font-black tracking-widest rounded-pill",
-                lg: "text-sm h-14 px-6 uppercase font-black tracking-widest rounded-pill",
-                xl: "text-base h-16 px-8 uppercase font-black tracking-widest rounded-pill",
-                icon: "h-10 w-10 rounded-full p-0",
-                "icon-sm": "h-8 w-8 rounded-full p-0",
+                xs: "type-label h-11 px-3 rounded-pill [@media(hover:hover)_and_(pointer:fine)]:h-8",
+                sm: "type-label h-11 px-3.5 rounded-pill [@media(hover:hover)_and_(pointer:fine)]:h-9",
+                md: "type-label text-sm h-11 px-4 rounded-pill [@media(hover:hover)_and_(pointer:fine)]:h-9",
+                lg: "type-label text-sm h-12 px-6 rounded-pill",
+                xl: "type-label text-base h-14 px-8 rounded-pill",
+                icon: "h-11 w-11 rounded-full p-0 [@media(hover:hover)_and_(pointer:fine)]:h-9 [@media(hover:hover)_and_(pointer:fine)]:w-9",
+                "icon-sm": "h-11 w-11 rounded-full p-0 [@media(hover:hover)_and_(pointer:fine)]:h-8 [@media(hover:hover)_and_(pointer:fine)]:w-8",
                 "icon-lg": "h-12 w-12 rounded-full p-0",
             },
         },
@@ -84,6 +103,9 @@ export const ButtonAnatomy = defineStyleAnatomy({
 /* -------------------------------------------------------------------------------------------------
  * Button
  * -----------------------------------------------------------------------------------------------*/
+
+/** Spinner de carga (viewBox 0 0 1792 1792). */
+const SPINNER_PATH = "M526 1394q0 53-37.5 90.5t-90.5 37.5q-52 0-90-38t-38-90q0-53 37.5-90.5t90.5-37.5 90.5 37.5 37.5 90.5zm498 206q0 53-37.5 90.5t-90.5 37.5-90.5-37.5-37.5-90.5 37.5-90.5 90.5-37.5 90.5 37.5 37.5 90.5zm-704-704q0 53-37.5 90.5t-90.5 37.5-90.5-37.5-37.5-90.5 37.5-90.5 90.5-37.5 90.5 37.5 37.5 90.5zm1202 498q0 52-38 90t-90 38q-53 0-90.5-37.5t-37.5-90.5 37.5-90.5 90.5-37.5 90.5 37.5 37.5 90.5zm-964-996q0 66-47 113t-113 47-113-47-47-113 47-113 113-47 113 47 47 113zm1170 498q0 53-37.5 90.5t-90.5 37.5-90.5-37.5-37.5-90.5 37.5-90.5 90.5-37.5 90.5 37.5 37.5 90.5zm-640-704q0 80-56 136t-136 56-136-56-56-136 56-136 136-56 136 56 56 136zm530 206q0 93-66 158.5t-158 65.5q-93 0-158.5-65.5t-65.5-158.5q0-92 65.5-158t158.5-66q92 0 158 66t66 158z"
 
 export type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> &
     VariantProps<typeof ButtonAnatomy.root> & {
@@ -125,18 +147,19 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
                     intent,
                 }),
                 // Respuesta al toque: se hunde al presionar (150 ms, ease-out fuerte) sin
-                // rebote. El agrandado de hover queda solo para mouse: en touch se pega.
-                // Una sola transición con color y transform, porque twMerge descarta
-                // `transition-colors` si le sigue otra clase `transition-*`.
-                !isDisabled && !disableSpring && "transition-[transform,background-color,border-color,color,box-shadow] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.02] active:scale-95",
+                // rebote (solo transform en :active; sin agrandado en hover).
+                // Una sola transición con color, brillo (`filter`: los hover brightness-* de los intents) y transform,
+                // porque twMerge descarta `transition-colors` si le sigue otra clase `transition-*`.
+                !isDisabled && !disableSpring && "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong active:scale-95",
                 className,
             )}
             disabled={isDisabled}
             aria-disabled={disabled}
+            aria-busy={loading || undefined}
             {...rest}
             ref={ref}
         >
-            {loading ? (
+            {loading && !leftIcon ? (
                 <>
                     <svg
                         width="15"
@@ -148,7 +171,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
                         style={{ marginInlineEnd: !hideTextOnSmallScreen ? iconSpacing : 0 }}
                     >
                         <path
-                            d="M526 1394q0 53-37.5 90.5t-90.5 37.5q-52 0-90-38t-38-90q0-53 37.5-90.5t90.5-37.5 90.5 37.5 37.5 90.5zm498 206q0 53-37.5 90.5t-90.5 37.5-90.5-37.5-37.5-90.5 37.5-90.5 90.5-37.5 90.5 37.5 37.5 90.5zm-704-704q0 53-37.5 90.5t-90.5 37.5-90.5-37.5-37.5-90.5 37.5-90.5 90.5-37.5 90.5 37.5 37.5 90.5zm1202 498q0 52-38 90t-90 38q-53 0-90.5-37.5t-37.5-90.5 37.5-90.5 90.5-37.5 90.5 37.5 37.5 90.5zm-964-996q0 66-47 113t-113 47-113-47-47-113 47-113 113-47 113 47 47 113zm1170 498q0 53-37.5 90.5t-90.5 37.5-90.5-37.5-37.5-90.5 37.5-90.5 90.5-37.5 90.5 37.5 37.5 90.5zm-640-704q0 80-56 136t-136 56-136-56-56-136 56-136 136-56 136 56 56 136zm530 206q0 93-66 158.5t-158 65.5q-93 0-158.5-65.5t-65.5-158.5q0-92 65.5-158t158.5-66q92 0 158 66t66 158z"
+                            d={SPINNER_PATH}
                         >
                         </path>
                     </svg>
@@ -157,10 +180,24 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
             ) : <>
                 {leftIcon &&
                     <span
-                        className={cn(ButtonAnatomy.icon(), iconClass)}
+                        className={cn(ButtonAnatomy.icon(), iconClass, loading && "relative")}
                         style={{ marginInlineEnd: !hideTextOnSmallScreen ? iconSpacing : 0 }}
                     >
-                        {leftIcon}
+                        {loading ? (
+                            /* Con icono, el spinner ocupa su lugar con el mismo tamaño y margen: el icono queda
+                               invisible para reservar la caja y el ancho del botón no cambia al cargar. */
+                            <>
+                                <span className="inline-flex invisible">{leftIcon}</span>
+                                <svg
+                                    fill="currentColor"
+                                    className="absolute inset-0 h-full w-full animate-spin"
+                                    viewBox="0 0 1792 1792"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path d={SPINNER_PATH} />
+                                </svg>
+                            </>
+                        ) : leftIcon}
                     </span>}
                 <span
                     className={cn(

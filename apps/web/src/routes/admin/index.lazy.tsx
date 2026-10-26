@@ -1,26 +1,44 @@
 import { createLazyFileRoute, useNavigate, Link } from "@tanstack/react-router"
 import { m } from "framer-motion"
 import * as React from "react"
-import { useState } from "react"
 import { cn } from "@/components/ui/core/styling"
-import { IconUiDownload, IconNavigationTv, IconNavigationFilm, IconStatusActivity, IconStatusHdd, IconStatusPulse, IconNavigationSearch, IconUiRefresh, IconUiLink, IconUiDelete, IconStatusDatabase, IconStatusImage, IconArrowRight, IconStatusCloud, IconNavigationLibrary, IconStatusZap, IconMediaWand, IconStatusMusic, IconUiCheckCircle, IconUiXCircle, IconUiAlertCircle, IconUiHelpCircle, IconStatusFile, IconUiSliders, IconNavigationUsers, IconUiSpinner } from "@/components/ui/icons";
+import { Button, ButtonAnatomy } from "@/components/ui/button"
+import {
+    IconNavigationTv,
+    IconNavigationFilm,
+    IconStatusActivity,
+    IconStatusHdd,
+    IconStatusPulse,
+    IconNavigationSearch,
+    IconUiRefresh,
+    IconUiLink,
+    IconUiDelete,
+    IconStatusDatabase,
+    IconStatusImage,
+    IconArrowRight,
+    IconStatusCloud,
+    IconNavigationLibrary,
+    IconStatusZap,
+    IconMediaWand,
+    IconStatusMusic,
+    IconUiCheckCircle,
+    IconUiXCircle,
+    IconUiAlertCircle,
+    IconUiHelpCircle,
+    IconStatusFile,
+    IconUiSliders,
+    IconNavigationUsers,
+} from "@/components/ui/icons"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
 import { useGetLibraryStats, useGetTranscodeStats } from "@/api/hooks/admin.hooks"
-import { useBackupDatabase, useDownloadDatabaseBackup } from "@/api/hooks/system.hooks"
 import { useGetNotifications } from "@/api/hooks/notifications.hooks"
 import { useGetFFmpegStatus } from "@/api/hooks/mediastream.hooks"
-import { useCancelPreTranscode, useGetPreTranscodeJobs } from "@/api/hooks/pretranscode.hooks"
-import {
-    useDeleteLogs,
-    useDownloadDiagnosticsReport,
-    useGetLogContent,
-    useGetLogFilenames,
-} from "@/api/hooks/diagnostics.hooks"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
-import { toast } from "sonner"
 import { SectionBar } from "@/components/ui/sectionbar"
 import { ElasticCounter, LoadSwap } from "@/components/ui/kinetics"
-import { Skeleton } from "@/components/ui/skeleton/skeleton"
+import { AdminHeader } from "./-components/admin-header"
+import { AdminTranscodePanel, AdminRowSkeletons } from "./-components/admin-transcode-panel"
+import { ServerLogsViewer } from "@/components/settings/server-logs-viewer"
 
 export const Route = createLazyFileRoute("/admin/")({
     component: AdminPage,
@@ -34,32 +52,32 @@ function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen text-on-surface font-sans antialiased selection:bg-brand-accent/30 selection:text-white"
+            className="min-h-screen text-on-surface font-sans antialiased"
         >
-            <div className="page-container py-8 sm:py-10">
+            <div className="page-container pt-nav pb-8 sm:pb-10">
                 <AdminHeader />
 
                 <div className="mt-8 md:mt-12 space-y-6 md:space-y-8">
                     <AdminStatsGrid trStats={trStats} />
 
-                    <AdminSection title="Gestión de Biblioteca" subtitle="Escaneo y sincronización" icon={IconNavigationLibrary}>
+                    <AdminSection title="Gestión de la biblioteca" subtitle="Escaneo y sincronización" icon={IconNavigationLibrary}>
                         <AdminActionsGrid />
                     </AdminSection>
 
-                    <AdminSection title="Transcodificación" subtitle="Motor de streaming, CPU, RAM y GPU en tiempo real" icon={IconStatusZap}>
+                    <AdminSection title="Conversión de video" subtitle="Transcodificación en vivo: motor, CPU, memoria y GPU" icon={IconStatusZap}>
                         <AdminTranscodePanel trStats={trStats} />
                     </AdminSection>
 
-                    <AdminSection title="Servicios Externos" subtitle="TMDB, AniList, Trakt, etc." icon={IconStatusCloud}>
+                    <AdminSection title="Servicios externos" subtitle="TMDB, AniList y otros" icon={IconStatusCloud}>
                         <AdminServicesGrid />
                     </AdminSection>
 
-                    <AdminSection title="Sistema" subtitle="Configuración y monitoreo" icon={IconUiSliders}>
+                    <AdminSection title="Sistema" subtitle="Ajustes y monitoreo" icon={IconUiSliders}>
                         <AdminSystemGrid />
                     </AdminSection>
 
-                    <AdminSection title="Logs del Servidor" subtitle="Visor y limpieza de archivos de log" icon={IconStatusFile}>
-                        <AdminLogsViewer />
+                    <AdminSection title="Registros del servidor" subtitle="Visor y limpieza de los archivos de registro" icon={IconStatusFile}>
+                        <ServerLogsViewer />
                     </AdminSection>
 
                     <AdminRecentActivity />
@@ -69,64 +87,6 @@ function AdminPage() {
     )
 }
 
-function AdminHeader() {
-    const { mutate: backupDb, isPending: isBackingUp } = useBackupDatabase()
-    const { download: downloadReport, isDownloading: isDownloadingReport } = useDownloadDiagnosticsReport()
-    const { download: downloadBackup, isDownloading: isDownloadingBackup } = useDownloadDatabaseBackup()
-
-    const handleBackup = () => {
-        backupDb(undefined, {
-            onSuccess: () => {
-                toast.success("Respaldo de base de datos generado con éxito")
-                void downloadBackup()
-            },
-            onError: () => {
-                toast.error("Error al generar el respaldo")
-            }
-        })
-    }
-
-    return (
-        <header className="relative z-10">
-            <div className="w-full">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-4">
-                    <div>
-                        <h1 className="text-h2 font-display text-on-surface tracking-tight">Panel de Administración</h1>
-                        <p className="text-body-md text-on-surface-variant/70 mt-2">Gestiona y monitorea tu instancia de KameHouse</p>
-                    </div>
-                    <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 w-full sm:w-auto flex-wrap">
-                        <button
-                            onClick={handleBackup}
-                            disabled={isBackingUp || isDownloadingBackup}
-                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 h-10 border border-white/15 text-on-surface font-semibold text-xs rounded-full bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 active:scale-95 transition-[background-color,border-color,transform] duration-base ease-smooth-out disabled:opacity-50 cursor-pointer"
-                        >
-                            <LoadSwap
-                                loading={isBackingUp || isDownloadingBackup}
-                                skeleton={<IconUiSpinner size={16} className="animate-spin text-brand-accent" />}
-                            >
-                                <IconUiDownload size={16} strokeWidth={2.5} />
-                            </LoadSwap>
-                            {isBackingUp ? "Creando..." : isDownloadingBackup ? "Descargando..." : "Backup"}
-                        </button>
-                        <button
-                            onClick={downloadReport}
-                            disabled={isDownloadingReport}
-                            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 h-10 border border-white/15 text-on-surface font-semibold text-xs rounded-full bg-white/[0.04] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 active:scale-95 transition-[background-color,border-color,transform] duration-base ease-smooth-out disabled:opacity-50 cursor-pointer"
-                        >
-                            <LoadSwap
-                                loading={isDownloadingReport}
-                                skeleton={<IconUiSpinner size={16} className="animate-spin text-brand-accent" />}
-                            >
-                                <IconStatusFile size={16} strokeWidth={2.5} />
-                            </LoadSwap>
-                            {isDownloadingReport ? "Descargando..." : "Reporte"}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </header>
-    )
-}
 
 function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTranscodeStats>["data"] }) {
     const { data: libStats } = useGetLibraryStats()
@@ -136,23 +96,23 @@ function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTransco
     const memoryUsed = trStats?.system?.memoryUsed ? (trStats.system.memoryUsed / 1024 / 1024 / 1024).toFixed(1) : "0.0"
 
     const stats = React.useMemo(() => [
-        { label: "Medios", count: libStats?.totalMedia, change: "Series y Películas", icon: IconNavigationTv, color: "var(--brand-accent)" },
-        { label: "Archivos", count: libStats?.totalLocalFiles, change: "Ficheros indexados", icon: IconNavigationFilm, color: "var(--brand-accent)" },
-        { label: "CPU", value: `${cpuPercent}%`, change: "Uso del sistema", icon: IconStatusActivity, color: "rgb(52 211 153)" },
-        { label: "Memoria", value: `${memoryUsed} GB`, change: `De ${memoryTotal} GB totales`, icon: IconStatusHdd, color: "rgb(168 85 247)" },
-        { label: "Transcoder NVENC", value: trStats?.transcoderInitialized && trStats.governor ? `${trStats.governor.activeNvenc} / ${trStats.governor.nvencCap}` : "Inactivo", change: "Sesiones GPU activas", icon: IconNavigationTv, color: "var(--md-sys-color-on-surface-variant)" },
-        { label: "Pre-Transcode", count: trStats?.preTranscodeQueue, change: "En cola", icon: IconStatusPulse, color: "rgb(52 211 153)" },
+        { label: "Títulos", count: libStats?.totalMedia, change: "Series y películas", icon: IconNavigationTv, color: "hsl(var(--brand-accent))" },
+        { label: "Archivos", count: libStats?.totalLocalFiles, change: "En la biblioteca", icon: IconNavigationFilm, color: "hsl(var(--brand-accent))" },
+        { label: "CPU", value: `${cpuPercent}%`, change: "Uso del sistema", icon: IconStatusActivity, color: "var(--status-success)" },
+        { label: "Memoria", value: `${memoryUsed} GB`, change: `De ${memoryTotal} GB totales`, icon: IconStatusHdd, color: "var(--brand-accent-hex)" },
+        { label: "GPU (NVENC)", value: trStats?.transcoderInitialized && trStats.governor ? `${trStats.governor.activeNvenc} / ${trStats.governor.nvencCap}` : "Inactiva", change: "Sesiones de GPU activas", icon: IconNavigationTv, color: "var(--md-sys-color-on-surface-variant)" },
+        { label: "Conversión previa", count: trStats?.preTranscodeQueue, change: "En cola", icon: IconStatusPulse, color: "var(--status-success)" },
     ], [libStats, trStats, cpuPercent, memoryUsed, memoryTotal])
 
     return (
         <section aria-labelledby="stats-title" className="mb-6">
-            <h2 id="stats-title" className="sr-only">Estadísticas Generales</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+            <h2 id="stats-title" className="sr-only">Estadísticas generales</h2>
+            {/* Un solo contenedor de vidrio para los 6 datos: cada tarjeta suelta sumaba un blur (Admin llegaba a 16 nodos). */}
+            <div className="surface-content rounded-2xl p-3.5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {stats.map((stat) => (
-                    <div key={stat.label} className="sectionbar p-4.5 relative overflow-hidden group [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/25 transition-[border-color,box-shadow] duration-base ease-smooth-out">
+                    <div key={stat.label} className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] p-4 relative overflow-hidden group [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-colors duration-base ease-smooth-out">
                         <div className="flex items-start justify-between">
                             <stat.icon size={22} className="text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface transition-colors duration-fast ease-smooth-out" style={{ color: stat.color }} />
-                            <span className="text-3xs font-mono text-on-surface-variant/50 uppercase tracking-wider">—</span>
                         </div>
                         <div className="text-2xl font-display text-on-surface font-extrabold tracking-tight mt-3 tabular-nums">
                             {stat.count !== undefined ? (
@@ -163,7 +123,7 @@ function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTransco
                         </div>
                         <div className="text-2xs mt-1">
                             <span className="text-on-surface font-semibold block truncate">{stat.label}</span>
-                            <span className="text-on-surface-variant/70 text-3xs truncate block mt-0.5">{stat.change}</span>
+                            <span className="text-label-2 text-3xs truncate block mt-0.5">{stat.change}</span>
                         </div>
                     </div>
                 ))}
@@ -191,13 +151,13 @@ function AdminSection({
 }) {
     return (
         <SectionBar
+            variant="content"
             label={title}
             description={subtitle}
             icon={icon}
             badge={badge}
             collapsible={collapsible}
             defaultOpen={defaultOpen}
-            variant="default"
             className="mb-8"
         >
             <div className="pt-2">
@@ -212,12 +172,12 @@ function AdminActionsGrid() {
     const { mutate: scanLibrary } = useScanLocalFiles()
 
     const actions = [
-        { label: "Escanear Biblioteca", desc: "Detectar nuevos archivos", icon: IconNavigationSearch, variant: "primary" as const, action: () => scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false }) },
-        { label: "Re-Scan Forzado", desc: "Ignorar cache y re-escanear todo", icon: IconUiRefresh, variant: "secondary" as const, action: () => scanLibrary({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false }) },
-        { label: "Match Manual", desc: "Resolver archivos no vinculados", icon: IconUiLink, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Limpiar Huérfanos", desc: "Eliminar entradas sin archivo (no implementado)", icon: IconUiDelete, variant: "destructive" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Actualizar Metadatos", desc: "Refrescar info de TMDB/AniList", icon: IconStatusDatabase, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Configurar Pre-Transcode", desc: "Gestionar caché y perfiles", icon: IconStatusImage, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
+        { label: "Escanear biblioteca", desc: "Detecta archivos nuevos", icon: IconNavigationSearch, variant: "primary" as const, action: () => scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false }) },
+        { label: "Escaneo profundo", desc: "Ignora la caché y analiza todo de nuevo", icon: IconUiRefresh, variant: "secondary" as const, action: () => scanLibrary({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false }) },
+        { label: "Coincidencia manual", desc: "Vincula archivos sin identificar", icon: IconUiLink, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Limpiar huérfanos", desc: "Elimina entradas de la biblioteca que ya no tienen archivo", icon: IconUiDelete, variant: "destructive" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Metadatos", desc: "Elige el proveedor y el idioma de los metadatos", icon: IconStatusDatabase, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Rendimiento y video", desc: "Perfil de rendimiento y motor de video", icon: IconStatusImage, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
     ]
 
     return (
@@ -225,19 +185,18 @@ function AdminActionsGrid() {
             {actions.map((action, i) => {
                 if (action.variant === "destructive") {
                     return (
-                        <div key={i} className="w-full text-left rounded-xl bg-white/[0.03] border border-white/10 p-5 flex flex-col justify-between">
+                        <div key={i} className="w-full text-left rounded-xl bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] p-5 flex flex-col justify-between">
                             <div className="flex items-start gap-3.5">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-red-500/15 text-red-400 border border-red-500/25">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-status-error/15 text-status-error border border-status-error/25">
                                     <action.icon size={20} strokeWidth={2.5} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase font-mono">{action.label}</h3>
-                                    <p className="text-2xs text-on-surface-variant/70 mt-0.5">{action.desc}</p>
+                                    <h3 className="text-xs font-bold text-on-surface">{action.label}</h3>
+                                    <p className="text-2xs text-label-2 mt-0.5">{action.desc}</p>
                                 </div>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-white/[0.08] flex items-center justify-between gap-2">
-                                <span className="text-3xs font-mono text-on-surface-variant/60 uppercase">No implementado</span>
-                                <span className="text-3xs font-mono px-2 py-1 rounded bg-white/5 border border-white/10 text-on-surface-variant/70 uppercase">
+                            <div className="mt-4 pt-3 border-t border-[var(--neutral-separator)] flex items-center justify-end gap-2">
+                                <span className="text-2xs px-2 py-1 rounded bg-[var(--neutral-elev-3)] border border-[var(--neutral-separator)] text-on-surface-variant">
                                     Próximamente
                                 </span>
                             </div>
@@ -249,22 +208,22 @@ function AdminActionsGrid() {
                         key={i}
                         type="button"
                         onClick={action.action}
-                        className="w-full text-left rounded-xl bg-white/[0.03] border border-white/10 p-5 cursor-pointer transition-[background-color,border-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] active:scale-95 group flex flex-col justify-between"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full text-left rounded-xl bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] p-5 cursor-pointer transition-[background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] active:scale-[0.98] group flex flex-col justify-between"
                     >
                         <div className="flex items-start gap-3.5">
                             <div className={cn(
-                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-smooth-out",
-                                action.variant === "primary" && "bg-brand-accent/15 text-brand-accent border border-brand-accent/25",
-                                action.variant === "secondary" && "bg-sky-500/15 text-sky-400 border border-sky-500/25",
-                                action.variant === "outline" && "bg-white/[0.04] border border-white/10 text-on-surface-variant",
+                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-fast ease-smooth-out",
+                                action.variant === "primary" && "bg-brand-accent/15 text-brand-accent-readable border border-brand-accent/25",
+                                action.variant === "secondary" && "bg-brand-accent/15 text-brand-accent-readable border border-brand-accent/25",
+                                action.variant === "outline" && "bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] text-on-surface-variant",
                             )}>
                                 <action.icon size={20} strokeWidth={2.5} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase font-mono">{action.label}</h3>
-                                <p className="text-2xs text-on-surface-variant/70 mt-0.5">{action.desc}</p>
+                                <h3 className="text-xs font-bold text-on-surface">{action.label}</h3>
+                                <p className="text-2xs text-label-2 mt-0.5">{action.desc}</p>
                             </div>
-                            <IconArrowRight size={18} className="text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
+                            <IconArrowRight size={18} className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
                         </div>
                     </button>
                 )
@@ -284,7 +243,7 @@ function AdminServicesGrid() {
         {
             name: "TMDB",
             status: tmdbConfigured ? "connected" : "disconnected",
-            desc: "Metadatos y afiches oficiales de películas y series",
+            desc: "Metadatos y pósters de películas y series",
             lastSync: tmdbConfigured ? "Vinculado" : "Sin configurar",
             icon: IconStatusCloud,
             tab: "system",
@@ -298,33 +257,33 @@ function AdminServicesGrid() {
             tab: "system",
         },
         {
-            name: "Biblioteca Local",
+            name: "Biblioteca local",
             status: hasPaths ? "connected" : "disconnected",
-            desc: "Directorios locales escaneados en tiempo real",
+            desc: "Carpetas locales vigiladas en tiempo real",
             lastSync: hasPaths ? "Monitoreado" : "Sin carpetas",
             icon: IconNavigationLibrary,
             tab: "library",
         },
         {
-            name: "Motor de Video / FFmpeg",
+            name: "Motor de video (FFmpeg)",
             status: ffmpegReady ? "connected" : "disconnected",
-            desc: "Aceleración por hardware y transcodificación HLS",
+            desc: "Aceleración por GPU y conversión de video HLS",
             lastSync: ffmpegReady ? "Listo" : "No instalado",
             icon: IconStatusZap,
             tab: "performance",
         },
         {
-            name: "Continuidad y Marcas Skip",
+            name: "Progreso e intros",
             status: settings?.library?.enableWatchContinuity ? "connected" : "disconnected",
-            desc: "Historial sincronizado y detección acústica",
+            desc: "Historial de reproducción y detección de intros y créditos",
             lastSync: settings?.library?.enableWatchContinuity ? "Activo" : "Desactivado",
             icon: IconMediaWand,
             tab: "playback",
         },
         {
-            name: "Música Ambiental y Audio",
+            name: "Música y sonidos",
             status: "unknown",
-            desc: "Bandas sonoras de era y efectos sonoros",
+            desc: "Música de fondo y sonidos de la interfaz",
             lastSync: "No monitoreado",
             icon: IconStatusMusic,
             tab: "playback",
@@ -333,9 +292,9 @@ function AdminServicesGrid() {
 
     const getStatusConfig = (status: string) => {
         switch (status) {
-            case "connected": return { color: "rgb(52 211 153)", label: "Conectado", icon: IconUiCheckCircle }
+            case "connected": return { color: "var(--status-success)", label: "Conectado", icon: IconUiCheckCircle }
             case "disconnected": return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconectado", icon: IconUiXCircle }
-            case "error": return { color: "rgb(248 113 113)", label: "Error", icon: IconUiAlertCircle }
+            case "error": return { color: "var(--status-error)", label: "Error", icon: IconUiAlertCircle }
             case "unknown": return { color: "var(--md-sys-color-on-surface-variant)", label: "No monitoreado", icon: IconUiHelpCircle }
             default: return { color: "var(--md-sys-color-on-surface-variant)", label: "Desconocido", icon: IconUiHelpCircle }
         }
@@ -346,28 +305,28 @@ function AdminServicesGrid() {
             {services.map((service, i) => {
                 const status = getStatusConfig(service.status)
                 return (
-                    <div key={i} className="rounded-xl bg-white/[0.03] border border-white/10 p-5 transition-[background-color,border-color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.05] flex flex-col justify-between">
+                    <div key={i} className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] p-5 transition-[background-color,border-color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] flex flex-col justify-between">
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3.5 min-w-0">
-                                <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center shrink-0">
-                                    <service.icon size={20} className="text-on-surface-variant/80" />
+                                <div className="w-10 h-10 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center shrink-0">
+                                    <service.icon size={20} className="text-label-2" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase font-mono truncate">{service.name}</h3>
-                                    <p className="text-2xs text-on-surface-variant/70 mt-0.5 line-clamp-2">{service.desc}</p>
+                                    <h3 className="text-xs font-bold text-on-surface truncate">{service.name}</h3>
+                                    <p className="text-2xs text-label-2 mt-0.5 line-clamp-2">{service.desc}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                                 <status.icon size={14} className="shrink-0" style={{ color: status.color }} />
-                                <span className="text-3xs font-mono font-bold uppercase tracking-wider" style={{ color: status.color }}>{status.label}</span>
+                                <span className="text-2xs font-bold" style={{ color: status.color }}>{status.label}</span>
                             </div>
                         </div>
-                        <div className="mt-4 pt-3.5 border-t border-white/[0.08] flex items-center justify-between">
-                            <span className="text-2xs text-on-surface-variant/70">Estado: <span className="font-mono text-on-surface ml-1">{service.lastSync}</span></span>
+                        <div className="mt-4 pt-3.5 border-t border-[var(--neutral-separator)] flex items-center justify-between">
+                            <span className="text-2xs text-label-2">Estado: <span className="text-on-surface ml-1">{service.lastSync}</span></span>
                             <Link
                                 to="/settings"
                                 search={{ tab: service.tab }}
-                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:text-white active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out min-h-[32px] cursor-pointer"
+                                className={ButtonAnatomy.root({ intent: "outline", size: "sm" })}
                             >
                                 Configurar
                             </Link>
@@ -379,218 +338,34 @@ function AdminServicesGrid() {
     )
 }
 
-function StatBar({ label, value, max, display, color }: { label: string; value: number; max: number; display: string; color?: string }) {
-    const percent = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0
-    return (
-        <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between items-center text-label-sm font-bold uppercase tracking-widest text-on-surface-variant">
-                <span>{label}</span>
-                <span className="font-mono normal-case tracking-normal" style={{ fontVariantNumeric: "tabular-nums" }}>{display}</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden border border-white/5">
-                <div
-                    className="h-full rounded-full transition-[width] duration-base ease-smooth-out"
-                    style={{ width: `${percent}%`, background: color || "var(--brand-accent)" }}
-                />
-            </div>
-        </div>
-    )
-}
 
-function formatGb(bytes: number | undefined): string {
-    return ((bytes || 0) / 1024 / 1024 / 1024).toFixed(1)
-}
 
-function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof useGetTranscodeStats>["data"] }) {
-    const stats = trStats
 
-    const governor = stats?.governor
-    const system = stats?.system
-    const gpu = stats?.gpu
-
-    return (
-        <>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {/* Motor de transcodificación */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[background-color,border-color] duration-base ease-smooth-out">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">Motor de Streaming</h3>
-                    <span className={cn(
-                        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-3xs font-mono font-bold uppercase tracking-wider border",
-                        stats?.transcoderInitialized
-                            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                            : "bg-white/5 border-white/10 text-on-surface-variant"
-                    )}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full", stats?.transcoderInitialized ? "bg-emerald-400 animate-pulse" : "bg-on-surface-variant/50")} />
-                        {stats?.transcoderInitialized ? "Activo" : "En reposo"}
-                    </span>
-                </div>
-                {governor ? (
-                    <>
-                        <StatBar
-                            label="Procesos ffmpeg"
-                            value={governor.activeProcesses}
-                            max={governor.maxConcurrency}
-                            display={`${governor.activeProcesses} / ${governor.maxConcurrency}`}
-                        />
-                        <StatBar
-                            label="Sesiones NVENC"
-                            value={governor.activeNvenc}
-                            max={governor.nvencCap}
-                            display={`${governor.activeNvenc} / ${governor.nvencCap}`}
-                            color="rgb(52 211 153)"
-                        />
-                        <div className="flex items-center justify-between text-2xs text-on-surface-variant/70 mt-auto pt-3.5 border-t border-white/[0.08]">
-                            <span>Lanzados: <span className="font-mono text-on-surface ml-1">{governor.totalLaunched}</span></span>
-                            <span>Completados: <span className="font-mono text-on-surface ml-1">{governor.totalCompleted}</span></span>
-                        </div>
-                    </>
-                ) : (
-                    <p className="text-2xs text-on-surface-variant/70 my-auto">
-                        El transcoder está dormido. Se despierta al reproducir un stream que lo necesite.
-                    </p>
-                )}
-                <div className="flex items-center justify-between text-2xs text-on-surface-variant/70">
-                    <span>Cola de pre-transcode</span>
-                    <span className="font-mono text-on-surface font-semibold">{stats?.preTranscodeQueue ?? 0}</span>
-                </div>
-            </div>
-
-            {/* Sistema */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[background-color,border-color] duration-base ease-smooth-out">
-                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">Sistema</h3>
-                <StatBar
-                    label="CPU"
-                    value={system?.cpuPercent || 0}
-                    max={100}
-                    display={`${(system?.cpuPercent || 0).toFixed(1)}%`}
-                />
-                <StatBar
-                    label="Memoria RAM"
-                    value={system?.memoryUsed || 0}
-                    max={system?.memoryTotal || 1}
-                    display={`${formatGb(system?.memoryUsed)} / ${formatGb(system?.memoryTotal)} GB`}
-                    color="var(--brand-accent)"
-                />
-            </div>
-
-            {/* GPU (solo si nvidia-smi respondió) */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[background-color,border-color] duration-base ease-smooth-out">
-                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface">GPU · NVIDIA</h3>
-                {gpu ? (
-                    <>
-                        <StatBar label="Uso de GPU" value={gpu.utilization} max={100} display={`${gpu.utilization}%`} />
-                        <StatBar label="Encoder NVENC" value={gpu.encoder} max={100} display={`${gpu.encoder}%`} color="rgb(52 211 153)" />
-                        <StatBar
-                            label="VRAM"
-                            value={gpu.memoryUsed}
-                            max={gpu.memoryTotal || 1}
-                            display={`${gpu.memoryUsed} / ${gpu.memoryTotal} MB`}
-                            color="rgb(168 85 247)"
-                        />
-                    </>
-                ) : (
-                    <p className="text-2xs text-on-surface-variant/70 my-auto">
-                        No se detectó nvidia-smi en el servidor.
-                    </p>
-                )}
-            </div>
-        </div>
-        <PreTranscodeJobsList />
-        </>
-    )
-}
-
-/** Filas de carga con la misma caja que las filas reales, para que nada salte al llegar los datos. */
-function AdminRowSkeletons({ count }: { count: number }) {
-    return (
-        <>
-            {Array.from({ length: count }, (_, i) => (
-                <Skeleton key={i} className="h-[58px] rounded-xl" />
-            ))}
-        </>
-    )
-}
-
-function PreTranscodeJobsList() {
-    const { data: jobs, isLoading } = useGetPreTranscodeJobs()
-    const { mutate: cancelJob, isPending: isCancelling } = useCancelPreTranscode()
-
-    if (isLoading) {
-        return (
-            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 mt-3.5 space-y-2.5" role="status" aria-label="Cargando cola de pre-transcode">
-                <Skeleton className="h-3 w-40 rounded-full" />
-                <AdminRowSkeletons count={2} />
-            </div>
-        )
-    }
-    if (!jobs || jobs.length === 0) return null
-
-    return (
-        <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 mt-3.5">
-            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-on-surface mb-3">
-                Cola de Pre-Transcode ({jobs.length})
-            </h3>
-            <div className="space-y-2.5">
-                {jobs.map((job) => (
-                    <div key={job.hash} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10">
-                        <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-on-surface truncate" title={job.filePath}>{job.filePath}</p>
-                            <div className="flex items-center gap-2 mt-1.5">
-                                <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                    <div
-                                        className="h-full rounded-full bg-brand-accent transition-[width]"
-                                        style={{ width: `${Math.min(100, Math.max(0, job.progress))}%` }}
-                                    />
-                                </div>
-                                <span className="text-3xs font-mono text-on-surface-variant/70 shrink-0">
-                                    {job.status} · {Math.round(job.progress)}%
-                                </span>
-                            </div>
-                            {job.error && (
-                                <p className="text-3xs text-red-400 mt-1 truncate">{job.error}</p>
-                            )}
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => cancelJob(job.hash)}
-                            disabled={isCancelling}
-                            title="Cancelar pre-transcode"
-                            className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-red-400 [@media(hover:hover)_and_(pointer:fine)]:hover:border-red-500/40 active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out disabled:opacity-50 cursor-pointer"
-                        >
-                            <IconUiDelete size={14} />
-                        </button>
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
-}
 
 function AdminSystemGrid() {
     const navigate = useNavigate()
 
     const items = [
-        { label: "Logs y Diagnóstico", desc: "Ver reportes y eventos del sistema", icon: IconStatusFile, action: () => navigate({ to: "/settings", search: { tab: "system" } }) },
-        { label: "Configuración Avanzada", desc: "Ajustes de rendimiento y hardware", icon: IconUiSliders, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
-        { label: "Rutas de Biblioteca", desc: "Gestionar carpetas de series y películas", icon: IconNavigationUsers, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Backup y Base de Datos", desc: "Respaldos y mantenimiento de SQLite", icon: IconStatusHdd, action: () => navigate({ to: "/settings", search: { tab: "system" } }) },
-        { label: "Apariencia y Temas", desc: "Personalización visual y eras", icon: IconUiRefresh, action: () => navigate({ to: "/settings", search: { tab: "appearance" } }) },
+        { label: "Registros y diagnóstico", desc: "Ver informes y eventos del sistema", icon: IconStatusFile, action: () => navigate({ to: "/settings", search: { tab: "system" } }) },
+        { label: "Ajustes avanzados", desc: "Ajustes de rendimiento y hardware", icon: IconUiSliders, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
+        { label: "Carpetas de la biblioteca", desc: "Gestiona las carpetas de series y películas", icon: IconNavigationUsers, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Respaldo y base de datos", desc: "Copias de seguridad y mantenimiento", icon: IconStatusHdd, action: () => navigate({ to: "/settings", search: { tab: "system" } }) },
+        { label: "Apariencia y temas", desc: "Personalización visual y eras", icon: IconUiRefresh, action: () => navigate({ to: "/settings", search: { tab: "appearance" } }) },
     ]
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {items.map((item, i) => (
-                <button key={i} type="button" onClick={item.action} className="w-full text-left rounded-xl bg-white/[0.03] border border-white/10 p-5 cursor-pointer transition-[background-color,border-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] active:scale-95 group flex flex-col justify-between">
+                <button key={i} type="button" onClick={item.action} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full text-left rounded-xl bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] p-5 cursor-pointer transition-[background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] active:scale-[0.98] group flex flex-col justify-between">
                     <div className="flex items-start gap-3.5">
-                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-white/20 transition-[background-color,border-color] duration-fast ease-smooth-out shrink-0">
-                            <item.icon size={20} className="text-on-surface-variant/80" />
+                        <div className="w-10 h-10 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-[var(--neutral-separator)] transition-[background-color,border-color] duration-fast ease-smooth-out shrink-0">
+                            <item.icon size={20} className="text-label-2" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="text-xs font-bold text-on-surface tracking-wide uppercase font-mono">{item.label}</h3>
-                            <p className="text-2xs text-on-surface-variant/70 mt-0.5">{item.desc}</p>
+                            <h3 className="text-xs font-bold text-on-surface">{item.label}</h3>
+                            <p className="text-2xs text-label-2 mt-0.5">{item.desc}</p>
                         </div>
-                        <IconArrowRight size={18} className="text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
+                        <IconArrowRight size={18} className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
                     </div>
                 </button>
             ))}
@@ -598,52 +373,6 @@ function AdminSystemGrid() {
     )
 }
 
-function AdminLogsViewer() {
-    const { data: filenames, isLoading: isLoadingFiles } = useGetLogFilenames()
-    const [selected, setSelected] = useState<string | null>(null)
-    const { data: content, isLoading: isLoadingContent } = useGetLogContent(selected)
-    const { mutate: deleteLogs, isPending: isDeleting } = useDeleteLogs()
-    const files = filenames ?? []
-    const shown = (content ?? "").split("\n").slice(-300).join("\n")
-
-    return (
-        <div className="space-y-3.5">
-            <div className="flex flex-col sm:flex-row gap-2.5">
-                <select
-                    value={selected ?? ""}
-                    onChange={(e) => setSelected(e.target.value || null)}
-                    aria-label="Archivo de log"
-                    disabled={isLoadingFiles || files.length === 0}
-                    className="flex-1 px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-mono text-white min-h-[42px] focus:outline-none focus:border-white/30 transition-[border-color,background-color] duration-fast ease-smooth-out disabled:opacity-50 cursor-pointer"
-                >
-                    <option value="" className="bg-surface-container-lowest text-white">Último log activo</option>
-                    {files.map((f) => (
-                        <option key={f} value={f} className="bg-surface-container-lowest text-white">{f}</option>
-                    ))}
-                </select>
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (!selected) {
-                            toast.error("Selecciona un archivo para eliminar (el actual está protegido)")
-                            return
-                        }
-                        deleteLogs({ filenames: [selected] }, {
-                            onSuccess: () => setSelected(null),
-                        })
-                    }}
-                    disabled={isDeleting || !selected}
-                    className="px-5 py-2 rounded-full border border-red-500/30 text-red-400 text-xs font-bold [@media(hover:hover)_and_(pointer:fine)]:hover:bg-red-500/10 active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out disabled:opacity-50 min-h-[42px] cursor-pointer"
-                >
-                    {isDeleting ? "Eliminando..." : "Eliminar"}
-                </button>
-            </div>
-            <pre className="max-h-[400px] overflow-auto p-4 rounded-xl bg-black/40 border border-white/10 text-3xs font-mono text-on-surface-variant whitespace-pre-wrap break-all select-text leading-relaxed no-scrollbar">
-                {isLoadingContent ? "Cargando..." : shown || "Sin contenido."}
-            </pre>
-        </div>
-    )
-}
 
 function AdminRecentActivity() {
     const navigate = useNavigate()
@@ -652,30 +381,30 @@ function AdminRecentActivity() {
 
     const iconForType = (type: string) => {
         switch (type) {
-            case "scanner": return { icon: IconNavigationSearch, color: "rgb(52 211 153)" }
-            case "mediastream": return { icon: IconStatusZap, color: "var(--brand-accent)" }
-            default: return { icon: IconStatusActivity, color: "rgb(59 130 246)" }
+            case "scanner": return { icon: IconNavigationSearch, color: "var(--status-success)" }
+            case "mediastream": return { icon: IconStatusZap, color: "hsl(var(--brand-accent))" }
+            default: return { icon: IconStatusActivity, color: "var(--brand-accent-hex)" }
         }
     }
 
     return (
         <SectionBar
-            label="Actividad Reciente"
+            variant="content"
+            label="Actividad reciente"
             description="Eventos del sistema y sincronizaciones automáticas"
             icon={IconStatusActivity}
-            variant="default"
             className="mb-8"
         >
             <div className="pt-2 space-y-4">
                 <div className="flex items-center justify-end">
-                    <button
-                        type="button"
+                    <Button
+                        intent="outline"
+                        size="sm"
                         onClick={() => navigate({ to: "/settings", search: { tab: "system" } })}
-                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-on-surface-variant font-semibold text-xs rounded-full border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/25 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] [@media(hover:hover)_and_(pointer:fine)]:hover:text-white active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out cursor-pointer min-h-[32px]"
+                        rightIcon={<IconArrowRight size={13} strokeWidth={2.5} />}
                     >
-                        Ver Todo en Sistema
-                        <IconArrowRight size={13} strokeWidth={2.5} />
-                    </button>
+                        Abrir ajustes del sistema
+                    </Button>
                 </div>
                 <LoadSwap
                     className="space-y-2.5"
@@ -687,20 +416,20 @@ function AdminRecentActivity() {
                     }
                 >
                     {notifications.length === 0 ? (
-                        <p className="text-2xs text-on-surface-variant/70">Sin actividad reciente.</p>
+                        <p className="text-2xs text-label-2">Sin actividad reciente.</p>
                     ) : (
                         notifications.map((n) => {
                             const cfg = iconForType(n.type)
                             return (
-                                <div key={n.id} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[border-color] duration-fast ease-smooth-out">
+                                <div key={n.id} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] transition-[border-color] duration-fast ease-smooth-out">
                                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`, color: cfg.color }}>
                                         <cfg.icon size={16} strokeWidth={2.5} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs font-medium text-on-surface">{n.title}: {n.message}</p>
-                                        <p className="text-3xs text-on-surface-variant/70 mt-0.5">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}</p>
+                                        <p className="text-3xs text-label-2 mt-0.5">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}</p>
                                     </div>
-                                    <span className="text-4xs font-mono text-on-surface-variant/60 uppercase tracking-wider shrink-0 mt-0.5">{n.type}</span>
+                                    <span className="text-2xs text-label-2 shrink-0 mt-0.5">{n.type === "scanner" ? "Escáner" : n.type === "mediastream" ? "Reproducción" : "Sistema"}</span>
                                 </div>
                             )
                         })

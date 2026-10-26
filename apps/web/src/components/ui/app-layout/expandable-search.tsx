@@ -62,26 +62,30 @@ export function ExpandableSearch() {
         return (results || []).filter(res => res != null).slice(0, 6)
     }, [results])
 
-    // Cargar recientes al expandir
-    const [prevExpanded, setPrevExpanded] = React.useState(false)
-    if (isExpanded !== prevExpanded) {
-        setPrevExpanded(isExpanded)
-        if (isExpanded) {
-            setRecentSearches(getStoredRecents())
-            setSelectedIndex(-1)
-        }
+    const listId = React.useId()
+    const [selectionSource, setSelectionSource] = React.useState({ results: visibleResults, query })
+    // La selección pertenece a esta lista y consulta; una respuesta nueva no hereda el índice anterior.
+    if (selectionSource.results !== visibleResults || selectionSource.query !== query) {
+        setSelectionSource({ results: visibleResults, query })
+        setSelectedIndex(-1)
     }
+    const resultsOpen = isExpanded && isSearchActive
 
     // Expand handler
     const handleExpand = () => {
         if (!isExpanded) {
             playSound("category", 0.3)
+            setRecentSearches(getStoredRecents())
+            setSelectedIndex(-1)
             setIsExpanded(true)
-            setTimeout(() => {
-                inputRef.current?.focus()
-            }, 50)
         }
     }
+
+    React.useEffect(() => {
+        if (!isExpanded) return
+        const timer = window.setTimeout(() => inputRef.current?.focus(), 50)
+        return () => window.clearTimeout(timer)
+    }, [isExpanded])
 
     // Collapse handler
     const handleCollapse = React.useCallback(() => {
@@ -170,12 +174,12 @@ export function ExpandableSearch() {
 
     // Navegación con teclado
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "ArrowDown") {
+        if (e.key === "ArrowDown" && resultsOpen && visibleResults.length > 0) {
             e.preventDefault()
             setSelectedIndex(prev => (prev < visibleResults.length - 1 ? prev + 1 : 0))
             return
         }
-        if (e.key === "ArrowUp") {
+        if (e.key === "ArrowUp" && resultsOpen && visibleResults.length > 0) {
             e.preventDefault()
             setSelectedIndex(prev => (prev > 0 ? prev - 1 : visibleResults.length - 1))
             return
@@ -202,37 +206,35 @@ export function ExpandableSearch() {
 
     return (
         <div ref={containerRef} className="relative flex items-center">
-            {/* Pill Container */}
-            <m.div
-                initial={false}
-                animate={{
-                    width: isExpanded ? 260 : 36,
-                    backgroundColor: isExpanded
-                        ? "rgba(255, 255, 255, 0.08)"
-                        : "transparent",
-                    borderColor: isExpanded
-                        ? "rgba(255, 255, 255, 0.2)"
-                        : "transparent",
-                    boxShadow: isExpanded
-                        ? "inset 0 1px 1px rgba(255, 255, 255, 0.18)"
-                        : "inset 0 1px 1px rgba(255, 255, 255, 0)",
-                }}
-                transition={tabIndicatorSpring}
-                className="relative flex items-center h-8 rounded-full border overflow-hidden"
+            {/* Cápsula: el ancho pasa por una transición CSS con tokens y no por un spring de
+                framer que escribía el estilo en cada cuadro. Es `width` porque la isla tiene que
+                crecer con el buscador; el alto es fijo (h-8), así que no hay salto vertical.
+                Con movimiento reducido la regla global deja la transición en 0. */}
+            <div
+                className={cn(
+                    "relative flex items-center h-8 rounded-full border overflow-hidden",
+                    "transition-[width,background-color,border-color,box-shadow] duration-base ease-smooth-out",
+                    // Foco de teclado en la cápsula (el input lleva data-field-embedded y no dibuja el suyo).
+                    "has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:[outline-color:hsl(var(--focus-ring)/0.9)]",
+                    isExpanded
+                        ? "w-[260px] bg-white/[0.08] border-white/20 shadow-glass-highlight-md"
+                        : "w-9 bg-transparent border-transparent"
+                )}
             >
                 {/* Search Icon Trigger - Zero Shift geometry */}
                 <m.button
                     type="button"
                     onClick={handleExpand}
-                    aria-label="Buscar (Ctrl+K)"
+                    aria-label="Buscar"
+                    aria-keyshortcuts="Control+K"
                     title={isExpanded ? undefined : "Buscar (Ctrl+K)"}
                     whileTap={{ scale: 0.96 }}
                     whileHover={{ scale: isExpanded ? 1 : 1.05 }}
                     className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors duration-150",
                         isExpanded
-                            ? "text-brand-accent"
-                            : "text-on-surface-variant hover:text-white hover:bg-white/10"
+                            ? "text-brand-accent-readable"
+                            : "text-on-surface-variant hover:text-on-surface hover:bg-white/10"
                     )}
                 >
                     <IconNavigationSearch className="w-3.5 h-3.5" />
@@ -258,11 +260,18 @@ export function ExpandableSearch() {
                             <input
                                 ref={inputRef}
                                 type="text"
+                                role="combobox"
+                                aria-autocomplete="list"
+                                aria-expanded={resultsOpen}
+                                aria-controls={resultsOpen ? listId : undefined}
+                                aria-activedescendant={resultsOpen && selectedIndex >= 0 && visibleResults[selectedIndex] ? `${listId}-option-${selectedIndex}` : undefined}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Buscar anime, películas..."
-                                className="w-full bg-transparent border-none outline-none text-xs text-on-surface placeholder:text-on-surface-variant/60 font-sans focus:ring-0 focus:outline-none p-0 pr-1"
+                                placeholder="Buscar series, películas…"
+                                aria-label="Buscar series y películas"
+                                data-field-embedded=""
+                                className="w-full bg-transparent border-none outline-none text-xs text-on-surface placeholder:text-label-3 font-sans focus:ring-0 focus:outline-none p-0 pr-1"
                             />
 
                             {/* Loading indicator */}
@@ -270,47 +279,28 @@ export function ExpandableSearch() {
                                 <IconUiSpinner className="w-3 h-3 text-brand-accent animate-spin shrink-0 mx-1" />
                             )}
 
-                            {/* Clear or Close button */}
-                            <AnimatePresence mode="wait">
-                                {query ? (
-                                    <m.button
-                                        key="clear-query"
-                                        initial={{ opacity: 0, scale: 0.7 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.7 }}
-                                        transition={{ duration: 0.12 }}
-                                        type="button"
-                                        onClick={() => {
-                                             setQuery("")
-                                             inputRef.current?.focus()
-                                        }}
-                                        className="p-1 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 shrink-0 cursor-pointer"
-                                        aria-label="Limpiar búsqueda"
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <IconUiClose className="w-3 h-3" />
-                                    </m.button>
-                                ) : (
-                                    <m.button
-                                        key="collapse-search"
-                                        initial={{ opacity: 0, scale: 0.7 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.7 }}
-                                        transition={{ duration: 0.12 }}
-                                        type="button"
-                                        onClick={handleCollapse}
-                                        className="p-1 rounded-full text-on-surface-variant hover:text-white hover:bg-white/10 shrink-0 cursor-pointer"
-                                        aria-label="Cerrar búsqueda"
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        <IconUiClose className="w-3 h-3" />
-                                    </m.button>
-                                )}
-                            </AnimatePresence>
+                            {/* Limpiar o cerrar: es la misma X, así que es un solo botón que no se
+                                remonta al tipear (antes se encogía y volvía a aparecer). */}
+                            <m.button
+                                type="button"
+                                onClick={() => {
+                                    if (query) {
+                                        setQuery("")
+                                        inputRef.current?.focus()
+                                    } else {
+                                        handleCollapse()
+                                    }
+                                }}
+                                className="p-1 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/10 shrink-0 cursor-pointer"
+                                aria-label={query ? "Limpiar búsqueda" : "Cerrar búsqueda"}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <IconUiClose className="w-3 h-3" />
+                            </m.button>
                         </m.div>
                     )}
                 </AnimatePresence>
-            </m.div>
+            </div>
 
             {/* Instant Floating Results & Recents Dropdown */}
             <AnimatePresence>
@@ -320,13 +310,16 @@ export function ExpandableSearch() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -4, scale: 0.96 }}
                         transition={tabIndicatorSpring}
-                        className="glass-frosted absolute top-[calc(100%+10px)] right-0 origin-top-right w-80 sm:w-96 max-h-[70vh] flex flex-col shadow-[shadow:0_16px_40px_-8px_rgba(0,0,0,0.95),var(--glass-highlight-md)] p-2.5 z-50 overflow-hidden"
+                        className="glass-frosted absolute top-[calc(100%+10px)] right-0 origin-top-right w-80 sm:w-96 max-h-[70vh] flex flex-col shadow-[shadow:var(--glass-highlight-md),var(--elevation-4)] p-2.5 z-50 overflow-hidden"
                     >
+                        <span role="status" className="sr-only">
+                            {isLoading ? "Buscando…" : isSearchActive ? `${visibleResults.length} resultados disponibles` : "Escribe para buscar"}
+                        </span>
                         {isSearchActive ? (
                             <>
                                 {/* Header bar */}
                                 <div className="flex items-center justify-between px-2 py-1 border-b border-white/10 text-3xs uppercase font-black tracking-widest text-on-surface-variant">
-                                    <span className="flex items-center gap-1.5 text-brand-accent">
+                                    <span className="flex items-center gap-1.5 text-brand-accent-readable">
                                         <IconStatusSparkles className="w-3 h-3" />
                                         Resultados instantáneos
                                     </span>
@@ -334,7 +327,7 @@ export function ExpandableSearch() {
                                 </div>
 
                                 {/* List container */}
-                                <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1 custom-scrollbar max-h-[360px]">
+                                <div id={listId} role="listbox" aria-label="Resultados de búsqueda" aria-busy={isLoading || undefined} className="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1 custom-scrollbar max-h-[360px]">
                                     {visibleResults.length > 0 ? (
                                         visibleResults.map((res, index) => {
                                             const result = res as GlobalSearchResultItem
@@ -351,11 +344,16 @@ export function ExpandableSearch() {
 
                                             return (
                                                 <button
-                                                    key={String(result?.mediaId ?? `idx-${index}`)}
+                                                    key={`${String(result?.mediaId ?? "result")}-${index}`}
+                                                    id={`${listId}-option-${index}`}
+                                                    role="option"
+                                                    aria-selected={isSelected}
+                                                    tabIndex={-1}
+                                                    onMouseDown={(event) => event.preventDefault()}
                                                     type="button"
                                                     onClick={() => handleSelectResult(result)}
                                                     className={cn(
-                                                        "w-full group flex items-center gap-3 p-2 rounded-xl transition-[background-color,border-color,transform] duration-fast ease-out-strong active:scale-[0.99] cursor-pointer text-left",
+                                                        "w-full group flex items-center gap-3 p-2 rounded-xl transition-transform duration-fast ease-out-strong active:scale-[0.99] cursor-pointer text-left",
                                                         isSelected
                                                             ? "bg-brand-accent/20 border border-brand-accent/40"
                                                             : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 active:bg-white/15 border border-transparent"
@@ -370,11 +368,11 @@ export function ExpandableSearch() {
                                                                 className="w-full h-full object-cover [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-out-strong"
                                                             />
                                                         ) : isChronology ? (
-                                                            <IconStatusSparkles className="w-4 h-4 text-amber-400" />
+                                                            <IconStatusSparkles className="w-4 h-4 text-status-warning" />
                                                         ) : isMovie ? (
-                                                            <IconNavigationFilm className="w-4 h-4 text-on-surface-variant/60" />
+                                                            <IconNavigationFilm className="w-4 h-4 text-on-surface-variant" />
                                                         ) : (
-                                                            <IconNavigationTv className="w-4 h-4 text-on-surface-variant/60" />
+                                                            <IconNavigationTv className="w-4 h-4 text-on-surface-variant" />
                                                         )}
                                                     </div>
 
@@ -382,7 +380,7 @@ export function ExpandableSearch() {
                                                     <div className="flex-1 min-w-0">
                                                         <p className={cn(
                                                             "text-xs font-bold truncate transition-colors",
-                                                            isSelected ? "text-brand-accent" : "text-on-surface group-hover:text-white"
+                                                            isSelected ? "text-brand-accent-readable" : "text-on-surface group-hover:text-on-surface"
                                                         )}>
                                                             {title}
                                                         </p>
@@ -391,13 +389,13 @@ export function ExpandableSearch() {
                                                             <span className={cn(
                                                                 "px-1.5 py-px rounded font-semibold uppercase tracking-wider",
                                                                 isChronology
-                                                                    ? "bg-amber-500/15 text-amber-300 border border-amber-500/25"
+                                                                    ? "bg-status-warning/15 text-status-warning border border-status-warning/25"
                                                                     : "bg-white/10 text-on-surface"
                                                             )}>
                                                                 {isChronology ? "Cronología" : getFormatLabel(media?.format, isMovie ? "Película" : "Serie")}
                                                             </span>
                                                             {media && "score" in media && media.score !== undefined && media.score > 0 && (
-                                                                <span className="text-amber-400 font-black">
+                                                                <span className="text-status-warning font-black">
                                                                     ★ {(media.score > 10 ? media.score / 10 : media.score).toFixed(1)}
                                                                 </span>
                                                             )}
@@ -407,9 +405,9 @@ export function ExpandableSearch() {
                                             )
                                         })
                                     ) : !isLoading ? (
-                                        <div className="py-8 text-center px-4">
-                                            <p className="text-xs text-on-surface-variant">Sin coincidencias detectadas</p>
-                                            <p className="text-3xs text-on-surface-variant/70 mt-1">Prueba con otro término de búsqueda</p>
+                                        <div role="presentation" className="py-8 text-center px-4">
+                                            <p className="text-xs font-medium text-on-surface">No se encontró nada</p>
+                                            <p className="text-2xs text-label-2 mt-1">Prueba con otras palabras.</p>
                                         </div>
                                     ) : null}
                                 </div>
@@ -419,8 +417,8 @@ export function ExpandableSearch() {
                             <div className="p-2 space-y-3">
                                 {/* Sugerencias rápidas */}
                                 <div className="space-y-1.5">
-                                    <span className="text-3xs font-black uppercase tracking-widest text-on-surface-variant/80 font-mono">
-                                        Exploración rápida
+                                    <span className="text-2xs font-semibold text-label-2">
+                                        Sugerencias
                                     </span>
                                     <div className="flex flex-wrap gap-1.5 pt-0.5">
                                         {SUGGESTIONS.map((tag) => (
@@ -443,7 +441,7 @@ export function ExpandableSearch() {
                                 {/* Búsquedas recientes */}
                                 {recentSearches.length > 0 && (
                                     <div className="space-y-1.5 pt-2 border-t border-white/10">
-                                        <div className="flex items-center justify-between text-3xs font-black uppercase tracking-widest text-on-surface-variant/80 font-mono">
+                                        <div className="flex items-center justify-between text-2xs font-semibold text-label-2">
                                             <span className="flex items-center gap-1">
                                                 <IconTimeClock className="w-3 h-3 text-brand-accent" />
                                                 Recientes
@@ -454,9 +452,10 @@ export function ExpandableSearch() {
                                                     localStorage.removeItem(RECENT_SEARCHES_KEY)
                                                     setRecentSearches([])
                                                 }}
-                                                className="text-4xs text-on-surface-variant hover:text-white lowercase cursor-pointer active:scale-95 transition-transform duration-fast"
+                                                aria-label="Borrar las búsquedas recientes"
+                                                className="text-2xs font-medium text-on-surface-variant hover:text-on-surface cursor-pointer active:scale-95 transition-[color,transform] duration-fast"
                                             >
-                                                limpiar
+                                                Borrar todo
                                             </button>
                                         </div>
                                         <div className="space-y-1 pt-0.5">
@@ -471,7 +470,7 @@ export function ExpandableSearch() {
                                                             setQuery(term)
                                                             inputRef.current?.focus()
                                                         }}
-                                                        className="flex-1 text-left text-xs text-on-surface group-hover/recent:text-white truncate cursor-pointer active:scale-[0.99] transition-[color,transform] duration-fast"
+                                                        className="flex-1 text-left text-xs text-on-surface group-hover/recent:text-on-surface truncate cursor-pointer active:scale-[0.99] transition-[color,transform] duration-fast"
                                                     >
                                                         {term}
                                                     </button>
@@ -481,8 +480,8 @@ export function ExpandableSearch() {
                                                             removeStoredRecent(term)
                                                             setRecentSearches(getStoredRecents())
                                                         }}
-                                                        className="text-on-surface-variant/40 hover:text-red-400 p-0.5 rounded cursor-pointer active:scale-90 transition-[color,transform] duration-fast"
-                                                        aria-label={`Eliminar ${term}`}
+                                                        className="text-label-2 hover:text-status-error p-0.5 rounded cursor-pointer active:scale-90 transition-[color,transform] duration-fast"
+                                                        aria-label={`Quitar «${term}» de recientes`}
                                                     >
                                                         <IconUiClose className="w-3 h-3" />
                                                     </button>
@@ -499,10 +498,10 @@ export function ExpandableSearch() {
                             <button
                                 type="button"
                                 onClick={handleOpenFullPalette}
-                                className="w-full py-1.5 px-2.5 rounded-lg text-left text-2xs font-semibold text-on-surface-variant hover:text-white hover:bg-white/10 active:scale-[0.99] transition-[background-color,color,transform] duration-fast ease-out-strong flex items-center justify-between group cursor-pointer"
+                                className="w-full py-1.5 px-2.5 rounded-lg text-left text-2xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-white/10 active:scale-[0.99] transition-[background-color,color,transform] duration-fast ease-out-strong flex items-center justify-between group cursor-pointer"
                             >
-                                <span>Búsqueda avanzada en Bóveda</span>
-                                <kbd className="text-4xs font-mono px-1.5 py-0.5 rounded bg-white/10 text-on-surface-variant border border-white/10 group-hover:border-white/20">
+                                <span>Búsqueda avanzada</span>
+                                <kbd className="text-3xs font-mono px-1.5 py-0.5 rounded bg-white/10 text-on-surface-variant border border-white/10 group-hover:border-white/20">
                                     Ctrl+K
                                 </kbd>
                             </button>

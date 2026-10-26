@@ -13,7 +13,7 @@ export const TMDB_ID_BY_SERIES_SLUG: Record<string, number> = {
  * AniList IDs canónicos por serie (verificados contra graphql.anilist.co).
  * Red de seguridad: solo se usan si falla local + TMDB.
  */
-export const ANILIST_ID_BY_SERIES_SLUG: Record<string, number> = {
+const ANILIST_ID_BY_SERIES_SLUG: Record<string, number> = {
   classic: 223,
   z: 813,
   gt: 225,
@@ -22,7 +22,7 @@ export const ANILIST_ID_BY_SERIES_SLUG: Record<string, number> = {
 };
 
 /** Slug de carpeta local para /public/episodes/<slug>/<abs>.webp */
-export const LOCAL_SLUG_BY_VOLUME: Record<string, string> = {
+const LOCAL_SLUG_BY_VOLUME: Record<string, string> = {
   'vol-clasico-origen': 'classic',
   'vol-clasico-redribbon': 'classic',
   'vol-clasico-piccolo': 'classic',
@@ -38,7 +38,7 @@ export const LOCAL_SLUG_BY_VOLUME: Record<string, string> = {
   'vol-gt-viaje': 'gt',
 };
 
-export function getSeriesSlugForVolume(volume: Pick<VolumeData, 'id' | 'seriesTag'> & { seriesId?: string }): string {
+function getSeriesSlugForVolume(volume: Pick<VolumeData, 'id' | 'seriesTag'> & { seriesId?: string }): string {
   const withSeries = volume as { seriesId?: string };
   if (withSeries.seriesId && TMDB_ID_BY_SERIES_SLUG[withSeries.seriesId]) return withSeries.seriesId;
   const direct = LOCAL_SLUG_BY_VOLUME[volume.id];

@@ -46,4 +46,14 @@ describe("OsSelect", () => {
         expect(changes.at(-1)).toBe("medium")
         expect(changes).not.toContain("")
     })
+
+    // El punto de la opción elegida brilla con el token de estado, no con un rgba escrito a mano.
+    it("el punto de la opción elegida usa el brillo de estado del token", () => {
+        const { container } = render(<Harness onChange={() => {}} />)
+        const dot = container.querySelector(".bg-status-success")
+        if (!dot) throw new Error("falta el punto de la opción elegida")
+        // Con el prefijo shadow: Tailwind genera box-shadow; sin el, la clase no pinta el halo.
+        expect(dot.className).toContain("shadow-[shadow:var(--shadow-glow-status-success)]")
+        expect(dot.className).not.toMatch(/rgba\(/)
+    })
 })

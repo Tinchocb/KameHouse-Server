@@ -162,7 +162,6 @@ func TestParseTracks(t *testing.T) {
 	}
 }
 
-
 // NewMatroskaParser does not fail on a bad header/segment: it may be positioned
 // at a cluster offset mid-stream, so it falls back to defaults and no tracks.
 func assertClusterOnlyFallback(t *testing.T, p *MatroskaParser, err error) {
@@ -1276,72 +1275,6 @@ func TestParseAttachedFile(t *testing.T) {
 	})
 }
 
-
-
-
-
-
-// createMockMatroskaFileWithMultipleClusters creates a mock file with multiple clusters
-func createMockMatroskaFileWithMultipleClusters() ([]byte, error) {
-	buf := new(bytes.Buffer)
-
-	// EBML Header
-	ebmlHeader := new(bytes.Buffer)
-	ebmlHeader.Write([]byte{0x42, 0x82, 0x88, 'm', 'a', 't', 'r', 'o', 's', 'k', 'a'}) // DocType
-	buf.Write([]byte{0x1A, 0x45, 0xDF, 0xA3})                                          // EBML Header ID
-	buf.Write(vintEncode(uint64(ebmlHeader.Len())))
-	buf.Write(ebmlHeader.Bytes())
-
-	// Segment
-	segment := new(bytes.Buffer)
-
-	// -- SegmentInfo
-	segInfo := new(bytes.Buffer)
-	segInfo.Write([]byte{0x7B, 0xA9, 0x8A, 'T', 'e', 's', 't', ' ', 'T', 'i', 't', 'l', 'e'}) // Title
-	segInfo.Write([]byte{0x2A, 0xD7, 0xB1, 0x83, 0x0F, 0x42, 0x40})                           // TimestampScale 1,000,000
-	segment.Write([]byte{0x15, 0x49, 0xA9, 0x66})                                             // SegmentInfo ID
-	segment.Write(vintEncode(uint64(segInfo.Len())))
-	segment.Write(segInfo.Bytes())
-
-	// -- Tracks
-	trackEntry, _ := createMockTrackEntry(1, TypeVideo, "V_TEST", "TestVideo", "und")
-	tracks := new(bytes.Buffer)
-	tracks.Write([]byte{0xAE}) // TrackEntry ID
-	tracks.Write(vintEncode(uint64(len(trackEntry))))
-	tracks.Write(trackEntry)
-	segment.Write([]byte{0x16, 0x54, 0xAE, 0x6B}) // Tracks ID
-	segment.Write(vintEncode(uint64(tracks.Len())))
-	segment.Write(tracks.Bytes())
-
-	// -- Cluster 1
-	cluster1 := new(bytes.Buffer)
-	cluster1.Write([]byte{0xE7, 0x81, 0x00}) // Timestamp 0
-	// SimpleBlock: Track 1, Timecode 0, Flags 0x80 (Keyframe), Data "frame1"
-	blockData1 := []byte{0x81, 0x00, 0x00, 0x80, 'f', 'r', 'a', 'm', 'e', '1'}
-	cluster1.Write([]byte{0xA3, byte(0x80 | len(blockData1))})
-	cluster1.Write(blockData1)
-	segment.Write([]byte{0x1F, 0x43, 0xB6, 0x75}) // Cluster ID
-	segment.Write(vintEncode(uint64(cluster1.Len())))
-	segment.Write(cluster1.Bytes())
-
-	// -- Cluster 2
-	cluster2 := new(bytes.Buffer)
-	cluster2.Write([]byte{0xE7, 0x82, 0x03, 0xE8}) // Timestamp 1000
-	// SimpleBlock: Track 1, Timecode 0, Flags 0x00, Data "frame2"
-	blockData2 := []byte{0x81, 0x00, 0x00, 0x00, 'f', 'r', 'a', 'm', 'e', '2'}
-	cluster2.Write([]byte{0xA3, byte(0x80 | len(blockData2))})
-	cluster2.Write(blockData2)
-	segment.Write([]byte{0x1F, 0x43, 0xB6, 0x75}) // Cluster ID
-	segment.Write(vintEncode(uint64(cluster2.Len())))
-	segment.Write(cluster2.Bytes())
-
-	buf.Write([]byte{0x18, 0x53, 0x80, 0x67}) // Segment ID
-	buf.Write(vintEncode(uint64(segment.Len())))
-	buf.Write(segment.Bytes())
-
-	return buf.Bytes(), nil
-}
-
 // TestParseSegmentInfo_Advanced tests advanced scenarios for parseSegmentInfo.
 func TestParseSegmentInfo_Advanced(t *testing.T) {
 	t.Run("SegmentInfo with all optional fields", func(t *testing.T) {
@@ -2334,7 +2267,6 @@ func TestParseAttachments_EdgeCases(t *testing.T) {
 
 // ===== Additional tests to raise coverage toward 95% =====
 
-
 func TestParserProxyMethods_AttachmentsAndChapters(t *testing.T) {
 	// Attachments
 	mockA, err := createMockMatroskaFileWithAttachments()
@@ -2379,7 +2311,6 @@ func TestParserProxyMethods_AttachmentsAndChapters(t *testing.T) {
 	}
 }
 
-
 // Build a minimal Matroska stream with unknown-size Segment that ends at EOF to
 // exercise parseSegmentChildren EOF handling for streaming input.
 func buildUnknownSizeSegmentFile() []byte {
@@ -2413,11 +2344,6 @@ func TestParseSegment_UnknownSizeEOF_OK(t *testing.T) {
 		t.Fatalf("Expected parser to handle unknown-size segment ending at EOF, got error: %v", err)
 	}
 }
-
-
-
-
-
 
 // TestParseVideoTrack_Defaults verifies Display* defaults from Pixel* when absent.
 func TestParseVideoTrack_Defaults(t *testing.T) {
@@ -2498,9 +2424,6 @@ func TestParseCuePoint_Full(t *testing.T) {
 	}
 }
 
-
-
-
 func TestParseSegmentInfo_Rich(t *testing.T) {
 	buf := new(bytes.Buffer)
 	// EBML Header
@@ -2567,65 +2490,6 @@ func TestParseSegmentInfo_Rich(t *testing.T) {
 		t.Errorf("Unexpected scale/duration: %+v", fi)
 	}
 }
-
-func createMockMatroskaFileWithBlockGroup() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	// EBML Header
-	ebmlHeader := new(bytes.Buffer)
-	ebmlHeader.Write([]byte{0x42, 0x82, 0x88, 'm', 'a', 't', 'r', 'o', 's', 'k', 'a'})
-	buf.Write([]byte{0x1A, 0x45, 0xDF, 0xA3})
-	buf.Write(vintEncode(uint64(ebmlHeader.Len())))
-	buf.Write(ebmlHeader.Bytes())
-
-	// Segment
-	segment := new(bytes.Buffer)
-
-	// -- SegmentInfo TimestampScale = 1,000,000
-	segInfo := new(bytes.Buffer)
-	segInfo.Write([]byte{0x2A, 0xD7, 0xB1, 0x83, 0x0F, 0x42, 0x40})
-	segment.Write([]byte{0x15, 0x49, 0xA9, 0x66})
-	segment.Write(vintEncode(uint64(segInfo.Len())))
-	segment.Write(segInfo.Bytes())
-
-	// -- Tracks
-	trackEntry, _ := createMockTrackEntry(1, TypeVideo, "V_TEST", "TestVideo", "und")
-	tracks := new(bytes.Buffer)
-	tracks.Write([]byte{0xAE})
-	tracks.Write(vintEncode(uint64(len(trackEntry))))
-	tracks.Write(trackEntry)
-	segment.Write([]byte{0x16, 0x54, 0xAE, 0x6B})
-	segment.Write(vintEncode(uint64(tracks.Len())))
-	segment.Write(tracks.Bytes())
-
-	// -- Cluster with BlockGroup
-	cluster := new(bytes.Buffer)
-	cluster.Write([]byte{0xE7, 0x81, 0x00}) // Timestamp 0
-
-	// BlockGroup
-	bg := new(bytes.Buffer)
-	// Block element (0xA1) with track 1, timecode 0, flags 0, data "BG"
-	blockData := []byte{0x81, 0x00, 0x00, 0x00, 'B', 'G'}
-	bg.Write([]byte{0xA1})
-	bg.Write(vintEncode(uint64(len(blockData))))
-	bg.Write(blockData)
-	// BlockDuration (0x9B) value 5
-	bg.Write([]byte{0x9B, 0x81, 0x05})
-
-	cluster.Write([]byte{0xA0}) // BlockGroup ID
-	cluster.Write(vintEncode(uint64(bg.Len())))
-	cluster.Write(bg.Bytes())
-
-	segment.Write([]byte{0x1F, 0x43, 0xB6, 0x75})
-	segment.Write(vintEncode(uint64(cluster.Len())))
-	segment.Write(cluster.Bytes())
-
-	buf.Write([]byte{0x18, 0x53, 0x80, 0x67})
-	buf.Write(vintEncode(uint64(segment.Len())))
-	buf.Write(segment.Bytes())
-
-	return buf.Bytes(), nil
-}
-
 
 // parseSegmentChildren: out-of-order children and unknown IDs should be tolerated
 func TestParseSegmentChildren_OrderAndUnknown(t *testing.T) {
@@ -2777,9 +2641,6 @@ func TestParseTrackEntry_VariousTypes(t *testing.T) {
 		t.Errorf("audio fields not parsed: %+v", p.GetTrackInfo(1).Audio)
 	}
 }
-
-
-
 
 // TestParseChapters tests the parsing of Chapters element.
 func TestParseChapters(t *testing.T) {
@@ -3475,12 +3336,6 @@ func createMinimalEBMLHeader() []byte {
 
 	return buf.Bytes()
 }
-
-
-
-
-
-
 
 // helper to write an EBML UInt element: [ID][size-vint][big-endian data]
 func writeUIntElement(buf *bytes.Buffer, id uint32, value uint64, dataLen int) {

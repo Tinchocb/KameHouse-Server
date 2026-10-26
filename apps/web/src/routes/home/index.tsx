@@ -11,7 +11,8 @@ import {
     resolveTargetId,
     type MappableEntry,
 } from "./home.mappers"
-import { ErrorBanner, EmptyState } from "./home.components"
+import { LibraryErrorState } from "@/components/shared/library-error-state"
+import { LibraryEmptyState } from "@/components/shared/library-empty-state"
 import { MediaSpotlight } from "@/components/ui/media-spotlight"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
 
@@ -30,7 +31,14 @@ export const Route = createFileRoute("/home/")({
 
 function HomeClient() {
     const navigate = useNavigate()
-    const { data: collection, isLoading, error } = useGetLibraryCollection()
+    const { data: collection, isLoading, error, refetch } = useGetLibraryCollection()
+    // React Query borra `error` y vuelve a `pending` cuando otra pieza vuelve a pedir la colección sin datos
+    // (p. ej. la precarga de Series/Películas en main.tsx). Se recuerda el último error almacenándolo en render.
+    const [lastError, setLastError] = React.useState(error)
+    if (error && error !== lastError) {
+        setLastError(error)
+    }
+    const failure = error ?? lastError
 
     const allEntries = React.useMemo(() => {
         if (!collection?.lists) return []
@@ -78,17 +86,27 @@ function HomeClient() {
         [allEntries, handleNavigate],
     )
 
-    if (error && !collection) return <ErrorBanner message="Hubo un problema al cargar tu biblioteca." />
-    if (collection && allEntries.length === 0) return <EmptyState />
+    if (!collection && failure) return <LibraryErrorState error={failure} onRetry={() => { void refetch() }} />
+    if (collection && allEntries.length === 0) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center px-4 pt-nav">
+                <h1 className="sr-only">Inicio</h1>
+                <LibraryEmptyState />
+            </div>
+        )
+    }
 
     const isReady = !!collection && (!isLoading || allEntries.length > 0)
 
     return (
-        <div className="relative min-h-screen text-on-surface overflow-x-hidden">
+        <div className="relative min-h-screen text-on-surface">
+            <h1 className="sr-only">Inicio</h1>
             <LoadSwap
                 loading={!isReady}
                 skeleton={<HomeSkeleton />}
                 className="relative z-10 flex flex-col w-full"
+                // MediaSpotlight ya anima su propia entrada: sin esto el contenido se funde dos veces.
+                ownEntrance
             >
                 {spotlightItems.length > 0 && (
                     <MediaSpotlight

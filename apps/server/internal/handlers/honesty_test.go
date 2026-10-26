@@ -37,7 +37,6 @@ func doRequest(h *Handler, e *echo.Echo, method, path, body string, fn func(c ec
 	return rec
 }
 
-
 func TestProgressValidation400(t *testing.T) {
 	h, e := newBareHandler()
 	cases := []struct {

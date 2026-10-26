@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useLocation, useRouter } from "@tanstack/react-router"
 import React from "react"
 import { isBackendUnavailableError } from "@/api/client/requests"
+import { Button } from "@/components/ui/button"
 
 interface AppErrorBoundaryProps {
     error: unknown
@@ -69,11 +70,11 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center max-w-lg mx-auto my-8">
                 <div className="w-8 h-8 mb-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                <h2 className="text-lg font-display tracking-widest text-white mb-2 uppercase text-balance">
-                    Iniciando servidor
+                <h2 className="type-title text-on-surface mb-2 text-balance">
+                    Iniciando el servidor
                 </h2>
                 <p className="text-on-surface-variant text-sm">
-                    El servidor todavía está arrancando. Se reintentará automáticamente.
+                    KameHouse todavía está arrancando. Volverá a intentarlo solo.
                 </p>
             </div>
         )
@@ -81,27 +82,29 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
 
     return (
         <div className="sectionbar flex flex-col items-center justify-center min-h-[400px] p-8 text-center max-w-lg mx-auto my-8">
-            <h2 className="text-2xl font-display tracking-widest text-white mb-4 uppercase text-balance">
-                {isChunkLoadError ? "Actualización disponible" : "Error en el cliente"}
+            <h2 className="type-title text-on-surface mb-4 text-balance">
+                {isChunkLoadError ? "Actualización disponible" : "Algo salió mal"}
             </h2>
             <p className="text-on-surface-variant mb-6 leading-relaxed text-sm max-w-md text-pretty">
                 {isChunkLoadError 
-                    ? "La aplicación ha sido actualizada. Haz click para recargar y obtener la última versión." 
-                    : "Ha ocurrido un error inesperado en la interfaz que impidió cargar el módulo."}
+                    ? "KameHouse se actualizó. Recarga la página para usar la última versión." 
+                    : "Ocurrió un error inesperado y no se pudo mostrar esta pantalla. Puedes reintentar; si sigue pasando, revisa los registros en Administración."}
             </p>
             {!isChunkLoadError && (
-                <div className="mb-8 p-4 bg-white/[0.03] border border-white/5 rounded-xl text-left overflow-hidden w-full">
-                    <p className="text-status-error font-mono text-xs break-all">
-                        {(error as Error)?.message || "Unknown Error"}
-                    </p>
-                </div>
+                <details className="mb-8 w-full text-left group/details">
+                    <summary className="cursor-pointer text-xs text-on-surface-variant select-none mb-2">
+                        Detalles técnicos
+                    </summary>
+                    <div className="p-4 bg-white/[0.03] border border-white/5 rounded-xl overflow-hidden">
+                        <p className="text-status-error font-mono text-xs break-all">
+                            {(error as Error)?.message || "Error desconocido"}
+                        </p>
+                    </div>
+                </details>
             )}
-            <button
-                onClick={handleReset}
-                className="px-8 py-3 bg-white text-black font-black text-xs uppercase tracking-ultra rounded-full hover:bg-white/90 active:scale-95 transition-[background-color,transform] duration-fast ease-out-strong shadow-elevation-2 cursor-pointer"
-            >
-                {isChunkLoadError ? "RECARGAR AHORA" : "REINTENTAR ACCESO"}
-            </button>
+            <Button intent="primary" size="lg" onClick={handleReset}>
+                {isChunkLoadError ? "Recargar" : "Reintentar"}
+            </Button>
         </div>
     )
 }

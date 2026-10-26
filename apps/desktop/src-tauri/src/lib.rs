@@ -6,20 +6,32 @@ mod settings;
 #[path = "window.rs"]
 mod window_manager;
 mod tray;
-mod updater;
 mod ipc;
 mod mpv;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::Manager;
-use tauri_plugin_log::{Target, TargetKind};
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
 use sidecar::SidecarManager;
 use window_manager::WindowManager;
 use tray::TrayManager;
 use settings::SettingsManager;
-use updater::UpdaterManager;
 use mpv::MpvManager;
+
+/// Carpeta de registros compartida con el servidor Go: `<datadir>/logs`, con el mismo
+/// datadir que usa el sidecar (ver `config.go`: en producción `%APPDATA%\KameHouse`; en
+/// desarrollo `-datadir` apunta a `<data_dir>/kamehouse-dev`). Así la pestaña Sistema de
+/// los ajustes lista el registro de la app de escritorio junto al del servidor.
+pub(crate) fn shared_logs_dir(is_dev: bool) -> PathBuf {
+    let datadir = if is_dev {
+        dirs::data_dir().unwrap_or_default().join("kamehouse-dev")
+    } else {
+        dirs::config_dir().unwrap_or_default().join("KameHouse")
+    };
+    datadir.join("logs")
+}
 
 pub fn run() {
     #[cfg(target_os = "windows")]
@@ -34,7 +46,6 @@ pub fn run() {
     let settings_manager = Arc::new(SettingsManager::new());
     let window_manager = Arc::new(WindowManager::new(settings_manager.clone()));
     let tray_manager = Arc::new(TrayManager::new());
-    let updater_manager = Arc::new(UpdaterManager::new());
     let mpv_manager = Arc::new(MpvManager::new());
 
     let single_instance_window_manager = window_manager.clone();
@@ -42,14 +53,24 @@ pub fn run() {
     let setup_window_manager = window_manager.clone();
     let setup_sidecar_manager = sidecar_manager.clone();
 
+    // Registro en la carpeta del servidor (ver shared_logs_dir). Antes: LogDir con
+    // rotación KeepOne y 40 KB, es decir, solo sobrevivía el último tramo del log.
+    let logs_dir = shared_logs_dir(cfg!(debug_assertions));
+    let _ = std::fs::create_dir_all(&logs_dir);
+
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::default()
                 .targets([
                     Target::new(TargetKind::Stdout),
-                    Target::new(TargetKind::LogDir { file_name: Some("kamehouse.log".to_string()) }),
+                    Target::new(TargetKind::Folder {
+                        path: logs_dir,
+                        file_name: Some("desktop".to_string()),
+                    }),
                     Target::new(TargetKind::Webview),
                 ])
+                .rotation_strategy(RotationStrategy::KeepSome(5))
+                .max_file_size(2 * 1024 * 1024)
                 .level(log::LevelFilter::Info)
                 .build(),
         )
@@ -63,18 +84,15 @@ pub fn run() {
         .manage(settings_manager.clone())
         .manage(window_manager.clone())
         .manage(tray_manager.clone())
-        .manage(updater_manager.clone())
         .manage(mpv_manager.clone())
         .invoke_handler(tauri::generate_handler![
-            ipc::get_desktop_settings,
-            ipc::set_desktop_settings,
-            ipc::kill_server,
             ipc::get_local_server_port,
             ipc::startup_renderer_ready,
             ipc::shell_open,
             ipc::mpv_play,
             ipc::mpv_stop,
             ipc::mpv_is_available,
+            ipc::open_logs_folder,
         ])
         .setup(move |app| {
             let handle = app.handle().clone();
@@ -141,15 +159,6 @@ pub fn run() {
                 if let Err(e) = launch_sidecar_mgr.launch(&sidecar_handle, settings_clone, sidecar_window_mgr.clone()).await {
                     log::error!("[Sidecar] Failed to launch: {}", e);
                     let _ = sidecar_window_mgr.show_crash_screen(&sidecar_handle, &format!("Failed to start server: {}", e));
-                }
-            });
-
-            // Setup auto-updater
-            let updater_mgr = updater_manager.clone();
-            let updater_handle = handle.clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = updater_mgr.setup(&updater_handle, window_mgr, sidecar_mgr, settings).await {
-                    log::error!("[Updater] Setup failed: {}", e);
                 }
             });
 

@@ -4,7 +4,6 @@ go 1.26.6
 
 require (
 	github.com/5rahim/habari v0.1.12
-	github.com/5rahim/hls-m3u8 v0.1.0
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/PuerkitoBio/goquery v1.11.0
 	github.com/adrg/strutil v0.3.1

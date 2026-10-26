@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { AnimatePresence, m, useReducedMotion } from "framer-motion"
+import { AnimatePresence, m, type TargetAndTransition } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
+import { useMotionTier, useSpringPreset, type MotionTier } from "./hooks"
 
 interface IconSwapProps {
     /** Cambia cuando cambia el ícono: dispara la transición. */
@@ -12,14 +13,33 @@ interface IconSwapProps {
 }
 
 /**
+ * Estados del cambio según el tier de movimiento. El blur (`filter`) solo corre en "full":
+ * en "subtle" (ahorro de energía o modo TV) se quita porque repinta el ícono en cada frame.
+ * Con movimiento reducido ("off") queda solo el fade.
+ */
+export function iconSwapStates(tier: MotionTier): { hidden: TargetAndTransition; shown: TargetAndTransition } {
+    if (tier === "off") {
+        return { hidden: { opacity: 0 }, shown: { opacity: 1 } }
+    }
+    if (tier === "subtle") {
+        return { hidden: { opacity: 0, scale: 0.25 }, shown: { opacity: 1, scale: 1 } }
+    }
+    return {
+        hidden: { opacity: 0, scale: 0.25, filter: "blur(4px)" },
+        shown: { opacity: 1, scale: 1, filter: "blur(0px)" },
+    }
+}
+
+/**
  * Cambio de ícono por estado (p. ej. "+" → "✓" al confirmar una acción).
- * Ambos íconos ocupan la misma celda: el nuevo entra desde scale 0.25 con un
- * blur leve mientras el viejo sale igual, sin saltos de layout.
+ * Ambos íconos ocupan la misma celda: el nuevo entra desde scale 0.25 (con un
+ * blur leve en tier "full") mientras el viejo sale igual, sin saltos de layout.
  * Con movimiento reducido solo hace fade.
  */
 export function IconSwap({ swapKey, children, className }: IconSwapProps) {
-    const reduce = useReducedMotion()
-    const hidden = reduce ? { opacity: 0 } : { opacity: 0, scale: 0.25, filter: "blur(4px)" }
+    const tier = useMotionTier()
+    const spring = useSpringPreset("iconSwap")
+    const { hidden, shown } = iconSwapStates(tier)
     return (
         <span className={cn("inline-grid place-items-center", className)}>
             <AnimatePresence initial={false}>
@@ -27,9 +47,9 @@ export function IconSwap({ swapKey, children, className }: IconSwapProps) {
                     key={swapKey}
                     className="col-start-1 row-start-1 inline-flex"
                     initial={hidden}
-                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                    animate={shown}
                     exit={hidden}
-                    transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+                    transition={spring}
                 >
                     {children}
                 </m.span>

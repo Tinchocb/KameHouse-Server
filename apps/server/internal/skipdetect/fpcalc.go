@@ -87,7 +87,7 @@ type fingerprintResult struct {
 
 // EnsureFpcalcBinary resuelve la ruta a fpcalc: PATH del sistema →
 // {cacheDir}/bin/fpcalc[.exe] → descarga chromaprint v1.6.0 de GitHub releases.
-func EnsureFpcalcBinary(cacheDir string, logger *zerolog.Logger) (string, error) {
+func EnsureFpcalcBinary(ctx context.Context, cacheDir string, logger *zerolog.Logger) (string, error) {
 	if path, err := exec.LookPath("fpcalc"); err == nil {
 		return path, nil
 	}
@@ -118,7 +118,11 @@ func EnsureFpcalcBinary(cacheDir string, logger *zerolog.Logger) (string, error)
 	logger.Info().Str("url", release.url).Msg("skipdetect: descargando archivo de fpcalc")
 
 	client := &http.Client{Timeout: 2 * time.Minute}
-	resp, err := client.Get(release.url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, release.url, nil)
+	if err != nil {
+		return "", fmt.Errorf("no se pudo preparar la descarga de fpcalc: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		// Sin red / DNS: error claro y accionable (no reintenta en loop; el próximo
 		// scan volverá a intentar). fpcalc solo hace falta para Método A/B, no para

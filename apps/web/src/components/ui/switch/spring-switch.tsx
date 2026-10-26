@@ -1,19 +1,20 @@
 import React, { useState } from "react"
 import { m, useReducedMotion } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
+import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 
-export const variantTrackColors = {
+const variantTrackColors = {
     default: {
-        checked: "bg-brand-accent border-white/40",
+        checked: "bg-brand-accent border-transparent",
         // Thumb en on-primary: blanco en Por Era (track de color), negro #09090B
         // en Clásico (track blanco) — sin esto el toggle ON en Clásico era
         // gris-sobre-blanco lavado e ilegible.
-        thumb: "bg-on-primary text-brand-accent shadow-[0_2px_5px_rgba(0,0,0,0.45)]",
+        thumb: "bg-on-primary text-brand-accent shadow-elevation-2",
         dot: "bg-brand-accent opacity-90",
     },
 }
 
-export interface SpringSwitchProps {
+interface SpringSwitchProps {
     checked: boolean
     onChange?: (checked: boolean) => void
     onCheckedChange?: (checked: boolean) => void
@@ -46,6 +47,7 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
 }) => {
     const [internalPressing, setInternalPressing] = useState(false)
     const shouldReduceMotion = useReducedMotion()
+    const pulgarSpring = useSpringPreset("switch")
 
     const isPressing = isPressingExternal !== undefined ? isPressingExternal : internalPressing
     const isSm = size === "sm"
@@ -91,20 +93,17 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
             className={cn(
                 "relative inline-flex shrink-0 cursor-pointer items-center rounded-full border outline-none select-none",
                 // Track transitions only color/border — Framer Motion owns transforms
-                "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),box-shadow_var(--duration-fast)_var(--ease-smooth-out)]",
+                "[transition:background-color_var(--duration-base)_var(--ease-smooth-out),border-color_var(--duration-base)_var(--ease-smooth-out),box-shadow_var(--duration-base)_var(--ease-smooth-out)]",
                 // Accessible touch target (>= 44px) without visual overflow
                 "after:absolute after:-inset-y-2.5 after:-inset-x-2 after:content-[''] after:z-0",
                 isSm ? "w-9 h-5 p-0.5" : "w-[46px] h-6.5 p-[3px]",
                 checked
                     ? variantConfig.checked
-                    : "bg-[var(--switch-track-off,#1B1B20)] hover:bg-[var(--classic-hover,#24242A)] border-white/10 shadow-[inset_0_1px_2.5px_rgba(0,0,0,0.6)]",
+                    : "bg-[var(--switch-track-off)] hover:bg-[var(--classic-hover)] border-[var(--neutral-separator)]",
                 disabled && "opacity-40 cursor-not-allowed pointer-events-none",
                 className
             )}
         >
-            {/* Top specular highlight rim */}
-            <span className="absolute inset-x-1.5 top-0.5 h-px bg-white/25 pointer-events-none rounded-full z-10" />
-
             {/* Tactile thumb with physics & squash */}
             <m.span
                 animate={{
@@ -114,33 +113,25 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
                 style={{
                     transformOrigin: checked ? "right center" : "left center",
                 }}
-                transition={
-                    shouldReduceMotion
-                        ? { duration: 0.08 }
-                        : {
-                              type: "spring",
-                              stiffness: 520,
-                              damping: 32,
-                              mass: 0.8,
-                          }
-                }
+                // 0.08 s = --duration-micro (80 ms). Framer necesita un número, no la variable CSS.
+                transition={shouldReduceMotion ? { duration: 0.08 } : pulgarSpring}
                 className={cn(
-                    "relative z-10 flex items-center justify-center rounded-full shadow-elevation-1 transform-gpu pointer-events-none",
-                    "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out)]",
+                    "relative z-10 flex items-center justify-center rounded-full transform-gpu pointer-events-none",
+                    "[transition:background-color_var(--duration-base)_var(--ease-smooth-out)]",
                     isSm ? "w-4 h-4" : "w-5 h-5",
                     checked
                         ? variantConfig.thumb
-                        : "bg-[var(--switch-thumb-off,#8B8B93)] hover:bg-[var(--classic-text-secondary,#A5A5AD)] shadow-[0_1px_3px_rgba(0,0,0,0.5)]"
+                        : "bg-[var(--switch-thumb-off)] hover:bg-[var(--classic-text-secondary)] shadow-elevation-1"
                 )}
             >
                 {/* Micro-dot relief inside thumb */}
                 <span
                     className={cn(
-                        "rounded-full [transition:background-color_var(--duration-fast)_var(--ease-smooth-out),transform_var(--duration-fast)_var(--ease-smooth-out),opacity_var(--duration-fast)_var(--ease-smooth-out)]",
+                        "rounded-full [transition:background-color_var(--duration-base)_var(--ease-smooth-out),transform_var(--duration-base)_var(--ease-smooth-out),opacity_var(--duration-base)_var(--ease-smooth-out)]",
                         isSm ? "w-1 h-1" : "w-1.5 h-1.5",
                         checked
                             ? variantConfig.dot
-                            : "bg-[var(--classic-text-muted,#6E6E76)] opacity-40 scale-75"
+                            : "bg-[var(--classic-text-muted)] opacity-40 scale-75"
                     )}
                 />
             </m.span>

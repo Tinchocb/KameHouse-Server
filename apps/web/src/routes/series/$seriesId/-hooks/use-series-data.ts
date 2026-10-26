@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 import { buildVideoThumbnailUrl, getHighResImage } from "@/lib/helpers/images"
-import { resolveSeriesSagas } from "@/lib/config/dragonball.config"
+import { resolveSeriesSagas, type SagaDefinition } from "@/lib/config/dragonball.config"
 import { getNextInTimeline } from "@/lib/config/franchise_timeline"
 import { getSeriesHeroArt, heroArtFromUrl } from "@/lib/config/hero-art"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
@@ -85,6 +85,7 @@ function resolveSagaId(epNum: number, sagas: SagaDTO[] | undefined): string | un
 interface UseSeriesDataInput {
     entry: Anime_Entry | undefined | null
     sagas: SagaDTO[] | undefined
+    localSagas?: SagaDefinition[]
     activeSagaId: string | undefined
     activeSubSagaId: string | undefined
     continuityData: Continuity_WatchHistoryItemResponse | undefined | null
@@ -94,6 +95,7 @@ interface UseSeriesDataInput {
 export function useSeriesData({
     entry,
     sagas,
+    localSagas,
     activeSagaId,
     activeSubSagaId,
     continuityData,
@@ -118,9 +120,9 @@ export function useSeriesData({
                 .filter(ep => ep && typeof ep.episodeNumber === "number")
                 .map(ep => {
                     const epNum = ep.absoluteEpisodeNumber || ep.episodeNumber
-                    // Prefer scan-time sagaId from API (assigned by GetDragonBallSagas during library scan)
-                    // Only fall back to UI-time resolution if episode has no sagaId
-                    const sagaId = ep.sagaId ?? resolveSagaId(epNum, sagas)
+                    // Validar si el sagaId escaneado encaja en la lista de sagas activa y su rango
+                    const validScanSaga = ep.sagaId && sagas?.find(s => s.id === ep.sagaId && epNum >= s.startEp && epNum <= s.endEp)
+                    const sagaId = validScanSaga ? ep.sagaId : resolveSagaId(epNum, sagas)
                     return sagaId ? { ...ep, sagaId } : ep
                 })
 
@@ -226,13 +228,18 @@ export function useSeriesData({
         if (!computedEpisodes || !sagas?.length) return {}
         const map: Record<string, { watched: number; total: number; percent: number }> = {}
         for (const saga of sagas) {
-            const eps = computedEpisodes.filter(ep => ep.sagaId === saga.id)
-            if (eps.length === 0) {
-                map[saga.id] = { watched: 0, total: 0, percent: 0 }
-            } else {
-                const watched = eps.filter(ep => ep.watched).length
-                const total = eps.length
-                map[saga.id] = { watched, total, percent: Math.round((watched / total) * 100) }
+            map[saga.id] = { watched: 0, total: 0, percent: 0 }
+        }
+        for (const ep of computedEpisodes) {
+            if (ep.sagaId && map[ep.sagaId]) {
+                map[ep.sagaId].total++
+                if (ep.watched) map[ep.sagaId].watched++
+            }
+        }
+        for (const sagaId in map) {
+            const stat = map[sagaId]
+            if (stat.total > 0) {
+                stat.percent = Math.round((stat.watched / stat.total) * 100)
             }
         }
         return map
@@ -255,7 +262,7 @@ export function useSeriesData({
     // Moving the construction here means the list only re-renders when the
     // content actually changes — NOT on hover-preload, scroll, mobileSagasOpen,
     // playTarget changes, etc.
-    const dbSagaDefs = useMemo(() => resolveSeriesSagas(entry?.media), [entry?.media])
+    const dbSagaDefs = useMemo(() => localSagas || resolveSeriesSagas(entry?.media), [localSagas, entry?.media])
 
     const lfMap = useMemo(() => {
         const map = new Map<number, Anime_LocalFile>()
@@ -379,6 +386,9 @@ export function useSeriesData({
             : computedEpisodes.filter(ep => ep.sagaId === activeSagaId)
 
         const tmdbId = entry?.media?.tmdbId
+        const sagaById = new Map((sagas || []).map(s => [s.id, s]))
+        const defSagaById = new Map((dbSagaDefs || []).map(s => [s.id, s]))
+        const defaultArtworkFallback = heroBackdrop || entry?.media?.bannerImage || entry?.media?.posterImage || ""
 
         return filtered.map(ep => {
             const epNum = episodeNumberOf(ep)
@@ -402,10 +412,11 @@ export function useSeriesData({
             // 2. Video thumbnail generated from local file
             // 3. Sub-saga / saga curated artwork
             // 4. Series heroBackdrop / poster
-            const currentSaga = sagas?.find(s => s.id === ep.sagaId)
+            const currentSaga = ep.sagaId ? sagaById.get(ep.sagaId) : undefined
             const currentSubSaga = currentSaga?.subSagas?.find(ss => epNum >= ss.startEp && epNum <= ss.endEp)
 
-            const defSaga = dbSagaDefs?.find(s => s.id === ep.sagaId || (epNum >= s.startEp && epNum <= s.endEp))
+            const defSaga = (ep.sagaId ? defSagaById.get(ep.sagaId) : undefined) ||
+                dbSagaDefs?.find(s => epNum >= s.startEp && epNum <= s.endEp)
             const defSubSaga = defSaga?.subSagas?.find(ss => epNum >= ss.startEp && epNum <= ss.endEp)
 
             const artworkFallback =
@@ -413,10 +424,7 @@ export function useSeriesData({
                 defSaga?.image ||
                 currentSubSaga?.image ||
                 (currentSaga as { image?: string } | undefined)?.image ||
-                heroBackdrop ||
-                entry?.media?.bannerImage ||
-                entry?.media?.posterImage ||
-                ""
+                defaultArtworkFallback
 
             let resolvedThumbnail = ep.episodeMetadata?.image || ""
             if (!resolvedThumbnail && lf?.path) {
@@ -443,7 +451,7 @@ export function useSeriesData({
                 audioCodec: lf?.technicalInfo?.audioStreams?.[0]?.codec,
                 localFilePath: lf?.path,
                 sagaId: ep.sagaId,
-                sagaName: sagas?.find(s => s.id === ep.sagaId)?.name,
+                sagaName: currentSaga?.name,
             } as PremiumEpisode
         }).filter((ep): ep is PremiumEpisode => ep !== null)
     }, [computedEpisodes, sagas, activeSagaId, entry?.media, heroBackdrop, dbSagaDefs, lfMap])

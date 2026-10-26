@@ -23,6 +23,9 @@ func IsValidMediaSource(s string) bool {
 // GetMediaSourcePreferences devuelve mediaID -> origen de las series con
 // preferencia fija. Un mapa vacío significa "todas en automático".
 func (db *Database) GetMediaSourcePreferences() (map[int]string, error) {
+	if cached := db.currMediaSourcePrefs.Load(); cached != nil {
+		return *cached, nil
+	}
 	var rows []models.MediaSourcePreference
 	if err := db.gormdb.Find(&rows).Error; err != nil {
 		return map[int]string{}, err
@@ -31,11 +34,13 @@ func (db *Database) GetMediaSourcePreferences() (map[int]string, error) {
 	for _, r := range rows {
 		out[r.MediaID] = r.Source
 	}
+	db.currMediaSourcePrefs.Store(&out)
 	return out, nil
 }
 
 // SetMediaSourcePreference guarda el origen de una serie; "auto" borra la fila.
 func (db *Database) SetMediaSourcePreference(mediaID int, source string) error {
+	defer db.currMediaSourcePrefs.Store(nil)
 	if source == MediaSourceAuto {
 		return db.gormdb.Where("media_id = ?", mediaID).Delete(&models.MediaSourcePreference{}).Error
 	}

@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
+import { Button } from "@/components/ui/button"
 import { SpringSwitch } from "@/components/ui/switch/spring-switch"
 import { buildApiQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
@@ -66,7 +67,7 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
     const handleScan = async () => {
         if (status === "running") return
         setStatus("running")
-        setMessage("Iniciando detección...")
+        setMessage("Iniciando detección…")
         setPercent(0)
         try {
             await buildApiQuery<unknown, { mediaId: number }>({
@@ -85,26 +86,27 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
     return (
         <div className="px-3 py-2 flex items-center justify-between text-left group">
             <div className="flex flex-col">
-                <span className="text-xs font-semibold tracking-wide text-white">
-                    Detectar intros y outros
+                <span className="text-xs font-semibold text-label-1">
+                    Detectar intro y créditos
                 </span>
-                <span className="text-2xs text-on-surface-variant mt-0.5">
-                    {message || "Detección inteligente con AnimeThemes"}
+                <span className="text-xs text-label-2 mt-0.5">
+                    {message || "Busca la intro y los créditos con AnimeThemes"}
                 </span>
             </div>
-            <button
+            <Button
+                intent={status === "idle" ? "primary" : "secondary"}
+                size="xs"
                 onClick={handleScan}
                 disabled={status === "running"}
                 className={cn(
-                    "min-h-[36px] px-3.5 rounded-full text-xs font-semibold tracking-wide transition-[background-color,color,transform] duration-fast ease-smooth-out cursor-pointer active:scale-95 disabled:cursor-not-allowed",
-                    status === "running" && "bg-brand-accent/20 text-brand-accent animate-pulse",
-                    status === "done" && "bg-emerald-500/20 text-emerald-400",
-                    status === "error" && "bg-rose-500/20 text-rose-400",
-                    status === "idle" && "bg-white/95 text-black [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white"
+                    "shrink-0",
+                    status === "running" && "text-brand-accent animate-pulse",
+                    status === "done" && "text-status-success",
+                    status === "error" && "text-[color:color-mix(in_srgb,var(--status-error),white_35%)]",
                 )}
             >
-                {status === "running" ? `${percent}%` : status === "done" ? "¡Listo!" : status === "error" ? "Error" : "Escanear"}
-            </button>
+                {status === "running" ? `${percent}%` : status === "done" ? "Listo" : status === "error" ? "Reintentar" : "Detectar"}
+            </Button>
         </div>
     )
 }
@@ -140,15 +142,15 @@ function ToggleRow({
             aria-checked={enabled}
             aria-label={label}
             className={cn(
-                "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,transform] duration-fast ease-smooth-out group text-left relative overflow-hidden outline-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 focus-visible:bg-white/10 active:scale-95 cursor-pointer",
-                enabled ? "text-white" : "text-on-surface-variant",
+                "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,transform] duration-fast ease-smooth-out group text-left relative overflow-hidden outline-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] focus-visible:bg-[var(--neutral-elev-3)] active:scale-95 cursor-pointer",
+                enabled ? "text-label-1" : "text-label-2",
                 disabled && "opacity-60 cursor-default pointer-events-none"
             )}
         >
             
             <div className="flex flex-col">
-                <span className="text-xs font-semibold tracking-wide text-white text-left">{label}</span>
-                {subtext && <span className="text-2xs text-on-surface-variant mt-0.5">{subtext}</span>}
+                <span className="text-xs font-semibold text-label-1 text-left">{label}</span>
+                {subtext && <span className="text-xs text-label-2 mt-0.5">{subtext}</span>}
             </div>
             
             <SpringSwitch
@@ -188,52 +190,49 @@ export function PlaybackSettings({
 
     return (
         <div className="py-4">
-            {showSeparator && <div className="mx-6 h-px bg-white/10 mb-4" />}
+            {showSeparator && <div className="mx-6 h-px bg-[var(--neutral-elev-3)] mb-4" />}
 
             {/* Velocidad de reproducción */}
             <div className="px-3 py-2">
-                <div className="text-2xs font-semibold uppercase tracking-widest text-on-surface-variant mb-3">Velocidad</div>
+                <div className="text-xs font-semibold text-label-2 mb-3">Velocidad</div>
                 <div className="flex flex-wrap gap-1.5">
                     {PLAYBACK_RATES.map((rate) => {
                         const isActive = Math.abs(playbackRate - rate) < 0.001
                         return (
-                            <button
+                            <Button
                                 key={rate}
+                                intent={isActive ? "primary" : "secondary"}
+                                size="xs"
+                                aria-pressed={isActive}
                                 onClick={() => onPlaybackRateChange(rate)}
-                                className={cn(
-                                    "px-2.5 py-1.5 rounded-full text-xs font-medium tabular-nums transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer",
-                                    "focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black",
-                                    isActive
-                                        ? "bg-white/95 text-black"
-                                        : "bg-white/5 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white"
-                                )}
+                                className="tabular-nums"
                             >
                                 {rate}x
-                            </button>
+                            </Button>
                         )
                     })}
                 </div>
             </div>
 
-            <ToggleRow label="Repetir (loop)" enabled={loopEnabled} onChange={onLoopEnabledChange} />
-            <ToggleRow label="Ocultar subtítulos si está doblado" enabled={autoDisableSubtitlesWhenDubbed} onChange={onAutoDisableSubtitlesWhenDubbedChange} />
+            <ToggleRow label="Repetir video" enabled={loopEnabled} onChange={onLoopEnabledChange} />
+            <ToggleRow label="Ocultar subtítulos si el audio está doblado" enabled={autoDisableSubtitlesWhenDubbed} onChange={onAutoDisableSubtitlesWhenDubbedChange} />
             {!isMovie && onMarathonModeChange && (
                 <ToggleRow
-                    label="Modo Maratón"
+                    label="Maratón"
                     enabled={Boolean(marathonMode)}
                     onChange={onMarathonModeChange}
-                    subtext="Salta intro/outro y avanza automáticamente"
+                    subtext="Salta la intro y los créditos y sigue con el siguiente episodio"
                 />
             )}
             {onTvModeChange && (
                 <ToggleRow
-                    label="Modo Smart TV (D-Pad)"
+                    label="Modo TV"
                     enabled={Boolean(tvMode)}
                     onChange={onTvModeChange}
                 />
             )}
-            {!isMovie && <ToggleRow label="Omitir Intro (automático)" enabled={marathonMode ? true : autoSkipIntro} onChange={onAutoSkipIntroChange} disabled={marathonMode} subtext={marathonMode ? "(controlado por Maratón)" : undefined} />}
-            {!isMovie && <ToggleRow label="Saltar Final (automático)" enabled={marathonMode ? true : autoSkipOutro} onChange={onAutoSkipOutroChange} disabled={marathonMode} subtext={marathonMode ? "(controlado por Maratón)" : undefined} />}
+            {!isMovie && <ToggleRow label="Saltar intro automáticamente" enabled={marathonMode ? true : autoSkipIntro} onChange={onAutoSkipIntroChange} disabled={marathonMode} subtext={marathonMode ? "Lo controla Maratón" : undefined} />}
+            {!isMovie && <ToggleRow label="Saltar créditos automáticamente" enabled={marathonMode ? true : autoSkipOutro} onChange={onAutoSkipOutroChange} disabled={marathonMode} subtext={marathonMode ? "Lo controla Maratón" : undefined} />}
             {!isMovie && typeof mediaId === "number" && mediaId > 0 && <AutoDetectRow mediaId={mediaId} />}
         </div>
     )

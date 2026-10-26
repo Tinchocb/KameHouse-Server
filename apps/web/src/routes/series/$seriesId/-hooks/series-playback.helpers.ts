@@ -8,9 +8,9 @@ import { getDragonBallSpanishTitle } from "@/lib/config/dragonball.config"
 // viendo" no puedan divergir.
 
 /** Por debajo de este segundo el episodio arranca desde el principio. */
-export const RESUME_MIN_SECONDS = 10
+const RESUME_MIN_SECONDS = 10
 /** A partir de esta fracción el episodio se considera terminado. */
-export const WATCHED_THRESHOLD = 0.95
+const WATCHED_THRESHOLD = 0.95
 
 /** Número canónico del episodio (absoluto si existe). */
 export function episodeNumberOf(ep: Anime_Episode): number {
@@ -88,7 +88,7 @@ export function findEpisodeByNumber(episodes: Anime_Episode[], n: number): Anime
     return episodes.find(ep => episodeNumberOf(ep) === n)
 }
 
-export function findLocalFileByEpisodeNumber(
+function findLocalFileByEpisodeNumber(
     localFiles: Anime_LocalFile[] | undefined | null,
     n: number
 ): Anime_LocalFile | undefined {
@@ -145,7 +145,7 @@ export function selectDefaultTarget(
     return files[0] ? { kind: "file", file: files[0] } : { kind: "empty" }
 }
 
-export type NumberedTarget =
+type NumberedTarget =
     | { kind: "episode"; ep: Anime_Episode; lf: Anime_LocalFile; skippedFrom?: number }
     | { kind: "file"; file: Anime_LocalFile }
     | { kind: "missing-file" }

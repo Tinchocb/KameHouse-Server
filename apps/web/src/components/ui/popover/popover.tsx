@@ -10,13 +10,14 @@ import { cn, defineStyleAnatomy } from "../core/styling"
 const PopoverAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Popover__root",
-        "z-popover w-72 rounded-xl border border-white/[0.08] bg-[var(--glass-bg)] backdrop-blur-overlay-md p-4 text-base shadow-2xl outline-none",
+        "z-popover w-72 rounded-xl border border-white/[0.08] bg-[var(--glass-bg)] backdrop-blur-overlay-md p-4 text-base shadow-elevation-4 outline-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-        "data-[state=open]:fade-in-50 data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-95",
+        "data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-95",
         "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
         "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         // Crece desde el botón que lo abrió, con ease-out fuerte y cierre más rápido.
-        "origin-[--radix-popover-content-transform-origin] ease-out-strong duration-200 data-[state=closed]:duration-fast",
+        // La duración de abrir lleva prefijo: sin él, animate-in (150 ms) le gana por especificidad.
+        "origin-[--radix-popover-content-transform-origin] ease-out-strong data-[state=open]:duration-base data-[state=closed]:duration-fast",
     ]),
 })
 
@@ -24,7 +25,7 @@ const PopoverAnatomy = defineStyleAnatomy({
  * Popover
  * -----------------------------------------------------------------------------------------------*/
 
-export type PopoverProps =
+type PopoverProps =
     React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Root> &
     Omit<React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>, "asChild"> &
     {

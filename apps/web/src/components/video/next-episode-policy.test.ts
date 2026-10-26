@@ -43,6 +43,11 @@ describe("shouldShowNextEpisode", () => {
         expect(shouldShowNextEpisode(BASE)).toBe(false)
     })
 
+    it("en maratón nunca muestra la tarjeta, tampoco con modo TV", () => {
+        expect(shouldShowNextEpisode({ ...BASE, curr: 1390, marathonMode: true, tvMode: true })).toBe(false)
+        expect(shouldShowNextEpisode({ ...BASE, inEdWindow: true, marathonMode: true })).toBe(false)
+    })
+
     it("oculta en películas, maratón puro o sin siguiente", () => {
         expect(shouldShowNextEpisode({ ...BASE, curr: 1390, mediaFormat: "MOVIE" })).toBe(false)
         expect(shouldShowNextEpisode({ ...BASE, curr: 1390, marathonMode: true })).toBe(false)

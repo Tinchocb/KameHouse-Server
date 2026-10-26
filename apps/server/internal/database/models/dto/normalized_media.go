@@ -20,21 +20,13 @@ type NormalizedMedia struct {
 	NextAiringEpisode *NormalizedMediaNextAiringEpisode
 	MetadataStatus    *string // "COMPLETE", "MISSING", "LOCAL"
 	Description       *string
-	Relations         []*NormalizedMediaRelation
 
 	// FanArt.tv enrichment (filled in Stage 4 if FanArt API key is configured)
 	LogoImage     *string // HD transparent logo (hdtvlogo / hdmovielogo)
 	ThumbImage    *string // Thumb/tile image (tvthumb / moviethumb)
 	ClearArtImage *string // HD clearart (hdclearart / hdmovieclearart)
 
-	// OMDb enrichment (filled in Stage 4 if OMDb API key is configured)
-	ImdbRating *string // "8.4"
-	ImdbVotes  *string // "1,234,567"
-	Runtime    *int    // minutes
-	Director   *string
-	Awards     *string
-	Rated      *string // "PG-13"
-	RTRating   *string // Rotten Tomatoes rating e.g. "94%"
+	Runtime *int // minutes
 
 	// TMDB enrichment
 	Score  *float64  // Normalized score (0-100)
@@ -66,9 +58,4 @@ type NormalizedMediaNextAiringEpisode struct {
 	AiringAt        int
 	TimeUntilAiring int
 	Episode         int
-}
-
-type NormalizedMediaRelation struct {
-	RelationType string
-	Media        *NormalizedMedia
 }

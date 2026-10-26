@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
-import React from "react"
-import { LoadingErrorOverlay, SkipIntroOverlay, CenterPlayFlash, AutoSkipToastOverlay, STREAM_FILE_MISSING_MSG } from "./player-overlays"
+import { PresenceContext } from "framer-motion"
+import { LoadingErrorOverlay, SkipIntroOverlay, CenterPlayFlash, AutoSkipToastOverlay, NextEpisodeOverlay, NextEpisodeLayer, STREAM_FILE_MISSING_MSG, STREAM_DRIVE_AUTH_MSG } from "./player-overlays"
 
 describe("Player Overlays", () => {
     describe("LoadingErrorOverlay", () => {
@@ -22,10 +22,16 @@ describe("Player Overlays", () => {
             expect(screen.queryByText(/No se pudo reproducir/i)).not.toBeInTheDocument()
         })
 
+        it("ofrece ir a Ajustes cuando Drive se desconectó", () => {
+            render(<LoadingErrorOverlay status="error" errorMsg={STREAM_DRIVE_AUTH_MSG} streamType="direct" isBuffering={false} onClose={() => {}} />)
+            expect(screen.getByText(/DRIVE DESCONECTADO/i)).toBeInTheDocument()
+            expect(screen.getByText(/IR A AJUSTES/i)).toBeInTheDocument()
+        })
+
         it("calls onClose when returning from error", () => {
             const spy = vi.fn()
             render(<LoadingErrorOverlay status="error" errorMsg="x" streamType="x" isBuffering={false} onClose={spy} />)
-            fireEvent.click(screen.getByText(/REGRESAR/i))
+            fireEvent.click(screen.getByText(/VOLVER/i))
             expect(spy).toHaveBeenCalledTimes(1)
         })
     })
@@ -42,6 +48,12 @@ describe("Player Overlays", () => {
     })
 
     describe("SkipIntroOverlay", () => {
+        it("muestra Saltar resumen como nombre accesible y permite activarlo", () => {
+            const onSkip = vi.fn()
+            render(<SkipIntroOverlay show skipMode="recap" onSkip={onSkip} />)
+            fireEvent.click(screen.getByRole("button", { name: "Saltar resumen" }))
+            expect(onSkip).toHaveBeenCalledOnce()
+        })
         it("hides when show is false", () => {
             const spy = vi.fn()
             render(<SkipIntroOverlay show={false} onSkip={spy} />)
@@ -57,6 +69,15 @@ describe("Player Overlays", () => {
             expect(btn.parentElement).toHaveClass("opacity-100")
             fireEvent.click(btn)
             expect(spy).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    describe("SkipIntroOverlay apilado sobre la tarjeta", () => {
+        it("con la tarjeta de siguiente episodio visible, el botón de créditos queda encima de ella", () => {
+            const spy = vi.fn()
+            render(<SkipIntroOverlay show skipMode="outro" stackAbove onSkip={spy} />)
+            const btn = screen.getByRole("button", { name: /saltar créditos/i })
+            expect(btn.parentElement).toHaveClass("-translate-y-[10.25rem]")
         })
     })
 
@@ -78,6 +99,50 @@ describe("Player Overlays", () => {
             render(<AutoSkipToastOverlay showType="segment" onUndo={() => {}} />)
             expect(screen.getByText("Segmento saltado")).toBeInTheDocument()
             expect(screen.getByRole("button", { name: "Deshacer salto" })).toBeInTheDocument()
+        })
+    })
+
+    describe("NextEpisodeOverlay", () => {
+        const base = {
+            tvMode: false,
+            duration: 0,
+            showCountdown: false,
+            countdownSeconds: 0,
+            remainingProgress: 0,
+            onNext: () => {},
+        }
+
+        it("la pastilla visible recibe clics", () => {
+            render(<NextEpisodeOverlay {...base} show nextEpisodeTitle="Episodio 2" />)
+            const boton = screen.getByRole("button", { name: /ver siguiente episodio/i })
+            expect(boton.parentElement).toHaveClass("pointer-events-auto")
+        })
+    })
+
+    describe("NextEpisodeLayer", () => {
+        it("sin presencia (la pastilla está saliendo) no recibe clics", () => {
+            render(
+                <PresenceContext.Provider value={{ id: "next-episode-overlay", isPresent: false, register: () => () => {} }}>
+                    <NextEpisodeLayer>
+                        <button>Ver siguiente episodio</button>
+                    </NextEpisodeLayer>
+                </PresenceContext.Provider>
+            )
+            const capa = screen.getByRole("button").parentElement as HTMLElement
+            expect(capa).toHaveClass("pointer-events-none")
+            expect(capa).not.toHaveClass("pointer-events-auto")
+        })
+
+        it("con presencia activa recibe clics", () => {
+            render(
+                <PresenceContext.Provider value={{ id: "next-episode-overlay", isPresent: true, register: () => () => {} }}>
+                    <NextEpisodeLayer>
+                        <button>Ver siguiente episodio</button>
+                    </NextEpisodeLayer>
+                </PresenceContext.Provider>
+            )
+            const capa = screen.getByRole("button").parentElement as HTMLElement
+            expect(capa).toHaveClass("pointer-events-auto")
         })
     })
 })

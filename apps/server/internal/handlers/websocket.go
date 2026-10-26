@@ -117,7 +117,7 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 			} else {
 				h.App.Logger.Debug().Str("id", id).Msg("ws: Client disconnection")
 			}
-			h.App.WSEventManager.RemoveConn(id)
+			h.App.WSEventManager.RemoveConnIfSame(id, ws)
 			break
 		}
 
@@ -152,14 +152,6 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 		}
 
 		h.HandleClientEvents(event)
-
-		// h.App.Logger.Debug().Msgf("ws: message received: %+v", msg)
-
-		// // Echo the message back
-		// if err = ws.WriteMessage(messageType, msg); err != nil {
-		// 	h.App.Logger.Err(err).Msg("ws: Failed to send message")
-		// 	break
-		// }
 	}
 
 	return nil

@@ -4,8 +4,10 @@ import { useLocation } from "@tanstack/react-router"
 import { useAppStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
+import { useTransparencyState } from "@/lib/theme/apply-custom-theme"
 import { usePerformanceStore, selectEffectiveTier } from "@/lib/hardware/performance-store"
 import { getLowResImage } from "@/lib/helpers/images"
+import { useReducedMotion } from "@/components/ui/kinetics/hooks"
 
 /**
  * DynamicBackdrop — Cinematic Minimalist backdrop for KameHouse v3
@@ -47,7 +49,13 @@ export function DynamicBackdrop() {
     const effectiveTier = usePerformanceStore(selectEffectiveTier)
     const autoThrottleActive = usePerformanceStore(state => state.autoThrottleActive)
     const isEcoMode = effectiveTier === "low_power" || autoThrottleActive
-    const isFlat = !ts.themeEnableBlurringEffects || tvMode || isEcoMode
+    // MotionConfig no llega a los listeners manuales de abajo: el parallax lee la preferencia aquí.
+    const prefersReduced = useReducedMotion()
+    // Plano (Reducir transparencia, TV, contraste alto, ahorro): sin imagen
+    // ambiental. Pintada nítida y a baja opacidad era una foto de baja
+    // resolución detrás de superficies sólidas; en plano el fondo es el color
+    // de la superficie más el brillo suave del acento (CSS puro, sin GPU extra).
+    const { flat: isFlat } = useTransparencyState()
     
     const isHeroPage = isHomePage || isListingPage
 
@@ -65,7 +73,7 @@ export function DynamicBackdrop() {
         ? 0.35
         : isDetailPage
             ? 0.45
-            : 0.25) * (isFlat ? 0.75 : 1)
+            : 0.25)
 
     const [displayedUrl, setDisplayedUrl] = React.useState<string | null>(activeBackdropUrl)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
@@ -89,10 +97,12 @@ export function DynamicBackdrop() {
 
     const backdropWrapperRef = React.useRef<HTMLDivElement>(null)
 
-    // Mouse parallax (GPU-accelerated, disabled in TV, Eco mode, or Home — en Home el hero
+    // Mouse parallax (GPU-accelerated, disabled in TV, Eco mode, reduced motion, or Home — en Home el hero
     // tiene su propio backdrop sin blur; mover una capa con blur activo invalida una capa enorme)
     React.useEffect(() => {
-        if (!isEnabled || !isMotionEnabled || tvMode || isEcoMode || isHomePage) return
+        if (!isEnabled || !isMotionEnabled || tvMode || isEcoMode || isHomePage || prefersReduced) return
+        // La capa es siempre el mismo nodo mientras el parallax está activo: se toma una vez para la limpieza.
+        const wrapper = backdropWrapperRef.current
         let rafId: number | null = null
         let targetX = 0
         let targetY = 0
@@ -111,8 +121,8 @@ export function DynamicBackdrop() {
             if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
                 currentX += dx * 0.05
                 currentY += dy * 0.05
-                if (backdropWrapperRef.current) {
-                    backdropWrapperRef.current.style.transform = `translate3d(${currentX * 0.08}px, ${currentY * 0.08}px, 0)`
+                if (wrapper) {
+                    wrapper.style.transform = `translate3d(${currentX * 0.08}px, ${currentY * 0.08}px, 0)`
                 }
                 rafId = requestAnimationFrame(updatePosition)
             } else {
@@ -146,13 +156,17 @@ export function DynamicBackdrop() {
             window.removeEventListener("mousemove", handleMouseMove)
             document.removeEventListener("visibilitychange", handleVisibility)
             if (rafId) cancelAnimationFrame(rafId)
+            // Al apagarse el parallax la capa vuelve al origen: si no, se queda con el desfase del último cuadro
+            // (y al reactivarse, currentX arranca en 0 y saltaría).
+            if (wrapper) wrapper.style.transform = "translate3d(0px, 0px, 0px)"
         }
-    }, [isEnabled, isMotionEnabled, tvMode, isEcoMode, isHomePage])
+    }, [isEnabled, isMotionEnabled, tvMode, isEcoMode, isHomePage, prefersReduced])
 
     // Cross-fade timer
     React.useEffect(() => {
         if (!isEnabled || !isCrossFading) return
 
+        // 350 ms = --duration-medium: el mismo tiempo que el fundido CSS de las capas de imagen (abajo).
         const finishTimer = setTimeout(() => {
             setDisplayedUrl(activeBackdropUrl)
             setNextUrl(null)
@@ -204,31 +218,27 @@ export function DynamicBackdrop() {
                 {/* Blurred layer — low-res image, heavy blur 64px (puramente ambiental y difuso).
                     Se omite cuando el hero local ya pinta la misma imagen con su
                     propio blur (hasLocalHeroAura): evita la doble capa de blur. */}
-                {!hasLocalHeroAura && !isDetailPage && displayedUrlLowRes && (
+                {!isFlat && !hasLocalHeroAura && !isDetailPage && displayedUrlLowRes && (
                     <div
                         className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
                         style={{
                             backgroundImage: `url(${displayedUrlLowRes})`,
                             opacity: isCrossFading ? 0 : baseOpacity,
                             transform: "scale(1.18)",
-                            filter: isFlat || isEcoMode
-                                ? "none"
-                                : "blur(48px) brightness(0.50) saturate(135%)",
-                            transition: "opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)",
+                            filter: "blur(48px) brightness(0.50) saturate(135%)",
+                            transition: "opacity var(--duration-medium) var(--ease-expo-out)",
                         }}
                     />
                 )}
-                {!hasLocalHeroAura && !isDetailPage && nextUrlLowRes && (
+                {!isFlat && !hasLocalHeroAura && !isDetailPage && nextUrlLowRes && (
                     <div
                         className="absolute inset-0 bg-cover bg-center bg-no-repeat transform-gpu"
                         style={{
                             backgroundImage: `url(${nextUrlLowRes})`,
                             opacity: isCrossFading ? baseOpacity : 0,
                             transform: "scale(1.18)",
-                            filter: isFlat || isEcoMode
-                                ? "none"
-                                : "blur(48px) brightness(0.50) saturate(135%)",
-                            transition: "opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)",
+                            filter: "blur(48px) brightness(0.50) saturate(135%)",
+                            transition: "opacity var(--duration-medium) var(--ease-expo-out)",
                         }}
                     />
                 )}
@@ -236,7 +246,7 @@ export function DynamicBackdrop() {
 
             {/* Ambient soft glow when no backdrop image is active */}
             {/* --brand-accent-hex (no --brand-accent, que es un triplete HSL y dejaba el color-mix inválido) */}
-            {!displayedUrlLowRes && (
+            {(isFlat || !displayedUrlLowRes) && (
                 <div
                     className="absolute inset-0 pointer-events-none opacity-40"
                     style={{
@@ -249,10 +259,10 @@ export function DynamicBackdrop() {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_0%,var(--glass-border-bottom),transparent_60%)]" />
 
             {/* Scrim superior para proteger la barra de navegación flotante */}
-            <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-[var(--bg-primary)] via-[var(--bg-primary)]/60 to-transparent" />
+            <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-[var(--bg-primary)] via-[color-mix(in_srgb,var(--bg-primary)_60%,transparent)] to-transparent" />
 
             <div
-                className="absolute inset-0 bg-gradient-to-r from-[var(--bg-primary)] via-[var(--bg-primary)]/20 to-transparent transition-opacity duration-slow"
+                className="absolute inset-0 bg-gradient-to-r from-[var(--bg-primary)] via-[color-mix(in_srgb,var(--bg-primary)_20%,transparent)] to-transparent transition-opacity duration-slow"
                 style={{ opacity: isListingPage ? 0.35 : isDetailPage ? 0.45 : 0.65 }}
             />
             <div

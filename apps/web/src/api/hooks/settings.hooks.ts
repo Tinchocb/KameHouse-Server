@@ -18,6 +18,13 @@ export function useGetStatus(options?: { enabled?: boolean }) {
     })
 }
 
+const normalizeSettings = (data: Models_Settings | undefined): Models_Settings | undefined => {
+    if (!data) return data
+    const raw = data as unknown as Record<string, unknown>
+    const normalized = (raw.platform ?? raw.Platform ?? { hideAudienceScore: false }) as Models_Settings["platform"]
+    return { ...data, platform: normalized } as Models_Settings
+}
+
 export function useGetSettings() {
     return useServerQuery<Models_Settings>({
         endpoint: API_ENDPOINTS.SETTINGS.GetSettings.endpoint,
@@ -29,12 +36,7 @@ export function useGetSettings() {
         refetchOnWindowFocus: false,
         // El servidor serializa `platform` en minúsculas (json tag de Go).
         // Normalizar aquí para compat con payloads legacy que traían `Platform`.
-        select: (data) => {
-            if (!data) return data
-            const raw = data as unknown as Record<string, unknown>
-            const normalized = (raw.platform ?? raw.Platform ?? { hideAudienceScore: false }) as Models_Settings["platform"]
-            return { ...data, platform: normalized } as Models_Settings
-        },
+        select: normalizeSettings,
     })
 }
 

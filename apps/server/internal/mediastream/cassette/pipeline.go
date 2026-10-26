@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -80,7 +81,6 @@ type head struct {
 	segment  int32              // Current segment (updated as ffmpeg writes segments).
 	end      int32              // First segment NOT included in this head's work.
 	cmd      *exec.Cmd          // The ffmpeg process.
-	stdin    io.WriteCloser     // Used to gracefully quit ffmpeg via "q".
 	cancel   context.CancelFunc // Cancels the head's soft-close goroutine.
 	release  func()             // Governor slot release function.
 	released *sync.Once         // Ensures release is called at most once (early kill or natural exit).
@@ -194,7 +194,7 @@ func (p *Pipeline) reclaimExistingSegments() {
 	}
 
 	pattern := filepath.Base(p.outPathFmt(0))
-	reclaimed := 0
+	var found []int32
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -205,6 +205,20 @@ func (p *Pipeline) reclaimExistingSegments() {
 			continue
 		}
 		if seg < 0 || seg >= int32(p.segments.Len()) {
+			continue
+		}
+		found = append(found, seg)
+	}
+
+	// A file on disk counts as a finished segment only when the next one exists: ffmpeg opens
+	// segment N+1 after closing N. The newest file of each run of consecutive segments may be
+	// the one a killed ffmpeg was writing (or one a head launched meanwhile is writing right
+	// now, since this scan runs concurrently with the first runHead); marking it ready would
+	// serve a truncated segment.
+	slices.Sort(found)
+	reclaimed := 0
+	for i, seg := range found {
+		if i+1 == len(found) || found[i+1] != seg+1 {
 			continue
 		}
 		// File exists on disk — mark as ready with encoder ID 0.
@@ -227,7 +241,7 @@ func (p *Pipeline) GetIndex(token string) (string, error) {
 	return GenerateVariantPlaylist(
 		p.session.Keyframes,
 		float64(p.session.Info.Duration),
-		token,
+		p.session.linkQuery(token),
 	), nil
 }
 
@@ -333,10 +347,25 @@ func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
 
 		attempt++
 		p.logger.Warn().Int("attempt", attempt).Int32("seg", seg).Err(err).
-			Msg("cassette: segment wait failed, killing all active heads and retrying...")
+			Msg("cassette: segment wait timed out, retrying...")
 
-		// Kill all active heads on retry to clear any stuck or slow processes
-		p.killAllHeads()
+		if attempt >= 3 {
+			// Último intento fallido: se libera todo antes de devolver el error.
+			p.killAllHeads()
+			continue
+		}
+
+		// Un timeout no significa que la cabeza esté colgada: si la que produce el segmento
+		// sigue viva se la espera de nuevo, porque reiniciarla pierde todo lo ya codificado
+		// (y con varias calidades en paralelo ese reinicio es lo que tumbaba el stream). Sólo
+		// se matan las cabezas que no cubren el segmento, y únicamente si no hay ninguna que
+		// lo cubra, para que runHead pueda respawnear.
+		p.headsMu.RLock()
+		scheduled = p.isScheduled(seg)
+		p.headsMu.RUnlock()
+		if !scheduled {
+			p.killStaleHeads(seg)
+		}
 	}
 
 	return "", fmt.Errorf("cassette: %s segment %d not ready after retries", p.label, seg)
@@ -425,12 +454,40 @@ func (p *Pipeline) killAllHeads() {
 	}
 }
 
+// killStaleHeads mata las cabezas que no cubren seg, para liberar sus slots del governor
+// antes de respawnear. La cabeza que cubre seg no se toca.
+func (p *Pipeline) killStaleHeads(seg int32) {
+	p.headsMu.Lock()
+	defer p.headsMu.Unlock()
+	for i, h := range p.heads {
+		if h.segment == -1 {
+			continue
+		}
+		if h.segment <= seg && seg < h.end {
+			continue
+		}
+		p.killHeadLocked(i)
+	}
+}
+
 // encoder head management
 
 // isScheduled reports if any head covers seg
 func (p *Pipeline) isScheduled(seg int32) bool {
 	for _, h := range p.heads {
 		if h.segment >= 0 && h.cmd != nil && h.segment <= seg && seg < h.end {
+			return true
+		}
+	}
+	return false
+}
+
+// headNearLocked reports whether a live head already covers start and sits at most one segment
+// behind it. Unlike isScheduled and minHeadDistance it also counts heads that are still
+// launching (cmd not set yet). Caller holds headsMu.
+func (p *Pipeline) headNearLocked(start int32) bool {
+	for _, h := range p.heads {
+		if h.segment >= 0 && h.segment <= start && start < h.end && start-h.segment <= 1 {
 			return true
 		}
 	}
@@ -481,6 +538,17 @@ func (p *Pipeline) prefetch(current int32) {
 	}
 }
 
+// headProfileFor devuelve el perfil con el que arranca una cabeza de ffmpeg. El audio nunca
+// usa el encoder de video: con el perfil GPU reservaba una sesión NVENC (cap 3, así dos
+// cabezas de audio dejaban a los videos sin GPU) y, si su stderr coincidía con un patrón
+// hw, apagaba la GPU de toda la sesión.
+func headProfileFor(kind PipelineKind, active HwAccelProfile, preset string) HwAccelProfile {
+	if kind == AudioKind {
+		return FallbackToCPU(preset)
+	}
+	return active
+}
+
 // boolToReserve converts a bool to a reserve count for NVENC arbiter
 func boolToReserve(speculative bool) int {
 	if speculative {
@@ -514,10 +582,21 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		return nil
 	}
 
-	// acquire a slot from the governor
-	release, err := p.governor.Acquire(ctx)
-	if err != nil {
-		return fmt.Errorf("cassette: governor denied slot: %w", err)
+	// acquire a slot from the governor. A speculative head never waits for one: parked in the
+	// FIFO channel queue it would be served before the head a player requests right after a seek
+	// (killAllHeads frees slots first), and prefetch fires once per ready segment, so every
+	// request would leave one more goroutine parked here for the same segment.
+	var release func()
+	if speculative {
+		var ok bool
+		if release, ok = p.governor.TryAcquire(); !ok {
+			return nil
+		}
+	} else {
+		var err error
+		if release, err = p.governor.Acquire(ctx); err != nil {
+			return fmt.Errorf("cassette: governor denied slot: %w", err)
+		}
 	}
 	// guard against the select race: when both the semaphore and ctx.Done()
 	// are immediately ready, Go picks randomly. If the semaphore won but the
@@ -551,7 +630,7 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		}
 	}()
 
-	headProfile := p.settings.GetHwAccel()
+	headProfile := headProfileFor(p.kind, p.settings.GetHwAccel(), p.settings.Preset)
 	var nvencRelease func()
 	if headProfile.Name == "nvidia" {
 		var ok bool
@@ -588,6 +667,14 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		p.headsMu.Unlock()
 		combinedRelease()
 		return fmt.Errorf("cassette: pipeline cancelled")
+	}
+	// Another prefetch (they fire once per ready segment) may have claimed this range, or even
+	// finished its first segment, while this one was launching: a second ffmpeg would only
+	// encode the same segments until readSegments tells it to quit.
+	if speculative && (p.segments.IsReady(start) || p.headNearLocked(start)) {
+		p.headsMu.Unlock()
+		combinedRelease()
+		return nil
 	}
 	p.nextHeadGen++
 	gen = p.nextHeadGen
@@ -757,7 +844,7 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		p.heads[encoderID] = head{
 			segment: start, end: end, cancel: headCancel,
 			release: combinedRelease, released: once,
-			cmd: cmd, stdin: stdin, gen: gen,
+			cmd: cmd, gen: gen,
 		}
 	}
 	p.headsMu.Unlock()
@@ -888,13 +975,26 @@ func (p *Pipeline) reapProcess(ctx context.Context, encoderID int, gen uint64, c
 	//     if the GPU still encodes, we keep the profile and let GetSegment retry on
 	//     GPU (the `case err != nil` branch below closes killCh to trigger that).
 	if isHwAccelEnabled && !intentionalKill && DetectHwAccelFailure(stderr.String()) {
-		p.logger.Warn().Int("eid", encoderID).
-			Str("hwaccel", FormatHwAccelSummary(hwProfile)).
-			Str("ffmpeg_error", stderr.String()).
-			Msg("cassette: hardware acceleration failed, falling back to CPU...")
-		p.settings.SetHwAccel(FallbackToCPU("superfast"))
-		notifier.Global().Notify(notifier.TypeMediastream, "Aceleración por hardware desactivada",
-			fmt.Sprintf("FFmpeg falló usando %s; la transcodificación continúa por CPU.", hwProfile.Name))
+		streak := p.settings.RecordHwFailure()
+		encoderAlive := testEncoder(p.settings.FfmpegPath, encoderName(hwProfile))
+		if hwFallbackNeeded(encoderAlive, streak) {
+			p.logger.Warn().Int("eid", encoderID).
+				Str("hwaccel", FormatHwAccelSummary(hwProfile)).
+				Int("streak", streak).
+				Str("ffmpeg_error", stderr.String()).
+				Msg("cassette: hardware acceleration failed, falling back to CPU...")
+			p.settings.SetHwAccel(FallbackToCPU("superfast"))
+			notifier.Global().Notify(notifier.TypeMediastream, "Aceleración por hardware desactivada",
+				fmt.Sprintf("FFmpeg falló usando %s; la transcodificación continúa por CPU.", hwProfile.Name))
+		} else {
+			p.logger.Warn().Int("eid", encoderID).
+				Str("hwaccel", FormatHwAccelSummary(hwProfile)).
+				Int("streak", streak).
+				Str("ffmpeg_error", stderr.String()).
+				Msg("cassette: hardware acceleration error but the encoder still answers, keeping GPU and retrying")
+		}
+	} else if err == nil {
+		p.settings.ResetHwFailures()
 	}
 
 	switch {

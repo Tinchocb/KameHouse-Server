@@ -57,19 +57,3 @@ func (c *Client) GetMovieAlternativeTitles(ctx context.Context, movieID int) ([]
 	SetCached(c, cacheKey, resp.Results, 7*24*time.Hour)
 	return resp.Results, nil
 }
-
-// GetMovieImages fetches all backdrops, posters, and logos for a movie from TMDb.
-func (c *Client) GetMovieImages(ctx context.Context, movieID int) (*ImagesResponse, error) {
-	cacheKey := fmt.Sprintf("movie_images:%d", movieID)
-	if cached, ok := GetCached[*ImagesResponse](c, cacheKey); ok {
-		return cached, nil
-	}
-
-	resp, err := executeWithRetry[ImagesResponse](ctx, c, fmt.Sprintf("/movie/%d/images", movieID))
-	if err != nil {
-		return nil, fmt.Errorf("tmdb get movie images: %w", err)
-	}
-
-	SetCached(c, cacheKey, resp, 7*24*time.Hour)
-	return resp, nil
-}

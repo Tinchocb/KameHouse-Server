@@ -4,7 +4,13 @@ export type EraFilter = 'all' | 'db-clasico' | 'db-z' | 'db-super' | 'db-daima' 
 
 export type AspectRatioType = '3:4' | '2:3';
 
-export interface VolumeNarrative {
+export interface MomentPlayInfo {
+  key?: string;
+  title: string;
+  seconds: number;
+}
+
+interface VolumeNarrative {
   detonante: {
     title: string;
     description: string;
@@ -31,7 +37,7 @@ export interface VolumeNarrative {
   keyArtifacts?: string[];
 }
 
-export interface VolumeCoverArt {
+interface VolumeCoverArt {
   dominantToneDescription: string;
   visualSummary: string;
   kanjiTitle: string;
@@ -43,6 +49,8 @@ export interface VolumeCoverArt {
   badgeBg: string;
   tagColor: string;
   accentHex: string;
+  /** Color de saga original cuando `accentHex` se neutralizó (modo Neutro). */
+  identityHex?: string;
   themeClass: string;
 }
 

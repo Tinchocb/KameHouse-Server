@@ -16,16 +16,20 @@ export const ModalAnatomy = defineStyleAnatomy({
         "fixed inset-0 z-overlay bg-black/65 backdrop-blur-overlay-xs transition-opacity duration-base",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        // Con prefijo: animate-in (0,2,0) fija 150 ms y le gana al duration-base suelto.
+        // Misma curva que el contenido: sin ella el velo usaba el `ease` por defecto de CSS.
+        "ease-out-strong data-[state=open]:duration-base",
     ]),
     content: cva([
         "UI-Modal__content",
         "glass-frosted z-modal grid relative w-full max-w-lg gap-4 p-6 duration-base rounded-2xl",
-        "shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_-12px_rgba(0,0,0,0.9)]",
+        "shadow-[shadow:var(--glass-highlight-lg),var(--elevation-5)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         // Entra con ease-out fuerte; al cerrar responde más rápido de lo que abrió.
-        "ease-out-strong data-[state=closed]:duration-fast",
+        // El duration-base de abrir necesita el prefijo para ganarle a animate-in (150 ms).
+        "ease-out-strong data-[state=open]:duration-base data-[state=closed]:duration-fast",
     ]),
     close: cva([
         "UI-Modal__close",
@@ -179,7 +183,7 @@ export function Modal(props: ModalProps) {
                     </div>}
 
                     {!hideCloseButton && <DialogPrimitive.Close className={cn(ModalAnatomy.close(), closeClass)} asChild>
-                        {closeButton ? closeButton : <CloseButton aria-label="Cerrar ventana modal" />}
+                        {closeButton ? closeButton : <CloseButton aria-label="Cerrar" />}
                     </DialogPrimitive.Close>}
 
                 </DialogPrimitive.Content>

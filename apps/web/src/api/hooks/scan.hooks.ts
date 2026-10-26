@@ -5,12 +5,6 @@ import { Anime_LocalFile } from "@/api/generated/types"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
-export const scanQueryKeys = {
-    all: ['scan'] as const,
-    summaries: () => [API_ENDPOINTS.SCAN_SUMMARY.GetScanSummaries.key] as const,
-    status: () => [API_ENDPOINTS.SCAN.GetScanStatus.key] as const,
-}
-
 export function useScanLocalFiles(onSuccess?: () => void) {
     const queryClient = useQueryClient()
 
@@ -29,7 +23,6 @@ export function useScanLocalFiles(onSuccess?: () => void) {
             } else {
                 await queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
             }
-            await queryClient.invalidateQueries({ queryKey: scanQueryKeys.summaries() })
             onSuccess?.()
         },
         onError: (err) => {

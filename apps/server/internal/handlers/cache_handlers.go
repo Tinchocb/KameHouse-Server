@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -250,8 +248,8 @@ func (h *Handler) HandleClearSystemCache(c echo.Context) error {
 		if h.App.Metadata.Provider != nil {
 			h.App.Metadata.Provider.ClearCache()
 		}
-		if h.App.Metadata.TMDBClient != nil {
-			h.App.Metadata.TMDBClient.ClearCache()
+		if client := h.App.Metadata.GetTMDBClient(); client != nil {
+			client.ClearCache()
 		}
 	}
 
@@ -303,9 +301,11 @@ func (h *Handler) HandleWarmThumbnailCache(c echo.Context) error {
 		})
 	}
 
-	warmingMu.Lock()
-	if isThumbnailWarming.Swap(true) {
-		warmingMu.Unlock()
+	started, totalFiles, err := h.startThumbnailWarm(thumbnailWarmWorkers(), false)
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+	if !started {
 		return h.RespondWithData(c, map[string]interface{}{
 			"status":  "already_running",
 			"message": "La pre-generación de miniaturas ya está en curso",
@@ -317,121 +317,6 @@ func (h *Handler) HandleWarmThumbnailCache(c echo.Context) error {
 			},
 		})
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	warmingCancel = cancel
-	warmingMu.Unlock()
-
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
-	if err != nil {
-		isThumbnailWarming.Store(false)
-		warmingMu.Lock()
-		warmingCancel = nil
-		warmingMu.Unlock()
-		cancel()
-		return h.RespondWithError(c, fmt.Errorf("failed to retrieve local files: %w", err))
-	}
-
-	totalFiles := len(lfs)
-	warmingTotal.Store(int64(totalFiles))
-	warmingProcessed.Store(0)
-	warmingGenerated.Store(0)
-	warmingSkipped.Store(0)
-
-	h.App.Logger.Info().Int("totalFiles", totalFiles).Msg("cache: Starting thumbnail warm-up worker pool")
-
-	go func() {
-		defer func() {
-			isThumbnailWarming.Store(false)
-			warmingMu.Lock()
-			warmingCancel = nil
-			warmingMu.Unlock()
-			cancel()
-		}()
-
-		cacheDir := filepath.Join(h.App.Config.Cache.Dir, "thumbnails")
-		_ = os.MkdirAll(cacheDir, 0755)
-
-		numWorkers := 4
-		if n := runtime.NumCPU(); n > 0 && n < numWorkers {
-			numWorkers = n
-		}
-
-		jobs := make(chan string, 100)
-		var wg sync.WaitGroup
-
-		for w := 0; w < numWorkers; w++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for videoPath := range jobs {
-					if ctx.Err() != nil {
-						return
-					}
-
-					fi, err := os.Stat(videoPath)
-					if err != nil {
-						warmingProcessed.Add(1)
-						warmingSkipped.Add(1)
-						continue
-					}
-
-					cacheFile := filepath.Join(cacheDir, thumbnailHash(videoPath, fi, nil)+".jpg")
-
-					// Fast O(1) disk existence check: skip if thumbnail already exists
-					if _, err := os.Stat(cacheFile); err == nil {
-						warmingProcessed.Add(1)
-						warmingSkipped.Add(1)
-						continue
-					}
-
-					// Cold thumbnail: generate with cancellation context.
-					// El recover va por archivo: un archivo que hace fallar a ffmpeg
-					// no debe matar al worker (si caían todos, el productor quedaba
-					// bloqueado enviando a jobs) ni al servidor.
-					err = func() (err error) {
-						defer func() {
-							if r := recover(); r != nil {
-								h.App.Logger.Error().Interface("panic", r).Str("path", videoPath).Msg("cache: panic generating thumbnail")
-								err = fmt.Errorf("panic: %v", r)
-							}
-						}()
-						_, err = h.EnsureThumbnailWithContext(ctx, videoPath)
-						return err
-					}()
-					warmingProcessed.Add(1)
-					if err != nil {
-						warmingSkipped.Add(1)
-					} else {
-						warmingGenerated.Add(1)
-					}
-				}
-			}()
-		}
-
-		for _, lf := range lfs {
-			if ctx.Err() != nil {
-				break
-			}
-			if lf != nil && lf.Path != "" {
-				select {
-				case jobs <- lf.Path:
-				case <-ctx.Done():
-					break
-				}
-			}
-		}
-		close(jobs)
-		wg.Wait()
-
-		h.App.Logger.Info().
-			Int64("total", warmingTotal.Load()).
-			Int64("processed", warmingProcessed.Load()).
-			Int64("generated", warmingGenerated.Load()).
-			Int64("skipped", warmingSkipped.Load()).
-			Bool("cancelled", ctx.Err() != nil).
-			Msg("cache: Thumbnail warm-up completed")
-	}()
 
 	return h.RespondWithData(c, map[string]interface{}{
 		"status":     "started",

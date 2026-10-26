@@ -4,15 +4,18 @@ import { usePlayerCore } from "./player-core"
 import { PlayerUI } from "./player-ui"
 import { useMpvPlayer } from "./use-mpv-player"
 import { MpvOverlay } from "./mpv-overlay"
+import { useDriveSubtitleExtraction } from "./useDriveSubtitleExtraction"
+import { isDrivePath } from "./drive-subtitles"
 import { getClientCapabilities, isAudioCodecNativelyPlayable, supportsNativeAudioTracks } from "./client-capabilities"
-import { STREAM_FILE_MISSING_MSG } from "./player-overlays"
+import { STREAM_FILE_MISSING_MSG, STREAM_DRIVE_AUTH_MSG } from "./player-overlays"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import type { Mediastream_StreamType, Audio, Subtitle } from "@/api/generated/types"
 import type { VideoPlayerProps } from "./player"
 import { useAppStore } from "@/lib/store"
 import { toast } from "sonner"
+import { withClientId } from "./stream-client-id"
 
-export interface OrchestratorProps extends VideoPlayerProps {
+interface OrchestratorProps extends VideoPlayerProps {
     playableUrl?: string
 }
 
@@ -50,40 +53,66 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
     // between Chromium, Firefox and hardware).
     const clientCapabilities = useMemo(() => getClientCapabilities(), [])
 
-    const { data, error: streamRequestFailure } = useRequestMediastreamMediaContainer({
+    const requestVariables = useMemo(() => ({
         path: props.streamUrl,
         streamType: streamType as Mediastream_StreamType,
         clientID: clientId,
         force: forceTranscode,
         clientCapabilities,
-    }, isLocal)
+    }), [props.streamUrl, streamType, clientId, forceTranscode, clientCapabilities])
+
+    const { data, error: streamRequestFailure } = useRequestMediastreamMediaContainer(requestVariables, isLocal)
 
     // Traduce el rechazo del servidor a un mensaje claro para el overlay de error.
     const streamRequestError = useMemo(() => {
         if (!streamRequestFailure) return null
         const serverMsg = streamRequestFailure.message?.toLowerCase() || ""
         if (serverMsg.includes("transcoder not initialized") || serverMsg.includes("transcoder could not be initialized")) {
-            return "La transcodificación no está habilitada o FFmpeg no está disponible en el servidor. Podés activarla en Ajustes → Streaming."
+            return "La conversión de video no está activada o FFmpeg no está disponible en el servidor. Puedes activarla en Ajustes → Rendimiento."
+        }
+        if (serverMsg.includes("quota")) {
+            return "Google Drive limitó las descargas de este archivo (cuota excedida). Inténtalo de nuevo más tarde."
         }
         switch (streamRequestFailure.status) {
+            case 424:
+                if (serverMsg.includes("no está conectado")) {
+                    return "Google Drive no está conectado. Conéctalo en Ajustes → Biblioteca → Google Drive."
+                }
+                return serverMsg.includes("google drive authorization expired") ? STREAM_DRIVE_AUTH_MSG : "Un servicio externo falló al preparar el episodio. Inténtalo de nuevo en unos segundos."
             case 404:
                 return STREAM_FILE_MISSING_MSG
             case 403:
-                return "Este archivo está fuera de las carpetas de tu biblioteca."
+                return "Este archivo está fuera de las carpetas de tu biblioteca. Agrégalo en Ajustes → Biblioteca."
             case 503:
-                return "La biblioteca no está disponible en este momento. Probá de nuevo en unos segundos."
+                return "La biblioteca no está disponible en este momento. Inténtalo de nuevo en unos segundos."
             default:
-                return "No pudimos preparar la reproducción de este episodio. Probá de nuevo en unos segundos."
+                console.warn("[orchestrator] el servidor no pudo preparar el stream:", streamRequestFailure.status, streamRequestFailure.message)
+                return "No pudimos preparar este episodio. Inténtalo de nuevo en unos segundos."
         }
     }, [streamRequestFailure])
 
     const playableUrl = useMemo(() => {
         if (!isLocal) return props.playableUrl || props.streamUrl
-        return data?.streamUrl || ""
-    }, [isLocal, props.playableUrl, props.streamUrl, data?.streamUrl])
+        // El id del reproductor viaja en la URL: el servidor lo usa para no mezclar streams.
+        const streamUrl = data?.streamUrl
+        return streamUrl ? withClientId(streamUrl, clientId) : ""
+    }, [isLocal, props.playableUrl, props.streamUrl, data?.streamUrl, clientId])
+
+    // Subtítulos embebidos de un archivo de Drive: el servidor los lista como pendientes
+    // (needsExtraction) hasta que el usuario los extrae desde el panel.
+    const hasPendingDriveSubtitles = useMemo(
+        () => isDrivePath(props.streamUrl) && (data?.mediaInfo?.subtitles ?? []).some((s: Subtitle) => s.needsExtraction),
+        [props.streamUrl, data?.mediaInfo?.subtitles]
+    )
+    const { driveSubtitlesReady, driveFonts } = useDriveSubtitleExtraction({
+        path: props.streamUrl,
+        hasPending: hasPendingDriveSubtitles,
+    })
 
     const backendTracks = useMemo(() => {
         if (!data?.mediaInfo) return undefined
+        const pathParam = `&path=${encodeURIComponent(props.streamUrl)}`
+        const fonts = data.mediaInfo.fonts?.length ? data.mediaInfo.fonts : driveFonts
         return {
             audioTracks: data.mediaInfo.audios?.map((a: Audio, i: number) => ({
                 index: a.index ?? i,
@@ -97,6 +126,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                 const trackIdx = s.index ?? i
                 const isImageBased = s.isImageBased ?? false
                 const endpoint = isImageBased ? "/api/v1/mediastream/subs/pgs" : "/api/v1/mediastream/subtitles"
+                const pending = !!s.needsExtraction && !driveSubtitlesReady
                 return {
                     index: trackIdx,
                     language: s.language ?? "und",
@@ -105,7 +135,11 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                     default: s.isDefault,
                     forced: s.isForced,
                     isImageBased,
-                    url: `${endpoint}?path=${encodeURIComponent(props.streamUrl)}&trackIndex=${trackIdx}&clientId=${clientId}`
+                    needsExtraction: pending,
+                    progressive: !!s.progressive,
+                    // `path` ubica la caché de los subtítulos externos y de los de Drive
+                    // (que no tienen un container activo en el servidor).
+                    url: pending ? undefined : `${endpoint}?trackIndex=${trackIdx}&clientId=${clientId}${pathParam}${s.progressive && props.initialProgressSeconds ? `&t=${Math.floor(props.initialProgressSeconds)}` : ""}`
                 }
             }) || [],
 
@@ -115,9 +149,9 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                 name: c.name || "",
                 type: c.type
             })) || [],
-            fontUrls: data.mediaInfo.fonts?.map((font: string) => `/api/v1/mediastream/att/${encodeURIComponent(font)}?clientId=${clientId}`) || []
+            fontUrls: fonts?.map((font: string) => `/api/v1/mediastream/att/${encodeURIComponent(font)}?clientId=${clientId}${pathParam}`) || []
         }
-    }, [data, props.streamUrl, clientId])
+    }, [data, props.streamUrl, props.initialProgressSeconds, clientId, driveSubtitlesReady, driveFonts])
 
     const activeStreamType = (data?.streamType && ["local", "online", "direct", "transcode", "optimized"].includes(data.streamType) ? data.streamType : streamType || "direct") as "local" | "online" | "direct" | "transcode" | "optimized"
 
@@ -208,7 +242,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                 props.onClose()
             }
         }
-    })
+    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, core, props])
 
     // External mpv playback (desktop app only): hands the local file off to an
     // mpv window while progress keeps syncing through the IPC bridge.
@@ -220,7 +254,14 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
         onExited: () => props.onClose(),
     })
 
+    // mpv.play espera a que mpv arranque y conecte su IPC (hasta 10 s) y recién entonces
+    // isActive quita el botón: mientras tanto se ignoran más clics, que abrían otra ventana.
+    const isOpeningMpvRef = React.useRef(false)
+    const [isOpeningMpv, setIsOpeningMpv] = React.useState(false)
     const handleOpenInMpv = useCallback(async () => {
+        if (isOpeningMpvRef.current) return
+        isOpeningMpvRef.current = true
+        setIsOpeningMpv(true)
         try {
             const current = core.state.currentTime > 5
                 ? core.state.currentTime
@@ -228,11 +269,14 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             core.domElements.videoElement.current?.pause()
             const success = await mpv.play(current)
             if (!success) {
-                toast.error("No se pudo iniciar el reproductor MPV externo")
+                toast.error("No se pudo abrir el episodio en mpv")
             }
         } catch (err) {
             console.error("[MPV] Error opening external player:", err)
-            toast.error("Error al abrir reproductor MPV")
+            toast.error("No se pudo abrir el episodio en mpv")
+        } finally {
+            isOpeningMpvRef.current = false
+            setIsOpeningMpv(false)
         }
     }, [mpv, core, props.initialProgressSeconds])
 
@@ -298,6 +342,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             episodeLabel={props.episodeLabel}
             onClose={props.onClose}
             onOpenInMpv={canUseMpv && !mpv.isActive ? handleOpenInMpv : undefined}
+            mpvPending={isOpeningMpv}
             onNextEpisode={props.onNextEpisode}
             playableUrl={playableUrl}
             streamType={activeStreamType as "local" | "online" | "direct" | "transcode" | "optimized"}

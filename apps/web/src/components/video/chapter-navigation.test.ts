@@ -54,6 +54,12 @@ describe("getPrevChapterTarget", () => {
 })
 
 describe("findSkippableChapter", () => {
+    it("con skipIntermediates salta el resumen sin auto-salto de intro, y el OP sigue su preferencia", () => {
+        const prefs = { autoSkipIntroPref: false, autoSkipOutroPref: false, skipIntermediates: true }
+        expect(findSkippableChapter(chapters, 620, new Set(), prefs)?.name).toBe("Eyecatch")
+        expect(findSkippableChapter(chapters, 10, new Set(), prefs)).toBeNull()
+    })
+
     it("encuentra OP/ED según preferencias", () => {
         expect(findSkippableChapter(chapters, 10, new Set(), PREFS)?.name).toBe("Opening 1")
         expect(findSkippableChapter(chapters, 10, new Set(), { ...PREFS, autoSkipIntroPref: false })).toBeNull()

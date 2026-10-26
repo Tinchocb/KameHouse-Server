@@ -1,0 +1,151 @@
+{
+  "originalBytes": 13392304,
+  "servedBytes": 13392304,
+  "reductionPercent": 0,
+  "rows": [
+    {
+      "source": "/icons/series-icons/db/reposo-guardia-sin-texto.png",
+      "optimized": "/icons/series-icons/db/reposo-guardia-sin-texto.png",
+      "originalBytes": 1124609,
+      "servedBytes": 1124609,
+      "width": 1055,
+      "height": 1491,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "3b3c2f78a80ff46e84b2b25c2d3ab54b0126b61080d99c9f1f75a16b81b98f8f",
+      "servedSha256": "3b3c2f78a80ff46e84b2b25c2d3ab54b0126b61080d99c9f1f75a16b81b98f8f"
+    },
+    {
+      "source": "/icons/series-icons/db/combate-kamehameha.png",
+      "optimized": "/icons/series-icons/db/combate-kamehameha.png",
+      "originalBytes": 368356,
+      "servedBytes": 368356,
+      "width": 427,
+      "height": 632,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "a12e970472fe90fed38ec8cab1b538ac8b9ae5651a9e9fa1333e8a310f214a70",
+      "servedSha256": "a12e970472fe90fed38ec8cab1b538ac8b9ae5651a9e9fa1333e8a310f214a70"
+    },
+    {
+      "source": "/icons/series-icons/dbz/reposo-brazos-cruzados.png",
+      "optimized": "/icons/series-icons/dbz/reposo-brazos-cruzados.png",
+      "originalBytes": 977674,
+      "servedBytes": 977674,
+      "width": 859,
+      "height": 1831,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "f372815a43215dc2552e5ee8f70a204565b534ff59fc2078cbef8c9b5319a581",
+      "servedSha256": "f372815a43215dc2552e5ee8f70a204565b534ff59fc2078cbef8c9b5319a581"
+    },
+    {
+      "source": "/icons/series-icons/dbz/combate-kamehameha.png",
+      "optimized": "/icons/series-icons/dbz/combate-kamehameha.png",
+      "originalBytes": 1410175,
+      "servedBytes": 1410175,
+      "width": 1086,
+      "height": 1448,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "32e685c2038b3c32a3dfb251a56f83a9a5146cffde04d673dbc1e59102ca72aa",
+      "servedSha256": "32e685c2038b3c32a3dfb251a56f83a9a5146cffde04d673dbc1e59102ca72aa"
+    },
+    {
+      "source": "/icons/series-icons/dbgt/reposo-clasico-hd.png",
+      "optimized": "/icons/series-icons/dbgt/reposo-clasico-hd.png",
+      "originalBytes": 990566,
+      "servedBytes": 990566,
+      "width": 894,
+      "height": 1760,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "5bfbec66a47afb5c5fa57f9a48a5e07912db053830d31cb65c89cb9b14c1ca05",
+      "servedSha256": "5bfbec66a47afb5c5fa57f9a48a5e07912db053830d31cb65c89cb9b14c1ca05"
+    },
+    {
+      "source": "/icons/series-icons/dbgt/combate-ssj4-kamehameha.png",
+      "optimized": "/icons/series-icons/dbgt/combate-ssj4-kamehameha.png",
+      "originalBytes": 1202684,
+      "servedBytes": 1202684,
+      "width": 937,
+      "height": 1678,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "a93731d5ab716f5cf781bc064bdcad9a4f093a3cd1130a7bc1334ea39a66e1b0",
+      "servedSha256": "a93731d5ab716f5cf781bc064bdcad9a4f093a3cd1130a7bc1334ea39a66e1b0"
+    },
+    {
+      "source": "/icons/series-icons/dbkai/reposo-frente.png",
+      "optimized": "/icons/series-icons/dbkai/reposo-frente.png",
+      "originalBytes": 980878,
+      "servedBytes": 980878,
+      "width": 985,
+      "height": 1597,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "9241805547eb1bc3b2f81130945c1e682ae148ac68f2995104961f0dec148d11",
+      "servedSha256": "9241805547eb1bc3b2f81130945c1e682ae148ac68f2995104961f0dec148d11"
+    },
+    {
+      "source": "/icons/series-icons/dbkai/combate-ssj-lateral.png",
+      "optimized": "/icons/series-icons/dbkai/combate-ssj-lateral.png",
+      "originalBytes": 1314805,
+      "servedBytes": 1314805,
+      "width": 914,
+      "height": 1721,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "6792cdc071bcfe1846edbbe494b754f4f9df4294e08dcd4998603e2a4cf631f1",
+      "servedSha256": "6792cdc071bcfe1846edbbe494b754f4f9df4294e08dcd4998603e2a4cf631f1"
+    },
+    {
+      "source": "/icons/series-icons/dbs/reposo-hombro.png",
+      "optimized": "/icons/series-icons/dbs/reposo-hombro.png",
+      "originalBytes": 1116168,
+      "servedBytes": 1116168,
+      "width": 778,
+      "height": 2022,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "d2547612d250190ce0bbb2c827985b7d6cdf6efc24a0cc19f57d47c9ef1a9833",
+      "servedSha256": "d2547612d250190ce0bbb2c827985b7d6cdf6efc24a0cc19f57d47c9ef1a9833"
+    },
+    {
+      "source": "/icons/series-icons/dbs/combate-ultra-instinto.png",
+      "optimized": "/icons/series-icons/dbs/combate-ultra-instinto.png",
+      "originalBytes": 1333963,
+      "servedBytes": 1333963,
+      "width": 827,
+      "height": 1902,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "d405452ee214aa37e9e1779e5231dad191b5cb0b25d35c4e8061dd0640580270",
+      "servedSha256": "d405452ee214aa37e9e1779e5231dad191b5cb0b25d35c4e8061dd0640580270"
+    },
+    {
+      "source": "/icons/series-icons/daima/reposo-pose.png",
+      "optimized": "/icons/series-icons/daima/reposo-pose.png",
+      "originalBytes": 962458,
+      "servedBytes": 962458,
+      "width": 1023,
+      "height": 1537,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "963d0ba3dc36477e5914a6521085fe1ac7204a79c65bc251167fa1027245c754",
+      "servedSha256": "963d0ba3dc36477e5914a6521085fe1ac7204a79c65bc251167fa1027245c754"
+    },
+    {
+      "source": "/icons/series-icons/daima/combate-ssj-kamehameha.png",
+      "optimized": "/icons/series-icons/daima/combate-ssj-kamehameha.png",
+      "originalBytes": 1609968,
+      "servedBytes": 1609968,
+      "width": 875,
+      "height": 1797,
+      "alphaAndVisibleRgbIdentical": true,
+      "hiddenRgbDifferences": 0,
+      "originalSha256": "2191fa94a82e6078ec9657c5cd95a5e4d8d187754504bf91bd05b9cd44fcad92",
+      "servedSha256": "2191fa94a82e6078ec9657c5cd95a5e4d8d187754504bf91bd05b9cd44fcad92"
+    }
+  ]
+}

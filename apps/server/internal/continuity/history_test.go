@@ -3,7 +3,6 @@ package continuity
 import (
 	"context"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
 	"path/filepath"
@@ -13,15 +12,12 @@ import (
 )
 
 func TestHistoryItems(t *testing.T) {
-	test_utils.SetTwoLevelDeep()
-	test_utils.InitTestProvider(t)
-
 	logger := util.NewLogger()
 
 	tempDir := t.TempDir()
 	t.Log(tempDir)
 
-	database, err := db.NewDatabase(context.Background(), test_utils.ConfigData.Path.DataDir, test_utils.ConfigData.Database.Name, logger)
+	database, err := db.NewDatabase(context.Background(), tempDir, "test-history", logger)
 	require.NoError(t, err)
 
 	cacher, err := filecache.NewCacher(filepath.Join(tempDir, "cache"))
@@ -33,6 +29,8 @@ func TestHistoryItems(t *testing.T) {
 		Database:   database,
 	})
 	require.NotNil(t, manager)
+	t.Cleanup(func() { _ = database.Close() })
+	t.Cleanup(manager.TelemetryManager.Stop)
 
 	var mediaIds = make([]int, MaxWatchHistoryItems+1)
 	for i := 0; i < MaxWatchHistoryItems+1; i++ {
@@ -71,7 +69,7 @@ func TestHistoryItems(t *testing.T) {
 
 	require.Len(t, items, MaxWatchHistoryItems)
 
-	item, found := items["1"]
+	item, found := items["1_2"]
 	require.True(t, found)
 
 	require.Equal(t, 2, item.EpisodeNumber)

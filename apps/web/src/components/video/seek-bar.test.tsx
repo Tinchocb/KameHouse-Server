@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
-import React from "react"
 import { SeekBar } from "./seek-bar"
 
 describe("SeekBar component", () => {
@@ -26,7 +25,7 @@ describe("SeekBar component", () => {
         expect(slider).toBeInTheDocument()
         expect(slider).toHaveAttribute("min", "0")
         expect(slider).toHaveAttribute("max", "1420")
-        expect(slider).toHaveAttribute("aria-valuetext", "Posición actual de 23:40")
+        expect(slider).toHaveAttribute("aria-valuetext", "00:00 de 23:40")
     })
 
     it("triggers handleSeek on range change", () => {

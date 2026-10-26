@@ -134,7 +134,15 @@ func readBody(resp *http.Response) ([]byte, error) {
 		return nil, errors.New("nil response body")
 	}
 	defer resp.Body.Close()
-	return io.ReadAll(resp.Body)
+	const maxMappingBody = 1 << 20
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxMappingBody+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > maxMappingBody {
+		return nil, fmt.Errorf("mapping response exceeds %d bytes", maxMappingBody)
+	}
+	return body, nil
 }
 
 func sleepWithContext(ctx context.Context, d time.Duration) {

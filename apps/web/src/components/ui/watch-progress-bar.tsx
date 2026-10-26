@@ -1,9 +1,11 @@
 import React from "react";
+import { m } from "framer-motion";
 import { cn } from "./core/styling";
+import { useReducedMotion } from "./kinetics/hooks";
 
-export type ProgressBarVariant = "hero" | "compact";
+type ProgressBarVariant = "hero" | "compact";
 
-export interface WatchProgressBarProps {
+interface WatchProgressBarProps {
     percent: number;
     className?: string;
     animateOnMount?: boolean;
@@ -20,12 +22,12 @@ export interface WatchProgressBarProps {
 }
 
 const ERA_COLOR_MAP: Record<string, string> = {
-    "era-db": "var(--era-db-hex, #E87A2D)",
-    "era-dbz": "var(--era-dbz-hex, #E6B43C)",
-    "era-dbgt": "var(--era-dbgt-hex, #D23859)",
-    "era-dbkai": "var(--era-dbkai-hex, #278DC5)",
-    "era-dbs": "var(--era-dbs-hex, #2C9FC7)",
-    "era-daima": "var(--era-daima-hex, #9564C8)",
+    "era-db": "var(--era-db-hex, #F97316)",
+    "era-dbz": "var(--era-dbz-hex, #FBBF24)",
+    "era-dbgt": "var(--era-dbgt-hex, #F43F5E)",
+    "era-dbkai": "var(--era-dbkai-hex, #10B981)",
+    "era-dbs": "var(--era-dbs-hex, #3B82F6)",
+    "era-daima": "var(--era-daima-hex, #A855F7)",
 };
 
 export function WatchProgressBar({
@@ -57,8 +59,14 @@ export function WatchProgressBar({
         ? { background: "color-mix(in srgb, var(--md-sys-color-surface-container) 20%, transparent)" }
         : undefined;
 
+    // El scaleX lo maneja framer (no va en el style): una transición CSS no corre en
+    // el primer pintado, así que con animateOnMount la barra aparecía ya llena.
+    const reduceMotion = useReducedMotion();
+    const fillTransition = animateOnMount
+        ? { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const } // --duration-slower + --ease-expo-out
+        : { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const }; // --duration-base + --ease-smooth-out
+
     const fillStyle: React.CSSProperties = {
-        transform: `scaleX(${clampedPercent / 100})`,
         transformOrigin: "left",
         ...(activeColor ? {
             background: activeColor.startsWith("linear-gradient") || activeColor.startsWith("var(")
@@ -80,15 +88,15 @@ export function WatchProgressBar({
                 className={cn("w-full overflow-hidden relative z-10", trackClass)}
                 style={trackStyle}
             >
-                <div
+                <m.div
                     className={cn(
                         "h-full w-full rounded-pill origin-left",
-                        !activeColor && defaultFillClass,
-                        animateOnMount
-                            ? "transition-transform duration-slower ease-expo-out"
-                            : "transition-transform duration-base ease-smooth-out"
+                        !activeColor && defaultFillClass
                     )}
                     style={fillStyle}
+                    initial={animateOnMount && !reduceMotion ? { scaleX: 0 } : false}
+                    animate={{ scaleX: clampedPercent / 100 }}
+                    transition={fillTransition}
                 />
             </div>
         </div>

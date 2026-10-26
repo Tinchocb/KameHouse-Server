@@ -1,4 +1,4 @@
-import React from "react"
+import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { AnimatedTooltip } from "@/components/ui/kinetics"
 
@@ -23,6 +23,11 @@ function roleToneClass(roleTag?: string | null): string {
     return "text-on-surface-variant"
 }
 
+// Con foco por teclado, el avatar se trae a la vista lo mínimo necesario (en 412 px el último quedaba a medias).
+function scrollIntoViewOnFocus(e: React.FocusEvent<HTMLButtonElement>) {
+    e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" })
+}
+
 export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect }: CharacterAvatarProps) {
     const handleSelect = () => onSelect?.(name)
     const tooltipText = roleTag ? `${name} · ${roleTag}` : `Ver detalles de ${name}`
@@ -33,6 +38,7 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect 
                 type="button"
                 aria-label={roleTag ? `${name}, ${roleTag}` : name}
                 onClick={handleSelect}
+                onFocus={scrollIntoViewOnFocus}
                 className={cn(
                     "flex flex-col items-center text-center gap-2.5 group cursor-pointer rounded-xl active:scale-95 transition-transform duration-fast ease-out-strong",
                     "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70",
@@ -60,12 +66,12 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect 
                     />
                 </div>
                 <div className="flex flex-col w-full px-1">
-                    <p className="text-sm font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent transition-colors duration-fast ease-smooth-out line-clamp-1">
+                    <p className="text-sm font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent-readable transition-colors duration-fast ease-smooth-out line-clamp-1">
                         {name}
                     </p>
                     {roleTag && (
                         <p className={cn(
-                            "text-badge font-medium uppercase tracking-widest mt-0.5 transition-colors duration-fast ease-smooth-out",
+                            "text-xs font-medium mt-0.5 transition-colors duration-fast ease-smooth-out",
                             roleToneClass(roleTag)
                         )}>
                             {roleTag}

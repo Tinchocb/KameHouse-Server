@@ -74,8 +74,7 @@ func TestIsRestrictedWrite(t *testing.T) {
 		want         bool
 	}{
 		// Escrituras que necesita un cliente de la LAN.
-		{http.MethodPost, "/api/v1/progress", false},
-		{http.MethodPost, "/api/v1/playback/sync", false},
+		{http.MethodPost, "/api/v1/mediastream/preload", false},
 		{http.MethodPatch, "/api/v1/continuity/item", false},
 		{http.MethodPost, "/api/v1/mediastream/request", false},
 		{http.MethodPost, "/api/v1/library/anime-entry/progress", false},
@@ -83,7 +82,7 @@ func TestIsRestrictedWrite(t *testing.T) {
 		// Lecturas: nunca se restringen por este camino.
 		{http.MethodGet, "/api/v1/library/local-files", false},
 		{http.MethodHead, "/api/v1/drive/play", false},
-		{http.MethodOptions, "/api/v1/progress", false},
+		{http.MethodOptions, "/api/v1/playback/sync", false},
 		// Escrituras que solo se hacen desde este equipo.
 		{http.MethodPost, "/api/v1/cache/thumbnails/warm", true},
 		{http.MethodPost, "/api/v1/intelligence/chronology/overrides", true},

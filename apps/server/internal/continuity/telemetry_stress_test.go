@@ -4,7 +4,6 @@ import (
 	"context"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/test_utils"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/filecache"
 	"path/filepath"
@@ -15,9 +14,6 @@ import (
 )
 
 func TestTelemetryManager_Stress(t *testing.T) {
-	test_utils.SetTwoLevelDeep()
-	test_utils.InitTestProvider(t)
-
 	logger := util.NewLogger()
 	tempDir := t.TempDir()
 
@@ -33,6 +29,8 @@ func TestTelemetryManager_Stress(t *testing.T) {
 		Database:   database,
 	})
 	require.NotNil(t, manager)
+	t.Cleanup(func() { _ = database.Close() })
+	t.Cleanup(manager.TelemetryManager.Stop)
 
 	// Simulate 500 concurrent incoming HTTP requests pushing events into the Queue.
 	var wg sync.WaitGroup

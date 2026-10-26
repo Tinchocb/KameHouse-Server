@@ -1,4 +1,4 @@
-export interface DBSagaDef {
+interface DBSagaDef {
     id: string
     name: string
     startEp: number
@@ -6,7 +6,7 @@ export interface DBSagaDef {
     image: string
 }
 
-export interface DBMovieDef {
+interface DBMovieDef {
     id: string
     tmdbId: number
     title: string

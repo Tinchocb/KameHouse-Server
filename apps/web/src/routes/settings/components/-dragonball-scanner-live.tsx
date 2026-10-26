@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from "react"
-import { m, AnimatePresence } from "framer-motion"
-import { createPortal } from "react-dom"
+import { useState, useMemo } from "react"
+import { m } from "framer-motion"
 import { Check, CheckCircle2, Film, X } from "lucide-react"
 import { useFormContext } from "react-hook-form"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
@@ -11,6 +10,9 @@ import { ScanFileList } from "@/components/scan-live/scan-file-list"
 import { useDriveStatus, useTriggerDriveScan } from "@/lib/drive-status"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { cn } from "@/components/ui/core/styling"
+import { Button, IconButton } from "@/components/ui/button"
+import { Modal } from "@/components/ui/modal"
+import { useCardMotionProps } from "@/components/ui/kinetics/hooks"
 import type { SettingsFormValues } from "../index"
 
 import {
@@ -29,7 +31,16 @@ export function DragonBallScannerLive() {
     const { mutate: scanLibrary, isPending } = useScanLocalFiles()
     const { data: collection } = useGetLibraryCollection()
     const [selectedSeries, setSelectedSeries] = useState<DBFranchiseSeries | null>(null)
+    // Abrir y cerrar van aparte de la serie: al cerrar, el Modal la sigue mostrando mientras corre su salida.
+    const [isDetailOpen, setIsDetailOpen] = useState(false)
     const [modalTab, setModalTab] = useState<"sagas" | "movies">("sagas")
+    const openDetail = (series: DBFranchiseSeries) => {
+        setSelectedSeries(series)
+        setModalTab(series.type === "MOVIES" ? "movies" : "sagas")
+        setIsDetailOpen(true)
+    }
+    // Hover y tap de las portadas según el tier: en subtle y off no se mueven.
+    const cardMotion = useCardMotionProps()
     const { data: driveStatus } = useDriveStatus()
     const { mutate: scanDrive, isPending: isDrivePending } = useTriggerDriveScan()
 
@@ -169,7 +180,7 @@ export function DragonBallScannerLive() {
     }, [collectionMap, detectedMovieIds, totalMoviesDetected])
 
     return (
-        <div className="space-y-5 animate-in fade-in duration-300">
+        <div className="space-y-5 animate-in fade-in duration-base">
             {/* ── 1. ESTADO + ACCIÓN ÚNICA + COBERTURA ────────────────────────────── */}
             <ScanStatusCard
                 view={scanViews[0] ?? null}
@@ -199,8 +210,8 @@ export function DragonBallScannerLive() {
             {/* ── 3. COLECCIÓN: COBERTURA POR SERIE ───────────────────────────────── */}
             <div className="space-y-3">
                 <div className="flex items-baseline justify-between gap-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface">Colección</h4>
-                    <p className="text-3xs text-on-surface-variant/60">Tocá una portada para ver sagas y películas</p>
+                    <h3 className="text-xs font-bold text-on-surface">Colección</h3>
+                    <p className="text-3xs text-label-2">Toca una portada para ver sagas y películas</p>
                 </div>
 
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
@@ -217,27 +228,21 @@ export function DragonBallScannerLive() {
                         return (
                             <m.div
                                 key={series.id}
-                                whileHover={{ y: -3 }}
-                                whileTap={{ scale: 0.96 }}
-                                transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                                {...cardMotion}
                                 role="button"
                                 tabIndex={0}
                                 aria-label={`Ver detalle de ${series.title}`}
-                                onClick={() => {
-                                    setSelectedSeries(series)
-                                    setModalTab(series.type === "MOVIES" ? "movies" : "sagas")
-                                }}
+                                onClick={() => openDetail(series)}
                                 onKeyDown={(e) => {
                                     if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return
                                     e.preventDefault()
-                                    setSelectedSeries(series)
-                                    setModalTab(series.type === "MOVIES" ? "movies" : "sagas")
+                                    openDetail(series)
                                 }}
                                 className={cn(
-                                    "group relative flex flex-col rounded-xl overflow-hidden cursor-pointer border transition-[border-color,box-shadow,opacity,transform] duration-fast ease-smooth-out bg-white/[0.02]",
+                                    "group relative flex flex-col rounded-xl overflow-hidden cursor-pointer border transition-[border-color,box-shadow,opacity] duration-fast ease-smooth-out bg-[var(--neutral-elev-2)]",
                                     (count > 0 || detectedMoviesInSeries > 0)
-                                        ? "border-white/15 [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-accent/60 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-[0_4px_20px_rgba(0,0,0,0.5),0_0_14px_hsl(var(--brand-accent)/0.2)]"
-                                        : "border-white/10 opacity-75 [@media(hover:hover)_and_(pointer:fine)]:hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20"
+                                        ? "border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-accent/60 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-elevation-3"
+                                        : "border-[var(--neutral-separator)] opacity-75 [@media(hover:hover)_and_(pointer:fine)]:hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)]"
                                 )}
                             >
                                 {/* Poster Image Container (2:3 Aspect Ratio) */}
@@ -277,17 +282,17 @@ export function DragonBallScannerLive() {
 
                                     {/* Bottom Info on Poster */}
                                     <div className="absolute bottom-2 left-2 right-2 z-10">
-                                        <h4 className="text-2xs font-bold text-white leading-tight line-clamp-1 group-hover:text-brand-accent transition-colors">
+                                        <h3 className="text-2xs font-bold text-label-1 leading-tight line-clamp-1 group-hover:text-brand-accent-readable transition-colors">
                                             {series.title}
-                                        </h4>
-                                        <p className="text-4xs font-mono text-on-surface-variant/80 mt-0.5 truncate">
+                                        </h3>
+                                        <p className="text-4xs font-mono text-label-2 mt-0.5 truncate">
                                             {series.subtitle}
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* Conteo + barra (+ películas de la serie) */}
-                                <div className="px-2.5 py-2 border-t border-white/5 space-y-1.5">
+                                <div className="px-2.5 py-2 border-t border-[var(--neutral-separator)] space-y-1.5">
                                     <div className="flex items-center justify-between gap-2 text-3xs font-mono">
                                         <span className={cn("font-bold tabular-nums whitespace-nowrap", count > 0 ? "text-on-surface" : "text-on-surface-variant/50")}
                                             title={series.type === "MOVIES" ? "Películas detectadas" : "Episodios detectados"}>
@@ -297,7 +302,7 @@ export function DragonBallScannerLive() {
                                             <span
                                                 className={cn(
                                                     "inline-flex items-center gap-0.5 tabular-nums shrink-0",
-                                                    detectedMoviesInSeries === seriesMovies.length ? "text-status-success/90" : "text-on-surface-variant/60",
+                                                    detectedMoviesInSeries === seriesMovies.length ? "text-status-success/90" : "text-label-3",
                                                 )}
                                                 title={`${detectedMoviesInSeries} de ${seriesMovies.length} películas`}
                                             >
@@ -307,18 +312,18 @@ export function DragonBallScannerLive() {
                                         )}
                                     </div>
 
-                                    {/* Progress Bar */}
-                                    <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+                                    {/* Progress Bar: escala desde la izquierda (transform), no anima width. */}
+                                    <div className="w-full h-1 rounded-full bg-[var(--neutral-elev-3)] overflow-hidden">
                                         <div
                                             className={cn(
-                                                "h-full transition-[width,background-color] duration-slow ease-smooth-out rounded-full",
+                                                "w-full h-full origin-left transition-[transform,background-color] duration-slow ease-smooth-out rounded-full",
                                                 isComplete
                                                     ? "bg-status-success"
                                                     : count > 0
                                                     ? "bg-brand-accent"
                                                     : "bg-transparent"
                                             )}
-                                            style={{ width: `${Math.max(count > 0 ? 4 : 0, percentage)}%` }}
+                                            style={{ transform: `scaleX(${Math.max(count > 0 ? 4 : 0, percentage) / 100})` }}
                                         />
                                     </div>
                                 </div>
@@ -328,34 +333,34 @@ export function DragonBallScannerLive() {
                 </div>
             </div>
 
-            {/* ── 4. MODAL / DRAWER VISUAL DE SAGAS Y PELÍCULAS ──────────────────── */}
-            {/* Portal a body: el scroller de Ajustes usa transform y rompe position: fixed. */}
-            {typeof document !== "undefined" && createPortal(
-            <AnimatePresence>
+            {/* ── 4. MODAL VISUAL DE SAGAS Y PELÍCULAS ───────────────────────────── */}
+            {/* Modal porta a body (el scroller de Ajustes usa transform y rompe position: fixed)
+                y trae la salida del velo y del diálogo, Escape, clic afuera y el foco. */}
+            <Modal
+                open={isDetailOpen}
+                onOpenChange={setIsDetailOpen}
+                srTitle={selectedSeries ? `Detalle del escaneo: ${selectedSeries.title}` : undefined}
+                hideCloseButton
+                contentClass="max-w-xl max-h-[85vh] p-0 gap-0 flex flex-col overflow-hidden bg-surface-container border border-[var(--neutral-separator)] shadow-elevation-5"
+            >
                 {selectedSeries && (
-                    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-overlay-md animate-in fade-in duration-150">
-                        <m.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="relative w-full max-w-xl max-h-[85vh] flex flex-col rounded-2xl bg-surface-container border border-white/15 shadow-elevation-5 overflow-hidden"
-                        >
+                    <>
                             {/* Header with Official Poster Banner */}
-                            <div className="relative p-5 bg-white/[0.02] border-b border-white/10 flex items-start justify-between gap-4">
+                            <div className="relative p-5 bg-[var(--neutral-elev-2)] border-b border-[var(--neutral-separator)] flex items-start justify-between gap-4">
                                 <div className="flex items-center gap-4">
                                     <img
                                         src={selectedSeries.officialPoster}
                                         alt={selectedSeries.title}
-                                        className="w-14 h-20 object-cover rounded-xl shadow-elevation-2 border border-white/10 shrink-0"
+                                        className="w-14 h-20 object-cover rounded-xl shadow-elevation-2 border border-[var(--neutral-separator)] shrink-0"
                                     />
                                     <div>
-                                        <span className="text-3xs font-mono font-bold text-brand-accent uppercase tracking-wider block">
-                                            Inspector de Escaneo
+                                        <span className="text-2xs font-bold text-brand-accent-readable block">
+                                            Detalle del escaneo
                                         </span>
-                                        <h3 className="text-lg font-bold text-white tracking-tight">
+                                        <h3 className="text-lg font-bold text-label-1 tracking-tight">
                                             {selectedSeries.title}
                                         </h3>
-                                        <p className="text-xs text-on-surface-variant/80 font-mono mt-0.5">
+                                        <p className="text-xs text-label-2 mt-0.5">
                                             {selectedSeries.subtitle} • {selectedSeries.totalEpisodes} {selectedSeries.type === "MOVIES" ? "películas" : "episodios"}
                                             {selectedSeries.type === "SERIES" && selectedSeries.movies && selectedSeries.movies.length > 0 && (
                                                 <span> • {selectedSeries.movies.length} películas asociadas</span>
@@ -364,49 +369,41 @@ export function DragonBallScannerLive() {
                                     </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedSeries(null)}
-                                    className="p-1.5 rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-white active:scale-95 transition-[background-color,color,transform] duration-fast cursor-pointer"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <IconButton
+                                    intent="ghost"
+                                    size="md"
+                                    onClick={() => setIsDetailOpen(false)}
+                                    aria-label="Cerrar detalle"
+                                    icon={<X className="w-5 h-5" />}
+                                />
                             </div>
 
                             {/* Tab Switcher (Sagas vs Movies) if series has both */}
                             {selectedSeries.type === "SERIES" && selectedSeries.sagas.length > 0 && selectedSeries.movies && selectedSeries.movies.length > 0 && (
-                                <div className="flex items-center gap-2 px-5 pt-3 pb-1 border-b border-white/5 bg-surface-container-low">
-                                    <button
-                                        type="button"
+                                <div className="flex items-center gap-2 px-5 pt-3 pb-1 border-b border-[var(--neutral-separator)] bg-surface-container-low">
+                                    <Button
+                                        intent={modalTab === "sagas" ? "secondary" : "ghost"}
+                                        size="xs"
+                                        aria-pressed={modalTab === "sagas"}
                                         onClick={() => setModalTab("sagas")}
-                                        className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer",
-                                            modalTab === "sagas"
-                                                ? "bg-white/15 text-white shadow-elevation-1"
-                                                : "text-on-surface-variant hover:text-white"
-                                        )}
                                     >
-                                        Sagas & Episodios ({presentEpisodes.size}/{selectedSeries.totalEpisodes})
-                                    </button>
-                                    <button
-                                        type="button"
+                                        Sagas y episodios ({presentEpisodes.size}/{selectedSeries.totalEpisodes})
+                                    </Button>
+                                    <Button
+                                        intent={modalTab === "movies" ? "secondary" : "ghost"}
+                                        size="xs"
+                                        aria-pressed={modalTab === "movies"}
                                         onClick={() => setModalTab("movies")}
-                                        className={cn(
-                                            "px-3 py-1.5 rounded-lg text-xs font-bold font-mono uppercase tracking-wider transition-[background-color,color,border-color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer",
-                                            modalTab === "movies"
-                                                ? "bg-white/15 text-white shadow-elevation-1"
-                                                : "text-on-surface-variant hover:text-white"
-                                        )}
                                     >
                                         Películas ({selectedSeries.movies.filter(m => detectedMovieIds.has(m.tmdbId)).length}/{selectedSeries.movies.length})
-                                    </button>
+                                    </Button>
                                 </div>
                             )}
 
                             {/* Content List: Sagas or Movies */}
                             <div className="p-5 overflow-y-auto space-y-2.5 max-h-[60vh]">
                                 {modalTab === "sagas" && selectedSeries.type === "SERIES" && isEntryLoading ? (
-                                    <p className="text-center text-on-surface-variant/60 py-8 text-xs font-mono">
+                                    <p className="text-center text-label-2 py-8 text-xs">
                                         Cargando episodios detectados…
                                     </p>
                                 ) : modalTab === "sagas" && selectedSeries.type === "SERIES" && selectedSeries.sagas.length > 0 ? (
@@ -421,11 +418,11 @@ export function DragonBallScannerLive() {
                                         return (
                                             <div
                                                 key={saga.id}
-                                                className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/15 transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden"
+                                                className="flex items-center justify-between p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] hover:border-[var(--neutral-separator)] transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden"
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     {/* Saga Artwork Thumbnail */}
-                                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-lowest border border-white/10 shrink-0">
+                                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-lowest border border-[var(--neutral-separator)] shrink-0">
                                                         <img
                                                             src={saga.image}
                                                             alt={saga.name}
@@ -437,26 +434,26 @@ export function DragonBallScannerLive() {
                                                     </div>
 
                                                     <div className="min-w-0">
-                                                        <h5 className="text-xs font-bold text-white truncate">
+                                                        <h5 className="text-xs font-bold text-label-1 truncate">
                                                             {saga.name}
                                                         </h5>
-                                                        <span className="text-2xs font-mono text-on-surface-variant/70">
-                                                            Eps {saga.startEp} - {saga.endEp} ({sagaFound}/{sagaTotal} caps)
+                                                        <span className="text-2xs text-label-2">
+                                                            Episodios {saga.startEp}–{saga.endEp} · {sagaFound} de {sagaTotal}
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 <span
                                                     className={cn(
-                                                        "px-2.5 py-0.5 rounded-full text-3xs font-bold font-mono tracking-wider shrink-0",
+                                                        "px-2.5 py-0.5 rounded-full text-3xs font-bold shrink-0",
                                                         sagaCompleted
                                                             ? "bg-status-success/15 text-status-success border border-status-success/30"
                                                             : sagaFound > 0
                                                             ? "bg-status-warning/15 text-status-warning border border-status-warning/30"
-                                                            : "bg-white/5 text-on-surface-variant/60"
+                                                            : "bg-[var(--neutral-elev-3)] text-label-3"
                                                     )}
                                                 >
-                                                    {sagaCompleted ? "COMPLETA" : sagaFound > 0 ? "INCOMPLETA" : "PENDIENTE"}
+                                                    {sagaCompleted ? "Completa" : sagaFound > 0 ? "Incompleta" : "Pendiente"}
                                                 </span>
                                             </div>
                                         )
@@ -472,12 +469,12 @@ export function DragonBallScannerLive() {
                                                 className={cn(
                                                     "flex items-center justify-between p-3 rounded-xl border transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden",
                                                     isDetected
-                                                        ? "bg-white/[0.03] border-white/15"
-                                                        : "bg-white/[0.01] border-white/5 opacity-60"
+                                                        ? "bg-[var(--neutral-elev-2)] border-[var(--neutral-separator)]"
+                                                        : "bg-[var(--neutral-elev-2)] border-[var(--neutral-separator)] opacity-60"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="w-10 h-14 rounded-lg overflow-hidden bg-surface-container-lowest border border-white/10 shrink-0">
+                                                    <div className="w-10 h-14 rounded-lg overflow-hidden bg-surface-container-lowest border border-[var(--neutral-separator)] shrink-0">
                                                         <img
                                                             src={movieDetails?.poster || selectedSeries.officialPoster}
                                                             alt={movie.title}
@@ -486,14 +483,14 @@ export function DragonBallScannerLive() {
                                                     </div>
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-4xs font-mono font-bold px-1.5 py-px rounded bg-white/10 text-on-surface-variant uppercase">
+                                                            <span className="text-2xs font-bold px-1.5 py-px rounded bg-[var(--neutral-elev-3)] text-on-surface-variant">
                                                                 {movie.type}
                                                             </span>
-                                                            <span className="text-3xs font-mono text-on-surface-variant/70">
+                                                            <span className="text-3xs font-mono text-label-2">
                                                                 {movie.year}
                                                             </span>
                                                         </div>
-                                                        <h5 className="text-xs font-bold text-white truncate mt-0.5">
+                                                        <h5 className="text-xs font-bold text-label-1 truncate mt-0.5">
                                                             {movie.title}
                                                         </h5>
                                                     </div>
@@ -501,47 +498,40 @@ export function DragonBallScannerLive() {
 
                                                 <span
                                                     className={cn(
-                                                        "px-2.5 py-1 rounded-full text-3xs font-bold font-mono tracking-wider shrink-0 flex items-center gap-1",
+                                                        "px-2.5 py-1 rounded-full text-3xs font-bold shrink-0 flex items-center gap-1",
                                                         isDetected
                                                             ? "bg-status-success/20 text-status-success border border-status-success/40"
-                                                            : "bg-surface-container-lowest text-on-surface-variant/60 border border-white/5"
+                                                            : "bg-surface-container-lowest text-label-3 border border-[var(--neutral-separator)]"
                                                     )}
                                                 >
                                                     {isDetected ? (
                                                         <>
                                                             <CheckCircle2 className="w-3 h-3 text-status-success" />
-                                                            DETECTADA
+                                                            Detectada
                                                         </>
                                                     ) : (
-                                                        "NO DETECTADA"
+                                                        "No detectada"
                                                     )}
                                                 </span>
                                             </div>
                                         )
                                     })
                                 ) : (
-                                    <p className="text-center text-on-surface-variant/60 py-8 text-xs font-mono">
+                                    <p className="text-center text-label-2 py-8 text-xs">
                                         No hay información disponible para esta sección.
                                     </p>
                                 )}
                             </div>
 
                             {/* Modal Footer */}
-                            <div className="p-3.5 bg-white/[0.02] border-t border-white/10 flex items-center justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedSeries(null)}
-                                    className="px-4 py-1.5 rounded-xl font-bold text-xs bg-white/10 text-white hover:bg-white/15 active:scale-95 transition-[background-color,transform] duration-fast ease-out-strong cursor-pointer"
-                                >
+                            <div className="p-3.5 bg-[var(--neutral-elev-2)] border-t border-[var(--neutral-separator)] flex items-center justify-end">
+                                <Button intent="secondary" size="sm" onClick={() => setIsDetailOpen(false)}>
                                     Cerrar
-                                </button>
+                                </Button>
                             </div>
-                        </m.div>
-                    </div>
+                    </>
                 )}
-            </AnimatePresence>,
-            document.body
-            )}
+            </Modal>
         </div>
     )
 }

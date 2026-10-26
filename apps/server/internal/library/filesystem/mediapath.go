@@ -5,7 +5,6 @@ import (
 	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -49,21 +48,22 @@ func SeparateFilePath(path string, prefixPath string) *SeparatedFilePath {
 //	fmt.Println(fp) // file.mkv
 //	fmt.Println(dirs) // [to]
 func SeparateFilePathS(path string, potentialPrefixes []string) *SeparatedFilePath {
-	// Sort prefix paths by length in descending order
-	sort.Slice(potentialPrefixes, func(i, j int) bool {
-		return len(potentialPrefixes[i]) > len(potentialPrefixes[j])
-	})
-
-	// Check each prefix path, and remove the first match from the path
+	// Se elige el prefijo coincidente más largo sin reordenar potentialPrefixes: los workers
+	// del escáner comparten ese slice y ordenarlo in situ desde varias goroutines a la vez
+	// era una carrera de datos.
+	normalizedPath := util.NormalizePath(path)
 	prefixPath := ""
+	bestLen := -1
 	for _, p := range potentialPrefixes {
 		// Normalize the paths for comparison only
-		if strings.HasPrefix(util.NormalizePath(path), util.NormalizePath(p)) {
-			// Remove the prefix from the path
-			path = path[len(p):]
+		if len(p) > bestLen && strings.HasPrefix(normalizedPath, util.NormalizePath(p)) {
+			bestLen = len(p)
 			prefixPath = p
-			break
 		}
+	}
+	if bestLen >= 0 {
+		// Remove the prefix from the path
+		path = path[len(prefixPath):]
 	}
 
 	filename := filepath.ToSlash(filepath.Base(path))

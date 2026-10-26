@@ -9,6 +9,7 @@ import (
 	"kamehouse/internal/database/models"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 // HandleGetLibraryEpisodeFile resolves the local file path for a given TMDB ID + absolute episode.
@@ -38,17 +39,31 @@ func (h *Handler) HandleGetLibraryEpisodeFile(c echo.Context) error {
 
 	// 1. Find LibraryMedia by TMDB ID (type ANIME or SHOW)
 	var libMedia models.LibraryMedia
-	if err := h.App.Database.Gorm().
+	if err := h.App.Database.Gorm().WithContext(c.Request().Context()).
+		Select("id").
 		Where("tmdb_id = ? AND type IN (?, ?)", tmdbID, "ANIME", "SHOW").
 		First(&libMedia).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return h.RespondWithError(c, err)
+		}
 		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("series not found in library"))
 	}
 
 	// 2. Find LibraryEpisode by LibraryMediaID + AbsoluteNumber
-	var libEpisode models.LibraryEpisode
-	if err := h.App.Database.Gorm().
+	var libEpisode struct {
+		Image          string
+		AbsoluteNumber int
+		Title          string
+		SagaName       string
+	}
+	if err := h.App.Database.Gorm().WithContext(c.Request().Context()).
+		Model(&models.LibraryEpisode{}).
+		Select("image", "absolute_number", "title", "saga_name").
 		Where("library_media_id = ? AND absolute_number = ?", libMedia.ID, absoluteEpisode).
 		First(&libEpisode).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return h.RespondWithError(c, err)
+		}
 		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("episode not found in library"))
 	}
 
@@ -70,8 +85,9 @@ func (h *Handler) HandleGetLibraryEpisodeFile(c echo.Context) error {
 	// json_each (JSON1 de SQLite) porque JSON_CONTAINS no existe en SQLite.
 	var localFile models.LocalFile
 	// Use raw SQL for flexible matching on parsed/metadata
-	query := h.App.Database.Gorm().
+	query := h.App.Database.Gorm().WithContext(c.Request().Context()).
 		Table("local_file").
+		Select("path", "file_mod_time", "file_size").
 		Where("library_media_id = ?", libMedia.ID).
 		Where(
 			"(CAST(JSON_EXTRACT(parsed_data, '$.episode') AS INTEGER) = ? OR EXISTS (SELECT 1 FROM json_each(\"metadata\", '$.episodes') WHERE CAST(value AS INTEGER) = ?))",
@@ -80,6 +96,9 @@ func (h *Handler) HandleGetLibraryEpisodeFile(c echo.Context) error {
 		Limit(1)
 
 	if err := query.First(&localFile).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return h.RespondWithError(c, err)
+		}
 		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("local file not found for episode"))
 	}
 
@@ -128,62 +147,110 @@ func (h *Handler) HandleGetChronologyEpisodeFiles(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("tmdbIds is required"))
 	}
 
-	db := h.App.Database.Gorm()
-	var medias []models.LibraryMedia
-	if err := db.Where("tmdb_id IN ? AND type IN (?, ?)", tmdbIDs, "ANIME", "SHOW").Order("id").Find(&medias).Error; err != nil {
+	if h.App == nil || h.App.Database == nil {
+		return h.RespondWithCodeError(c, http.StatusInternalServerError, errors.New("database not initialized"))
+	}
+	reqCtx := c.Request().Context()
+	gdb := h.App.Database.Gorm().WithContext(reqCtx)
+
+	type mediaProjection struct {
+		ID     uint
+		TmdbID int
+	}
+	var medias []mediaProjection
+	if err := gdb.Model(&models.LibraryMedia{}).
+		Select("id, tmdb_id").
+		Where("tmdb_id IN ? AND type IN (?, ?)", tmdbIDs, "ANIME", "SHOW").
+		Order("id ASC").
+		Find(&medias).Error; err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	out := make([]ChronologyEpisodeFile, 0, 512)
+	// Filtrar primer media.ID por cada TMDB ID preservando el orden exacto de las series
+	mediaIDs := make([]uint, 0, len(medias))
+	tmdbByMediaID := make(map[uint]int, len(medias))
 	seenTmdb := make(map[int]bool, len(medias))
-	for _, media := range medias {
-		// Como First() en el endpoint individual: la primera serie de cada TMDB ID.
-		if seenTmdb[media.TmdbID] {
+	for _, m := range medias {
+		if !seenTmdb[m.TmdbID] {
+			seenTmdb[m.TmdbID] = true
+			mediaIDs = append(mediaIDs, m.ID)
+			tmdbByMediaID[m.ID] = m.TmdbID
+		}
+	}
+
+	if len(mediaIDs) == 0 {
+		return h.RespondWithData(c, []ChronologyEpisodeFile{})
+	}
+
+	// 1. Cargar episodios en UNA SOLA consulta usando proyección mínima (sin description ni tags)
+	type epProjection struct {
+		LibraryMediaID uint
+		AbsoluteNumber int
+		Title          string
+		SagaName       string
+		Image          string
+	}
+	var allEpisodes []epProjection
+	if err := gdb.Model(&models.LibraryEpisode{}).
+		Select("library_media_id, absolute_number, title, saga_name, image").
+		Where("library_media_id IN ? AND absolute_number > 0", mediaIDs).
+		Order("absolute_number ASC").
+		Find(&allEpisodes).Error; err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	// 2. Cargar archivos locales asociados en UNA SOLA consulta batch
+	type fileRow struct {
+		LibraryMediaID uint
+		Path           string
+		FileModTime    int64
+		FileSize       int64
+		Episode        int
+		Priority       int
+	}
+	var rows []fileRow
+	if err := gdb.Raw(`
+		SELECT library_media_id, path, file_mod_time, file_size, CAST(JSON_EXTRACT(parsed_data, '$.episode') AS INTEGER) AS episode, 0 AS priority
+		FROM local_file WHERE library_media_id IN ? AND JSON_EXTRACT(parsed_data, '$.episode') IS NOT NULL
+		UNION ALL
+		SELECT lf.library_media_id, lf.path, lf.file_mod_time, lf.file_size, CAST(je.value AS INTEGER) AS episode, 1 AS priority
+		FROM local_file lf, json_each(lf."metadata", '$.episodes') je
+		WHERE lf.library_media_id IN ? AND json_valid(lf."metadata")`,
+		mediaIDs, mediaIDs,
+	).Scan(&rows).Error; err != nil {
+		return h.RespondWithError(c, err)
+	}
+
+	// Agrupar archivos por (libraryMediaID, episode)
+	type fileKey struct {
+		mediaID uint
+		episode int
+	}
+	fileByMediaAndEp := make(map[fileKey]fileRow, len(rows))
+	for _, r := range rows {
+		if r.Episode <= 0 {
 			continue
 		}
-		seenTmdb[media.TmdbID] = true
+		k := fileKey{mediaID: r.LibraryMediaID, episode: r.Episode}
+		if prev, ok := fileByMediaAndEp[k]; !ok || r.Priority < prev.Priority {
+			fileByMediaAndEp[k] = r
+		}
+	}
 
-		var episodes []models.LibraryEpisode
-		if err := db.Where("library_media_id = ? AND absolute_number > 0", media.ID).Find(&episodes).Error; err != nil {
-			return h.RespondWithError(c, err)
-		}
-		if len(episodes) == 0 {
-			continue
-		}
+	// Agrupar episodios por libraryMediaID preservando el orden de las series
+	episodesByMedia := make(map[uint][]epProjection, len(mediaIDs))
+	for _, ep := range allEpisodes {
+		episodesByMedia[ep.LibraryMediaID] = append(episodesByMedia[ep.LibraryMediaID], ep)
+	}
 
-		// Archivo por episodio absoluto: primero parsed_data.episode, después metadata.episodes.
-		type fileRow struct {
-			Path        string
-			FileModTime int64
-			FileSize    int64
-			Episode     int
-			Priority    int
-		}
-		var rows []fileRow
-		if err := db.Raw(`
-			SELECT path, file_mod_time, file_size, CAST(JSON_EXTRACT(parsed_data, '$.episode') AS INTEGER) AS episode, 0 AS priority
-			FROM local_file WHERE library_media_id = ? AND JSON_EXTRACT(parsed_data, '$.episode') IS NOT NULL
-			UNION ALL
-			SELECT lf.path, lf.file_mod_time, lf.file_size, CAST(je.value AS INTEGER) AS episode, 1 AS priority
-			FROM local_file lf, json_each(lf."metadata", '$.episodes') je
-			WHERE lf.library_media_id = ? AND json_valid(lf."metadata")`,
-			media.ID, media.ID,
-		).Scan(&rows).Error; err != nil {
-			return h.RespondWithError(c, err)
-		}
-		fileByEpisode := make(map[int]fileRow, len(rows))
-		for _, r := range rows {
-			if r.Episode <= 0 {
-				continue
-			}
-			if prev, ok := fileByEpisode[r.Episode]; !ok || r.Priority < prev.Priority {
-				fileByEpisode[r.Episode] = r
-			}
-		}
-
-		for _, ep := range episodes {
+	// 3. Ensamblar la respuesta en memoria agrupada por serie
+	out := make([]ChronologyEpisodeFile, 0, len(allEpisodes))
+	for _, mID := range mediaIDs {
+		tmdbID := tmdbByMediaID[mID]
+		eps := episodesByMedia[mID]
+		for _, ep := range eps {
 			entry := ChronologyEpisodeFile{
-				TmdbID:          media.TmdbID,
+				TmdbID:          tmdbID,
 				AbsoluteEpisode: ep.AbsoluteNumber,
 				Title:           ep.Title,
 				SagaName:        ep.SagaName,
@@ -191,7 +258,7 @@ func (h *Handler) HandleGetChronologyEpisodeFiles(c echo.Context) error {
 			if ep.Image != "" {
 				entry.Path = ep.Image
 				entry.HasImage = true
-			} else if f, ok := fileByEpisode[ep.AbsoluteNumber]; ok {
+			} else if f, ok := fileByMediaAndEp[fileKey{mediaID: ep.LibraryMediaID, episode: ep.AbsoluteNumber}]; ok {
 				entry.Path = f.Path
 				entry.FileModTime = f.FileModTime
 				entry.FileSize = f.FileSize

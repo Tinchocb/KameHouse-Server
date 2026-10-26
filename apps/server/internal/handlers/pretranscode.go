@@ -55,6 +55,11 @@ func (h *Handler) HandleEnqueuePreTranscode(c echo.Context) error {
 		return h.RespondWithCodeError(c, 403, errors.New("access denied to requested file path"))
 	}
 
+	// Solo original: pre-transcodificar un archivo completo contradice el ajuste.
+	if h.App.MediastreamRepository.DirectPlayOnly() {
+		return h.RespondWithCodeError(c, 409, errors.New("Solo original está activo: la pre-transcodificación está deshabilitada."))
+	}
+
 	m, err := h.preTranscoder()
 	if err != nil {
 		return h.RespondWithError(c, err)

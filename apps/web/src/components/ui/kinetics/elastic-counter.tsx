@@ -3,7 +3,7 @@ import { m, AnimatePresence, type Variants } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { useSpringPreset, useReducedMotion } from "./hooks"
 
-export interface ElasticCounterProps {
+interface ElasticCounterProps {
     value: number
     className?: string
 }
@@ -35,7 +35,9 @@ export const ElasticCounter: React.FC<ElasticCounterProps> = ({ value, className
     }
 
     return (
-        <span className={cn("inline-flex overflow-hidden font-mono tabular-nums", className)}>
+        // `relative`: con popLayout el número que sale pasa a `position: absolute` respecto de su
+        // offsetParent; sin un contador posicionado escapaba del recorte de overflow-hidden.
+        <span className={cn("relative inline-flex overflow-hidden font-mono tabular-nums", className)}>
             <AnimatePresence mode="popLayout" initial={false} custom={dir}>
                 <m.span
                     key={value}

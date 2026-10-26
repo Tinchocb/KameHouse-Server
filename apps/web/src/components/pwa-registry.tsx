@@ -37,13 +37,14 @@ export function PwaRegistry() {
         const hadController = Boolean(navigator.serviceWorker.controller)
 
         // Al activarse el nuevo SW que toma control, recargamos la página una sola vez
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
+        const onControllerChange = () => {
             if (!hadController) return
             if (!refreshing) {
                 refreshing = true
                 window.location.reload()
             }
-        })
+        }
+        navigator.serviceWorker.addEventListener("controllerchange", onControllerChange)
 
         const isVideoPlaying = () => {
             const video = document.querySelector("video")
@@ -110,7 +111,11 @@ export function PwaRegistry() {
             register()
         } else {
             window.addEventListener("load", register)
-            return () => window.removeEventListener("load", register)
+        }
+
+        return () => {
+            navigator.serviceWorker.removeEventListener?.("controllerchange", onControllerChange)
+            window.removeEventListener("load", register)
         }
     }, [])
 

@@ -370,6 +370,18 @@ export type Continuity_WatchHistoryItemResponse = {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
+ * - Filepath: internal/core/cache_location.go
+ * - Filename: cache_location.go
+ * - Package: core
+ */
+export type INTERNAL_CacheLocation = {
+    activeDirectory: string
+    directory: string
+    restartRequired: boolean
+    managedByEnvironment: boolean
+}
+
+/**
  * - Filepath: internal/core/feature_flags.go
  * - Filename: feature_flags.go
  * - Package: core
@@ -663,67 +675,6 @@ export type SagaDTO = {
     newCharacters: Array<string> | null
     keyCharacters: Array<CharacterDTO> | null
     subSagas?: Array<SubSagaDTO>
-}
-
-/**
- * - Filepath: internal/database/models/dto/scan_summary_dto.go
- * - Filename: scan_summary_dto.go
- * - Package: dto
- */
-export type ScanSummary = {
-    id: string
-    groups: Array<ScanSummaryGroup> | null
-    unmatchedFiles: Array<ScanSummaryFile> | null
-}
-
-/**
- * - Filepath: internal/database/models/dto/scan_summary_dto.go
- * - Filename: scan_summary_dto.go
- * - Package: dto
- */
-export type ScanSummaryFile = {
-    id: string
-    localFile: LocalFile | null
-    logs: Array<ScanSummaryLog> | null
-}
-
-/**
- * - Filepath: internal/database/models/dto/scan_summary_dto.go
- * - Filename: scan_summary_dto.go
- * - Package: dto
- */
-export type ScanSummaryGroup = {
-    id: string
-    files: Array<ScanSummaryFile> | null
-    mediaId: number
-    mediaTitle: string
-    mediaImage: string
-    /**
-     * Whether the media is in the user's collection
-     */
-    mediaIsInCollection: boolean
-}
-
-/**
- * - Filepath: internal/database/models/dto/scan_summary_dto.go
- * - Filename: scan_summary_dto.go
- * - Package: dto
- */
-export type ScanSummaryItem = {
-    createdAt: string
-    scanSummary: ScanSummary | null
-}
-
-/**
- * - Filepath: internal/database/models/dto/scan_summary_dto.go
- * - Filename: scan_summary_dto.go
- * - Package: dto
- */
-export type ScanSummaryLog = {
-    id: string
-    filePath: string
-    level: string
-    message: string
 }
 
 /**
@@ -1060,6 +1011,19 @@ export type GPUStats = {
 }
 
 /**
+ * - Filepath: internal/handlers/media_audio_profile.go
+ * - Filename: media_audio_profile.go
+ * - Package: handlers
+ * @description
+ *  MediaAudioProfile es el perfil de audio propio de una serie. Las series sin fila usan
+ *  el perfil global de Ajustes.
+ */
+export type MediaAudioProfile = {
+    mediaId: number
+    audioProfile: string
+}
+
+/**
  * - Filepath: internal/handlers/media_source.go
  * - Filename: media_source.go
  * - Package: handlers
@@ -1139,7 +1103,6 @@ export type Status = {
     disabledFeatures: Array<INTERNAL_FeatureKey> | null
     serverReady: boolean
     serverHasPassword: boolean
-    showChangelogTour: string
     serverIPs: Array<string> | null
     serverPort: number
     /**
@@ -1208,57 +1171,6 @@ export type ChronologySeriesProgress = {
     tmdbId: number
     completed: boolean
     watchedEpisodes: Array<number> | null
-}
-
-/**
- * - Filepath: internal/intelligence/types.go
- * - Filename: types.go
- * - Package: intelligence
- * @description
- *  MediaCandidate representa un archivo de video candidato para selección.
- */
-export type MediaCandidate = {
-    filePath: string
-    /**
-     * 2160, 1080, 720, 480
-     */
-    resolution: number
-    /**
-     * "h264", "hevc", "av1"
-     */
-    codec: string
-    /**
-     * bytes/s
-     */
-    bitrate: number
-    /**
-     * ["spa", "eng"]
-     */
-    audioLangs: Array<string> | null
-    /**
-     * "aac", "flac", "dts"
-     */
-    audioCodec: string
-    fileSize: number
-    isHDR: boolean
-    /**
-     * "mkv", "mp4", "webm"
-     */
-    container: string
-}
-
-/**
- * - Filepath: internal/intelligence/types.go
- * - Filename: types.go
- * - Package: intelligence
- * @description
- *  SelectionResult resultado de la selección inteligente.
- */
-export type SelectionResult = {
-    winner: MediaCandidate | null
-    allCandidates: Array<MediaCandidate> | null
-    totalScore: number
-    reason: string
 }
 
 /**
@@ -1337,6 +1249,7 @@ export type Mediastream_ClientCapabilities = {
      * can demux .mkv in <video> (Chromium yes, Firefox/Safari no)
      */
     matroska: boolean
+    hlsHevc?: boolean
 }
 
 /**
@@ -1648,21 +1561,18 @@ export type Models_LibrarySettings = {
     autoDetectSkipTimes: boolean
     enableWatchContinuity: boolean
     scannerMatchingThreshold: number
-    primaryMetadataProvider: string
     tmdbApiKey: string
     tmdbLanguage: string
     scannerStrictStructure: boolean
     scannerProvider: string
     disableLocalScanning: boolean
     disableCloudSource: boolean
-    scannerUseLegacyMatching: boolean
     lastScanAt: string
     autoScan: boolean
     unifiedScan: boolean
     preferredAudioProfile: string
     autoSkipIntro: boolean
     autoSkipOutro: boolean
-    autoSkipFiller: boolean
     autoDisableSubtitlesWhenDubbed: boolean
     marathonMode: boolean
     tvMode: boolean
@@ -2131,6 +2041,8 @@ export type Subtitle = {
     isForced: boolean
     link: string | null
     isImageBased: boolean
+    needsExtraction?: boolean
+    progressive?: boolean
 }
 
 /**
@@ -2153,10 +2065,6 @@ export type Video = {
 export type Anime_LocalFile = LocalFile
 export type Anime_LocalFileType = LocalFileType
 export type Anime_LocalFileMetadata = LocalFileMetadata
-export type Summary_ScanSummaryItem = ScanSummaryItem
-export type Summary_ScanSummaryGroup = ScanSummaryGroup
-export type Summary_ScanSummaryFile = ScanSummaryFile
-export type Summary_ScanSummary = ScanSummary
 export type Platform_MediaStatus = MediaStatus
 export type Platform_MediaFormat = MediaFormat
 export type Platform_UnifiedMedia = UnifiedMedia

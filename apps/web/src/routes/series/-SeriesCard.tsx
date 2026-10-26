@@ -1,127 +1,130 @@
-import { memo, useMemo, useCallback, useState, useRef, useEffect } from 'react';
-import { IconMediaPlay } from '@/components/ui/icons';
+import { memo, useCallback, useState, type CSSProperties } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import { IconArrowRight, IconUiCheckCircle2 } from '@/components/ui/icons';
 import { cn } from '@/components/ui/core/styling';
+import { ButtonAnatomy } from '@/components/ui/button';
 import { getSpineConfig } from '@/lib/helpers/goku-panorama';
-import { getMediumResImage, getLowResImage, localImage } from '@/lib/helpers/images';
+import { getMediumResImage, localImage } from '@/lib/helpers/images';
 import { usePrefetchAnimeEntry } from '@/hooks/use-prefetch-anime-entry';
 import { DRAGON_BALL_SERIES_INFO, getSeriesEraAccent } from '@/lib/helpers/series';
 import { DRAGON_BALL_SAGAS } from '@/lib/config/dragonball_sagas';
 import { usePerformanceStore, selectEffectiveTier } from '@/lib/hardware/performance-store';
-import { MediaMetadataCapsule } from '@/components/ui/media-metadata-capsule';
-import { ElasticCounter } from '@/components/ui/kinetics';
+import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
+import { isDataSavingEnabled } from '@/lib/network-preferences';
+import type { SeriesItem } from './-series-model';
+import './-series-shelf.css';
 
-/** Saga que contiene el episodio dado (para "Vas en…"). */
+export type { SeriesItem } from './-series-model';
+
+const VHS_ERA_TOKENS = [
+    'var(--era-db-hex)', 'var(--era-dbz-hex)', 'var(--era-dbgt-hex)',
+    'var(--era-dbkai-hex)', 'var(--era-dbs-hex)', 'var(--era-daima-hex)',
+];
+
+export const getVhsColor = (id: number) => VHS_ERA_TOKENS[id % VHS_ERA_TOKENS.length];
+
+// Compartidas con el cálculo de las capas fijas del estante.
+export const SPINE_EXPANDED_BASIS = 480;
+export const SPINE_COLLAPSED_BASIS = 160;
+export const SPINE_EXPANDED_GROW = 3;
+export const SPINE_SHELF_GAP = 8;
+export const SPINE_SHELF_PADDING = 8;
+
+// Ancho visible / alto del PNG: ignora los márgenes transparentes de cada pose.
+// Permite mostrar el cuerpo completo sin modificar los archivos originales.
+const CHARACTER_RATIOS: Record<string, { idle: number; attack: number; idleOffsetX?: number }> = {
+    dragon_ball: { idle: 0.7777777778, attack: 0.90, idleOffsetX: 0 },
+    dragon_ball_z: { idle: 0.48, attack: 0.63 },
+    dragon_ball_gt: { idle: 0.7777777778, attack: 0.63, idleOffsetX: 0 },
+    dragon_ball_kai: { idle: 0.48, attack: 0.63 },
+    dragon_ball_super: { idle: 0.48, attack: 0.63 },
+    dragon_ball_daima: { idle: 0.7777777778, attack: 0.90, idleOffsetX: 0 },
+};
+
+// Contorno visible (alfa >= 128): compensa márgenes transparentes sin editar el arte.
+const IDLE_ART_FRAMING: Record<string, { height: number; x: number; y: number }> = {
+    dragon_ball: { height: 1.005394, x: -2.417062, y: -0.536553 },
+    dragon_ball_z: { height: 1.037982, x: 0.582072, y: -1.037684 },
+    dragon_ball_gt: { height: 1.066021, x: -0.055928, y: -0.738636 },
+    dragon_ball_kai: { height: 1.021753, x: -1.472081, y: -0.876644 },
+    dragon_ball_super: { height: 1, x: -0.449871, y: 0 },
+    dragon_ball_daima: { height: 1.007869, x: 0.097752, y: 0 },
+};
+
+// Ataque: adultos (incluido GT SSJ4) con mayor altura que DB y Daima pequeños.
+// Los contornos compensan márgenes; la escala de grupo no depende del ancho de la pose.
+const ATTACK_ART_FRAMING: Record<string, { height: number; x: number; y: number }> = {
+    dragon_ball: { height: 1.007974, x: 0.117096, y: -0.474684 },
+    dragon_ball_z: { height: 1.001383, x: -2.302026, y: 0 },
+    dragon_ball_gt: { height: 1, x: 0, y: 0 },
+    dragon_ball_kai: { height: 1.013545, x: -0.547046, y: -0.871586 },
+    dragon_ball_super: { height: 1.007415, x: -0.120919, y: -0.368034 },
+    dragon_ball_daima: { height: 1, x: 0, y: 0 },
+};
+
 function getSagaForEpisode(mediaId: number, ep: number): string | null {
     if (ep < 1) return null;
     const raw = mediaId >= 1000000 ? mediaId - 1000000 : mediaId;
-    const sagas = DRAGON_BALL_SAGAS[raw];
-    if (!sagas) return null;
-    return sagas.find(s => ep >= s.startEp && ep <= s.endEp)?.title ?? null;
+    return DRAGON_BALL_SAGAS[raw]?.find(s => ep >= s.startEp && ep <= s.endEp)?.title ?? null;
 }
-
-export interface SeriesItem {
-    id: number;
-    title: string;
-    eps: number;
-    year: string | number;
-    progress: number;
-    img: string;
-    poster: string;
-    desc: string;
-    seriesId?: string;
-}
-
-const VHS_ERA_TOKENS = [
-    'var(--era-db-hex)',
-    'var(--era-dbz-hex)',
-    'var(--era-dbgt-hex)',
-    'var(--era-dbs-hex)',
-    'var(--era-daima-hex)',
-];
-
-export const getVhsColor = (id: number) => {
-    return VHS_ERA_TOKENS[id % VHS_ERA_TOKENS.length];
-};
 
 export const SeriesCard = memo(function SeriesCard({
     item,
     isSelected,
+    isTabStop = false,
     showUnwatchedCount = true,
     onNavigate,
     onSelect,
     entryDelayMs = 0,
     eager = false,
+    index = 0,
+    total = 1,
 }: {
     item: SeriesItem;
     isSelected: boolean;
+    isTabStop?: boolean;
     showUnwatchedCount?: boolean;
     onNavigate: (id: string) => void;
     onSelect: (id: number) => void;
     entryDelayMs?: number;
-    /** Lomo visible al montar: sus imágenes se piden sin esperar al lazy. */
     eager?: boolean;
+    index?: number;
+    total?: number;
 }) {
-    const effectiveTier = usePerformanceStore(selectEffectiveTier);
     const handlePrefetch = usePrefetchAnimeEntry(item.id);
-    const isEco = effectiveTier === 'low_power';
+    const effectiveTier = usePerformanceStore(selectEffectiveTier);
+    const reduceMotion = useReducedMotion();
+    const isClassic = useIsClassicMode();
     const spineCfg = getSpineConfig(item.seriesId || '', item.id, item.title);
-    const [isHovered, setIsHovered] = useState(false);
-
     const canonicalInfo = item.seriesId ? DRAGON_BALL_SERIES_INFO[item.seriesId] : undefined;
+    const characterSrc = spineCfg.rawImg;
+    const attackSrc = spineCfg.rawImgAtaque;
+    const [loadedAttackSrc, setLoadedAttackSrc] = useState<string | null>(null);
+    const [requestedAttackSrc, setRequestedAttackSrc] = useState<string | null>(null);
+    const loadAttack = isSelected || requestedAttackSrc === attackSrc || loadedAttackSrc === attackSrc;
+    // Mantener la pose de reposo si la de combate tarda o no se puede cargar.
+    const showAttack = isSelected && Boolean(attackSrc) && loadedAttackSrc === attackSrc;
+    const characterRatios = CHARACTER_RATIOS[item.seriesId || ''] ?? { idle: 0.65, attack: 0.65 };
+    const idleFraming = IDLE_ART_FRAMING[item.seriesId || ''];
+    const attackFraming = ATTACK_ART_FRAMING[item.seriesId || ''];
     const fallbackPoster = canonicalInfo?.poster || canonicalInfo?.banner || '/sagas/original/busqueda-esferas.webp';
-    const rawPoster = item.poster || item.img || fallbackPoster;
-    const posterSrc = useMemo(() =>
-        getMediumResImage(rawPoster) || fallbackPoster,
-        [rawPoster, fallbackPoster]);
-
-    const [isPosterLoaded, setIsPosterLoaded] = useState(false);
-    const posterImgRef = useRef<HTMLImageElement>(null);
-
-    const handlePosterLoad = useCallback(() => {
-        setIsPosterLoaded(true);
-    }, []);
-
-    useEffect(() => {
-        if (posterImgRef.current?.complete && posterImgRef.current.naturalWidth > 0) {
-            setIsPosterLoaded(true);
-        }
-    }, [posterSrc]);
-
-    const characterSrc = spineCfg?.rawImg;
-    // NOTA perf: no usar useDominantColors acá. Ya duplica la descarga del
-    // character (new Image + canvas) por cada card y bloquea el paint con
-    // k-means. Los colores de fondo derivan de los tokens de era (spineCfg),
-    // que son la fuente canónica y no cambian por píxel.
-
-    const unwatchedCount = showUnwatchedCount && item.eps > 0
-        ? Math.max(0, item.eps - Math.round(item.eps * (item.progress / 100)))
-        : null;
-
-    // Color de era canónico
-    const eraGradientFrom = spineCfg?.colors?.[0] || getSeriesEraAccent(item.seriesId, getVhsColor(item.id));
-    const eraAccent = spineCfg?.accent || eraGradientFrom;
-
-    // Fondo cinematográfico obsidiana unificador para el lomo del shelf (mural continuo).
-    const bgGradient = useMemo(() => {
-        return `linear-gradient(175deg, #06070a 0%, #030407 100%)`;
-    }, []);
-
-    // Capa manga colapsada: decorativa en grayscale + overlay al 35%.
-    // w185 alcanza (va con blur de mezcla) y lazy para no competir con el hero.
-    const collapsedBgSrc = useMemo(() =>
-        getLowResImage(rawPoster) || posterSrc,
-        [rawPoster, posterSrc]);
-
-    // Prefetch de la ficha (lógica en hooks/use-prefetch-anime-entry).
+    const posterSrc = localImage(getMediumResImage(item.poster || item.img || fallbackPoster));
+    const progress = Math.max(0, Math.min(100, item.progress));
+    const watchedCount = item.watched ?? Math.round((progress / 100) * (item.eps || 0));
+    const unwatchedCount = showUnwatchedCount && item.eps > 0 ? Math.max(0, item.eps - watchedCount) : null;
+    const isComplete = progress >= 100;
+    const progressLabel = isComplete ? 'Completa' : progress > 0 ? `${watchedCount} de ${item.eps}` : 'Sin comenzar';
+    const nextEp = Math.min(item.eps || 1, watchedCount + 1);
+    const saga = progress > 0 && !isComplete ? getSagaForEpisode(item.id, nextEp) : null;
+    const eraAccent = spineCfg.accent || getSeriesEraAccent(item.seriesId, getVhsColor(item.id));
+    const chromeAccent = isClassic ? 'var(--label-1)' : eraAccent;
 
     const handleActivate = useCallback(() => {
+        setRequestedAttackSrc(attackSrc);
         handlePrefetch();
-        if (!isSelected) {
-            onSelect(item.id);
-        } else {
-            onNavigate(item.id.toString());
-        }
-    }, [isSelected, item.id, onSelect, onNavigate, handlePrefetch]);
+        if (isSelected) onNavigate(item.id.toString());
+        else onSelect(item.id);
+    }, [attackSrc, handlePrefetch, isSelected, item.id, onNavigate, onSelect]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -129,346 +132,181 @@ export const SeriesCard = memo(function SeriesCard({
             handleActivate();
             return;
         }
-        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const dir = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (dir !== 0 || e.key === 'Home' || e.key === 'End') {
             e.preventDefault();
-            const cards = Array.from(document.querySelectorAll<HTMLElement>('[role="option"][id^="series-card-"]'));
-            const idx = cards.findIndex((el) => el.id === `series-card-${item.id}`);
-            const next = e.key === 'ArrowRight' ? cards[idx + 1] : cards[idx - 1];
-            if (next) { next.focus(); next.click(); }
+            const cards = Array.from(e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('[role="option"]') ?? []);
+            const idx = cards.indexOf(e.currentTarget as HTMLElement);
+            const next = e.key === 'Home' ? cards[0] : e.key === 'End' ? cards[cards.length - 1] : cards[idx + dir];
+            if (next && next !== e.currentTarget) {
+                next.focus();
+                if (next.getAttribute('aria-selected') !== 'true') next.click();
+            }
         }
-    }, [handleActivate, item.id]);
+    }, [handleActivate]);
 
     const handleMouseEnter = useCallback(() => {
-        if (typeof window !== 'undefined' && window.matchMedia?.('(hover: hover)').matches) {
-            setIsHovered(true);
+        if (window.matchMedia?.('(hover: hover)').matches) {
+            if (!isDataSavingEnabled()) setRequestedAttackSrc(attackSrc);
             handlePrefetch();
         }
-    }, [handlePrefetch]);
+    }, [attackSrc, handlePrefetch]);
 
-    const handleMouseLeave = useCallback(() => setIsHovered(false), []);
-
-    const watchedCount = Math.round((item.progress / 100) * (item.eps || 0));
+    const handleFocus = useCallback(() => {
+        if (!isDataSavingEnabled()) setRequestedAttackSrc(attackSrc);
+        handlePrefetch();
+    }, [attackSrc, handlePrefetch]);
 
     return (
         <div
             id={`series-card-${item.id}`}
             role="option"
-            tabIndex={0}
+            tabIndex={isSelected || isTabStop ? 0 : -1}
             aria-selected={isSelected}
-            title={item.title}
-            aria-label={`${item.title}, Año ${item.year}, ${item.eps} episodios, ${item.progress}% visto`}
+            aria-posinset={index + 1}
+            aria-setsize={total}
+            aria-label={`${item.title}, ${item.year}, ${item.eps} ${item.eps === 1 ? 'episodio' : 'episodios'}, ${progress}% visto. ${isSelected ? 'Pulsa Intro para abrir la serie' : 'Pulsa Intro para seleccionar'}`}
             onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onFocus={handlePrefetch}
+            onFocus={handleFocus}
             onClick={handleActivate}
             onKeyDown={handleKeyDown}
-            // Entrada en cascada por CSS (corre fuera del hilo principal mientras
-            // el shelf decodifica pósters); el delay llega por animationDelay.
-            className={cn(
-                "h-full flex flex-col cursor-pointer overflow-hidden relative group/card border-r border-white/5 select-none shrink-0 transform-gpu animate-slide-up"
-            )}
+            className="series-shelf-card relative h-full shrink-0 cursor-pointer select-none overflow-hidden rounded-2xl outline-none animate-slide-up"
+            data-still={reduceMotion || effectiveTier === 'low_power' ? 'true' : undefined}
             style={{
-                flex: isSelected ? '3 0 380px' : '1 0 150px',
-                transition: 'flex-grow 600ms cubic-bezier(0.16, 1, 0.3, 1), flex-basis 600ms cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: isSelected
+                    ? `${SPINE_EXPANDED_GROW} 0 ${SPINE_EXPANDED_BASIS}px`
+                    : `1 0 ${SPINE_COLLAPSED_BASIS}px`,
                 animationDelay: `${entryDelayMs}ms`,
-                contain: 'layout paint',
-                scrollSnapAlign: 'center',
-                willChange: 'flex-grow, flex-basis',
-            } as React.CSSProperties}
+                '--shelf-accent': chromeAccent,
+                '--shelf-progress': progress / 100,
+            } as CSSProperties}
         >
-            {/* ─── VHS TAPE BODY (Cuerpo de la cinta de colección) ─── */}
-            <div
-                className="flex-1 min-h-0 relative overflow-hidden rounded-none transition-colors duration-500 border-x border-white/5 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.75)]"
-                style={{
-                    background: !isSelected ? bgGradient : '#07080c',
-                }}
-            >
-                {/* ─── ESTADO EXPANDIDO / PLACEHOLDER BASE: Capa inmediata que evita hueco negro ─── */}
-                {collapsedBgSrc && (
-                    <img
-                        src={localImage(collapsedBgSrc)}
-                        alt=""
-                        aria-hidden="true"
-                        draggable={false}
-                        decoding="async"
-                        className={cn(
-                            "absolute inset-0 w-full h-full object-cover transform-gpu pointer-events-none z-[1]",
-                            isSelected ? "opacity-100 blur-md brightness-[0.45] scale-105" : "opacity-0"
-                        )}
-                        style={{
-                            transition: isSelected
-                                ? 'opacity 300ms ease-out'
-                                // Al soltar la selección responde rápido (ease-in arrancaba lento y se quedaba pegado).
-                                : 'opacity 200ms cubic-bezier(0.23, 1, 0.32, 1)',
-                        }}
-                    />
-                )}
-
-                {/* ─── ESTADO EXPANDIDO: Póster Cinematográfico nítido ─── */}
-                {posterSrc && (
-                    <img
-                        ref={posterImgRef}
-                        src={localImage(posterSrc)}
-                        alt={item.title}
-                        loading={isSelected || eager ? "eager" : "lazy"}
-                        decoding="async"
-                        fetchPriority={isSelected ? "high" : "low"}
-                        onLoad={handlePosterLoad}
-                        onError={handlePosterLoad}
-                        className={cn(
-                            "absolute inset-0 w-full h-full object-cover transform-gpu z-[2]",
-                            isSelected && isPosterLoaded
-                                ? "opacity-100 scale-100 brightness-[0.45] will-change-transform"
-                                : "opacity-0 scale-105 pointer-events-none"
-                        )}
-                        style={{
-                            transition: isSelected
-                                ? 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1), transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
-                                : 'opacity 200ms cubic-bezier(0.23, 1, 0.32, 1), transform 200ms cubic-bezier(0.23, 1, 0.32, 1)',
-                        }}
-                    />
-                )}
-
-                {/* ─── ESTADO COLAPSADO: Elementos de Lomo (se desvanecen suavemente al expandir) ─── */}
-                <div
-                    className={cn(
-                        "absolute inset-0 pointer-events-none transition-opacity duration-200 z-[3]",
-                        !isSelected ? "opacity-100" : "opacity-0 pointer-events-none"
-                    )}
-                >
-                    {/* 1. Capa superior Mural: Color difuminado de la portada arriba (top → bottom) con blur etéreo */}
-                    <div className="absolute top-0 inset-x-0 h-[68%] overflow-hidden pointer-events-none z-[1] transform-gpu">
-                        <img
-                            src={localImage(collapsedBgSrc)}
-                            alt=""
-                            aria-hidden="true"
-                            draggable={false}
-                            // Lomos visibles al cargar: pedir ya, no al final de la cola.
-                            loading={eager ? "eager" : "lazy"}
-                            decoding="async"
-                            fetchPriority={eager ? "auto" : "low"}
-                            className="w-full h-full object-cover object-top scale-115 blur-xl brightness-[0.6] saturate-[1.3] opacity-80 transform-gpu"
-                            style={{
-                                maskImage: 'linear-gradient(to bottom, black 0%, black 35%, transparent 100%)',
-                                WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 35%, transparent 100%)',
-                            }}
-                        />
-                        {/* Degradé unificador obsidiana hacia abajo */}
-                        <div
-                            aria-hidden="true"
-                            className="absolute inset-0 pointer-events-none"
-                            style={{
-                                background: 'linear-gradient(to bottom, transparent 0%, rgba(3,4,7,0.55) 45%, #030407 100%)',
-                            }}
-                        />
-                        {/* Velo de era sutil arriba */}
-                        <div
-                            aria-hidden="true"
-                            className="absolute inset-0 pointer-events-none"
-                            style={{
-                                background: `linear-gradient(to bottom, color-mix(in srgb, ${eraAccent} 18%, transparent) 0%, transparent 60%)`,
-                            }}
-                        />
-                    </div>
-
-                    {/* 2. Textura sutil manga-speed (sin blur, puro pattern overlay) */}
-                    <div className="absolute inset-0 bg-manga-speed opacity-[0.06] mix-blend-overlay pointer-events-none z-[1]" />
-
-                    {/* 3. Kanji de la Era en marca de agua flotante de fondo (profundidad z-[2]) */}
+            <div aria-hidden className="series-shelf-backdrop absolute inset-0 pointer-events-none" />
+            {/* Ambas poses conservan su encuadre; el combate aparece solo al expandir. */}
+            {characterSrc ? (
+                <>
                     <div
-                        className="absolute inset-x-0 top-[20%] z-[2] flex flex-col items-center pointer-events-none transition-transform duration-500"
+                        aria-hidden
+                        className="series-shelf-character pointer-events-none"
+                        data-pose="idle"
+                        data-visible={!showAttack}
                         style={{
-                            transform: isHovered ? 'scale(1.08) translateY(-4px)' : 'scale(1) translateY(0)',
-                        }}
+                            '--shelf-character-ratio': characterRatios.idle,
+                            '--shelf-character-offset-x': `${characterRatios.idleOffsetX ?? 0}px`,
+                        } as CSSProperties}
                     >
-                        <span
-                            className="font-kanji font-black leading-none select-none"
-                            style={{
-                                color: eraAccent,
-                                fontSize: '72px',
-                                opacity: isHovered ? 0.45 : 0.28,
-                                textShadow: `0 0 24px color-mix(in srgb, ${eraAccent} 60%, transparent), 0 0 48px color-mix(in srgb, ${eraAccent} 30%, transparent)`,
-                                transition: 'opacity 300ms ease, transform 300ms ease',
-                            }}
-                        >
-                            {spineCfg?.kanji ?? '★'}
-                        </span>
-                        <span
-                            className="font-mono font-bold uppercase select-none mt-1"
-                            style={{
-                                color: eraAccent,
-                                fontSize: '10px',
-                                letterSpacing: '0.22em',
-                                opacity: isHovered ? 0.60 : 0.35,
-                            }}
-                        >
-                            {item.year}
-                        </span>
-                    </div>
-
-                    {/* 4. Título HORIZONTAL del lomo (Sin vertical-lr, alineado con DESIGN-GUIDE.md) */}
-                    <div className="absolute top-4 inset-x-0 z-[4] flex flex-col items-center px-2.5 pointer-events-none transition-opacity duration-300 opacity-90 group-hover/card:opacity-100">
-                        <span className="font-display font-black text-xs uppercase tracking-wider text-center text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] line-clamp-2 select-none leading-tight">
-                            {spineCfg?.subtitle || item.title}
-                        </span>
-                        <span className="text-3xs font-mono font-bold text-white/70 tracking-widest uppercase mt-0.5 select-none drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
-                            VOL. {spineCfg?.vol ?? '1'}
-                        </span>
-                    </div>
-
-                    {/* 5. Personaje recortado (Goku en pose por era con sombra de oclusión negra limpia, sin resplandor) */}
-                    {characterSrc && (
                         <img
                             src={characterSrc}
+                            style={idleFraming ? {
+                                height: String(idleFraming.height * 100) + '%',
+                                transform: 'translate(' + idleFraming.x + '%, ' + idleFraming.y + '%)',
+                            } : undefined}
                             alt=""
-                            aria-hidden="true"
                             draggable={false}
-                            loading="lazy"
+                            loading={eager || isSelected ? 'eager' : 'lazy'}
                             decoding="async"
-                            fetchPriority="low"
-                            className={cn(
-                                "pointer-events-none absolute z-[3] select-none object-contain origin-bottom bottom-0 right-1/2 translate-x-1/2 h-[66%] transform-gpu will-change-transform",
-                                "translate-y-0 opacity-95 scale-100 saturate-[1.05] [@media(hover:hover)_and_(pointer:fine)]:group-hover/card:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/card:scale-[1.08] [@media(hover:hover)_and_(pointer:fine)]:group-hover/card:translate-y-[-6px] [@media(hover:hover)_and_(pointer:fine)]:group-hover/card:saturate-[1.12]"
-                            )}
-                            style={{
-                                filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.9))',
-                                maskImage: 'linear-gradient(to bottom, black 92%, transparent 100%)',
-                                WebkitMaskImage: 'linear-gradient(to bottom, black 92%, transparent 100%)',
-                                transition: 'opacity 400ms cubic-bezier(0.16, 1, 0.3, 1) 50ms, transform 500ms cubic-bezier(0.16, 1, 0.3, 1), filter 400ms ease',
-                            }}
+                            fetchPriority={eager ? 'auto' : 'low'}
+                            className="block h-full w-auto max-w-none"
                         />
-                    )}
-
-                    {/* 6. Barra de progreso colapsada en la base — scaleX con origin-left acelerado por GPU */}
-                    {item.progress > 0 && (
-                        <div className="absolute bottom-0 inset-x-0 h-[3px] bg-white/10 z-[6] overflow-hidden">
-                            <div
-                                className="h-full w-full origin-left transition-transform duration-500 ease-smooth-out"
-                                style={{
-                                    transform: `scaleX(${item.progress / 100})`,
-                                    background: eraAccent,
-                                }}
+                    </div>
+                    {attackSrc && loadAttack && (
+                        <div
+                            aria-hidden
+                            className="series-shelf-character pointer-events-none"
+                            data-pose="attack"
+                            data-visible={showAttack}
+                            style={{ '--shelf-character-ratio': characterRatios.attack } as CSSProperties}
+                        >
+                            <img
+                                src={attackSrc}
+                                style={attackFraming ? {
+                                    height: String(attackFraming.height * 100) + '%',
+                                    transform: 'translate(' + attackFraming.x + '%, ' + attackFraming.y + '%)',
+                                } : undefined}
+                                alt=""
+                                draggable={false}
+                                loading="eager"
+                                decoding="async"
+                                fetchPriority="low"
+                                onLoad={() => setLoadedAttackSrc(attackSrc)}
+                                onError={() => setLoadedAttackSrc(null)}
+                                className="block h-full w-auto max-w-none"
                             />
                         </div>
                     )}
+                </>
+            ) : (
+                <img
+                    src={posterSrc}
+                    alt=""
+                    aria-hidden
+                    draggable={false}
+                    loading={eager || isSelected ? 'eager' : 'lazy'}
+                    decoding="async"
+                    className="series-shelf-poster absolute inset-0 h-full w-full object-cover pointer-events-none"
+                />
+            )}
+
+            <div aria-hidden={isSelected} className="series-shelf-closed pointer-events-none">
+                <div className="absolute inset-x-0 top-0 p-4 space-y-2">
+                    <p className="text-xs font-medium tabular-nums text-label-2">{item.year}</p>
+                    <span className="series-shelf-era block h-1 w-7 rounded-full" />
+                    <h2 className="font-display text-lg font-bold leading-tight text-label-1 line-clamp-2 text-balance">
+                        {item.title}
+                    </h2>
                 </div>
-
-                {/* Resplandor ambiental de era expandido */}
-                {isSelected && !isEco && (
-                    <div
-                        className="absolute top-0 right-0 w-64 h-64 pointer-events-none z-[4] opacity-25 blur-3xl transform-gpu"
-                        style={{ background: eraAccent }}
-                    />
-                )}
-
-                {/* Panel flotante expandido */}
-                <div
-                    className={cn(
-                        "absolute inset-0 z-[5] flex flex-col justify-end p-4 md:p-5 transition-opacity duration-300 ease-out",
-                        isSelected ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                    )}
-                >
-                    {/* Viñeta de gradiente suave */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-transparent pointer-events-none" />
-
-                    {/* Contenedor Glassmorphism — SectionBar canónico (tokens DESIGN-GUIDE.md §3) */}
-                    <div className={cn(
-                        "sectionbar relative p-4 md:p-5 space-y-2.5 transform-gpu transition-[opacity,transform] duration-slow ease-expo-out delay-100",
-                        isSelected ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-6 scale-95"
-                    )}>
-                        {/* Badges de metadatos — MediaMetadataCapsule canónica */}
-                        <div className={cn(
-                            "flex flex-wrap items-center gap-1.5 transition-[opacity,transform] duration-slow ease-smooth-out",
-                            isSelected ? "opacity-100 translate-y-0 delay-150" : "opacity-0 translate-y-2 delay-0"
-                        )}>
-                            <MediaMetadataCapsule format="SERIE" year={item.year} episodes={item.eps}>
-                                {!!unwatchedCount && (
-                                    <span className="badge badge-success font-mono text-3xs font-bold uppercase tracking-wider">{unwatchedCount} sin ver</span>
-                                )}
-                            </MediaMetadataCapsule>
-                        </div>
-
-                        {/* Título horizontal */}
-                        <h2 className={cn(
-                            "font-display text-xl md:text-2xl font-black text-on-surface leading-tight tracking-tight line-clamp-2 transition-[opacity,transform] duration-slow ease-smooth-out text-edge-glow text-balance",
-                            isSelected ? "opacity-100 translate-y-0 delay-200" : "opacity-0 translate-y-2 delay-0"
-                        )}>
-                            {item.title}
-                        </h2>
-
-                        {/* Sinopsis */}
-                        {isSelected && (
-                            <p className="font-sans text-on-surface-variant text-xs leading-relaxed font-medium line-clamp-2 text-pretty delay-250 transition-opacity duration-base [@media(max-height:640px)]:hidden">
-                                {item.desc || canonicalInfo?.description}
-                            </p>
-                        )}
-
-                        {/* Contexto de avance inteligente ("Vas en:...") — color = token de era */}
-                        {isSelected && item.progress > 0 && item.progress < 100 && (() => {
-                            const nextEp = Math.min(item.eps || 1, watchedCount + 1);
-                            const saga = getSagaForEpisode(item.id, nextEp);
-                            if (!saga) return null;
-                            return (
-                                <p className="font-mono font-bold uppercase tracking-display truncate text-3xs" style={{ color: eraAccent }}>
-                                    Vas en: {saga} · EP {nextEp}
-                                </p>
-                            );
-                        })()}
-
-                        {/* Barra de progreso */}
-                        <div className={cn(
-                            "flex flex-col w-full transition-[opacity,transform] duration-slow ease-smooth-out pt-1",
-                            isSelected ? "opacity-100 translate-y-0 delay-300" : "opacity-0 translate-y-2 delay-0"
-                        )}>
-                            <div className="flex justify-between items-end mb-1 text-2xs font-semibold">
-                                <span className="font-mono text-on-surface-variant uppercase tracking-wider text-3xs tabular-nums">
-                                    {item.progress > 0 ? (
-                                        <>Visto: <ElasticCounter value={watchedCount} /> de {item.eps}</>
-                                    ) : 'Sin comenzar'}
-                                </span>
-                                <span className="font-mono font-extrabold text-2xs tabular-nums" style={{ color: eraAccent }}>
-                                    <ElasticCounter value={item.progress} />%
-                                </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-surface-container-high/60 rounded-full overflow-hidden border border-[var(--sectionbar-border)]">
-                                <div
-                                    className="h-full w-full rounded-full transition-transform duration-slower ease-expo-out origin-left"
-                                    style={{
-                                        transform: `scaleX(${isSelected ? item.progress / 100 : 0})`,
-                                        background: `linear-gradient(90deg, ${eraAccent}, color-mix(in srgb, ${eraAccent} 55%, white))`,
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Botón CTA — pill canónico (rounded-full + active:scale-95 + shadow-brand-primary) */}
-                        <div className={cn(
-                            "pt-2 transition-[opacity,transform] duration-slow ease-smooth-out",
-                            isSelected ? "opacity-100 translate-y-0 delay-350" : "opacity-0 translate-y-2 delay-0"
-                        )}>
-                            {/* Visual: la cinta ya es el control (option). Un botón acá quedaba anidado dentro
-                                de role="option" y, sin seleccionar, invisible pero enfocable. El clic sube a
-                                la cinta: seleccionada → abre la ficha. */}
-                            <div
-                                aria-hidden
-                                className="w-full min-h-11 text-black font-display font-black uppercase tracking-display rounded-full text-label-sm py-2.5 transition-[transform,filter] duration-fast ease-out-strong flex justify-center items-center gap-2 relative overflow-hidden group/btn [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 cursor-pointer"
-                                style={{
-                                    background: eraAccent,
-                                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.45)',
-                                }}
-                            >
-                                <div className="absolute inset-0 -translate-x-full [@media(hover:hover)_and_(pointer:fine)]:group-hover/btn:translate-x-full transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover/btn:transition-transform duration-slower ease-out bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none" />
-                                <IconMediaPlay className="w-3.5 h-3.5 fill-current drop-shadow-sm" />
-                                {item.progress <= 0
-                                    ? 'Ver serie'
-                                    : item.progress >= 100
-                                        ? 'Ver de nuevo'
-                                        : `Continuar · EP ${Math.min(item.eps, watchedCount + 1)}`}
-                            </div>
-                        </div>
+                <div className="series-shelf-footer absolute bottom-0 inset-x-0 px-4 py-4 space-y-2.5">
+                    <p className="flex items-center gap-1.5 text-xs font-medium tabular-nums text-label-1">
+                        {isComplete && <IconUiCheckCircle2 className="size-3.5 shrink-0" />}
+                        <span className="truncate">{progressLabel}</span>
+                    </p>
+                    <div className="series-shelf-progress h-1 w-full overflow-hidden rounded-full">
+                        <span className="block h-full w-full origin-left rounded-full" />
                     </div>
                 </div>
             </div>
+
+            {/* Ancho fijo: título y CTA no refluyen durante la apertura del lomo. */}
+            <div aria-hidden={!isSelected} className="series-shelf-expanded pointer-events-none">
+                <div className={cn(
+                    'series-shelf-copy absolute inset-y-0 left-0 flex flex-col justify-center py-8 pl-6 pr-3',
+                    !characterSrc && 'series-shelf-copy-fallback',
+                )}>
+                    <p className="text-xs font-medium tabular-nums text-label-2">
+                        {item.year}{item.eps > 0 && ` · ${item.eps} episodios`}
+                    </p>
+                    <span className="series-shelf-era mt-3 mb-4 block h-1 w-9 rounded-full" />
+                    <h2 className="series-shelf-title font-display font-black leading-tight tracking-tight text-label-1 text-balance">
+                        {item.title}
+                    </h2>
+                    {saga && (
+                        <p className="mt-3 text-sm leading-snug text-label-2 line-clamp-2">
+                            {saga}
+                        </p>
+                    )}
+                    <div className="mt-8 space-y-2">
+                        <div className="flex items-center justify-between gap-2 text-xs font-medium tabular-nums text-label-2">
+                            <span>{progressLabel}</span>
+                            {progress > 0 && <span>{Math.round(progress)}%</span>}
+                        </div>
+                        <div className="series-shelf-progress h-1.5 w-full overflow-hidden rounded-full">
+                            <span className="block h-full w-full origin-left rounded-full" />
+                        </div>
+                        {!!unwatchedCount && progress > 0 && (
+                            <p className="text-xs tabular-nums text-label-2">{unwatchedCount} sin ver</p>
+                        )}
+                    </div>
+                    {/* La option es el único control enfocable. Esta acción abre la ficha. */}
+                    <span aria-hidden className={cn(
+                        ButtonAnatomy.root({ intent: 'primary', size: 'lg' }),
+                        'mt-6 w-full gap-3',
+                    )}>
+                        Abrir serie
+                        <IconArrowRight className="size-4 shrink-0" />
+                    </span>
+                </div>
+            </div>
+            <span aria-hidden className="series-shelf-rim absolute inset-0 rounded-[inherit] pointer-events-none" />
         </div>
     );
 });

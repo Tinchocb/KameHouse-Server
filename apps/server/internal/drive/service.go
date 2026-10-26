@@ -26,8 +26,14 @@ type Service struct {
 	cachedEmail      string
 	cachedName       string
 	userInfoCachedAt time.Time
-	logger           *zerolog.Logger
+	// authExpiredAt: cuándo se vio por última vez invalid_grant. Evita llamar a Google
+	// en cada reproducción mientras el refresh token sigue revocado.
+	authExpiredAt time.Time
+	logger        *zerolog.Logger
 }
+
+// authExpiredCacheTTL es cuánto se recuerda que Google rechazó el refresh token.
+const authExpiredCacheTTL = 45 * time.Second
 
 func NewService(logger *zerolog.Logger) *Service {
 	return &Service{
@@ -69,6 +75,7 @@ func (s *Service) UpdateConfig(enabled bool, clientID, clientSecret, refreshToke
 	s.cachedEmail = ""
 	s.cachedName = ""
 	s.userInfoCachedAt = time.Time{}
+	s.authExpiredAt = time.Time{}
 
 	if !enabled || s.clientID == "" || s.clientSecret == "" || s.refreshToken == "" {
 		s.client = nil
@@ -189,9 +196,11 @@ func (s *Service) GetStatus(ctx context.Context, indexedEpisodes int) *DriveStat
 	email, name, err := client.GetUserInfo(ctx)
 	if err != nil {
 		s.mu.Lock()
-		s.cachedEmail = ""
-		s.cachedName = ""
-		s.userInfoCachedAt = time.Time{}
+		if s.client == client {
+			s.cachedEmail = ""
+			s.cachedName = ""
+			s.userInfoCachedAt = time.Time{}
+		}
 		s.mu.Unlock()
 
 		status.Error = err.Error()
@@ -199,15 +208,47 @@ func (s *Service) GetStatus(ctx context.Context, indexedEpisodes int) *DriveStat
 	}
 
 	s.mu.Lock()
-	s.cachedEmail = email
-	s.cachedName = name
-	s.userInfoCachedAt = time.Now()
+	// A completed request belongs to the client snapshot that issued it. A
+	// config reload may have installed another account while HTTP was in flight.
+	if s.client == client {
+		s.cachedEmail = email
+		s.cachedName = name
+		s.userInfoCachedAt = time.Now()
+	}
 	s.mu.Unlock()
 
 	status.Connected = true
 	status.UserEmail = email
 	status.DisplayName = name
 	return status
+}
+
+// AuthExpired indica si Google rechazó el refresh token (invalid_grant: vencido o
+// revocado). Otros fallos (red, cuota) no cuentan. Reusa el estado de usuario, que
+// se cachea 10 min cuando es válido, así que no suma una llamada a Google por pedido.
+func (s *Service) AuthExpired(ctx context.Context) bool {
+	s.mu.RLock()
+	client := s.client
+	enabled := s.enabled && client != nil && s.folderID != ""
+	recent := !s.authExpiredAt.IsZero() && time.Since(s.authExpiredAt) < authExpiredCacheTTL
+	s.mu.RUnlock()
+	if !enabled {
+		return false
+	}
+	if recent {
+		return true
+	}
+	st := s.GetStatus(ctx, 0)
+	expired := !st.Connected && strings.Contains(st.Error, "invalid_grant")
+	s.mu.Lock()
+	if s.client != client {
+		// A failure from an old token must not mark the new account as expired.
+		expired = false
+	} else if expired {
+		s.authExpiredAt = time.Now()
+	}
+	s.mu.Unlock()
+	return expired
 }
 
 // StreamMedia delegates media streaming to the active Drive client.

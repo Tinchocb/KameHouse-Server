@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/events"
+	"kamehouse/internal/library/filesystem"
 	"kamehouse/internal/library/summary"
+	"strings"
 	"time"
 
 	"github.com/samber/lo"
 )
 
-// scanFinalizePhase sends completion events, merges skipped files, and logs scan summary.
+// scanFinalizePhase verifies the merged files, sends completion events and logs the summary.
 func (scn *Scanner) scanFinalizePhase(
 	localFiles []*dto.LocalFile,
 	skippedLfs map[string]*dto.LocalFile,
@@ -29,14 +31,30 @@ func (scn *Scanner) scanFinalizePhase(
 		})
 	}
 
-	if len(skippedLfs) > 0 {
-		for _, sf := range skippedLfs {
-			if sf == nil {
-				continue
-			}
-			localFiles = append(localFiles, sf)
+	// hydrateAndPersist already merged skipped files. Recheck the merged result
+	// without appending them again or restoring files discarded by that merge.
+	verified := make([]*dto.LocalFile, 0, len(localFiles))
+	seen := make(map[string]bool, len(localFiles))
+	for _, lf := range localFiles {
+		if lf == nil {
+			continue
+		}
+		if strings.HasPrefix(lf.Path, "gdrive://") || filesystem.FileExists(lf.Path) {
+			verified = append(verified, lf)
+			seen[lf.GetNormalizedPath()] = true
+		} else if scn.WithShelving && lf.IsLocked() {
+			scn.shelvedLocalFiles = append(scn.shelvedLocalFiles, lf)
 		}
 	}
+	// These references are not local disk paths. Preserve the previous finalizer's
+	// behavior even when the disk-only merge did not include them.
+	for _, sf := range skippedLfs {
+		if sf != nil && strings.HasPrefix(sf.Path, "gdrive://") && !seen[sf.GetNormalizedPath()] {
+			verified = append(verified, sf)
+			seen[sf.GetNormalizedPath()] = true
+		}
+	}
+	localFiles = verified
 
 	scn.ScanSummaryLogger.HydrateData(localFiles, mc.NormalizedMedia, nil)
 
@@ -201,18 +219,18 @@ func (scn *Scanner) fetchAndMatchMedia(ctx context.Context, localFiles []*dto.Lo
 	tmdbClient, tmdbProvider, providers := sp.tmdbClient, sp.tmdbProvider, sp.providers
 
 	mf, err := NewMediaFetcher(ctx, &MediaFetcherOptions{
-		PlatformRef:             scn.PlatformRef,
-		MetadataProviderRef:     scn.MetadataProviderRef,
-		MetadataProviders:       providers,
-		LocalFiles:              localFiles,
-		Logger:                  scn.Logger,
-		DisableAnimeCollection:  false,
-		ScanLogger:              scn.ScanLogger,
-		TMDBProvider:            tmdbProvider,
-		SeriesPaths:             scn.SeriesPaths,
-		MoviePaths:              scn.MoviePaths,
-		Database:                scn.Database,
-		UnifiedScan:             scn.UnifiedScan,
+		PlatformRef:            scn.PlatformRef,
+		MetadataProviderRef:    scn.MetadataProviderRef,
+		MetadataProviders:      providers,
+		LocalFiles:             localFiles,
+		Logger:                 scn.Logger,
+		DisableAnimeCollection: false,
+		ScanLogger:             scn.ScanLogger,
+		TMDBProvider:           tmdbProvider,
+		SeriesPaths:            scn.SeriesPaths,
+		MoviePaths:             scn.MoviePaths,
+		Database:               scn.Database,
+		UnifiedScan:            scn.UnifiedScan,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -245,12 +263,12 @@ func (scn *Scanner) fetchAndMatchMedia(ctx context.Context, localFiles []*dto.Lo
 	if scn.ScanMode != "metadata" {
 		// Create a new matcher
 		matcher := &Matcher{
-			LocalFiles:        localFiles,
-			MediaContainer:    mc,
-			Logger:            scn.Logger,
-			Database:          scn.Database,
-			Threshold:         scn.MatchingThreshold,
-			StrictStructure:   scn.StrictStructure,
+			LocalFiles:      localFiles,
+			MediaContainer:  mc,
+			Logger:          scn.Logger,
+			Database:        scn.Database,
+			Threshold:       scn.MatchingThreshold,
+			StrictStructure: scn.StrictStructure,
 		}
 
 		telemetry.Send(events.EventScanProgress, 60)
@@ -279,6 +297,9 @@ func (scn *Scanner) hydrateAndPersist(
 	mc *MediaContainer,
 	telemetry *scanTelemetry,
 ) ([]*dto.LocalFile, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	telemetry.Send(events.EventScanProgress, 70)
 	telemetry.Send(events.EventScanStatus, "Hydrating metadata...")
 	telemetry.Send(events.EventScanProgressDetailed, map[string]interface{}{
@@ -305,6 +326,9 @@ func (scn *Scanner) hydrateAndPersist(
 		Config:              scn.Config,
 	}
 	hydrator.HydrateMetadata(ctx)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	telemetry.Send(events.EventScanProgress, 80)
 
@@ -335,6 +359,9 @@ func (scn *Scanner) hydrateAndPersist(
 	}
 
 	// IDs matcheados (más los de la colección) y cuáles son películas.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	allMatchedIds, movieIds := collectMatchedMedia(localFiles, mf.CollectionMediaIds, libraryPaths)
 
 	// Create LibraryMedia DB records for each unique matched media

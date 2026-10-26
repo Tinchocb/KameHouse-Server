@@ -44,4 +44,3 @@ func TestSeparateFilePathS(t *testing.T) {
 		})
 	}
 }
-

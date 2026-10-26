@@ -4,13 +4,32 @@
     Splash de arranque del cliente de escritorio (Tauri).
     Debe ser 100% estático y liviano: se pinta al instante mientras el sidecar
     arranca y la ventana principal (oculta) carga el bundle React.
-    Rust actualiza el texto de estado vía `window.setStatus(...)`.
+    Rust actualiza estado y progreso vía `window.setStatus(texto, progreso)`.
+
+    Las rutas (fuentes, íconos) son RELATIVAS a propósito: este archivo se abre
+    también por file:// desde scripts/dev-splash.ps1 (ventana previa a Tauri),
+    donde una ruta con "/" inicial no resuelve y la ventana quedaba con el globo.
+
+    IMPORTANTE: la composición (fuente, tamaños, espaciado, barra) es la misma
+    que la del #global-loader de index.html. Cuando la ventana principal se
+    revela, su loader queda justo debajo de este splash y el cambio de ventana
+    pasa desapercibido. Si se toca uno, tocar el otro.
 -->
 <head>
     <meta charset="UTF-8" />
     <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#09090b" />
     <title>KameHouse</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png?v=2" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png?v=2" />
     <style>
+        @font-face {
+            font-family: "KH Loader";
+            src: url("fonts/outfit-latin-wght-normal.woff2") format("woff2");
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: block;
+        }
         html, body {
             margin: 0;
             height: 100%;
@@ -36,30 +55,38 @@
         }
         h1 {
             color: #fff;
-            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-            font-size: 2rem;
-            font-weight: 900;
+            font-family: "KH Loader", "Outfit Variable", "Segoe UI", system-ui, sans-serif;
+            font-size: 2.25rem;
+            font-weight: 800;
             letter-spacing: 0.3em;
+            text-transform: uppercase;
             margin: 0 0 0 0.3em;
             line-height: 1;
             text-shadow: 0 0 28px rgba(245, 158, 11, 0.3);
         }
+        /* Anillo de siete esferas del dragón (1 a 7 estrellas, PNG en icons/dragon-balls):
+           se encienden y apagan todas a la vez, en círculo, como al invocar a Shenlong. */
         .dots {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            height: 32px;
+            position: relative;
+            width: 120px;
+            height: 120px;
         }
-        .dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, #fde68a, #f59e0b 60%, #b45309 100%);
-            box-shadow: 0 0 16px rgba(245, 158, 11, 0.65), 0 0 6px rgba(251, 191, 36, 0.9);
-            animation: ball-bounce 1.4s ease-in-out infinite;
+        .ball {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 26px;
+            height: 26px;
+            margin: -13px 0 0 -13px;
+            transform: rotate(var(--a)) translateY(-42px) rotate(calc(-1 * var(--a)));
+            filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45);
+            animation: ball-charge 3s ease-in-out infinite;
         }
-        .dot:nth-child(1) { animation-delay: -0.32s; }
-        .dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes ball-charge {
+            0%, 100% { filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); }
+            35%      { filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.75)) grayscale(0) brightness(1.1); }
+            70%      { filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); }
+        }
         #status {
             font-family: ui-monospace, Consolas, monospace;
             font-size: 11px;
@@ -68,9 +95,46 @@
             color: #71717a;
             margin-top: -0.5rem;
         }
-        @keyframes ball-bounce {
-            0%, 80%, 100% { transform: translateY(0) scale(0.85); opacity: 0.4; }
-            40% { transform: translateY(-12px) scale(1.1); opacity: 1; }
+        .bar {
+            margin-top: 1.5rem;
+            width: 200px;
+            height: 2px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+        #bar-fill {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+            overflow: hidden;
+            transform: scaleX(0.06);
+            transform-origin: left center;
+            transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #bar-fill::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 50%;
+            background: linear-gradient(90deg, transparent, #fcd34d, transparent);
+            animation: bar-pulse 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes bar-pulse {
+            0%   { transform: translateX(-100%); opacity: 0; }
+            30%, 70% { opacity: 1; }
+            100% { transform: translateX(250%); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #bar-fill { transition: none; }
+            #bar-fill::after { animation: none; display: none; }
+            /* Sin animación: el anillo queda en reposo, con todas las esferas al 70 %. */
+            .ball { animation: none; opacity: 0.7; }
         }
     </style>
 </head>
@@ -79,16 +143,37 @@
     <div class="wrap">
         <h1>KAMEHOUSE</h1>
         <div class="dots">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
+            <img class="ball" style="--a: 0deg" src="icons/dragon-balls/star-1.png" alt="" draggable="false" />
+            <img class="ball" style="--a: 51.43deg" src="icons/dragon-balls/star-2.png" alt="" draggable="false" />
+            <img class="ball" style="--a: 102.86deg" src="icons/dragon-balls/star-3.png" alt="" draggable="false" />
+            <img class="ball" style="--a: 154.29deg" src="icons/dragon-balls/star-4.png" alt="" draggable="false" />
+            <img class="ball" style="--a: 205.71deg" src="icons/dragon-balls/star-5.png" alt="" draggable="false" />
+            <img class="ball" style="--a: 257.14deg" src="icons/dragon-balls/star-6.png" alt="" draggable="false" />
+            <img class="ball" style="--a: 308.57deg" src="icons/dragon-balls/star-7.png" alt="" draggable="false" />
         </div>
-        <span id="status">Iniciando KameHouse...</span>
+        <span id="status"></span>
+        <div class="bar"><div id="bar-fill"></div></div>
     </div>
     <script>
-        window.setStatus = function (text) {
+        var current = 0.06;
+        var fill = document.getElementById("bar-fill");
+        var advanced = location.protocol !== "file:";
+        // Solo en la ventana previa de dev (file://): mientras compila Rust la barra avanza sola y
+        // se frena en ~35% para no parecer congelada; el progreso real la supera luego.
+        var creep = setInterval(function () {
+            if (advanced || current >= 0.35) return clearInterval(creep);
+            current += (0.35 - current) * 0.04;
+            fill.style.transform = "scaleX(" + current + ")";
+        }, 700);
+        // Progreso monótono (0..1): nunca retrocede, igual que en el loader de index.html.
+        window.setStatus = function (text, progress) {
             var el = document.getElementById("status");
-            if (el) el.textContent = text;
+            if (el && text) el.textContent = text;
+            if (typeof progress === "number" && progress > current) {
+                advanced = true;
+                current = Math.min(progress, 1);
+                if (fill) fill.style.transform = "scaleX(" + current + ")";
+            }
         };
         // Texto inicial opcional vía hash (lo usa scripts/dev-splash.ps1 en dev).
         if (location.hash.length > 1) {

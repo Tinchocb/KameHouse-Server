@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "./core/styling";
 
-export type EpisodeBadgeVariant = "premium";
+type EpisodeBadgeVariant = "premium";
 
 interface EpisodeBadgeProps {
     variant?: EpisodeBadgeVariant;

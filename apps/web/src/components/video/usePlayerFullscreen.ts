@@ -50,6 +50,9 @@ export function usePlayerFullscreen({ containerRef, videoRef, setGlobalFullscree
             setGlobalFullscreen(isFs)
         }
         document.addEventListener("fullscreenchange", handleFullscreenChange)
+        // VideoPlayer entra a pantalla completa al montar y este hook carga después (lazy):
+        // sin sincronizar acá se perdía ese evento y el botón/atajo F quedaba un paso desfasado.
+        handleFullscreenChange()
         return () => {
             document.removeEventListener("fullscreenchange", handleFullscreenChange)
             setGlobalFullscreen(false)

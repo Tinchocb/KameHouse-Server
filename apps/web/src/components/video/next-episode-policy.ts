@@ -1,4 +1,4 @@
-export interface SegmentStatus {
+interface SegmentStatus {
     remaining: number
     progress: number
 }
@@ -16,7 +16,7 @@ export function isNearEnd(total: number, curr: number, edStart?: number): boolea
     return total > 0 && (total - curr <= 180 || (edStart != null && curr >= edStart))
 }
 
-export interface NextEpisodePolicy {
+interface NextEpisodePolicy {
     mediaFormat?: string | null
     marathonMode: boolean
     tvMode: boolean
@@ -28,17 +28,17 @@ export interface NextEpisodePolicy {
 
 /** Visibilidad del panel "Up next" + countdown. */
 export function shouldShowNextEpisode(p: NextEpisodePolicy): boolean {
-    const isPureMarathon = p.marathonMode && !p.tvMode
+    // Maratón (también con modo TV): transición continua, sin tarjeta ni cuenta regresiva.
     const nextThreshold = p.tvMode ? 3 : 15
     return (
         p.mediaFormat?.toUpperCase() !== "MOVIE" &&
-        !isPureMarathon &&
+        !p.marathonMode &&
         p.hasNextEpisode &&
         ((p.total > 0 && p.total - p.curr <= nextThreshold) || (!p.tvMode && p.inEdWindow))
     )
 }
 
-export interface AutoAdvancePolicy {
+interface AutoAdvancePolicy {
     marathonMode: boolean
     hasNextEpisode: boolean
     hasOnNext: boolean

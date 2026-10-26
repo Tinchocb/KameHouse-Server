@@ -1,0 +1,62 @@
+[
+  {
+    "era": "db",
+    "title": "Makafushigi Adventure!",
+    "version": "instrumental / karaoke (segun la fuente)",
+    "source": "https://www.youtube.com/watch?v=yzNyWTbP7vU",
+    "retrieved": "2026-10-22",
+    "file": "db.m4a",
+    "sha256": "b70a0b8a65b3116e8ab918cc6c1fdb512d7736c5f9be0184c1b3184e4d4c68fc",
+    "processing": "AAC stereo 112 kbit/s, loudnorm I=-18 TP=-2 LRA=11, faststart"
+  },
+  {
+    "era": "dbz",
+    "title": "Cha-La Head-Cha-La",
+    "version": "instrumental / karaoke (segun la fuente)",
+    "source": "https://kara.moe/kara/cha-la-head-cha-la/709b4eb4-c7a7-46d5-bd8e-6a2948547f6a",
+    "retrieved": "2026-10-22",
+    "file": "dbz.m4a",
+    "sha256": "14debc208ff1e902c6de183f02a9699fc784291682f5773d0ae53bc2a2ed2731",
+    "processing": "AAC stereo 112 kbit/s, loudnorm I=-18 TP=-2 LRA=11, faststart"
+  },
+  {
+    "era": "dbkai",
+    "title": "Dragon Soul",
+    "version": "instrumental / karaoke (segun la fuente)",
+    "source": "https://www.youtube.com/watch?v=_dGazBs4UMs",
+    "retrieved": "2026-10-22",
+    "file": "dbkai.m4a",
+    "sha256": "b5bde3ae4fb06fde5478595b03768f50670e81a482e0e7f7e995e32b5cd9ab42",
+    "processing": "AAC stereo 112 kbit/s, loudnorm I=-18 TP=-2 LRA=11, faststart"
+  },
+  {
+    "era": "dbgt",
+    "title": "Dan Dan Kokoro Hikareteku",
+    "version": "instrumental / karaoke (segun la fuente)",
+    "source": "https://www.youtube.com/watch?v=feNVhOgL9vY",
+    "retrieved": "2026-10-22",
+    "file": "dbgt.m4a",
+    "sha256": "f79acbafeeeb06426a3601f3f4a47a57b8b010688e69c5c77fc495eb3c84f81e",
+    "processing": "AAC stereo 112 kbit/s, loudnorm I=-18 TP=-2 LRA=11, faststart"
+  },
+  {
+    "era": "dbs",
+    "title": "Chouzetsu Dynamic!",
+    "version": "instrumental / karaoke (segun la fuente)",
+    "source": "https://www.youtube.com/watch?v=nFB8AMXc27M",
+    "retrieved": "2026-10-22",
+    "file": "dbs.m4a",
+    "sha256": "fb347dc58a2a6add4b33cb57e68a82711a08af613171de0ad2987852eaedebf4",
+    "processing": "AAC stereo 112 kbit/s, loudnorm I=-18 TP=-2 LRA=11, faststart"
+  },
+  {
+    "era": "dbdaima",
+    "title": "Jaka Jaan",
+    "version": "instrumental / karaoke (segun la fuente)",
+    "source": "https://www.youtube.com/watch?v=7rkQ1HJ91H0",
+    "retrieved": "2026-10-22",
+    "file": "dbdaima.m4a",
+    "sha256": "6d7e4a058c25198db98cfef2bd43bebd7f7f0017e5d990e6a9a1280e6c78e5dc",
+    "processing": "AAC stereo 112 kbit/s, loudnorm I=-18 TP=-2 LRA=11, faststart"
+  }
+]

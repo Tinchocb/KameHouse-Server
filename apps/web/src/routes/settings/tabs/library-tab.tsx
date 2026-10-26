@@ -71,7 +71,6 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
         | "library.unifiedScan"
         | "library.refreshLibraryOnStart"
         | "library.scannerStrictStructure"
-        | "library.scannerUseLegacyMatching"
         | "library.disableLocalScanning"
         | "library.disableCloudSource"
 
@@ -103,8 +102,9 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 1. ESCÁNER DE BIBLIOTECA (estado, archivos escaneados y colección)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
+                variant="content"
                 id="library-scanner"
-                label="Escáner de Biblioteca"
+                label="Escáner de la biblioteca"
                 description="Escanea el disco local y Google Drive, sigue el progreso en vivo y revisa qué falta del catálogo."
                 icon={IconStatusZap}
                 collapsible
@@ -112,9 +112,9 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
             >
                 <React.Suspense
                     fallback={
-                        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-center gap-2">
+                        <div className="p-4 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center gap-2">
                             <IconUiSpinner className="w-4 h-4 animate-spin text-brand-accent" />
-                            <span className="text-xs text-on-surface-variant">Cargando escáner...</span>
+                            <span className="text-xs text-on-surface-variant">Cargando el escáner…</span>
                         </div>
                     }
                 >
@@ -126,14 +126,15 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 2. ORÍGENES (de dónde se reproduce: disco local y/o Google Drive)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
+                variant="content"
                 id="library-sources"
                 label="Orígenes"
-                description="Elegí de dónde se reproduce tu biblioteca. Cada serie puede fijar su propio origen desde su página."
+                description="Elige de dónde se reproduce tu biblioteca. Cada serie puede fijar su propio origen desde su ficha."
                 icon={IconNavigationLayers}
                 collapsible
                 defaultOpen={true}
                 badge={localDisconnected && cloudPaused ? (
-                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25">
+                    <span className="text-3xs px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25">
                         Sin orígenes
                     </span>
                 ) : undefined}
@@ -143,7 +144,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     name="library.disableLocalScanning"
                     render={({ field }) => (
                         <OsToggle
-                            label="Usar Disco Local"
+                            label="Usar el disco local"
                             description="Al apagarlo no se escanea ni se vigila el disco y los archivos locales se ocultan de la biblioteca. No se borran: vuelven al encenderlo."
                             checked={!field.value}
                             onChange={(v) => applyLibraryToggle("library.disableLocalScanning", !v)}
@@ -173,14 +174,15 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 3. DISCO LOCAL (carpetas)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
+                variant="content"
                 id="media-directories"
-                label="Disco Local"
+                label="Disco local"
                 description="Carpetas de tu PC donde están tus series, anime y películas."
                 icon={IconStatusFolder}
                 collapsible
                 defaultOpen={true}
                 badge={localDisconnected ? (
-                    <span className="text-3xs font-mono px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25">
+                    <span className="text-3xs px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25">
                         Desconectado
                     </span>
                 ) : undefined}
@@ -191,7 +193,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                         name="library.seriesPaths"
                         render={({ field }) => (
                             <PathList
-                                label="Series & Anime"
+                                label="Series y anime"
                                 icon={IconNavigationTv}
                                 directories={field.value || []}
                                 showFullPath={showFullPath}
@@ -199,7 +201,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                                     const trimmed = newPath.trim()
                                     if (!trimmed || trimmed === ".") return
                                     if (trimmed.includes(",")) {
-                                        toast.error("Las rutas con comas no están soportadas")
+                                        toast.error("No se admiten rutas con comas")
                                         return
                                     }
                                     const current = field.value || []
@@ -234,7 +236,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                         name="library.moviePaths"
                         render={({ field }) => (
                             <PathList
-                                label="Películas & OVAs"
+                                label="Películas y OVAs"
                                 icon={IconNavigationFilm}
                                 directories={field.value || []}
                                 showFullPath={showFullPath}
@@ -242,7 +244,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                                     const trimmed = newPath.trim()
                                     if (!trimmed || trimmed === ".") return
                                     if (trimmed.includes(",")) {
-                                        toast.error("Las rutas con comas no están soportadas")
+                                        toast.error("No se admiten rutas con comas")
                                         return
                                     }
                                     const current = field.value || []
@@ -274,16 +276,16 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     />
                 </div>
 
-                <div className="pt-2 border-t border-white/[0.05]">
+                <div className="pt-2 border-t border-[var(--neutral-separator)]">
                     <div className="flex items-center gap-2 px-1 pb-1">
-                        <span className="text-3xs font-mono px-2 py-0.5 rounded bg-white/5 text-on-surface-variant border border-white/10">
+                        <span className="text-3xs px-2 py-0.5 rounded bg-[var(--neutral-elev-3)] text-on-surface-variant border border-[var(--neutral-separator)]">
                             Local
                         </span>
-                        <span className="text-3xs text-on-surface-variant/70">Preferencia de vista, no se sincroniza</span>
+                        <span className="text-3xs text-label-2">Preferencia de vista, no se sincroniza</span>
                     </div>
                     <OsToggle
                         label="Mostrar ruta completa en la lista"
-                        description="Muestra la ruta completa de cada directorio en lugar del nombre solo."
+                        description="Muestra la ruta entera de cada carpeta en vez de solo su nombre."
                         checked={showFullPath}
                         onChange={handleToggleFullPath}
                     />
@@ -295,9 +297,9 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                ═══════════════════════════════════════════════════════════════════ */}
             <React.Suspense
                 fallback={
-                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-center gap-2">
+                    <div className="p-4 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center gap-2">
                         <IconUiSpinner className="w-4 h-4 animate-spin text-brand-accent" />
-                        <span className="text-xs text-on-surface-variant">Cargando Google Drive...</span>
+                        <span className="text-xs text-on-surface-variant">Cargando Google Drive…</span>
                     </div>
                 }
             >
@@ -308,8 +310,9 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 5. ESCANEO AUTOMÁTICO (cuándo se actualiza la biblioteca)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
+                variant="content"
                 id="scanner-automation"
-                label="Escaneo Automático"
+                label="Escaneo automático"
                 description="Cuándo se actualiza la biblioteca sin que toques Escanear."
                 icon={IconStatusRadar}
                 collapsible
@@ -320,7 +323,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     name="library.autoScan"
                     render={({ field }) => (
                         <OsToggle
-                            label="Escaneo Automático por Cambios"
+                            label="Escanear al detectar cambios"
                             description="Detecta archivos añadidos o borrados en tiempo real y actualiza la biblioteca."
                             checked={!!field.value}
                             onChange={(v) => applyLibraryToggle("library.autoScan", v)}
@@ -333,13 +336,13 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     render={({ field }) => (
                         <div>
                             <div className="flex items-center gap-2 px-1 pb-1">
-                                <span className="text-3xs font-mono px-2 py-0.5 rounded bg-white/5 text-on-surface-variant border border-white/10">
-                                    Próximo arranque
+                                <span className="text-3xs px-2 py-0.5 rounded bg-[var(--neutral-elev-3)] text-on-surface-variant border border-[var(--neutral-separator)]">
+                                    Próximo inicio
                                 </span>
                             </div>
                             <OsToggle
-                                label="Escanear al Arrancar el Servidor"
-                                description="Realiza una pasada de verificación rápida al encender KameHouse. Se aplica al próximo arranque."
+                                label="Escanear al iniciar KameHouse"
+                                description="Hace una revisión rápida al iniciar KameHouse. Se aplica desde el próximo inicio."
                                 checked={!!field.value}
                                 onChange={(v) => applyLibraryToggle("library.refreshLibraryOnStart", v)}
                             />
@@ -351,8 +354,8 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     name="library.unifiedScan"
                     render={({ field }) => (
                         <OsToggle
-                            label="Modo de Escaneo Unificado"
-                            description="Junta Series y Películas en una sola pasada completa. Ignora escaneos parciales por carpeta ante cambios en disco."
+                            label="Escaneo unificado"
+                            description="Escanea series y películas juntas, siempre de forma completa. No hace escaneos parciales por carpeta cuando cambia el disco."
                             checked={!!field.value}
                             onChange={(v) => applyLibraryToggle("library.unifiedScan", v)}
                         />
@@ -364,38 +367,33 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                 6. IDENTIFICACIÓN Y METADATOS (cómo se reconocen los archivos)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
+                variant="content"
                 id="scanner-identification"
-                label="Identificación y Metadatos"
-                description="Cómo se reconocen los archivos y de dónde salen títulos, sinopsis y afiches."
+                label="Identificación y metadatos"
+                description="Cómo se reconocen los archivos y de dónde salen títulos, sinopsis y pósters."
                 icon={IconStatusDatabase}
                 collapsible
                 defaultOpen={true}
             >
                 <Controller
                     control={control}
-                    name="library.primaryMetadataProvider"
+                    name="library.scannerProvider"
                     render={({ field }) => (
                         <OsSelect
-                            label="Proveedor de Metadatos y Escaneo"
-                            description="Base de datos prioritaria para indexar series, películas y episodios."
+                            label="Proveedor de metadatos"
+                            description="Fuente principal para identificar series, películas y episodios."
                             icon={IconStatusDatabase}
                             options={[
-                                { value: "anilist", label: "AniList", desc: "Banners HD y arte oficial", badge: "RECOMENDADO" },
+                                { value: "anilist", label: "AniList", desc: "Banners HD y arte oficial", badge: "Recomendado" },
                                 { value: "jikan", label: "Jikan · MyAnimeList", desc: "Sagas canónicas y ranking", badge: "MAL" },
                                 { value: "tmdb", label: "TMDB", desc: "The Movie Database", badge: "TMDB" },
                             ]}
                             value={field.value || "anilist"}
                             onChange={(val) => {
-                                const prevPrimary = field.value
-                                const prevScanner = getValues("library.scannerProvider")
-                                setValue("library.primaryMetadataProvider", val, { shouldDirty: false, shouldValidate: true })
+                                const prev = field.value
                                 setValue("library.scannerProvider", val, { shouldDirty: false, shouldValidate: true })
-                                void patchLibraryNow(
-                                    { primaryMetadataProvider: val, scannerProvider: val },
-                                    () => {
-                                        setValue("library.primaryMetadataProvider", prevPrimary, { shouldDirty: false })
-                                        setValue("library.scannerProvider", prevScanner, { shouldDirty: false })
-                                    }
+                                void patchLibraryNow({ scannerProvider: val }, () =>
+                                    setValue("library.scannerProvider", prev, { shouldDirty: false })
                                 ).then(() => toast.success("Proveedor aplicado")).catch(() => {})
                             }}
                         />
@@ -406,14 +404,14 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     name="library.tmdbLanguage"
                     render={({ field }) => (
                         <OsSelect
-                            label="Idioma Predeterminado de Metadatos"
-                            description="Idioma para sinopsis, títulos de episodios y afiches oficiales. Cambiarlo purga la caché para re-fetch en el próximo escaneo."
+                            label="Idioma de los metadatos"
+                            description="Idioma de sinopsis, títulos de episodios y pósters. Al cambiarlo se borra la caché de metadatos y se vuelve a descargar en el próximo escaneo."
                             icon={IconUiTag}
                             options={[
-                                { value: "es-MX", label: "Español Latino", desc: "Sinopsis y títulos doblados", badge: "ES-MX" },
-                                { value: "es-ES", label: "Español España", desc: "Castellano peninsular", badge: "ES-ES" },
+                                { value: "es-MX", label: "Español latino", desc: "Sinopsis y títulos doblados", badge: "ES-MX" },
+                                { value: "es-ES", label: "Español de España", desc: "Castellano peninsular", badge: "ES-ES" },
                                 { value: "en-US", label: "Inglés", desc: "Títulos originales", badge: "EN-US" },
-                                { value: "ja-JP", label: "Japonés", desc: "Kanji + romaji oficial", badge: "JA-JP" },
+                                { value: "ja-JP", label: "Japonés", desc: "Kanji y romaji oficiales", badge: "JA-JP" },
                             ]}
                             value={field.value || "es-MX"}
                             onChange={(val) => {
@@ -428,7 +426,7 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                                                 endpoint: API_ENDPOINTS.METADATA.ClearMetadataCache.endpoint,
                                                 method: API_ENDPOINTS.METADATA.ClearMetadataCache.methods[0] as "DELETE",
                                             })
-                                            toast.success("Caché de metadatos purgada para el nuevo idioma")
+                                            toast.success("Se borró la caché de metadatos para el nuevo idioma")
                                         } catch {}
                                     }
                                     await patchLibraryNow({ tmdbLanguage: val }, () =>
@@ -444,22 +442,10 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                     name="library.scannerStrictStructure"
                     render={({ field }) => (
                         <OsToggle
-                            label="Estructura Estricta de Carpetas"
-                            description="Exige que las carpetas sigan estrictamente la jerarquía Serie/Temporada/Episodio para indexar."
+                            label="Estructura estricta de carpetas"
+                            description="Solo reconoce archivos que estén en carpetas Serie, Temporada y Episodio."
                             checked={Boolean(field.value)}
                             onChange={(v) => applyLibraryToggle("library.scannerStrictStructure", v)}
-                        />
-                    )}
-                />
-                <Controller
-                    control={control}
-                    name="library.scannerUseLegacyMatching"
-                    render={({ field }) => (
-                        <OsToggle
-                            label="Coincidencia Clásica (Legacy)"
-                            description="Utiliza el algoritmo de coincidencia por similitud de texto histórico en lugar del parser moderno."
-                            checked={Boolean(field.value)}
-                            onChange={(v) => applyLibraryToggle("library.scannerUseLegacyMatching", v)}
                         />
                     )}
                 />
@@ -470,9 +456,9 @@ export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTab
                ═══════════════════════════════════════════════════════════════════ */}
             <React.Suspense
                 fallback={
-                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-center gap-2">
+                    <div className="p-4 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center gap-2">
                         <IconUiSpinner className="w-4 h-4 animate-spin text-brand-accent" />
-                        <span className="text-xs text-on-surface-variant">Cargando match manual...</span>
+                        <span className="text-xs text-on-surface-variant">Cargando la coincidencia manual…</span>
                     </div>
                 }
             >

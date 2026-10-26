@@ -2,18 +2,14 @@ package util
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"unicode"
 
 	"github.com/dustin/go-humanize"
 )
-
-var reBase64Chars = regexp.MustCompile("^[A-Za-z0-9+/]*=*$")
 
 func Bytes(size uint64) string {
 	switch runtime.GOOS {
@@ -51,46 +47,6 @@ func NormalizePath(path string) (ret string) {
 		return strings.ToLower(filepath.ToSlash(path))
 	}
 	return filepath.ToSlash(path)
-}
-
-func Base64DecodeStr(str string) (string, error) {
-	decoded, err := base64.StdEncoding.DecodeString(str)
-	if err != nil {
-		return "", err
-	}
-	return string(decoded), nil
-}
-
-func IsBase64(s string) bool {
-	// 1. Check if string is empty
-	if len(s) == 0 {
-		return false
-	}
-
-	// 2. Check if length is valid (must be multiple of 4)
-	if len(s)%4 != 0 {
-		return false
-	}
-
-	// 3. Check for valid padding
-	padding := strings.Count(s, "=")
-	if padding > 2 {
-		return false
-	}
-
-	// 4. Check if padding is at the end only
-	if padding > 0 && !strings.HasSuffix(s, strings.Repeat("=", padding)) {
-		return false
-	}
-
-	// 5. Check if string contains only valid base64 characters
-	if !reBase64Chars.MatchString(s) {
-		return false
-	}
-
-	// 6. Try to decode - this is the final verification
-	_, err := base64.StdEncoding.DecodeString(s)
-	return err == nil
 }
 
 func ReplaceExtension(path, newExt string) string {

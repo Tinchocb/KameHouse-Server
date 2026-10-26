@@ -1,9 +1,5 @@
 package dto
 
-import (
-	"time"
-)
-
 type (
 	ScanSummaryLog struct {
 		ID       string `json:"id"`
@@ -31,10 +27,5 @@ type (
 		MediaTitle          string             `json:"mediaTitle"`
 		MediaImage          string             `json:"mediaImage"`
 		MediaIsInCollection bool               `json:"mediaIsInCollection"` // Whether the media is in the user's collection
-	}
-
-	ScanSummaryItem struct { // Database item
-		CreatedAt   time.Time    `json:"createdAt"`
-		ScanSummary *ScanSummary `json:"scanSummary"`
 	}
 )

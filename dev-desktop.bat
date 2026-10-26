@@ -14,7 +14,7 @@ if "%REPO_ROOT:~-1%"=="\" set "REPO_ROOT=%REPO_ROOT:~0,-1%"
 :: y se cierra solo cuando aparece la ventana de Tauri. En dev, Tauri
 :: no muestra nada hasta terminar de compilar Rust + levantar Rsbuild.
 :: ---------------------------------------------------------
-if "%CI%"=="" start "" /min powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%REPO_ROOT%\scripts\dev-splash.ps1"
+:: El arranque usa una única ventana principal en Tauri (sin splash de navegador previo).
 
 echo.
 echo  ========================================================
@@ -70,6 +70,20 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 :: ---------------------------------------------------------
+:: 1c. Verificar dependencias (node_modules)
+:: ---------------------------------------------------------
+if not exist "node_modules\.bin\concurrently.CMD" (
+    echo  [INFO] Dependencias no encontradas o incompletas. Instalando con pnpm...
+    call pnpm install
+    if !ERRORLEVEL! NEQ 0 (
+        echo  [ERROR] Fallo al instalar dependencias con pnpm.
+        call :close_splash
+        pause
+        exit /b 1
+    )
+)
+
+:: ---------------------------------------------------------
 :: 1b. Toolchain MSVC para Tauri (rc.exe + link.exe)
 :: Si no estan en PATH, buscarlos en las rutas de instalacion
 :: (la version cambia con cada update, se resuelve dinamico).
@@ -117,15 +131,30 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":43212.*LISTENING" 2^>nul') 
     )
 )
 
-:: Un servidor de desarrollo viejo -Rsbuild- que siga en :43210 se queda sirviendo la
-:: interfaz de una sesion anterior: el nuevo falla por puerto ocupado -strictPort- y la
-:: ventana de Tauri -devUrl :43210- mostraria la version vieja. Solo se cierra si el
-:: proceso es node.exe, para no matar otra cosa que use ese puerto.
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":43210.*LISTENING" 2^>nul') do (
-    if %%p NEQ 0 (
-        tasklist /FI "PID eq %%p" /FO CSV /NH 2>nul | findstr /i "node.exe" >nul && (
-            echo  [INFO] Cerrando el servidor de desarrollo anterior en :43210 - PID %%p
-            taskkill /F /T /PID %%p >nul 2>&1
+:: Si :43210 ya lo ocupa un servidor Rsbuild DEV de ESTE repo escuchando solo en 127.0.0.1 (por
+:: ejemplo, lo levantaste en otra terminal), Tauri lo reutiliza: no se levanta ni se mata nada.
+:: Cualquier otra cosa en ese puerto se cierra como antes -incluido un servidor expuesto a la LAN-:
+:: un servidor viejo se queda sirviendo la interfaz de una sesion anterior y el nuevo falla por
+:: puerto ocupado -strictPort-. Solo se cierra si el proceso es node.exe, para no matar otra cosa
+:: que use ese puerto.
+:: La reutilizacion exige la raiz del repo seguida de node_modules o apps\web: un worktree
+:: (.claude\worktrees\...) o un repo vecino con nombre parecido no cuenta.
+set "REUSE_WEB=0"
+for /f "tokens=2,5" %%a in ('netstat -ano ^| findstr ":43210.*LISTENING" 2^>nul') do (
+    if %%b NEQ 0 (
+        set "LOCAL_ADDR=%%a"
+        set "REUSE_OK=0"
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Get-CimInstance Win32_Process -Filter 'ProcessId = %%b' -ErrorAction SilentlyContinue; $c = [string]$p.CommandLine; $ours = $c -like '*rsbuild*' -and ($c -like ('*' + $env:REPO_ROOT + '\node_modules\*') -or $c -like ('*' + $env:REPO_ROOT + '\apps\web\*')) -and $c -match 'dev\W*$'; if ($ours) { exit 0 } else { exit 1 }" >nul 2>&1
+        if !ERRORLEVEL! EQU 0 if "!LOCAL_ADDR:~0,10!"=="127.0.0.1:" set "REUSE_OK=1"
+        if "!REUSE_OK!"=="1" (
+            echo  [INFO] Reutilizando el servidor de desarrollo activo en :43210 - PID %%b
+            echo  [AVISO] Ese servidor conserva la configuracion con la que se inicio: puerto del backend, .env.web y rsbuild.config.ts. Si Tauri muestra 503 o cambios viejos, cierre ese servidor y vuelva a ejecutar este script.
+            set "REUSE_WEB=1"
+        ) else (
+            tasklist /FI "PID eq %%b" /FO CSV /NH 2>nul | findstr /i "node.exe" >nul && (
+                echo  [INFO] Cerrando el servidor de desarrollo anterior en :43210 - PID %%b
+                taskkill /F /T /PID %%b >nul 2>&1
+            )
         )
     )
 )
@@ -149,7 +178,13 @@ echo  Tip: El splash aparece al instante.
 echo       El servidor Go compila en fondo y se conecta solo.
 echo.
 
-call pnpm dev:desktop
+:: Con el servidor reutilizado solo se lanza Tauri: pnpm dev:desktop levantaria otro Rsbuild en
+:: :43210 (strictPort) y concurrently -k cerraria todo al fallar.
+if "%REUSE_WEB%"=="1" (
+    call pnpm --filter kamehouse-desktop dev
+) else (
+    call pnpm dev:desktop
+)
 set EXIT_CODE=%ERRORLEVEL%
 
 :: ---------------------------------------------------------

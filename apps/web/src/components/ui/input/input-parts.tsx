@@ -9,7 +9,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
 export const InputAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Input__root",
-        "flex h-12 w-full rounded-none border border-white/15 bg-surface-container-lowest/60 backdrop-blur-overlay-sm px-3 py-2 text-base md:text-sm text-white placeholder:text-on-surface-variant/50 focus-visible:outline-none focus-visible:border-white/50 focus-visible:ring-1 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50 transition-[border-color,background-color,box-shadow] duration-fast ease-smooth-out"
+        "flex h-11 min-w-0 w-full rounded-full border border-[var(--neutral-separator)] bg-[var(--neutral-elev-2)] px-4 py-2 text-base md:text-sm text-on-surface placeholder:text-label-3 focus-visible:outline-none focus-visible:border-brand-accent/50 disabled:cursor-not-allowed disabled:opacity-50 transition-[border-color,background-color,box-shadow] duration-fast ease-smooth-out"
     ], {
         variants: {
             size: {
@@ -18,8 +18,8 @@ export const InputAnatomy = defineStyleAnatomy({
                 lg: "h-14 px-4 py-3 text-base",
             },
             intent: {
-                basic: "[@media(hover:hover)_and_(pointer:fine)]:hover:border-white/40",
-                filled: "bg-surface-container-low border-transparent focus-within:bg-surface-container-lowest focus-within:border-white shadow-none",
+                basic: "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)]",
+                filled: "bg-surface-container-low border-transparent focus-within:bg-surface-container-lowest focus-within:border-brand-accent/50 shadow-none",
                 unstyled: "bg-transparent hover:bg-transparent border-0 shadow-none focus-within:ring-0 rounded-none p-0 text-base",
             },
             hasError: {
@@ -40,9 +40,9 @@ export const InputAnatomy = defineStyleAnatomy({
             hasRightIcon: { true: null, false: null },
         },
         compoundVariants: [
-            { hasLeftAddon: true, className: "border-l-transparent hover:border-l-transparent rounded-none" },
+            { hasLeftAddon: true, className: "border-l-transparent hover:border-l-transparent rounded-l-none" },
             /**/
-            { hasRightAddon: true, className: "border-r-transparent hover:border-r-transparent rounded-none" },
+            { hasRightAddon: true, className: "border-r-transparent hover:border-r-transparent rounded-r-none" },
             /**/
             { hasLeftAddon: false, hasLeftIcon: true, size: "sm", className: "pl-10" },
             { hasLeftAddon: false, hasLeftIcon: true, size: "md", className: "pl-10" },
@@ -65,9 +65,6 @@ export const InputAnatomy = defineStyleAnatomy({
     }),
 })
 
-export const hiddenInputStyles = cn(
-    "appearance-none absolute bottom-0 border-0 w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap [clip:rect(0px,0px,0px,0px)] [overflow-wrap:normal]")
-
 /* -------------------------------------------------------------------------------------------------
  * InputContainer
  * -----------------------------------------------------------------------------------------------*/
@@ -79,7 +76,7 @@ const InputContainerAnatomy = defineStyleAnatomy({
     ]),
 })
 
-export type InputContainerProps = {
+type InputContainerProps = {
     className: React.HTMLAttributes<HTMLDivElement>["className"],
     children?: React.ReactNode
 }
@@ -113,7 +110,7 @@ export type InputStyling = Omit<VariantProps<typeof InputAnatomy.root>,
  * Addons Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const InputAddonsAnatomy = defineStyleAnatomy({
+const InputAddonsAnatomy = defineStyleAnatomy({
     icon: cva([
         "UI-Input__addons--icon",
         "pointer-events-none absolute inset-y-0 grid place-content-center text-on-surface-variant",
@@ -131,12 +128,12 @@ export const InputAddonsAnatomy = defineStyleAnatomy({
     }),
     addon: cva([
         "UI-Input__addons--addon",
-        "bg-surface-container-high inline-flex items-center flex-none px-3 border border-white/10 text-white shadow-none text-sm sm:text-base",
+        "bg-surface-container-high inline-flex items-center flex-none px-3 border border-[var(--neutral-separator)] text-on-surface shadow-none text-sm sm:text-base",
     ], {
         variants: {
             size: { sm: "text-sm", md: "text-base", lg: "text-lg" },
-            isLeftAddon: { true: "rounded-none border-r-0", false: null },
-            isRightAddon: { true: "rounded-none border-l-0", false: null },
+            isLeftAddon: { true: "rounded-l-full border-r-0", false: null },
+            isRightAddon: { true: "rounded-r-full border-l-0", false: null },
             hasLeftIcon: { true: null, false: null },
             hasRightIcon: { true: null, false: null },
         },
@@ -159,7 +156,7 @@ export const InputAddonsAnatomy = defineStyleAnatomy({
  * InputIcon
  * -----------------------------------------------------------------------------------------------*/
 
-export type InputIconProps = {
+type InputIconProps = {
     icon: InputStyling["leftIcon"] | undefined,
     size: InputStyling["size"],
     side: "right" | "left",
@@ -184,7 +181,7 @@ InputIcon.displayName = "InputIcon"
  * InputAddon
  * -----------------------------------------------------------------------------------------------*/
 
-export type InputAddonProps = {
+type InputAddonProps = {
     addon: InputStyling["rightAddon"] | InputStyling["leftAddon"] | undefined,
     rightIcon: InputStyling["leftIcon"] | undefined,
     leftIcon: InputStyling["rightIcon"] | undefined,

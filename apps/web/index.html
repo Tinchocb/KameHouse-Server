@@ -13,6 +13,9 @@
          el primer render hasta el timeout. display=swap ya cubre el cambio de fuente. -->
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
     <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet" /></noscript>
+    <!-- Misma fuente que public/splash.html: el titulo del loader nace con la tipografia
+         final (antes caia a sans-serif hasta que llegaba el bundle). -->
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/outfit-latin-wght-normal.woff2" crossorigin />
     <link rel="preload" as="image" href="/backdrops/db.webp" type="image/webp" fetchpriority="high" />
     <!-- El resto de las eras del carrusel: prefetch (en tiempo ocioso, sin competir
          con el LCP ni disparar avisos de "preload sin usar" en otras rutas). -->
@@ -98,64 +101,136 @@
         } catch {}
     </script>
     <style>
+        @font-face {
+            font-family: "KH Loader";
+            src: url("/fonts/outfit-latin-wght-normal.woff2") format("woff2");
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: block;
+        }
         html { background-color: #09090b; }
         html[data-mode="classic"] { background-color: #09090b; }
         body { margin: 0; background: transparent; -webkit-font-smoothing: antialiased; }
-        @keyframes ball-bounce {
-            0%, 80%, 100% {
-                transform: translateY(0) scale(0.85);
-                opacity: 0.4;
-            }
-            40% {
-                transform: translateY(-12px) scale(1.1);
-                opacity: 1;
-            }
+        /* Anillo de siete esferas del dragón (1 a 7 estrellas, PNG en public/icons/dragon-balls):
+           se encienden y apagan todas a la vez, en círculo, como al invocar a Shenlong. */
+        .loading-ring {
+            position: relative;
+            width: 120px;
+            height: 120px;
         }
-        @keyframes progress-slide {
-            0% { transform: translateX(-100%); }
-            50% { transform: translateX(0); }
-            100% { transform: translateX(100%); }
+        .loading-ball {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 26px;
+            height: 26px;
+            margin: -13px 0 0 -13px;
+            transform: rotate(var(--a)) translateY(-42px) rotate(calc(-1 * var(--a)));
+            filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45);
+            animation: ball-charge 3s ease-in-out infinite;
         }
-        .loading-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, #fde68a, #f59e0b 60%, #b45309 100%);
-            box-shadow: 0 0 16px rgba(245, 158, 11, 0.65), 0 0 6px rgba(251, 191, 36, 0.9);
-            animation: ball-bounce 1.4s ease-in-out infinite;
+        @keyframes ball-charge {
+            0%, 100% { filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); }
+            35%      { filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.75)) grayscale(0) brightness(1.1); }
+            70%      { filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); }
         }
-        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
-        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
-        .loading-dot:nth-child(3) { animation-delay: 0s; }
 
-        /* Transición splash → interfaz: el contenido del loader se abre hacia el
-           espectador mientras el fondo se desvanece y la interfaz asienta debajo. */
+        /* Composición idéntica a public/splash.html (ver nota allí). */
+        #global-loader-title {
+            color: #fff;
+            font-family: "KH Loader", "Outfit Variable", "Segoe UI", system-ui, sans-serif;
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            line-height: 1;
+            margin: 0 0 0 0.3em;
+            text-shadow: 0 0 28px rgba(245, 158, 11, 0.3);
+        }
+        #global-loader-text {
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 11px;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #71717a;
+            margin-top: -0.5rem;
+        }
+        /* Línea de carga minimal (hairline de 2px): trazo blanco con un pulso ámbar que lo recorre.
+           Misma composición en public/splash.html. */
+        #global-loader-progress {
+            margin-top: 1.5rem;
+            width: 200px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        #global-loader-bar {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+            border-radius: 9999px;
+            overflow: hidden;
+            transform: scaleX(0.06);
+            transform-origin: left center;
+            transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        #global-loader-bar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 50%;
+            background: linear-gradient(90deg, transparent, #fcd34d, transparent);
+            animation: kh-bar-pulse 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes kh-bar-pulse {
+            0%   { transform: translateX(-100%); opacity: 0; }
+            30%, 70% { opacity: 1; }
+            100% { transform: translateX(250%); opacity: 0; }
+        }
+
+        /* Transición loader → interfaz: crossfade limpio y rápido en compositor (opacity + transform). */
         #global-loader {
-            transition: opacity 460ms cubic-bezier(0.22, 1, 0.36, 1) 80ms;
+            transition: opacity 220ms cubic-bezier(0.22, 1, 0.36, 1);
         }
         #global-loader-content {
-            transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 240ms cubic-bezier(0.4, 0, 1, 1);
+            transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
         }
         #global-loader.is-exiting {
             opacity: 0;
             pointer-events: none;
         }
         #global-loader.is-exiting #global-loader-content {
-            transform: scale(1.08);
+            transform: scale(0.98);
             opacity: 0;
         }
         #root.kh-root-enter {
-            animation: kh-root-enter 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+            animation: kh-root-enter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
         }
         @keyframes kh-root-enter {
-            from { opacity: 0; transform: scale(0.985); }
-            to { opacity: 1; transform: none; }
+            from {
+                opacity: 0;
+                transform: scale(0.985);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
         @media (prefers-reduced-motion: reduce) {
-            #global-loader { transition: opacity 200ms ease-out; }
+            #global-loader { transition: opacity 150ms ease-out; }
+            #global-loader.is-exiting { opacity: 0; }
             #global-loader-content { transition: opacity 150ms ease-out; }
+            #global-loader-bar { transition: none; }
+            #global-loader-bar::after { animation: none; display: none; }
             #global-loader.is-exiting #global-loader-content { transform: none; }
             #root.kh-root-enter { animation: none; }
+            /* Sin animación: el anillo queda en reposo, con todas las esferas al 70 %. */
+            .loading-ball { animation: none; opacity: 0.7; }
         }
     </style>
 </head>
@@ -163,27 +238,45 @@
 <body>
     <div id="global-loader" style="background-color: #09090b; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; overflow: hidden; z-index: 9999; user-select: none;">
         <div id="global-loader-content" style="display: flex; flex-direction: column; align-items: center; gap: 1.75rem;">
-            <h1 style="color: white; font-size: 2.25rem; font-family: 'Outfit', sans-serif; letter-spacing: 0.3em; text-transform: uppercase; line-height: 1; margin: 0 0 0 0.3em; font-weight: 900; text-shadow: 0 0 28px rgba(245,158,11,0.3);">KAMEHOUSE</h1>
-            
-            <!-- 3 Pelotas de Dragon Ball cargando -->
-            <div style="display: flex; align-items: center; gap: 12px; height: 32px;">
-                <div class="loading-dot"></div>
-                <div class="loading-dot"></div>
-                <div class="loading-dot"></div>
+            <h1 id="global-loader-title">KAMEHOUSE</h1>
+
+            <!-- 7 Esferas del Dragón (1 a 7 estrellas) en círculo, cargando -->
+            <div class="loading-ring">
+                <img class="loading-ball" style="--a: 0deg" src="/icons/dragon-balls/star-1.png" alt="" draggable="false" />
+                <img class="loading-ball" style="--a: 51.43deg" src="/icons/dragon-balls/star-2.png" alt="" draggable="false" />
+                <img class="loading-ball" style="--a: 102.86deg" src="/icons/dragon-balls/star-3.png" alt="" draggable="false" />
+                <img class="loading-ball" style="--a: 154.29deg" src="/icons/dragon-balls/star-4.png" alt="" draggable="false" />
+                <img class="loading-ball" style="--a: 205.71deg" src="/icons/dragon-balls/star-5.png" alt="" draggable="false" />
+                <img class="loading-ball" style="--a: 257.14deg" src="/icons/dragon-balls/star-6.png" alt="" draggable="false" />
+                <img class="loading-ball" style="--a: 308.57deg" src="/icons/dragon-balls/star-7.png" alt="" draggable="false" />
             </div>
 
-            <span id="global-loader-text" style="font-family: monospace; font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; color: #71717a; margin-top: -0.5rem;">Iniciando KameHouse...</span>
+            <span id="global-loader-text"></span>
 
-            <div id="global-loader-progress" style="margin-top: 1.5rem; width: 60%; max-width: 200px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 9999px; overflow: hidden; opacity: 0; transition: opacity 0.3s ease;">
-                <div style="width: 100%; height: 100%; background: linear-gradient(90deg, #f59e0b, #b45309); border-radius: 9999px; transform: translateX(-100%); animation: progress-slide 2s ease-in-out infinite;"></div>
+            <div id="global-loader-progress" role="progressbar" aria-label="Progreso de arranque" aria-valuemin="0" aria-valuemax="100" aria-valuenow="6">
+                <div id="global-loader-bar"></div>
             </div>
         </div>
     </div>
 <script>
-        setTimeout(() => {
-            const progress = document.getElementById('global-loader-progress');
-            if (progress) progress.style.opacity = '1';
-        }, 800);
+        // Estado del loader: texto + progreso monótono (0..1). Lo alimenta
+        // routes/__root.tsx; nunca retrocede, así el arranque se lee siempre hacia adelante.
+        (function () {
+            var current = 0.06;
+            window.khLoader = {
+                set: function (text, progress) {
+                    var textEl = document.getElementById('global-loader-text');
+                    if (textEl && text && textEl.textContent !== text) textEl.textContent = text;
+                    if (typeof progress === 'number' && progress > current) {
+                        current = Math.min(progress, 1);
+                        var bar = document.getElementById('global-loader-bar');
+                        if (bar) bar.style.transform = 'scaleX(' + current + ')';
+                        var wrap = document.getElementById('global-loader-progress');
+                        if (wrap) wrap.setAttribute('aria-valuenow', String(Math.round(current * 100)));
+                    }
+                }
+            };
+        })();
     </script>
 <div id="root"></div>
 </body>

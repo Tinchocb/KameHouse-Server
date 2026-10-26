@@ -1,12 +1,24 @@
 # IDEs and System files
 .idea/
 .vscode/
+*.code-workspace
 .cursor/
 .claude/
 .gemini/
+.codegraph/
+.fleet/
+.zed/
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
-desktop.ini
+Thumbs.db:encryptable
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
 *.swp
 *.swo
 *~
@@ -15,11 +27,22 @@ desktop.ini
 logs/
 *.log
 *.err
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
 tmp/
 scratch/
 .run/
 testdata/
 *.cache
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*.patch
 
 # Database files
 *.db
@@ -34,6 +57,7 @@ docs/dragonball/dragonball_chronology.sqlite
 
 # Server test data and caches
 apps/server/test_data_dir/
+apps/server/cache/
 apps/server/internal/util/data/user_agents.jsonl
 
 # Environment and secrets
@@ -52,12 +76,15 @@ node_modules/
 # Build outputs
 dist/
 out/
+out-*/
 build/
 bin/
 *.exe
 *.exe~
 *.tsbuildinfo
+.rsbuild/
 apps/web/.tanstack/
+apps/web/rsbuild.navperf*.config.ts
 apps/server/kamehouse
 apps/server/kamehouse.exe
 apps/server/build/bin/
@@ -67,6 +94,9 @@ apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/binaries/
 apps/desktop/src-tauri/gen/
 .cargo/
+target/
+*.prof
+*.pprof
 
 # Tests, Coverage & Reports
 coverage/
@@ -76,6 +106,14 @@ lint-*.json
 *-lint.json
 .rsdoctor/
 rsdoctor-report.html
+rsdoctor-report.json
+*-report.html
+*-report.json
+*-details.json
+all-components-details.json
+.eslintcache
+.stylelintcache
+.prettiercache
 
 # Misc generated files
 package.json.md5
@@ -107,3 +145,7 @@ apps/server/deadcode_report.txt
 
 # Archives
 *.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z

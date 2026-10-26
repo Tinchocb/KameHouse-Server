@@ -44,24 +44,6 @@ func TestJaroWinklerSimilarity(t *testing.T) {
 	}
 }
 
-func TestTokenSetRatio(t *testing.T) {
-	tests := []struct {
-		s1, s2  string
-		minWant float64
-	}{
-		{"Dragon Ball Z Movie 01", "Movie 01 Dragon Ball Z", 0.95},
-		{"[Fansub] Dragon Ball Super - Broly [1080p]", "Dragon Ball Super Broly", 0.80},
-		{"Goku vs Jiren", "Jiren vs Goku", 0.95},
-	}
-
-	for _, tt := range tests {
-		got := TokenSetRatio(tt.s1, tt.s2)
-		if got < tt.minWant {
-			t.Errorf("TokenSetRatio(%q, %q) = %f, want >= %f", tt.s1, tt.s2, got, tt.minWant)
-		}
-	}
-}
-
 func TestFuzzyMatchScore(t *testing.T) {
 	tests := []struct {
 		query, target string

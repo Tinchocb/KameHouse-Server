@@ -1,6 +1,7 @@
 import React from "react";
 import { cn } from "./core/styling";
 import { AnimatedTooltip } from "./kinetics";
+import { IconButton } from "./button";
 
 interface GlassIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     icon: React.ReactNode;
@@ -11,6 +12,7 @@ interface GlassIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElem
     tooltipSide?: "top" | "bottom";
 }
 
+/** Botón de ícono sobre imagen: usa la receta `glass` del sistema de botones. */
 export function GlassIconButton({
     icon,
     title,
@@ -29,23 +31,22 @@ export function GlassIconButton({
 
     return (
         <AnimatedTooltip content={title} side={tooltipSide}>
-            <button
+            <IconButton
+                intent="glass"
+                size="md"
                 aria-label={title}
                 className={cn(
-                    "group flex items-center justify-center p-3.5 sm:p-4 rounded-xl",
-                    "bg-surface/60 border border-white/20 border-t-white/40 border-b-white/10",
-                    "backdrop-blur-overlay-md backdrop-saturate-[180%]",
-                    "shadow-[shadow:var(--glass-highlight-lg),0_8px_24px_rgba(0,0,0,0.6)]",
-                    "transition-[transform,background-color,border-color,color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.03] active:scale-95 min-h-[44px] min-w-[44px] cursor-pointer",
+                    "group",
                     isActive ? toneMap[activeTone] : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container/80",
                     className
                 )}
+                icon={
+                    <div className={cn("transition-transform duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:-translate-y-0.5", isActive && "scale-110")}>
+                        {icon}
+                    </div>
+                }
                 {...props}
-            >
-                <div className={cn("transition-transform duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:-translate-y-0.5", isActive && "scale-110")}>
-                    {icon}
-                </div>
-            </button>
+            />
         </AnimatedTooltip>
     );
 }

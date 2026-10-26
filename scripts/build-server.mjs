@@ -33,9 +33,8 @@ if (!fs.existsSync(serverDir)) {
 const serverWebDir = path.join(serverDir, "web");
 const webOutDir = path.join(rootDir, "apps", "web", "out");
 if (fs.existsSync(webOutDir) && fs.readdirSync(webOutDir).length > 0) {
-  if (!fs.existsSync(serverWebDir)) {
-    fs.mkdirSync(serverWebDir, { recursive: true });
-  }
+  fs.rmSync(serverWebDir, { recursive: true, force: true });
+  fs.mkdirSync(serverWebDir, { recursive: true });
   fs.cpSync(webOutDir, serverWebDir, { recursive: true });
 } else if (!fs.existsSync(serverWebDir) || fs.readdirSync(serverWebDir).length === 0) {
   fs.mkdirSync(serverWebDir, { recursive: true });

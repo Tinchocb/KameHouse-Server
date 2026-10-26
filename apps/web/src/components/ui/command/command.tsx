@@ -2,7 +2,7 @@ import { cva } from "class-variance-authority"
 import { Command as CommandPrimitive } from "cmdk"
 import * as React from "react"
 import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
-import { InputAnatomy } from "../input"
+import { InputAnatomy } from "../input/input-parts"
 import { Modal, ModalProps } from "../modal"
 
 /* -------------------------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ const CommandAnatomy = defineStyleAnatomy({
     ]),
     item: cva([
         "UI-Command__item",
-        "relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-base outline-none transition-colors",
+        "relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-base outline-none",
         "aria-selected:bg-surface-container-high aria-selected:text-on-surface data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
         "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
     ]),
@@ -56,7 +56,7 @@ const CommandAnatomy = defineStyleAnatomy({
     ]),
 })
 
-export const CommandDialogAnatomy = defineStyleAnatomy({
+const CommandDialogAnatomy = defineStyleAnatomy({
     content: cva([
         "UI-CommandDialog__content",
         "overflow-hidden p-0",
@@ -79,9 +79,9 @@ export const CommandDialogAnatomy = defineStyleAnatomy({
 
 const __CommandAnatomyContext = React.createContext<ComponentAnatomy<typeof CommandAnatomy>>({})
 
-export type CommandProps = React.ComponentPropsWithoutRef<typeof CommandPrimitive> & ComponentAnatomy<typeof CommandAnatomy>
+type CommandProps = React.ComponentPropsWithoutRef<typeof CommandPrimitive> & ComponentAnatomy<typeof CommandAnatomy>
 
-export const Command = React.forwardRef<HTMLDivElement, CommandProps>((props, ref) => {
+const Command = React.forwardRef<HTMLDivElement, CommandProps>((props, ref) => {
     const {
         className,
         inputContainerClass,
@@ -126,7 +126,7 @@ Command.displayName = CommandPrimitive.displayName
  * CommandInput
  * -----------------------------------------------------------------------------------------------*/
 
-export type CommandInputProps =
+type CommandInputProps =
     React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
     & Pick<ComponentAnatomy<typeof CommandAnatomy>, "inputContainerClass" | "inputIconClass">
 
@@ -178,7 +178,7 @@ CommandInput.displayName = "CommandInput"
  * CommandList
  * -----------------------------------------------------------------------------------------------*/
 
-export type CommandListProps =
+type CommandListProps =
     React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
 
 export const CommandList = React.forwardRef<HTMLDivElement, CommandListProps>((props, ref) => {
@@ -200,7 +200,7 @@ CommandList.displayName = "CommandList"
  * CommandEmpty
  * -----------------------------------------------------------------------------------------------*/
 
-export type CommandEmptyProps =
+type CommandEmptyProps =
     React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
 
 export const CommandEmpty = React.forwardRef<HTMLDivElement, CommandEmptyProps>((props, ref) => {
@@ -222,7 +222,7 @@ CommandEmpty.displayName = "CommandEmpty"
  * CommandGroup
  * -----------------------------------------------------------------------------------------------*/
 
-export type CommandGroupProps =
+type CommandGroupProps =
     React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
 
 export const CommandGroup = React.forwardRef<HTMLDivElement, CommandGroupProps>((props, ref) => {
@@ -244,7 +244,7 @@ CommandGroup.displayName = "CommandGroup"
  * CommandItem
  * -----------------------------------------------------------------------------------------------*/
 
-export type CommandItemProps =
+type CommandItemProps =
     React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
     & Pick<ComponentAnatomy<typeof CommandAnatomy>, "itemIconContainerClass">
     & { leftIcon?: React.ReactNode }
@@ -257,40 +257,11 @@ export const CommandItem = React.forwardRef<HTMLDivElement, CommandItemProps>((p
         itemIconContainerClass: _itemIconContainerClass,
     } = React.useContext(__CommandAnatomyContext)
 
-    const itemRef = React.useRef<HTMLDivElement | null>(null)
-
-    React.useEffect(() => {
-        const element = itemRef.current
-        if (!element) return
-
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === "aria-selected" && element.getAttribute("aria-selected") === "true") {
-                    element.scrollIntoView({ block: "nearest" })
-                }
-            })
-        })
-
-        observer.observe(element, { attributes: true })
-        return () => observer.disconnect()
-    }, [])
-
-    const setRefs = React.useCallback(
-        (node: HTMLDivElement | null) => {
-            itemRef.current = node
-
-            if (ref) {
-                if (typeof ref === "function") {
-                    ref(node)
-                }
-            }
-        },
-        [ref],
-    )
-
+    // Sin scrollIntoView propio: cmdk ya desplaza la selección al navegar con teclado, y a
+    // propósito no lo hace cuando la selección llega por el puntero (la lista saltaba bajo el mouse).
     return (
         <CommandPrimitive.Item
-            ref={setRefs}
+            ref={ref}
             className={cn(CommandAnatomy.item(), itemClass, className)}
             {...rest}
             data-cmdkvalue={rest.id}
@@ -310,7 +281,7 @@ CommandItem.displayName = "CommandItem"
  * CommandDialog
  * -----------------------------------------------------------------------------------------------*/
 
-export type CommandDialogProps = ModalProps & ComponentAnatomy<typeof CommandDialogAnatomy> & {
+type CommandDialogProps = ModalProps & ComponentAnatomy<typeof CommandDialogAnatomy> & {
     commandProps: React.ComponentPropsWithoutRef<typeof CommandPrimitive>
 }
 
@@ -319,6 +290,8 @@ export const CommandDialog = (props: CommandDialogProps) => {
     return (
         <Modal
             srTitle="Buscar en KameHouse"
+            // 36 px con puntero fino (el IconButton sm da 32); con puntero grueso se queda en 44.
+            closeClass="[@media(pointer:fine)]:!h-9 [@media(pointer:fine)]:!w-9"
             {...rest}
             contentClass={cn(CommandDialogAnatomy.content(), contentClass)}
         >

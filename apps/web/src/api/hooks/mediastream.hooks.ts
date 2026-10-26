@@ -14,10 +14,9 @@ export function useRequestMediastreamMediaContainer(variables: Partial<RequestMe
     return useServerQuery<Mediastream_MediaContainer, RequestMediastreamMediaContainer_Variables>({
         endpoint: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.endpoint,
         method: API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.methods[0],
-        // force va en la key: si se pidió "transcode", el servidor devolvió direct y
-        // el direct falla, el reintento con force:true tiene la misma path/streamType;
-        // sin force en la key, staleTime Infinity serviría la respuesta vieja.
-        queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, variables?.path, variables?.streamType, !!variables?.force],
+        // La preparación vincula una sesión al cliente y al archivo: todos los
+        // argumentos enviados participan en la identidad, incluidas sus capacidades.
+        queryKey: [API_ENDPOINTS.MEDIASTREAM.RequestMediastreamMediaContainer.key, variables],
         data: variables as RequestMediastreamMediaContainer_Variables,
         enabled: !!variables.path && !!variables.streamType && enabled,
         refetchOnWindowFocus: false,

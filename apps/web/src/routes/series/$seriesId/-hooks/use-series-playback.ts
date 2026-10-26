@@ -6,6 +6,8 @@ import type { Anime_Entry, Anime_Episode, Anime_LocalFile, Mediastream_StreamTyp
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { queryKeys } from "@/lib/query-keys"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
+import { useGetAnimeEntrySource } from "@/api/hooks/anime_entries.hooks"
+import { describeMissingSources } from "./missing-sources"
 import {
     type PlayCandidate,
     candidatePath,
@@ -58,15 +60,13 @@ interface UseSeriesPlaybackInput {
     setSearchParams: (updates: Partial<Record<string, string>>, options?: { replace?: boolean }) => void
 }
 
-const NO_FILES_MESSAGE = "No hay archivos locales disponibles para reproducir."
-
 // ─── Preload ──────────────────────────────────────────────────────────────────
 
 /**
  * Calienta un path en el servidor una sola vez por serie (el preload es
  * idempotente, pero así no se dispara la mutación en cada hover/re-render).
  */
-export function usePreloadPath(seriesId: string) {
+function usePreloadPath(seriesId: string) {
     const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
     const preloadedPathsRef = React.useRef<Set<string>>(new Set())
     // Limpiar al cambiar de serie: evita falsos "ya precargado" y acumulación en memoria.
@@ -101,6 +101,7 @@ export function useSeriesPlayback({
 }: UseSeriesPlaybackInput) {
     const queryClient = useQueryClient()
     const [playTarget, setPlayTarget] = useState<PlayTarget | null>(null)
+    const { data: sourceInfo } = useGetAnimeEntrySource(entry?.mediaId)
 
     // El toggle de Ajustes manda: con continuidad OFF no se resume nada.
     const { data: serverSettings } = useGetSettings()
@@ -194,9 +195,16 @@ export function useSeriesPlayback({
         (c: PlayCandidate) => {
             if (c.kind === "episode") handlePlayEpisode(c.lf, c.ep)
             else if (c.kind === "file") handlePlayLocalFile(c.file)
-            else toast.info(NO_FILES_MESSAGE)
+            else {
+                // Sin fuentes: explicar por qué (local vacío, nube sin sincronizar o apagada) y llevar a Ajustes.
+                const missing = describeMissingSources(sourceInfo)
+                toast.info(missing.title, {
+                    description: missing.message,
+                    action: { label: "Ajustes", onClick: () => navigate({ to: "/settings" }) },
+                })
+            }
         },
-        [handlePlayEpisode, handlePlayLocalFile]
+        [handlePlayEpisode, handlePlayLocalFile, sourceInfo, navigate]
     )
 
     // ── Target por defecto ("Reproducir") ─────────────────────────────────────
@@ -249,13 +257,14 @@ export function useSeriesPlayback({
     const continueToNextSeries = useCallback(() => {
         if (!nextSeriesTarget) return false
         toast.success(`Continuando con ${nextSeriesTarget.label}`)
-        startViewTransition(() => {
-            setPlayTarget(null)
-            navigate({
-                to: "/series/$seriesId",
-                params: { seriesId: nextSeriesTarget.seriesId },
-                search: { tab: "episodes", saga: "", subSaga: "", autoplay: "1" },
-            })
+        // Sin cerrar el reproductor ni abrir una view transition: al cambiar la
+        // `key` de SeriesDetailClient, el cliente viejo (y su reproductor) se
+        // desmonta en el mismo commit en que entra el nuevo con su fallback negro.
+        // Cerrarlo antes dejaba asomar la ficha anterior mientras el loader esperaba.
+        navigate({
+            to: "/series/$seriesId",
+            params: { seriesId: nextSeriesTarget.seriesId },
+            search: { tab: "episodes", saga: "", subSaga: "", autoplay: "1" },
         })
         return true
     }, [nextSeriesTarget, navigate])

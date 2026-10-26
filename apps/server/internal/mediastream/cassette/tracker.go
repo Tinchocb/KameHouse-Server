@@ -214,11 +214,11 @@ func (t *ClientTracker) purgeInactive(timeout time.Duration) {
 			continue
 		}
 		info := t.clients[client]
+		delete(t.clients, client)
+		delete(t.visitDate, client)
 		if !t.killSessionIfDead(info.Path) {
 			t.killOrphanedHeads(info.Path, info.Quality, info.Audio)
 		}
-		delete(t.clients, client)
-		delete(t.visitDate, client)
 	}
 }
 
@@ -286,6 +286,9 @@ func (t *ClientTracker) maybeDestroySession(path string) {
 		return
 	}
 	t.cassette.destroySession(path)
+	delete(t.lastUsage, path)
+	delete(t.qualityActive, path)
+	delete(t.audioActive, path)
 }
 
 func (t *ClientTracker) killAudioIfDead(path string, audio int32) bool {

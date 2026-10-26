@@ -2,11 +2,15 @@ package anime
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/util/cache"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -145,16 +149,46 @@ type IntelligenceService struct {
 	db     *db.Database
 	fm     FillerChecker // may be nil when filler data is not yet loaded
 	logger *zerolog.Logger
+
+	// scoringMedia memoriza (30 s) el LibraryMedia con el que se puntúa cada episodio.
+	scoringMedia *cache.Cache[*models.LibraryMedia]
 }
 
 // NewIntelligenceService constructs the service.
 // fm may be nil; when nil, filler detection is skipped gracefully.
 func NewIntelligenceService(database *db.Database, fm FillerChecker, logger *zerolog.Logger) *IntelligenceService {
 	return &IntelligenceService{
-		db:     database,
-		fm:     fm,
-		logger: logger,
+		db:           database,
+		fm:           fm,
+		logger:       logger,
+		scoringMedia: cache.NewCache[*models.LibraryMedia](30*time.Second, 512),
 	}
+}
+
+// lookupScoringMedia resuelve el LibraryMedia con el que se puntúa un episodio
+// (primero por tmdb_id y, si no existe, por id). Solo trae las columnas que usa
+// computeIntelligence (score y genres) y memoriza el resultado, incluido el "no
+// encontrado", para no repetir 1-2 consultas por cada episodio de la serie.
+func (s *IntelligenceService) lookupScoringMedia(mediaID int) *models.LibraryMedia {
+	key := strconv.Itoa(mediaID)
+	if s.scoringMedia != nil {
+		if cached, ok := s.scoringMedia.Get(key); ok {
+			return cached
+		}
+	}
+
+	var found *models.LibraryMedia
+	var m models.LibraryMedia
+	if err := s.db.Gorm().Select("id", "score", "genres").Where("tmdb_id = ?", mediaID).First(&m).Error; err == nil {
+		found = &m
+	} else if err := s.db.Gorm().Select("id", "score", "genres").Where("id = ?", mediaID).First(&m).Error; err == nil {
+		found = &m
+	}
+
+	if s.scoringMedia != nil {
+		s.scoringMedia.Set(key, found)
+	}
+	return found
 }
 
 // computeIntelligence derives EpisodeIntelligence from available data.
@@ -191,12 +225,7 @@ func (s *IntelligenceService) computeIntelligence(mediaID, episodeNum int, base 
 	var media *models.LibraryMedia
 	func() {
 		defer func() { recover() }() //nolint:errcheck
-		var m models.LibraryMedia
-		if err := s.db.Gorm().Where("tmdb_id = ?", mediaID).First(&m).Error; err == nil {
-			media = &m
-		} else if err := s.db.Gorm().Where("id = ?", mediaID).First(&m).Error; err == nil {
-			media = &m
-		}
+		media = s.lookupScoringMedia(mediaID)
 		if media != nil {
 			if media.Score > 0 {
 				intel.Rating = float64(media.Score) / 10.0
@@ -288,26 +317,55 @@ func (s *IntelligenceService) ContinueWatchingFromHistory(_ context.Context, his
 		return []dto.ContinueWatchingItem{}, nil
 	}
 
-	allLocalFiles, _, err := db.GetLocalFiles(s.db)
-	if err != nil {
-		return nil, err
+	// Extract unique media IDs
+	mediaIDs := make([]uint, 0, len(history))
+	mediaIDSet := make(map[int]bool, len(history))
+	for _, h := range history {
+		if h.MediaID > 0 && !mediaIDSet[h.MediaID] {
+			mediaIDs = append(mediaIDs, uint(h.MediaID))
+			mediaIDSet[h.MediaID] = true
+		}
 	}
 
 	fileMap := make(map[int]map[int]bool)
-	for _, lf := range allLocalFiles {
-		if lf.MediaID == 0 {
-			continue
+	// If local files are already cached in memory, use them directly without querying DB
+	if cached, ok := db.CachedLocalFiles(); ok {
+		for _, lf := range cached {
+			if lf == nil || lf.MediaID == 0 || !mediaIDSet[lf.MediaID] || lf.Metadata == nil {
+				continue
+			}
+			if _, ok := fileMap[lf.MediaID]; !ok {
+				fileMap[lf.MediaID] = make(map[int]bool)
+			}
+			fileMap[lf.MediaID][lf.Metadata.Episode] = true
 		}
-		if _, ok := fileMap[lf.MediaID]; !ok {
-			fileMap[lf.MediaID] = make(map[int]bool)
+	} else if len(mediaIDs) > 0 {
+		// Cold cache: query ONLY files belonging to the media IDs in history,
+		// selecting just media_id and metadata (avoiding full-table scan and unmarshaling
+		// heavy unused columns like technical_info, parsed_folder_data, tags, etc.)
+		type epRow struct {
+			MediaID  int             `gorm:"column:media_id"`
+			Metadata json.RawMessage `gorm:"column:metadata"`
 		}
-		fileMap[lf.MediaID][lf.Metadata.Episode] = true
-	}
-
-	// Extract unique media IDs
-	mediaIDs := make([]uint, 0, len(history))
-	for _, h := range history {
-		mediaIDs = append(mediaIDs, uint(h.MediaID))
+		var rows []epRow
+		if err := s.db.Gorm().Model(&models.LocalFile{}).
+			Select("media_id, metadata").
+			Where("media_id IN (?)", mediaIDs).
+			Find(&rows).Error; err != nil {
+			return nil, err
+		}
+		for _, r := range rows {
+			if r.MediaID == 0 || len(r.Metadata) == 0 {
+				continue
+			}
+			var meta dto.LocalFileMetadata
+			if err := json.Unmarshal(r.Metadata, &meta); err == nil {
+				if _, ok := fileMap[r.MediaID]; !ok {
+					fileMap[r.MediaID] = make(map[int]bool)
+				}
+				fileMap[r.MediaID][meta.Episode] = true
+			}
+		}
 	}
 
 	// 1. Batch-fetch all parent LibraryMedia
@@ -320,9 +378,20 @@ func (s *IntelligenceService) ContinueWatchingFromHistory(_ context.Context, his
 		mediaMap[mediaList[i].ID] = &mediaList[i]
 	}
 
-	// 2. Batch-fetch all episodes for these media
+	// 2. Batch-fetch only relevant candidate episodes for these media (current, next, or saga starter)
+	var conds []string
+	var condArgs []interface{}
+	for _, h := range history {
+		conds = append(conds, "(library_media_id = ? AND episode_number IN (?, ?, 1))")
+		condArgs = append(condArgs, uint(h.MediaID), h.EpisodeNumber, h.EpisodeNumber+1)
+	}
+
 	var episodeList []models.LibraryEpisode
-	if err := s.db.Gorm().Where("library_media_id IN (?)", mediaIDs).Find(&episodeList).Error; err != nil {
+	epQuery := s.db.Gorm().Where("library_media_id IN (?)", mediaIDs)
+	if len(conds) > 0 {
+		epQuery = epQuery.Where(strings.Join(conds, " OR "), condArgs...)
+	}
+	if err := epQuery.Find(&episodeList).Error; err != nil {
 		return nil, err
 	}
 

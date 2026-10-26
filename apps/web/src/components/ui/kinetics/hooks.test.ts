@@ -64,6 +64,24 @@ describe("kinetics hooks", () => {
             })
         })
 
+        it("returns island preset with stiffness 400 and damping 30 (islas del nav)", () => {
+            const spring = useSpringPreset("island")
+            expect(spring).toEqual({
+                type: "spring",
+                stiffness: 400,
+                damping: 30,
+            })
+        })
+
+        it("returns selector preset with stiffness 350 and damping 26 (modal Sorpréndeme)", () => {
+            const spring = useSpringPreset("selector")
+            expect(spring).toEqual({
+                type: "spring",
+                stiffness: 350,
+                damping: 26,
+            })
+        })
+
         it("falls back to tween 0.15s when reduced motion is preferred", () => {
             vi.mocked(useReducedMotion).mockReturnValueOnce(true)
             const fallback = useSpringPreset("tabIndicator")

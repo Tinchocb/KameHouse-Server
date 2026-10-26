@@ -124,6 +124,27 @@
     }
   },
   {
+    "name": "buildLibraryCollection",
+    "trimmedName": "buildLibraryCollection",
+    "comments": [
+      "buildLibraryCollection arma la coleccion principal y la deja en cache.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_collection.go",
+    "filename": "anime_collection.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "enrichEpisodesWithTMDB",
     "trimmedName": "enrichEpisodesWithTMDB",
     "comments": [
@@ -175,6 +196,72 @@
     "trimmedName": "enrichMediaWithTMDB",
     "comments": [
       "enrichMediaWithTMDB fetches series-level metadata from TMDB or Jikan API if the local metadata or poster is missing/broken.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_enrichment.go",
+    "filename": "anime_enrichment.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "episodesEnriched",
+    "trimmedName": "episodesEnriched",
+    "comments": [
+      "episodesEnriched dice si todos los episodios ya traen imagen y sinopsis del proveedor principal.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_enrichment.go",
+    "filename": "anime_enrichment.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "animeEntryNeedsEnrichment",
+    "trimmedName": "animeEntryNeedsEnrichment",
+    "comments": [
+      "animeEntryNeedsEnrichment dice si la ficha tiene algo que TMDB/Jikan pueden completar y no está",
+      "en enfriamiento por un intento anterior que agotó el tiempo.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_enrichment.go",
+    "filename": "anime_enrichment.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "scheduleAnimeEnrichment",
+    "trimmedName": "scheduleAnimeEnrichment",
+    "comments": [
+      "scheduleAnimeEnrichment completa la ficha en segundo plano y la guarda en caché cuando termina.",
+      "Usa su propia copia de la ficha: la respuesta que ya salió no comparte memoria con este trabajo.",
+      "Si Jikan todavía no respondió, espera sus datos (hasta metadataWaitBudget) antes de completarla.",
       ""
     ],
     "filepath": "internal/handlers/anime_enrichment.go",
@@ -354,6 +441,55 @@
     }
   },
   {
+    "name": "prewarmAnimeMetadata",
+    "trimmedName": "prewarmAnimeMetadata",
+    "comments": [
+      "prewarmAnimeMetadata pide a Jikan la ficha de cada título de la biblioteca, de a uno y con",
+      "una pausa, para que quede en la caché persistente (7 días). Sin esto, abrir una ficha que",
+      "todavía no se consultó esperaba hasta jikanInlineWait (1,5 s) y, al reiniciar el servidor,",
+      "volvía a esperar: la ficha tardaba 1,5–3,5 s en frío y ~15 ms en caliente.",
+      "",
+      "Corre de fondo, después de `delay`, igual que prewarmShelfImages, y deja libre el limitador",
+      "de Jikan entre consultas para que las aperturas del usuario no queden detrás.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_metadata_prewarm.go",
+    "filename": "anime_metadata_prewarm.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "canonicalAnimeMediaID",
+    "trimmedName": "canonicalAnimeMediaID",
+    "comments": [
+      "canonicalAnimeMediaID es el mediaId con el que la biblioteca identifica cada título: el TMDB",
+      "para series y TMDB+1.000.000 para películas (mismo criterio que collection_hydrate.go).",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_metadata_prewarm.go",
+    "filename": "anime_metadata_prewarm.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleGetCacheStats",
     "trimmedName": "GetCacheStats",
     "comments": [
@@ -434,6 +570,59 @@
       "returns": "map[string]interface{}",
       "returnGoType": "interface{}",
       "returnTypescriptType": "Record\u003cstring, interface{}\u003e"
+    }
+  },
+  {
+    "name": "HandleGetCacheLocation",
+    "trimmedName": "GetCacheLocation",
+    "comments": [
+      "HandleGetCacheLocation returns the active and saved cache directories.",
+      "",
+      "@route /api/v1/system/cache/location [GET]",
+      "@returns core.CacheLocation",
+      ""
+    ],
+    "filepath": "internal/handlers/cache_location.go",
+    "filename": "cache_location.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "/api/v1/system/cache/location",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "core.CacheLocation",
+      "returnGoType": "core.CacheLocation",
+      "returnTypescriptType": "INTERNAL_CacheLocation"
+    }
+  },
+  {
+    "name": "HandleSaveCacheLocation",
+    "trimmedName": "SaveCacheLocation",
+    "comments": [
+      "HandleSaveCacheLocation saves the cache directory for the next server start.",
+      "",
+      "@route /api/v1/system/cache/location [PATCH]",
+      "@body directory string",
+      "@returns core.CacheLocation",
+      ""
+    ],
+    "filepath": "internal/handlers/cache_location.go",
+    "filename": "cache_location.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "/api/v1/system/cache/location",
+      "methods": [
+        "PATCH"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "core.CacheLocation",
+      "returnGoType": "core.CacheLocation",
+      "returnTypescriptType": "INTERNAL_CacheLocation"
     }
   },
   {
@@ -903,10 +1092,10 @@
     "trimmedName": "DriveCallback",
     "comments": [
       "HandleDriveCallback exchanges the authorization code for OAuth2 tokens and saves them in Settings.",
-      "Supports both browser redirect (GET) and programmatic POST.",
+      "Es el redirect del navegador (GET) con el que Google cierra la autorización.",
       "",
       "\t@summary exchanges code and enables Google Drive integration.",
-      "\t@route /api/v1/drive/callback [GET, POST]",
+      "\t@route /api/v1/drive/callback [GET]",
       ""
     ],
     "filepath": "internal/handlers/drive.go",
@@ -914,8 +1103,10 @@
     "api": {
       "summary": "exchanges code and enables Google Drive integration.",
       "descriptions": [],
-      "endpoint": "",
-      "methods": null,
+      "endpoint": "/api/v1/drive/callback",
+      "methods": [
+        "GET"
+      ],
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -1113,6 +1304,28 @@
     }
   },
   {
+    "name": "TestDriveInputURLResolvesGdriveToLoopback",
+    "trimmedName": "TestDriveInputURLResolvesGdriveToLoopback",
+    "comments": [
+      "Los episodios de Drive se huellan y se prueban por la URL interna de loopback: el resolver",
+      "tiene que mandar gdrive:// ahí y dejar intactas las rutas locales.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_input_url_test.go",
+    "filename": "drive_input_url_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "isDriveInternalRequest",
     "trimmedName": "isDriveInternalRequest",
     "comments": [
@@ -1200,6 +1413,28 @@
     }
   },
   {
+    "name": "driveInputURL",
+    "trimmedName": "driveInputURL",
+    "comments": [
+      "driveInputURL devuelve lo que ffmpeg/ffprobe abren para una ruta de la biblioteca: las",
+      "gdrive:// pasan por el endpoint interno de loopback; cualquier otra ruta sigue igual.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "parseDrivePath",
     "trimmedName": "parseDrivePath",
     "comments": [
@@ -1226,7 +1461,8 @@
     "comments": [
       "publicDriveContainer adapta un container construido sobre la URL interna para",
       "devolverlo al cliente: no expone la URL con el token interno y quita subtítulos",
-      "y fuentes embebidos, que en Drive no se extraen (requeriría bajar el archivo entero).",
+      "y fuentes embebidos, que en Drive solo se exponen una vez extraídos",
+      "(addDriveEmbeddedSubtitles): extraerlos requiere bajar el archivo entero.",
       ""
     ],
     "filepath": "internal/handlers/drive_mediastream.go",
@@ -1269,6 +1505,28 @@
     }
   },
   {
+    "name": "respondDriveTranscode",
+    "trimmedName": "respondDriveTranscode",
+    "comments": [
+      "respondDriveTranscode sirve un archivo de Drive en transcode (HLS). Los errores tipados del",
+      "transcoder salen con su codigo HTTP: 409 si la transcodificacion esta desactivada, 503 si no arranca.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_mediastream.go",
+    "filename": "drive_mediastream.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "persistDriveAudioStreams",
     "trimmedName": "persistDriveAudioStreams",
     "comments": [
@@ -1292,6 +1550,231 @@
     }
   },
   {
+    "name": "addDriveEmbeddedSubtitles",
+    "trimmedName": "addDriveEmbeddedSubtitles",
+    "comments": [
+      "addDriveEmbeddedSubtitles expone en el container de un archivo de Drive las pistas",
+      "embebidas que ffprobe encontró (`src`, el container sin filtrar).",
+      "  - Si ya se extrajeron (caché por hash de la ruta gdrive://): quedan listas para",
+      "    usar, igual que en un archivo local, junto con sus fuentes.",
+      "  - Si no: se listan como pendientes (NeedsExtraction, sin enlace) para que el",
+      "    reproductor ofrezca extraerlas. Extraer obliga a leer el archivo entero, por eso",
+      "    nunca se hace sin que el usuario lo pida.",
+      "",
+      "`out.MediaInfo` debe ser una copia privada (publicDriveContainer ya la hace).",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "extractableSubtitles",
+    "trimmedName": "extractableSubtitles",
+    "comments": [
+      "extractableSubtitles son las pistas que la extracción sabe volcar a la caché:",
+      "texto (srt/ass/ssa/vtt) y PGS (.sup).",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "validDrivePathParam",
+    "trimmedName": "validDrivePathParam",
+    "comments": [
+      "validDrivePathParam valida un path gdrive:// recibido del cliente.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveSubtitlesStatus",
+    "trimmedName": "DriveSubtitlesStatus",
+    "comments": [
+      "HandleDriveSubtitlesStatus informa el estado de la extracción de subtítulos",
+      "embebidos de un archivo de Drive.",
+      "",
+      "\t@summary returns the embedded-subtitle extraction status of a Google Drive file.",
+      "\t@route /api/v1/drive/subtitles/status [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "returns the embedded-subtitle extraction status of a Google Drive file.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/subtitles/status",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveSubtitlesExtract",
+    "trimmedName": "DriveSubtitlesExtract",
+    "comments": [
+      "HandleDriveSubtitlesExtract lanza en segundo plano la extracción de los subtítulos",
+      "y fuentes embebidos de un archivo de Drive (lee el archivo completo una vez).",
+      "",
+      "\t@summary starts extracting the embedded subtitles of a Google Drive file.",
+      "\t@route /api/v1/drive/subtitles/extract [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "starts extracting the embedded subtitles of a Google Drive file.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/subtitles/extract",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveSubtitlesCancel",
+    "trimmedName": "DriveSubtitlesCancel",
+    "comments": [
+      "HandleDriveSubtitlesCancel corta una extracción en curso.",
+      "",
+      "\t@summary cancels a running Google Drive subtitle extraction.",
+      "\t@route /api/v1/drive/subtitles/cancel [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "cancels a running Google Drive subtitle extraction.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/subtitles/cancel",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveFileSize",
+    "trimmedName": "driveFileSize",
+    "comments": [
+      "driveFileSize devuelve el tamaño del archivo de Drive (0 si no se pudo saber): del",
+      "índice local o, si no está, de la API de Drive.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveSubtitleSource",
+    "trimmedName": "driveSubtitleSource",
+    "comments": [
+      "driveSubtitleSource abre, para el repositorio, la lectura por rangos de un archivo de",
+      "Drive. Pasa por la misma caché de bloques que la reproducción (/drive/play): lo que",
+      "se bajó para reproducir no se vuelve a pedir, y lo que lee esto lo aprovecha el video.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveSubtitlesWindow",
+    "trimmedName": "DriveSubtitlesWindow",
+    "comments": [
+      "HandleDriveSubtitlesWindow le dice al servidor en qué segundo está el reproductor para",
+      "que tenga leídos los subtítulos embebidos de esa franja, y devuelve el estado. Lo llama",
+      "el reproductor cada pocos segundos mientras hay pistas progresivas.",
+      "",
+      "\t@summary reads the embedded subtitles of a Google Drive file around a playback position.",
+      "\t@route /api/v1/drive/subtitles/window [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "reads the embedded subtitles of a Google Drive file around a playback position.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/subtitles/window",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "serveDriveThumbnail",
     "trimmedName": "serveDriveThumbnail",
     "comments": [
@@ -1301,6 +1784,187 @@
     ],
     "filepath": "internal/handlers/drive_thumbnail.go",
     "filename": "drive_thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveThumbnailHash",
+    "trimmedName": "driveThumbnailHash",
+    "comments": [
+      "driveThumbnailHash identifica el frame de un archivo de Drive: id, mtime y ancho.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_thumbnail.go",
+    "filename": "drive_thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "fetchDriveThumbnail",
+    "trimmedName": "fetchDriveThumbnail",
+    "comments": [
+      "fetchDriveThumbnail baja el frame que Drive tiene para el archivo y lo guarda en disco.",
+      "Lo usan el endpoint (al mirar) y el precalentado tras un escaneo: comparten el",
+      "singleflight y el tope de pedidos simultáneos, así no se duplica el trabajo ni se",
+      "satura la cuota de la API. Un archivo sin frame en Drive se recuerda un rato.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_thumbnail.go",
+    "filename": "drive_thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveThumbnailKnownMissing",
+    "trimmedName": "driveThumbnailKnownMissing",
+    "comments": [
+      "driveThumbnailKnownMissing dice si ya se sabe (en memoria o por la marca en disco) que Drive",
+      "no tiene frame para este archivo, sin volver a preguntarle.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_thumbnail.go",
+    "filename": "drive_thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "withExternalSubtitles",
+    "trimmedName": "withExternalSubtitles",
+    "comments": [
+      "withExternalSubtitles devuelve una copia del container con los subtítulos externos",
+      "de un video local (.srt/.ass/.ssa/.vtt junto al archivo, en Subs/…) sumados a los",
+      "embebidos. No modifica el container recibido: es el compartido de la caché de",
+      "playback.",
+      ""
+    ],
+    "filepath": "internal/handlers/external_subtitles.go",
+    "filename": "external_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "addDriveExternalSubtitles",
+    "trimmedName": "addDriveExternalSubtitles",
+    "comments": [
+      "addDriveExternalSubtitles suma al container público de un archivo de Drive los",
+      "subtítulos que están en su misma carpeta con el mismo nombre base. `out.MediaInfo`",
+      "debe ser una copia privada (publicDriveContainer ya la hace).",
+      ""
+    ],
+    "filepath": "internal/handlers/external_subtitles.go",
+    "filename": "external_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "appendExternalSubtitles",
+    "trimmedName": "appendExternalSubtitles",
+    "comments": [
+      "appendExternalSubtitles agrega las pistas externas tras las embebidas, en una",
+      "lista nueva (nunca sobre el slice del container compartido).",
+      ""
+    ],
+    "filepath": "internal/handlers/external_subtitles.go",
+    "filename": "external_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestAddDriveEmbeddedSubtitlesMarksProgressive",
+    "trimmedName": "TestAddDriveEmbeddedSubtitlesMarksProgressive",
+    "comments": [
+      "En un MKV de Drive con Cues, las pistas de texto se leen por ventanas (progresivas, sin",
+      "botón) y el resto (PGS) sigue pendiente de la extracción completa.",
+      ""
+    ],
+    "filepath": "internal/handlers/external_subtitles_test.go",
+    "filename": "external_subtitles_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "healthSnapshot",
+    "trimmedName": "healthSnapshot",
+    "comments": [
+      "healthSnapshot devuelve el ultimo resultado cacheado o lo recalcula. Sin locks en el camino",
+      "caliente. Si un chequeo entra en panico, singleflight libera la clave y el pedido siguiente",
+      "vuelve a intentar: nada queda bloqueado para siempre.",
+      ""
+    ],
+    "filepath": "internal/handlers/health.go",
+    "filename": "health.go",
     "api": {
       "summary": "",
       "descriptions": [],
@@ -1429,66 +2093,6 @@
     }
   },
   {
-    "name": "HandleGetBestSource",
-    "trimmedName": "GetBestSource",
-    "comments": [
-      "HandleGetBestSource retorna el mejor archivo para un título/episodio.",
-      "",
-      "\t@summary get best source for playback.",
-      "\t@desc Evaluates all available sources (local + Jellyfin) and returns the winner.",
-      "\t@returns intelligence.SelectionResult",
-      "\t@route /api/v1/intelligence/best-source [GET]",
-      ""
-    ],
-    "filepath": "internal/handlers/intelligence.go",
-    "filename": "intelligence.go",
-    "api": {
-      "summary": "get best source for playback.",
-      "descriptions": [
-        "Evaluates all available sources (local + Jellyfin) and returns the winner."
-      ],
-      "endpoint": "/api/v1/intelligence/best-source",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "intelligence.SelectionResult",
-      "returnGoType": "intelligence.SelectionResult",
-      "returnTypescriptType": "SelectionResult"
-    }
-  },
-  {
-    "name": "HandleGetIntelligenceStats",
-    "trimmedName": "GetIntelligenceStats",
-    "comments": [
-      "HandleGetIntelligenceStats retorna estadísticas del motor de selección.",
-      "",
-      "\t@summary get intelligence engine stats.",
-      "\t@desc Returns cache stats and scoring configuration.",
-      "\t@returns map",
-      "\t@route /api/v1/intelligence/stats [GET]",
-      ""
-    ],
-    "filepath": "internal/handlers/intelligence.go",
-    "filename": "intelligence.go",
-    "api": {
-      "summary": "get intelligence engine stats.",
-      "descriptions": [
-        "Returns cache stats and scoring configuration."
-      ],
-      "endpoint": "/api/v1/intelligence/stats",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "map",
-      "returnGoType": "map",
-      "returnTypescriptType": "map"
-    }
-  },
-  {
     "name": "HandleSemanticSearch",
     "trimmedName": "SemanticSearch",
     "comments": [
@@ -1541,36 +2145,6 @@
     }
   },
   {
-    "name": "HandleGetLocalFiles",
-    "trimmedName": "GetLocalFiles",
-    "comments": [
-      "HandleGetLocalFiles returns all local files.",
-      "",
-      "\t@summary returns all local files.",
-      "\t@desc Reminder that local files are scanned from the library path.",
-      "\t@route /api/v1/library/local-files [GET]",
-      "\t@returns []dto.LocalFile",
-      ""
-    ],
-    "filepath": "internal/handlers/localfiles.go",
-    "filename": "localfiles.go",
-    "api": {
-      "summary": "returns all local files.",
-      "descriptions": [
-        "Reminder that local files are scanned from the library path."
-      ],
-      "endpoint": "/api/v1/library/local-files",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "[]dto.LocalFile",
-      "returnGoType": "dto.LocalFile",
-      "returnTypescriptType": "Array\u003cLocalFile\u003e"
-    }
-  },
-  {
     "name": "HandleGetDragonballLore",
     "trimmedName": "GetDragonballLore",
     "comments": [
@@ -1596,6 +2170,85 @@
       "returns": "handlers.DragonballLore",
       "returnGoType": "handlers.DragonballLore",
       "returnTypescriptType": "DragonballLore"
+    }
+  },
+  {
+    "name": "HandleGetAudioProfiles",
+    "trimmedName": "GetAudioProfiles",
+    "comments": [
+      "HandleGetAudioProfiles lists the series that have their own audio profile.",
+      "",
+      "\t@summary lists the per-series audio profiles.",
+      "\t@desc Series without a row play with the global audio profile from Settings.",
+      "\t@route /api/v1/library/audio-profiles [GET]",
+      "\t@returns []handlers.MediaAudioProfile",
+      ""
+    ],
+    "filepath": "internal/handlers/media_audio_profile.go",
+    "filename": "media_audio_profile.go",
+    "api": {
+      "summary": "lists the per-series audio profiles.",
+      "descriptions": [
+        "Series without a row play with the global audio profile from Settings."
+      ],
+      "endpoint": "/api/v1/library/audio-profiles",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "[]handlers.MediaAudioProfile",
+      "returnGoType": "handlers.MediaAudioProfile",
+      "returnTypescriptType": "Array\u003cMediaAudioProfile\u003e"
+    }
+  },
+  {
+    "name": "HandleSetAudioProfile",
+    "trimmedName": "SetAudioProfile",
+    "comments": [
+      "HandleSetAudioProfile sets the audio profile of one series.",
+      "",
+      "\t@summary sets the audio profile of a series.",
+      "\t@desc \"latino\", \"castellano\", \"japanese\", \"english\" or \"auto\". An empty profile removes the series' own profile, so it follows the global one again.",
+      "\t@route /api/v1/library/audio-profile [POST]",
+      "\t@returns handlers.MediaAudioProfile",
+      ""
+    ],
+    "filepath": "internal/handlers/media_audio_profile.go",
+    "filename": "media_audio_profile.go",
+    "api": {
+      "summary": "sets the audio profile of a series.",
+      "descriptions": [
+        "\"latino\", \"castellano\", \"japanese\", \"english\" or \"auto\". An empty profile removes the series' own profile, so it follows the global one again."
+      ],
+      "endpoint": "/api/v1/library/audio-profile",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [
+        {
+          "name": "MediaID",
+          "jsonName": "mediaId",
+          "goType": "int",
+          "usedStructType": "",
+          "typescriptType": "number",
+          "required": true,
+          "descriptions": []
+        },
+        {
+          "name": "AudioProfile",
+          "jsonName": "audioProfile",
+          "goType": "string",
+          "usedStructType": "",
+          "typescriptType": "string",
+          "required": true,
+          "descriptions": []
+        }
+      ],
+      "returns": "handlers.MediaAudioProfile",
+      "returnGoType": "handlers.MediaAudioProfile",
+      "returnTypescriptType": "MediaAudioProfile"
     }
   },
   {
@@ -1754,76 +2407,6 @@
       "returns": "handlers.MediaSourceInfo",
       "returnGoType": "handlers.MediaSourceInfo",
       "returnTypescriptType": "MediaSourceInfo"
-    }
-  },
-  {
-    "name": "HandleGetMediastreamSettings",
-    "trimmedName": "GetMediastreamSettings",
-    "comments": [
-      "HandleGetMediastreamSettings returns the mediastream settings.",
-      "",
-      "\t@summary get mediastream settings.",
-      "\t@desc This returns the mediastream settings.",
-      "\t@returns models.MediastreamSettings",
-      "\t@route /api/v1/mediastream/settings [GET]",
-      ""
-    ],
-    "filepath": "internal/handlers/mediastream.go",
-    "filename": "mediastream.go",
-    "api": {
-      "summary": "get mediastream settings.",
-      "descriptions": [
-        "This returns the mediastream settings."
-      ],
-      "endpoint": "/api/v1/mediastream/settings",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "models.MediastreamSettings",
-      "returnGoType": "models.MediastreamSettings",
-      "returnTypescriptType": "Models_MediastreamSettings"
-    }
-  },
-  {
-    "name": "HandleSaveMediastreamSettings",
-    "trimmedName": "SaveMediastreamSettings",
-    "comments": [
-      "HandleSaveMediastreamSettings saves the mediastream settings.",
-      "",
-      "\t@summary save mediastream settings.",
-      "\t@desc This saves the mediastream settings.",
-      "\t@returns models.MediastreamSettings",
-      "\t@route /api/v1/mediastream/settings [PATCH]",
-      ""
-    ],
-    "filepath": "internal/handlers/mediastream.go",
-    "filename": "mediastream.go",
-    "api": {
-      "summary": "save mediastream settings.",
-      "descriptions": [
-        "This saves the mediastream settings."
-      ],
-      "endpoint": "/api/v1/mediastream/settings",
-      "methods": [
-        "PATCH"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "Settings",
-          "jsonName": "settings",
-          "goType": "models.MediastreamSettings",
-          "usedStructType": "models.MediastreamSettings",
-          "typescriptType": "Models_MediastreamSettings",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "models.MediastreamSettings",
-      "returnGoType": "models.MediastreamSettings",
-      "returnTypescriptType": "Models_MediastreamSettings"
     }
   },
   {
@@ -2613,37 +3196,6 @@
     }
   },
   {
-    "name": "HandlePlaybackSync",
-    "trimmedName": "PlaybackSync",
-    "comments": [
-      "HandlePlaybackSync ...",
-      "",
-      "\t@summary receives playback telemetry from the frontend.",
-      "\t@desc    Updates continuity watch history and, when progress \u003e= 85%,",
-      "\t         automatically scrobbles the episode as watched to Platform.",
-      "\t@route /api/v1/playback/sync [POST]",
-      "\t@returns bool",
-      ""
-    ],
-    "filepath": "internal/handlers/playback_sync.go",
-    "filename": "playback_sync.go",
-    "api": {
-      "summary": "receives playback telemetry from the frontend.",
-      "descriptions": [
-        "Updates continuity watch history and, when progress \u003e= 85%,"
-      ],
-      "endpoint": "/api/v1/playback/sync",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "StartPlaybackHeartbeatSubscriber",
     "trimmedName": "StartPlaybackHeartbeatSubscriber",
     "comments": [
@@ -2796,69 +3348,6 @@
     }
   },
   {
-    "name": "HandleGetProgress",
-    "trimmedName": "GetProgress",
-    "comments": [
-      "HandleGetProgress handles GET /api/v1/progress",
-      ""
-    ],
-    "filepath": "internal/handlers/progress.go",
-    "filename": "progress.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleSaveProgress",
-    "trimmedName": "SaveProgress",
-    "comments": [
-      "HandleSaveProgress handles POST /api/v1/progress",
-      ""
-    ],
-    "filepath": "internal/handlers/progress.go",
-    "filename": "progress.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "rewriteURI",
-    "trimmedName": "rewriteURI",
-    "comments": [
-      "rewriteURI rewrites a URI pointer if needed, returns true if modified",
-      ""
-    ],
-    "filepath": "internal/handlers/proxy.go",
-    "filename": "proxy.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "JSONSuccess",
     "trimmedName": "JSONSuccess",
     "comments": [
@@ -2949,6 +3438,31 @@
     "comments": [
       "authRateLimitMiddleware limita los intentos de login por IP, incluso desde",
       "loopback (un proceso local tampoco debería poder probar contraseñas a ritmo libre).",
+      ""
+    ],
+    "filepath": "internal/handlers/routes.go",
+    "filename": "routes.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "isGzipSkippedPath",
+    "trimmedName": "isGzipSkippedPath",
+    "comments": [
+      "isGzipSkippedPath indicates which routes should bypass the Gzip middleware.",
+      "Media chunks, video direct play, image proxies and websockets are already",
+      "compressed binary data; gzip only burns CPU on them.",
+      "In contrast, text and JSON endpoints under /api/v1/mediastream (e.g. subtitles,",
+      "request container metadata, skip-times) benefit heavily from gzip compression.",
       ""
     ],
     "filepath": "internal/handlers/routes.go",
@@ -3266,40 +3780,6 @@
     }
   },
   {
-    "name": "HandleGetScanStatus",
-    "trimmedName": "GetScanStatus",
-    "comments": [
-      "HandleGetScanStatus ...",
-      "",
-      "\t@summary returns the latest scan summary.",
-      "\t@desc Returns metadata about the most recent library scan:",
-      "\t@desc  - timestamp, duration, matched/unmatched file counts, errors.",
-      "\t@desc Clients can poll this endpoint instead of relying solely on WebSocket events.",
-      "\t@route /api/v1/library/scan/status [GET]",
-      "\t@returns dto.ScanSummaryItem",
-      ""
-    ],
-    "filepath": "internal/handlers/scan.go",
-    "filename": "scan.go",
-    "api": {
-      "summary": "returns the latest scan summary.",
-      "descriptions": [
-        "Returns metadata about the most recent library scan:",
-        "- timestamp, duration, matched/unmatched file counts, errors.",
-        "Clients can poll this endpoint instead of relying solely on WebSocket events."
-      ],
-      "endpoint": "/api/v1/library/scan/status",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "dto.ScanSummaryItem",
-      "returnGoType": "dto.ScanSummaryItem",
-      "returnTypescriptType": "ScanSummaryItem"
-    }
-  },
-  {
     "name": "HandleGetUnlinkedFiles",
     "trimmedName": "GetUnlinkedFiles",
     "comments": [
@@ -3375,33 +3855,6 @@
       "returns": "bool",
       "returnGoType": "bool",
       "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetScanSummaries",
-    "trimmedName": "GetScanSummaries",
-    "comments": [
-      "HandleGetScanSummaries returns the latest scan summaries.",
-      "",
-      "\t@summary returns the latest scan summaries.",
-      "\t@route /api/v1/library/scan-summaries [GET]",
-      "\t@returns []dto.ScanSummaryItem",
-      ""
-    ],
-    "filepath": "internal/handlers/scan_summary.go",
-    "filename": "scan_summary.go",
-    "api": {
-      "summary": "returns the latest scan summaries.",
-      "descriptions": [],
-      "endpoint": "/api/v1/library/scan-summaries",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "[]dto.ScanSummaryItem",
-      "returnGoType": "dto.ScanSummaryItem",
-      "returnTypescriptType": "Array\u003cScanSummaryItem\u003e"
     }
   },
   {
@@ -3898,6 +4351,28 @@
     }
   },
   {
+    "name": "waitSettingsMigrations",
+    "trimmedName": "waitSettingsMigrations",
+    "comments": [
+      "The background migration legitimately fills the legacy default. Finish it",
+      "before seeding a deliberately legacy row, so GET is the only actor tested.",
+      ""
+    ],
+    "filepath": "internal/handlers/settings_immutable_test.go",
+    "filename": "settings_immutable_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "shelfImageURLs",
     "trimmedName": "shelfImageURLs",
     "comments": [
@@ -3905,6 +4380,29 @@
       "las series de la biblioteca: póster y banner en w342 (nítido) y w185 (fondo",
       "desenfocado), igual que shelfImageUrls en el front; y el póster w342 de las",
       "películas, igual que moviePosterUrls.",
+      ""
+    ],
+    "filepath": "internal/handlers/shelf_images.go",
+    "filename": "shelf_images.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "episodeStillURLs",
+    "trimmedName": "episodeStillURLs",
+    "comments": [
+      "episodeStillURLs devuelve los stills de episodios de TMDB en w300, el tamaño con que la",
+      "Cronología dibuja sus momentos (tmdbSize=\"w300\" en EpisodeThumbnailImg). Sin esto, la",
+      "primera visita a la Cronología pedía a TMDB, uno por uno, cientos de stills.",
       ""
     ],
     "filepath": "internal/handlers/shelf_images.go",
@@ -4598,6 +5096,118 @@
     }
   },
   {
+    "name": "runThumbnailWarmPool",
+    "trimmedName": "runThumbnailWarmPool",
+    "comments": [
+      "runThumbnailWarmPool reparte los archivos entre `workers` goroutines. Se detiene al",
+      "cancelarse ctx. Un panic en un archivo cuenta como fallo y no mata al worker.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail_warm.go",
+    "filename": "thumbnail_warm.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "warmOneThumbnail",
+    "trimmedName": "warmOneThumbnail",
+    "comments": [
+      "warmOneThumbnail deja en disco la miniatura de un archivo (local o de Drive).",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail_warm.go",
+    "filename": "thumbnail_warm.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "startThumbnailWarm",
+    "trimmedName": "startThumbnailWarm",
+    "comments": [
+      "startThumbnailWarm arranca el precalentado de miniaturas si no hay otro en curso.",
+      "background=true: un solo worker, con pausa mientras haya una reproducción transcodificando.",
+      "Devuelve started=false si ya había uno corriendo.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail_warm.go",
+    "filename": "thumbnail_warm.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "warmThumbnailsAfterScan",
+    "trimmedName": "warmThumbnailsAfterScan",
+    "comments": [
+      "warmThumbnailsAfterScan genera en segundo plano las miniaturas que faltan después de un",
+      "escaneo (o de indexar Drive), para que estén listas cuando el usuario las mire. Es",
+      "idempotente: si ya hay un precalentado en curso (manual o de un escaneo anterior) no",
+      "arranca otro, y las que ya están en disco se saltan sin tocar ffmpeg ni Drive. Se cancela",
+      "con la misma acción `cancel` del precalentado manual.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail_warm.go",
+    "filename": "thumbnail_warm.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "thumbnailWarmWorkers",
+    "trimmedName": "thumbnailWarmWorkers",
+    "comments": [
+      "thumbnailWarmWorkers es la concurrencia del precalentado manual (el botón de Ajustes).",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail_warm.go",
+    "filename": "thumbnail_warm.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleTMDBSearch",
     "trimmedName": "TMDBSearch",
     "comments": [
@@ -4653,73 +5263,6 @@
       "returns": "[]map[string]interface{}",
       "returnGoType": "interface{}",
       "returnTypescriptType": "Array\u003cRecord\u003cstring, interface{}\u003e\u003e"
-    }
-  },
-  {
-    "name": "HandleTMDBGetDetails",
-    "trimmedName": "TMDBGetDetails",
-    "comments": [
-      "HandleTMDBGetDetails ...",
-      "",
-      "\t@summary get TMDB (or Jikan) anime details and alternative titles.",
-      "\t@desc Returns detailed metadata and alternative titles for a show.",
-      "\t@returns map[string]interface{}",
-      "\t@route /api/v1/tmdb/details [POST]",
-      ""
-    ],
-    "filepath": "internal/handlers/tmdb.go",
-    "filename": "tmdb.go",
-    "api": {
-      "summary": "get TMDB (or Jikan) anime details and alternative titles.",
-      "descriptions": [
-        "Returns detailed metadata and alternative titles for a show."
-      ],
-      "endpoint": "/api/v1/tmdb/details",
-      "methods": [
-        "POST"
-      ],
-      "params": [],
-      "bodyFields": [
-        {
-          "name": "ID",
-          "jsonName": "id",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": []
-        },
-        {
-          "name": "TVID",
-          "jsonName": "tvId",
-          "goType": "int",
-          "usedStructType": "",
-          "typescriptType": "number",
-          "required": true,
-          "descriptions": []
-        },
-        {
-          "name": "MediaType",
-          "jsonName": "mediaType",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": true,
-          "descriptions": []
-        },
-        {
-          "name": "BearerToken",
-          "jsonName": "bearerToken",
-          "goType": "string",
-          "usedStructType": "",
-          "typescriptType": "string",
-          "required": true,
-          "descriptions": []
-        }
-      ],
-      "returns": "map[string]interface{}",
-      "returnGoType": "interface{}",
-      "returnTypescriptType": "Record\u003cstring, interface{}\u003e"
     }
   },
   {
@@ -4798,35 +5341,6 @@
         "Maps absolute-\u003eseason/episode server-side and returns still_path for chronology thumbnails."
       ],
       "endpoint": "/api/v1/tmdb/episode/:tvId/:absolute",
-      "methods": [
-        "GET"
-      ],
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleTMDBImages",
-    "trimmedName": "TMDBImages",
-    "comments": [
-      "HandleTMDBImages fetches all backdrops, posters, and logos for a TV show or movie from TMDb.",
-      "",
-      "\t@summary get TMDB images (backdrops, posters, logos)",
-      "\t@desc Fetches backdrops, posters, and logos from TMDb with caching.",
-      "\t@route /api/v1/tmdb/images/:type/:id [GET]",
-      ""
-    ],
-    "filepath": "internal/handlers/tmdb.go",
-    "filename": "tmdb.go",
-    "api": {
-      "summary": "get TMDB images (backdrops, posters, logos)",
-      "descriptions": [
-        "Fetches backdrops, posters, and logos from TMDb with caching."
-      ],
-      "endpoint": "/api/v1/tmdb/images/:type/:id",
       "methods": [
         "GET"
       ],

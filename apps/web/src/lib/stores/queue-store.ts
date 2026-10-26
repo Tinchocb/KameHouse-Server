@@ -28,7 +28,8 @@ export interface QueueState {
      * importe el UI store (inversión de dependencia vía suscripción).
      */
     queueOpenSignal: number
-    addToQueue: (item: PlaylistItem) => void
+    /** `openSidebar: false` agrega sin abrir el panel (acciones en lote como la cola rápida de episodios). */
+    addToQueue: (item: PlaylistItem, options?: { openSidebar?: boolean }) => void
     removeFromQueue: (index: number) => void
     clearQueue: () => void
     setCurrentQueueIndex: (index: number) => void
@@ -49,11 +50,11 @@ export const useQueueStore = create<QueueState>()(
                     activeQueuePlayItem: null,
                     queueRepeatMode: "off" as QueueRepeatMode,
                     queueOpenSignal: 0,
-                    addToQueue: (item) => {
+                    addToQueue: (item, options) => {
                         set((state) => {
                             const exists = state.playlistQueue.some(i => i.id === item.id && i.episodeNumber === item.episodeNumber);
                             return {
-                                queueOpenSignal: state.queueOpenSignal + 1,
+                                queueOpenSignal: options?.openSidebar === false ? state.queueOpenSignal : state.queueOpenSignal + 1,
                                 playlistQueue: exists ? state.playlistQueue : [...state.playlistQueue, item],
                             };
                         })

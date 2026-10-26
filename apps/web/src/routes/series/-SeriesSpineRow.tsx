@@ -1,16 +1,19 @@
 import { memo, useCallback, useState } from 'react';
 import { IconMediaPlay, IconUiCheckCircle2 } from '@/components/ui/icons';
 import { cn } from '@/components/ui/core/styling';
+import { Button } from '@/components/ui/button';
 import { getSpineConfig } from '@/lib/helpers/goku-panorama';
 import { getLowResImage, getMediumResImage } from '@/lib/helpers/images';
 import { getSeriesEraAccent } from '@/lib/helpers/series';
 import { usePrefetchAnimeEntry } from '@/hooks/use-prefetch-anime-entry';
-import { getVhsColor, type SeriesItem } from './-SeriesCard';
+import { getVhsColor } from './-SeriesCard';
+import type { SeriesItem } from './-series-model';
 import { ElasticCounter } from '@/components/ui/kinetics/elastic-counter';
+import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
 
 /**
  * Cinta VHS acostada para la estantería móvil: las cintas se apilan una sobre otra
- * y la que tocás se abre hacia abajo con el póster y los accesos directos.
+ * y la que tocas se abre hacia abajo con el póster y los accesos directos.
  * Sin blur ni animaciones continuas: el scroll tiene que ir fluido en celulares modestos.
  */
 export const SeriesSpineRow = memo(function SeriesSpineRow({
@@ -34,7 +37,10 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
     const handlePrefetch = usePrefetchAnimeEntry(item.id);
     const spineCfg = getSpineConfig(item.seriesId || '', item.id, item.title);
     const accent = spineCfg?.accent || getSeriesEraAccent(item.seriesId, getVhsColor(item.id));
-    const volLabel = `VOL. ${spineCfg?.vol ?? index + 1}`;
+    // Neutro: el color de saga queda en el kanji (identidad); filete, velo y progreso van en gris.
+    const isClassic = useIsClassicMode();
+    const chrome = isClassic ? 'var(--neutral-separator)' : accent;
+    const volLabel = `Vol. ${spineCfg?.vol ?? index + 1}`;
     const kanji = spineCfg?.kanji ?? '★';
     const thumbSrc = getLowResImage(item.poster || item.img) || item.poster || item.img;
     const artSrc = getMediumResImage(item.img || item.poster);
@@ -51,39 +57,40 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
         onToggle(item.id);
     }, [handlePrefetch, onToggle, item.id]);
 
+    // Sin overflow-hidden: el anillo de foco del botón cae fuera de la fila. Lo que sí debe
+    // recortarse (filete, progreso, fondos) lleva su propio radio.
     return (
         <li
             id={`series-card-${item.id}`}
             className={cn(
-                'relative overflow-hidden rounded-xl border bg-[#07080c] transition-[border-color,box-shadow] duration-300',
-                isOpen ? 'border-white/20 shadow-[0_18px_40px_-20px_rgba(0,0,0,0.9)]' : 'border-white/[0.07]'
+                'relative rounded-xl border bg-[var(--surface-content)] transition-[border-color,box-shadow] duration-base ease-smooth-out',
+                isOpen ? 'border-white/25 shadow-elevation-3' : 'border-[var(--surface-content-border)]'
             )}
         >
-            {/* Filete de color de la era a lo largo del lomo */}
-            <span aria-hidden className="absolute inset-y-0 left-0 w-1.5 z-10" style={{ background: accent }} />
-
             <button
                 type="button"
                 aria-expanded={isOpen}
                 aria-controls={regionId}
-                aria-label={`${item.title}, ${volLabel}, ${item.year}, ${watched} de ${item.eps} episodios vistos`}
+                aria-label={`${item.title}, ${volLabel}, ${item.year}, ${watched} de ${item.eps} ${item.eps === 1 ? 'episodio visto' : 'episodios vistos'}`}
                 onClick={handleToggle}
-                className="relative w-full flex items-center gap-3 min-h-[72px] pl-4 pr-3 py-2.5 text-left cursor-pointer active:bg-white/[0.04] active:scale-[0.985] transition-[background-color,transform] duration-fast ease-out-strong"
+                className="relative w-full flex items-center gap-3 min-h-[72px] pl-4 pr-3 py-2.5 text-left cursor-pointer active:bg-[var(--neutral-elev-1)] active:scale-[0.985] transition-[background-color,transform] duration-fast ease-out-strong rounded-xl"
             >
                 {/* Velo de era muy suave sobre el lomo */}
-                <span
-                    aria-hidden
-                    className="absolute inset-0 pointer-events-none"
-                    style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${accent} 16%, transparent), transparent 55%)` }}
-                />
+                {!isClassic && (
+                    <span
+                        aria-hidden
+                        className="absolute inset-0 pointer-events-none rounded-xl"
+                        style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${accent} 16%, transparent), transparent 55%)` }}
+                    />
+                )}
                 {/* Kanji de la era como marca de agua del lomo */}
                 <span
                     aria-hidden
-                    className="absolute right-12 top-1/2 -translate-y-1/2 font-kanji font-black text-5xl leading-none select-none pointer-events-none transition-opacity duration-300"
+                    className="absolute right-12 top-1/2 -translate-y-1/2 font-kanji font-black text-5xl leading-none select-none pointer-events-none transition-opacity duration-base"
                     style={{
                         color: accent,
                         opacity: isOpen ? 0.35 : 0.18,
-                        textShadow: `0 0 20px color-mix(in srgb, ${accent} 40%, transparent)`,
+                        textShadow: isClassic ? 'none' : `0 0 20px color-mix(in srgb, ${accent} 40%, transparent)`,
                     }}
                 >
                     {kanji}
@@ -104,17 +111,17 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                 )}
 
                 <span className="relative flex-1 min-w-0 flex flex-col gap-0.5">
-                    <span className="flex items-center gap-2 font-mono text-2xs font-bold uppercase tracking-widest">
-                        <span style={{ color: accent }}>{volLabel}</span>
-                        <span className="text-white/40">{item.year}</span>
+                    <span className="flex items-center gap-2 text-xs font-semibold tabular-nums">
+                        <span style={{ color: isClassic ? 'var(--label-1)' : `color-mix(in oklab, ${accent} 70%, white)` }}>{volLabel}</span>
+                        <span className="text-label-2">{item.year}</span>
                     </span>
-                    <span className="font-display text-base leading-tight tracking-wide text-white truncate">
+                    <span className="font-display text-base leading-tight text-label-1 truncate" title={item.title}>
                         {item.title}
                     </span>
-                    <span className="font-mono text-2xs font-semibold uppercase tracking-wider text-white/60 tabular-nums flex items-center gap-0">
+                    <span className="text-xs font-medium text-label-2 tabular-nums flex items-center gap-0">
                         {isComplete ? 'Completa' : (
                             <>
-                                <ElasticCounter value={watched} /><span>/{item.eps || '?'} caps · {item.progress}%</span>
+                                <ElasticCounter value={watched} /><span>&nbsp;de {item.eps || '?'} episodios · {item.progress}%</span>
                             </>
                         )}
                     </span>
@@ -127,7 +134,7 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                         aria-hidden
                         viewBox="0 0 24 24"
                         className={cn(
-                            'relative h-5 w-5 shrink-0 text-white/50 transition-transform duration-300',
+                            'relative h-5 w-5 shrink-0 text-label-2 transition-transform duration-base ease-smooth-out',
                             isOpen && 'rotate-180'
                         )}
                         fill="none"
@@ -141,12 +148,18 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                 )}
             </button>
 
-            {/* Progreso a lo largo del borde inferior del lomo */}
-            <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-white/[0.06]">
-                <div
-                    className="h-full origin-left"
-                    style={{ transform: `scaleX(${Math.min(Math.max(item.progress, 0), 100) / 100})`, background: accent }}
-                />
+            {/* Filete y progreso: van en un recorte con el radio del lomo, fuera del botón, para que
+                el anillo de foco del botón no quede cortado. */}
+            <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+                {/* Filete de color de la era a lo largo del lomo */}
+                <span className="absolute inset-y-0 left-0 w-1.5 z-10" style={{ background: chrome }} />
+                {/* Progreso a lo largo del borde inferior del lomo */}
+                <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white/[0.06]">
+                    <div
+                        className="h-full origin-left"
+                        style={{ transform: `scaleX(${Math.min(Math.max(item.progress, 0), 100) / 100})`, background: isClassic ? 'var(--selected-bg)' : accent }}
+                    />
+                </div>
             </div>
 
             {/* Cinta abierta: se despliega hacia abajo */}
@@ -156,11 +169,11 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                 aria-label={item.title}
                 inert={!isOpen}
                 className={cn(
-                    'grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none',
+                    'grid transition-[grid-template-rows] duration-base ease-smooth-out motion-reduce:transition-none',
                     isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                 )}
             >
-                <div className="min-h-0 overflow-hidden">
+                <div className="min-h-0 overflow-hidden rounded-b-xl">
                     {hasOpened && (
                         <div className="relative px-4 pt-3 pb-4 flex flex-col gap-3">
                             {artSrc && (
@@ -173,32 +186,28 @@ export const SeriesSpineRow = memo(function SeriesSpineRow({
                                     className="absolute inset-0 w-full h-full object-cover object-[center_25%] opacity-35 pointer-events-none"
                                 />
                             )}
-                            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#07080c] via-[#07080c]/80 to-[#07080c]/40 pointer-events-none" />
+                            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-[color-mix(in_srgb,var(--bg-primary)_80%,transparent)] to-[color-mix(in_srgb,var(--bg-primary)_40%,transparent)] pointer-events-none" />
 
-                            <p className="relative text-sm leading-relaxed text-white/75 line-clamp-3 text-pretty">{item.desc}</p>
+                            <p className="relative text-sm leading-relaxed text-label-1 line-clamp-3 text-pretty">{item.desc}</p>
 
                             <div className="relative flex gap-2">
                                 {nextEpisode !== null && (
-                                    <button
-                                        type="button"
+                                    <Button
+                                        intent="primary"
+                                        className="flex-1"
+                                        leftIcon={<IconMediaPlay className="h-4 w-4" aria-hidden />}
                                         onClick={() => onPlay(item.id, nextEpisode)}
-                                        className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-full font-display text-xs font-bold uppercase tracking-wider text-black active:scale-95 transition-[transform,filter] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 cursor-pointer"
-                                        style={{ background: accent }}
                                     >
-                                        <IconMediaPlay className="h-4 w-4" aria-hidden />
-                                        {watched > 0 ? 'Continuar' : 'Empezar'} · Cap. {nextEpisode}
-                                    </button>
+                                        {watched > 0 ? 'Continuar' : 'Reproducir'} · ep. {nextEpisode}
+                                    </Button>
                                 )}
-                                <button
-                                    type="button"
+                                <Button
+                                    intent={nextEpisode === null ? 'primary' : 'secondary'}
+                                    className={cn(nextEpisode === null && 'flex-1')}
                                     onClick={() => onNavigate(item.id.toString())}
-                                    className={cn(
-                                        'inline-flex items-center justify-center min-h-[44px] px-4 rounded-full border border-white/20 bg-white/[0.06] font-display text-xs font-bold uppercase tracking-wider text-white active:scale-95 transition-[transform,background-color,border-color] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.12] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 cursor-pointer',
-                                        nextEpisode === null && 'flex-1'
-                                    )}
                                 >
                                     Ver serie
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     )}

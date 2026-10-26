@@ -2,8 +2,10 @@ package filecache
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -15,10 +17,13 @@ import (
 
 // CacheStore represents a single-process, file-based, key/value cache store.
 type CacheStore struct {
-	filePath string
-	mu       sync.RWMutex
-	saveMu   sync.Mutex
-	data     map[string]*cacheItem
+	filePath  string
+	mu        sync.RWMutex
+	saveMu    sync.Mutex
+	data      map[string]*cacheItem
+	dirty     bool
+	saveTimer *time.Timer
+	timerMu   sync.Mutex
 }
 
 // Bucket represents a cache bucket with a name and TTL.
@@ -33,9 +38,59 @@ func NewBucket(name string, ttl time.Duration) Bucket {
 
 // Cacher represents a single-process, file-based, key/value cache.
 type Cacher struct {
-	dir    string
-	stores map[string]*CacheStore
-	mu     sync.RWMutex
+	dir        string
+	bucketDirs map[string]string
+	stores     map[string]*CacheStore
+	mu         sync.RWMutex
+}
+
+// NewCacherWithPersistentBucket keeps durable user data independent of the
+// configurable cache root. Existing data is copied only if the stable file is
+// missing; the original is preserved and an existing stable file wins.
+func NewCacherWithPersistentBucket(dir, bucket, persistentDir string) (*Cacher, error) {
+	c, err := NewCacher(dir)
+	if err != nil {
+		return nil, err
+	}
+	if filepath.Base(bucket) != bucket || bucket == "." || bucket == "" {
+		return nil, fmt.Errorf("invalid persistent bucket")
+	}
+	if err := os.MkdirAll(persistentDir, 0700); err != nil {
+		return nil, err
+	}
+	destination := filepath.Join(persistentDir, bucket+".cache")
+	if _, err := os.Stat(destination); os.IsNotExist(err) {
+		source, err := os.Open(filepath.Join(dir, bucket+".cache"))
+		if err == nil {
+			defer source.Close()
+			data, err := io.ReadAll(source)
+			if err != nil {
+				return nil, err
+			}
+			target, err := os.CreateTemp(persistentDir, ".history-migration-*")
+			if err != nil {
+				return nil, err
+			}
+			defer os.Remove(target.Name())
+			_, writeErr := target.Write(data)
+			if writeErr == nil {
+				writeErr = target.Sync()
+			}
+			closeErr := target.Close()
+			if writeErr != nil || closeErr != nil {
+				return nil, fmt.Errorf("could not preserve persistent bucket")
+			}
+			if err := os.Rename(target.Name(), destination); err != nil {
+				return nil, err
+			}
+		} else if !os.IsNotExist(err) {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
+	c.bucketDirs = map[string]string{bucket: persistentDir}
+	return c, nil
 }
 
 type cacheItem struct {
@@ -63,33 +118,13 @@ func NewCacher(dir string) (*Cacher, error) {
 	}, nil
 }
 
-// Close closes all the cache stores.
+// Close closes all the cache stores and flushes any pending writes.
 func (c *Cacher) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for _, store := range c.stores {
-		if err := store.saveToFile(); err != nil {
+		if err := store.Flush(); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-func (c *Cacher) Clear() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.stores = make(map[string]*CacheStore)
-
-	entries, err := os.ReadDir(c.dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".cache") {
-			_ = os.Remove(filepath.Join(c.dir, e.Name()))
 		}
 	}
 	return nil
@@ -112,8 +147,12 @@ func (c *Cacher) getStore(name string) (*CacheStore, error) {
 		return store, nil
 	}
 
+	storeDir := c.dir
+	if persistentDir := c.bucketDirs[name]; persistentDir != "" {
+		storeDir = persistentDir
+	}
 	store = &CacheStore{
-		filePath: filepath.Join(c.dir, name+".cache"),
+		filePath: filepath.Join(storeDir, name+".cache"),
 		data:     make(map[string]*cacheItem),
 	}
 	c.stores[name] = store
@@ -138,7 +177,14 @@ func (c *Cacher) Set(bucket Bucket, key string, value interface{}) error {
 	store.mu.Lock()
 	store.data[key] = &cacheItem{Value: value, Expiration: lo.ToPtr(time.Now().Add(bucket.ttl))}
 	store.mu.Unlock()
-	return store.saveToFile()
+
+	// If the cache file does not exist yet on disk, write it immediately so initial state is persisted.
+	// Otherwise, debounce subsequent writes to avoid disk thrashing during playback.
+	if _, err := os.Stat(store.filePath); os.IsNotExist(err) {
+		return store.saveToFile()
+	}
+	store.scheduleSave(1 * time.Second)
+	return nil
 }
 
 func Range[T any](c *Cacher, bucket Bucket, f func(key string, value T) bool) error {
@@ -153,6 +199,15 @@ func Range[T any](c *Cacher, bucket Bucket, f func(key string, value T) bool) er
 			delete(store.data, key)
 			hasExpired = true
 		} else {
+			// Fast path: if item.Value is already T, invoke callback directly without JSON serialization
+			if val, ok := item.Value.(T); ok {
+				if !f(key, val) {
+					break
+				}
+				continue
+			}
+
+			// Slow path: loaded from disk as map[string]interface{}, hydrate in-place
 			itemVal, err := json.Marshal(item.Value)
 			if err != nil {
 				store.mu.Unlock()
@@ -164,6 +219,7 @@ func Range[T any](c *Cacher, bucket Bucket, f func(key string, value T) bool) er
 				store.mu.Unlock()
 				return err
 			}
+			item.Value = out
 			if !f(key, out) {
 				break
 			}
@@ -172,7 +228,7 @@ func Range[T any](c *Cacher, bucket Bucket, f func(key string, value T) bool) er
 	store.mu.Unlock()
 
 	if hasExpired {
-		return store.saveToFile()
+		store.scheduleSave(2 * time.Second)
 	}
 	return nil
 }
@@ -196,17 +252,47 @@ func (c *Cacher) Get(bucket Bucket, key string, out interface{}) (bool, error) {
 			delete(store.data, key)
 		}
 		store.mu.Unlock()
-		go func() { _ = store.saveToFile() }()
+		store.scheduleSave(2 * time.Second)
 		return false, nil
 	}
 	itemVal := item.Value
 	store.mu.RUnlock()
 
+	if out == nil {
+		return true, nil
+	}
+
+	// Fast path: direct type reflection if itemVal is already assignable to *out
+	outVal := reflect.ValueOf(out)
+	if outVal.Kind() == reflect.Ptr && !outVal.IsNil() && itemVal != nil {
+		elemVal := outVal.Elem()
+		itemRVal := reflect.ValueOf(itemVal)
+		if itemRVal.Type().AssignableTo(elemVal.Type()) {
+			elemVal.Set(itemRVal)
+			return true, nil
+		}
+	}
+
+	// Slow path: convert via JSON (typically when loaded from disk as map[string]interface{})
 	data, err := json.Marshal(itemVal)
 	if err != nil {
 		return false, err
 	}
-	return true, json.Unmarshal(data, out)
+	if err := json.Unmarshal(data, out); err != nil {
+		return false, err
+	}
+
+	// Lazy hydration: cache the decoded object in memory so subsequent gets hit the fast path
+	if outVal.Kind() == reflect.Ptr && !outVal.IsNil() {
+		hydratedVal := outVal.Elem().Interface()
+		store.mu.Lock()
+		if cur, exists := store.data[key]; exists && cur == item {
+			cur.Value = hydratedVal
+		}
+		store.mu.Unlock()
+	}
+
+	return true, nil
 }
 
 func GetAll[T any](c *Cacher, bucket Bucket) (map[string]T, error) {
@@ -230,9 +316,9 @@ func (c *Cacher) Delete(bucket Bucket, key string) error {
 	store.mu.Lock()
 	delete(store.data, key)
 	store.mu.Unlock()
-	return store.saveToFile()
+	store.scheduleSave(1 * time.Second)
+	return nil
 }
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -258,15 +344,47 @@ func (cs *CacheStore) loadFromFile() error {
 	return nil
 }
 
+func (cs *CacheStore) scheduleSave(delay time.Duration) {
+	cs.timerMu.Lock()
+	cs.dirty = true
+	if cs.saveTimer != nil {
+		cs.saveTimer.Stop()
+	}
+	cs.saveTimer = time.AfterFunc(delay, func() {
+		_ = cs.Flush()
+	})
+	cs.timerMu.Unlock()
+}
+
+func (cs *CacheStore) Flush() error {
+	cs.timerMu.Lock()
+	if cs.saveTimer != nil {
+		cs.saveTimer.Stop()
+		cs.saveTimer = nil
+	}
+	if !cs.dirty {
+		cs.timerMu.Unlock()
+		return nil
+	}
+	cs.dirty = false
+	cs.timerMu.Unlock()
+
+	return cs.saveToFile()
+}
+
 func (cs *CacheStore) saveToFile() error {
 	cs.saveMu.Lock()
 	defer cs.saveMu.Unlock()
 
-	// Fast snapshot of the map under read lock; releases cs.mu immediately so readers/writers aren't blocked by disk I/O
+	// Fast snapshot of the map under read lock; releases cs.mu immediately so readers/writers aren't blocked by disk I/O.
+	// Cada cacheItem se copia por valor: Get y Range hidratan item.Value en el lugar (con cs.mu para escritura),
+	// asi que codificar los punteros compartidos despues del RUnlock seria una carrera de datos.
 	cs.mu.RLock()
-	snapshot := make(map[string]*cacheItem, len(cs.data))
+	snapshot := make(map[string]cacheItem, len(cs.data))
 	for k, v := range cs.data {
-		snapshot[k] = v
+		if v != nil {
+			snapshot[k] = *v
+		}
 	}
 	cs.mu.RUnlock()
 
@@ -277,16 +395,11 @@ func (cs *CacheStore) saveToFile() error {
 	}
 
 	encErr := json.NewEncoder(file).Encode(snapshot)
-	syncErr := file.Sync()
 	closeErr := file.Close()
 
 	if encErr != nil {
 		_ = os.Remove(tmpPath)
 		return fmt.Errorf("filecache: failed to encode cache data: %w", encErr)
-	}
-	if syncErr != nil {
-		_ = os.Remove(tmpPath)
-		return fmt.Errorf("filecache: failed to sync cache file: %w", syncErr)
 	}
 	if closeErr != nil {
 		_ = os.Remove(tmpPath)

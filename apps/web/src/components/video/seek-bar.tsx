@@ -10,7 +10,7 @@ import { formatPlaybackTime } from "./format-playback-time"
  * un micro-seek al soltarla. */
 const SEEK_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"])
 
-export interface SeekBarProps {
+interface SeekBarProps {
     duration: number
     progressBarRef: React.RefObject<HTMLDivElement | null>
     thumbRef: React.RefObject<HTMLDivElement | null>
@@ -124,10 +124,10 @@ export const SeekBar = React.memo(function SeekBar({
         if (!hoverInfo || hoverInfo.time === null || duration <= 0) return null
         const t = hoverInfo.time
         if (skipTimesOp && t >= skipTimesOp.startTime && t <= skipTimesOp.endTime) {
-            return "Opening"
+            return "Intro"
         }
         if (skipTimesEd && t >= skipTimesEd.startTime && t <= skipTimesEd.endTime) {
-            return "Ending"
+            return "Créditos"
         }
         if (!isMovie && Array.isArray(chapters)) {
             const ch = chapters.find(c => t >= c.startTime && t <= c.endTime)
@@ -156,7 +156,7 @@ export const SeekBar = React.memo(function SeekBar({
                 onMouseLeave={handleMouseLeave}
             >
                 {/* Track Background */}
-                <div className="w-full h-[3px] [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:h-[5px] group-focus-within/seek:h-[5px] transition-[height] duration-fast ease-smooth-out bg-white/25 rounded-full relative flex items-center overflow-visible">
+                <div className="w-full h-[2px] [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:h-[4px] group-focus-within/seek:h-[4px] transition-[height] duration-fast ease-smooth-out bg-white/15 rounded-full relative flex items-center overflow-visible">
                     {/* Skip OP Marker */}
                     {duration > 0 && skipTimesOp && (
                         <div
@@ -214,7 +214,7 @@ export const SeekBar = React.memo(function SeekBar({
                     {/* Thumb Indicator */}
                     <div
                         ref={thumbRef}
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-brand-accent pointer-events-none scale-50 opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:scale-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:opacity-100 group-focus-within/seek:scale-100 group-focus-within/seek:opacity-100 transition-[transform,opacity] duration-fast ease-out-strong"
+                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.6)] pointer-events-none scale-50 opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:scale-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:opacity-100 group-focus-within/seek:scale-100 group-focus-within/seek:opacity-100 transition-[transform,opacity] duration-fast ease-out-strong"
                         style={{ left: "0%" }}
                     />
                 </div>
@@ -227,7 +227,7 @@ export const SeekBar = React.memo(function SeekBar({
                     max={duration || 0}
                     step="any"
                     aria-label="Línea de tiempo"
-                    aria-valuetext={duration ? `Posición actual de ${formatPlaybackTime(duration)}` : "0:00"}
+                    aria-valuetext={duration ? `${formatPlaybackTime(0)} de ${formatPlaybackTime(duration)}` : "0:00"}
                     onChange={handleSeek}
                     onMouseDown={handleSeekStart}
                     onTouchStart={handleSeekStart}

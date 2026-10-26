@@ -12,13 +12,6 @@ import (
 
 //----------------------------------------------------------------------------------------------------------------------
 
-func (f *LocalFile) IsParsedEpisodeValid() bool {
-	if f == nil || f.ParsedData == nil {
-		return false
-	}
-	return len(f.ParsedData.Episode) > 0
-}
-
 // GetEpisodeNumber returns the first episode number from the metadata episodes array.
 // This requires the LocalFile to be hydrated.
 func (f *LocalFile) GetEpisodeNumber() int {
@@ -187,4 +180,3 @@ func isSeasonOrSagaFolderNameDTO(name string) bool {
 	clean := strings.TrimSpace(name)
 	return reSeasonFolderInDTO.MatchString(clean) || reSagaFolderInDTO.MatchString(clean)
 }
-

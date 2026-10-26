@@ -52,7 +52,7 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			}
 			chunk := allTmdbIds[i:end]
 			var persisted []*models.LibraryMedia
-			scn.Database.Gorm().Where("tmdb_id IN ?", chunk).Find(&persisted)
+			scn.Database.Gorm().Select("tmdb_id", "type").Where("tmdb_id IN ?", chunk).Find(&persisted)
 			for _, m := range persisted {
 				alreadyPersisted[fmt.Sprintf("%d_%s", m.TmdbID, m.Type)] = true
 			}
@@ -270,7 +270,7 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			}
 			chunk := allTmdbIds[i:end]
 			var chunkMedia []*models.LibraryMedia
-			scn.Database.Gorm().Where("tmdb_id IN ?", chunk).Find(&chunkMedia)
+			scn.Database.Gorm().Select("id", "tmdb_id", "type").Where("tmdb_id IN ?", chunk).Find(&chunkMedia)
 			insertedMedia = append(insertedMedia, chunkMedia...)
 		}
 

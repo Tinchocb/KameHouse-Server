@@ -35,6 +35,7 @@ export function useDriveStatus() {
     return useQuery({
         queryKey: DRIVE_STATUS_QUERY_KEY,
         queryFn: fetchDriveStatus,
+        staleTime: 30 * 1000,
         // El progreso llega por WS (drive_scan_progress); el poll de 5s durante el
         // escaneo es solo red de seguridad si el socket se cae.
         refetchInterval: (query) => (query.state.data?.isScanning ? 5000 : 30000),

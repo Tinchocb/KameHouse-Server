@@ -1,7 +1,7 @@
 import { useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
-export interface AniListEpisodeThumbnailResponse {
+interface AniListEpisodeThumbnailResponse {
     anilistId: number
     absoluteEpisode: number
     title?: string

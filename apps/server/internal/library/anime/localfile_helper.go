@@ -75,4 +75,3 @@ func GroupLocalFilesByMediaID(lfs []*dto.LocalFile) (groupedLfs map[int][]*dto.L
 
 	return
 }
-

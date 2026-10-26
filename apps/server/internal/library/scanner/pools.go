@@ -63,9 +63,13 @@ func NewWorkerPool(ctx context.Context, workers int) *WorkerPool {
 }
 
 // Submit enqueues a task. Blocks only if the internal buffer is full (i.e. all
-// workers are saturated). Returns immediately once the task is accepted.
+// workers are saturated). If the pool context is canceled, it returns early.
 func (p *WorkerPool) Submit(task func(context.Context)) {
-	p.jobs <- task
+	select {
+	case <-p.ctx.Done():
+		return
+	case p.jobs <- task:
+	}
 }
 
 // Wait closes the jobs channel and blocks until all in-flight tasks complete.

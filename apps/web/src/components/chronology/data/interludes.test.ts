@@ -9,7 +9,7 @@ describe("Chronology interludes (lore entre lapsos)", () => {
   const epilogues = CHRONOLOGY_INTERLUDES.filter((il) => il.toVolumeId === null)
 
   it("cada par consecutivo del orden in-universe tiene exactamente un interludio", () => {
-    expect(sorted.length).toBe(35)
+    expect(sorted.length).toBe(70)
     expect(pairInterludes.length).toBe(sorted.length - 1)
 
     const seen = new Set<string>()

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"kamehouse/internal/api/animethemes"
-	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/db"
@@ -42,21 +41,6 @@ func (a *App) initModulesOnce() {
 	ffprobePath := ffmpegutil.ResolveFFprobePath(a.Config.Cache.Dir, customFfprobe)
 	ffmpegPath := ffmpegutil.ResolveFFmpegPath(a.Config.Cache.Dir, customFfmpeg)
 
-	// Check if binaries exist; if not, trigger background auto-download
-	status := a.FFmpegManager.GetStatus(customFfmpeg, customFfprobe)
-	if !status.FFmpegAvailable || !status.FFprobeAvailable {
-		go func() {
-			defer util.HandlePanicInModuleThen("core/ffmpegAutoDownload", func() {})
-			a.Logger.Info().Msg("ffmpegutil: Binarios de FFmpeg/FFprobe no detectados, iniciando descarga automática en segundo plano...")
-			// Atado al apagado de la app: cerrar KameHouse corta la descarga.
-			if err := a.FFmpegManager.EnsureBinaries(a.ShutdownCtx(), nil); err != nil {
-				a.Logger.Warn().Err(err).Msg("ffmpegutil: No se pudo auto-descargar FFmpeg en el arranque (se puede reintentar desde Ajustes)")
-			} else {
-				a.Logger.Info().Msg("ffmpegutil: FFmpeg y FFprobe descargados y listos")
-			}
-		}()
-	}
-
 	a.BackgroundQueue = scanner.NewBackgroundQueue(a.Database, a.WSEventManager, a.Logger, ffprobePath)
 	a.BackgroundQueue.Start(4)
 
@@ -81,12 +65,35 @@ func (a *App) initModulesOnce() {
 		Logger:         a.Logger,
 		WSEventManager: a.WSEventManager,
 		FileCacher:     a.FileCacher,
-		Database:       a.Database,
 	})
 
 	a.AddCleanupFunction(func() {
 		a.MediastreamRepository.OnCleanup()
 	})
+
+	// Comprobar si existen los binarios y, si faltan, descargarlos en segundo plano. GetStatus
+	// ejecuta `ffmpeg -version` y `ffprobe -version` (hasta 3 s cada uno, con el lock del gestor
+	// tomado): si corriera antes de escuchar, retrasaría la navegación a la interfaz del sidecar.
+	// Va después de crear el repositorio porque, al terminar la descarga, lo reinicializa.
+	go func() {
+		defer util.HandlePanicInModuleThen("core/ffmpegAutoDownload", func() {})
+		status := a.FFmpegManager.GetStatus(customFfmpeg, customFfprobe)
+		if status.FFmpegAvailable && status.FFprobeAvailable {
+			return
+		}
+		a.Logger.Info().Msg("ffmpegutil: Binarios de FFmpeg/FFprobe no detectados, iniciando descarga automática en segundo plano...")
+		// Atado al apagado de la app: cerrar KameHouse corta la descarga.
+		if err := a.FFmpegManager.EnsureBinaries(a.ShutdownCtx(), nil); err != nil {
+			a.Logger.Warn().Err(err).Msg("ffmpegutil: No se pudo auto-descargar FFmpeg en el arranque (se puede reintentar desde Ajustes)")
+			return
+		}
+		a.Logger.Info().Msg("ffmpegutil: FFmpeg y FFprobe descargados y listos")
+		// Igual que la instalación manual: el perfil de aceleración por hardware se calcula al
+		// reinicializar; sin esto quedaría deshabilitado hasta reiniciar la app.
+		if mSettings, ok := a.Database.GetMediastreamSettings(); ok {
+			a.MediastreamRepository.InitializeModules(mSettings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)
+		}
+	}()
 
 	if a.ContinuityManager != nil && a.ContinuityManager.TelemetryManager != nil {
 		a.AddCleanupFunction(func() {
@@ -102,6 +109,13 @@ func (a *App) initModulesOnce() {
 	// El cliente de AnimeThemes se inyecta en Fase 3 (nil → arranca en Método B).
 	athClient := animethemes.NewClient(a.Logger, a.Database)
 	a.SkipDetector = skipdetect.New(a.Database, a.Logger, a.WSEventManager, a.Config.Cache.Dir, ffmpegPath, ffprobePath, athClient, a.FileCacher)
+	// Los episodios de Drive se huellan por la URL interna (los handlers la registran al montar rutas).
+	a.SkipDetector.SetInputResolver(func(path string) string {
+		if a.DriveInputURL != nil {
+			return a.DriveInputURL(path)
+		}
+		return path
+	})
 
 	// +---------------------+
 	// | Transcode Cleanup   |
@@ -191,10 +205,6 @@ func (a *App) InitOrRefreshModules() {
 
 	a.Logger.Debug().Msgf("app: Refreshing modules")
 
-	if a.Watcher != nil {
-		a.Watcher.StopWatching()
-	}
-
 	// Los overrides de entorno se aplican a una copia (GetSettings); lo guardado en
 	// la base no los ve, así que guardar ajustes no los persiste.
 	a.Database.SetSettingsOverride(applyEnvSettingsOverrides)
@@ -221,11 +231,7 @@ func (a *App) InitOrRefreshModules() {
 		a.AutoScanner.SetEnabled(settings.Library.AutoScan && !settings.Library.DisableLocalScanning)
 	}
 
-	if len(settings.GetLibrary().GetAllPaths()) > 0 && settings.Library.AutoScan && !settings.Library.DisableLocalScanning {
-		go util.HandlePanicInModuleThen("core/modules/InitWatcher", func() {
-			a.initLibraryWatcher(settings.GetLibrary().GetAllPaths())
-		})
-	}
+	a.refreshLibraryWatcher(allPaths, settings.Library.AutoScan && !settings.Library.DisableLocalScanning)
 
 	a.ContinuityManager.SetSettings(&continuity.Settings{
 		WatchContinuityEnabled: settings.Library.EnableWatchContinuity,
@@ -234,28 +240,7 @@ func (a *App) InitOrRefreshModules() {
 	a.Logger.Info().Msg("app: Using Jikan platform")
 	a.Metadata.Platform.SetPlatform(jikan_platform.NewPlatform(a.Logger))
 
-	tmdbAPIKey, tmdbReason := tmdb.ResolveToken(settings.Library.TmdbApiKey, a.Config.Metadata.TMDBApiKey)
-	tmdbLanguage := settings.Library.TmdbLanguage
-	if tmdbLanguage == "" {
-		tmdbLanguage = "es-MX"
-	}
-	if tmdbAPIKey == "" {
-		if tmdbReason == "placeholder" {
-			a.Logger.Warn().Msg("app: TMDB token is an unreplaced placeholder - TMDB features degraded, using default provider")
-		} else {
-			a.Logger.Warn().Msg("app: No TMDB API key configured - TMDB features degraded, using default provider")
-		}
-	}
-	tmdbClient := tmdb.NewClient(tmdbAPIKey, tmdbLanguage)
-	if a.Database != nil {
-		tmdbClient.SetPersistentCache(&TMDbCacheAdapter{db: a.Database})
-	}
-	a.Metadata.TMDBClient = tmdbClient
-	a.Metadata.Provider.SetProvider(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{
-		Logger:     a.Logger,
-		Database:   a.Database,
-		TMDBClient: a.Metadata.TMDBClient,
-	}))
+	a.refreshMetadata(settings)
 
 	if a.DriveService != nil {
 		_ = a.DriveService.UpdateConfig(
@@ -307,16 +292,18 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 		}
 	}
 
-	a.MediastreamRepository.InitializeModules(settings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)
+	changed := a.MediastreamRepository.InitializeModules(settings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)
 
-	go func() {
-		defer util.HandlePanicInModuleThen("core/trimMediastreamCache", func() {})
-		if settings.TranscodeEnabled {
-			_ = a.FileCacher.TrimMediastreamVideoFiles()
-		} else {
-			_ = a.FileCacher.ClearMediastreamVideoFiles()
-		}
-	}()
+	if changed {
+		go func() {
+			defer util.HandlePanicInModuleThen("core/trimMediastreamCache", func() {})
+			if settings.TranscodeEnabled {
+				_ = a.FileCacher.TrimMediastreamVideoFiles()
+			} else {
+				_ = a.FileCacher.ClearMediastreamVideoFiles()
+			}
+		}()
+	}
 
 	a.SecondarySettings.Mediastream = settings
 

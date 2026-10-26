@@ -49,7 +49,7 @@ const DRIVE_STEPS = [
  * @param isScanning true desde el click en "Escanear" aunque el primer snapshot aún no
  * llegó: mientras tanto se muestra el estado inicial, no el resumen del escaneo anterior.
  */
-export function driveScanView(progress: DriveScanProgress | undefined, isScanning: boolean): ScanLiveView {
+function driveScanView(progress: DriveScanProgress | undefined, isScanning: boolean): ScanLiveView {
     const stale = isScanning && (!progress || progress.phase === "done" || progress.phase === "error")
     const p = stale ? undefined : progress
     const phase = p?.phase ?? "listing"
@@ -61,14 +61,14 @@ export function driveScanView(progress: DriveScanProgress | undefined, isScannin
         : phase === "saving" || phase === "pruning" || state === "done" ? 100 : null
 
     const currentLine = state === "done" ? finishedLabel(finishedAt)
-        : phase === "saving" ? "Escribiendo en la base de datos…"
+        : phase === "saving" ? "Guardando los resultados…"
         : phase === "pruning" ? "Quitando archivos que ya no están en Drive…"
         : p?.currentFolder || "Conectando con Google Drive…"
 
     return {
         source: "drive",
         sourceLabel: "Google Drive",
-        title: state === "running" ? "Escaneando Google Drive" : state === "done" ? "Último escaneo de Drive" : "Falló el escaneo de Drive",
+        title: state === "running" ? "Escaneando Google Drive" : state === "done" ? "Último escaneo de Drive" : "El escaneo de Drive falló",
         state,
         steps: DRIVE_STEPS.map(({ label, icon }) => ({ label, icon })),
         activeStep: DRIVE_STEPS.findIndex(s => s.phase === phase),
@@ -113,7 +113,7 @@ const LOCAL_STEPS = [
     { from: 0, label: "Explorando carpetas", icon: FolderSearch },
     { from: 30, label: "Analizando archivos", icon: FileSearch },
     { from: 50, label: "Identificando", icon: Sparkles },
-    { from: 70, label: "Metadatos", icon: Database },
+    { from: 70, label: "Obteniendo metadatos", icon: Database },
     { from: 90, label: "Verificando", icon: ShieldCheck },
 ] as const
 
@@ -155,14 +155,14 @@ export function useLocalScanView(): ScanLiveView | null {
         return {
             source: "local",
             sourceLabel: "Disco local",
-            title: state === "running" ? "Escaneando disco local" : state === "done" ? "Último escaneo local" : "Falló el escaneo local",
+            title: state === "running" ? "Escaneando el disco local" : state === "done" ? "Último escaneo local" : "El escaneo local falló",
             state,
             steps: LOCAL_STEPS.map(({ label, icon }) => ({ label, icon })),
             activeStep,
             percent: state === "done" ? 100 : pct,
             currentLine: state === "done" ? finishedLabel(s.finishedAt ?? undefined)
                 : inAnalysis ? s.currentScanningFile
-                : s.statusMessage || "Preparando escaneo…",
+                : s.statusMessage || "Preparando el escaneo…",
             counter: state === "running" && inAnalysis && s.filesTotal ? `${s.filesCurrent} / ${s.filesTotal}` : `${state === "done" ? 100 : pct}%`,
             startedAt: s.startedAt ?? undefined,
             finishedAt: s.finishedAt ?? undefined,

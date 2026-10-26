@@ -82,7 +82,7 @@ func TestSeekHeadReadsThroughBuffer(t *testing.T) {
 		}
 		// cuesPos apunta al inicio del elemento (vía SeekHead) o a sus datos
 		// (lectura secuencial); cualquiera de los dos sirve.
-		if got := d.GetCuesPos(); got < uint64(cuesOffset) || got > uint64(cuesOffset)+8 {
+		if got := d.parser.cuesPos; got < uint64(cuesOffset) || got > uint64(cuesOffset)+8 {
 			t.Fatalf("padding=%d: cuesPos = %d, se esperaba ~%d", padding, got, cuesOffset)
 		}
 		if cues := d.GetCues(); len(cues) != 1 || cues[0].Track != 1 {

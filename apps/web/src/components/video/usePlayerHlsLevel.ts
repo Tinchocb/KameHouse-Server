@@ -2,7 +2,7 @@ import { useState, useCallback } from "react"
 import type React from "react"
 import type Hls from "hls.js"
 
-export interface HlsLevelOption {
+interface HlsLevelOption {
     index: number
     label: string
     height: number
@@ -30,5 +30,5 @@ export function usePlayerHlsLevel({ hlsRef }: { hlsRef: React.RefObject<Hls | nu
         }
     }, [hlsRef])
 
-    return { hlsLevels, setHlsLevels, activeHlsLevel, setHlsLevel }
+    return { hlsLevels, setHlsLevels, activeHlsLevel, setActiveHlsLevel, setHlsLevel }
 }

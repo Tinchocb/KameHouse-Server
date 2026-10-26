@@ -6,44 +6,61 @@ import (
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"sync"
+	"sync/atomic"
 
 	"github.com/goccy/go-json"
-	"github.com/samber/mo"
 	"golang.org/x/sync/singleflight"
 	"gorm.io/gorm"
 )
 
-var localFilesMutex sync.RWMutex
-var CurrLocalFiles mo.Option[[]*dto.LocalFile]
+// localFilesCache es la ultima lista cargada (nil = sin cache). Se lee sin lock.
+var localFilesCache atomic.Pointer[[]*dto.LocalFile]
+
+// localFilesMu ordena a quien publica la cache frente a quien la invalida.
+var localFilesMu sync.Mutex
+
+// localFilesGen sube en cada invalidacion (bajo localFilesMu). Una carga que empezo antes de una
+// escritura no debe publicar su resultado: podria ser anterior a ella y quedaria rancio.
+var localFilesGen uint64
 var localFilesSingleFlight singleflight.Group
+
+// CachedLocalFiles devuelve la lista en memoria, si la hay, sin tocar la base ni tomar locks.
+func CachedLocalFiles() ([]*dto.LocalFile, bool) {
+	if p := localFilesCache.Load(); p != nil {
+		return *p, true
+	}
+	return nil, false
+}
 
 // GetLocalFiles will return the latest local files.
 // The second return value (ID) is now legacy and returns 0 as we use relational storage.
 func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
-	localFilesMutex.RLock()
-	if cached, ok := CurrLocalFiles.Get(); ok {
-		localFilesMutex.RUnlock()
+	if cached, ok := CachedLocalFiles(); ok {
 		return cached, 0, nil
 	}
-	localFilesMutex.RUnlock()
 
 	val, err, _ := localFilesSingleFlight.Do("get_local_files", func() (interface{}, error) {
 		// Re-check cache inside singleflight to avoid racing
-		localFilesMutex.RLock()
-		if cached, ok := CurrLocalFiles.Get(); ok {
-			localFilesMutex.RUnlock()
+		if cached, ok := CachedLocalFiles(); ok {
 			return cached, nil
 		}
-		localFilesMutex.RUnlock()
+
+		localFilesMu.Lock()
+		gen := localFilesGen
+		localFilesMu.Unlock()
 
 		lfs, err := GetAllLocalFilesRelational(d)
 		if err != nil {
 			return nil, err
 		}
 
-		localFilesMutex.Lock()
-		CurrLocalFiles = mo.Some(lfs)
-		localFilesMutex.Unlock()
+		// Si una escritura invalido la cache mientras se leia la base, se devuelve lo leido
+		// pero no se publica.
+		localFilesMu.Lock()
+		if localFilesGen == gen {
+			localFilesCache.Store(&lfs)
+		}
+		localFilesMu.Unlock()
 
 		return lfs, nil
 	})
@@ -63,13 +80,25 @@ func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
 
 // InvalidateLocalFilesCache clears the in-memory local files cache.
 func InvalidateLocalFilesCache() {
-	localFilesMutex.Lock()
-	CurrLocalFiles = mo.None[[]*dto.LocalFile]()
-	localFilesMutex.Unlock()
+	localFilesMu.Lock()
+	localFilesGen++
+	localFilesCache.Store(nil)
+	localFilesMu.Unlock()
 }
 
 // GetLocalFilesByMediaID will return the local files for the given media ID.
 func GetLocalFilesByMediaID(d *Database, mediaID int) ([]*dto.LocalFile, error) {
+	if cached, ok := CachedLocalFiles(); ok && cached != nil {
+		var matched []*dto.LocalFile
+		for _, f := range cached {
+			if f != nil && f.MediaID == mediaID {
+				matched = append(matched, f)
+			}
+		}
+		d.Logger.Debug().Int("mediaID", mediaID).Int("count", len(matched)).Msg("db: Local files retrieved from in-memory cache by media ID")
+		return matched, nil
+	}
+
 	lfs, err := GetLocalFilesByMediaIDRelational(d, mediaID)
 	if err != nil {
 		return nil, err

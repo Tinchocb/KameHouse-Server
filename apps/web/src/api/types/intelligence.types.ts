@@ -8,13 +8,13 @@ export type CardAspect = "poster" | "wide" | "square"
 /**
  * ContentTag mirrors the Go backend enum in internal/library/anime/intelligence.go
  */
-export type ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL" | "HYPED" | "EMOTIONAL" | "INTENSE" | "CHILL"
+type ContentTag = "FILLER" | "EPIC" | "CANON" | "SPECIAL" | "HYPED" | "EMOTIONAL" | "INTENSE" | "CHILL"
 
 /**
  * EpisodeIntelligence carries computed intelligence about a single episode or movie.
  * Mirrors the Go struct in internal/library/anime/intelligence.go
  */
-export interface EpisodeIntelligence {
+interface EpisodeIntelligence {
     /** 0–10 score derived from backend providers */
     rating: number
     /** Whether the episode is considered filler */

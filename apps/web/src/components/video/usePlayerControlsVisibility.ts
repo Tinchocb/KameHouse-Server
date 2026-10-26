@@ -3,6 +3,12 @@ import type React from "react"
 
 export const CONTROLS_HIDE_DELAY_MS = 3000
 
+export function hasFocusedPlayerControls() {
+    return document.activeElement?.closest(
+        ".player-top-bar, .player-bottom-bar, .player-center-controls"
+    ) != null
+}
+
 /**
  * Visibilidad de los controles con auto-ocultado mientras se reproduce, y estado
  * del panel de ajustes (que bloquea el auto-ocultado mientras está abierto).
@@ -29,10 +35,8 @@ export function usePlayerControlsVisibility({ isPlaying }: { isPlaying: boolean 
             clearTimeout(controlsTimeoutRef.current)
         }
         controlsTimeoutRef.current = setTimeout(() => {
-            // Do not auto-hide while the settings panel is open: the panel is a
-            // child of .player-bottom-bar and GSAP's autoAlpha:0 makes it
-            // non-interactive even though isSettingsOpen stays true.
-            if (isPlaying && !isSettingsOpenRef.current) {
+            // No retirar controles mientras se usan con teclado o hay un menú abierto.
+            if (isPlaying && !isSettingsOpenRef.current && !hasFocusedPlayerControls()) {
                 setControlsVisible(false)
                 setIsSettingsOpen(false)
             }
@@ -41,11 +45,16 @@ export function usePlayerControlsVisibility({ isPlaying }: { isPlaying: boolean 
 
     // Rearma el temporizador al empezar/pausar la reproducción.
     useEffect(() => {
-        Promise.resolve().then(() => {
-            triggerControlsVisibility()
+        let cancelled = false
+        void Promise.resolve().then(() => {
+            if (!cancelled) triggerControlsVisibility()
         })
         return () => {
-            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+            cancelled = true
+            if (controlsTimeoutRef.current !== null) {
+                clearTimeout(controlsTimeoutRef.current)
+                controlsTimeoutRef.current = null
+            }
         }
     }, [triggerControlsVisibility])
 

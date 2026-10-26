@@ -27,7 +27,7 @@ const LoadingSpinnerAnatomy = defineStyleAnatomy({
  * LoadingSpinner
  * -----------------------------------------------------------------------------------------------*/
 
-export type LoadingSpinnerProps = React.ComponentPropsWithRef<"div"> & ComponentAnatomy<typeof LoadingSpinnerAnatomy> & {
+type LoadingSpinnerProps = React.ComponentPropsWithRef<"div"> & ComponentAnatomy<typeof LoadingSpinnerAnatomy> & {
     spinner?: React.ReactNode
 }
 

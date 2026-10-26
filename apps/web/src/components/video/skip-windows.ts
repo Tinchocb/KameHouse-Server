@@ -102,7 +102,7 @@ export function findOutroChapter(chapters: Chapter[]): Chapter | undefined {
 // ─── Resolución de ventanas (AniSkip → capítulos → caché de la serie) ──────────
 
 /** Intervalo devuelto por AniSkip (solo los campos que se usan). */
-export interface AniSkipInterval {
+interface AniSkipInterval {
     startTime: number
     endTime: number
 }
@@ -111,12 +111,35 @@ export interface AniSkipInterval {
 export interface AniSkipWindows {
     op?: AniSkipInterval
     ed?: AniSkipInterval
+    recap?: AniSkipInterval
     opSource?: string
     edSource?: string
 }
 
+/** Un resumen necesita marcas explícitas; no se deduce del espacio anterior al OP. */
+export function isRecapChapter(c: Chapter): boolean {
+    return !isIntroChapter(c) && !isOutroChapter(c) && (
+        c.type === "recap" || c.type === "prologue" ||
+        /\b(recap|resumen|prologue)\b|prólogo/i.test(c.name)
+    )
+}
+
+export function resolveRecapWindow(aniskip: AniSkipWindows | undefined, chapters: Chapter[]): SkipWindow | undefined {
+    const chapter = chapters.find(c => isRecapChapter(c) && validRecapInterval(c))
+    if (chapter) return { startTime: chapter.startTime, endTime: chapter.endTime, source: "chapters" }
+    if (aniskip?.recap && validRecapInterval(aniskip.recap)) {
+        return { ...aniskip.recap, source: "aniskip" }
+    }
+    return undefined
+}
+
+function validRecapInterval(interval: AniSkipInterval): boolean {
+    return Number.isFinite(interval.startTime) && Number.isFinite(interval.endTime) &&
+        interval.startTime >= 0 && interval.endTime > interval.startTime
+}
+
 /** Tiempos aprendidos de otros episodios de la misma serie (skip-times-store). */
-export interface CachedSeriesSkipTimes {
+interface CachedSeriesSkipTimes {
     opStart?: number
     opEnd?: number
     edOffset?: number
@@ -132,8 +155,14 @@ export function resolveOpWindow(
     chapters: Chapter[],
     cached: CachedSeriesSkipTimes | undefined,
 ): SkipWindow | undefined {
-    if (aniskip?.op) return { startTime: aniskip.op.startTime, endTime: aniskip.op.endTime, source: aniskip.opSource ?? "aniskip" }
     const chap = findIntroChapter(chapters)
+    // Una copia heurística (intro del episodio anterior) no pisa al capítulo OP del
+    // archivo: el auto-salto usa el capítulo, y si el botón apuntara a otro final la
+    // intro seguiría visible después de saltarla sola.
+    const heuristicOp = aniskip?.opSource === "heuristic"
+    if (aniskip?.op && !(heuristicOp && chap)) {
+        return { startTime: aniskip.op.startTime, endTime: aniskip.op.endTime, source: aniskip.opSource ?? "aniskip" }
+    }
     if (chap) return { startTime: chap.startTime, endTime: chap.endTime, source: "chapters" }
     if (cached && typeof cached.opStart === "number" && typeof cached.opEnd === "number") {
         return { startTime: cached.opStart, endTime: cached.opEnd, source: "propagated" }

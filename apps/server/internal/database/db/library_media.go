@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"kamehouse/internal/database/models"
+	"sync"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -12,8 +13,9 @@ import (
 // GetLibraryMediaByTmdbIdAndType retrieves a LibraryMedia by its TMDB ID and Type.
 // Cloned to prevent caller mutating cached object.
 func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (*models.LibraryMedia, error) {
+	cache := d.libraryMediaSnapshot()
 	cacheKey := fmt.Sprintf("id_type_%d_%s", tmdbID, mediaType)
-	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
+	if v, ok := cache.Load(cacheKey); ok {
 		if media, _ := v.(*models.LibraryMedia); media == nil {
 			return nil, nil
 		} else {
@@ -25,12 +27,12 @@ func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (
 	err := d.Gorm().Where("tmdb_id = ? AND type = ?", tmdbID, mediaType).First(&media).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			d.LibraryMediaCache.Store(cacheKey, (*models.LibraryMedia)(nil))
+			cache.Store(cacheKey, (*models.LibraryMedia)(nil))
 			return nil, nil
 		}
 		return nil, err
 	}
-	d.LibraryMediaCache.Store(cacheKey, &media)
+	cache.Store(cacheKey, &media)
 	copy := media
 	return &copy, nil
 }
@@ -38,8 +40,9 @@ func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (
 // GetLibraryMediaByID retrieves a LibraryMedia by its primary key ID.
 // Cloned to prevent caller mutating cached object.
 func GetLibraryMediaByID(d *Database, id uint) (*models.LibraryMedia, error) {
+	cache := d.libraryMediaSnapshot()
 	cacheKey := fmt.Sprintf("pk_%d", id)
-	if v, ok := d.LibraryMediaCache.Load(cacheKey); ok {
+	if v, ok := cache.Load(cacheKey); ok {
 		if media, _ := v.(*models.LibraryMedia); media == nil {
 			return nil, nil
 		} else {
@@ -51,12 +54,12 @@ func GetLibraryMediaByID(d *Database, id uint) (*models.LibraryMedia, error) {
 	err := d.Gorm().First(&media, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			d.LibraryMediaCache.Store(cacheKey, (*models.LibraryMedia)(nil))
+			cache.Store(cacheKey, (*models.LibraryMedia)(nil))
 			return nil, nil
 		}
 		return nil, err
 	}
-	d.LibraryMediaCache.Store(cacheKey, &media)
+	cache.Store(cacheKey, &media)
 	copy := media
 	return &copy, nil
 }
@@ -82,14 +85,7 @@ func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.Librar
 	if err != nil {
 		return nil, err
 	}
-	// Invalidate cache entry so the next read fetches the authoritative DB record.
-	if media.TmdbID != 0 {
-		d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", media.TmdbID))
-		d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", media.TmdbID, media.Type))
-	}
-	if media.ID != 0 {
-		d.LibraryMediaCache.Delete(fmt.Sprintf("pk_%d", media.ID))
-	}
+	d.invalidateLibraryMediaCache()
 	return media, nil
 }
 
@@ -108,7 +104,7 @@ func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSiz
 	})
 
 	if err == nil {
-		evictLibraryMediaCache(d, media)
+		d.invalidateLibraryMediaCache()
 	}
 	return err
 }
@@ -129,34 +125,39 @@ func InsertLibraryMediaBatchIfMissing(d *Database, media []*models.LibraryMedia,
 	})
 	if err == nil {
 		// También los nuevos: una consulta previa pudo dejar cacheado "no existe".
-		evictLibraryMediaCache(d, media)
+		d.invalidateLibraryMediaCache()
 	}
 	return err
 }
 
-// evictLibraryMediaCache saca de la caché en memoria las entradas de cada registro escrito.
-func evictLibraryMediaCache(d *Database, media []*models.LibraryMedia) {
-	for _, m := range media {
-		if m.TmdbID != 0 {
-			d.LibraryMediaCache.Delete(fmt.Sprintf("id_%d", m.TmdbID))
-			d.LibraryMediaCache.Delete(fmt.Sprintf("id_type_%d_%s", m.TmdbID, m.Type))
-			// Also evict malId mapping if present
-			if m.MyanimelistId != 0 {
-				d.LibraryMediaCache.Delete(fmt.Sprintf("malid_%d", m.MyanimelistId))
-			}
-		}
-		if m.ID != 0 {
-			d.LibraryMediaCache.Delete(fmt.Sprintf("pk_%d", m.ID))
-		}
+// libraryMediaSnapshot pins one cache generation for the whole read. A query
+// started before an invalidation can only publish into its retired generation.
+func (d *Database) libraryMediaSnapshot() *sync.Map {
+	if c := d.libraryMediaCache.Load(); c != nil {
+		return c
 	}
+	c := &sync.Map{}
+	if d.libraryMediaCache.CompareAndSwap(nil, c) {
+		return c
+	}
+	return d.libraryMediaCache.Load()
+}
+
+func (d *Database) invalidateLibraryMediaCache() {
+	d.libraryMediaCache.Store(&sync.Map{})
 }
 
 // UpdateLibraryMediaMappings updates the external mappings (AniDB, MAL) for a LibraryMedia record.
 func UpdateLibraryMediaMappings(d *Database, id uint, anidbId, malId int) error {
-	return d.Gorm().Model(&models.LibraryMedia{}).Where("id = ?", id).Updates(map[string]interface{}{
+	err := d.Gorm().Model(&models.LibraryMedia{}).Where("id = ?", id).Updates(map[string]interface{}{
 		"anidb_id":       anidbId,
 		"myanimelist_id": malId,
 	}).Error
+	if err != nil {
+		return err
+	}
+	d.invalidateLibraryMediaCache()
+	return nil
 }
 
 // CleanBrokenLibraryMediaPosters resets broken/hallucinated legacy placeholder image URLs in the DB

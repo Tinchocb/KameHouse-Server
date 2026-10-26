@@ -63,7 +63,9 @@ func (s *IntelligenceService) BuildDynamicTagLanes() []*CuratedSwimlane {
 		Select("tags").
 		Where("tags IS NOT NULL AND tags != '' AND tags != '[]' AND tags != 'null'").
 		Find(&results).Error; err != nil {
-		s.logger.Error().Err(err).Msg("tag_lanes: failed to fetch tags from library_episodes")
+		if s.logger != nil {
+			s.logger.Error().Err(err).Msg("tag_lanes: failed to fetch tags from library_episodes")
+		}
 		return nil
 	}
 

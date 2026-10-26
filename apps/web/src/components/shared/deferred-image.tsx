@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/components/ui/core/styling';
 import { IconStatusImageOff } from "@/components/ui/icons";
 import { usePerformanceStore, selectIsHeavyEffectsAllowed } from '@/lib/hardware/performance-store';
-import { isImageLoaded, markImageLoaded, isTmdbImageUrl, withTmdbSize } from '@/lib/helpers/images';
+import { isImageLoaded, markImageLoaded, isTmdbImageUrl, withTmdbSize, localImage } from '@/lib/helpers/images';
 
 interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "onDrag"> {
     src: string;
@@ -23,11 +23,23 @@ interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageEleme
     objectPosition?: string;
 }
 
+const isDirectTmdbUrl = (url: string) => /^https?:\/\/image\.tmdb\.org\//.test(url);
+
 function getTmdbSrcSet(url: string): string | undefined {
     if (!url || !isTmdbImageUrl(url)) {
         return undefined;
     }
-    return [185, 342, 500, 780, 1280].map((w) => `${withTmdbSize(url, `w${w}`)} ${w}w`).join(", ");
+    // Por el proxy local: el servidor las guarda en disco y el navegador las cachea
+    // como inmutables (directo a TMDB, el SW no puede guardar respuestas opacas).
+    return [185, 342, 500, 780, 1280].map((w) => `${localImage(withTmdbSize(url, `w${w}`))} ${w}w`).join(", ");
+}
+
+/**
+ * srcSet que DeferredImage arma por su cuenta para un `src` (sin `srcSet` explícito).
+ * Sirve para precargar exactamente la variante que después pedirá el `<img>`.
+ */
+export function getDeferredImageSrcSet(rawSrc: string): string | undefined {
+    return isDirectTmdbUrl(rawSrc) ? getTmdbSrcSet(rawSrc) : undefined;
 }
 
 /**
@@ -38,7 +50,7 @@ export function getTmdbHeroSrcSet(url: string): string | undefined {
     if (!url || !isTmdbImageUrl(url)) {
         return undefined;
     }
-    const size = (s: string) => withTmdbSize(url, s);
+    const size = (s: string) => localImage(withTmdbSize(url, s));
     return `${size("w780")} 780w, ${size("w1280")} 1280w, ${size("original")} 1920w`;
 }
 
@@ -78,9 +90,9 @@ export function DeferredImage(props: DeferredImageProps) {
     const defaultRootMargin = isHeavyAllowed ? '400px' : '100px';
 
     const {
-        src,
+        src: rawSrc,
         alt,
-        lowResSrc,
+        lowResSrc: rawLowResSrc,
         className,
         placeholderColor = 'rgba(24, 24, 27, 0.6)',
         rootMargin = defaultRootMargin,
@@ -102,10 +114,18 @@ export function DeferredImage(props: DeferredImageProps) {
         ...restProps
     } = props;
 
+    // Las de TMDB se piden siempre por el proxy local (idempotente si ya vienen de él).
+    const src = localImage(rawSrc);
+    const lowResSrc = rawLowResSrc ? localImage(rawLowResSrc) : rawLowResSrc;
+
     const [isIntersecting, setIsIntersecting] = useState(priority);
     // Si la URL ya terminó de descargarse antes (rotación o prewarm), no
     // flashear el skeleton: arrancar como cargada.
     const [isLoaded, setIsLoaded] = useState(() => isImageLoaded(src));
+    // El skeleton (y con él el placeholderColor) se va recién cuando la imagen terminó de
+    // fundirse encima; si se desmontaba al cargar, durante el fundido asomaba el
+    // fondo del padre (claro → hueco → imagen).
+    const [isSkeletonGone, setIsSkeletonGone] = useState(() => isImageLoaded(src));
     const [isLowResLoaded, setIsLowResLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const [showLqip, setShowLqip] = useState(Boolean(priority && lowResSrc));
@@ -114,7 +134,10 @@ export function DeferredImage(props: DeferredImageProps) {
     const thresholdStr = Array.isArray(threshold) ? threshold.join(',') : String(threshold);
 
     const lqipSrc = lowResSrc;
-    const computedSrcSet = srcSet ?? getTmdbSrcSet(src);
+    // Solo se ofrecen otros anchos si llega la URL directa de TMDB. Una que ya viene del proxy
+    // la dimensionó quien llama (p. ej. el póster w342 de una tarjeta): reabrirla hasta w1280
+    // bajaba y decodificaba imágenes 5 veces más pesadas que lo que se dibuja.
+    const computedSrcSet = srcSet ?? (isDirectTmdbUrl(rawSrc) ? getTmdbSrcSet(rawSrc) : undefined);
     const computedSizes = sizes ?? (computedSrcSet ? '(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px' : undefined);
 
     const [prevProps, setPrevProps] = useState({ src, priority, lqipSrc });
@@ -123,6 +146,7 @@ export function DeferredImage(props: DeferredImageProps) {
         setIsIntersecting(priority);
         const alreadyLoaded = isImageLoaded(src);
         setIsLoaded(alreadyLoaded);
+        setIsSkeletonGone(alreadyLoaded);
         setIsLowResLoaded(false);
         setHasError(false);
         setShowLqip(Boolean(priority && lqipSrc) && !alreadyLoaded);
@@ -147,6 +171,16 @@ export function DeferredImage(props: DeferredImageProps) {
         }, timeoutMs);
         return () => clearTimeout(timer);
     }, [isIntersecting, isLoaded, hasError, src, timeoutMs]);
+
+    // Respaldo del onTransitionEnd del skeleton: si la imagen carga antes de que el
+    // navegador calcule el estilo inicial del skeleton, el fundido no arranca y
+    // transitionend nunca llega (quedaría montado, invisible y con su pulse corriendo).
+    // 700 ms = retraso --duration-slow (400) + fundido --duration-quick (150) + margen.
+    useEffect(() => {
+        if (!isLoaded || isSkeletonGone) return;
+        const timer = setTimeout(() => setIsSkeletonGone(true), 700);
+        return () => clearTimeout(timer);
+    }, [isLoaded, isSkeletonGone]);
 
     // Los onLoad/onError de quien usa el componente se encadenan: antes llegaban
     // por restProps y pisaban estos, y la imagen quedaba en opacity 0 o sin fallback.
@@ -184,12 +218,22 @@ export function DeferredImage(props: DeferredImageProps) {
     return (
         <div
             ref={containerRef}
-            style={{ backgroundColor: isLoaded ? 'transparent' : placeholderColor }}
+            style={{ backgroundColor: isLoaded && (isSkeletonGone || !showSkeleton) ? 'transparent' : placeholderColor }}
             className={cn("relative overflow-hidden bg-surface-container-lowest/70", className)}
         >
-            {/* Single Pulse Skeleton Layer */}
-            {!isLoaded && !hasError && isIntersecting && showSkeleton && (
-                <div className="absolute inset-0 z-10 overflow-hidden">
+            {/* Single Pulse Skeleton Layer: sin z-index, queda debajo de la <img> (posicionada
+                y después en el DOM). Al cargar sigue opaco mientras la imagen se funde encima
+                (duration-slow) y recién después se apaga y se desmonta. */}
+            {!isSkeletonGone && !hasError && isIntersecting && showSkeleton && (
+                <div
+                    onTransitionEnd={(e) => {
+                        if (isLoaded && e.target === e.currentTarget) setIsSkeletonGone(true);
+                    }}
+                    className={cn(
+                        "absolute inset-0 overflow-hidden",
+                        isLoaded && "opacity-0 transition-opacity duration-quick ease-out-strong [transition-delay:var(--duration-slow)] motion-reduce:delay-0"
+                    )}
+                >
                     <div className="h-full w-full animate-pulse bg-surface-container-high/80 border border-white/5" />
                 </div>
             )}
@@ -220,7 +264,9 @@ export function DeferredImage(props: DeferredImageProps) {
                     alt={alt}
                     loading={loading ?? (priority ? "eager" : "lazy")}
                     decoding={decoding ?? "async"}
-                    fetchPriority={fetchPriority ?? (priority ? "high" : "low")}
+                    // Sin prioridad explícita, "auto": Chrome sube a alta las que ya están en pantalla y deja
+                    // en baja las que apenas se precargan; un "low" fijo retrasaba incluso a las visibles.
+                    fetchPriority={fetchPriority ?? (priority ? "high" : "auto")}
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(

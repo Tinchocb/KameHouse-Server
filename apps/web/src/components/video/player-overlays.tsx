@@ -1,19 +1,24 @@
-import React, { useState, useEffect, useRef } from "react"
-import { m, AnimatePresence } from "framer-motion"
+import { useState, useEffect, type ReactNode } from "react"
+import { m, AnimatePresence, useIsPresent } from "framer-motion"
 import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
 import { IconUiSpinner, IconUiAlert, IconMediaPlay, IconMediaVolume2, IconMediaVolumeX, IconStatusZap } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { ElasticCounter } from "@/components/ui/kinetics/elastic-counter"
-import { PLAYER_EYEBROW, PLAYER_GLASS, PLAYER_PRIMARY_BTN, PLAYER_SECONDARY_BTN } from "./player-theme"
+import { Button } from "@/components/ui/button"
+import { PLAYER_GLASS } from "./player-theme"
 
 /** Mensaje del 404 de mediastream: el overlay lo titula "Archivo no disponible". */
 export const STREAM_FILE_MISSING_MSG =
-    "No encontramos el archivo de este episodio. Revisá que el disco o la carpeta de tu biblioteca estén conectados."
+    "No encontramos el archivo de este episodio. Revisa que el disco o la carpeta de tu biblioteca estén conectados."
+
+/** Mensaje del 401 de mediastream con Drive vencido: el overlay ofrece ir a Ajustes. */
+export const STREAM_DRIVE_AUTH_MSG =
+    "Google Drive se desconectó porque venció la autorización. Vuelve a conectarlo en Ajustes e inténtalo de nuevo."
 
 const STREAM_SWITCH_COPY = {
-    audio: { title: "Cambiando pista de audio", detail: "Iniciando transcodificación…" },
+    audio: { title: "Cambiando el audio", detail: "Preparando la nueva pista…" },
     source: { title: "Cambiando de fuente", detail: "Retomando en el mismo punto…" },
-    fallback: { title: "Preparando el video", detail: "Pasando a transcodificación…" },
+    fallback: { title: "Preparando el video", detail: "Adaptando el formato para tu dispositivo…" },
 } as const
 
 export function LoadingErrorOverlay({
@@ -39,19 +44,12 @@ export function LoadingErrorOverlay({
 }) {
     // Debounce buffering spinner on seek: wait 500ms before showing it
     const [isSeekBufferingDelayed, setIsSeekBufferingDelayed] = useState(false)
-    const bufferingTimerRef = useRef<NodeJS.Timeout | null>(null)
-
     useEffect(() => {
-        if (isBuffering && isSeeking) {
-            if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current)
-            bufferingTimerRef.current = setTimeout(() => setIsSeekBufferingDelayed(true), 500)
-        } else {
-            if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current)
-            const timer = setTimeout(() => setIsSeekBufferingDelayed(false), 0)
-            return () => clearTimeout(timer)
-        }
+        if (!isBuffering || !isSeeking) return
+        const timer = setTimeout(() => setIsSeekBufferingDelayed(true), 500)
         return () => {
-            if (bufferingTimerRef.current) clearTimeout(bufferingTimerRef.current)
+            clearTimeout(timer)
+            setIsSeekBufferingDelayed(false)
         }
     }, [isBuffering, isSeeking])
 
@@ -92,24 +90,40 @@ export function LoadingErrorOverlay({
                 <div className="flex flex-col items-center max-w-sm gap-2">
                     <IconUiAlert className="w-8 h-8 text-brand-accent mb-1" />
                     <h3 className="font-display text-xl font-medium tracking-tight">
-                        {errorMsg === STREAM_FILE_MISSING_MSG ? "Archivo no disponible" : "No se pudo reproducir"}
+                        {errorMsg === STREAM_FILE_MISSING_MSG
+                            ? "Archivo no disponible"
+                            : errorMsg === STREAM_DRIVE_AUTH_MSG ? "Drive desconectado" : "No se pudo reproducir"}
                     </h3>
                     <p className="text-sm text-on-surface-variant leading-relaxed">{errorMsg}</p>
                     <div className="flex items-center gap-2 mt-4">
+                        {errorMsg === STREAM_DRIVE_AUTH_MSG && (
+                            <Button
+                                intent="primary"
+                                size="lg"
+                                onClick={() => { window.location.href = "/settings" }}
+                                className="[[data-tv=true]_&]:h-14 [[data-tv=true]_&]:text-base"
+                            >
+                                Ir a Ajustes
+                            </Button>
+                        )}
                         {onRetry && (
-                            <button
+                            <Button
+                                intent="primary"
+                                size="lg"
                                 onClick={onRetry}
-                                className={PLAYER_PRIMARY_BTN}
+                                className="[[data-tv=true]_&]:h-14 [[data-tv=true]_&]:text-base"
                             >
                                 Reintentar
-                            </button>
+                            </Button>
                         )}
-                        <button
+                        <Button
+                            intent={onRetry ? "glass" : "primary"}
+                            size="lg"
                             onClick={onClose}
-                            className={onRetry ? PLAYER_SECONDARY_BTN : PLAYER_PRIMARY_BTN}
+                            className="[[data-tv=true]_&]:h-14 [[data-tv=true]_&]:text-base"
                         >
-                            Regresar
-                        </button>
+                            Volver
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -154,19 +168,27 @@ export function SkipIntroOverlay({
     segmentProgress = 0,
     shortcutKey = "S",
     controlsVisible = true,
+    stackAbove = false,
 }: {
     show: boolean
     onSkip: () => void
-    skipMode?: "intro" | "outro"
+    skipMode?: "intro" | "outro" | "recap"
     remainingSeconds?: number
     segmentProgress?: number
     shortcutKey?: string
+    /** Con la tarjeta de siguiente episodio visible (modo normal), el botón se apila encima de ella. */
+    stackAbove?: boolean
     /** Con la barra de controles visible, el botón sube para no pisarla. */
     controlsVisible?: boolean
 }) {
     const isOutro = skipMode === "outro"
-    const label = isOutro ? "Saltar outro" : "Saltar intro"
+    const label = skipMode === "recap" ? "Saltar resumen" : isOutro ? "Saltar créditos" : "Saltar intro"
     const fillProgress = 100 - segmentProgress
+    // Alturas: tarjeta h-14 (3.5rem) + separación 0.75rem; el botón parte de bottom-8 (2rem).
+    // Con la barra visible la tarjeta sube 6rem, sin barra no sube.
+    const lift = stackAbove
+        ? (controlsVisible ? "-translate-y-[10.25rem]" : "-translate-y-[4.25rem]")
+        : (controlsVisible ? "-translate-y-24" : "translate-y-0")
 
     return (
         <div
@@ -177,25 +199,26 @@ export function SkipIntroOverlay({
                 // Sube sobre la barra de controles con transform (no con `bottom`, que
                 // recalcula el layout en cada cuadro): bottom-8 − 4rem = bottom-24.
                 "absolute right-3 sm:right-6 bottom-8 z-player-overlay pointer-events-auto",
-                "transition-[opacity,transform] duration-300 ease-out-strong",
+                "transition-[opacity,transform] duration-base ease-out-strong",
                 show
-                    ? cn("opacity-100", controlsVisible ? "-translate-y-16" : "translate-y-0")
-                    : cn("opacity-0 pointer-events-none", controlsVisible ? "-translate-y-[3.25rem]" : "translate-y-3")
+                    ? cn("opacity-100", lift)
+                    : cn("opacity-0 pointer-events-none", controlsVisible ? "-translate-y-[5.25rem]" : "translate-y-3")
             )}>
             <button
                 id="skip-intro-btn"
                 tabIndex={show ? 0 : -1}
-                aria-label={isOutro ? "Saltar Outro / Ending" : "Saltar Intro / Opening"}
+                aria-label={label}
                 onClick={(e) => {
                     e.stopPropagation()
                     onSkip()
                 }}
                 className={cn(
-                    "relative isolate flex items-center gap-2.5 h-11 pl-4 pr-1.5 overflow-hidden rounded-full",
-                    PLAYER_GLASS,
-                    "text-white text-xs font-semibold tracking-wide",
-                    "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/95 [@media(hover:hover)_and_(pointer:fine)]:hover:text-black",
-                    "transition-[color,background-color,border-color,transform] duration-fast active:scale-95 ease-out-strong cursor-pointer group",
+                    // Pastilla clara (AVKit): la única acción blanca sobre el video.
+                    "relative isolate flex items-center gap-2.5 h-12 [[data-tv=true]_&]:h-16 pl-5 pr-2 overflow-hidden rounded-full",
+                    "bg-[var(--selected-bg)] text-[var(--selected-fg)] shadow-elevation-2",
+                    "text-sm [[data-tv=true]_&]:text-lg font-semibold tracking-wide",
+                    "[@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95",
+                    "transition-[color,filter,transform] duration-fast active:scale-95 ease-out-strong cursor-pointer group",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 )}
             >
@@ -203,8 +226,8 @@ export function SkipIntroOverlay({
                 <div
                     aria-hidden
                     className={cn(
-                        "absolute inset-0 -z-10 origin-left transition-transform duration-slow ease-linear [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-0",
-                        isOutro ? "bg-brand-secondary/30" : "bg-brand-accent/30"
+                        "absolute inset-0 -z-10 origin-left transition-transform duration-slow ease-linear motion-reduce:transition-none",
+                        "bg-black/10"
                     )}
                     style={{ transform: `scaleX(${Math.min(100, Math.max(0, fillProgress)) / 100})` }}
                 />
@@ -216,7 +239,7 @@ export function SkipIntroOverlay({
                 <span className="whitespace-nowrap">{label}</span>
 
                 {remainingSeconds !== undefined && remainingSeconds > 0 && (
-                    <span className="tabular-nums text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-black/50">
+                    <span className="tabular-nums text-[color:color-mix(in_srgb,var(--selected-fg)_70%,transparent)]">
                         <ElasticCounter value={remainingSeconds} />s
                     </span>
                 )}
@@ -224,7 +247,7 @@ export function SkipIntroOverlay({
                 <kbd className={cn(
                     "hidden sm:inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full",
                     "text-2xs font-mono font-semibold",
-                    "bg-white/10 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-black/10 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-black/60"
+                    "bg-black/10 text-[color:color-mix(in_srgb,var(--selected-fg)_70%,transparent)]"
                 )}>
                     {shortcutKey}
                 </kbd>
@@ -238,15 +261,15 @@ export function AutoSkipToastOverlay({
     onUndo,
     controlsVisible = true,
 }: {
-    showType: "intro" | "outro" | "segment" | null
+    showType: "intro" | "outro" | "recap" | "segment" | null
     onUndo: () => void
     controlsVisible?: boolean
 }) {
     const entranceSpring = useSpringPreset("entrance")
     const reduceMotion = useReducedMotion()
 
-    const label = showType === "outro"
-        ? "Outro saltado"
+    const label = showType === "recap" ? "Resumen saltado" : showType === "outro"
+        ? "Créditos saltados"
         : showType === "segment"
             ? "Segmento saltado"
             : "Intro saltada"
@@ -257,8 +280,8 @@ export function AutoSkipToastOverlay({
         // que recalcula el layout); la entrada y salida del aviso las anima framer adentro.
         <div
             className={cn(
-                "absolute right-3 sm:right-6 bottom-8 z-player-overlay pointer-events-none transition-transform duration-300 ease-out-strong",
-                controlsVisible ? "-translate-y-16" : "translate-y-0"
+                "absolute right-3 sm:right-6 bottom-8 z-player-overlay pointer-events-none transition-transform duration-base ease-out-strong",
+                controlsVisible ? "-translate-y-24" : "translate-y-0"
             )}
         >
         <AnimatePresence>
@@ -272,29 +295,55 @@ export function AutoSkipToastOverlay({
                     className="pointer-events-auto"
                 >
                     <div className={cn(
-                        "flex items-center h-11 pl-4 pr-1.5 text-white rounded-full",
+                        "flex items-center h-11 pl-4 pr-1.5 text-label-1 rounded-full",
                         PLAYER_GLASS,
                         "text-xs font-semibold tracking-wide",
                         "[&>*:not(:first-child)]:ml-2"
                     )}>
                         <span className="whitespace-nowrap">{label}</span>
 
-                        {canUndo && <button
+                        {canUndo && <Button
+                            intent="secondary"
+                            size="xs"
                             tabIndex={0}
                             aria-label="Deshacer salto"
                             onClick={(e) => {
                                 e.stopPropagation()
                                 onUndo()
                             }}
-                            className={cn(PLAYER_SECONDARY_BTN, "h-8 px-3.5")}
                         >
                             Deshacer
-                        </button>}
+                        </Button>}
                     </div>
                 </m.div>
             )}
         </AnimatePresence>
         </div>
+    )
+}
+
+/**
+ * Capa de entrada/salida de la pastilla "Siguiente episodio". Mientras sale (useIsPresent en
+ * false) deja de recibir clics, como el panel de Mi Lista: si no, un toque durante la salida
+ * volvería a llamar onNext y podría saltar otro episodio.
+ */
+export function NextEpisodeLayer({ children }: { children: ReactNode }) {
+    const isPresent = useIsPresent()
+    const entranceSpring = useSpringPreset("entrance")
+    const reduceMotion = useReducedMotion()
+
+    return (
+        <m.div
+            initial={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
+            transition={reduceMotion ? { duration: 0.15 } : entranceSpring}
+            className={isPresent ? "pointer-events-auto" : "pointer-events-none"}
+            // inert durante la salida: el teclado (Enter o Espacio sobre el foco) tampoco debe volver a llamar onNext.
+            inert={!isPresent}
+        >
+            {children}
+        </m.div>
     )
 }
 
@@ -306,7 +355,8 @@ export function NextEpisodeOverlay({
     nextEpisodeImage,
     nextEpisodeNumber,
     onNext,
-    remainingProgress
+    remainingProgress,
+    controlsVisible = true,
 }: {
     show: boolean
     tvMode: boolean
@@ -319,88 +369,78 @@ export function NextEpisodeOverlay({
     onNext: () => void
     duration: number
     remainingProgress: number
+    /** Con la barra de controles visible, la pastilla sube para no pisarla. */
+    controlsVisible?: boolean
 }) {
-    const entranceSpring = useSpringPreset("entrance")
-    const reduceMotion = useReducedMotion()
+    const fill = Math.min(100, Math.max(0, remainingProgress)) / 100
 
     return (
+        // Misma esquina y altura que "Saltar intro": las dos acciones de fin de segmento
+        // viven en el mismo lugar. El desplazamiento usa transform, no `bottom`.
+        <div
+            className={cn(
+                "absolute right-3 sm:right-6 bottom-8 z-player-overlay pointer-events-none transition-transform duration-base ease-out-strong motion-reduce:transition-none",
+                controlsVisible ? "-translate-y-24" : "translate-y-0"
+            )}
+        >
         <AnimatePresence>
             {show && (
-                <m.div
-                    key="next-episode-overlay"
-                    initial={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: reduceMotion ? 0 : 24 }}
-                    transition={reduceMotion ? { duration: 0.15 } : entranceSpring}
-                    className="absolute bottom-24 right-3 sm:right-6 z-player-overlay pointer-events-auto"
-                >
-                    <div className={cn(
-                        "flex flex-col w-64 sm:w-72 overflow-hidden rounded-2xl",
-                        PLAYER_GLASS,
-                        "[&>*:not(:first-child)]:mt-3"
-                    )}>
-                        {/* Thumbnail */}
-                        {nextEpisodeImage && (
-                            <div className="relative w-full aspect-video bg-surface-container overflow-hidden">
-                                <img
-                                    src={nextEpisodeImage}
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                    loading="lazy"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                {showCountdown && (
-                                    <div className={cn("absolute top-2 right-2 text-2xs font-semibold text-white px-2.5 py-1 rounded-full flex items-center tabular-nums", PLAYER_GLASS)}>
-                                        <ElasticCounter value={countdownSeconds} />s
-                                    </div>
-                                )}
-                            </div>
+                <NextEpisodeLayer key="next-episode-overlay">
+                    <button
+                        tabIndex={0}
+                        aria-label={nextEpisodeTitle ? `Ver siguiente episodio: ${nextEpisodeTitle}` : "Ver siguiente episodio"}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onNext()
+                        }}
+                        className={cn(
+                            "relative isolate flex items-center gap-3 h-14 [[data-tv=true]_&]:h-20 max-w-[min(26rem,calc(100vw-1.5rem))] pl-1.5 pr-5 overflow-hidden rounded-full text-left",
+                            "bg-[var(--selected-bg)] text-[var(--selected-fg)] shadow-elevation-2 [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95",
+                            "transition-[filter,transform] duration-fast active:scale-95 ease-out-strong cursor-pointer",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                        )}
+                    >
+                        {/* Cuenta regresiva: el relleno se vacía hacia la izquierda */}
+                        {showCountdown && (
+                            <span
+                                aria-hidden
+                                className="absolute inset-0 -z-10 origin-left bg-black/10 transition-transform duration-slow ease-linear motion-reduce:transition-none"
+                                style={{ transform: `scaleX(${fill})` }}
+                            />
                         )}
 
-                        <div className="flex flex-col px-4 pb-4 pt-1 [&>*:not(:first-child)]:mt-2.5">
-                            <div className="flex items-center justify-between">
-                                <span className={PLAYER_EYEBROW}>
-                                    {nextEpisodeNumber ? `Siguiente · Ep. ${nextEpisodeNumber}` : "Siguiente"}
+                        {nextEpisodeImage ? (
+                            <span className="relative shrink-0 h-11 [[data-tv=true]_&]:h-16 aspect-video rounded-full overflow-hidden bg-black/10">
+                                <img src={nextEpisodeImage} alt="" className="w-full h-full object-cover" loading="lazy" />
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white">
+                                    <IconMediaPlay className="w-4 h-4 fill-current" />
                                 </span>
-                                {!nextEpisodeImage && showCountdown && (
-                                    <span className="text-on-surface-variant text-xs tabular-nums flex items-center">
-                                        <ElasticCounter value={countdownSeconds} />s
-                                    </span>
-                                )}
-                            </div>
+                            </span>
+                        ) : (
+                            <span className="shrink-0 flex items-center justify-center w-11 h-11 rounded-full bg-black text-white">
+                                <IconMediaPlay className="w-4 h-4 fill-current ml-0.5" />
+                            </span>
+                        )}
 
+                        <span className="flex flex-col min-w-0">
+                            <span className="text-sm [[data-tv=true]_&]:text-lg font-semibold tracking-wide whitespace-nowrap">
+                                {nextEpisodeNumber ? `Siguiente episodio · ${nextEpisodeNumber}` : "Siguiente episodio"}
+                            </span>
                             {nextEpisodeTitle && (
-                                <p className="font-display text-white text-base font-medium tracking-tight leading-snug line-clamp-2">
-                                    {nextEpisodeTitle}
-                                </p>
+                                <span className="text-xs text-[color:color-mix(in_srgb,var(--selected-fg)_70%,transparent)] truncate">{nextEpisodeTitle}</span>
                             )}
+                        </span>
 
-                            {showCountdown && (
-                                <div className="w-full h-0.5 bg-white/15 overflow-hidden rounded-full">
-                                    <div
-                                        className="h-full w-full bg-brand-accent origin-left transition-transform duration-slow ease-linear"
-                                        style={{ transform: `scaleX(${Math.min(100, Math.max(0, remainingProgress)) / 100})` }}
-                                    />
-                                </div>
-                            )}
-
-                            <button
-                                tabIndex={0}
-                                aria-label={nextEpisodeTitle ? `Ver siguiente episodio: ${nextEpisodeTitle}` : "Ver siguiente episodio"}
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    onNext()
-                                }}
-                                className={cn(PLAYER_PRIMARY_BTN, "w-full")}
-                            >
-                                <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
-                                Reproducir ahora
-                            </button>
-                        </div>
-                    </div>
-                </m.div>
+                        {showCountdown && (
+                            <span className="shrink-0 ml-1 text-sm font-semibold tabular-nums text-[color:color-mix(in_srgb,var(--selected-fg)_70%,transparent)] flex items-center">
+                                <ElasticCounter value={countdownSeconds} />s
+                            </span>
+                        )}
+                    </button>
+                </NextEpisodeLayer>
             )}
         </AnimatePresence>
+        </div>
     )
 }
 
@@ -413,6 +453,7 @@ export interface PlayerHudData {
 
 export function PlayerHudOverlay({ hud }: { hud: PlayerHudData | null }) {
     const reduceMotion = useReducedMotion()
+    const hudSpring = useSpringPreset("tabIndicator")
 
     return (
         <AnimatePresence>
@@ -423,27 +464,27 @@ export function PlayerHudOverlay({ hud }: { hud: PlayerHudData | null }) {
                         initial={{ opacity: 0, y: reduceMotion ? 0 : -8, scale: 0.94 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: reduceMotion ? 0 : -6, scale: 0.96 }}
-                        transition={{ type: "spring", stiffness: 480, damping: 34 }}
+                        transition={hudSpring}
                         className={cn(
-                            "flex items-center gap-2.5 h-10 px-4 rounded-full text-white text-xs font-semibold tracking-wide select-none",
-                            PLAYER_GLASS,
-                            "shadow-[0_8px_24px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.2)] border border-white/20"
+                            "flex items-center gap-2.5 h-10 px-4 rounded-full text-label-1 text-xs font-semibold tracking-wide select-none",
+                            PLAYER_GLASS
                         )}
                     >
                         {hud.type === "volume" && (
                             <>
                                 {hud.isMuted || hud.value === 0 ? (
-                                    <IconMediaVolumeX className="w-4 h-4 text-brand-error shrink-0" />
+                                    <IconMediaVolumeX className="w-4 h-4 text-status-error shrink-0" />
                                 ) : (
                                     <IconMediaVolume2 className="w-4 h-4 text-brand-accent shrink-0" />
                                 )}
-                                <div className="w-20 sm:w-24 h-1.5 bg-white/20 rounded-full overflow-hidden shrink-0">
+                                <div className="w-20 sm:w-24 h-1.5 bg-[var(--neutral-elev-3)] rounded-full overflow-hidden shrink-0">
+                                    {/* scaleX en vez de width: cada paso de volumen avanza por el compositor, sin recalcular layout */}
                                     <div
-                                        className="h-full bg-brand-accent rounded-full transition-all duration-75 ease-out"
-                                        style={{ width: `${hud.isMuted ? 0 : Math.round(hud.value * 100)}%` }}
+                                        className="h-full w-full origin-left bg-brand-accent rounded-full transition-transform [transition-duration:var(--duration-micro)] ease-out-strong motion-reduce:transition-none"
+                                        style={{ transform: `scaleX(${hud.isMuted ? 0 : hud.value})` }}
                                     />
                                 </div>
-                                <span className="font-mono tabular-nums text-3xs font-extrabold min-w-[28px] text-right">
+                                <span className="font-mono tabular-nums text-xs font-bold min-w-[32px] text-right">
                                     {hud.isMuted ? "0%" : `${Math.round(hud.value * 100)}%`}
                                 </span>
                             </>
@@ -455,7 +496,7 @@ export function PlayerHudOverlay({ hud }: { hud: PlayerHudData | null }) {
                                 <span className="font-mono tabular-nums font-bold text-xs">
                                     {hud.value}x
                                 </span>
-                                <span className="text-3xs uppercase font-mono tracking-wider text-on-surface-variant font-medium">
+                                <span className="text-xs text-label-2 font-medium">
                                     Velocidad
                                 </span>
                             </>

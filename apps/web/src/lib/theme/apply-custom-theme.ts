@@ -3,6 +3,52 @@ import { useThemeSettings } from "./theme-hooks"
 import { useAppStore } from "@/lib/store"
 import { usePerformanceStore, selectEffectiveTier } from "@/lib/hardware/performance-store"
 
+function useMediaMatch(query: string): boolean {
+    return React.useSyncExternalStore(
+        (onChange) => {
+            if (typeof window === "undefined" || !window.matchMedia) return () => {}
+            const mql = window.matchMedia(query)
+            mql.addEventListener("change", onChange)
+            return () => mql.removeEventListener("change", onChange)
+        },
+        () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(query).matches,
+        () => false,
+    )
+}
+
+/** Por qué la app está en modo plano (sin transparencia). Si hay varios motivos
+ *  manda el más explícito: el interruptor del usuario, luego TV, el contraste
+ *  del sistema, el gobernador automático y por último el perfil de ahorro. */
+export type FlatReason = "manual" | "tv" | "contrast" | "auto" | "eco"
+
+interface TransparencyState {
+    /** true ⇒ <html data-flat="true"> (superficies sólidas, 0 backdrop-filter). */
+    flat: boolean
+    reason: FlatReason | null
+    /** El sistema pide menos transparencia (`prefers-reduced-transparency`). Solo
+     *  sugerencia: Chrome en Windows lo reporta true también por ahorro de energía. */
+    systemSuggestsReduce: boolean
+}
+
+export function useTransparencyState(): TransparencyState {
+    const ts = useThemeSettings()
+    const tvMode = useAppStore(state => state.tvMode)
+    const autoThrottleActive = usePerformanceStore(state => state.autoThrottleActive)
+    const effectiveTier = usePerformanceStore(selectEffectiveTier)
+    const contrastMore = useMediaMatch("(prefers-contrast: more)")
+    const systemSuggestsReduce = useMediaMatch("(prefers-reduced-transparency: reduce)")
+
+    const reason: FlatReason | null =
+        ts.themeEnableBlurringEffects === false ? "manual"
+        : tvMode ? "tv"
+        : contrastMore ? "contrast"
+        : autoThrottleActive ? "auto"
+        : effectiveTier === "low_power" ? "eco"
+        : null
+
+    return { flat: reason !== null, reason, systemSuggestsReduce }
+}
+
 
 /** Converts a "#rrggbb" hex color into the "H S% L%" triplet format used by
  *  this design system's HSL custom properties (consumed as hsl(var(--x))). */
@@ -65,10 +111,7 @@ function setStyleProp(style: CSSStyleDeclaration, name: string, value: string | 
  */
 export function useApplyCustomTheme() {
     const ts = useThemeSettings()
-    const tvMode = useAppStore(state => state.tvMode)
-    const effectiveTier = usePerformanceStore(selectEffectiveTier)
-    const autoThrottleActive = usePerformanceStore(state => state.autoThrottleActive)
-    const isEcoMode = effectiveTier === "low_power" || autoThrottleActive
+    const { flat: flatOn } = useTransparencyState()
 
     React.useLayoutEffect(() => {
         const root = document.documentElement.style
@@ -78,12 +121,9 @@ export function useApplyCustomTheme() {
             const mode = ts.effectiveMode
             setDatasetProp(html, "mode", mode)
 
-            // 1. Efectos por modo — el toggle de blur manda en Clásico y en Era
-            // 1. Efectos por modo — el toggle de blur manda en Clásico y en Era
-            // (en Clásico la intensidad la suavizan los tokens de [data-mode]).
-            // En modo Eco / Ahorro o Throttled se fuerza flatOn = true para 0% costo de GPU.
-            const flatOn = tvMode || isEcoMode || ts.themeEnableBlurringEffects === false
-
+            // 1. Efectos por modo — el plano (data-flat) lo decide useTransparencyState:
+            // interruptor "Reducir transparencia", TV, contraste alto del sistema,
+            // gobernador automático o perfil de ahorro. Con flat: 0 backdrop-filter.
             setDatasetProp(html, "flat", flatOn ? "true" : undefined)
 
             const liquidOn = !flatOn && Boolean(ts.themeEnableLiquidGlass)
@@ -121,18 +161,10 @@ export function useApplyCustomTheme() {
                 if (hsl) {
                     setStyleProp(root, "--brand-accent", hsl)
                     setStyleProp(root, "--brand-accent-hex", ts.accentColor)
-                    setStyleProp(root, "--era-btn-from", ts.accentColor)
-                    setStyleProp(root, "--era-btn-to", ts.accentColor)
-                    setStyleProp(root, "--era-btn-hover-from", ts.accentColor)
-                    setStyleProp(root, "--era-btn-hover-to", ts.accentColor)
                 }
             } else {
                 setStyleProp(root, "--brand-accent", null)
                 setStyleProp(root, "--brand-accent-hex", null)
-                setStyleProp(root, "--era-btn-from", null)
-                setStyleProp(root, "--era-btn-to", null)
-                setStyleProp(root, "--era-btn-hover-from", null)
-                setStyleProp(root, "--era-btn-hover-to", null)
             }
         }
 
@@ -140,7 +172,7 @@ export function useApplyCustomTheme() {
     }, [
         ts.effectiveMode,
         ts.themeEra,
-        ts.themeEnableBlurringEffects,
+        flatOn,
         ts.themeEnableLiquidGlass,
         ts.enableColorSettings,
         ts.hasEraTheme,
@@ -148,8 +180,6 @@ export function useApplyCustomTheme() {
         ts.hasCustomAccentColor,
         ts.backgroundColor,
         ts.accentColor,
-        tvMode,
-        isEcoMode,
     ])
 }
 

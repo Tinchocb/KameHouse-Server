@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -19,6 +20,7 @@ type Watcher struct {
 	WSEventManager events.WSEventManagerInterface
 	Debouncer      *FileDebouncer
 	DebounceDelay  time.Duration
+	stopOnce       sync.Once
 }
 
 type NewWatcherOptions struct {
@@ -56,25 +58,38 @@ type WatchLibraryFilesOptions struct {
 
 // InitLibraryFileWatcher starts watching the specified directory and its subdirectories for file system events
 func (w *Watcher) InitLibraryFileWatcher(opts *WatchLibraryFilesOptions) error {
+	var watched int
+	var firstErr error
+
 	// Define a function to add directories and their subdirectories to the watcher
-	watchDir := func(dir string) error {
-		err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	watchDir := func(dir string) {
+		_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
 			if d.IsDir() {
-				return w.Watcher.Add(path)
+				// Un directorio que no se puede vigilar (permisos, límite de watches del SO) no debe
+				// impedir vigilar el resto de la biblioteca ni dejar sin arrancar el watcher completo.
+				if addErr := w.Watcher.Add(path); addErr != nil {
+					w.Logger.Warn().Err(addErr).Str("path", path).Msg("watcher: Failed to watch directory, skipping")
+					if firstErr == nil {
+						firstErr = addErr
+					}
+				} else {
+					watched++
+				}
 			}
 			return nil
 		})
-		return err
 	}
 
 	// Add the initial directory and its subdirectories to the watcher
 	for _, path := range opts.LibraryPaths {
-		if err := watchDir(path); err != nil {
-			return err
-		}
+		watchDir(path)
+	}
+	// Solo es un error fatal si no se pudo vigilar ni un directorio.
+	if watched == 0 && firstErr != nil {
+		return firstErr
 	}
 
 	w.Logger.Info().Msgf("watcher: Watching directories: %+v", opts.LibraryPaths)
@@ -117,7 +132,18 @@ func (w *Watcher) StartWatching(
 				// Uses util.IsValidVideoExtension as the single source of truth for
 				// supported extensions — keeps the watcher in sync with the scanner.
 				ext := strings.ToLower(filepath.Ext(event.Name))
-				isDirCreate := event.Op&fsnotify.Create != 0 && ext == ""
+				// Una carpeta nueva puede llevar puntos en el nombre ("Show.S01.1080p.WEB-DL-GRP"):
+				// filepath.Ext devuelve ".web-dl-grp" y la carpeta se descartaba sin registrar su
+				// watch, así que los archivos que llegaran después nunca disparaban eventos.
+				isDirCreate := false
+				if event.Op&fsnotify.Create != 0 && !util.IsValidVideoExtension(ext) {
+					isDirCreate = ext == ""
+					if !isDirCreate {
+						if info, statErr := os.Stat(event.Name); statErr == nil && info.IsDir() {
+							isDirCreate = true
+						}
+					}
+				}
 				if event.Op&(fsnotify.Create|fsnotify.Write) != 0 && !util.IsValidVideoExtension(ext) && !isDirCreate {
 					continue
 				}
@@ -183,10 +209,13 @@ func (w *Watcher) StartWatching(
 }
 
 func (w *Watcher) StopWatching() {
-	err := w.Watcher.Close()
-	if err != nil {
-		w.Logger.Error().Err(err).Msg("watcher: Error stopping watcher")
-	} else {
-		w.Logger.Trace().Msg("watcher: Watcher stopped")
-	}
+	w.stopOnce.Do(func() {
+		w.Debouncer.Close()
+		err := w.Watcher.Close()
+		if err != nil {
+			w.Logger.Error().Err(err).Msg("watcher: Error stopping watcher")
+		} else {
+			w.Logger.Trace().Msg("watcher: Watcher stopped")
+		}
+	})
 }

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +22,9 @@ import (
 const (
 	driveThumbWidth      = 480
 	driveThumbMissingTTL = 30 * time.Minute
+	// Un archivo al que Drive no le generó frame se recuerda también en disco, para que el
+	// precalentado de cada arranque no vuelva a preguntar por él.
+	driveThumbMissingDiskTTL = 7 * 24 * time.Hour
 )
 
 var (
@@ -42,7 +46,7 @@ func (h *Handler) serveDriveThumbnail(c echo.Context, videoPath string) error {
 		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("video file not found"))
 	}
 
-	hash := fmt.Sprintf("%x", sha256.Sum256(fmt.Appendf(nil, "gdrive:%s:%d:%d", lf.DriveFileID, lf.FileModTime, driveThumbWidth)))
+	hash := driveThumbnailHash(lf.DriveFileID, lf.FileModTime)
 	eTag := thumbnailETag(hash)
 	cacheControl := thumbnailCacheControlDefault
 	if c.QueryParam("v") != "" {
@@ -68,7 +72,7 @@ func (h *Handler) serveDriveThumbnail(c echo.Context, videoPath string) error {
 		return serve(imgBytes)
 	}
 
-	cacheFile := filepath.Join(h.App.Config.Cache.Dir, "thumbnails", "gdrive-"+hash+".jpg")
+	cacheFile := driveThumbnailCacheFile(h.App.Config.Cache.Dir, hash)
 	if imgBytes, err := os.ReadFile(cacheFile); err == nil {
 		if info, statErr := os.Stat(cacheFile); statErr == nil {
 			cache.TouchDiskCacheIfOlder(cacheFile, info, thumbnailTouchMinAge)
@@ -77,8 +81,35 @@ func (h *Handler) serveDriveThumbnail(c echo.Context, videoPath string) error {
 		return serve(imgBytes)
 	}
 
-	if at, ok := driveThumbMissing.Load(hash); ok && time.Since(at.(time.Time)) < driveThumbMissingTTL {
-		return h.RespondWithCodeError(c, http.StatusNotFound, drive.ErrNoThumbnail)
+	imgBytes, err := h.fetchDriveThumbnail(hash, cacheFile, lf.DriveFileID)
+	if err != nil {
+		if errors.Is(err, drive.ErrNoThumbnail) {
+			return h.RespondWithCodeError(c, http.StatusNotFound, err)
+		}
+		h.App.Logger.Debug().Err(err).Str("path", videoPath).Msg("thumbnail: failed to fetch Drive thumbnail")
+		return h.RespondWithCodeError(c, http.StatusBadGateway, err)
+	}
+
+	h.App.ThumbnailCache.Set(hash, imgBytes)
+	return serve(imgBytes)
+}
+
+// driveThumbnailHash identifica el frame de un archivo de Drive: id, mtime y ancho.
+func driveThumbnailHash(driveFileID string, fileModTime int64) string {
+	return fmt.Sprintf("%x", sha256.Sum256(fmt.Appendf(nil, "gdrive:%s:%d:%d", driveFileID, fileModTime, driveThumbWidth)))
+}
+
+func driveThumbnailCacheFile(cacheDir, hash string) string {
+	return filepath.Join(cacheDir, "thumbnails", "gdrive-"+hash+".jpg")
+}
+
+// fetchDriveThumbnail baja el frame que Drive tiene para el archivo y lo guarda en disco.
+// Lo usan el endpoint (al mirar) y el precalentado tras un escaneo: comparten el
+// singleflight y el tope de pedidos simultáneos, así no se duplica el trabajo ni se
+// satura la cuota de la API. Un archivo sin frame en Drive se recuerda un rato.
+func (h *Handler) fetchDriveThumbnail(hash, cacheFile, driveFileID string) ([]byte, error) {
+	if driveThumbnailKnownMissing(hash, cacheFile) {
+		return nil, drive.ErrNoThumbnail
 	}
 
 	v, err, _ := thumbnailSingleFlight.Do(hash, func() (interface{}, error) {
@@ -96,7 +127,7 @@ func (h *Handler) serveDriveThumbnail(c echo.Context, videoPath string) error {
 			return nil, ctx.Err()
 		}
 
-		imgBytes, err := client.GetThumbnail(ctx, lf.DriveFileID, driveThumbWidth)
+		imgBytes, err := client.GetThumbnail(ctx, driveFileID, driveThumbWidth)
 		if err != nil {
 			return nil, err
 		}
@@ -111,13 +142,27 @@ func (h *Handler) serveDriveThumbnail(c echo.Context, videoPath string) error {
 	if err != nil {
 		if errors.Is(err, drive.ErrNoThumbnail) {
 			driveThumbMissing.Store(hash, time.Now())
-			return h.RespondWithCodeError(c, http.StatusNotFound, err)
+			if os.MkdirAll(filepath.Dir(cacheFile), 0755) == nil {
+				_ = os.WriteFile(driveThumbnailMissingMarker(cacheFile), nil, 0644)
+			}
 		}
-		h.App.Logger.Debug().Err(err).Str("path", videoPath).Msg("thumbnail: failed to fetch Drive thumbnail")
-		return h.RespondWithCodeError(c, http.StatusBadGateway, err)
+		return nil, err
 	}
+	return v.([]byte), nil
+}
 
-	imgBytes := v.([]byte)
-	h.App.ThumbnailCache.Set(hash, imgBytes)
-	return serve(imgBytes)
+func driveThumbnailMissingMarker(cacheFile string) string {
+	return strings.TrimSuffix(cacheFile, ".jpg") + ".none"
+}
+
+// driveThumbnailKnownMissing dice si ya se sabe (en memoria o por la marca en disco) que Drive
+// no tiene frame para este archivo, sin volver a preguntarle.
+func driveThumbnailKnownMissing(hash, cacheFile string) bool {
+	if at, ok := driveThumbMissing.Load(hash); ok && time.Since(at.(time.Time)) < driveThumbMissingTTL {
+		return true
+	}
+	if info, err := os.Stat(driveThumbnailMissingMarker(cacheFile)); err == nil && time.Since(info.ModTime()) < driveThumbMissingDiskTTL {
+		return true
+	}
+	return false
 }

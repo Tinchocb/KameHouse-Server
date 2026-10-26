@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { auroraBackground, fillTone, heroCompactRect, heroRightRect, isCompactArt, seamFadePx } from "./hero-backdrop"
+import { auroraBackground, darkFillBackground, fillTone, isFlatEdge, heroCompactRect, heroRightRect, isCompactArt, mutedZoneLevel, seamFadePx } from "./hero-backdrop"
 
 describe("seamFadePx", () => {
     it("sujeto a la derecha: fundido largo, cortado antes de llegar al sujeto", () => {
@@ -37,6 +37,22 @@ describe("fillTone", () => {
 
     it("color inválido: usa un gris oscuro", () => {
         expect(fillTone("nada", 1, 1)).toEqual([20, 20, 24])
+    })
+})
+
+describe("mutedZoneLevel", () => {
+    it("zona saturada: conserva el nivel pedido", () => {
+        expect(mutedZoneLevel("rgb(200, 80, 40)", 0.75)).toBeCloseTo(0.75, 5)
+    })
+
+    it("zona gris: baja al 35 % del nivel (se funde con el fondo)", () => {
+        expect(mutedZoneLevel("rgb(90, 90, 90)", 0.75)).toBeCloseTo(0.75 * 0.35, 5)
+    })
+
+    it("croma intermedio: nivel intermedio", () => {
+        const mid = mutedZoneLevel("rgb(100, 120, 130)", 0.75)
+        expect(mid).toBeGreaterThan(0.75 * 0.35)
+        expect(mid).toBeLessThan(0.75)
     })
 })
 
@@ -91,5 +107,37 @@ describe("heroCompactRect", () => {
         expect(isCompactArt({ sourceWidth: 1280 })).toBe(true)
         expect(isCompactArt({ sourceWidth: 1920 })).toBe(false)
         expect(isCompactArt({})).toBe(false)
+    })
+})
+
+describe("isFlatEdge", () => {
+    const zones = (col0: string[], col1 = col0) =>
+        Array.from({ length: 48 }, (_, i) => (i % 8 === 0 ? col0[(i / 8) | 0] : i % 8 === 1 ? col1[(i / 8) | 0] : "rgb(0, 0, 0)"))
+
+    it("borde casi gris: cae al fondo oscuro", () => {
+        const grey = Array(6).fill("rgb(58, 70, 64)")
+        expect(isFlatEdge({ left: grey[0], zones: zones(grey) })).toBe(true)
+    })
+
+    it("borde liso y saturado (fondo croma): también", () => {
+        const flat = Array(6).fill("rgb(20, 160, 110)")
+        expect(isFlatEdge({ left: flat[0], zones: zones(flat) })).toBe(true)
+    })
+
+    it("borde con color y variación: se queda la aurora", () => {
+        const varied = ["rgb(200, 60, 30)", "rgb(30, 80, 200)", "rgb(220, 180, 40)", "rgb(40, 40, 120)", "rgb(180, 40, 90)", "rgb(30, 150, 90)"]
+        expect(isFlatEdge({ left: varied[0], zones: zones(varied) })).toBe(false)
+    })
+
+    it("sin zonas suficientes: no decide", () => {
+        expect(isFlatEdge({ left: "rgb(1, 1, 1)", zones: [] })).toBe(false)
+    })
+})
+
+describe("darkFillBackground", () => {
+    it("usa --bg-primary de base y un velo desde la costura", () => {
+        const fill = darkFillBackground({ left: "rgb(60, 70, 64)" }, { left: 400, top: 0, width: 1000, height: 600 })
+        expect(fill.backgroundColor).toContain("--bg-primary")
+        expect(fill.backgroundImage).toContain("at 400px 240px")
     })
 })

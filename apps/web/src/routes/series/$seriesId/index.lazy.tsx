@@ -8,33 +8,65 @@ import { useGetContinuityWatchHistoryItem } from "@/api/hooks/continuity.hooks"
 import { useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { EmptyState } from "@/components/shared/empty-state"
+import { DeferredMount } from "@/components/shared/deferred-mount"
 import { useUIStore } from "@/lib/store"
 
 const VideoPlayer = React.lazy(() =>
     import("@/components/video/player").then(m => ({ default: m.VideoPlayer }))
 )
-import { isDragonBallTmdbId, getSeriesEraTheme, resolveSeriesSagas } from "@/lib/config/dragonball.config"
+import { isDragonBallTmdbId, getSeriesEraTheme, resolveSeriesSagas, DRAGON_BALL_SERIES, DRAGON_BALL_SAGAS, type SagaDefinition } from "@/lib/config/dragonball.config"
 import { getSeriesIdFromMedia } from "@/lib/helpers/series"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
+import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 
 import { SeriesHero } from "./-components/series-hero"
 import { SagaSelector } from "./-components/saga-selector"
 import { SeriesEpisodesTab } from "./-components/series-episodes-tab"
-import type { SagaDTO, SagaDetailSearchParams } from "@/api/types/series.types"
+import { SeriesAudioProfilePicker } from "./-components/series-audio-profile-picker"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
-import { CharacterDetailModal, type DragonBallLoreData } from "@/components/shared/character-detail-modal"
+import type { SagaDTO, SagaDetailSearchParams } from "@/api/types/series.types"
+import type { DragonBallLoreData } from "@/components/shared/character-detail-modal"
+const CharacterDetailModal = React.lazy(() =>
+    import("@/components/shared/character-detail-modal").then(m => ({ default: m.CharacterDetailModal }))
+)
 import { Vaul, VaulContent } from "@/components/vaul"
 import { IconNavigationChevronLeft, IconNavigationLayers, IconUiClose } from "@/components/ui/icons"
 import { PlayerFallback } from "@/components/video/player-fallback"
 import { SeriesContinueWatching } from "./-components/series-continue-watching"
-import { SeriesSourcePicker } from "./-components/series-source-picker"
 
 // ── Custom hooks ──────────────────────────────────────────────────────────────
 import { useSeriesData } from "./-hooks/use-series-data"
 import { useSeriesPlayback } from "./-hooks/use-series-playback"
 import { resolveEpisodeTitle } from "./-hooks/series-playback.helpers"
 import { queryKeys } from "@/lib/query-keys"
+import { useFocusTrap } from "@/hooks/use-focus-trap"
+
+function mapSagaDefToDTO(sd: SagaDefinition): SagaDTO {
+    return {
+        id: sd.id,
+        name: sd.title,
+        episodeRange: `${sd.startEp}-${sd.endEp}`,
+        startEp: sd.startEp,
+        endEp: sd.endEp,
+        description: sd.description,
+        isFiller: sd.title.toLowerCase().includes("relleno"),
+        canonStatus: sd.title.toLowerCase().includes("relleno") ? "Filler" : "Canon",
+        antagonists: [],
+        keyEvents: [],
+        newCharacters: [],
+        keyCharacters: [],
+        subSagas: sd.subSagas?.map(ss => ({
+            id: ss.id,
+            name: ss.title,
+            episodeRange: `${ss.startEp}-${ss.endEp}`,
+            startEp: ss.startEp,
+            endEp: ss.endEp,
+            description: ss.description,
+            image: ss.image,
+        })),
+    }
+}
 
 export const Route = createLazyFileRoute("/series/$seriesId/")({
     component: SeriesDetailPage,
@@ -81,6 +113,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
     const [selectedCharacterName, setSelectedCharacterName] = useState<string | null>(null)
     const [mobileSagasOpen, setMobileSagasOpen] = useState(false)
+    // Hoja de sagas (móvil): el foco entra en ella al abrir, Tab cicla dentro y vuelve al disparador al cerrar.
+    const sagasSheetRef = useRef<HTMLDivElement>(null)
+    useFocusTrap(sagasSheetRef, mobileSagasOpen)
 
     const setActiveSeriesContext = useUIStore(s => s.setActiveSeriesContext)
     // Owner-guard: guardamos el valor que este mount escribió para no limpiar
@@ -131,22 +166,102 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         }
     }, [entry?.media?.id, playSound])
 
-    const { data: sagas } = useServerQuery<SagaDTO[]>({
+    const { data: serverSagas } = useServerQuery<SagaDTO[]>({
         endpoint: API_ENDPOINTS.SERIES_DETAILS.GetSeriesSagas.endpoint.replace("{id}", seriesId),
         method: API_ENDPOINTS.SERIES_DETAILS.GetSeriesSagas.methods[0],
         queryKey: queryKeys.series.sagas(seriesId),
         staleTime: 600000,
     })
 
-    useEffect(() => {
-        if (sagas && sagas.length > 0 && !activeSagaId) {
-            setSearchParams({ saga: sagas[0].id }, { replace: true })
-        }
-    }, [sagas, activeSagaId, setSearchParams])
+    const seriesTitle =
+        entry?.media?.titleSpanish ||
+        entry?.media?.titleRomaji ||
+        entry?.media?.titleEnglish ||
+        ""
+    const detailSeriesId = getSeriesIdFromMedia(entry?.media, seriesTitle)
+    const tmdbId = entry?.media?.tmdbId
+
+    const isZSeries = useMemo(() => {
+        return (
+            tmdbId === 12971 ||
+            tmdbId === 61709 ||
+            tmdbId === 42705 ||
+            detailSeriesId === "dragon_ball_z" ||
+            detailSeriesId === "dragon_ball_kai"
+        )
+    }, [tmdbId, detailSeriesId])
+
+    const isNativeKai = useMemo(() => {
+        return tmdbId === 61709 || tmdbId === 42705 || detailSeriesId === "dragon_ball_kai"
+    }, [tmdbId, detailSeriesId])
+
+    const [zVariant, setZVariant] = useState<'z' | 'kai'>(() => {
+        if (isNativeKai) return 'kai'
+        try {
+            const stored = localStorage.getItem('kamehouse:timeline:z-variant')
+            if (stored === 'kai' || stored === 'z') return stored
+        } catch {}
+        return 'z'
+    })
+
+    const effectiveZVariant: 'z' | 'kai' = isNativeKai ? 'kai' : zVariant
 
     const localSagas = useMemo(() => {
         return entry?.media ? resolveSeriesSagas(entry.media) : []
     }, [entry])
+
+    const effectiveLocalSagas = useMemo<SagaDefinition[]>(() => {
+        if (!isZSeries) return localSagas
+        return effectiveZVariant === 'kai'
+            ? DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.KAI]
+            : DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.Z]
+    }, [isZSeries, effectiveZVariant, localSagas])
+
+    const effectiveSagas = useMemo<SagaDTO[]>(() => {
+        if (!isZSeries) return serverSagas || []
+        if (!isNativeKai && effectiveZVariant === 'z' && serverSagas && serverSagas.length > 0) {
+            return serverSagas
+        }
+        if (isNativeKai && effectiveZVariant === 'kai' && serverSagas && serverSagas.length > 0) {
+            return serverSagas
+        }
+        return effectiveLocalSagas.map(mapSagaDefToDTO)
+    }, [isZSeries, isNativeKai, effectiveZVariant, serverSagas, effectiveLocalSagas])
+
+    useEffect(() => {
+        if (effectiveSagas && effectiveSagas.length > 0) {
+            const hasMatch = effectiveSagas.some(s => s.id === activeSagaId)
+            if (!hasMatch) {
+                setSearchParams({ saga: effectiveSagas[0].id, subSaga: "" }, { replace: true })
+            }
+        }
+    }, [effectiveSagas, activeSagaId, setSearchParams])
+
+    const handleZVariantChange = useCallback((variant: 'z' | 'kai') => {
+        setZVariant(variant)
+        try {
+            localStorage.setItem('kamehouse:timeline:z-variant', variant)
+        } catch {}
+
+        const targetTmdbIds = variant === 'kai' ? [61709, 42705] : [12971]
+        const entries = getSafeCollectionEntries(libraryCollection)
+        const target = entries.find(e => e?.media?.tmdbId && targetTmdbIds.includes(e.media.tmdbId) && e.mediaId != null)
+
+        if (target && target.mediaId && String(target.mediaId) !== seriesId) {
+            navigate({
+                to: "/series/$seriesId",
+                params: { seriesId: String(target.mediaId) },
+            })
+            return
+        }
+
+        const nextSagas = variant === 'kai'
+            ? DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.KAI]
+            : DRAGON_BALL_SAGAS[DRAGON_BALL_SERIES.Z]
+        if (nextSagas && nextSagas.length > 0) {
+            setSearchParams({ saga: nextSagas[0].id, subSaga: "" }, { replace: true })
+        }
+    }, [libraryCollection, seriesId, navigate, setSearchParams])
 
     // ── Data derivation ───────────────────────────────────────────────────────
     const {
@@ -162,19 +277,14 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         episodeViewModels,
     } = useSeriesData({
         entry,
-        sagas,
+        sagas: effectiveSagas,
+        localSagas: effectiveLocalSagas,
         activeSagaId,
         activeSubSagaId,
         continuityData,
         libraryCollection,
     })
 
-    const seriesTitle =
-        entry?.media?.titleSpanish ||
-        entry?.media?.titleRomaji ||
-        entry?.media?.titleEnglish ||
-        ""
-    const detailSeriesId = getSeriesIdFromMedia(entry?.media, seriesTitle)
     const CHRONOLOGY_SERIES_MAP: Record<string, string> = {
         dragon_ball: "classic",
         dragon_ball_z: "z",
@@ -183,7 +293,9 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         dragon_ball_super: "super",
         dragon_ball_daima: "daima",
     }
-    const chronologySeriesId = CHRONOLOGY_SERIES_MAP[detailSeriesId] || detailSeriesId
+    const chronologySeriesId = isZSeries
+        ? (effectiveZVariant === "kai" ? "kai" : "z")
+        : (CHRONOLOGY_SERIES_MAP[detailSeriesId] || detailSeriesId)
 
     // ── Playback logic ────────────────────────────────────────────────────────
     const {
@@ -213,8 +325,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
     })
 
     const activeSaga = useMemo(() => {
-        return sagas?.find(s => s.id === activeSagaId)
-    }, [sagas, activeSagaId])
+        return effectiveSagas?.find(s => s.id === activeSagaId)
+    }, [effectiveSagas, activeSagaId])
 
     const handlePlayHover = useCallback(() => {
         preloadPath(defaultTargetPath)
@@ -329,7 +441,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
         <div
             ref={pageRef}
             data-theme={localTheme || undefined}
-            className="flex flex-col h-full w-full pt-16 md:pt-0 text-on-surface-variant selection:bg-brand-accent/30 overflow-clip relative bg-transparent"
+            className="neutro-sentence flex flex-col h-full w-full pt-16 md:pt-0 text-on-surface-variant selection:bg-brand-accent/30 overflow-clip relative bg-transparent"
         >
             {/* Back en el hero (volver a Series) */}
             <button
@@ -352,25 +464,31 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                 }}
                 className="flex-1 bg-transparent"
             >
-                <div className="flex-shrink-0 relative">
-                    <SeriesHero
-                        entry={entry}
-                        backdropUrl={heroBackdrop || null}
-                        backdropArt={heroArt}
-                        scrollContainerRef={mainScrollRef}
-                        sagaCount={sagas?.length ?? 0}
-                        onPlay={handlePlayDefault}
-                        onPlayHover={handlePlayHover}
-                        footerText={sagaProgress.percent > 0 && sagaProgress.percent < 100 && activeSaga
-                            ? `Vas en: ${activeSaga.name} · ${Math.round(sagaProgress.percent)}%`
-                            : null}
-                        hasProgress={!!continueWatching}
-                        resumeEpisodeNumber={continueWatching?.episodeNumber}
-                        resumeEpisodeTitle={continueWatching?.title}
-                    />
-                </div>
+                {/* Sin wrapper: la tarjeta sticky de SeriesHero tiene que quedar fija sobre todo el cuerpo. */}
+                <SeriesHero
+                    entry={entry}
+                    backdropUrl={heroBackdrop || null}
+                    backdropArt={heroArt}
+                    scrollContainerRef={mainScrollRef}
+                    sagaCount={effectiveSagas?.length ?? 0}
+                    onPlay={handlePlayDefault}
+                    onPlayHover={handlePlayHover}
+                    footerText={sagaProgress.percent > 0 && sagaProgress.percent < 100 && activeSaga
+                        ? `Vas en: ${activeSaga.name} · ${Math.round(sagaProgress.percent)}%`
+                        : null}
+                    hasProgress={!!continueWatching}
+                    resumeEpisodeNumber={continueWatching?.episodeNumber}
+                    resumeEpisodeTitle={continueWatching?.title}
+                    resumePercent={continueWatching?.percent}
+                    resumeTimeLeftLabel={continueWatching?.timeLeftLabel}
+                    isZSeries={isZSeries}
+                    zVariant={effectiveZVariant}
+                    onZVariantChange={handleZVariantChange}
+                />
 
                 <div className="w-full page-container py-7 lg:py-6 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] space-y-8 lg:space-y-7 bg-transparent relative z-10">
+                    {/* Todo el cuerpo queda bajo el hero: se monta tras el primer pintado (DeferredMount). */}
+                    <DeferredMount heightKey={`series-body-${seriesId}`} className="space-y-8 lg:space-y-7">
                     {/* Continuar viendo — integrado en el flujo de contenido sin superposición */}
                     {continueWatching && (
                         <SeriesContinueWatching
@@ -380,11 +498,11 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         />
                     )}
 
-                    <SeriesSourcePicker mediaId={entry.mediaId ?? Number(seriesId)} />
+                    <SeriesAudioProfilePicker mediaId={entry.mediaId ?? Number(seriesId)} />
 
                     <SeriesEpisodesTab
-                        sagas={sagas}
-                        localSagas={localSagas}
+                        sagas={effectiveSagas}
+                        localSagas={effectiveLocalSagas}
                         chronologySeriesId={chronologySeriesId}
                         sagasProgressMap={sagasProgressMap}
                         activeSagaId={activeSagaId}
@@ -416,12 +534,13 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                         heroBackdrop={heroBackdrop}
                         seriesMediaId={entry.mediaId ?? Number(seriesId) ?? undefined}
                     />
+                    </DeferredMount>
                 </div>
             </div>
 
             {/* Mobile Vaul Drawer for Sagas */}
             <Vaul open={mobileSagasOpen} onOpenChange={setMobileSagasOpen}>
-                <VaulContent className="bg-surface-container-high/95 backdrop-blur-overlay-xl border-t border-white/[0.1] p-5 pb-8 flex flex-col focus:outline-none max-h-[85vh]">
+                <VaulContent ref={sagasSheetRef} className="p-5 flex flex-col focus:outline-none max-h-[85vh]">
                     <div className="flex justify-between items-center mb-4 px-1">
                         <h3 className="font-display text-2xl tracking-display text-on-surface uppercase flex items-center gap-2">
                             <IconNavigationLayers className="w-5 h-5 text-brand-accent" />
@@ -437,8 +556,8 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                     </div>
                     <div className="overflow-y-auto flex-grow min-h-0 pb-4">
                         <SagaSelector
-                            sagas={sagas || []}
-                            localSagas={localSagas}
+                            sagas={effectiveSagas || []}
+                            localSagas={effectiveLocalSagas}
                             chronologySeriesId={chronologySeriesId}
                             sagasProgressMap={sagasProgressMap}
                             activeSagaId={activeSagaId}
@@ -448,7 +567,7 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
                                     saga: sagaId,
                                     subSaga: "",
                                 })
-                                const saga = sagas?.find(s => s.id === sagaId)
+                                const saga = effectiveSagas?.find(s => s.id === sagaId)
                                 if (!saga?.subSagas?.length) {
                                     setMobileSagasOpen(false)
                                 }
@@ -526,12 +645,14 @@ function SeriesDetailClient({ seriesId }: { seriesId: string }) {
 
             {/* Character Detail Modal */}
             {/* Siempre montado: su AnimatePresence interno necesita seguir vivo para correr la salida. */}
-            <CharacterDetailModal
-                characterName={selectedCharacterName}
-                entry={entry}
-                loreData={lore}
-                onClose={() => setSelectedCharacterName(null)}
-            />
+            <React.Suspense fallback={null}>
+                <CharacterDetailModal
+                    characterName={selectedCharacterName}
+                    entry={entry}
+                    loreData={lore}
+                    onClose={() => setSelectedCharacterName(null)}
+                />
+            </React.Suspense>
         </div>
     )
 }

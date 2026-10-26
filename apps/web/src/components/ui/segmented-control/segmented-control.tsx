@@ -1,8 +1,7 @@
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { MagneticIndicator } from "@/components/ui/kinetics/magnetic-indicator"
-import { useReducedMotion } from "@/components/ui/kinetics/hooks"
-import { usePerformanceStore, selectIsHeavyEffectsAllowed } from "@/lib/hardware/performance-store"
+import { useMotionTier } from "@/components/ui/kinetics/hooks"
 
 export interface SegmentedOption<T extends string> {
     value: T
@@ -13,6 +12,9 @@ export interface SegmentedOption<T extends string> {
     disabled?: boolean
     /** Nombre accesible cuando el label no es texto. */
     ariaLabel?: string
+    /** Identidad de la pestaña y panel que controla (solo con semantics="tablist"). */
+    id?: string
+    panelId?: string
 }
 
 export interface SegmentedControlProps<T extends string> {
@@ -35,6 +37,10 @@ export interface SegmentedControlProps<T extends string> {
      */
     surface?: "glass" | "inset"
     fullWidth?: boolean
+    /** caps: mono, mayúsculas espaciadas (sobreetiqueta corta). sentence: etiqueta normal para palabras de navegación. */
+    labelStyle?: "caps" | "sentence"
+    /** Muestra únicamente los íconos de forma fija (sin desplegar etiquetas con hover). */
+    iconOnly?: boolean
     onOptionHover?: (value: T) => void
     className?: string
 }
@@ -43,9 +49,20 @@ export interface SegmentedControlProps<T extends string> {
  * Segmented control canónico (DESIGN-GUIDE §5.3): pill deslizante con
  * layoutId + spring tabIndicator (480/34), touch 44px, flechas/Home/End con
  * roving tabindex y fallback sin animación para prefers-reduced-motion.
- * En equipos de gama baja (perfil eco o throttle automático) la pill no anima ni
+ * En equipos de gama baja (perfil eco o throttle automático) o en modo TV la pill no anima ni
  * lleva el brillo pesado, igual que el resto de los efectos del sistema.
  */
+/**
+ * Foco pendiente tras una flecha, por layoutId. Vive fuera del componente porque la ruta
+ * puede remontarlo: la ficha de Series cambia de serie al pulsar la flecha y el radio nuevo
+ * monta en otra instancia. Caduca para no robar el foco más tarde.
+ */
+const ARROW_FOCUS_TTL_MS = 5000
+const arrowFocusHandoff = new Map<string, { value: string; expires: number; owner: object }>()
+const armArrowFocus = (layoutId: string, value: string, owner: object) => {
+    arrowFocusHandoff.set(layoutId, { value, owner, expires: Date.now() + ARROW_FOCUS_TTL_MS })
+}
+
 export function SegmentedControl<T extends string>({
     options,
     value,
@@ -56,12 +73,13 @@ export function SegmentedControl<T extends string>({
     tone = "neutral",
     surface = "glass",
     fullWidth = false,
+    labelStyle = "caps",
+    iconOnly = false,
     onOptionHover,
     className,
 }: SegmentedControlProps<T>) {
-    const reduceMotion = useReducedMotion()
-    const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed)
-    const allowFx = isHeavyAllowed && !reduceMotion
+    // Tier "full": hardware capaz, sin modo TV y con movimiento permitido. Con cualquier otro tier la pill no anima.
+    const allowFx = useMotionTier() === "full"
     const buttonRefs = React.useRef<Array<HTMLButtonElement | null>>([])
     const isTabs = semantics === "tablist"
 
@@ -71,6 +89,15 @@ export function SegmentedControl<T extends string>({
     const focusableIndex = selectedIndex >= 0 && !options[selectedIndex].disabled
         ? selectedIndex
         : enabledIndexes[0]
+
+    // Tras una flecha, el radio seleccionado recibe el foco, también si el control se monta de nuevo.
+    // La instancia que disparó la flecha ya tiene el foco: solo recoge el encargo una instancia distinta.
+    React.useEffect(() => {
+        const pending = arrowFocusHandoff.get(layoutId)
+        if (!pending || pending.owner === buttonRefs || pending.value !== value) return
+        arrowFocusHandoff.delete(layoutId)
+        if (Date.now() <= pending.expires) buttonRefs.current[selectedIndex]?.focus()
+    }, [layoutId, value, selectedIndex])
 
     const move = (from: number, key: string) => {
         if (enabledIndexes.length === 0) return
@@ -82,34 +109,40 @@ export function SegmentedControl<T extends string>({
             const step = key === "ArrowRight" || key === "ArrowDown" ? 1 : -1
             next = enabledIndexes[(pos + step + enabledIndexes.length) % enabledIndexes.length]
         }
+        const target = options[next].value
+        armArrowFocus(layoutId, target, buttonRefs)
         buttonRefs.current[next]?.focus()
-        onChange(options[next].value)
+        onChange(target)
     }
 
     return (
         <div
+            data-compact={iconOnly ? "true" : undefined}
             role={semantics}
             aria-label={ariaLabel}
             className={cn(
                 "flex items-center gap-1 p-1 rounded-full",
                 surface === "glass"
                     ? "glass-frosted-pill"
-                    : "bg-white/[0.04] border border-[var(--sectionbar-border)]",
+                    : "bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)]",
                 fullWidth ? "w-full" : "w-fit",
                 className,
             )}
         >
             {options.map((option, i) => {
                 const selected = option.value === value
+                const accessibleLabel = option.ariaLabel ?? (iconOnly && typeof option.label === "string" ? option.label : undefined)
                 return (
                     <button
                         key={option.value}
                         ref={el => { buttonRefs.current[i] = el }}
                         type="button"
                         role={isTabs ? "tab" : "radio"}
+                        id={isTabs ? option.id : undefined}
+                        aria-controls={isTabs ? option.panelId : undefined}
                         aria-selected={isTabs ? selected : undefined}
                         aria-checked={isTabs ? undefined : selected}
-                        aria-label={option.ariaLabel}
+                        aria-label={accessibleLabel}
                         disabled={option.disabled}
                         tabIndex={i === focusableIndex ? 0 : -1}
                         onClick={() => onChange(option.value)}
@@ -121,15 +154,18 @@ export function SegmentedControl<T extends string>({
                         }}
                         onMouseEnter={onOptionHover ? () => onOptionHover(option.value) : undefined}
                         className={cn(
-                            "relative min-h-11 px-4 rounded-full text-xs font-mono font-bold uppercase tracking-wider",
+                            "relative min-h-11 rounded-full",
+                            iconOnly ? "min-w-11 px-3" : "px-4",
+                            labelStyle === "caps" ? "text-xs font-mono font-bold uppercase tracking-wider" : "type-label font-semibold",
                             "flex items-center justify-center gap-2 select-none cursor-pointer",
-                            "transition-[color,transform] duration-base ease-smooth-out active:scale-95",
+                            // background-color: el hover de las opciones no elegidas se funde en vez de saltar.
+                            "transition-[color,background-color,transform] duration-quick ease-out-strong active:scale-95",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                             "disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100",
                             fullWidth && "flex-1",
                             selected
-                                ? "text-[var(--control-primary-fg)] font-black"
-                                : "text-on-surface-variant hover:text-on-surface hover:bg-white/[0.08]",
+                                ? "text-[var(--selected-fg)] font-black"
+                                : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)]",
                         )}
                     >
                         <MagneticIndicator
@@ -137,16 +173,15 @@ export function SegmentedControl<T extends string>({
                             active={selected}
                             disableAnimation={!allowFx}
                             className={cn(
-                                "border-t border-t-white/80",
-                                allowFx && "shadow-[0_2px_14px_rgba(255,255,255,0.35),inset_0_1px_1px_rgba(255,255,255,0.9)]",
-                                tone === "accent" ? "bg-brand-accent text-black font-black" : "bg-[var(--control-primary-bg)]"
+                                "shadow-elevation-1",
+                                tone === "accent" ? "bg-brand-accent text-on-primary font-black" : "bg-[var(--selected-bg)]"
                             )}
                         />
                         <span className="relative z-10 flex items-center gap-2">
                             {option.icon}
-                            <span>{option.label}</span>
-                            {option.count !== undefined && (
-                                <span className={cn("tabular-nums", selected ? "opacity-70" : "opacity-60")}>
+                            {!iconOnly && <span>{option.label}</span>}
+                            {!iconOnly && option.count !== undefined && (
+                                <span className={cn("tabular-nums", selected ? "opacity-80" : "text-label-2")}>
                                     ({option.count})
                                 </span>
                             )}

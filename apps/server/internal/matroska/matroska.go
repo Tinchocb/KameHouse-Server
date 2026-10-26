@@ -117,8 +117,6 @@ func NewDemuxer(r io.ReadSeeker, elements ...uint32) (*Demuxer, error) {
 	}, nil
 }
 
-
-
 // Close closes a demuxer.
 //
 // Close releases any resources associated with the Demuxer.
@@ -307,9 +305,4 @@ func (d *Demuxer) GetTags() []*Tag {
 //   - []*Cue: A slice of cue information. May be empty if no cues are present.
 func (d *Demuxer) GetCues() []*Cue {
 	return d.parser.GetCues()
-}
-
-// GetCuesPos returns the byte position of the cues element.
-func (d *Demuxer) GetCuesPos() uint64 {
-	return d.parser.GetCuesPos()
 }

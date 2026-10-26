@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"sync"
 	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru/v2"
@@ -10,6 +11,7 @@ import (
 // dedicated to avoiding disk I/O when serving grid images/thumbnails.
 type ThumbnailCache struct {
 	cache        *lru.Cache[string, []byte]
+	setMu        sync.Mutex // serializa Set y Purge: currentBytes debe igualar la suma de bytes guardados
 	currentBytes atomic.Int64
 	maxBytes     int64
 	hits         atomic.Uint64
@@ -63,6 +65,12 @@ func (c *ThumbnailCache) Set(key string, data []byte) bool {
 		return false
 	}
 
+	// Remove + Add no pueden entrelazarse con otro Set de la misma clave: el segundo Add
+	// pisaria el valor sin disparar el callback de eviccion y currentBytes seguiria contando
+	// bytes que ya no estan en la cache. Get no toma este lock.
+	c.setMu.Lock()
+	defer c.setMu.Unlock()
+
 	// Add over an existing key does not fire the evict callback, so the old bytes would
 	// never be discounted. Remove first (it does fire it) to keep currentBytes accurate.
 	c.cache.Remove(key)
@@ -80,6 +88,8 @@ func (c *ThumbnailCache) Set(key string, data []byte) bool {
 
 // Purge completely flushes the cache, releasing the GC to recycle the memory.
 func (c *ThumbnailCache) Purge() {
+	c.setMu.Lock()
+	defer c.setMu.Unlock()
 	c.cache.Purge()
 	c.currentBytes.Store(0)
 }
@@ -92,9 +102,4 @@ func (c *ThumbnailCache) Stats() (hits uint64, misses uint64, count int) {
 // BytesUsed returns the approximate memory occupied by cached image bytes.
 func (c *ThumbnailCache) BytesUsed() int64 {
 	return c.currentBytes.Load()
-}
-
-// Len returns the current number of items in the cache.
-func (c *ThumbnailCache) Len() int {
-	return c.cache.Len()
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { useAppStore } from "@/lib/store"
 import { useLocation } from "@tanstack/react-router"
+import { isNavigable, pickNext, type SpatialDir } from "./tv-spatial"
 
 interface CachedNode {
     el: HTMLElement
@@ -61,7 +62,7 @@ export function useTvDpad() {
             for (const el of rawNodes) {
                 if (el.offsetParent === null && el.offsetWidth === 0) continue
                 const rect = el.getBoundingClientRect()
-                if (rect.width > 0 && rect.height > 0) {
+                if (rect.width > 0 && rect.height > 0 && isNavigable(el)) {
                     newCache.push({ el, rect })
                 }
             }
@@ -101,48 +102,13 @@ export function useTvDpad() {
         window.addEventListener("scroll", handleLayoutChange, { passive: true, capture: true })
         window.addEventListener("resize", handleLayoutChange, { passive: true })
 
-        function center(rect: DOMRect) {
-            return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-        }
-
-        function score(
-            from: { x: number; y: number },
-            to: { x: number; y: number },
-            dir: "up" | "down" | "left" | "right"
-        ): number {
-            const dx = to.x - from.x
-            const dy = to.y - from.y
-            const dist = Math.sqrt(dx * dx + dy * dy)
-            if (dist === 0) return Infinity
-
-            let inDir = false
-            let perp = 1
-            switch (dir) {
-                case "right": inDir = dx > 0; perp = 1 + (Math.abs(dy) / (Math.abs(dx) + 1)) * 0.5; break
-                case "left":  inDir = dx < 0; perp = 1 + (Math.abs(dy) / (Math.abs(dx) + 1)) * 0.5; break
-                case "down":  inDir = dy > 0; perp = 1 + (Math.abs(dx) / (Math.abs(dy) + 1)) * 0.5; break
-                case "up":    inDir = dy < 0; perp = 1 + (Math.abs(dx) / (Math.abs(dy) + 1)) * 0.5; break
-            }
-            return inDir ? dist * perp : dist * 3
-        }
-
-        function findBest(currentEl: HTMLElement, dir: "up" | "down" | "left" | "right"): HTMLElement | null {
+        function findBest(currentEl: HTMLElement, dir: SpatialDir): HTMLElement | null {
             if (needsRefresh.current || nodesCache.current.length === 0) {
                 refreshCache()
             }
-            
-            const currentCache = nodesCache.current.find(n => n.el === currentEl)
-            const cc = currentCache ? center(currentCache.rect) : center(currentEl.getBoundingClientRect())
 
-            let bestEl: HTMLElement | null = null
-            let bestScore = Infinity
-
-            for (const { el, rect } of nodesCache.current) {
-                if (el === currentEl) continue
-                const s = score(cc, center(rect), dir)
-                if (s < bestScore) { bestScore = s; bestEl = el }
-            }
-            return bestEl
+            const from = nodesCache.current.find(n => n.el === currentEl)?.rect ?? currentEl.getBoundingClientRect()
+            return pickNext(from, nodesCache.current, dir, currentEl)
         }
 
         function handleKeyDown(e: KeyboardEvent) {
@@ -154,9 +120,16 @@ export function useTvDpad() {
                 active.getAttribute("role") === "textbox" ||
                 active.getAttribute("role") === "searchbox"
             )
-            if (isTextInput) return
+            // En un campo de una sola línea ↑/↓ no mueven el cursor: dejan salir (si no, el
+            // foco queda atrapado en el input). ←/→ siguen editando el texto, y dentro de
+            // diálogos/cmdk ↑/↓ son de la lista.
+            const canLeaveInput =
+                active?.tagName === "INPUT" &&
+                (e.key === "ArrowUp" || e.key === "ArrowDown") &&
+                !active.closest('[role="dialog"], [aria-modal="true"], [cmdk-root]')
+            if (isTextInput && !canLeaveInput) return
 
-            const dirMap: Record<string, "up" | "down" | "left" | "right"> = {
+            const dirMap: Record<string, SpatialDir> = {
                 ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
             }
             const dir = dirMap[e.key]

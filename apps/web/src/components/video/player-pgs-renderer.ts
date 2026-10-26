@@ -215,7 +215,7 @@ export class VideoCorePgsRenderer {
             }
 
             if (hasVideoFrameCallback) {
-                this._videoElement.requestVideoFrameCallback((now, metadata) => {
+                this._videoElement.requestVideoFrameCallback((_now, metadata) => {
                     if (this._isDestroyed) return
 
                     const isPlaying = !this._videoElement.paused

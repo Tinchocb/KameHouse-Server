@@ -1,10 +1,11 @@
 import { IconUiAlert, IconUiRefresh, IconUiClose } from "@/components/ui/icons";
 import * as React from "react"
+import { Button } from "@/components/ui/button"
 
 
 interface Props {
     children: React.ReactNode
-    /** Optional label shown in the fallback — e.g. "Video Player" */
+    /** Optional label shown in the fallback — e.g. "El reproductor" */
     label?: string
     /** Optional close callback to exit fullscreen player upon unrecoverable errors */
     onClose?: () => void
@@ -12,7 +13,6 @@ interface Props {
 
 interface State {
     hasError: boolean
-    errorMessage: string
 }
 
 /**
@@ -26,12 +26,11 @@ interface State {
 export class PlayerErrorBoundary extends React.Component<Props, State> {
     constructor(props: Props) {
         super(props)
-        this.state = { hasError: false, errorMessage: "" }
+        this.state = { hasError: false }
     }
 
-    static getDerivedStateFromError(error: unknown): State {
-        const message = error instanceof Error ? error.message : String(error)
-        return { hasError: true, errorMessage: message }
+    static getDerivedStateFromError(): State {
+        return { hasError: true }
     }
 
     componentDidCatch(error: unknown, info: React.ErrorInfo) {
@@ -39,39 +38,39 @@ export class PlayerErrorBoundary extends React.Component<Props, State> {
     }
 
     private handleRetry = () => {
-        this.setState({ hasError: false, errorMessage: "" })
+        this.setState({ hasError: false })
     }
 
     render() {
         if (this.state.hasError) {
-            const { label = "Player", onClose } = this.props
+            const { label = "El reproductor", onClose } = this.props
             return (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-black/80 text-white rounded-lg p-8 min-h-[200px]">
+                <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-black/80 text-label-1 rounded-lg p-8 min-h-[200px]">
                     <IconUiAlert className="w-10 h-10 text-brand-warning shrink-0" />
                     <div className="text-center space-y-1">
                         <p className="font-semibold text-base">{label} encontró un error</p>
-                        {this.state.errorMessage && (
-                            <p className="text-xs text-white/50 font-mono max-w-sm break-all">
-                                {this.state.errorMessage}
-                            </p>
-                        )}
+                        <p className="text-sm text-label-2">No pudimos continuar la reproducción. Intentá de nuevo o cerrá el reproductor y abrí otro video.</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
+                        <Button
+                            intent="glass"
+                            size="md"
                             onClick={this.handleRetry}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/20 active:scale-95 transition-[transform,background-color] duration-fast ease-out-strong text-sm font-medium cursor-pointer"
+                            leftIcon={<IconUiRefresh className="w-4 h-4" />}
+                            iconSpacing="0.5rem"
                         >
-                            <IconUiRefresh className="w-4 h-4" />
                             Reintentar
-                        </button>
+                        </Button>
                         {onClose && (
-                            <button
+                            <Button
+                                intent="destructive"
+                                size="md"
                                 onClick={onClose}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-destructive/20 text-brand-destructive [@media(hover:hover)_and_(pointer:fine)]:hover:bg-brand-destructive/30 active:scale-95 transition-[transform,background-color] duration-fast ease-out-strong text-sm font-medium cursor-pointer"
+                                leftIcon={<IconUiClose className="w-4 h-4" />}
+                                iconSpacing="0.5rem"
                             >
-                                <IconUiClose className="w-4 h-4" />
-                                Cerrar Reproductor
-                            </button>
+                                Cerrar reproductor
+                            </Button>
                         )}
                     </div>
                 </div>

@@ -30,7 +30,7 @@ func TestBuildFfmpegArgs(t *testing.T) {
 			DecodeFlags: []string{"-hwaccel", "cuda"},
 			EncodeFlags: []string{"-c:v", "h264_nvenc"},
 		}
-		args := buildFfmpegArgs(hw, "in.mkv", outDir)
+		args := buildFfmpegArgs(hw, "in.mkv", outDir, 1)
 
 		iIdx := indexOf(args, "-i")
 		if iIdx == -1 {
@@ -47,11 +47,14 @@ func TestBuildFfmpegArgs(t *testing.T) {
 		}
 	})
 
-	t.Run("produces a VOD playlist in the output dir", func(t *testing.T) {
-		args := buildFfmpegArgs(cassette.HwAccelProfile{}, "in.mkv", outDir)
+	t.Run("produces VOD variant playlists in the output dir", func(t *testing.T) {
+		args := buildFfmpegArgs(cassette.HwAccelProfile{}, "in.mkv", outDir, 2)
 
-		if got := args[len(args)-1]; got != filepath.Join(outDir, "master.m3u8") {
-			t.Errorf("last arg must be the playlist path, got %q", got)
+		if got := args[len(args)-1]; got != filepath.Join(outDir, "%v", "index.m3u8") {
+			t.Errorf("last arg must be the variant playlist path, got %q", got)
+		}
+		if idx := indexOf(args, "-var_stream_map"); idx == -1 || args[idx+1] != variantStreamMap(2) {
+			t.Errorf("the variant map must declare video plus one rendition per audio track, got %q", args[idx+1])
 		}
 		if idx := indexOf(args, "-hls_playlist_type"); idx == -1 || args[idx+1] != "vod" {
 			t.Error("a pre-transcode must be a VOD playlist, not a live one")
@@ -62,12 +65,12 @@ func TestBuildFfmpegArgs(t *testing.T) {
 	})
 
 	t.Run("forces keyframes only when the profile needs it", func(t *testing.T) {
-		withIDR := buildFfmpegArgs(cassette.HwAccelProfile{ForcedIDR: true}, "in.mkv", outDir)
+		withIDR := buildFfmpegArgs(cassette.HwAccelProfile{ForcedIDR: true}, "in.mkv", outDir, 1)
 		if indexOf(withIDR, "-force_key_frames") == -1 {
 			t.Error("ForcedIDR profile must force keyframes at segment boundaries")
 		}
 
-		withoutIDR := buildFfmpegArgs(cassette.HwAccelProfile{ForcedIDR: false}, "in.mkv", outDir)
+		withoutIDR := buildFfmpegArgs(cassette.HwAccelProfile{ForcedIDR: false}, "in.mkv", outDir, 1)
 		if indexOf(withoutIDR, "-force_key_frames") != -1 {
 			t.Error("non-ForcedIDR profile must not force keyframes")
 		}
@@ -177,7 +180,7 @@ func TestCancelQueuedJob(t *testing.T) {
 	}
 
 	// The worker must skip it rather than start an encode the user cancelled.
-	got, ok := m.Get(job.Hash)
+	got, ok := jobByHash(m, job.Hash)
 	if !ok {
 		t.Fatal("job disappeared after cancel")
 	}

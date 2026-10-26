@@ -10,7 +10,7 @@ export type SeriesViewMode = 'shelf' | 'etapas';
 
 export const Route = createFileRoute('/series/')({
     validateSearch: (search: Record<string, unknown>): { view?: SeriesViewMode } => ({
-        view: search.view === 'etapas' ? 'etapas' : undefined,
+        view: search.view === 'etapas' || search.view === 'shelf' ? search.view : undefined,
     }),
     // prefetch no bloqueante: nunca congela la navegación ni lanza en el router;
     // unificado con home y movies.

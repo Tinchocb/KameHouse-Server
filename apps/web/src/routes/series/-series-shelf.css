@@ -1,0 +1,164 @@
+/* Estantería de escritorio. Las capas fijas evitan reflujo de texto al abrir. */
+.series-shelf-card {
+    isolation: isolate;
+    contain: layout paint;
+    scroll-snap-align: center;
+    background: var(--surface-content);
+    transition: flex-grow var(--duration-base) var(--ease-expo-out),
+        flex-basis var(--duration-base) var(--ease-expo-out);
+}
+
+.series-shelf-backdrop {
+    background:
+        radial-gradient(ellipse at 70% 56%, color-mix(in srgb, var(--shelf-accent) 19%, transparent), transparent 72%),
+        linear-gradient(to bottom, color-mix(in srgb, var(--shelf-accent) 8%, var(--bg-primary)), var(--bg-primary));
+}
+
+.series-shelf-rim {
+    z-index: 5;
+    box-shadow: inset 0 0 0 1px var(--sectionbar-border);
+}
+
+.series-shelf-card[aria-selected="true"] .series-shelf-rim {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--shelf-accent) 65%, var(--sectionbar-border));
+}
+
+.series-shelf-card:focus-visible .series-shelf-rim {
+    box-shadow: inset 0 0 0 3px hsl(var(--focus-ring));
+}
+
+.series-shelf-era,
+.series-shelf-progress > span {
+    background: var(--shelf-accent);
+}
+
+.series-shelf-progress {
+    background: color-mix(in srgb, var(--label-1) 14%, transparent);
+}
+
+.series-shelf-progress > span {
+    transform: scaleX(var(--shelf-progress));
+    transition: transform var(--duration-base) var(--ease-out);
+}
+
+.series-shelf-character {
+    --shelf-art-scale: min(1, calc((var(--spine-col-width, 160) - 24) / (var(--spine-art-height, 400) * var(--shelf-character-ratio))));
+    position: absolute;
+    z-index: 2;
+    left: 50%;
+    bottom: 88px;
+    height: calc(var(--spine-art-height, 400) * 1px);
+    transform: translateX(calc(-50% + var(--shelf-character-offset-x, 0px))) translateY(calc(var(--spine-art-height, 400) * (1 - var(--shelf-art-scale)) * -.42px)) scale(var(--shelf-art-scale));
+    transform-origin: center bottom;
+    opacity: 0;
+    transition: transform var(--duration-base) var(--ease-expo-out),
+        opacity var(--duration-base) var(--ease-out);
+}
+
+.series-shelf-character[data-visible="true"] {
+    opacity: 1;
+}
+
+.series-shelf-card[aria-selected="true"] .series-shelf-character {
+    --shelf-art-scale: min(1, calc(var(--spine-exp-width, 480) * .42 / (var(--spine-art-height, 400) * var(--shelf-character-ratio))));
+    transform: translateX(calc(-50% + var(--spine-exp-w, 480px) * .27)) translateY(calc(var(--spine-art-height, 400) * (1 - var(--shelf-art-scale)) * -.42px)) scale(var(--shelf-art-scale));
+}
+
+.series-shelf-closed,
+.series-shelf-expanded {
+    position: absolute;
+    z-index: 3;
+    inset-block: 0;
+    left: 50%;
+}
+
+.series-shelf-closed {
+    width: var(--spine-col-w, 160px);
+    margin-left: calc(var(--spine-col-w, 160px) / -2);
+}
+
+.series-shelf-expanded {
+    width: var(--spine-exp-w, 480px);
+    margin-left: calc(var(--spine-exp-w, 480px) / -2);
+}
+
+/* Al cambiar de lomo las dos capas se funden entre sí, sin deslizarse. La que entra espera un instante
+   a que el lomo gane ancho (el texto de ancho fijo no asoma recortado) y la que sale se va rápido.
+   `visibility` cambia recién al terminar la salida, para que el fundido se vea. */
+.series-shelf-card[aria-selected="false"] .series-shelf-closed,
+.series-shelf-card[aria-selected="true"] .series-shelf-expanded {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--duration-base) var(--ease-out) var(--duration-micro),
+        visibility 0s;
+}
+
+.series-shelf-card[aria-selected="true"] .series-shelf-closed,
+.series-shelf-card[aria-selected="false"] .series-shelf-expanded {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--duration-quick) var(--ease-out),
+        visibility 0s linear var(--duration-quick);
+}
+
+.series-shelf-copy {
+    width: 53%;
+}
+
+.series-shelf-title {
+    font-size: clamp(1.75rem, 2.4vw, 2.75rem);
+}
+
+.series-shelf-footer {
+    min-height: 72px;
+    border-top: 1px solid var(--sectionbar-border);
+    background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+}
+
+.series-shelf-poster {
+    opacity: .3;
+}
+
+.series-shelf-copy-fallback {
+    width: 85%;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .series-shelf-card[aria-selected="false"]:hover .series-shelf-character {
+        transform: translateX(calc(-50% + var(--shelf-character-offset-x, 0px))) translateY(calc(var(--spine-art-height, 400) * (1 - var(--shelf-art-scale)) * -.42px - 4px)) scale(var(--shelf-art-scale));
+    }
+
+    .series-shelf-card[aria-selected="false"]:hover .series-shelf-rim {
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--shelf-accent) 40%, var(--sectionbar-border));
+    }
+}
+
+[data-flat="true"] .series-shelf-backdrop {
+    background: var(--bg-secondary);
+}
+
+.series-shelf-card[data-still="true"],
+.series-shelf-card[data-still="true"] * {
+    animation: none !important;
+    transition: none !important;
+}
+
+.series-shelf-card[data-still="true"]:hover .series-shelf-character {
+    transform: translateX(calc(-50% + var(--shelf-character-offset-x, 0px))) translateY(calc(var(--spine-art-height, 400) * (1 - var(--shelf-art-scale)) * -.42px)) scale(var(--shelf-art-scale));
+}
+
+.series-shelf-card[data-still="true"][aria-selected="true"] .series-shelf-character {
+    transform: translateX(calc(-50% + var(--spine-exp-w, 480px) * .27)) translateY(calc(var(--spine-art-height, 400) * (1 - var(--shelf-art-scale)) * -.42px)) scale(var(--shelf-art-scale));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .series-shelf-card,
+    .series-shelf-card * {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .series-shelf-card[aria-selected="false"]:hover .series-shelf-character {
+        transform: translateX(calc(-50% + var(--shelf-character-offset-x, 0px))) translateY(calc(var(--spine-art-height, 400) * (1 - var(--shelf-art-scale)) * -.42px)) scale(var(--shelf-art-scale));
+    }
+}

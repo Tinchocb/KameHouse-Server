@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import type React from "react"
 import type { PlayerCoreProps } from "./player-core.types"
 
-export type StreamSwitchReason = "audio" | "source" | "fallback"
+type StreamSwitchReason = "audio" | "source" | "fallback"
 
 /**
  * Congela el cuadro actual como póster antes de reconstruir el stream (cambio de

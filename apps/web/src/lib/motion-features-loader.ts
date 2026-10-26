@@ -35,10 +35,6 @@ export function loadMotionFeatures(): Promise<FeatureBundle> {
     return promise
 }
 
-export function isMotionFeaturesReady(): boolean {
-    return ready
-}
-
 /** true cuando las funciones de animación ya están cargadas. */
 export function useMotionFeaturesReady(): boolean {
     return React.useSyncExternalStore(

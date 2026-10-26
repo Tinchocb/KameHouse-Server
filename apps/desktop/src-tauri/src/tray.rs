@@ -8,7 +8,7 @@ use tauri::{
 };
 
 use crate::sidecar::SidecarManager;
-use crate::window_manager::WindowManager;
+use crate::window_manager::{main_is_blank, WindowManager};
 
 pub struct TrayManager;
 
@@ -54,6 +54,11 @@ impl TrayManager {
                     if let Some(win) = target_win {
                         if win.is_visible().unwrap_or(false) {
                             let _ = win.hide();
+                        } else if main_is_blank(app) {
+                            // La interfaz del sidecar aún no está lista: se ve el splash, no una ventana vacía.
+                            if let Some(splash) = app.get_webview_window("splash") {
+                                let _ = splash.set_focus();
+                            }
                         } else {
                             // El splash ya cumplió si el usuario pide la ventana a mano.
                             if let Some(splash) = app.get_webview_window("splash") {
@@ -82,6 +87,10 @@ impl TrayManager {
                         if let Some(win) = target_win {
                             if win.is_visible().unwrap_or(false) {
                                 let _ = win.hide();
+                            } else if main_is_blank(app) {
+                                if let Some(splash) = app.get_webview_window("splash") {
+                                    let _ = splash.set_focus();
+                                }
                             } else {
                                 if let Some(splash) = app.get_webview_window("splash") {
                                     let _ = splash.destroy();
@@ -99,28 +108,8 @@ impl TrayManager {
         Ok(())
     }
 
-    fn get_icon_path<R: Runtime>(&self, app_handle: &AppHandle<R>) -> tauri::image::Image<'_> {
-        let icon_name = if cfg!(target_os = "macos") {
-            "18x18.png"
-        } else {
-            "icon.ico"
-        };
-
-        let icon_path = if cfg!(debug_assertions) {
-            let current_dir = std::env::current_dir().unwrap_or_default();
-            current_dir.join("assets").join(icon_name)
-        } else {
-            app_handle
-                .path()
-                .resource_dir()
-                .unwrap_or_default()
-                .join("icons")
-                .join(icon_name)
-        };
-
-        tauri::image::Image::from_path(icon_path).unwrap_or_else(|_| {
-            tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap()
-        })
+    fn get_icon_path<R: Runtime>(&self, _app_handle: &AppHandle<R>) -> tauri::image::Image<'_> {
+        tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap()
     }
 }
 

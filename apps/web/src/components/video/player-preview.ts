@@ -1,7 +1,7 @@
 import Hls from "hls.js"
 
-export const VIDEOCORE_PREVIEW_THUMBNAIL_SIZE = 200
-export const VIDEOCORE_PREVIEW_CAPTURE_INTERVAL_SECONDS = 4
+const VIDEOCORE_PREVIEW_THUMBNAIL_SIZE = 200
+const VIDEOCORE_PREVIEW_CAPTURE_INTERVAL_SECONDS = 4
 const MAX_CONCURRENT_JOBS = 1
 const MAX_PREVIEW_CACHE_SIZE = 150
 const PREFETCH_AHEAD_COUNT = 10
@@ -11,7 +11,6 @@ export class PlayerPreviewManager {
     private inFlightPromises: Map<number, Promise<string | undefined>> = new Map()
     private jobQueue: Job[] = []
     private activeJobs: Set<number> = new Set()
-    private currentMediaSource?: string
     private videoSyncController = new AbortController()
     private videoElement: HTMLVideoElement
     private lastCapturedSegment: number = -1
@@ -22,6 +21,7 @@ export class PlayerPreviewManager {
     private isHlsSource: boolean = false
     private lastKnownTime: number = 0
     private prefetchAheadCount: number = PREFETCH_AHEAD_COUNT
+    private disposed = false
 
     private readonly _dummyVideoElement = document.createElement("video")
     private readonly _offscreenCanvas = new OffscreenCanvas(0, 0)
@@ -49,6 +49,7 @@ export class PlayerPreviewManager {
     }
 
     _bindToVideoPlayer(): void {
+        if (this.disposed) return
         this.detachFromCurrentPlayer()
         this.videoSyncController = new AbortController()
 
@@ -84,6 +85,8 @@ export class PlayerPreviewManager {
     }
 
     cleanup(): void {
+        if (this.disposed) return
+        this.disposed = true
         this.detachFromCurrentPlayer()
         this.resetOperationQueue()
         this.clearPreviewCache()
@@ -103,7 +106,6 @@ export class PlayerPreviewManager {
         this._dummyVideoElement.load()
         this._dummyVideoElement.remove()
 
-        this.currentMediaSource = undefined
         this.lastCapturedSegment = -1
         this.highestCachedIndex = -1
         this.canvasSizeConfigured = false
@@ -115,6 +117,7 @@ export class PlayerPreviewManager {
         segmentIndex: number,
         prefetch = true,
     ): Promise<string | undefined> {
+        if (this.disposed) return undefined
         const cachedPreview = this.previewCache.get(segmentIndex)
         if (cachedPreview) {
             if (prefetch) this.prefetchUpcomingSegments(segmentIndex)
@@ -139,8 +142,6 @@ export class PlayerPreviewManager {
     }
 
     private loadMediaSource(source: string): void {
-        this.currentMediaSource = source
-
         if (this.hlsInstance) {
             this.hlsInstance.destroy()
             this.hlsInstance = null
@@ -168,7 +169,7 @@ export class PlayerPreviewManager {
     }
 
     private prefetchUpcomingSegments(currentIndex: number): void {
-        if (this.prefetchAheadCount <= 0) return
+        if (this.disposed || this.prefetchAheadCount <= 0) return
 
         for (let i = 1; i <= this.prefetchAheadCount; i++) {
             const nextIndex = currentIndex + i
@@ -182,6 +183,7 @@ export class PlayerPreviewManager {
     }
 
     private throttledCaptureFrame(segmentIndex: number): void {
+        if (this.disposed) return
         if (this.captureThrottleTimeout) {
             clearTimeout(this.captureThrottleTimeout)
         }
@@ -240,7 +242,7 @@ export class PlayerPreviewManager {
         const frameWidth = this.videoElement.videoWidth
         const frameHeight = this.videoElement.videoHeight
 
-        if (!frameWidth || !frameHeight) return undefined
+        if (this.disposed || !frameWidth || !frameHeight) return undefined
 
         try {
             if (!this._drawingContext) return undefined
@@ -257,6 +259,7 @@ export class PlayerPreviewManager {
                 type: "image/webp",
                 quality: 0.6,
             })
+            if (this.disposed) return undefined
             const previewUrl = URL.createObjectURL(imageBlob)
 
             this.setCachedPreview(segmentIndex, previewUrl)
@@ -309,8 +312,16 @@ export class PlayerPreviewManager {
                 this.activeJobs.add(segmentIndex)
                 const targetTime = segmentIndex * VIDEOCORE_PREVIEW_CAPTURE_INTERVAL_SECONDS
                 await this.waitForVideoReady()
+                if (this.disposed) {
+                    resolve(undefined)
+                    return
+                }
                 this._dummyVideoElement.currentTime = targetTime
                 await this.waitForSeek()
+                if (this.disposed) {
+                    resolve(undefined)
+                    return
+                }
 
                 const preview = await this.captureFrameAtSegment(
                     this._dummyVideoElement,
@@ -329,7 +340,7 @@ export class PlayerPreviewManager {
             }
         }
 
-        return { segmentIndex, execute, promise }
+        return { segmentIndex, execute, promise, cancel: () => resolve(undefined) }
     }
 
     private waitForVideoReady(): Promise<void> {
@@ -394,6 +405,7 @@ export class PlayerPreviewManager {
     }
 
     private processNextJob(): void {
+        if (this.disposed) return
         while (
             this.activeJobs.size < MAX_CONCURRENT_JOBS &&
             this.jobQueue.length > 0
@@ -408,6 +420,7 @@ export class PlayerPreviewManager {
     private schedulePreviewGeneration(
         segmentIndex: number,
     ): Promise<string | undefined> {
+        if (this.disposed) return Promise.resolve(undefined)
         const existingPromise = this.inFlightPromises.get(segmentIndex)
         if (existingPromise) {
             return existingPromise
@@ -455,7 +468,7 @@ export class PlayerPreviewManager {
         }
 
         try {
-            if (!this._drawingContext) return undefined
+            if (this.disposed || !this._drawingContext) return undefined
             this.configureRenderingSurface(frameWidth, frameHeight)
             this._drawingContext.drawImage(
                 videoElement,
@@ -469,6 +482,7 @@ export class PlayerPreviewManager {
                 type: "image/webp",
                 quality: 0.6,
             })
+            if (this.disposed) return undefined
             const previewUrl = URL.createObjectURL(imageBlob)
 
             this.setCachedPreview(segmentIndex, previewUrl)
@@ -518,6 +532,7 @@ export class PlayerPreviewManager {
     }
 
     private resetOperationQueue(): void {
+        for (const job of this.jobQueue) job.cancel()
         this.jobQueue = []
         this.activeJobs.clear()
     }
@@ -527,4 +542,5 @@ type Job = {
     segmentIndex: number
     execute: () => Promise<void>
     promise: Promise<string | undefined>
+    cancel: () => void
 }

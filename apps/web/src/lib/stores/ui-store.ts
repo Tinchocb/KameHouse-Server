@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
 import { useQueueStore } from "./queue-store"
+import { isNavDensity, type NavDensity } from "@/lib/nav-compact"
 
 export interface BackgroundMusicTrack {
     name: string
@@ -15,19 +16,13 @@ export interface BackgroundMusicTrack {
  * de Apariencia se escribe aquí al instante (preview local hasta Guardar);
  * syncStoresWithSettings vuelca el servidor aquí al cargar/guardar/descartar.
  */
-export interface ThemeVisualPatch {
+interface ThemeVisualPatch {
     themeEra?: string
     themeMode?: string
     enableColorSettings?: boolean
     backgroundColor?: string
     accentColor?: string
     themeEnableBlurringEffects?: boolean
-    themeEnableLiquidGlass?: boolean
-    themeEnableSidebarGradient?: boolean
-    themeEnableCinematicGrain?: boolean
-    themeMediaPageBannerType?: string
-    themeMediaPageBannerSize?: string
-    themeMediaPageBannerInfoBoxSize?: string
     themeEnableMediaPageBlurredBackground?: boolean
     themeAnimeLibraryCollectionDefaultSorting?: string
 }
@@ -51,6 +46,10 @@ export interface UIState {
     themeVisual: ThemeVisualPatch
     hideAudienceScore: boolean | undefined
     scrollBlurEnabled: boolean
+    /** Tarjeta que se contrae al desplazar la ficha de series. Solo este dispositivo. */
+    seriesHeroCardEnabled: boolean
+    /** Barra de navegación flotante: solo íconos al bajar (auto), siempre (compact) o nunca (expanded). */
+    navDensity: NavDensity
     setSearchQuery: (query: string) => void
     setVideoActive: (active: boolean) => void
     setBgMusicEnabled: (enabled: boolean) => void
@@ -63,6 +62,8 @@ export interface UIState {
     setDynamicBackdropEnabled: (enabled: boolean) => void
     setDynamicBackdropMotionEnabled: (enabled: boolean) => void
     setScrollBlurEnabled: (enabled: boolean) => void
+    setSeriesHeroCardEnabled: (enabled: boolean) => void
+    setNavDensity: (density: NavDensity) => void
     setEraOpeningPlaying: (playing: boolean) => void
     setShowInitialSetup: (show: boolean) => void
     setActiveSeriesContext: (context: string | null) => void
@@ -88,6 +89,8 @@ export const useUIStore = create<UIState>()(
                     dynamicBackdropEnabled: true,
                     dynamicBackdropMotionEnabled: true,
                     scrollBlurEnabled: true,
+                    seriesHeroCardEnabled: true,
+                    navDensity: "auto",
                     eraOpeningPlaying: false,
                     showInitialSetup: false,
                     activeSeriesContext: null,
@@ -106,6 +109,8 @@ export const useUIStore = create<UIState>()(
                     setDynamicBackdropEnabled: (enabled) => set({ dynamicBackdropEnabled: enabled }),
                     setDynamicBackdropMotionEnabled: (enabled) => set({ dynamicBackdropMotionEnabled: enabled }),
                     setScrollBlurEnabled: (enabled) => set({ scrollBlurEnabled: enabled }),
+                    setSeriesHeroCardEnabled: (enabled) => set({ seriesHeroCardEnabled: enabled }),
+                    setNavDensity: (density) => set({ navDensity: isNavDensity(density) ? density : "auto" }),
                     setEraOpeningPlaying: (playing) => set({ eraOpeningPlaying: playing }),
                     setShowInitialSetup: (show) => set({ showInitialSetup: show }),
                     setActiveSeriesContext: (context) => set((state) => (state.activeSeriesContext === context ? state : { activeSeriesContext: context })),
@@ -126,6 +131,8 @@ export const useUIStore = create<UIState>()(
                         dynamicBackdropEnabled: state.dynamicBackdropEnabled,
                         dynamicBackdropMotionEnabled: state.dynamicBackdropMotionEnabled,
                         scrollBlurEnabled: state.scrollBlurEnabled,
+                        seriesHeroCardEnabled: state.seriesHeroCardEnabled,
+                        navDensity: state.navDensity,
                         themeVisual: state.themeVisual,
                         hideAudienceScore: state.hideAudienceScore,
                     }),

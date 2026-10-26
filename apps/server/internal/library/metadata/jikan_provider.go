@@ -19,16 +19,14 @@ import (
 type JikanProvider struct {
 	client      *jikan.Client
 	db          *db.Database
-	logger      *zerolog.Logger
 	rateLimiter *limiter.Limiter
 }
 
 // NewJikanProvider creates a new Jikan metadata provider.
 func NewJikanProvider(database *db.Database, logger *zerolog.Logger) *JikanProvider {
 	return &JikanProvider{
-		client:      jikan.NewClient(logger),
+		client:      jikan.Shared(logger),
 		db:          database,
-		logger:      logger,
 		rateLimiter: limiter.NewJikanLimiter(),
 	}
 }

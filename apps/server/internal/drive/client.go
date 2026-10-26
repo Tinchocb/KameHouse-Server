@@ -27,11 +27,10 @@ const (
 
 // Client wraps Google Drive API calls with automatic OAuth2 token refreshing.
 type Client struct {
-	httpClient  *http.Client
-	transport   *http.Transport
-	tokenSource oauth2.TokenSource
-	logger      *zerolog.Logger
-	apiBase     string // overridable in tests; empty means driveAPIBase
+	httpClient *http.Client
+	transport  *http.Transport
+	logger     *zerolog.Logger
+	apiBase    string // overridable in tests; empty means driveAPIBase
 }
 
 func (c *Client) api(path string) string {
@@ -59,9 +58,6 @@ func NewClient(clientID, clientSecret, refreshToken string, logger *zerolog.Logg
 		RefreshToken: refreshToken,
 	}
 
-	tokenSource := config.TokenSource(context.Background(), initialToken)
-	reusingTokenSource := oauth2.ReuseTokenSource(initialToken, tokenSource)
-
 	baseTransport := &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
 		MaxIdleConns:          50,
@@ -71,6 +67,17 @@ func NewClient(clientID, clientSecret, refreshToken string, logger *zerolog.Logg
 		ResponseHeaderTimeout: 30 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
+
+	// El refresco del token corre fuera del contexto de cada pedido (ReuseTokenSource lo
+	// serializa con un mutex) y, sin oauth2.HTTPClient, usa http.DefaultClient, que no tiene
+	// timeout: un endpoint OAuth que acepta la conexion y no contesta dejaria colgados todos
+	// los pedidos a Drive esperando ese lock. Se le da un cliente acotado.
+	tokenCtx := context.WithValue(context.Background(), oauth2.HTTPClient, &http.Client{
+		Transport: baseTransport,
+		Timeout:   30 * time.Second,
+	})
+	tokenSource := config.TokenSource(tokenCtx, initialToken)
+	reusingTokenSource := oauth2.ReuseTokenSource(initialToken, tokenSource)
 
 	oauthTransport := &oauth2.Transport{
 		Source: reusingTokenSource,
@@ -83,10 +90,9 @@ func NewClient(clientID, clientSecret, refreshToken string, logger *zerolog.Logg
 	}
 
 	return &Client{
-		httpClient:  httpClient,
-		transport:   baseTransport,
-		tokenSource: reusingTokenSource,
-		logger:      logger,
+		httpClient: httpClient,
+		transport:  baseTransport,
+		logger:     logger,
 	}, nil
 }
 
@@ -479,8 +485,48 @@ func (e *StreamStatusError) Is(target error) bool {
 
 // Transient reports whether retrying the same request may succeed.
 func (e *StreamStatusError) Transient() bool {
-	return e.Status == http.StatusTooManyRequests || e.Status >= 500 || e.Is(ErrDownloadQuotaExceeded)
+	return e.Status == http.StatusTooManyRequests || e.Status >= 500 || e.Is(ErrDownloadQuotaExceeded) || e.rateLimited()
 }
+
+// rateLimited: Drive answers a request-rate cap with 403 + userRateLimitExceeded /
+// rateLimitExceeded / sharingRateLimitExceeded (not 429). Google documents these as
+// retryable with backoff; treating them as final turned a burst of subtitle reads into a
+// permanent "unavailable".
+func (e *StreamStatusError) rateLimited() bool {
+	return e.Status == http.StatusForbidden && strings.Contains(e.Body, "ateLimitExceeded")
+}
+
+// Failure kinds reported by DriveErrorKind.
+const (
+	ErrKindQuota    = "quota"    // downloadQuotaExceeded: the file's daily download cap
+	ErrKindRate     = "rate"     // too many requests (429 / 403 rateLimitExceeded)
+	ErrKindAuth     = "auth"     // 401 / 403: not authorised (token revoked, no access)
+	ErrKindNotFound = "notfound" // 404: the file is gone
+	ErrKindServer   = "server"   // 5xx
+	ErrKindNetwork  = "network"  // timeout, connection reset, truncated body
+	ErrKindChanged  = "changed"  // 416: the file is shorter than expected (replaced in Drive)
+	ErrKindOther    = "other"
+)
+
+// DriveErrorKind classifies the answer (see the ErrKind* constants).
+func (e *StreamStatusError) DriveErrorKind() string {
+	switch {
+	case e.Is(ErrDownloadQuotaExceeded):
+		return ErrKindQuota
+	case e.Status == http.StatusTooManyRequests || e.rateLimited():
+		return ErrKindRate
+	case e.Status == http.StatusUnauthorized || e.Status == http.StatusForbidden:
+		return ErrKindAuth
+	case e.Status == http.StatusNotFound:
+		return ErrKindNotFound
+	case e.Status >= 500:
+		return ErrKindServer
+	}
+	return ErrKindOther
+}
+
+// DriveStatus is the HTTP status Drive answered.
+func (e *StreamStatusError) DriveStatus() int { return e.Status }
 
 // GetUserInfo returns profile information of the authenticated user to verify credentials.
 func (c *Client) GetUserInfo(ctx context.Context) (email string, name string, err error) {

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { resolveBackdropTreatment, heroScrimBackground } from "./media-hero"
 
@@ -38,6 +40,17 @@ describe("resolveBackdropTreatment", () => {
         // Legacy/unset values must not blank out someone's hero.
         expect(resolveBackdropTreatment("", true)).toBe("show")
         expect(resolveBackdropTreatment("garbage", false)).toBe("show")
+    })
+})
+
+// La sinopsis y el pie de la ficha usan el texto del tema (sobre un fondo de token), no blanco fijo.
+describe("MediaHero · texto de sinopsis y pie", () => {
+    const source = readFileSync(join(__dirname, "media-hero.tsx"), "utf8")
+
+    it("sinopsis y pie usan text-on-surface en vez de text-white", () => {
+        expect(source).toMatch(/text-on-surface\/90/)
+        expect(source).toMatch(/text-on-surface\/85/)
+        expect(source).not.toMatch(/text-white\/(90|85)/)
     })
 })
 

@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"context"
-	"kamehouse/internal/database/models"
-	"kamehouse/internal/mediastream/cassette"
-	"os/exec"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"kamehouse/internal/database/models"
+	"kamehouse/internal/mediastream/cassette"
+	"kamehouse/internal/util"
 
 	"github.com/labstack/echo/v4"
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -69,7 +71,7 @@ func (h *Handler) HandleGetTranscodeStats(c echo.Context) error {
 	}
 
 	// GPU stats
-	res.GPU = getGPUStats()
+	res.GPU = getGPUStats(c.Request().Context())
 
 	return h.RespondWithData(c, res)
 }
@@ -80,11 +82,22 @@ func (h *Handler) HandleGetTranscodeStats(c echo.Context) error {
 //	@route /api/v1/admin/library-stats [GET]
 //	@returns handlers.AdminLibraryStatsResponse
 func (h *Handler) HandleGetLibraryStats(c echo.Context) error {
+	if h.App == nil || h.App.Database == nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "database not available")
+	}
+
+	reqCtx := c.Request().Context()
+	gdb := h.App.Database.Gorm().WithContext(reqCtx)
+
 	var totalLocalFiles int64
-	h.App.Database.Gorm().Model(&models.LocalFile{}).Count(&totalLocalFiles)
+	if err := gdb.Model(&models.LocalFile{}).Count(&totalLocalFiles).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
 
 	var totalMedia int64
-	h.App.Database.Gorm().Model(&models.LibraryMedia{}).Count(&totalMedia)
+	if err := gdb.Model(&models.LibraryMedia{}).Count(&totalMedia).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
 
 	return h.RespondWithData(c, AdminLibraryStatsResponse{
 		TotalLocalFiles: totalLocalFiles,
@@ -92,11 +105,11 @@ func (h *Handler) HandleGetLibraryStats(c echo.Context) error {
 	})
 }
 
-func getGPUStats() *GPUStats {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+func getGPUStats(parentCtx context.Context) *GPUStats {
+	ctx, cancel := context.WithTimeout(parentCtx, 2*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "nvidia-smi", "--query-gpu=utilization.gpu,utilization.encoder,memory.used,memory.total", "--format=csv,noheader,nounits")
+	cmd := util.NewCmdCtx(ctx, "nvidia-smi", "--query-gpu=utilization.gpu,utilization.encoder,memory.used,memory.total", "--format=csv,noheader,nounits")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil

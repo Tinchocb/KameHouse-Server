@@ -6,9 +6,9 @@ describe("aniskipQueryKeys", () => {
     })
 
     it("should generate query key with parameters normalized", () => {
-        expect(aniskipQueryKeys.times(123, 456, 1)).toEqual(["aniskip", 123, 456, 1])
-        expect(aniskipQueryKeys.times(undefined, 456, 1)).toEqual(["aniskip", null, 456, 1])
-        expect(aniskipQueryKeys.times(123, null, 2)).toEqual(["aniskip", 123, null, 2])
+        expect(aniskipQueryKeys.times(123, 456, 1)).toEqual(["aniskip", 123, 456, 1, "recap"])
+        expect(aniskipQueryKeys.times(undefined, 456, 1)).toEqual(["aniskip", null, 456, 1, "recap"])
+        expect(aniskipQueryKeys.times(123, null, 2)).toEqual(["aniskip", 123, null, 2, "recap"])
     })
 })
 

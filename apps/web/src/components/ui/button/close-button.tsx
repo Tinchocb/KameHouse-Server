@@ -1,12 +1,12 @@
 import * as React from "react"
-import { IconButton, IconButtonProps } from "."
+import { IconButton, IconButtonProps } from "./icon-button"
 import { cn } from "../core/styling"
 
 /* -------------------------------------------------------------------------------------------------
  * CloseButton
  * -----------------------------------------------------------------------------------------------*/
 
-export type CloseButtonProps = Omit<IconButtonProps, "icon"> & {
+type CloseButtonProps = Omit<IconButtonProps, "icon"> & {
     icon?: React.ReactNode
 }
 
@@ -27,7 +27,6 @@ export const CloseButton = React.forwardRef<HTMLButtonElement, CloseButtonProps>
                 "rounded-full text-2xl flex-none",
                 className,
             )}
-            aria-label={props["aria-label"] || "Cerrar"}
             icon={!icon ? <span>
                 <svg
                     xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"
@@ -39,6 +38,7 @@ export const CloseButton = React.forwardRef<HTMLButtonElement, CloseButtonProps>
                 </svg>
             </span> : icon}
             {...rest}
+            aria-label={props["aria-label"] || "Cerrar"}
             ref={ref}
         />
     )

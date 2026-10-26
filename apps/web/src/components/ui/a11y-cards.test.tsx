@@ -50,6 +50,16 @@ describe("MoviePosterCard", () => {
     })
 })
 
+// El título bajo el póster va sobre el fondo de página: su color sale del tema, no de blanco fijo.
+describe("MoviePosterCard · título", () => {
+    it("usa text-on-surface y no text-white", () => {
+        render(<MoviePosterCard image="" title="Dragon Ball Z: La Batalla" initial={false} />)
+        const title = screen.getByText("Dragon Ball Z: La Batalla")
+        expect(title.className).toContain("text-on-surface")
+        expect(title.className).not.toContain("text-white")
+    })
+})
+
 describe("SectionBar", () => {
     it("el título es h2 por defecto y admite h3", () => {
         const { rerender } = render(<SectionBar label="Apariencia">x</SectionBar>)

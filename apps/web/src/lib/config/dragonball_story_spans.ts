@@ -1,13 +1,13 @@
 import storySpansData from "./dragonball_story_spans.json"
 
-export interface StorySpanMilestone {
+interface StorySpanMilestone {
   episode: number
   title: string
   description: string
   time?: string
 }
 
-export interface StorySpanCharacterStatus {
+interface StorySpanCharacterStatus {
   goku: string
   vegeta: string
   gohan: string
@@ -16,14 +16,14 @@ export interface StorySpanCharacterStatus {
   [key: string]: string | undefined
 }
 
-export interface StorySpanWorldState {
+interface StorySpanWorldState {
   threatLevel: string
   activeVillains: string[]
   dragonBallsStatus: string
   characterStatus: StorySpanCharacterStatus
 }
 
-export type SeriesSpanId = "classic" | "z" | "super" | "daima" | "gt"
+type SeriesSpanId = "classic" | "z" | "super" | "daima" | "gt"
 
 export interface StorySpan {
   id: string
@@ -47,9 +47,12 @@ export interface StorySpan {
   hasFiller: boolean
   fillerEpisodes: number[]
   recommendedStartEpisode: number
+  kaiStartEpisode?: number
+  kaiEndEpisode?: number
+  kaiFiller?: boolean
 }
 
-export interface SeriesSummary {
+interface SeriesSummary {
   id: SeriesSpanId
   tmdbId: number
   title: string
@@ -58,7 +61,7 @@ export interface SeriesSummary {
   canon: boolean
 }
 
-export interface StorySpansPayload {
+interface StorySpansPayload {
   title: string
   version: string
   updatedAt: string
@@ -67,5 +70,5 @@ export interface StorySpansPayload {
   spans: StorySpan[]
 }
 
-export const DRAGON_BALL_STORY_DATA = storySpansData as unknown as StorySpansPayload
+const DRAGON_BALL_STORY_DATA = storySpansData as unknown as StorySpansPayload
 export const DRAGON_BALL_STORY_SPANS: StorySpan[] = DRAGON_BALL_STORY_DATA.spans

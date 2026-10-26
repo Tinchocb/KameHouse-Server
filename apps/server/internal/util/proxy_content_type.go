@@ -51,39 +51,6 @@ func isAVIF(b []byte) bool {
 	return brand == "avif" || brand == "avis"
 }
 
-// proxyMediaTypes son los tipos exactos permitidos además de video/*, audio/* e
-// image/* (menos SVG). Ninguno se ejecuta en el navegador al abrirse.
-var proxyMediaTypes = map[string]bool{
-	"application/vnd.apple.mpegurl": true,
-	"application/x-mpegurl":         true,
-	"application/mpegurl":           true,
-	"application/dash+xml":          true,
-	"application/octet-stream":      true,
-	"binary/octet-stream":           true,
-	"application/mp4":               true,
-	"application/ogg":               true,
-	"text/vtt":                      true,
-	"text/plain":                    true,
-}
-
-// SafeProxyContentType devuelve el Content-Type declarado si es de medios, o
-// application/octet-stream si podría interpretarse como página (HTML, SVG,
-// XML, JavaScript...). Un tipo ausente o ilegible también cae a octet-stream.
-func SafeProxyContentType(declared string) string {
-	mt := mediaTypeOf(declared)
-	switch {
-	case mt == "":
-		return "application/octet-stream"
-	case mt == "image/svg+xml":
-		return "application/octet-stream"
-	case strings.HasPrefix(mt, "video/"), strings.HasPrefix(mt, "audio/"), strings.HasPrefix(mt, "image/"):
-		return declared
-	case proxyMediaTypes[mt]:
-		return declared
-	}
-	return "application/octet-stream"
-}
-
 // HardenProxyResponse añade las cabeceras que impiden que el navegador
 // reinterprete o ejecute lo que devolvió el proxy.
 func HardenProxyResponse(h http.Header) {

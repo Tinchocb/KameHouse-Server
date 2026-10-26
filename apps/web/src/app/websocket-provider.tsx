@@ -63,6 +63,8 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const [isBackendReady, setIsBackendReady] = React.useState(false)
     useEffect(() => {
         let cancelled = false
+        let timerId: ReturnType<typeof setTimeout> | null = null
+
         const probe = async () => {
             while (!cancelled) {
                 try {
@@ -70,12 +72,18 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                     if (!cancelled) setIsBackendReady(true)
                     return
                 } catch {
-                    await new Promise(resolve => setTimeout(resolve, 1500))
+                    if (cancelled) return
+                    await new Promise(resolve => {
+                        timerId = setTimeout(resolve, 1500)
+                    })
                 }
             }
         }
         void probe()
-        return () => { cancelled = true }
+        return () => {
+            cancelled = true
+            if (timerId) clearTimeout(timerId)
+        }
     }, [])
 
     const { lastJsonMessage, sendJsonMessage } = useWebSocket(wsUrl, {
@@ -313,7 +321,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                         const notif = settings?.notifications
                         if (notif?.disableNotifications) break
                         if (n?.type === "scanner" && notif?.disableAutoScannerNotifications) break
-                        toast(n.title, { description: n.message })
+                        toast.info(n.title, { description: n.message })
                     }
                     break
                 }

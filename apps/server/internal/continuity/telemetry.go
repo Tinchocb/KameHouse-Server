@@ -1,14 +1,12 @@
 package continuity
 
 import (
-	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
-	"gorm.io/gorm/clause"
 )
 
 // telemetryEntry is the in-memory buffer entry for a single playback position.
@@ -30,6 +28,8 @@ type telemetryKey struct {
 // TelemetryManager orchestrates high-speed, thread-safe playback progress buffering.
 type TelemetryManager struct {
 	mu         sync.RWMutex
+	flushMu    sync.Mutex
+	stopped    bool
 	buffer     map[telemetryKey]telemetryEntry
 	manager    *Manager
 	repository *db.WatchHistoryRepository
@@ -57,6 +57,10 @@ func NewTelemetryManager(manager *Manager, logger *zerolog.Logger, flushInterval
 // UpdateProgress safely and instantly updates the memory buffer and file cache.
 func (tm *TelemetryManager) UpdateProgress(accountID uint, mediaID, episodeNumber int, currentTime, duration float64) {
 	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	if tm.stopped {
+		return
+	}
 	key := telemetryKey{AccountID: accountID, MediaID: mediaID, EpisodeNumber: episodeNumber}
 	tm.buffer[key] = telemetryEntry{
 		AccountID:     accountID,
@@ -65,9 +69,9 @@ func (tm *TelemetryManager) UpdateProgress(accountID uint, mediaID, episodeNumbe
 		CurrentTime:   currentTime,
 		Duration:      duration,
 	}
-	tm.mu.Unlock()
 
 	// Update continuity file cache simultaneously for instant sync across endpoints
+	// Keep both mirrors in the same arrival order and let Stop wait for this write.
 	if tm.manager != nil {
 		_ = tm.manager.UpdateWatchHistoryItem(&UpdateWatchHistoryItemOptions{
 			CurrentTime:   currentTime,
@@ -104,6 +108,9 @@ func (tm *TelemetryManager) Start(flushInterval time.Duration) {
 
 // flush safely duplicates the map and calls the DB repository outside the lock.
 func (tm *TelemetryManager) flush() {
+	// A retry of an older batch must never commit after a newer flush.
+	tm.flushMu.Lock()
+	defer tm.flushMu.Unlock()
 	tm.mu.Lock()
 	if len(tm.buffer) == 0 {
 		tm.mu.Unlock()
@@ -119,7 +126,6 @@ func (tm *TelemetryManager) flush() {
 	tm.mu.Unlock()
 
 	var records []models.WatchHistory
-	var completedProgress []models.UserMediaProgress
 
 	for _, entry := range localBatch {
 		if entry.MediaID <= 0 {
@@ -134,47 +140,22 @@ func (tm *TelemetryManager) flush() {
 			CurrentTime:   entry.CurrentTime,
 			Duration:      entry.Duration,
 		})
-
-		// If ratio is >= 90%, record the progress
-		if entry.Duration > 0 && (entry.CurrentTime/entry.Duration) >= IgnoreRatioThreshold {
-			anonUserId := fmt.Sprintf("%d", entry.AccountID)
-			status := "watching"
-			if entry.MediaID >= 1_000_000 {
-				status = "completed"
-			}
-			completedProgress = append(completedProgress, models.UserMediaProgress{
-				AnonUserId: anonUserId,
-				MediaID:    entry.MediaID,
-				Status:     status,
-				Progress:   entry.EpisodeNumber,
-			})
-		}
 	}
 
 	if len(records) > 0 {
 		if err := tm.repository.UpsertBatch(records); err != nil {
+			// UpsertBatch is transactional. Retain the failed batch for the next
+			// tick, but never overwrite a newer beat received during database I/O.
+			tm.mu.Lock()
+			for key, entry := range localBatch {
+				if _, newer := tm.buffer[key]; !newer {
+					tm.buffer[key] = entry
+				}
+			}
+			tm.mu.Unlock()
 			tm.logger.Error().Err(err).Int("batchSize", len(records)).Msg("telemetry: Async DB Flush failed")
 		} else {
 			tm.logger.Trace().Int("batchSize", len(records)).Msg("telemetry: Flushed bulk tick to disk successfully")
-		}
-	}
-
-	if len(completedProgress) > 0 {
-		// Bulk Upsert in batches to avoid locking SQLite.
-		// Sin transacción a propósito (SkipDefaultTransaction=true): cada fila es
-		// un upsert independiente e idempotente y el flush no reintenta, así que
-		// un todo-o-nada convertiría un fallo parcial en pérdida total.
-		err := tm.repository.DB.Clauses(clause.OnConflict{
-			Columns: []clause.Column{
-				{Name: "anon_user_id"},
-				{Name: "media_id"},
-			},
-			DoUpdates: clause.AssignmentColumns([]string{"status", "progress"}),
-		}).CreateInBatches(completedProgress, 50).Error
-		if err != nil {
-			tm.logger.Error().Err(err).Msg("telemetry: Bulk media progress update failed")
-		} else {
-			tm.logger.Debug().Int("count", len(completedProgress)).Msg("telemetry: Bulk updated media progress")
 		}
 	}
 }
@@ -182,6 +163,10 @@ func (tm *TelemetryManager) flush() {
 // Stop initiates a graceful shutdown and blocks until the final synchronous flush is performed.
 func (tm *TelemetryManager) Stop() {
 	tm.stopOnce.Do(func() {
+		// Finish accepted updates before the final flush and reject late producers.
+		tm.mu.Lock()
+		tm.stopped = true
+		tm.mu.Unlock()
 		if tm.ticker != nil {
 			tm.ticker.Stop()
 		}

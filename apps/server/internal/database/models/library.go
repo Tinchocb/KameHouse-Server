@@ -45,7 +45,7 @@ type LibraryMedia struct {
 	Genres            json.RawMessage `gorm:"column:genres;type:text" json:"genres"` // JSON array of strings
 	Tags              json.RawMessage `gorm:"column:tags;type:text" json:"tags"`     // JSON array of strings or objects
 	DominantVibe      string          `gorm:"column:dominant_vibe" json:"dominantVibe"`
-	SuggestedSwimlane string          `gorm:"column:suggested_swimlane;index" json:"suggestedSwimlane"`
+	SuggestedSwimlane string          `gorm:"column:suggested_swimlane" json:"suggestedSwimlane"`
 	TotalEpisodes     int             `gorm:"column:total_episodes" json:"totalEpisodes"`
 	Runtime           int             `gorm:"column:runtime" json:"runtime"`
 
@@ -123,8 +123,8 @@ type LibraryEpisode struct {
 	RuntimeMinutes int       `gorm:"column:runtime_minutes" json:"runtimeMinutes"`
 
 	// Saga/Story Arc association
-	SagaName string `gorm:"column:saga_name;index:idx_episode_saga" json:"sagaName"`
-	SagaId   string `gorm:"column:saga_id;index:idx_episode_saga" json:"sagaId"`
+	SagaName string `gorm:"column:saga_name" json:"sagaName"`
+	SagaId   string `gorm:"column:saga_id" json:"sagaId"`
 
 	Tags              json.RawMessage `gorm:"column:tags;type:text" json:"tags"`
 	DominantVibe      string          `gorm:"column:dominant_vibe" json:"dominantVibe"`
@@ -145,7 +145,6 @@ type LibrarySeason struct {
 	Description  string `gorm:"column:description;type:text" json:"description"`
 	Image        string `gorm:"column:image" json:"image"` // Thumbnail path/URL
 }
-
 
 // MediaEntryListData stores the user's progress and watch status for a specific LibraryMedia
 type MediaEntryListData struct {

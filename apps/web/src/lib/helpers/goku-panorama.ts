@@ -1,4 +1,4 @@
-export interface SpineTheme {
+interface SpineTheme {
     bg: string;
     text: string;
     accent: string;
@@ -10,7 +10,24 @@ export interface SpineTheme {
     eraYears: string;
     auraColor: string;
     colors: string[];
+    /** Pose de reposo: visible mientras la tarjeta está cerrada. */
     rawImg: string;
+    /** Pose de combate: se muestra al expandir la tarjeta. */
+    rawImgAtaque: string;
+    /** Ajustes opcionales de la card. */
+    layout?: Partial<SpineLayout>;
+}
+
+/** Ajustes de la card, en % del alto/ancho de la card y px. */
+interface SpineLayout {
+    normalAlturaPct: number;
+    normalDesplazXpx: number;
+    normalDesplazYpx: number;
+    ataqueTopPct: number;
+    ataqueAnchoPct: number;
+    ataqueOpacidadPct: number;
+    ataqueFadeDesdePct: number;
+    ataqueFadeLargoPct: number;
 }
 
 // Fuente única de color: tokens --spotlight-*-vivid (styles/tokens/colors.css:101-106)
@@ -29,7 +46,18 @@ const spineThemes: Record<string, SpineTheme> = {
         eraYears: "1986–1989",
         auraColor: "color-mix(in srgb, var(--spotlight-db-vivid) 60%, transparent)",
         colors: ["var(--spotlight-db-vivid-2)", "var(--spotlight-db-vivid)", "var(--era-db-hex)"],
-        rawImg: "/icons/series-icons/goku-raw-db.webp",
+        rawImg: "/icons/series-icons/db/reposo-guardia-sin-texto.png",
+        rawImgAtaque: "/icons/series-icons/db/combate-kamehameha.png",
+        layout: {
+            normalAlturaPct: 50,
+            normalDesplazXpx: 15,
+            normalDesplazYpx: 35,
+            ataqueTopPct: 18,
+            ataqueAnchoPct: 116,
+            ataqueOpacidadPct: 50,
+            ataqueFadeDesdePct: 55,
+            ataqueFadeLargoPct: 60,
+        },
     },
     "dragon_ball_z": {
         bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-dbz-vivid) 34%, #14100c) 0%, #1a130d 45%, #0d0a08 75%, #070505 100%)",
@@ -43,7 +71,17 @@ const spineThemes: Record<string, SpineTheme> = {
         eraYears: "1989–1996",
         auraColor: "color-mix(in srgb, var(--spotlight-dbz-vivid) 60%, transparent)",
         colors: ["var(--spotlight-dbz-vivid-2)", "var(--spotlight-dbz-vivid)", "var(--era-dbz-hex)"],
-        rawImg: "/icons/series-icons/goku-raw-dbz.webp",
+        rawImg: "/icons/series-icons/dbz/reposo-brazos-cruzados.png",
+        rawImgAtaque: "/icons/series-icons/dbz/combate-kamehameha.png",
+        layout: {
+            normalAlturaPct: 65,
+            normalDesplazYpx: 50,
+            ataqueTopPct: 15,
+            ataqueAnchoPct: 125,
+            ataqueOpacidadPct: 50,
+            ataqueFadeDesdePct: 55,
+            ataqueFadeLargoPct: 60,
+        },
     },
     "dragon_ball_gt": {
         bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-dbgt-vivid) 34%, #120a14) 0%, #1c1020 45%, #0d070d 75%, #070405 100%)",
@@ -57,7 +95,18 @@ const spineThemes: Record<string, SpineTheme> = {
         eraYears: "1996–1997",
         auraColor: "color-mix(in srgb, var(--spotlight-dbgt-vivid) 60%, transparent)",
         colors: ["var(--spotlight-dbgt-vivid-2)", "var(--spotlight-dbgt-vivid)", "var(--era-dbgt-hex)"],
-        rawImg: "/icons/series-icons/goku-raw-dbgt.webp",
+        rawImg: "/icons/series-icons/dbgt/reposo-clasico-hd.png",
+        rawImgAtaque: "/icons/series-icons/dbgt/combate-ssj4-kamehameha.png",
+        layout: {
+            normalAlturaPct: 50,
+            normalDesplazXpx: 0,
+            normalDesplazYpx: 20,
+            ataqueTopPct: 10,
+            ataqueAnchoPct: 150,
+            ataqueOpacidadPct: 50,
+            ataqueFadeDesdePct: 55,
+            ataqueFadeLargoPct: 60,
+        },
     },
     "dragon_ball_kai": {
         bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-dbkai-vivid) 34%, #070f18) 0%, #0d1b2c 45%, #080f18 75%, #04070c 100%)",
@@ -71,7 +120,18 @@ const spineThemes: Record<string, SpineTheme> = {
         eraYears: "2009–2015",
         auraColor: "color-mix(in srgb, var(--spotlight-dbkai-vivid) 55%, transparent)",
         colors: ["var(--spotlight-dbkai-vivid-2)", "var(--spotlight-dbkai-vivid)", "var(--era-dbkai-hex)"],
-        rawImg: "/icons/series-icons/goku-raw-dbz.webp",
+        rawImg: "/icons/series-icons/dbkai/reposo-frente.png",
+        rawImgAtaque: "/icons/series-icons/dbkai/combate-ssj-lateral.png",
+        layout: {
+            normalAlturaPct: 50,
+            normalDesplazXpx: 0,
+            normalDesplazYpx: 20,
+            ataqueTopPct: 8,
+            ataqueAnchoPct: 116,
+            ataqueOpacidadPct: 50,
+            ataqueFadeDesdePct: 55,
+            ataqueFadeLargoPct: 60,
+        },
     },
     "dragon_ball_super": {
         bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-dbs-vivid) 34%, #070d18) 0%, #0d172b 45%, #080f1c 75%, #04070d 100%)",
@@ -85,7 +145,17 @@ const spineThemes: Record<string, SpineTheme> = {
         eraYears: "2015–2018",
         auraColor: "color-mix(in srgb, var(--spotlight-dbs-vivid) 55%, transparent)",
         colors: ["var(--spotlight-dbs-vivid-2)", "var(--spotlight-dbs-vivid)", "var(--era-dbs-hex)"],
-        rawImg: "/icons/series-icons/goku-raw-dbs.webp",
+        rawImg: "/icons/series-icons/dbs/reposo-hombro.png",
+        rawImgAtaque: "/icons/series-icons/dbs/combate-ultra-instinto.png",
+        layout: {
+            normalAlturaPct: 50,
+            normalDesplazYpx: 75,
+            ataqueTopPct: 10,
+            ataqueAnchoPct: 125,
+            ataqueOpacidadPct: 50,
+            ataqueFadeDesdePct: 54,
+            ataqueFadeLargoPct: 61,
+        },
     },
     "dragon_ball_daima": {
         bg: "linear-gradient(to bottom, color-mix(in srgb, var(--spotlight-daima-vivid) 32%, #09130e) 0%, #0f1e16 45%, #0a140f 75%, #050a08 100%)",
@@ -99,13 +169,30 @@ const spineThemes: Record<string, SpineTheme> = {
         eraYears: "2024–2025",
         auraColor: "color-mix(in srgb, var(--spotlight-daima-vivid) 60%, transparent)",
         colors: ["var(--spotlight-daima-vivid-2)", "var(--spotlight-daima-vivid)", "var(--era-daima-hex)"],
-        rawImg: "/icons/series-icons/goku-raw-daima.webp",
+        rawImg: "/icons/series-icons/daima/reposo-pose.png",
+        rawImgAtaque: "/icons/series-icons/daima/combate-ssj-kamehameha.png",
+        layout: {
+            normalAlturaPct: 50,
+            normalDesplazXpx: -7,
+            normalDesplazYpx: 30,
+            ataqueTopPct: 8,
+            ataqueAnchoPct: 116,
+            ataqueOpacidadPct: 50,
+            ataqueFadeDesdePct: 55,
+            ataqueFadeLargoPct: 60,
+        },
     }
 };
 
-/** Arte de la estantería de /series (sin repetidos): se precalienta en idle
- *  para que al entrar las figuras ya estén decodificadas y no aparezcan tarde. */
-export const SPINE_ART_URLS: readonly string[] = [...new Set(Object.values(spineThemes).map((t) => t.rawImg))]
+/** Registro completo del arte, utilizado también para verificar los archivos. */
+export const SPINE_ART_URLS: readonly string[] = [
+    ...new Set(Object.values(spineThemes).flatMap((t) => [t.rawImg, t.rawImgAtaque]).filter(Boolean)),
+]
+
+/** Solo reposo en la precarga global; el combate se prepara por intención. */
+export const SPINE_IDLE_ART_URLS: readonly string[] = [
+    ...new Set(Object.values(spineThemes).map((t) => t.rawImg).filter(Boolean)),
+]
 
 export const getSpineConfig = (seriesId: string, id: number, fallbackTitle?: string): SpineTheme => {
     const theme = spineThemes[seriesId];
@@ -130,7 +217,8 @@ export const getSpineConfig = (seriesId: string, id: number, fallbackTitle?: str
         eraYears: "SERIE",
         auraColor: "color-mix(in srgb, var(--brand-accent-hex) 60%, transparent)",
         colors: cfg.colors,
-        rawImg: ""
+        rawImg: "",
+        rawImgAtaque: ""
     };
 };
 

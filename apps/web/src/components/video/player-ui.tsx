@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react"
-import { m, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence, useReducedMotion } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerTopBar } from "./player-topbar"
-import { PlayerBottomBar } from "./player-bottombar"
-import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, AutoSkipToastOverlay, PlayerHudOverlay, type PlayerHudData } from "./player-overlays"
+import { PlayerBottomBar, type PlayerSettingsPanel } from "./player-bottombar"
+import { PlayerCenterControls } from "./player-center-controls"
+import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, AutoSkipToastOverlay, PlayerHudOverlay } from "./player-overlays"
 import { PlayerShortcutsModal } from "./player-shortcuts-modal"
 import type { EpisodeSource } from "@/api/types/unified.types"
 import type { PlayerCore, PlayerStats } from "./player-core"
@@ -13,29 +14,30 @@ import { PlayerEpisodesSidebar } from "./player-episodes-sidebar"
 import { PlayerQueueSidebar } from "./player-queue-sidebar"
 import { __isTV__ } from "@/types/constants"
 import { useFocusNavigation } from "@/hooks/use-focus-navigation"
-import { IconMediaPlay, IconMediaVolume2, IconUiStar } from "@/components/ui/icons";
+import { IconMediaPlay, IconMediaVolume2, IconUiStar } from "@/components/ui/icons"
 import { PLAYER_GLASS } from "./player-theme"
-import { formatPlaybackTime } from "./format-playback-time"
+import { usePlayerGestures } from "./use-player-gestures"
+import { hasFocusedPlayerControls } from "./usePlayerControlsVisibility"
 
 
 function StatsOverlay({ show, data }: { show: boolean, data?: PlayerStats | null }) {
     if (!show || !data) return null
     return (
-        <div className={cn("absolute top-24 left-3 sm:left-6 z-player-ui w-64 max-w-[calc(100vw-1.5rem)] p-4 rounded-2xl text-xs text-on-surface-variant pointer-events-none", PLAYER_GLASS)}>
-            <div className="mb-2.5 text-2xs font-semibold uppercase tracking-widest text-brand-accent">Estadísticas</div>
+        <div className={cn("absolute top-24 left-3 sm:left-6 z-player-ui w-64 max-w-[calc(100vw-1.5rem)] p-4 rounded-2xl text-xs text-label-2 pointer-events-none", PLAYER_GLASS)}>
+            <div className="mb-2.5 text-sm font-semibold text-brand-accent-readable">Estadísticas</div>
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 tabular-nums">
-                <dt>Tiempo</dt><dd className="text-right text-white">{data.currentTime} / {data.duration}</dd>
-                <dt>Buffer</dt><dd className="text-right text-white">{data.buffer}s</dd>
-                <dt>Resolución</dt><dd className="text-right text-white">{data.resolution}</dd>
-                <dt>Velocidad</dt><dd className="text-right text-white">{data.playbackRate}x</dd>
-                <dt>Volumen</dt><dd className="text-right text-white">{data.volume}%</dd>
+                <dt>Tiempo</dt><dd className="text-right text-label-1">{data.currentTime} / {data.duration}</dd>
+                <dt>Búfer</dt><dd className="text-right text-label-1">{data.buffer}s</dd>
+                <dt>Resolución</dt><dd className="text-right text-label-1">{data.resolution}</dd>
+                <dt>Velocidad</dt><dd className="text-right text-label-1">{data.playbackRate}x</dd>
+                <dt>Volumen</dt><dd className="text-right text-label-1">{data.volume}%</dd>
             </dl>
-            <div className="mt-2.5 pt-2.5 border-t border-white/10 truncate opacity-60">{data.source}</div>
+            <div className="mt-2.5 pt-2.5 border-t border-[var(--neutral-separator)] truncate text-label-2">{data.source}</div>
         </div>
     )
 }
 
-export interface PlayerUIProps {
+interface PlayerUIProps {
     title?: string
     episodeLabel?: string
     onClose: () => void
@@ -62,6 +64,7 @@ export interface PlayerUIProps {
     nextEpisodeImage?: string
     /** Presente solo en la app de escritorio con mpv disponible: hace handoff de la reproducción a mpv. */
     onOpenInMpv?: () => void
+    mpvPending?: boolean
     isEpisodesSidebarOpen?: boolean
     onToggleEpisodesSidebar?: () => void
     setIsEpisodesSidebarOpen?: React.Dispatch<React.SetStateAction<boolean>>
@@ -80,6 +83,7 @@ export function PlayerUI(props: PlayerUIProps) {
         episodes, onSelectEpisode, mediaFormat,
         nextEpisodeTitle, nextEpisodeNumber, nextEpisodeImage,
         onOpenInMpv,
+        mpvPending,
         momentKey,
         momentTitle,
     } = props
@@ -100,12 +104,6 @@ export function PlayerUI(props: PlayerUIProps) {
         timeTextElement: timeTextRef,
     } = domElements
 
-    const localVideoRef = useRef<HTMLVideoElement | null>(null)
-
-    useEffect(() => {
-        localVideoRef.current = videoRef.current
-    }, [videoRef])
-
     const [localEpisodesSidebarOpen, setLocalEpisodesSidebarOpen] = React.useState(false)
     const [localQueueSidebarOpen, setLocalQueueSidebarOpen] = React.useState(false)
 
@@ -125,286 +123,26 @@ export function PlayerUI(props: PlayerUIProps) {
         setIsQueueSidebarOpen(false)
     }, [mediaId, onSelectEpisode, setIsQueueSidebarOpen])
 
-    // Gesture tracking for double tap to skip and hold for 2x speed
-    const [isHoldSpeedActive, setIsHoldSpeedActive] = React.useState(false)
-    const holdTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-    const isHoldingRef = useRef<boolean>(false)
-    const wasHoldingRef = useRef<boolean>(false)
-    const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-    const lastClickTimeRef = useRef<number>(0)
-
-    const startHold = () => {
-        wasHoldingRef.current = false
-        if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current)
-        holdTimeoutRef.current = setTimeout(() => {
-            isHoldingRef.current = true
-            wasHoldingRef.current = true
-            const video = localVideoRef.current
-            if (video) {
-                video.playbackRate = 2.0
-            }
-            setIsHoldSpeedActive(true)
-        }, 500)
-    }
-
-    const endHold = () => {
-        if (holdTimeoutRef.current) {
-            clearTimeout(holdTimeoutRef.current)
-            holdTimeoutRef.current = null
-        }
-        if (isHoldingRef.current) {
-            isHoldingRef.current = false
-            setIsHoldSpeedActive(false)
-            const video = localVideoRef.current
-            if (video) {
-                video.playbackRate = state.playbackRate
-            }
-            // Delay resetting wasHoldingRef to absorb synthetic trailing clicks
-            setTimeout(() => {
-                wasHoldingRef.current = false
-            }, 400)
-        }
-    }
-
-    // Gestures for swipe-seek, volume, and brightness
-    const [brightness, setBrightness] = React.useState(1.0)
-    const [swipeIndicator, setSwipeIndicator] = React.useState<{
-        type: "seek" | "volume" | "brightness"
-        value: string
-    } | null>(null)
-    const [skipFlash, setSkipFlash] = useState<"left" | "right" | null>(null)
-    const skipFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-    // OS-Style Floating HUD (volume & playback speed)
-    const [hudData, setHudData] = useState<PlayerHudData | null>(null)
-    const hudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-    const showHud = React.useCallback((data: PlayerHudData) => {
-        if (hudTimerRef.current) clearTimeout(hudTimerRef.current)
-        setHudData(data)
-        hudTimerRef.current = setTimeout(() => {
-            setHudData(null)
-        }, 1200)
-    }, [])
-
-    const isMountedRef = useRef(false)
-    const prevVolRef = useRef(state.volume)
-    const prevMuteRef = useRef(state.isMuted)
-    useEffect(() => {
-        if (!isMountedRef.current) {
-            isMountedRef.current = true
-            return
-        }
-        if (prevVolRef.current !== state.volume || prevMuteRef.current !== state.isMuted) {
-            prevVolRef.current = state.volume
-            prevMuteRef.current = state.isMuted
-            showHud({
-                type: "volume",
-                value: state.volume,
-                isMuted: state.isMuted,
-            })
-        }
-    }, [state.volume, state.isMuted, showHud])
-
-    const prevRateRef = useRef(state.playbackRate)
-    useEffect(() => {
-        if (prevRateRef.current !== state.playbackRate) {
-            prevRateRef.current = state.playbackRate
-            showHud({
-                type: "speed",
-                value: state.playbackRate,
-            })
-        }
-    }, [state.playbackRate, showHud])
-
-    useEffect(() => {
-        return () => {
-            if (hudTimerRef.current) clearTimeout(hudTimerRef.current)
-        }
-    }, [])
-
-    const touchStartRef = useRef<{ x: number, y: number } | null>(null)
-    const isSwipingRef = useRef<boolean>(false)
-    const swipeDirectionRef = useRef<"horizontal" | "vertical" | null>(null)
-    const swipeSideRef = useRef<"left" | "right" | null>(null)
-    const initialVolumeRef = useRef<number>(1.0)
-    const initialBrightnessRef = useRef<number>(1.0)
-    const initialTimeRef = useRef<number>(0)
-
-    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-        const touch = e.touches[0]
-        if (!touch) return
-        
-        touchStartRef.current = { x: touch.clientX, y: touch.clientY }
-        isSwipingRef.current = false
-        swipeDirectionRef.current = null
-        
-        const video = localVideoRef.current
-        if (video) {
-            initialTimeRef.current = video.currentTime
-            initialVolumeRef.current = video.volume
-        }
-        initialBrightnessRef.current = brightness
-        
-        // Determine touch side (left/right)
-        const rect = e.currentTarget.getBoundingClientRect()
-        const relativeX = touch.clientX - rect.left
-        swipeSideRef.current = relativeX < rect.width / 2 ? "left" : "right"
-        
-        // Also trigger controls visibility
-        actions.triggerControlsVisibility()
-        
-        // Trigger startHold for 2x speed if hold continues
-        startHold()
-    }
-
-    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-        if (!touchStartRef.current) return
-        const touch = e.touches[0]
-        if (!touch) return
-
-        const deltaX = touch.clientX - touchStartRef.current.x
-        const deltaY = touch.clientY - touchStartRef.current.y
-        const absX = Math.abs(deltaX)
-        const absY = Math.abs(deltaY)
-
-        // Cancel speed hold if user moves their finger (swiping)
-        if (absX > 15 || absY > 15) {
-            if (holdTimeoutRef.current) {
-                clearTimeout(holdTimeoutRef.current)
-                holdTimeoutRef.current = null
-            }
-        }
-
-        if (!isSwipingRef.current) {
-            // Check if threshold is met
-            if (absX > 15 || absY > 15) {
-                isSwipingRef.current = true
-                swipeDirectionRef.current = absX > absY ? "horizontal" : "vertical"
-            }
-        }
-
-        if (isSwipingRef.current && swipeDirectionRef.current) {
-            e.preventDefault()
-            
-            if (swipeDirectionRef.current === "horizontal") {
-                // Seek gesture: 1px = 0.15s of video seek
-                const seekMultiplier = 0.15
-                const secondsDelta = deltaX * seekMultiplier
-                const newTime = Math.max(0, Math.min(state.duration, initialTimeRef.current + secondsDelta))
-                
-                const timeDiff = newTime - initialTimeRef.current
-                const prefix = timeDiff >= 0 ? ">>" : "<<"
-                const formattedDiff = `${prefix} ${Math.abs(Math.round(timeDiff))}s`
-                const formattedNewTime = formatPlaybackTime(newTime)
-                
-                setSwipeIndicator({
-                    type: "seek",
-                    value: `[${formattedDiff}] ${formattedNewTime}`
-                })
-                
-                const video = localVideoRef.current
-                if (video) {
-                    video.currentTime = newTime
-                }
-            } else {
-                // Vertical swipe: volume on right side, brightness on left side
-                const verticalMultiplier = -0.005
-                const deltaValue = deltaY * verticalMultiplier
-                
-                if (swipeSideRef.current === "right") {
-                    // Volume control — centralizado en handleVolume (evita doble escritura)
-                    const newVolume = Math.max(0, Math.min(1, initialVolumeRef.current + deltaValue))
-                    actions.handleVolume({ target: { value: String(newVolume) } } as unknown as React.ChangeEvent<HTMLInputElement>)
-                    setSwipeIndicator({
-                        type: "volume",
-                        value: `VOL: ${(newVolume * 100).toFixed(0)}%`
-                    })
-                } else {
-                    // Brightness control
-                    const newBrightness = Math.max(0.2, Math.min(1.8, initialBrightnessRef.current + deltaValue))
-                    setBrightness(newBrightness)
-                    setSwipeIndicator({
-                        type: "brightness",
-                        value: `BRIG: ${(newBrightness * 100).toFixed(0)}%`
-                    })
-                }
-            }
-        }
-    }
-
-    const handleTouchEnd = () => {
-        touchStartRef.current = null
-        setSwipeIndicator(null)
-        endHold()
-        
-        if (isSwipingRef.current) {
-            isSwipingRef.current = false
-            swipeDirectionRef.current = null
-            // Swiped, do not trigger play/pause click
-            wasHoldingRef.current = true
-            setTimeout(() => {
-                wasHoldingRef.current = false
-            }, 400)
-        }
-    }
-
-    const playSkipAnimation = (side: "left" | "right") => {
-        setSkipFlash(side)
-        if (skipFlashTimerRef.current) clearTimeout(skipFlashTimerRef.current)
-        skipFlashTimerRef.current = setTimeout(() => {
-            setSkipFlash(null)
-            skipFlashTimerRef.current = null
-        }, 550)
-    }
-
-    const handleInteractionClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        actions.triggerControlsVisibility()
-        if (wasHoldingRef.current) {
-            wasHoldingRef.current = false
-            return
-        }
-
-        const isTouch = (e.nativeEvent as PointerEvent)?.pointerType === "touch" || isHoldingRef.current
-
-        // On desktop mouse clicks, toggle play/pause immediately without artificial 300ms latency.
-        // Fullscreen toggle on desktop is handled via onDoubleClick.
-        if (!isTouch) {
-            actions.togglePlay()
-            return
-        }
-
-        const rect = e.currentTarget.getBoundingClientRect()
-        const clickX = e.clientX - rect.left
-        const isLeftSide = clickX < rect.width / 2
-
-        const now = Date.now()
-        const DOUBLE_CLICK_DELAY = 300
-
-        if (now - lastClickTimeRef.current < DOUBLE_CLICK_DELAY) {
-            if (clickTimeoutRef.current) {
-                clearTimeout(clickTimeoutRef.current)
-                clickTimeoutRef.current = null
-            }
-            if (isLeftSide) {
-                actions.skipTime(-10)
-                playSkipAnimation("left")
-            } else {
-                actions.skipTime(10)
-                playSkipAnimation("right")
-            }
-            lastClickTimeRef.current = 0
-        } else {
-            lastClickTimeRef.current = now
-            if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current)
-            clickTimeoutRef.current = setTimeout(() => {
-                if (!isHoldingRef.current) {
-                    actions.togglePlay()
-                }
-                clickTimeoutRef.current = null
-            }, DOUBLE_CLICK_DELAY)
-        }
-    }
+    const prefersReducedMotion = useReducedMotion()
+    const {
+        isHoldSpeedActive,
+        brightness,
+        swipeIndicator,
+        skipFlash,
+        hudData,
+        startHold,
+        endHold,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
+        handleInteractionClick,
+        handleDoubleClick,
+        handlePointerDown,
+    } = usePlayerGestures({
+        videoRef,
+        state,
+        actions,
+    })
 
     const triggerControlsRef = useRef(actions.triggerControlsVisibility)
     useEffect(() => {
@@ -417,8 +155,6 @@ export function PlayerUI(props: PlayerUIProps) {
         }
         window.addEventListener("keydown", handleGlobalKeyDown, { capture: true })
         return () => {
-            if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current)
-            if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current)
             window.removeEventListener("keydown", handleGlobalKeyDown, { capture: true })
         }
     }, [])
@@ -429,6 +165,21 @@ export function PlayerUI(props: PlayerUIProps) {
     })))
 
     const controlsVisible = state.controlsVisible || isEpisodesSidebarOpen || isQueueSidebarOpen
+
+    // Dos menús agrupados ("Audio y subtítulos" y "Más") comparten isSettingsOpen del
+    // core; esto solo decide cuál se muestra. Al cerrar vuelve a "Más" (atajo O).
+    const [settingsPanel, setSettingsPanel] = useState<PlayerSettingsPanel>("more")
+    const handleOpenSettingsPanel = React.useCallback((panel: PlayerSettingsPanel) => {
+        setSettingsPanel(panel)
+        actions.setIsSettingsOpen(true)
+    }, [actions])
+    const handleToggleSettings = React.useCallback((open?: boolean) => {
+        const next = open !== undefined ? open : !state.isSettingsOpen
+        if (!next) setSettingsPanel("more")
+        actions.setIsSettingsOpen(next)
+    }, [actions, state.isSettingsOpen])
+
+    const anyPanelOpen = state.isSettingsOpen || isEpisodesSidebarOpen || isQueueSidebarOpen
 
     // Force controls visibility if sidebar is open
     useEffect(() => {
@@ -480,7 +231,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 // The panel renders inside .player-bottom-bar; closing it here
                 // would dismiss settings whenever the cursor briefly leaves the
                 // player container (e.g. moving to a sub-menu item).
-                if (!state.isSettingsOpen) {
+                if (!state.isSettingsOpen && !hasFocusedPlayerControls()) {
                     actions.setControlsVisible(false)
                 }
             }}
@@ -540,6 +291,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 global de usePlayerShortcuts (doble toggle = no pasaba nada). */}
             <div
                 aria-hidden="true"
+                onPointerDown={handlePointerDown}
                 onMouseDown={(e) => {
                     if (e.button === 0) startHold()
                 }}
@@ -550,11 +302,7 @@ export function PlayerUI(props: PlayerUIProps) {
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchEnd}
                 onClick={handleInteractionClick}
-                onDoubleClick={(e) => {
-                    if ((e.nativeEvent as PointerEvent)?.pointerType !== "touch") {
-                        actions.toggleFullscreen()
-                    }
-                }}
+                onDoubleClick={handleDoubleClick}
                 className={cn(
                     "absolute inset-0 z-player select-none",
                     !controlsVisible && state.isPlaying ? "cursor-none" : "cursor-pointer"
@@ -588,12 +336,14 @@ export function PlayerUI(props: PlayerUIProps) {
                     skipFlash === side ? (
                         <m.div
                             key={`skip-${side}`}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 1.15 }}
-                            transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+                            initial={prefersReducedMotion ? { opacity: 0, y: "-50%" } : { opacity: 0, scale: 0.8, y: "-50%" }}
+                            animate={prefersReducedMotion ? { opacity: 1, y: "-50%" } : { opacity: 1, scale: 1, y: "-50%" }}
+                            exit={prefersReducedMotion ? { opacity: 0, y: "-50%" } : { opacity: 0, scale: 1.15, y: "-50%" }}
+                            // El centrado va en `y` de Framer: con la clase -translate-y-1/2 (Tailwind 3)
+                            // el transform inline de la animación la pisaba y el círculo quedaba corrido.
+                            transition={{ duration: prefersReducedMotion ? 0.1 : 0.22, ease: [0.23, 1, 0.32, 1] }}
                             className={cn(
-                                `skip-indicator-${side} absolute top-1/2 -translate-y-1/2 z-player-overlay pointer-events-none`,
+                                `skip-indicator-${side} absolute top-1/2 z-player-overlay pointer-events-none`,
                                 side === "left" ? "left-[15%]" : "right-[15%]"
                             )}
                         >
@@ -613,14 +363,15 @@ export function PlayerUI(props: PlayerUIProps) {
                 {isHoldSpeedActive && (
                     <m.div
                         key="hold-speed"
-                        initial={{ opacity: 0, y: -8, scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                        initial={{ opacity: 0, y: -8, scale: 0.9, x: "-50%" }}
+                        animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+                        exit={{ opacity: 0, y: -6, scale: 0.95, x: "-50%" }}
+                        // Centrado en `x` de Framer, no con -translate-x-1/2 (el transform inline lo pisaba).
                         transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-                        className="absolute top-20 left-1/2 -translate-x-1/2 z-player-overlay pointer-events-none"
+                        className="absolute top-20 left-1/2 z-player-overlay pointer-events-none"
                     >
                         <div className={cn("h-9 px-4 flex items-center gap-1.5 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
-                            <span className="text-brand-accent">2x</span> Velocidad
+                            <span className="text-brand-accent-readable">2x</span> Velocidad
                         </div>
                     </m.div>
                 )}
@@ -648,13 +399,14 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <SkipIntroOverlay
                 // Se oculta mientras hay otro panel abierto en esa zona (ajustes, episodios, cola)
-                // o la tarjeta de siguiente episodio, que ya cubre "saltar outro". El atajo S sigue funcionando.
-                show={state.skipMode !== null && !state.showNextEpisode && !state.isSettingsOpen && !isEpisodesSidebarOpen && !isQueueSidebarOpen}
+                // En modo TV la tarjeta de siguiente episodio lo cubre; en modo normal el botón se apila encima de ella. El atajo S sigue funcionando.
+                show={state.skipMode !== null && !(state.showNextEpisode && state.tvMode) && !state.isSettingsOpen && !isEpisodesSidebarOpen && !isQueueSidebarOpen}
                 onSkip={actions.handleSkipIntro}
                 skipMode={state.skipMode ?? "intro"}
                 remainingSeconds={state.skipRemainingSeconds}
                 segmentProgress={state.segmentProgress}
                 shortcutKey="S"
+                stackAbove={state.showNextEpisode}
                 controlsVisible={controlsVisible}
             />
 
@@ -676,6 +428,19 @@ export function PlayerUI(props: PlayerUIProps) {
                 onNext={onNextEpisode || (() => { })}
                 duration={state.duration}
                 remainingProgress={state.remainingProgress}
+                controlsVisible={controlsVisible}
+            />
+
+            {/* Centro: solo visible en modo TV (D-pad). En web/escritorio los controles
+                de reproducción viven unificados en la barra inferior para dejar el fotograma 100% limpio. */}
+            <PlayerCenterControls
+                visible={Boolean(state.tvMode) && controlsVisible && !anyPanelOpen && state.status === "ready" && !state.isBuffering}
+                isPlaying={state.isPlaying}
+                onTogglePlay={actions.togglePlay}
+                onSkip={(amount) => {
+                    actions.skipTime(amount)
+                    actions.triggerControlsVisibility()
+                }}
             />
 
             <PlayerShortcutsModal
@@ -684,13 +449,18 @@ export function PlayerUI(props: PlayerUIProps) {
             />
 
             <div
+                inert={!controlsVisible}
+                aria-hidden={!controlsVisible}
+                onFocusCapture={actions.triggerControlsVisibility}
+                onBlurCapture={actions.triggerControlsVisibility}
                 className={cn(
                     // Asimétrico: al mover el mouse aparecen enseguida; al quedar quieto se
                     // retiran despacio, porque ese momento no lo decide la persona.
-                    "player-top-bar absolute top-0 inset-x-0 z-player-ui pointer-events-none transition-[opacity,transform] ease-out-strong",
+                    // Solo opacidad (AVKit): nada se desplaza al ocultarse.
+                    "player-top-bar absolute top-0 inset-x-0 z-player-ui pointer-events-none transition-opacity ease-out-strong",
                     controlsVisible
-                        ? "opacity-100 translate-y-0 duration-fast"
-                        : "opacity-0 -translate-y-3 pointer-events-none duration-slow"
+                        ? "opacity-100 duration-fast"
+                        : "opacity-0 pointer-events-none duration-slow"
                 )}
             >
                 <PlayerTopBar
@@ -700,6 +470,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     onClose={onClose}
                     mediaFormat={mediaFormat}
                     onOpenInMpv={onOpenInMpv}
+                    mpvPending={mpvPending}
                     momentKey={momentKey}
                     momentTitle={momentTitle}
                     currentTime={state.currentTime}
@@ -707,6 +478,10 @@ export function PlayerUI(props: PlayerUIProps) {
             </div>
 
             <div
+                inert={!controlsVisible}
+                aria-hidden={!controlsVisible}
+                onFocusCapture={actions.triggerControlsVisibility}
+                onBlurCapture={actions.triggerControlsVisibility}
                 className={cn(
                     "player-bottom-bar absolute bottom-0 inset-x-0 pointer-events-none transition-opacity ease-out-strong",
                     // Con ajustes abiertos la barra sube de capa para que el panel quede sobre los overlays
@@ -748,8 +523,11 @@ export function PlayerUI(props: PlayerUIProps) {
                     isFullscreen={state.isFullscreen}
                     toggleFullscreen={actions.toggleFullscreen}
                     settingsOpen={state.isSettingsOpen}
-                    onToggleSettings={(open?: boolean) => actions.setIsSettingsOpen(open !== undefined ? open : !state.isSettingsOpen)}
-                    videoRef={localVideoRef}
+                    onToggleSettings={handleToggleSettings}
+                    settingsPanel={settingsPanel}
+                    onOpenSettingsPanel={handleOpenSettingsPanel}
+                    mediaElementRef={videoRef}
+                    videoRef={videoRef}
                     malId={malId}
                     mediaId={mediaId}
                     playbackRate={state.playbackRate}

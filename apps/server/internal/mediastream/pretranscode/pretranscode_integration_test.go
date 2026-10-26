@@ -73,15 +73,23 @@ func TestPreTranscodeEndToEnd(t *testing.T) {
 		t.Error("temp dir survived a successful run")
 	}
 
-	playlist, err := os.ReadFile(filepath.Join(outDir, "master.m3u8"))
+	master, err := os.ReadFile(filepath.Join(outDir, "master.m3u8"))
 	if err != nil {
-		t.Fatalf("reading playlist: %v", err)
+		t.Fatalf("reading master playlist: %v", err)
 	}
-	if !containsAll(string(playlist), "#EXTM3U", "#EXT-X-PLAYLIST-TYPE:VOD", "#EXT-X-ENDLIST") {
-		t.Errorf("playlist is not a finished VOD playlist:\n%s", playlist)
+	if !containsAll(string(master), "#EXTM3U", "#EXT-X-STREAM-INF", "v/index.m3u8") {
+		t.Errorf("master is not a variant playlist:\n%s", master)
 	}
 
-	segments, err := filepath.Glob(filepath.Join(outDir, "seg*.ts"))
+	playlist, err := os.ReadFile(filepath.Join(outDir, "v", "index.m3u8"))
+	if err != nil {
+		t.Fatalf("reading video playlist: %v", err)
+	}
+	if !containsAll(string(playlist), "#EXTM3U", "#EXT-X-PLAYLIST-TYPE:VOD", "#EXT-X-ENDLIST") {
+		t.Errorf("video playlist is not a finished VOD playlist:\n%s", playlist)
+	}
+
+	segments, err := filepath.Glob(filepath.Join(outDir, "v", "seg*.ts"))
 	if err != nil || len(segments) == 0 {
 		t.Fatalf("no segments written to %s", outDir)
 	}
@@ -156,7 +164,7 @@ func TestProbeDurationFallback(t *testing.T) {
 		// Extractor deliberately omitted.
 	})
 
-	got := m.probeDuration(src)
+	got := m.probeDuration(t.Context(), src)
 	if got < 7 || got > 9 {
 		t.Errorf("probeDuration() = %v, want ~8s — progress would be stuck at 0%%", got)
 	}
@@ -167,7 +175,7 @@ func waitForTerminal(t *testing.T, m *Manager, hash string, timeout time.Duratio
 
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		job, ok := m.Get(hash)
+		job, ok := jobByHash(m, hash)
 		if ok && (job.Status == StatusCompleted || job.Status == StatusFailed) {
 			return job
 		}
@@ -175,6 +183,16 @@ func waitForTerminal(t *testing.T, m *Manager, hash string, timeout time.Duratio
 	}
 	t.Fatalf("job %s did not finish within %s", hash, timeout)
 	return nil
+}
+
+// jobByHash devuelve una copia del job con ese hash, para leer su estado en los tests.
+func jobByHash(m *Manager, hash string) (*PreTranscodeJob, bool) {
+	for _, j := range m.Jobs() {
+		if j.Hash == hash {
+			return j, true
+		}
+	}
+	return nil, false
 }
 
 func containsAll(s string, subs ...string) bool {

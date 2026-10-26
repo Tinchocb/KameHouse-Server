@@ -5,7 +5,7 @@ import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { isUsableDuration } from "./usePlayerDuration"
 
 /** Intervalo mínimo entre envíos de progreso al servidor durante la reproducción. */
-export const BACKEND_SYNC_INTERVAL_MS = 5000
+const BACKEND_SYNC_INTERVAL_MS = 5000
 
 type UsePlayerBackendSyncOptions = {
     videoRef: React.RefObject<HTMLVideoElement | null>

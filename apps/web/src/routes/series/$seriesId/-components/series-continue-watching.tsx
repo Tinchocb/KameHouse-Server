@@ -1,11 +1,11 @@
-import React, { useState, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { WatchProgressBar } from "@/components/ui/watch-progress-bar"
 import { IconMediaPlay, IconNavigationChevronDown } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import type { SeriesContinueWatchingData } from "../-hooks/use-series-data"
 
-export interface SeriesContinueWatchingProps {
+interface SeriesContinueWatchingProps {
     continueWatching: SeriesContinueWatchingData
     onResume: () => void
     onGoToEpisode?: () => void
@@ -18,19 +18,14 @@ export function SeriesContinueWatching({
     onGoToEpisode,
     className,
 }: SeriesContinueWatchingProps) {
-    const [currentThumbnail, setCurrentThumbnail] = useState(continueWatching.thumbnailUrl)
-    const [prevPropThumbnail, setPrevPropThumbnail] = useState(continueWatching.thumbnailUrl)
-
-    if (continueWatching.thumbnailUrl !== prevPropThumbnail) {
-        setPrevPropThumbnail(continueWatching.thumbnailUrl)
-        setCurrentThumbnail(continueWatching.thumbnailUrl)
-    }
+    const [hasThumbnailError, setHasThumbnailError] = useState(false)
+    const currentThumbnail = hasThumbnailError && continueWatching.fallbackThumbnailUrl
+        ? continueWatching.fallbackThumbnailUrl
+        : continueWatching.thumbnailUrl
 
     const handleThumbnailError = useCallback(() => {
-        if (continueWatching.fallbackThumbnailUrl && currentThumbnail !== continueWatching.fallbackThumbnailUrl) {
-            setCurrentThumbnail(continueWatching.fallbackThumbnailUrl)
-        }
-    }, [continueWatching.fallbackThumbnailUrl, currentThumbnail])
+        setHasThumbnailError(true)
+    }, [])
 
     return (
         <section
@@ -46,12 +41,12 @@ export function SeriesContinueWatching({
                 )}
             >
                 {/* Destino de teclado y lectores de pantalla. Antes la tarjeta era role="button"
-                    con botones dentro ("Ver en lista", "Reanudar"): controles anidados. El clic de
+                    con botones dentro ("Ver en lista", "Continuar"): controles anidados. El clic de
                     mouse sigue siendo el de la tarjeta; los botones internos son `relative` para
                     quedar por encima de este. */}
                 <button
                     type="button"
-                    aria-label={`Reanudar episodio ${continueWatching.episodeNumber}, ${continueWatching.title}`}
+                    aria-label={`Continuar episodio ${continueWatching.episodeNumber}, ${continueWatching.title}`}
                     className="absolute inset-0 rounded-2xl cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
                 />
                 {/* ── 16:9 Thumbnail with Overlay ───────────────────────────── */}
@@ -64,7 +59,7 @@ export function SeriesContinueWatching({
                             loading="lazy"
                             decoding="async"
                             className="w-full h-full"
-                            imgClassName="w-full h-full object-cover transition-transform duration-500 ease-out [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:scale-105"
+                            imgClassName="w-full h-full object-cover transition-transform duration-slow ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:scale-105"
                             showSkeleton={true}
                             onError={handleThumbnailError}
                             fallback={
@@ -99,8 +94,8 @@ export function SeriesContinueWatching({
                         </div>
                     </div>
 
-                    {/* Badge EP */}
-                    <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 z-20 px-1.5 sm:px-2 py-0.5 rounded-md bg-black/85 border border-white/15 text-4xs sm:text-3xs font-mono font-bold text-white shadow-sm">
+                    {/* Badge EP con micro-vidrio */}
+                    <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 z-20 px-1.5 sm:px-2 py-0.5 rounded-md bg-black/50 border border-white/15 border-t-white/30 text-4xs sm:text-3xs font-mono font-bold text-white shadow-elevation-1">
                         EP {continueWatching.episodeNumber}
                     </div>
                 </div>
@@ -111,7 +106,7 @@ export function SeriesContinueWatching({
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                             <div className="w-1.5 h-1.5 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))] animate-pulse shrink-0" />
-                            <span className="text-3xs sm:text-2xs font-mono font-black uppercase tracking-wider text-brand-accent shrink-0">
+                            <span className="text-3xs sm:text-2xs font-mono font-black uppercase tracking-wider text-brand-accent-readable shrink-0">
                                 Continuar viendo
                             </span>
                             {continueWatching.sagaName && (
@@ -131,7 +126,7 @@ export function SeriesContinueWatching({
                                         e.stopPropagation()
                                         onGoToEpisode()
                                     }}
-                                    className="relative inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-3xs sm:text-2xs font-mono font-medium text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface bg-white/[0.06] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.12] border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/20 transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-accent"
+                                    className="relative inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-3xs sm:text-2xs font-mono font-medium text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface bg-white/[0.08] border border-white/15 border-t-white/30 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/15 transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-accent shadow-elevation-1"
                                     title="Ver este episodio en la lista"
                                 >
                                     <span>Ver en lista</span>
@@ -142,7 +137,7 @@ export function SeriesContinueWatching({
 
                     {/* Title */}
                     <div>
-                        <h2 className="font-display text-xs sm:text-sm md:text-base font-bold uppercase tracking-wide leading-snug text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:text-brand-accent transition-colors duration-fast ease-smooth-out truncate">
+                        <h2 className="font-display text-xs sm:text-sm md:text-base font-bold uppercase tracking-wide leading-snug text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover/continue:text-brand-accent-readable transition-colors duration-fast ease-smooth-out truncate">
                             Ep {continueWatching.episodeNumber} — {continueWatching.title}
                         </h2>
                     </div>
@@ -160,7 +155,7 @@ export function SeriesContinueWatching({
                     </div>
                 </div>
 
-                {/* ── Desktop Reanudar CTA ──────────────────────────────────── */}
+                {/* ── Desktop Continuar CTA ──────────────────────────────────── */}
                 <div className="hidden lg:flex items-center shrink-0 pl-2">
                     <button
                         type="button"
@@ -171,7 +166,7 @@ export function SeriesContinueWatching({
                         className="relative inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-wider font-bold [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-fast ease-out-strong shadow-brand-primary cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                     >
                         <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
-                        <span>Reanudar</span>
+                        <span>Continuar</span>
                     </button>
                 </div>
             </div>

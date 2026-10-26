@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { PlayerPreviewManager } from "./player-preview"
 import { cn } from "@/components/ui/core/styling"
@@ -56,6 +56,9 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent, 
         }
     }, [hoverTime, previewManager, rendered])
 
+    // Solo se muestra la miniatura del segmento bajo el cursor: mientras llega la
+    // nueva, la anterior es de otro momento del episodio.
+    const hoverSegment = previewManager && hoverTime !== null ? previewManager.calculateSegmentIndex(hoverTime) : null
     const isVisible = hoverTime !== null
     const safeLeftPercent = Math.max(0, Math.min(100, hoverPosPercent))
 
@@ -64,29 +67,31 @@ export function PlayerSeekPreview({ previewManager, hoverTime, hoverPosPercent, 
             {isVisible && (
                 <m.div 
                     key="player-seek-preview"
-                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
+                    initial={prefersReducedMotion ? { opacity: 0, x: "-50%" } : { opacity: 0, y: 8, scale: 0.96, x: "-50%" }}
+                    animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+                    exit={prefersReducedMotion ? { opacity: 0, x: "-50%" } : { opacity: 0, y: 8, scale: 0.96, x: "-50%" }}
+                    // El centrado va en `x` de Framer: con la clase -translate-x-1/2 (Tailwind 3)
+                    // el transform inline de la animación la pisaba y la miniatura quedaba corrida.
                     transition={spring}
-                    className="absolute bottom-[calc(100%+16px)] pointer-events-none z-player-ui -translate-x-1/2 flex flex-col items-center"
+                    className="absolute bottom-[calc(100%+16px)] pointer-events-none z-player-ui flex flex-col items-center"
                     style={{ left: `clamp(90px, ${safeLeftPercent}%, calc(100% - 90px))` }}
                 >
                     <div className="relative overflow-hidden rounded-md bg-black w-[168px] aspect-video border border-white/20">
-                        {previewUrl ? (
+                        {previewUrl && rendered?.segment === hoverSegment ? (
                             <img 
                                 src={previewUrl} 
-                                alt="Previsualización de reproducción" 
+                                alt="Vista previa del fotograma" 
                                 className="w-full h-full object-cover animate-in fade-in duration-base"
                             />
                         ) : (
-                            <div className="w-full h-full bg-white/5" />
+                            <div className="w-full h-full bg-[var(--neutral-elev-2)]" />
                         )}
                     </div>
                     
                     {/* Time badge */}
                     <div className={cn("mt-1.5 px-2.5 py-1 rounded-full text-2xs font-semibold tracking-wide tabular-nums text-white inline-flex items-center gap-1.5", PLAYER_GLASS)}>
                         {segmentLabel && (
-                            <span className="font-mono text-3xs font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30">
+                            <span className="text-2xs font-semibold px-1.5 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent-readable border border-brand-accent/30">
                                 {segmentLabel}
                             </span>
                         )}

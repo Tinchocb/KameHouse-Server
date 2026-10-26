@@ -8,6 +8,9 @@
 //
 // Call once from an eagerly-loaded surface (the root) at browser idle.
 
+import { isDataSavingEnabled } from "@/lib/network-preferences"
+import { queueIdlePreload } from "@/lib/idle-preload-queue"
+
 let prewarmed = false
 let disposed = false
 
@@ -18,33 +21,15 @@ if (import.meta.webpackHot) {
 }
 
 export function prewarmVideoPlayer() {
-    if (prewarmed || typeof window === "undefined") return
+    if (prewarmed || typeof window === "undefined" || isDataSavingEnabled()) return
     prewarmed = true
 
-    const run = () => {
-        if (disposed) return
-        // Stagger loading across separate idle turns so heavy WASM & HLS module
-        // evaluation does not block the main thread in a single monolithic long task.
-        try {
-            void import("./player").then(() => {
-                const loadOrchestrator = () => {
-                    if (disposed) return
-                    void import("./player-orchestrator").catch(() => {})
-                }
-                if (typeof window.requestIdleCallback === "function") {
-                    window.requestIdleCallback(loadOrchestrator)
-                } else {
-                    setTimeout(loadOrchestrator, 1500)
-                }
-            }).catch(() => {})
-        } catch { /* noop */ }
-    }
-
-    if (typeof window.requestIdleCallback === "function") {
-        // Do NOT pass a short forced timeout: let the browser pick genuine idle time
-        // so it never interrupts initial user interaction.
-        window.requestIdleCallback(run)
-    } else {
-        setTimeout(run, 5000)
-    }
+    queueIdlePreload("player:shell", async () => {
+        if (disposed || isDataSavingEnabled()) return
+        await import("./player")
+        queueIdlePreload("player:orchestrator", async () => {
+            if (disposed || isDataSavingEnabled()) return
+            await import("./player-orchestrator")
+        }, 1)
+    }, 1)
 }

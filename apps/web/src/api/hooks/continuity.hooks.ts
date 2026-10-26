@@ -14,7 +14,7 @@ import {
 } from "./continuity-pending"
 import { confirmLocalProgress, getLocalProgress, mergeWithLocalProgress } from "./continuity-local"
 
-const continuityQueryKeys = {
+export const continuityQueryKeys = {
     all: ["continuity"] as const,
     history: () => [API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistory.key] as const,
     item: (id?: number | string | null) => [API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.key, Number(id)] as const,
@@ -96,7 +96,7 @@ export function useGetContinuityWatchHistoryItem(id: number | string) {
     const local = getLocalProgress(numericId)
     const serverData = query.data
     const data = useMemo(() => mergeWithLocalProgress(serverData, local), [serverData, local])
-    return { ...query, data }
+    return useMemo(() => ({ ...query, data }), [query, data])
 }
 
 export function useGetContinuityWatchHistory() {

@@ -25,6 +25,7 @@ type SlowTraceEntry struct {
 // to a `slow_traces.json` file for post-mortem analysis.
 type SlowTraceLogger struct {
 	mu        sync.Mutex
+	fileMu    sync.Mutex
 	filePath  string
 	threshold time.Duration
 	entries   []SlowTraceEntry
@@ -107,26 +108,43 @@ func (s *SlowTraceLogger) makeAfterCallback(startKey string) func(*gorm.DB) {
 		s.mu.Lock()
 		s.entries = append(s.entries, entry)
 
-		// Flush to disk when buffer is full
+		// Flush to disk when buffer is full: el lote se saca bajo el lock y se escribe en segundo
+		// plano, para que la consulta lenta (y la transaccion de GORM de la que forma parte) no
+		// espere la E/S del archivo.
+		var batch []SlowTraceEntry
 		if len(s.entries) >= s.maxBuffer {
-			s.flushLocked()
+			batch = s.entries
+			s.entries = make([]SlowTraceEntry, 0, 64)
 		}
 		s.mu.Unlock()
+
+		if batch != nil {
+			go s.writeBatch(batch)
+		}
 	}
 }
 
 // Flush writes all buffered entries to slow_traces.json.
 func (s *SlowTraceLogger) Flush() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.flushLocked()
+	batch := s.entries
+	s.entries = make([]SlowTraceEntry, 0, 64)
+	s.mu.Unlock()
+
+	s.writeBatch(batch)
 }
 
-// flushLocked writes entries to disk. Must be called with s.mu held.
-func (s *SlowTraceLogger) flushLocked() {
-	if len(s.entries) == 0 {
+// writeBatch agrega batch a slow_traces.json. Corre sin s.mu tomado: leer, recodificar y
+// escribir el archivo es E/S de disco y no debe frenar a las demas consultas lentas ni retener
+// una transaccion de escritura abierta cuando se invoca desde un callback de GORM.
+func (s *SlowTraceLogger) writeBatch(batch []SlowTraceEntry) {
+	if len(batch) == 0 {
 		return
 	}
+
+	// fileMu serializa el ciclo leer-modificar-escribir del archivo.
+	s.fileMu.Lock()
+	defer s.fileMu.Unlock()
 
 	// Read existing entries from file
 	var existing []SlowTraceEntry
@@ -136,7 +154,7 @@ func (s *SlowTraceLogger) flushLocked() {
 	}
 
 	// Append new entries
-	combined := append(existing, s.entries...)
+	combined := append(existing, batch...)
 
 	// Keep only the most recent 500 entries to prevent unbounded growth
 	const maxEntries = 500
@@ -154,7 +172,4 @@ func (s *SlowTraceLogger) flushLocked() {
 	if err := os.WriteFile(s.filePath, output, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "slow_trace_logger: failed to write: %v\n", err)
 	}
-
-	// Clear buffer
-	s.entries = s.entries[:0]
 }

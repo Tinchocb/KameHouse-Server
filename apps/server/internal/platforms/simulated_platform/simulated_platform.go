@@ -7,14 +7,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type SimulatedPlatform struct {
-	logger *zerolog.Logger
-}
+type SimulatedPlatform struct{}
 
-func NewSimulatedPlatform(logger *zerolog.Logger) *SimulatedPlatform {
-	return &SimulatedPlatform{
-		logger: logger,
-	}
+func NewSimulatedPlatform(_ *zerolog.Logger) *SimulatedPlatform {
+	return &SimulatedPlatform{}
 }
 
 func (p *SimulatedPlatform) GetAnimeCollection(ctx context.Context, bypassCache bool) (interface{}, error) {

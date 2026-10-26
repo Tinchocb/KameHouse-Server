@@ -1,7 +1,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { check } from '@tauri-apps/plugin-updater';
 
 const getAppWindow = () => {
   if (isTauri()) {
@@ -26,8 +25,6 @@ const getPlatform = (): NodeJS.Platform => {
   }
   return 'win32';
 };
-
-let pendingUpdate: Awaited<ReturnType<typeof check>> | null = null;
 
 export interface DesktopAPI {
   window: {
@@ -61,12 +58,9 @@ export interface DesktopAPI {
   clipboard: {
     writeText: (text: string) => Promise<boolean>;
   };
-  checkForUpdates: () => Promise<{ updateAvailable: boolean; updateInfo: unknown; updateDownloaded: boolean }>;
-  installUpdate: () => Promise<boolean>;
-  killServer: () => Promise<boolean>;
-  settings: {
-    get: () => Promise<DesktopSettings>;
-    set: (settings: Partial<DesktopSettings>) => Promise<DesktopSettings>;
+  logs: {
+    /** Abre la carpeta de registros en el explorador del sistema. */
+    openFolder: () => Promise<void>;
   };
   mpv: {
     isAvailable: () => Promise<boolean>;
@@ -82,25 +76,6 @@ interface MpvPlayRequest {
   startTime?: number;
   mediaId?: number;
   episodeNumber?: number;
-}
-
-export interface DesktopSettings {
-  minimizeToTray: boolean;
-  openInBackground: boolean;
-  openAtLaunch: boolean;
-  updateChannel: string;
-  windowBounds: WindowBounds | null;
-  windowMaximized: boolean;
-  disableHardwareAcceleration: boolean;
-  enableAggressiveGpuFlags: boolean;
-  mpvPath?: string | null;
-}
-
-interface WindowBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
 }
 
 const isTauri = () => {
@@ -258,100 +233,11 @@ function createTauriBridge(): DesktopAPI {
         return false;
       },
     },
-    checkForUpdates: async () => {
-      if (isTauri()) {
-        try {
-          const update = await check();
-          pendingUpdate = update;
-          return {
-            updateAvailable: !!update,
-            updateInfo: update ? { version: update.version } : null,
-            updateDownloaded: false, // Tauri doesn't separate download state
-          };
-        } catch (e) {
-          console.error('[Bridge] Check updates failed:', e);
-          return { updateAvailable: false, updateInfo: null, updateDownloaded: false };
-        }
-      }
-      return { updateAvailable: false, updateInfo: null, updateDownloaded: false };
-    },
-    installUpdate: async () => {
-      if (isTauri()) {
-        try {
-          if (pendingUpdate) {
-            await pendingUpdate.downloadAndInstall();
-            return true;
-          }
-          return false;
-        } catch (e) {
-          console.error('[Bridge] Install update failed:', e);
-          return false;
-        }
-      }
-      return false;
-    },
-    killServer: async () => {
-      if (isTauri()) {
-        try {
-          await invoke('kill_server');
-          return true;
-        } catch (e) {
-          console.error('[Bridge] Kill server failed:', e);
-          return false;
-        }
-      }
-      return false;
-    },
-    settings: {
-      get: async () => {
+    logs: {
+      openFolder: async () => {
         if (isTauri()) {
-          try {
-            return await invoke('get_desktop_settings');
-          } catch (e) {
-            console.error('[Bridge] Get settings failed:', e);
-            return {
-              minimizeToTray: true,
-              openInBackground: false,
-              openAtLaunch: false,
-              updateChannel: 'kamehouse',
-              windowBounds: null,
-              windowMaximized: true,
-              disableHardwareAcceleration: false,
-              enableAggressiveGpuFlags: false,
-            };
-          }
+          await invoke('open_logs_folder');
         }
-        return {
-          minimizeToTray: true,
-          openInBackground: false,
-          openAtLaunch: false,
-          updateChannel: 'kamehouse',
-          windowBounds: null,
-          windowMaximized: true,
-          disableHardwareAcceleration: false,
-          enableAggressiveGpuFlags: false,
-        };
-      },
-      set: async (settings: Partial<DesktopSettings>) => {
-        if (isTauri()) {
-          try {
-            const updates: Record<string, unknown> = {};
-            if (settings.minimizeToTray !== undefined) updates.minimizeToTray = settings.minimizeToTray;
-            if (settings.openInBackground !== undefined) updates.openInBackground = settings.openInBackground;
-            if (settings.openAtLaunch !== undefined) updates.openAtLaunch = settings.openAtLaunch;
-            if (settings.updateChannel !== undefined) updates.updateChannel = settings.updateChannel;
-            if (settings.windowBounds !== undefined) updates.windowBounds = settings.windowBounds;
-            if (settings.windowMaximized !== undefined) updates.windowMaximized = settings.windowMaximized;
-            if (settings.disableHardwareAcceleration !== undefined) updates.disableHardwareAcceleration = settings.disableHardwareAcceleration;
-            if (settings.enableAggressiveGpuFlags !== undefined) updates.enableAggressiveGpuFlags = settings.enableAggressiveGpuFlags;
-            if (settings.mpvPath !== undefined) updates.mpvPath = settings.mpvPath;
-            return await invoke('set_desktop_settings', { updates });
-          } catch (e) {
-            console.error('[Bridge] Set settings failed:', e);
-            throw e;
-          }
-        }
-        throw new Error('Not running in Tauri');
       },
     },
     mpv: {

@@ -3,7 +3,7 @@ import { IconSwap } from "@/components/ui/kinetics";
 import { cn } from "../core/styling"
 import * as React from "react"
 import { BasicField, BasicFieldOptions, extractBasicFieldProps } from "../basic-field"
-import { extractInputPartProps, InputAddon, InputAnatomy, InputContainer, InputIcon, InputStyling } from "../input"
+import { extractInputPartProps, InputAddon, InputAnatomy, InputContainer, InputIcon, InputStyling } from "../input/input-parts"
 
 
 /* -------------------------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
             type="button"
             onClick={togglePasswordVisibility}
             aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
-            className="cursor-pointer text-on-surface-variant/70 hover:text-on-surface active:scale-90 transition-[color,transform] duration-fast ease-out-strong p-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-accent flex items-center justify-center"
+            className="cursor-pointer text-label-2 hover:text-on-surface active:scale-90 transition-[color,transform] duration-fast ease-out-strong p-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-accent flex items-center justify-center"
         >
             <IconSwap swapKey={showPassword ? "hide" : "show"}>
                 {showPassword ? <IconUiEyeOff className="w-4 h-4" /> : <IconUiEye className="w-4 h-4" />}
@@ -97,9 +97,13 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
                             hasLeftAddon: !!leftAddon,
                             hasLeftIcon: !!leftIcon,
                         }),
+                        // El variante isReadonly de InputAnatomy trae pointer-events-none: sin esto no se
+                        // puede seleccionar ni copiar con el mouse. Un readonly es texto copiable.
+                        basicFieldProps.readonly && "pointer-events-auto cursor-text",
                         className,
                     )}
-                    disabled={basicFieldProps.disabled || basicFieldProps.readonly}
+                    disabled={basicFieldProps.disabled}
+                    readOnly={basicFieldProps.readonly}
                     data-disabled={basicFieldProps.disabled}
                     data-readonly={basicFieldProps.readonly}
                     aria-readonly={basicFieldProps.readonly}

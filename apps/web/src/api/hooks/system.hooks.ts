@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { toast } from "sonner"
 
-export interface DatabaseBackupResult {
+interface DatabaseBackupResult {
     path: string
     sizeBytes: number
     createdAt: string

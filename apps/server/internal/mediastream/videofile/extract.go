@@ -1,12 +1,16 @@
 package videofile
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/crashlog"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -20,7 +24,49 @@ func GetFileAttCacheDir(outDir string, hash string) string {
 	return filepath.Join(outDir, "videofiles", hash, "/att")
 }
 
+// ExtractOptions ajusta una extracción para fuentes lentas (Google Drive vía loopback).
+type ExtractOptions struct {
+	// Timeout acota la corrida de ffmpeg; 0 usa el valor por defecto (2 min, pensado
+	// para archivos locales).
+	Timeout time.Duration
+	// OnProgress recibe cuántos segundos de media ffmpeg ya procesó (out_time). Si es
+	// nil, ffmpeg no emite progreso.
+	OnProgress func(outTimeSeconds float64)
+}
+
 func ExtractAttachment(ctx context.Context, ffmpegPath string, path string, hash string, mediaInfo *MediaInfo, cacheDir string, logger *zerolog.Logger) (err error) {
+	return ExtractAttachmentOpts(ctx, ffmpegPath, path, hash, mediaInfo, cacheDir, logger, ExtractOptions{})
+}
+
+// progressWriter interpreta el `-progress pipe:1` de ffmpeg (líneas clave=valor) y
+// llama a onProgress con el tiempo de salida en segundos.
+type progressWriter struct {
+	pw *io.PipeWriter
+}
+
+func newProgressWriter(onProgress func(float64)) *progressWriter {
+	pr, pw := io.Pipe()
+	go func() {
+		sc := bufio.NewScanner(pr)
+		for sc.Scan() {
+			line := sc.Text()
+			// out_time_us (y el confuso out_time_ms, que también está en µs).
+			if v, ok := strings.CutPrefix(line, "out_time_us="); ok {
+				if us, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64); err == nil && us >= 0 {
+					onProgress(float64(us) / 1e6)
+				}
+			}
+		}
+		_, _ = io.Copy(io.Discard, pr)
+	}()
+	return &progressWriter{pw: pw}
+}
+
+func (w *progressWriter) Write(p []byte) (int, error) { return w.pw.Write(p) }
+func (w *progressWriter) Close() error                { return w.pw.Close() }
+
+// ExtractAttachmentOpts es ExtractAttachment con tope de tiempo y progreso configurables.
+func ExtractAttachmentOpts(ctx context.Context, ffmpegPath string, path string, hash string, mediaInfo *MediaInfo, cacheDir string, logger *zerolog.Logger, opts ExtractOptions) (err error) {
 	logger.Debug().Str("hash", hash).Msgf("videofile: Starting media attachment extraction")
 
 	attachmentPath := GetFileAttCacheDir(cacheDir, hash)
@@ -78,6 +124,9 @@ func ExtractAttachment(ctx context.Context, ffmpegPath string, path string, hash
 
 	// DEVNOTE: All paths fed into this command should be absolute
 	args := []string{"-y"}
+	if opts.OnProgress != nil {
+		args = append(args, "-nostats", "-progress", "pipe:1")
+	}
 
 	// Fonts are dumped individually to avoid empty string / directory path issues on Windows.
 	for i, fontName := range mediaInfo.Fonts {
@@ -91,7 +140,11 @@ func ExtractAttachment(ctx context.Context, ffmpegPath string, path string, hash
 	args = append(args, "-i", path)
 
 	// Cap the run even if the caller's ctx has no deadline.
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	timeout := opts.Timeout
+	if timeout <= 0 {
+		timeout = 2 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	cmd := util.NewCmdCtx(
@@ -128,12 +181,19 @@ func ExtractAttachment(ctx context.Context, ffmpegPath string, path string, hash
 	// If we are only extracting fonts (no text subtitles), we still need to provide
 	// an output format for ffmpeg to not complain
 	if textSubCount == 0 {
-		// Just copy video/audio to a null muxer to satisfy ffmpeg output requirement
-		cmd.Args = append(cmd.Args, "-f", "null", "-")
+		// Solo fuentes: se mapean sólo los adjuntos (copiados tal cual) a un muxer nulo. Sin -map,
+		// ffmpeg elige video y audio por defecto y los decodifica enteros en cada reproducción.
+		// Medido con ffmpeg real: decodificaba 480 cuadros de un clip de 20 s; con esto, cero.
+		cmd.Args = append(cmd.Args, "-map", "0:t?", "-c", "copy", "-f", "null", "-")
 	}
 
 	cmd.Stdout = crashLogger.Stdout()
 	cmd.Stderr = crashLogger.Stdout()
+	if opts.OnProgress != nil {
+		pwr := newProgressWriter(opts.OnProgress)
+		defer pwr.Close()
+		cmd.Stdout = io.MultiWriter(crashLogger.Stdout(), pwr)
+	}
 	err = cmd.Run()
 	if err != nil {
 		logger.Error().Err(err).Msgf("videofile: Error starting FFmpeg")

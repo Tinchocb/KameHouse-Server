@@ -87,10 +87,6 @@ type MatroskaParser struct {
 	// Element IDs to parse
 	elementsToParse map[uint32]struct{}
 
-	// Cluster parsing state
-	clusterTimestamp uint64
-	currentTrackMask uint64
-
 	// Position tracking
 	segmentPos    uint64
 	segmentTopPos uint64
@@ -613,13 +609,6 @@ func (mp *MatroskaParser) GetTags() []*Tag {
 func (mp *MatroskaParser) GetCues() []*Cue {
 	return mp.cues
 }
-
-// GetCuesPos returns the byte position of the cues element.
-func (mp *MatroskaParser) GetCuesPos() uint64 {
-	return mp.cuesPos
-}
-
-
 
 func (mp *MatroskaParser) parseSeekHead(size uint64) error {
 	// Leer a través del EBMLReader (con buffer), no de mp.reader.r: el bufio ya

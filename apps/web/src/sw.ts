@@ -1,15 +1,20 @@
 /// <reference lib="webworker" />
 declare const self: ServiceWorkerGlobalScope
 
-import { CacheFirst } from "workbox-strategies"
+import { CacheFirst, StaleWhileRevalidate } from "workbox-strategies"
 import { registerRoute } from "workbox-routing"
 import { CacheableResponsePlugin } from "workbox-cacheable-response"
 import { ExpirationPlugin } from "workbox-expiration"
+import { shouldFetchImageWithCors } from "./lib/sw-cors-images"
 
 const CACHE_CONFIG = {
     wasm: { name: "wasm-decoders-cache", maxEntries: 10, maxAgeSeconds: 30 * 24 * 60 * 60 },
-    thumbnails: { name: "video-thumbnails-cache", maxEntries: 500, maxAgeSeconds: 7 * 24 * 60 * 60 },
-    images: { name: "images-runtime-cache", maxEntries: 1000, maxAgeSeconds: 30 * 24 * 60 * 60 },
+    // Los cupos son holgados a propósito: las URLs son inmutables (llevan `v`, o son del proxy
+    // local) y una entrada expulsada de la caché se vuelve a pedir al servidor. Cada entrada
+    // pesa unos 5-60 KB, así que 3000 caben de sobra en la cuota del origen, y
+    // `purgeOnQuotaError` libera todo si el navegador la agota.
+    thumbnails: { name: "video-thumbnails-cache", maxEntries: 3000, maxAgeSeconds: 30 * 24 * 60 * 60 },
+    images: { name: "images-runtime-cache", maxEntries: 3000, maxAgeSeconds: 30 * 24 * 60 * 60 },
 }
 
 // Las respuestas opacas (status 0, cross-origin sin CORS) se inflan varios MB cada una en
@@ -27,6 +32,17 @@ function createExpirationPlugin(maxEntries: number, maxAgeSeconds: number) {
     return new ExpirationPlugin({ maxEntries, maxAgeSeconds, purgeOnQuotaError: true })
 }
 
+// Imágenes del servidor (o de TMDB) pedidas desde otro origen, como en la app de escritorio:
+// el SW las pide en modo CORS para poder guardarlas (ver lib/sw-cors-images.ts). Si el servidor
+// rechaza el CORS (origen no permitido, contraseña), se vuelve al pedido original sin guardar.
+const corsForCrossOriginImages = {
+    requestWillFetch: async ({ request }: { request: Request }) =>
+        shouldFetchImageWithCors(request.url, request.mode, self.location.origin)
+            ? new Request(request.url, { mode: "cors", credentials: "omit", referrerPolicy: "no-referrer" })
+            : request,
+    handlerDidError: async ({ request }: { request: Request }) => fetch(request),
+}
+
 // 1. WASM files (libass, decoders)
 registerRoute(
     ({ request }) => request.url.endsWith(".wasm"),
@@ -40,19 +56,25 @@ registerRoute(
 )
 
 // 2. Video thumbnails y endpoints de miniaturas locales (sin extensión requerida en URL).
-// CacheFirst es seguro porque la URL lleva `v` (mtime+tamaño del archivo): si el archivo
-// cambia, cambia la URL.
+// Con `v` (mtime+tamaño del archivo) la URL cambia si el archivo cambia: CacheFirst es seguro.
+// Sin `v` el frame podría haber cambiado: se sirve el guardado y se revalida en segundo plano.
+const isThumbnailRequest = ({ request, url }: { request: Request; url: URL }) =>
+    request.method === "GET" &&
+    (url.pathname.includes("/video-thumbnail") || url.pathname.includes("/thumbnail/"))
+
+const thumbnailPlugins = () => [
+    corsForCrossOriginImages,
+    createCacheablePlugin(CACHEABLE_STATUSES),
+    createExpirationPlugin(CACHE_CONFIG.thumbnails.maxEntries, CACHE_CONFIG.thumbnails.maxAgeSeconds),
+]
+
 registerRoute(
-    ({ request, url }) =>
-        request.method === "GET" &&
-        (url.pathname.includes("/video-thumbnail") || url.pathname.includes("/thumbnail/")),
-    new CacheFirst({
-        cacheName: CACHE_CONFIG.thumbnails.name,
-        plugins: [
-            createCacheablePlugin(CACHEABLE_STATUSES),
-            createExpirationPlugin(CACHE_CONFIG.thumbnails.maxEntries, CACHE_CONFIG.thumbnails.maxAgeSeconds),
-        ],
-    })
+    (ctx) => isThumbnailRequest(ctx) && ctx.url.searchParams.has("v"),
+    new CacheFirst({ cacheName: CACHE_CONFIG.thumbnails.name, plugins: thumbnailPlugins() })
+)
+registerRoute(
+    isThumbnailRequest,
+    new StaleWhileRevalidate({ cacheName: CACHE_CONFIG.thumbnails.name, plugins: thumbnailPlugins() })
 )
 
 // 3. Imágenes remotas y dinámicas (TMDB, AniList, etc.)
@@ -65,6 +87,7 @@ registerRoute(
     new CacheFirst({
         cacheName: CACHE_CONFIG.images.name,
         plugins: [
+            corsForCrossOriginImages,
             createCacheablePlugin(CACHEABLE_STATUSES),
             createExpirationPlugin(CACHE_CONFIG.images.maxEntries, CACHE_CONFIG.images.maxAgeSeconds),
         ],

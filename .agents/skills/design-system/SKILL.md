@@ -7,70 +7,50 @@ description: Aplicar el sistema de diseño KameHouse (Home + Ajustes) al mejorar
 
 Fuente canónica: `docs/DESIGN-GUIDE.md`. Patrones oro: `apps/web/src/routes/home/` + `apps/web/src/routes/settings/`. Tokens: `apps/web/src/styles/tokens/*.css`.
 
-## Workflow obligatorio
+## Workflow
 
-### 1. Diagnóstico (regla .agents/rules/communication.md)
-Antes de tocar código: causa raíz técnica + plan de acción. Inspeccionar la vista objetivo y compararla contra la guía.
+1. Leer la guía y el componente activo antes de modificarlo. Explicar causa técnica y plan según `.agents/rules/communication.md`.
+2. Reutilizar el shell y los componentes de la superficie; preservar identidad, personajes y encuadres.
+3. Aplicar los tokens actuales. No copiar recetas visuales que dupliquen los valores de CSS.
+4. Verificar estados, teclado, móvil y movimiento reducido. Distinguir pruebas de código de comprobaciones visuales.
+5. Si guía y código canónico difieren, documentar la diferencia y sincronizar la guía; no rediseñar una composición existente para ajustarla a un ejemplo antiguo.
 
-### 2. Elegir shell
-- **Cinematográfico** (Home / Movies / Series / vistas inmersivas): `relative min-h-screen text-on-surface overflow-x-hidden` + `z-10 flex flex-col`. Hero: `w-full aspect-[16/9] sm:aspect-[2.2/1] lg:aspect-[2.5/1] max-h-[440px] rounded-3xl`. Grid catálogo: `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5`, posters `aspect-[2/3] rounded-2xl`. Contenedor interno: `px-4 sm:px-6 md:px-8 lg:px-10 max-w-content mx-auto`.
-- **Estructurado** (Ajustes / Admin / vistas con sidebar): `flex flex-col md:flex-row h-full w-full pt-16 md:pt-0 overflow-hidden bg-transparent`, sidebar `hidden md:flex md:w-60 lg:w-[280px] shrink-0 border-r border-white/20 bg-zinc-950/40 backdrop-blur-overlay-2xl`, header `px-6 sm:px-8 lg:px-10 pt-20 pb-5 border-b border-white/10`, contenido `page-container py-7 pb-32 space-y-9`.
+## Shells
 
-### 3. Reglas Home (Cinematográfico) — continuar el diseño
-**Estructura de página**
-- Wrapper raíz: `<div className="relative min-h-screen text-on-surface overflow-x-hidden"><div className="relative z-10 flex flex-col">...</div></div>`
-- Secciones en `space-y-4` (no `space-y-9` como en Ajustes)
-- Padding superior: `pt-4 md:pt-20 pb-8` (hero alto en desktop)
-- **Nunca** `bg` opaco en contenedores; el fondo vive en `html` + `DynamicBackdrop` en `-z-10`
+- **Home cinematográfico**: `routes/home/index.tsx` + `MediaSpotlight`; fondo transparente para `DynamicBackdrop`, contenido en `page-container`, separación `space-y-4`, padding superior `pt-nav`.
+- **Hero**: reutilizar `HERO_STAGE_CLASS` (`lib/config/hero-stage.ts`), `rounded-hero`, `shadow-hero` y variantes de `kinetics/variants.ts`. No copiar dimensiones.
+- **Ajustes estructurado**: `routes/settings/index.lazy.tsx`; sidebar flotante `.sectionbar rounded-3xl`, barra móvil `.sectionbar .sectionbar-strong`, cabecera mínima y bloques `SectionBar`.
+- Administración, Películas y detalle: seguir su shell vigente y las referencias de la guía, sin imponer el mismo grid a todas las superficies.
 
-**Hero cinematográfico**
-- `aspect-[16/9] sm:aspect-[2.2/1] lg:aspect-[2.5/1] max-h-[440px] rounded-3xl overflow-hidden`
-- Backdrop: `getLowResImage(url)` + `filter: blur(72px) saturate(140%)` + máscara radial `ellipse 90% 80% at 70% 40%` + `opacity: 0.28`
-- Aura de color (era): `radial-gradient(ellipse, color-mix(in srgb, ${colors.accent} 50%, transparent) 0%, transparent 70%)` animado `scale [1,1.08,1] opacity [0.25,0.4,0.25]` 8s infinite
-- Ken Burns / parallax: `useHeroParallax(0.15)` solo si `isHeavyAllowed && !reduceMotion`
-- Transición de era: `AnimatePresence mode="wait"` + `motion.div key={eraId}` con `initial={{opacity:0,scale:0.96}} animate={{opacity:1,scale:1}} exit={{opacity:0}} transition={{duration:1,ease:"easeOut"}}`
+## Componentes canónicos
 
-**Navegación de eras (pills horizontal)**
-- Contenedor: `flex items-center gap-2 bg-surface-container-high/75 border border-outline-variant/30 rounded-2xl p-2 overflow-hidden`
-- Pill: `relative flex-1 px-3 py-1.5 rounded-xl text-xs font-semibold`, activo con `layoutId="activeEraIndicator"` + spring `480/34`, `bg-white/95 text-zinc-950`
-- Hover: `scale:1.012 x:4`, stagger entrada `delay: 0.06*idx + 0.18`, spring `380/32`
-- `prefers-reduced-motion` → tween 150ms
+- `SectionBar`: variantes `default | strong | minimal | content`. Catálogos edge-to-edge: `minimal`; bloques de contenido: `content`. Títulos de sección en sans y sentence case. `font-mono` solo para contadores y etiquetas técnicas cortas.
+- Filas de Ajustes: `OsToggle`, `OsSelect`, `OsInput`; navegación por cinco pilares, sin buscador montado. `SectionBar.searchQuery` es una API opcional, no implica un `SettingsFilter` existente.
+- `SegmentedControl`: `layoutId` único y `aria-label`; `radiogroup` para filtros, `tablist` para paneles. Con pestañas, opciones con `id`/`panelId` y panel asociado mediante `role="tabpanel"` / `aria-labelledby`. `surface="inset"` dentro de una superficie que ya tiene glass.
+- Eras: `SpotlightEraNav` delega en `EraRail`; no reimplementar pills.
+- Acciones: `Button` con intención y tamaño canónicos; `primary` para CTA principal, `glass` sobre imagen cuando corresponda, `secondary`/`ghost`/`outline` sobre superficie. Radio pill y feedback de pulsación del componente.
+- SaveBar: seguir la implementación de Ajustes y sus estados Guardando/Guardado.
 
-**Lower Hub (Sagas / Películas)**
-- Segmented control: `flex items-center gap-1 bg-zinc-950/40 border border-white/20 border-t-white/40 border-b-white/10 p-1.5 rounded-full`
-- Botón: `relative flex-1 px-4 py-2 rounded-full text-xs font-semibold`, activo con `layoutId` único + indicador `motion.div bg-white/95 rounded-full shadow-[0_2px_14px_rgba(255,255,255,0.4),inset_0_1px_1px_rgba(255,255,255,1)]`
-- Grid sagas: `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5`, cards `aspect-[2/3] rounded-2xl`
-- Grid películas: mismo, badges `SPECIAL/OVA` filtrados por toggle
+## Home y estados
 
-**Auto-rotación de eras**
-- Cadencia fija 8000ms, pausa en: `hover/focus`, `document.visibilityState === hidden`, `!document.hasFocus()`, `reduceMotion`, `availableEras.length <= 1`
-- Dirección del slide calculada por índice (`delta >= 0 ? 1 : -1`)
+- `SpotlightLowerHub`: `SectionBar variant="minimal"` y `SegmentedControl` cuando hay sagas y películas.
+- Sagas: tarjetas panorámicas 16:9; grid `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4`.
+- Películas: acordeón desde `sm` hasta seis ítems (columna en móvil); con más ítems, riel horizontal con scroll y snap. Expansiones solo para puntero fino con hover.
+- Auto-rotación: `HERO_ROTATION_MS` / `--hero-rotation-duration` = **5000 ms**. Pausa con hover/foco, pestaña oculta, ventana sin foco, movimiento reducido o una sola era.
+- Skeleton: reutilizar `HomeSkeleton` o espejar el layout real; dimensiones/aspect-ratio reservados. No aplicar `animate-pulse` a un elemento con backdrop-filter.
+- Biblioteca vacía/error: reutilizar `LibraryEmptyState` / `LibraryErrorState` / `EmptyState`; texto comprensible, jerarquía de títulos y CTA contextual. Vacíos internos en el flujo de la sección.
 
-**Motion / Springs**
-- Entrada global: `stiffness:380 damping:30 mass:0.8` (useSpring)
-- Tabs/eras: `stiffness:480 damping:34` (indicador), `stiffness:280 damping:28` (contenido)
-- Hover cards: `whileHover={{scale:1.012}}`, `active:scale-95`
-- Stagger: `0.06 * index`
+## Tokens y motion
 
-**Estados (Home)**
-- Skeleton: espeja `MediaSpotlight` exacto — `page-container space-y-4 animate-pulse`, hero `aspect-[16/9]...rounded-3xl bg-surface-container`, barra eras `h-9 w-24`, grid `aspect-[2/3] rounded-2xl`
-- Error/Empty: `flex min-h-[100dvh] items-center justify-center -mt-20 px-4` + `motion.div initial={{opacity:0,scale:0.95,y:20}} animate={{opacity:1,scale:1,y:0}} transition={useSpring(320,28,0.8)}` + `glass-card rounded-3xl p-8 border border-[var(--glass-border-side)]` + CTA `bg-brand-accent rounded-full font-display tracking-widest active:scale-95 hover:brightness-110 shadow-[var(--shadow-brand-primary)]`
+- Colores: `brand-accent`, `on-surface*`, `label-*`, `surface-container*`, paletas de era existentes. Sin hex fijos ni `text-white` en chrome temático.
+- Glass: `.sectionbar`, `.glass-frosted`, `.glass-frosted-pill`, `.glass-card` o tokens `--sectionbar-*`. No reescribir bordes/fondos manuales: deben seguir Clásico, Flat y Liquid.
+- Blur: **24 px (`overlay-md`) en paneles**; **64 px (`overlay-2xl`) solo en hero y overlays cinematográficos**. Un blur por superficie; ninguno por badge o fila repetida.
+- Radios: pill en botones/inputs/selectores, `rounded-xl` en filas, `rounded-2xl` en cards, `rounded-hero` en hero; `rounded-3xl` para superficies flotantes grandes según guía.
+- Sombras: tokens `elevation-*`, `shadow-hero`, sombras de CTA o `--sectionbar-shadow`. El type hint `shadow-[shadow:var(--token)]` es válido. No sombras genéricas ni rgba inline.
+- Springs: `useSpringPreset` / `useSpring` desde `kinetics/hooks.ts`; `entrance` 380/30/0.8, `tabIndicator` 480/34, `tabContent` 280/28. No inventar presets.
+- Respetar `prefers-reduced-motion` y `selectIsHeavyEffectsAllowed`. Clases de duración/easing desde tokens.
+- Hover solo bajo `[@media(hover:hover)_and_(pointer:fine)]`; feedback active del componente y limpieza de transforms en handlers manuales.
 
-### 4. Mapear a componentes canónicos
-Reutilizar `SectionBar` (`components/ui/sectionbar`): contenedor unificado canónico para secciones colapsables y estáticas (`variant="default" | "strong" | "minimal"`, `.sectionbar-divide` para hijos, header `w-8 h-8 rounded-xl bg-brand-accent/10`, título `text-xs font-black uppercase font-mono`). Filas de formulario reutilizables: `OsToggle` / `OsSelect` / `OsInput` (`px-5 py-4`, label `text-xs font-bold`, desc `text-[11px]`, controles pill `rounded-full bg-zinc-950/40 border-white/20`), `SettingsFilter` + keywords para búsqueda, segmentados con `layoutId` + spring `480/34`, SaveBar flotante `fixed bottom-20 md:bottom-8 shadow-elevation-3`. Todo elemento dentro de un `SectionBar` colapsable DEBE tener aspect-ratio reservado para evitar layout shift durante el cálculo de altura.
+## Verificación
 
-Componentes Home reutilizables (`components/ui/media-spotlight.tsx` + `components/ui/spotlight/*`):
-- `MediaSpotlight` (orquesta eras, hero, hub)
-- `SpotlightEraNav` (pills horizontales con layoutId)
-- `SpotlightHero` (backdrop, parallax, Ken Burns, acciones)
-- `SpotlightLowerHub` (segmented + grids sagas/películas)
-- Helpers: `useHeroParallax`, `useHeroBackdrop`, `useSpring`, `getEraFromItem`, `ERA_COLOR_MAP`
-
-### 5. Tokens y motion
-Nada hardcodeado: colores `on-surface*`/`brand-accent`/`--era-*-hex`, radios solo de escala (pill / xl / 2xl / 3xl), sombras `elevation-*` o `shadow-[var(--shadow-brand-primary)]` / `shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.3),0_12px_36px_-6px_rgba(0,0,0,0.85)]`, un blur por panel (`backdrop-blur-overlay-2xl` / `md`). Transición de tabs: `AnimatePresence mode="wait"` + `motion.div key` (`opacity 0→1, y 16→0, blur 8px→0`, spring `280/28`). `active:scale-95`, `whileHover 1.012`, stagger `0.06*idx`.
-
-### 6. Estados y verificación
-Skeleton espeja layout (`animate-pulse`, `bg-surface-container`). Error/Vacío: `min-h-[100dvh] -mt-20` + `SharedEmptyState` con CTA `bg-brand-accent rounded-full font-display tracking-widest`. Verificar: `page-container`, `no-scrollbar` en scroll interno, `scroll-mt-28`, touch 44px, `aria-pressed`/`role=switch`, `prefers-reduced-motion`, sin radios/sombras arbitrarias, sin `bg` opaco en body, `layoutId` en todos los indicadores animados.
-
-## Anti-patrones (rechazar)
-Hex fijos · `shadow-lg` genérico · blur por fila · animar width por JS (usar `animate-hero-progress` CSS) · tabs sin `layoutId` · texto fuera de `on-surface*` · buscador sin keywords · `bg-black`/`bg-zinc-900` opaco en contenedores (tapa DynamicBackdrop) · múltiples blurs apilados · skeleton que no espeja layout real · CTA sin `active:scale-95` · spring genérico sin `useReducedMotion`.
+Teclado y foco visible; nombres accesibles; roles y estados; touch 44 px; inputs móviles 16 px; safe areas en barras fijas; sin desbordamientos; estados carga/error/vacío; variantes Moderno/Clásico/Flat; movimiento reducido. No afirmar contraste, rendimiento o comportamiento visual sin medirlo en ejecución.

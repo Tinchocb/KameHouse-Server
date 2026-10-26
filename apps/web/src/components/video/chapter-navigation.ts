@@ -46,9 +46,11 @@ export function getPrevChapterTarget(chapters: Chapter[], curr: number): number 
     return prevs.length > 0 ? prevs[prevs.length - 1].startTime : 0
 }
 
-export interface SkippablePrefs {
+interface SkippablePrefs {
     autoSkipIntroPref: boolean
     autoSkipOutroPref: boolean
+    /** Segmentos intermedios (resumen, recap, eyecatch…). Si falta, sigue a autoSkipIntroPref. */
+    skipIntermediates?: boolean
 }
 
 /**
@@ -68,7 +70,7 @@ export function findSkippableChapter(
         if (isOutroChapter(c)) return prefs.autoSkipOutroPref
         const n = c.name.toLowerCase()
         return (
-            prefs.autoSkipIntroPref &&
+            (prefs.skipIntermediates ?? prefs.autoSkipIntroPref) &&
             (SKIPPABLE_KEYWORDS.some((k) => n.includes(k)) || SKIPPABLE_TYPES.has(c.type ?? ""))
         )
     }) ?? null

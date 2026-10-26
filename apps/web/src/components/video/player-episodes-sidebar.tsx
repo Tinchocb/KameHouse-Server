@@ -1,10 +1,12 @@
-import React, { useRef, useEffect } from "react"
+import React, { useRef, useEffect, useLayoutEffect } from "react"
+import { m, AnimatePresence } from "framer-motion"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { cn } from "@/components/ui/core/styling"
 import { DeferredImage } from "@/components/shared/deferred-image"
-import { SpringSwitch } from "@/components/ui/switch/spring-switch"
-import { IconMediaPlay } from "@/components/ui/icons"
-import { PlayerPanelReveal } from "./player-panel-reveal"
+import { IconMediaPlay, IconUiClose, IconUiCheck } from "@/components/ui/icons"
+import { useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { useFocusTrap } from "@/hooks/use-focus-trap"
+import { PLAYER_GLASS, PLAYER_ICON_BTN } from "./player-theme"
 
 interface Episode {
     title?: string
@@ -20,136 +22,192 @@ interface PlayerEpisodesSidebarProps {
     episodes: Episode[]
     currentEpisodeNumber?: number
     onSelectEpisode?: (episodeNumber: number) => void
+    /** Sin uso: Maratón vive ahora en el menú "Más". Se conserva por compatibilidad. */
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
 }
 
+const CARD_WIDTH = 224
+const CARD_GAP = 12
+
+/**
+ * Episodios como fila horizontal de miniaturas sobre la barra de controles (AVKit/tvOS).
+ * Virtualizada en horizontal; foco atrapado mientras está abierta; Esc cierra.
+ * Se mantiene el nombre del componente para no tocar a quien lo monta.
+ */
 export const PlayerEpisodesSidebar = React.memo(function PlayerEpisodesSidebar({
     isOpen,
     onClose,
     episodes,
     currentEpisodeNumber,
     onSelectEpisode,
-    marathonMode = false,
-    onMarathonModeChange,
 }: PlayerEpisodesSidebarProps) {
-    const parentRef = useRef<HTMLDivElement>(null)
+    const reduceMotion = useReducedMotion()
+    const dialogRef = useRef<HTMLDivElement>(null)
+    const scrollRef = useRef<HTMLDivElement>(null)
+    useFocusTrap(dialogRef, isOpen)
 
-    const rowVirtualizer = useVirtualizer({
+    const virtualizer = useVirtualizer({
+        horizontal: true,
         count: episodes.length,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => 72,
+        getScrollElement: () => scrollRef.current,
+        estimateSize: () => CARD_WIDTH + CARD_GAP,
         overscan: 4,
     })
 
+    const currentIndex = episodes.findIndex(
+        ep => (ep.absoluteEpisodeNumber ?? ep.episodeNumber) === currentEpisodeNumber
+    )
+
+    // Al abrir: centrar el episodio actual antes de pintar (un timer de 60 ms dejaba ver el salto
+    // desde el inicio de la lista, G4-NV1) y darle el foco (teclado / control remoto).
+    useLayoutEffect(() => {
+        if (!isOpen || currentIndex < 0) return
+        virtualizer.scrollToIndex(currentIndex, { align: "center" })
+        const frame = requestAnimationFrame(() => {
+            dialogRef.current
+                ?.querySelector<HTMLButtonElement>(`[data-episode-index="${currentIndex}"]`)
+                ?.focus({ preventScroll: true })
+        })
+        return () => cancelAnimationFrame(frame)
+    }, [isOpen, currentIndex, virtualizer])
+
     useEffect(() => {
-        if (isOpen && currentEpisodeNumber !== undefined && episodes.length > 0) {
-            const idx = episodes.findIndex(
-                ep => (ep.absoluteEpisodeNumber ?? ep.episodeNumber) === currentEpisodeNumber
-            )
-            if (idx >= 0) {
-                const timer = setTimeout(() => {
-                    rowVirtualizer.scrollToIndex(idx, { align: "center" })
-                }, 100)
-                return () => clearTimeout(timer)
+        if (!isOpen) return
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                e.stopPropagation()
+                e.stopImmediatePropagation()
+                onClose()
             }
         }
-    }, [isOpen, currentEpisodeNumber, episodes, rowVirtualizer])
+        window.addEventListener("keydown", handleKeyDown, { capture: true })
+        return () => window.removeEventListener("keydown", handleKeyDown, { capture: true })
+    }, [isOpen, onClose])
 
     return (
-        <PlayerPanelReveal
-            isOpen={isOpen}
-            onClose={onClose}
-            title="Episodios"
-            titleBadge={<span className="text-sm text-white/40 font-normal tabular-nums">{episodes.length}</span>}
-            ariaLabel="Lista de episodios"
-        >
-            {/* Marathon Mode Toggle */}
-            {onMarathonModeChange && (
-                <div className="h-12 px-5 border-b border-white/10 flex items-center justify-between">
-                    <span className="text-xs font-semibold tracking-wide text-white">Modo Maratón</span>
-                    <SpringSwitch
-                        checked={marathonMode}
-                        onChange={onMarathonModeChange}
-                        ariaLabel="Modo Maratón"
-                        size="sm"
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    <m.div
+                        key="episodes-backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        onClick={onClose}
+                        className="absolute inset-0 z-player-overlay bg-black/40 pointer-events-auto"
                     />
-                </div>
-            )}
-
-            {/* Virtualized Episodes List */}
-            <div
-                ref={parentRef}
-                className="flex-1 overflow-y-auto px-2 py-2 no-scrollbar relative"
-            >
-                <div
-                    style={{
-                        height: `${rowVirtualizer.getTotalSize()}px`,
-                        width: "100%",
-                        position: "relative",
-                    }}
-                >
-                    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                        const ep = episodes[virtualRow.index]
-                        if (!ep) return null
-                        const epNum = ep.absoluteEpisodeNumber ?? ep.episodeNumber
-                        const isCurrent = epNum === currentEpisodeNumber
-
-                        return (
-                            <div
-                                key={virtualRow.key}
-                                style={{
-                                    position: "absolute",
-                                    top: 0,
-                                    left: 0,
-                                    width: "100%",
-                                    height: `${virtualRow.size}px`,
-                                    transform: `translateY(${virtualRow.start}px)`,
-                                    paddingBottom: "4px",
-                                }}
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (onSelectEpisode) onSelectEpisode(epNum)
-                                        onClose()
-                                    }}
-                                    aria-label={`Episodio ${epNum}: ${ep.title || ""}`}
-                                    aria-current={isCurrent ? "true" : undefined}
-                                    className={cn(
-                                        "w-full h-full flex items-center gap-3 p-2 rounded-xl text-left cursor-pointer transition-[background-color,transform] duration-fast active:scale-[0.985] ease-out-strong",
-                                        isCurrent ? "bg-white/10" : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06]"
-                                    )}
-                                >
-                                    <div className="relative w-24 aspect-video rounded-sm overflow-hidden shrink-0 bg-white/5">
-                                        {ep.thumbnail && (
-                                            <DeferredImage
-                                                src={ep.thumbnail}
-                                                alt=""
-                                                className="w-full h-full object-cover"
-                                                showSkeleton={false}
-                                            />
-                                        )}
-                                        {isCurrent && (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                                                <IconMediaPlay className="w-4 h-4 text-brand-accent fill-current" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className={cn("text-2xs font-semibold uppercase tracking-widest tabular-nums", isCurrent ? "text-brand-accent" : "text-on-surface-variant")}>
-                                            Episodio {epNum}{ep.watched && <span className="text-white/40"> · Visto</span>}
-                                        </div>
-                                        <div className={cn("text-xs font-semibold tracking-wide truncate mt-0.5", isCurrent ? "text-white" : "text-white/80")}>
-                                            {ep.title || `Episodio ${epNum}`}
-                                        </div>
-                                    </div>
-                                </button>
+                    <m.div
+                        key="episodes-strip"
+                        ref={dialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Episodios"
+                        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "translateY(16px)" }}
+                        animate={reduceMotion ? { opacity: 1 } : { opacity: 1, transform: "translateY(0px)" }}
+                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "translateY(12px)" }}
+                        transition={{ duration: reduceMotion ? 0.15 : 0.24, ease: [0.23, 1, 0.32, 1] }}
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                            "absolute inset-x-3 sm:inset-x-8 bottom-[calc(7rem+env(safe-area-inset-bottom,0px))] z-player-settings pointer-events-auto rounded-3xl overflow-hidden",
+                            PLAYER_GLASS
+                        )}
+                    >
+                        <div className="flex items-center justify-between h-12 pl-5 pr-1.5">
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-sm font-semibold tracking-wide text-label-1">Episodios</span>
+                                <span className="text-xs text-label-2 tabular-nums">{episodes.length}</span>
                             </div>
-                        )
-                    })}
-                </div>
-            </div>
-        </PlayerPanelReveal>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                aria-label="Cerrar episodios"
+                                className={PLAYER_ICON_BTN}
+                            >
+                                <IconUiClose className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div
+                            ref={scrollRef}
+                            className="overflow-x-auto overflow-y-hidden no-scrollbar overscroll-x-contain px-4 pb-4 pt-1 touch-pan-x"
+                        >
+                            <ul
+                                className="relative h-[188px] [[data-tv=true]_&]:h-[208px]"
+                                style={{ width: `${virtualizer.getTotalSize()}px` }}
+                            >
+                                {virtualizer.getVirtualItems().map((item) => {
+                                    const ep = episodes[item.index]
+                                    if (!ep) return null
+                                    const epNum = ep.absoluteEpisodeNumber ?? ep.episodeNumber
+                                    const isCurrent = epNum === currentEpisodeNumber
+                                    return (
+                                        <li
+                                            key={item.key}
+                                            className="absolute top-0 h-full"
+                                            style={{ width: CARD_WIDTH, transform: `translateX(${item.start}px)` }}
+                                        >
+                                            <button
+                                                type="button"
+                                                data-episode-index={item.index}
+                                                onClick={() => {
+                                                    onSelectEpisode?.(epNum)
+                                                    onClose()
+                                                }}
+                                                aria-label={`Episodio ${epNum}${ep.title ? `: ${ep.title}` : ""}${ep.watched ? " (visto)" : ""}`}
+                                                aria-current={isCurrent ? "true" : undefined}
+                                                className={cn(
+                                                    "group/ep flex flex-col w-full h-full p-1.5 rounded-2xl text-left cursor-pointer",
+                                                    "transition-[background-color,transform] duration-fast ease-out-strong active:scale-[0.97]",
+                                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                                    isCurrent ? "bg-[var(--neutral-elev-3)]" : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)]"
+                                                )}
+                                            >
+                                                <span className="relative block w-full aspect-video rounded-xl overflow-hidden bg-[var(--neutral-elev-2)]">
+                                                    {ep.thumbnail && (
+                                                        <DeferredImage
+                                                            src={ep.thumbnail}
+                                                            alt=""
+                                                            className="w-full h-full object-cover"
+                                                            showSkeleton={false}
+                                                        />
+                                                    )}
+                                                    {isCurrent && (
+                                                        <span className="absolute inset-0 flex items-center justify-center bg-black/50">
+                                                            <span className="flex items-center gap-1.5 h-7 px-3 rounded-full bg-[var(--selected-bg)] text-[var(--selected-fg)] text-2xs font-semibold tracking-wide">
+                                                                <IconMediaPlay className="w-3 h-3 fill-current" />
+                                                                Viendo
+                                                            </span>
+                                                        </span>
+                                                    )}
+                                                    {!isCurrent && ep.watched && (
+                                                        <span className="absolute top-1.5 right-1.5 flex items-center justify-center w-6 h-6 rounded-full bg-black/70 text-white" title="Visto">
+                                                            <IconUiCheck className="w-3.5 h-3.5" />
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span className={cn(
+                                                    "mt-2 px-1 text-xs font-medium tabular-nums",
+                                                    isCurrent ? "text-brand-accent-readable" : "text-on-surface-variant"
+                                                )}>
+                                                    Episodio {epNum}
+                                                </span>
+                                                <span className={cn(
+                                                    "px-1 text-xs font-semibold tracking-wide line-clamp-2 mt-0.5",
+                                                    "text-label-1"
+                                                )}>
+                                                    {ep.title || `Episodio ${epNum}`}
+                                                </span>
+                                            </button>
+                                        </li>
+                                    )
+                                })}
+                            </ul>
+                        </div>
+                    </m.div>
+                </>
+            )}
+        </AnimatePresence>
     )
 })

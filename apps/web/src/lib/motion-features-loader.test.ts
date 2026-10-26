@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import type { FeatureBundle } from "framer-motion"
 import {
     __resetMotionFeaturesForTests,
-    isMotionFeaturesReady,
     loadMotionFeatures,
     useMotionFeaturesReady,
 } from "./motion-features-loader"
@@ -23,7 +22,6 @@ describe("motion-features-loader", () => {
             await Promise.all([loadMotionFeatures(), loadMotionFeatures()])
         })
         expect(importer).toHaveBeenCalledTimes(1)
-        expect(isMotionFeaturesReady()).toBe(true)
         expect(result.current).toBe(true)
     })
 
@@ -38,7 +36,8 @@ describe("motion-features-loader", () => {
 
     it("si falla dos veces no marca listo (el splash usa su tope de seguridad)", async () => {
         __resetMotionFeaturesForTests(vi.fn().mockRejectedValue(new Error("red")))
+        const { result } = renderHook(() => useMotionFeaturesReady())
         await expect(loadMotionFeatures()).rejects.toThrow("red")
-        expect(isMotionFeaturesReady()).toBe(false)
+        expect(result.current).toBe(false)
     })
 })

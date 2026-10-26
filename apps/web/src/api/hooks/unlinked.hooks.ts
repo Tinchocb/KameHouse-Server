@@ -1,7 +1,7 @@
 import { useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
-export interface UnlinkedFile {
+interface UnlinkedFile {
     id: number
     path: string
     originalTitle: string

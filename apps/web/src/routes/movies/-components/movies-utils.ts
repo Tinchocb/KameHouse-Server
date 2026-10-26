@@ -7,11 +7,11 @@ import { MEDIA_ID_TO_ERA, type EraId } from "@/lib/config/eras"
 export type SortOption = "year_asc" | "year_desc" | "alpha_asc" | "alpha_desc" | "rating_desc"
 
 export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-    { value: "alpha_asc", label: "Alfabético (A - Z)" },
-    { value: "alpha_desc", label: "Alfabético (Z - A)" },
-    { value: "year_desc", label: "Año: Recientes" },
-    { value: "year_asc", label: "Año: Antiguos" },
-    { value: "rating_desc", label: "Mejor Valorados" },
+    { value: "alpha_asc", label: "Alfabético A – Z" },
+    { value: "alpha_desc", label: "Alfabético Z – A" },
+    { value: "year_desc", label: "Año: más recientes" },
+    { value: "year_asc", label: "Año: más antiguos" },
+    { value: "rating_desc", label: "Mejor valoradas" },
 ]
 
 /** Mapea el valor guardado en Settings → Apariencia al SortOption local.
@@ -27,6 +27,110 @@ export function mapCollectionSortToOption(value: string | undefined | null): Sor
         case "SCORE_DESC": return "rating_desc"
         case "alpha": return "alpha_asc"
         default: return "alpha_asc"
+    }
+}
+
+// ─── Estado de visionado, década y preferencias recordadas ───────────────────
+
+export type MovieStatus = "all" | "pending" | "continue" | "watched"
+
+export const MOVIE_STATUS_OPTIONS: { value: MovieStatus; label: string }[] = [
+    { value: "all", label: "Todas" },
+    { value: "pending", label: "Por ver" },
+    { value: "continue", label: "Continuar" },
+    { value: "watched", label: "Vistas" },
+]
+
+type ProgressEntry = {
+    media?: Models_LibraryMedia | null
+    listData?: { progress?: number } | null
+}
+
+/**
+ * Progreso de una película con la misma regla en hero, tarjeta, filas y filtros:
+ * "Visto" si la ficha lo marca o el progreso llega al total; "Continuar" si hay
+ * más de 30 s reproducidos y no se terminó.
+ */
+export function getMovieProgress(
+    entry: ProgressEntry | null | undefined,
+    watchItem?: { currentTime?: number; duration?: number } | null,
+): { isCompleted: boolean; hasProgress: boolean; progressPercent: number } {
+    const isCompleted = !!entry && (!!entry.media?.watched || (entry.listData?.progress || 0) >= (entry.media?.totalEpisodes || 1))
+    const time = watchItem?.currentTime || 0
+    const total = watchItem?.duration || 0
+    const hasProgress = !isCompleted && time > 30 && total > 0 && time < total
+    return { isCompleted, hasProgress, progressPercent: hasProgress ? Math.min(100, Math.round((time / total) * 100)) : 0 }
+}
+
+export function getMovieStatus(
+    entry: ProgressEntry | null | undefined,
+    watchItem?: { currentTime?: number; duration?: number } | null,
+): Exclude<MovieStatus, "all"> {
+    const { isCompleted, hasProgress } = getMovieProgress(entry, watchItem)
+    if (isCompleted) return "watched"
+    return hasProgress ? "continue" : "pending"
+}
+
+/** Década de estreno ("1990") o null si la película no trae año. */
+export function getEntryDecade(entry?: { media?: Models_LibraryMedia | null } | null): number | null {
+    const year = entry?.media?.year
+    return year && year > 0 ? Math.floor(year / 10) * 10 : null
+}
+
+export function formatDecade(decade: number): string {
+    return `Años ${decade}`
+}
+
+/** "Las películas de Dragon Ball" / "Películas de Dragon Ball Z": rótulo de la grilla según la era. */
+export function gridHeading(eraTitle: string | null): string {
+    return eraTitle ? `Películas de ${eraTitle}` : "Todas las películas"
+}
+
+// Preferencias por dispositivo (orden y filtros): la URL manda; esto solo rellena
+// lo que la URL no trae. La era y la búsqueda no se recuerdan a propósito: filtrar
+// por ellas de un día para otro parecería una biblioteca incompleta.
+const MOVIES_PREFS_KEY = "kamehouse-movies-prefs"
+
+type MoviesPrefs = {
+    sort?: SortOption
+    estado?: Exclude<MovieStatus, "all">
+    decada?: number
+}
+
+const SORT_VALUES = SORT_OPTIONS.map(o => o.value) as string[]
+
+export function parseMoviesPrefs(raw: string | null): MoviesPrefs {
+    if (!raw) return {}
+    try {
+        const v = JSON.parse(raw) as Record<string, unknown>
+        const prefs: MoviesPrefs = {}
+        if (typeof v.sort === "string" && SORT_VALUES.includes(v.sort)) prefs.sort = v.sort as SortOption
+        if (v.estado === "pending" || v.estado === "continue" || v.estado === "watched") prefs.estado = v.estado
+        if (typeof v.decada === "number" && Number.isInteger(v.decada) && v.decada >= 1900 && v.decada <= 2100) prefs.decada = v.decada
+        return prefs
+    } catch {
+        return {}
+    }
+}
+
+export function loadMoviesPrefs(): MoviesPrefs {
+    try {
+        return parseMoviesPrefs(window.localStorage.getItem(MOVIES_PREFS_KEY))
+    } catch {
+        return {}
+    }
+}
+
+export function saveMoviesPrefs(patch: Partial<Record<keyof MoviesPrefs, MoviesPrefs[keyof MoviesPrefs] | null>>): void {
+    try {
+        const next: Record<string, unknown> = { ...loadMoviesPrefs() }
+        for (const [k, v] of Object.entries(patch)) {
+            if (v == null) delete next[k]
+            else next[k] = v
+        }
+        window.localStorage.setItem(MOVIES_PREFS_KEY, JSON.stringify(next))
+    } catch {
+        // Sin almacenamiento (modo privado, bloqueado): la página funciona igual.
     }
 }
 

@@ -13,6 +13,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/samber/lo"
+	"golang.org/x/sync/singleflight"
 	"golang.org/x/text/language"
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
@@ -120,6 +121,13 @@ type Subtitle struct {
 	// IsImageBased indicates a bitmap/image subtitle (PGS, DVB, XSUB).
 	// These cannot be extracted as text and require burn-in during transcode.
 	IsImageBased bool `json:"isImageBased"`
+	// NeedsExtraction marks a track embedded in a Google Drive file that has not been
+	// extracted yet (it requires downloading the whole file once). The player shows
+	// it as pending and offers to extract; once extracted the flag is cleared.
+	NeedsExtraction bool `json:"needsExtraction,omitempty"`
+	// Progressive marks an embedded text track of a Google Drive file that is read in
+	// time windows as the player advances (no need to download the whole file).
+	Progressive bool `json:"progressive,omitempty"`
 }
 
 type Chapter struct {
@@ -153,6 +161,8 @@ func ClassifyChapterName(name string) string {
 type MediaInfoExtractor struct {
 	fileCacher *filecache.Cacher
 	logger     *zerolog.Logger
+	// probes colapsa los ffprobe simultaneos del mismo archivo (clave: hash de la ruta).
+	probes singleflight.Group
 }
 
 func NewMediaInfoExtractor(fileCacher *filecache.Cacher, logger *zerolog.Logger) *MediaInfoExtractor {
@@ -165,6 +175,13 @@ func NewMediaInfoExtractor(fileCacher *filecache.Cacher, logger *zerolog.Logger)
 // GetInfo returns the media information of a file.
 // If the information is not in the cache, it will be extracted and saved in the cache.
 func (e *MediaInfoExtractor) GetInfo(ffprobePath, path string) (mi *MediaInfo, err error) {
+	return e.GetInfoContext(context.Background(), ffprobePath, path)
+}
+
+// GetInfoContext es GetInfo con un contexto: si quien pidió la info se va (el
+// cliente cancela el request), el ffprobe en curso se corta en vez de seguir
+// hasta su tope de 40 s.
+func (e *MediaInfoExtractor) GetInfoContext(ctx context.Context, ffprobePath, path string) (mi *MediaInfo, err error) {
 	hash, err := GetHashFromPath(path)
 	if err != nil {
 		return nil, err
@@ -186,50 +203,79 @@ func (e *MediaInfoExtractor) GetInfo(ffprobePath, path string) (mi *MediaInfo, e
 
 	e.logger.Debug().Str("hash", hash).Msg("mediastream: Extracting media information using FFprobe")
 
-	// Get the media information of the file.
-	mi, err = FfprobeGetInfo(ffprobePath, path, hash)
-	if err != nil {
-		e.logger.Error().Err(err).Str("path", path).Msg("mediastream: Failed to extract media information using FFprobe")
-		return nil, err
+	// Un solo ffprobe por archivo aunque lo pidan a la vez la construccion del container (que se
+	// deduplica por hash+capacidades+tipo, no solo por archivo), el calentado de la biblioteca, el
+	// pretranscode, skipdetect y los endpoints de Drive: cada ffprobe de Drive lee el archivo por
+	// loopback y cada uno local ocupa CPU y disco.
+	flight := e.probes.DoChan(hash, func() (interface{}, error) {
+		// Otro vuelo pudo dejarlo en cache entre el Get de arriba y este punto.
+		var cached *MediaInfo
+		if found, _ := e.fileCacher.Get(bucket, hash, &cached); found && cached != nil {
+			repairLegacyHevcMime(cached)
+			return cached, nil
+		}
+
+		// Desacoplado de quien lo pidio: lo comparten todos los que esperan y el tope de 40 s de
+		// FfprobeGetInfoContext lo sigue acotando. Si todos se van, el resultado igual queda en cache.
+		probed, probeErr := FfprobeGetInfoContext(context.WithoutCancel(ctx), ffprobePath, path, hash)
+		if probeErr != nil {
+			e.logger.Error().Err(probeErr).Str("path", path).Msg("mediastream: Failed to extract media information using FFprobe")
+			return nil, probeErr
+		}
+
+		// Save in the cache
+		_ = e.fileCacher.Set(bucket, hash, probed)
+
+		// [DIAGNOSTIC] Log detected audio and subtitle streams so we can
+		// see exactly what ffprobe found in the file (before any filtering).
+		for _, a := range probed.Audios {
+			e.logger.Info().
+				Uint32("index", a.Index).
+				Str("codec", a.Codec).
+				Uint32("channels", a.Channels).
+				Bool("default", a.IsDefault).
+				Msg("mediastream: [diag] audio stream")
+		}
+		for _, s := range probed.Subtitles {
+			e.logger.Info().
+				Uint32("index", s.Index).
+				Str("codec", s.Codec).
+				Bool("isImageBased", s.IsImageBased).
+				Bool("default", s.IsDefault).
+				Bool("forced", s.IsForced).
+				Msg("mediastream: [diag] subtitle stream")
+		}
+
+		e.logger.Debug().Str("hash", hash).Msg("mediastream: Extracted media information using FFprobe")
+
+		return probed, nil
+	})
+
+	select {
+	case res := <-flight:
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		return res.Val.(*MediaInfo), nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
-
-	// Save in the cache
-	_ = e.fileCacher.Set(bucket, hash, mi)
-
-	// [DIAGNOSTIC] Log detected audio and subtitle streams so we can
-	// see exactly what ffprobe found in the file (before any filtering).
-	for _, a := range mi.Audios {
-		e.logger.Info().
-			Uint32("index", a.Index).
-			Str("codec", a.Codec).
-			Uint32("channels", a.Channels).
-			Bool("default", a.IsDefault).
-			Msg("mediastream: [diag] audio stream")
-	}
-	for _, s := range mi.Subtitles {
-		e.logger.Info().
-			Uint32("index", s.Index).
-			Str("codec", s.Codec).
-			Bool("isImageBased", s.IsImageBased).
-			Bool("default", s.IsDefault).
-			Bool("forced", s.IsForced).
-			Msg("mediastream: [diag] subtitle stream")
-	}
-
-	e.logger.Debug().Str("hash", hash).Msg("mediastream: Extracted media information using FFprobe")
-
-	return mi, nil
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
+	return FfprobeGetInfoContext(context.Background(), ffprobePath, path, hash)
+}
+
+// FfprobeGetInfoContext hereda la cancelación de ctx; el tope de 40 s se mantiene.
+func FfprobeGetInfoContext(ctx context.Context, ffprobePath, path, hash string) (*MediaInfo, error) {
 
 	if ffprobePath != "" {
 		SetGlobalFFProbePath(ffprobePath)
 	}
 
-	ffprobeCtx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	ffprobeCtx, cancel := context.WithTimeout(ctx, 40*time.Second)
 	defer cancel()
 
 	data, err := ffprobe.ProbeURL(ffprobeCtx, path)

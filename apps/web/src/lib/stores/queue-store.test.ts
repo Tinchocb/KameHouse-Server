@@ -38,6 +38,17 @@ describe("queue-store addToQueue", () => {
         expect(state.queueOpenSignal).toBe(2)
     })
 
+    it("con openSidebar:false agrega sin emitir la señal ni abrir el sidebar", () => {
+        resetStores()
+        useQueueStore.getState().addToQueue(
+            { id: 5, title: "EP 5", playableUrl: "/v/5.mp4", mediaId: 5, episodeNumber: 5 },
+            { openSidebar: false },
+        )
+        expect(useQueueStore.getState().playlistQueue).toHaveLength(1)
+        expect(useQueueStore.getState().queueOpenSignal).toBe(0)
+        expect(useUIStore.getState().globalQueueOpen).toBe(false)
+    })
+
     it("la suscripción del ui-store abre el sidebar al agregar (integración)", () => {
         resetStores()
         expect(useUIStore.getState().globalQueueOpen).toBe(false)

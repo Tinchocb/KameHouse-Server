@@ -109,7 +109,7 @@ func (h *Handler) computeHealth() *healthCacheEntry {
 	}
 
 	// TMDB check
-	tmdbResult := checkTMDB(ctx, h.App.Metadata.TMDBClient)
+	tmdbResult := checkTMDB(ctx, h.App.Metadata.GetTMDBClient())
 	checks["tmdb"] = tmdbResult
 	if tmdbResult.Status == "down" {
 		overallStatus = "down"

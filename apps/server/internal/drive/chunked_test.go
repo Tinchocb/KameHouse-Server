@@ -149,3 +149,88 @@ func TestChunkedRangeRetriesQuotaRejections(t *testing.T) {
 		t.Fatal("el 403 de cuota debería reconocerse como ErrDownloadQuotaExceeded")
 	}
 }
+
+// Cancelar el pedido mientras se espera entre reintentos corta enseguida, sin
+// agotar los ~6,5 s de la tabla de reintentos.
+func TestRetryingFetchStopsOnContextCancel(t *testing.T) {
+	old := chunkRetryDelays
+	chunkRetryDelays = []time.Duration{time.Minute}
+	defer func() { chunkRetryDelays = old }()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	var calls atomic.Int32
+	fetch := retryingFetch(func(context.Context, string) (*http.Response, error) {
+		calls.Add(1)
+		return nil, &StreamStatusError{Status: http.StatusServiceUnavailable}
+	})
+
+	done := make(chan error, 1)
+	go func() { _, err := fetch(ctx, "bytes=0-9"); done <- err }()
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-done:
+		var se *StreamStatusError
+		if !errors.As(err, &se) {
+			t.Fatalf("err = %v, se esperaba el último StreamStatusError", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("el reintento no respetó la cancelación del contexto")
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("pedidos = %d, want 1", calls.Load())
+	}
+}
+
+// Cerrar el lector con un prefetch en vuelo cancela su contexto y cierra el body
+// que llegue después (sin fugas de conexión).
+func TestChunkedRangeCloseReleasesPrefetch(t *testing.T) {
+	f := &quotaDrive{data: testData(9_000), maxRange: 1 << 30}
+	var closed atomic.Int32
+	var prefetchCtx atomic.Value
+	fetch := func(ctx context.Context, rh string) (*http.Response, error) {
+		resp, err := f.fetch(ctx, rh)
+		if err != nil {
+			return nil, err
+		}
+		if !strings.HasPrefix(rh, "bytes=0-") {
+			prefetchCtx.Store(ctx)
+			resp.Body = &countingCloser{ReadCloser: resp.Body, closed: &closed}
+		}
+		return resp, nil
+	}
+
+	cr, err := OpenChunkedRange(context.Background(), fetch, 0, -1, 3000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, 10)
+	if _, err := io.ReadFull(cr.Body, buf); err != nil {
+		t.Fatal(err)
+	}
+	if err := cr.Body.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cr.Body.Read(buf); !errors.Is(err, io.ErrClosedPipe) {
+		t.Fatalf("Read tras Close: %v, want ErrClosedPipe", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for closed.Load() == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if closed.Load() == 0 {
+		t.Fatal("el body del prefetch quedó sin cerrar")
+	}
+	if ctx, _ := prefetchCtx.Load().(context.Context); ctx == nil || ctx.Err() == nil {
+		t.Fatal("el contexto del prefetch debería quedar cancelado")
+	}
+}
+
+type countingCloser struct {
+	io.ReadCloser
+	closed *atomic.Int32
+}
+
+func (c *countingCloser) Close() error { c.closed.Add(1); return c.ReadCloser.Close() }

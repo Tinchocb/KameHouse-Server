@@ -7,8 +7,6 @@ import {
   ArrowDownUp,
   ArrowLeftRight,
   ArrowRight,
-  Bell,
-  Bookmark,
   BookOpen,
   Check,
   CheckCircle,
@@ -20,7 +18,6 @@ import {
   Clapperboard,
   Clock,
   Cloud,
-  Compass,
   Cpu,
   Database,
   Download,
@@ -28,9 +25,7 @@ import {
   EyeOff,
   FastForward,
   File,
-  FileVideo,
   Film,
-  Flame,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -43,7 +38,6 @@ import {
   Home,
   Image,
   ImageOff,
-  Inbox,
   Info,
   Key,
   Layers,
@@ -66,7 +60,6 @@ import {
   Pause,
   Play,
   Plus,
-  Quote,
   Radar,
   RefreshCw,
   Repeat,
@@ -77,7 +70,6 @@ import {
   Server,
   Settings,
   Shield,
-  ShieldAlert,
   SkipBack,
   SkipForward,
   SlidersHorizontal,
@@ -85,7 +77,6 @@ import {
   Square,
   Star,
   Subtitles,
-  Swords,
   Tag,
   Trash2,
   Tv,
@@ -167,8 +158,6 @@ export const IconUiXCircle = XCircle;
 export const IconUiHelpCircle = HelpCircle;
 export const IconUiKey = Key;
 export const IconUiShield = Shield;
-export const IconUiBell = Bell;
-export const IconUiInbox = Inbox;
 export const IconStatusSparkles = Sparkles;
 export const IconStatusZap = Zap;
 export const IconStatusGhost = Ghost;
@@ -192,16 +181,9 @@ export const IconStatusCloud = Cloud;
 export const IconStatusHdd = HardDrive;
 export const IconStatusCpu = Cpu;
 export const IconStatusMonitorPlay = MonitorPlay;
-export const IconStatusFileVideo = FileVideo;
 export const IconStatusRadar = Radar;
 export const IconTimeClock = Clock;
 export const IconArrowRight = ArrowRight;
 export const IconArrowDownUp = ArrowDownUp;
 export const IconUiBookOpen = BookOpen;
-export const IconUiBookmark = Bookmark;
-export const IconStatusFlame = Flame;
 export const IconNavigationPanelRightOpen = PanelRightOpen;
-export const IconUiShieldAlert = ShieldAlert;
-export const IconStatusSwords = Swords;
-export const IconStatusCompass = Compass;
-export const IconUiQuote = Quote;

@@ -15,6 +15,8 @@ export interface SpanProgress {
   /** 0–100; una marca manual lo fuerza a 0 o 100. */
   percent: number;
   watchedEpisodes: number;
+  /** Números de episodio vistos dentro del rango; respeta las marcas manuales. */
+  seenEpisodes: number[];
   totalEpisodes: number;
   /**
    * Episodio para seguir: el siguiente al último visto (así no te devuelve al relleno
@@ -49,12 +51,15 @@ export function computeSpanProgress(
     let watchedEpisodes = 0;
     let firstUnwatched: number | undefined;
     let lastWatched: number | undefined;
+    const derivedSeen: number[] = [];
     if (series?.completed) {
       watchedEpisodes = totalEpisodes;
+      for (let ep = start; ep <= end; ep++) derivedSeen.push(ep);
     } else if (series) {
       for (let ep = start; ep <= end; ep++) {
         if (series.watched.has(ep)) {
           watchedEpisodes++;
+          derivedSeen.push(ep);
           lastWatched = ep;
         } else {
           firstUnwatched ??= ep;
@@ -77,7 +82,14 @@ export function computeSpanProgress(
           ? lastWatched + 1
           : firstUnwatched;
 
-    out.set(span.id, { derivedWatched, watched, percent, watchedEpisodes, totalEpisodes, nextEpisode });
+    const seenEpisodes =
+      override === true
+        ? Array.from({ length: totalEpisodes }, (_, i) => start + i)
+        : override === false
+          ? []
+          : derivedSeen;
+
+    out.set(span.id, { derivedWatched, watched, percent, watchedEpisodes, seenEpisodes, totalEpisodes, nextEpisode });
   }
   return out;
 }

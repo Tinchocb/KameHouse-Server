@@ -39,11 +39,9 @@ func (h *Handler) HandleClearMetadataCache(c echo.Context) error {
 	}
 
 	h.App.Metadata.Provider.ClearCache()
-	if h.App.Metadata.TMDBClient != nil {
-		h.App.Metadata.TMDBClient.ClearCache()
+	if client := h.App.Metadata.GetTMDBClient(); client != nil {
+		client.ClearCache()
 	}
 
 	return h.RespondWithData(c, true)
 }
-
-

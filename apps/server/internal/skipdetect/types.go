@@ -5,8 +5,8 @@ package skipdetect
 // sin que skipdetect dependa del paquete HTTP: skipdetect define el contrato,
 // api/animethemes lo implementa.
 type Theme struct {
-	Slug     string // "OP1", "OP2", "ED1"...
-	Type     string // "OP" | "ED"
+	Slug string // "OP1", "OP2", "ED1"...
+	Type string // "OP" | "ED"
 	// Episodes es la lista de rangos de episodios a los que aplica el theme,
 	// tal como los expone AnimeThemes ("1-12", "1, 3-5", "" = todos).
 	Episodes string

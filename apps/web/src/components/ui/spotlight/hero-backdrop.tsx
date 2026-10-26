@@ -56,7 +56,7 @@ function useElementSize<T extends HTMLElement>(): [React.RefObject<T | null>, { 
     return [ref, size]
 }
 
-export interface HeroBackdropProps {
+interface HeroBackdropProps {
     art: HeroArt
     alt: string
     /**
@@ -222,6 +222,20 @@ function parseRgb(rgb: string): [number, number, number] | null {
 }
 
 /**
+ * Una zona casi gris (azul y amarillo del borde promediados, p. ej.) no aporta color: al
+ * rellenar queda un gris verdoso turbio que ensucia el lado del texto. Por debajo de este
+ * croma (máx − mín de RGB) el nivel baja hasta `MUDDY_MIN_LEVEL` y se funde con el fondo.
+ */
+const MUDDY_CHROMA = 60
+const MUDDY_MIN_LEVEL = 0.35
+
+export function mutedZoneLevel(rgb: string, level: number): number {
+    const [r, g, b] = parseRgb(rgb) ?? [20, 20, 24]
+    const k = Math.min(1, (Math.max(r, g, b) - Math.min(r, g, b)) / MUDDY_CHROMA)
+    return level * (MUDDY_MIN_LEVEL + (1 - MUDDY_MIN_LEVEL) * k)
+}
+
+/**
  * Color de relleno a partir del color real de una zona: realza la saturación
  * (alrededor del gris de su misma luminancia) y lo oscurece a `level`.
  */
@@ -230,6 +244,47 @@ export function fillTone(rgb: string, level = FILL_LEVEL, saturation = FILL_SATU
     const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b
     const tone = (v: number) => Math.min(255, Math.max(0, Math.round((gray + (v - gray) * saturation) * level)))
     return [tone(r), tone(g), tone(b)]
+}
+
+/** Croma medio (máx − mín de RGB) de las zonas de la costura bajo el cual la aurora sale gris turbia. */
+const FLAT_EDGE_CHROMA = 32
+/** Dispersión de luminancia (0–1) de la columna 0 bajo la cual el borde es plano (fondo croma, color liso). */
+const FLAT_EDGE_SPREAD = 0.05
+
+/**
+ * ¿La aurora quedaría turbia o sería una losa lisa? Borde casi gris, o plano (todas las
+ * zonas de la costura iguales: no hay detalle que extender). Entonces el relleno cae a
+ * un fondo oscuro del tema con degradé suave (`darkFillBackground`).
+ */
+export function isFlatEdge(palette: Pick<ImagePalette, "left" | "zones">): boolean {
+    if (palette.zones.length < ZONE_COLS * ZONE_ROWS) return false
+    const chroma: number[] = []
+    const lum: number[] = []
+    for (let row = 0; row < ZONE_ROWS; row++) {
+        for (const col of [0, 1]) {
+            const rgb = parseRgb(palette.zones[row * ZONE_COLS + col])
+            if (!rgb) continue
+            chroma.push(Math.max(...rgb) - Math.min(...rgb))
+            if (col === 0) lum.push((0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255)
+        }
+    }
+    if (!chroma.length) return false
+    const meanChroma = chroma.reduce((a, b) => a + b, 0) / chroma.length
+    const spread = Math.max(...lum) - Math.min(...lum)
+    return meanChroma < FLAT_EDGE_CHROMA || spread < FLAT_EDGE_SPREAD
+}
+
+/**
+ * Relleno oscuro tipo Netflix: `--bg-primary` liso, con un velo apenas teñido del color
+ * medio del borde que nace en la costura y se apaga hacia la izquierda.
+ */
+export function darkFillBackground(palette: Pick<ImagePalette, "left">, rect: Rect): { backgroundImage: string; backgroundColor: string } {
+    const [r, g, b] = fillTone(palette.left, 0.22, 1.2)
+    const cy = Math.round(rect.top + rect.height * 0.4)
+    const rx = Math.max(240, Math.round(rect.left * 0.9))
+    const ry = Math.round(rect.height * 0.75)
+    const tint = `radial-gradient(ellipse ${rx}px ${ry}px at ${rect.left}px ${cy}px, rgba(${r},${g},${b},0.55) 0%, rgba(${r},${g},${b},0.2) 55%, transparent 100%)`
+    return { backgroundImage: tint, backgroundColor: "var(--bg-primary, #08080a)" }
 }
 
 /**
@@ -246,7 +301,8 @@ export function auroraBackground(palette: Pick<ImagePalette, "left" | "zones">, 
     // La columna 0 va arriba (se ve más que la 1, que solo aporta profundidad bajo el fundido).
     for (const col of [1, 0]) {
         for (let row = 0; row < ZONE_ROWS; row++) {
-            const [r, g, b] = fillTone(palette.zones[row * ZONE_COLS + col], col === 0 ? FILL_LEVEL_EDGE : FILL_LEVEL)
+            const zone = palette.zones[row * ZONE_COLS + col]
+            const [r, g, b] = fillTone(zone, mutedZoneLevel(zone, col === 0 ? FILL_LEVEL_EDGE : FILL_LEVEL))
             const x = Math.round(rect.left + (col + 0.5) * cw)
             const y = Math.round(rect.top + (row + 0.5) * rh)
             const rx = Math.round(Math.max(x, cw * 1.6))
@@ -271,15 +327,19 @@ const GRAIN_URL = `url("data:image/svg+xml;utf8,${encodeURIComponent(
  * paleta de la imagen (y `mirror`): degradados con el color real de cada zona
  * del borde (`auroraBackground`) + grano. Sin paleta todavía, o con
  * `reflect: false` (borde con destello que ensuciaría el texto): la imagen en
- * `cover` muy desenfocada.
+ * `cover` muy desenfocada. Si el borde es gris o plano (`isFlatEdge`): fondo oscuro
+ * del tema con degradé suave (`darkFillBackground`).
  */
 function HeroBlurFill({ src, rect, palette, mirror }: { src: string; rect: Rect; palette: ImagePalette | null; mirror: boolean }) {
-    const aurora = mirror && palette ? auroraBackground(palette, rect) : null
+    const flat = mirror && palette ? isFlatEdge(palette) : false
+    const dark = flat && palette ? darkFillBackground(palette, rect) : null
+    const aurora = mirror && palette && !flat ? auroraBackground(palette, rect) : null
+    const fill = dark ?? aurora
     return (
-        <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
-            {aurora ? (
+        <div aria-hidden="true" className="absolute inset-0 pointer-events-none" data-hero-fill={dark ? "dark" : aurora ? "aurora" : "blur"}>
+            {fill ? (
                 <>
-                    <div className="absolute inset-0 animate-fade-in" style={aurora} />
+                    <div className="absolute inset-0 animate-fade-in" style={fill} />
                     <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: GRAIN_URL, backgroundSize: "160px 160px" }} />
                 </>
             ) : (
@@ -292,30 +352,26 @@ function HeroBlurFill({ src, rect, palette, mirror }: { src: string; rect: Rect;
     )
 }
 
-/** Ancho y alto (px) de la viñeta del texto: título + meta + sinopsis + botones (`max-w-hero-content-wide`). */
-const TEXT_POOL_W = 780
-const TEXT_POOL_H = 340
-
-const scrimBase = (pct: number) => `color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) ${pct}%, transparent)`
-
 /**
- * Scrims de legibilidad en modo `right`: oscurecen solo la zona desenfocada
- * donde va el texto (hasta el borde de la imagen), nunca la imagen.
+ * Scrim cinematográfico natural (Apple TV+ / Netflix):
+ * Viñeta radial profunda en la esquina inferior izquierda que se disuelve
+ * suavemente hacia la derecha y arriba, combinada con gradiente vertical inferior,
+ * garantizando contraste perfecto y legibilidad para el título, metadatos y botones
+ * sin cortar ni desenfocar bruscamente el arte ni tapar a los personajes.
  */
-function RightModeScrims({ edge }: { edge: number }) {
-    const left = `linear-gradient(to right, ${scrimBase(88)} 0px, ${scrimBase(72)} ${Math.round(edge * 0.45)}px, ${scrimBase(35)} ${Math.round(edge * 0.85)}px, transparent ${Math.round(edge + 24)}px)`
-    const bottom = `linear-gradient(to top, ${scrimBase(92)} 0%, ${scrimBase(55)} 22%, transparent 50%)`
-    const bottomMask = `linear-gradient(to right, black 0px, black ${Math.round(edge * 0.8)}px, transparent ${Math.round(edge + 40)}px)`
-    // El bloque de texto (hasta ~670 px) puede pasar el borde de la imagen y quedar sobre
-    // personajes claros o saturados. Viñeta suave anclada abajo a la izquierda, del tamaño
-    // del texto: el resto del arte queda intacto.
-    const textPool = `radial-gradient(ellipse ${TEXT_POOL_W}px ${TEXT_POOL_H}px at 0% 100%, ${scrimBase(80)} 0%, ${scrimBase(68)} 50%, ${scrimBase(44)} 82%, transparent 100%)`
+function HeroCinematicScrim() {
     return (
-        <>
-            <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: left }} />
-            <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: textPool }} />
-            <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: bottom, maskImage: bottomMask, WebkitMaskImage: bottomMask }} />
-        </>
+        <div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none z-hero-scrim"
+            style={{
+                background: [
+                    "radial-gradient(ellipse 90% 80% at 0% 100%, rgba(5, 7, 12, 0.95) 0%, rgba(5, 7, 12, 0.85) 32%, rgba(5, 7, 12, 0.40) 62%, transparent 85%)",
+                    "linear-gradient(to top, rgba(5, 7, 12, 0.95) 0%, rgba(5, 7, 12, 0.45) 38%, transparent 68%)",
+                    "linear-gradient(to right, rgba(5, 7, 12, 0.55) 0%, transparent 45%)",
+                ].join(", "),
+            }}
+        />
     )
 }
 
@@ -330,17 +386,15 @@ const FIT_EDGE_MASK = "linear-gradient(to bottom, transparent 0%, black 10%, bla
 export function HeroBackdrop({
     art,
     alt,
-    variant = "stage",
+    variant: _variant = "stage",
     priority = true,
     wide = "cover",
     scrims = false,
     className,
     imgClassName,
 }: HeroBackdropProps) {
-    const tone = useHeroTone(art)
     const src = heroHighResSrc(art)
     const lowSrc = heroLowResSrc(art) ?? src
-    const softMask = art.subject !== "right"
     const [boxRef, box] = useElementSize<HTMLDivElement>()
     const fit = wide === "right" ? null : heroFitRect(art, box)
     const compact = wide === "right" && isCompactArt(art) ? heroCompactRect(art, box) : null
@@ -354,8 +408,6 @@ export function HeroBackdrop({
     const frame = fit ?? compact ?? right
     // Colores reales del borde para el relleno (solo modo `right`; comparte caché con `useHeroTone`).
     const palette = useImagePalette(wide === "right" ? src : null)
-    // Arte claro o con sujeto bajo el texto: el scrim estándar no alcanza (solo `cover`).
-    const needsBoost = variant === "stage" && !placed && (tone === "light" || softMask)
 
     return (
         <div ref={boxRef} className={cn("absolute inset-0 h-full w-full pointer-events-none overflow-hidden", className)}>
@@ -394,29 +446,12 @@ export function HeroBackdrop({
                     decoding="async"
                     fetchPriority={priority ? "high" : "auto"}
                     objectPosition={fit || placed ? "50% 50%" : heroObjectPosition(art, box)}
-                    className={cn(
-                        "!bg-transparent h-full w-full block",
-                        variant === "stage" && !fit && !placed && (softMask ? "hero-art-mask-soft" : "hero-art-mask-right")
-                    )}
+                    className="!bg-transparent h-full w-full block"
                     imgClassName={cn("!h-full !w-full !object-cover", imgClassName)}
                 />
                 </div>
             </div>
-            {needsBoost && (
-                <div
-                    aria-hidden="true"
-                    className="absolute inset-0 pointer-events-none scrim-hero-boost"
-                />
-            )}
-            {scrims && (placed
-                ? <RightModeScrims edge={placed.left} />
-                : (
-                    <>
-                        <div aria-hidden="true" className="absolute inset-0 scrim-hero-left pointer-events-none" />
-                        <div aria-hidden="true" className="absolute inset-0 scrim-hero-bottom pointer-events-none" />
-                        <div aria-hidden="true" className="absolute inset-0 scrim-hero-top pointer-events-none" />
-                    </>
-                ))}
+            {scrims && <HeroCinematicScrim />}
         </div>
     )
 }

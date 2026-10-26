@@ -19,7 +19,66 @@ describe("createIDBPersister", () => {
         setMock.mockClear()
         delMock.mockClear()
     })
-    afterEach(() => vi.useRealTimers())
+    afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
+
+    function controlIdle() {
+        const callbacks = new Map<number, IdleRequestCallback>()
+        let nextId = 0
+        const request = vi.fn((callback: IdleRequestCallback) => {
+            callbacks.set(++nextId, callback)
+            return nextId
+        })
+        const cancel = vi.fn((id: number) => { callbacks.delete(id) })
+        vi.stubGlobal('requestIdleCallback', request)
+        vi.stubGlobal('cancelIdleCallback', cancel)
+        const run = () => {
+            for (const [id, callback] of callbacks) {
+                callbacks.delete(id)
+                callback({ didTimeout: false, timeRemaining: () => 10 })
+            }
+        }
+        return { request, cancel, run }
+    }
+
+    it('mantiene un solo turno idle durante actividad continua y escribe el estado más reciente', async () => {
+        const idle = controlIdle()
+        const p = createIDBPersister('idle-burst', 1000)
+        for (let i = 1; i <= 5; i++) {
+            await p.persistClient(client(i))
+            await vi.advanceTimersByTimeAsync(1000)
+        }
+        expect(idle.request).toHaveBeenCalledTimes(1)
+        expect(setMock).not.toHaveBeenCalled()
+        idle.run()
+        expect(setMock).toHaveBeenCalledWith('idle-burst', client(5))
+    })
+
+    it('cancela el turno idle al borrar y respeta el plazo del siguiente guardado', async () => {
+        const idle = controlIdle()
+        const p = createIDBPersister('idle-remove', 1000)
+        await p.persistClient(client(1))
+        await vi.advanceTimersByTimeAsync(1000)
+        await p.removeClient()
+        expect(idle.cancel).toHaveBeenCalledTimes(1)
+        await p.persistClient(client(2))
+        idle.run()
+        expect(setMock).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(1000)
+        idle.run()
+        expect(setMock).toHaveBeenCalledWith('idle-remove', client(2))
+    })
+
+    it('pagehide guarda inmediatamente y cancela el turno idle anterior', async () => {
+        const idle = controlIdle()
+        const p = createIDBPersister('idle-exit', 1000)
+        await p.persistClient(client(1))
+        await vi.advanceTimersByTimeAsync(1000)
+        window.dispatchEvent(new Event('pagehide'))
+        expect(idle.cancel).toHaveBeenCalledTimes(1)
+        expect(setMock).toHaveBeenCalledWith('idle-exit', client(1))
+        idle.run()
+        expect(setMock).toHaveBeenCalledTimes(1)
+    })
 
     it("agrupa ráfagas de eventos en una sola escritura con el último estado", async () => {
         const p = createIDBPersister("k", 1000)

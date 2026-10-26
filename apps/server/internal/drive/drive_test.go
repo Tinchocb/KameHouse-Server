@@ -2,6 +2,8 @@ package drive
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -298,4 +300,84 @@ func TestServiceUserInfoCaching(t *testing.T) {
 	assert.Empty(t, svc.cachedEmail)
 	assert.Empty(t, svc.cachedName)
 	assert.True(t, svc.userInfoCachedAt.IsZero())
+}
+
+type failingTransport struct{ err error }
+
+func (f failingTransport) RoundTrip(*http.Request) (*http.Response, error) { return nil, f.err }
+
+func TestServiceAuthExpired(t *testing.T) {
+	logger := zerolog.Nop()
+	newSvc := func(err error) *Service {
+		svc := NewService(&logger)
+		svc.enabled = true
+		svc.folderID = "root"
+		svc.client = &Client{httpClient: &http.Client{Transport: failingTransport{err}}, logger: &logger}
+		return svc
+	}
+
+	t.Run("invalid_grant", func(t *testing.T) {
+		svc := newSvc(errors.New(`oauth2: "invalid_grant" "Token has been expired or revoked."`))
+		assert.True(t, svc.AuthExpired(context.Background()))
+	})
+	t.Run("otro fallo no cuenta", func(t *testing.T) {
+		svc := newSvc(errors.New("dial tcp: no such host"))
+		assert.False(t, svc.AuthExpired(context.Background()))
+	})
+	t.Run("deshabilitado", func(t *testing.T) {
+		svc := NewService(&logger)
+		assert.False(t, svc.AuthExpired(context.Background()))
+	})
+	t.Run("conectado con cache", func(t *testing.T) {
+		svc := newSvc(errors.New("invalid_grant"))
+		svc.cachedEmail = "a@b.c"
+		svc.userInfoCachedAt = time.Now()
+		assert.False(t, svc.AuthExpired(context.Background()))
+	})
+}
+
+type countingFailTransport struct {
+	err   error
+	calls *int
+}
+
+func (c countingFailTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	*c.calls++
+	return nil, c.err
+}
+
+func TestServiceAuthExpiredNegativeCache(t *testing.T) {
+	logger := zerolog.Nop()
+	calls := 0
+	svc := NewService(&logger)
+	svc.enabled = true
+	svc.folderID = "root"
+	svc.client = &Client{httpClient: &http.Client{Transport: countingFailTransport{
+		err: errors.New(`oauth2: "invalid_grant" "Token has been expired or revoked."`), calls: &calls,
+	}}, logger: &logger}
+
+	assert.True(t, svc.AuthExpired(context.Background()))
+	first := calls
+	assert.Greater(t, first, 0)
+
+	// Mientras el caché negativo siga vigente no se vuelve a llamar a Google.
+	assert.True(t, svc.AuthExpired(context.Background()))
+	assert.True(t, svc.AuthExpired(context.Background()))
+	assert.Equal(t, first, calls)
+
+	// Vencido el caché, se vuelve a consultar.
+	svc.mu.Lock()
+	svc.authExpiredAt = time.Now().Add(-2 * authExpiredCacheTTL)
+	svc.mu.Unlock()
+	assert.True(t, svc.AuthExpired(context.Background()))
+	assert.Greater(t, calls, first)
+
+	// Reconfigurar (nuevo refresh token) limpia el caché negativo.
+	svc.mu.Lock()
+	svc.authExpiredAt = time.Now()
+	svc.mu.Unlock()
+	_ = svc.UpdateConfig(false, "", "", "", "root", "")
+	svc.mu.RLock()
+	assert.True(t, svc.authExpiredAt.IsZero())
+	svc.mu.RUnlock()
 }

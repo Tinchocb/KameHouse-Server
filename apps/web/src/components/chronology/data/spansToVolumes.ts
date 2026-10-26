@@ -109,6 +109,11 @@ const COVER_TEMPLATES: Record<StorySpan['seriesId'], VolumeData['coverArt']> = {
   },
 };
 
+/** Color de acento (hex) de cada serie: el mismo de sus tarjetas y de la barra de eras. */
+export function eraAccentHex(seriesId: StorySpan['seriesId']): string {
+  return COVER_TEMPLATES[seriesId].accentHex;
+}
+
 /** Valores de characterStatus que significan "ausente en este lapso". */
 const ABSENT_STATUS = /no ha nacido|fuera de pantalla|en el espacio|sellado|no existe|aún no/i;
 
@@ -156,7 +161,7 @@ const SERIES_ICON_EMOJI: Record<StorySpan['seriesId'], string> = {
 };
 
 /** Parsea una cadena "mm:ss" a segundos totales. Devuelve undefined si no tiene formato válido. */
-export function parseTimeToSeconds(time?: string): number | undefined {
+function parseTimeToSeconds(time?: string): number | undefined {
   if (!time) return undefined;
   const match = time.trim().match(/^(\d{1,3}):([0-5]\d)$/);
   if (!match) return undefined;
@@ -194,7 +199,7 @@ function buildEpisodeMilestones(span: StorySpan, accentHex: string, auraGradient
   }));
 }
 
-export function spanToVolume(span: StorySpan): VolumeData {
+function spanToVolume(span: StorySpan): VolumeData {
   const seriesTag = SERIES_TAG_BY_ID[span.seriesId];
   const saga = coarseSagaForSpan(span);
   const episodesCount = span.endEpisode - span.startEpisode + 1;
@@ -308,7 +313,7 @@ export const SPAN_VOLUMES: VolumeData[] = [...DRAGON_BALL_STORY_SPANS]
   .map(spanToVolume);
 
 /** Agrupación Serie > Saga > Lapsos para la vista por sagas y subsagas. */
-export interface SagaGroup {
+interface SagaGroup {
   seriesId: StorySpan['seriesId'];
   seriesTag: VolumeData['seriesTag'];
   sagaId: string;
@@ -347,7 +352,7 @@ export function groupVolumesBySaga(volumes: VolumeData[]): SagaGroup[] {
   return groups;
 }
 
-export interface EraGroup {
+interface EraGroup {
   seriesId: StorySpan['seriesId'];
   seriesTag: VolumeData['seriesTag'];
   yearsLabel: string;
@@ -396,7 +401,8 @@ export function groupVolumesByEra(volumes: VolumeData[]): EraGroup[] {
       seriesId,
       seriesTag: first.seriesTag,
       yearsLabel,
-      accentHex: coverArt.accentHex,
+      // Del primer lapso (no de la plantilla): así sigue al modo (Neutro lo vuelve gris).
+      accentHex: first.coverArt?.accentHex ?? coverArt.accentHex,
       sagas: groupVolumesBySaga(chunk),
     };
   });

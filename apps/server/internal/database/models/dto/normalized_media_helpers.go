@@ -22,10 +22,10 @@ func GetTitleSafe(m *NormalizedMedia) string {
 }
 
 func GetAllTitles(m *NormalizedMedia) []*string {
-	titles := make([]*string, 0)
 	if m.Title == nil {
-		return titles
+		return make([]*string, 0)
 	}
+	titles := make([]*string, 0, 4+len(m.Synonyms))
 	if m.Title.Romaji != nil {
 		titles = append(titles, m.Title.Romaji)
 	}

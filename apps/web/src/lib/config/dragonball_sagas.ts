@@ -10,7 +10,7 @@ export const DRAGON_BALL_SERIES = {
     DAIMA: 236994,
 };
 
-export type SubSagaDefinition = {
+type SubSagaDefinition = {
     id: string
     title: string
     description?: string

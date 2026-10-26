@@ -9,18 +9,12 @@ func (h *Handler) RegisterSettingsRoutes(v1 *echo.Group) {
 	v1.PATCH("/settings", h.HandleSaveSettings)
 	v1.POST("/start", h.HandleGettingStarted)
 
-	// Progress
-	v1.GET("/progress", h.HandleGetProgress)
-	v1.POST("/progress", h.HandleSaveProgress)
-
 	// Metadata
 	v1.DELETE("/metadata/cache", h.HandleClearMetadataCache)
 
 	// TMDB
 	v1TMDB := v1.Group("/tmdb")
 	v1TMDB.POST("/search", h.HandleTMDBSearch)
-	v1TMDB.POST("/details", h.HandleTMDBGetDetails)
-	v1TMDB.GET("/images/:type/:id", h.HandleTMDBImages)
 	v1TMDB.GET("/episode/:tvId/:absolute", h.HandleTMDBEpisodeStill)
 
 	// AniList (sin API key; red de seguridad para miniaturas de episodios)

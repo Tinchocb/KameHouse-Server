@@ -14,7 +14,6 @@ type BaseModel struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-
 type WatchHistory struct {
 	BaseModel
 	AccountID     uint    `gorm:"column:account_id;uniqueIndex:idx_media_episode" json:"accountId"`
@@ -58,7 +57,6 @@ type LibrarySettings struct {
 	AutoDetectSkipTimes      bool    `gorm:"column:auto_detect_skip_times" json:"autoDetectSkipTimes"`
 	EnableWatchContinuity    bool    `gorm:"column:enable_watch_continuity" json:"enableWatchContinuity"`
 	ScannerMatchingThreshold float64 `gorm:"column:scanner_matching_threshold" json:"scannerMatchingThreshold"`
-	PrimaryMetadataProvider  string  `gorm:"column:primary_metadata_provider" json:"primaryMetadataProvider"`
 	TmdbApiKey               string  `gorm:"column:tmdb_api_key" json:"tmdbApiKey"`
 	TmdbLanguage             string  `gorm:"column:tmdb_language" json:"tmdbLanguage"`
 	ScannerStrictStructure   bool    `gorm:"column:scanner_strict_structure" json:"scannerStrictStructure"`
@@ -66,16 +64,14 @@ type LibrarySettings struct {
 	DisableLocalScanning     bool    `gorm:"column:disable_local_scanning" json:"disableLocalScanning"`
 	// DisableCloudSource pausa Google Drive como origen sin desconectar la cuenta:
 	// los archivos gdrive:// se ocultan de la biblioteca y vuelven al reactivar.
-	DisableCloudSource       bool      `gorm:"column:disable_cloud_source" json:"disableCloudSource"`
-	ScannerUseLegacyMatching bool      `gorm:"column:scanner_use_legacy_matching" json:"scannerUseLegacyMatching"`
-	LastScanAt               time.Time `gorm:"column:last_scan_at" json:"lastScanAt"`
-	AutoScan                 bool      `gorm:"column:auto_scan" json:"autoScan"`
-	UnifiedScan              bool      `gorm:"column:unified_scan" json:"unifiedScan"`
+	DisableCloudSource bool      `gorm:"column:disable_cloud_source" json:"disableCloudSource"`
+	LastScanAt         time.Time `gorm:"column:last_scan_at" json:"lastScanAt"`
+	AutoScan           bool      `gorm:"column:auto_scan" json:"autoScan"`
+	UnifiedScan        bool      `gorm:"column:unified_scan" json:"unifiedScan"`
 	// Preferencias de reproducción (antes solo-localStorage, ahora persistidas).
 	PreferredAudioProfile          string `gorm:"column:preferred_audio_profile;default:latino" json:"preferredAudioProfile"`
 	AutoSkipIntro                  bool   `gorm:"column:auto_skip_intro" json:"autoSkipIntro"`
 	AutoSkipOutro                  bool   `gorm:"column:auto_skip_outro" json:"autoSkipOutro"`
-	AutoSkipFiller                 bool   `gorm:"column:auto_skip_filler" json:"autoSkipFiller"`
 	AutoDisableSubtitlesWhenDubbed bool   `gorm:"column:auto_disable_subtitles_when_dubbed;default:true" json:"autoDisableSubtitlesWhenDubbed"`
 	MarathonMode                   bool   `gorm:"column:marathon_mode" json:"marathonMode"`
 	TvMode                         bool   `gorm:"column:tv_mode" json:"tvMode"`
@@ -312,13 +308,20 @@ type GhostAssociatedMedia struct {
 	Confidence      float64 `json:"confidence"`
 }
 
-
 // MediaSourcePreference fija de qué origen se reproduce una serie.
 // Sin fila = automático (local primero, luego nube).
 type MediaSourcePreference struct {
 	MediaID   int       `gorm:"primaryKey;autoIncrement:false" json:"mediaId"`
 	Source    string    `gorm:"not null" json:"source"` // "local" | "cloud"
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// MediaAudioPreference fija el perfil de audio con el que se reproduce una serie
+// (latino, castellano, japanese, english, auto). Sin fila = el perfil global de Ajustes.
+type MediaAudioPreference struct {
+	MediaID      int       `gorm:"primaryKey;autoIncrement:false" json:"mediaId"`
+	AudioProfile string    `gorm:"not null" json:"audioProfile"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 type MediaFiller struct {
@@ -328,15 +331,6 @@ type MediaFiller struct {
 	Provider      string    `gorm:"column:provider;index:idx_media_filler" json:"provider"`
 	Slug          string    `json:"slug"`
 	LastFetchedAt time.Time `json:"lastFetchedAt"`
-}
-
-type UserMediaProgress struct {
-	BaseModel
-	AnonUserId string  `gorm:"column:anon_user_id;uniqueIndex:idx_anon_media" json:"anonUserId"`
-	MediaID    int     `gorm:"column:media_id;uniqueIndex:idx_anon_media" json:"mediaId"`
-	Status     string  `gorm:"column:status" json:"status"`
-	Progress   int     `gorm:"column:progress" json:"progress"`
-	Score      float64 `gorm:"column:score" json:"score"`
 }
 
 // MetadataCache stores raw JSON responses from metadata providers (TMDB, AniList, etc.)

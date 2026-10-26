@@ -4,16 +4,18 @@ import { getMediumResImage, localImage } from "@/lib/helpers/images"
 import type { SwimlaneItem } from "@/components/ui/swimlane"
 import type { ERA_COLOR_MAP, EraId } from "@/lib/config/eras"
 import { MoviePosterCard, moviePosterCardItemVariants } from "@/components/ui/movie-poster-card"
+import { Button } from "@/components/ui/button"
 
 // Re-export para compatibilidad (la variante vive ahora en MoviePosterCard).
 export const spotlightCardItemVariants = moviePosterCardItemVariants
 
-export interface SpotlightMovieCardProps {
+interface SpotlightMovieCardProps {
     movie: SwimlaneItem
     index?: number
     colors: typeof ERA_COLOR_MAP[EraId]
     onNavigate: (item: SwimlaneItem) => void
     onHover: () => void
+    className?: string
 }
 
 export const SpotlightMovieCard = React.memo(function SpotlightMovieCard({
@@ -22,50 +24,50 @@ export const SpotlightMovieCard = React.memo(function SpotlightMovieCard({
     colors,
     onNavigate,
     onHover,
+    className,
 }: SpotlightMovieCardProps) {
     const posterSrc = movie.image
         ? (movie.image.startsWith("/") ? movie.image : localImage(getMediumResImage(movie.image)))
         : (movie.backdropUrl || "")
 
     const isSpecial = movie.badge === "SPECIAL" || movie.badge === "OVA" || movie.title.toLowerCase().includes("especial") || movie.title.toLowerCase().includes("ova")
-    const indexLabel = isSpecial ? "OVA" : (index !== undefined ? `#${String(index).padStart(2, '0')}` : undefined)
+    const typeLabel = isSpecial ? (movie.badge === "OVA" ? "OVA" : "Especial") : "Película"
+    const indexLabel = index !== undefined ? `#${String(index).padStart(2, "0")}` : undefined
+    const scoreFormatted = movie.rating ? (movie.rating / 10).toFixed(1) : undefined
 
     return (
         <MoviePosterCard
             image={posterSrc}
             title={movie.title}
             index={index}
-            borderColor={`color-mix(in srgb, ${colors.glowStrong} 20%, rgba(255,255,255,0.1))`}
+            sharedKey={movie.mediaId ? `movies:${movie.mediaId}` : undefined}
+            borderColor={`color-mix(in srgb, ${colors.glowStrong} 25%, rgba(255,255,255,0.12))`}
             titleHoverColor={colors.ambientGlow1}
+            eraColor={colors.accent}
+            year={movie.year}
+            score={scoreFormatted}
+            typeLabel={typeLabel}
+            isSpecial={isSpecial}
+            indexLabel={indexLabel}
+            synopsis={movie.description}
             onMouseEnter={onHover}
             onClick={() => onNavigate(movie)}
-            topLeft={indexLabel ? (
-                <span className="text-2xs font-mono font-extrabold tracking-wider px-2 py-0.5 rounded-md bg-black/65 border border-white/20 text-white uppercase shadow-elevation-1 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
-                    {indexLabel}
-                </span>
-            ) : null}
-            topRight={isSpecial ? (
-                <span className="text-2xs font-mono font-extrabold tracking-wider px-2 py-0.5 rounded-md bg-black/65 border border-white/20 text-white uppercase shadow-elevation-1 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
-                    OVA
-                </span>
-            ) : null}
-            bottomMeta={movie.year ? (
-                <span className="font-mono text-2xs font-semibold uppercase tracking-wider">
-                    AÑO {movie.year}
-                </span>
-            ) : null}
-            centerOverlay={
-                <button
+            className={className}
+            actions={
+                <Button
                     type="button"
+                    intent="primary"
+                    size="xs"
                     aria-label={`Reproducir ${movie.title}`}
                     onClick={(e) => {
                         e.stopPropagation()
                         onNavigate(movie)
                     }}
-                    className="w-11 h-11 rounded-full flex items-center justify-center bg-white text-black ring-1 ring-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,1)] pointer-events-auto cursor-pointer transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.04] active:scale-95 p-0 border-0"
+                    className="flex-1 gap-1.5 shadow-[shadow:var(--shadow-play-cta)]"
                 >
-                    <IconMediaPlay size={18} fill="currentColor" className="ml-0.5" />
-                </button>
+                    <IconMediaPlay size={14} fill="currentColor" />
+                    <span>Reproducir</span>
+                </Button>
             }
         />
     )

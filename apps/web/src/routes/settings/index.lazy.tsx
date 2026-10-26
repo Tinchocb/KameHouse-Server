@@ -1,5 +1,5 @@
 import { errorText } from "@/api/client/error-messages"
-import { createLazyFileRoute } from "@tanstack/react-router"
+import { createLazyFileRoute, Link } from "@tanstack/react-router"
 import React, { useEffect, useState, useMemo, Suspense } from "react"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { useForm, FormProvider, type SubmitHandler, type FieldValues, type Resolver } from "react-hook-form"
@@ -9,9 +9,9 @@ import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with
 import { useGetSettings, useSaveSettings } from "@/api/hooks/settings.hooks"
 import { m, AnimatePresence } from "framer-motion"
 import { cn } from "@/components/ui/core/styling"
-import { IconUiPalette, IconMediaPlay, IconNavigationLibrary, IconStatusZap, IconUiSettings, IconUiCheck } from "@/components/ui/icons"
-import { useSpringPreset } from "@/components/ui/kinetics/hooks"
-import { LoadSwap } from "@/components/ui/kinetics"
+import { Button } from "@/components/ui/button"
+import { IconUiPalette, IconMediaPlay, IconNavigationLibrary, IconStatusZap, IconUiSettings, IconUiCheck, IconUiAdmin } from "@/components/ui/icons"
+import { useReducedMotion, useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { useSound } from "@/hooks/use-sound"
 import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control"
 import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
@@ -169,18 +169,15 @@ function getEffectiveSettings(server: Partial<SettingsFormValues> | null | undef
             autoDetectSkipTimes: base.library?.autoDetectSkipTimes ?? true,
             enableWatchContinuity: base.library?.enableWatchContinuity ?? true,
             scannerMatchingThreshold: base.library?.scannerMatchingThreshold ?? 0,
-            primaryMetadataProvider: base.library?.primaryMetadataProvider || "anilist",
-            scannerProvider: base.library?.scannerProvider || base.library?.primaryMetadataProvider || "anilist",
+            scannerProvider: base.library?.scannerProvider || "anilist",
             tmdbLanguage: base.library?.tmdbLanguage || "es-MX",
             tmdbApiKey: base.library?.tmdbApiKey || "",
             scannerStrictStructure: base.library?.scannerStrictStructure ?? false,
-            scannerUseLegacyMatching: base.library?.scannerUseLegacyMatching ?? false,
             disableLocalScanning: base.library?.disableLocalScanning ?? false,
             disableCloudSource: base.library?.disableCloudSource ?? false,
             preferredAudioProfile: base.library?.preferredAudioProfile || appState.preferredAudioProfile || "latino",
             autoSkipIntro: base.library?.autoSkipIntro ?? appState.autoSkipIntro ?? false,
             autoSkipOutro: base.library?.autoSkipOutro ?? appState.autoSkipOutro ?? false,
-            autoSkipFiller: base.library?.autoSkipFiller ?? false,
             autoDisableSubtitlesWhenDubbed: base.library?.autoDisableSubtitlesWhenDubbed ?? appState.autoDisableSubtitlesWhenDubbed ?? true,
             marathonMode: base.library?.marathonMode ?? appState.marathonMode ?? false,
             tvMode: base.library?.tvMode ?? appState.tvMode ?? false,
@@ -203,50 +200,96 @@ function getEffectiveSettings(server: Partial<SettingsFormValues> | null | undef
     } as SettingsFormValues
 }
 
-export const SETTINGS_PILLARS = [
+const SETTINGS_PILLARS = [
     {
         id: "appearance",
-        label: "Apariencia y Diseño",
+        label: "Apariencia y diseño",
         shortLabel: "Apariencia",
         icon: IconUiPalette,
-        desc: "Temas por era, modo AMOLED y efectos visuales",
+        summary: "Tema neutro o por era, transparencia, efectos y orden del catálogo.",
         keywords: ["tema", "era", "vidrio", "blur", "liquid glass", "fondo", "diseño", "orden", "dragon ball", "amoled"]
     },
     {
         id: "playback",
-        label: "Reproducción y Audio",
+        label: "Reproducción y audio",
         shortLabel: "Reproducción",
         icon: IconMediaPlay,
-        desc: "Doblaje, auto-skip, música de fondo y modos",
+        summary: "Doblaje, saltar intro y créditos, música de fondo y modos de reproducción.",
         keywords: ["audio", "doblaje", "latino", "skip", "intro", "outro", "relleno", "música", "volumen", "maratón", "tv"]
     },
     {
         id: "library",
-        label: "Biblioteca y Escáner",
+        label: "Biblioteca y escáner",
         shortLabel: "Biblioteca",
         icon: IconNavigationLibrary,
-        desc: "Carpetas, escáner en vivo y metadatos",
+        summary: "Carpetas de series y películas, escáner en vivo y proveedores de metadatos.",
         keywords: ["carpetas", "directorios", "series", "peliculas", "escaner", "dragonball", "live", "tmdb", "anilist", "jikan", "scan"]
     },
     {
         id: "performance",
-        label: "Rendimiento y Hardware",
+        label: "Rendimiento y hardware",
         shortLabel: "Rendimiento",
         icon: IconStatusZap,
-        desc: "Telemetría de hardware, perfiles y aceleración GPU",
+        summary: "Datos de tu hardware, perfiles de rendimiento y aceleración por GPU.",
         keywords: ["hardware", "gpu", "nvenc", "qsv", "amf", "apple", "cpu", "ram", "transcode", "ffmpeg", "ultra", "eco", "rendimiento"]
     },
     {
         id: "system",
-        label: "Sistema e Integraciones",
+        label: "Sistema e integraciones",
         shortLabel: "Sistema",
         icon: IconUiSettings,
-        desc: "Claves de API, respaldo SQLite, caché y reseteo",
-        keywords: ["sistema", "tmdb", "omdb", "api", "database", "sqlite", "backup", "cache", "notificaciones", "peligro"]
+        summary: "Claves de API, registros, respaldo de la base de datos, caché y restablecimiento.",
+        keywords: ["sistema", "tmdb", "omdb", "api", "database", "sqlite", "backup", "cache", "notificaciones", "peligro", "registros", "logs", "diagnóstico"]
     },
 ]
 
 const VALID_TAB_IDS = new Set(SETTINGS_PILLARS.map(p => p.id))
+
+// El formulario es uno solo para las 5 pestañas: para marcar cuál tiene cambios
+// sin guardar se reparte cada campo sucio en la pestaña que lo muestra.
+const PLAYBACK_LIBRARY_KEYS = new Set([
+    "preferredAudioProfile", "autoDisableSubtitlesWhenDubbed", "autoSkipIntro", "autoSkipOutro",
+    "autoDetectSkipTimes", "autoPlayNextEpisode", "enableWatchContinuity",
+    "marathonMode", "tvMode",
+])
+const PLAYBACK_THEME_KEYS = new Set([
+    "uiSoundsEnabled", "uiSoundsVolume", "bgMusicEnabled", "bgMusicVolume", "bgMusicDir",
+    "bgMusicTracks", "seriesSoundtrackMode",
+])
+
+function pillarForFieldPath(path: string): string {
+    const [root, key] = path.split(".")
+    switch (root) {
+        case "mediastream": return "performance"
+        case "googleDrive": return "library"
+        case "platform": return "appearance"
+        case "theme": return PLAYBACK_THEME_KEYS.has(key) ? "playback" : "appearance"
+        case "library":
+            if (key === "tmdbApiKey") return "system"
+            return PLAYBACK_LIBRARY_KEYS.has(key) ? "playback" : "library"
+        default: return "system"
+    }
+}
+
+function hasDirtyLeaf(val: unknown): boolean {
+    if (val === true) return true
+    if (Array.isArray(val)) return val.some(hasDirtyLeaf)
+    if (val && typeof val === "object") return Object.values(val).some(hasDirtyLeaf)
+    return false
+}
+
+function collectDirtyPillars(node: unknown, path: string, out: Set<string>) {
+    if (node === true) {
+        out.add(pillarForFieldPath(path))
+    } else if (Array.isArray(node)) {
+        // Listas (carpetas, pistas): un solo marcador si algún elemento cambió.
+        if (hasDirtyLeaf(node)) out.add(pillarForFieldPath(path))
+    } else if (node && typeof node === "object") {
+        for (const [key, child] of Object.entries(node)) {
+            collectDirtyPillars(child, path ? `${path}.${key}` : key, out)
+        }
+    }
+}
 
 export const Route = createLazyFileRoute("/settings/")({
     component: SettingsPage,
@@ -259,7 +302,7 @@ function SettingsTabSkeleton() {
             {["h-44", "h-64", "h-36"].map((height) => (
                 <div
                     key={height}
-                    className={`sectionbar rounded-2xl bg-surface-container animate-pulse motion-reduce:animate-none ${height}`}
+                    className={`surface-content surface-content-row rounded-2xl animate-pulse motion-reduce:animate-none ${height}`}
                 />
             ))}
         </div>
@@ -275,6 +318,12 @@ function SettingsPage() {
     // La pestaña vive solo en la URL (?tab): sin copia local que sincronizar.
     const activeTab = search.tab && VALID_TAB_IDS.has(search.tab) ? search.tab : "appearance"
     const [isSaveSuccess, setIsSaveSuccess] = useState(false)
+
+    useEffect(() => {
+        if (!isSaveSuccess) return
+        const timer = window.setTimeout(() => setIsSaveSuccess(false), 2000)
+        return () => window.clearTimeout(timer)
+    }, [isSaveSuccess])
 
     const handleSelectTab = (tabId: string) => {
         navigate({ search: { tab: tabId }, replace: true }).catch(() => {})
@@ -339,7 +388,10 @@ function SettingsPage() {
         shouldUnregister: false,
     })
 
-    const { control, handleSubmit, formState: { isDirty }, reset } = form
+    const { control, handleSubmit, formState: { isDirty, dirtyFields }, reset } = form
+    // Sin useMemo: RHF muta dirtyFields en sitio y la identidad no cambia entre ediciones.
+    const dirtyPillars = new Set<string>()
+    collectDirtyPillars(dirtyFields, "", dirtyPillars)
 
     useEffect(() => {
         if (serverSettings && !isDirty) {
@@ -353,7 +405,7 @@ function SettingsPage() {
         // Sin los ajustes del servidor el formulario tiene defaults: guardarlos
         // pisaría la configuración real.
         if (!serverSettings) {
-            toast.error("No se pudieron cargar los ajustes del servidor; no se guardó nada")
+            toast.error("No se guardó nada porque los ajustes no se cargaron del servidor", { description: "Recarga la página e inténtalo de nuevo." })
             return
         }
         try {
@@ -362,15 +414,12 @@ function SettingsPage() {
             setIsSaveSuccess(true)
             reset(data)
             syncStoresWithSettings(data)
-            toast.success("Ajustes guardados con éxito")
+            toast.success("Ajustes guardados")
             void warnIgnoredBinaryPaths(data)
-            setTimeout(() => {
-                setIsSaveSuccess(false)
-            }, 2000)
         } catch (err) {
             // Los errores de la API ya los muestra el onError de useServerMutation.
             if (!(err instanceof ApiError)) {
-                toast.error(errorText(err, "Error al guardar los ajustes"))
+                toast.error(errorText(err, "No se pudieron guardar los ajustes"))
             }
         }
     }
@@ -414,10 +463,11 @@ function SettingsPage() {
             }
         }
         extractErrors(errors)
-        const errorMsg = failedFields.length > 0 
-            ? `Errores de validación: ${failedFields.join(", ")}` 
-            : "Hay errores de validación en el formulario"
-        toast.error(errorMsg)
+        // El detalle técnico (rutas de campo y mensajes del validador, en inglés) va a la consola.
+        if (failedFields.length > 0) console.warn("Ajustes: campos no válidos", failedFields)
+        toast.error("Hay campos con valores no válidos", {
+            description: "Revisa las secciones marcadas con un punto y vuelve a guardar.",
+        })
     }
 
     const activePillar = useMemo(() => {
@@ -435,52 +485,106 @@ function SettingsPage() {
         })
     }, [])
 
+    // Degradé de pista en las pestañas móviles: se muestra del lado donde quedan pestañas ocultas.
+    const mobileTabsRef = React.useRef<HTMLElement>(null)
+    const [tabsFade, setTabsFade] = React.useState({ left: false, right: false })
+    const updateTabsFade = React.useCallback(() => {
+        const el = mobileTabsRef.current
+        if (!el) return
+        const left = el.scrollLeft > 4
+        const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4
+        setTabsFade((prev) => (prev.left === left && prev.right === right ? prev : { left, right }))
+    }, [])
+    React.useEffect(() => {
+        updateTabsFade()
+        window.addEventListener("resize", updateTabsFade, { passive: true })
+        return () => window.removeEventListener("resize", updateTabsFade)
+    }, [updateTabsFade, isLoading])
+
     const desktopPillarSpring = useSpringPreset("entrance");
     const desktopIndicatorSpring = useSpringPreset("tabIndicator");
     const tabContentSpring = useSpringPreset("tabContent");
     const saveBarSpring = useSpringPreset("entrance");
+    // Fundido de salida del contenido (80 ms, como la cabecera de Ajustes); con movimiento reducido, instantáneo.
+    const reduceMotion = useReducedMotion();
 
-    if (isLoading && !serverSettings) return <LoadingOverlayWithLogo />
+    // Loader y contenido se alternan con AnimatePresence (mode="wait"): el loader sale con su fundido antes de entrar el contenido.
+    const showLoader = isLoading && !serverSettings
 
-    return (
-        <div className="flex flex-col md:flex-row h-full w-full text-on-surface-variant selection:bg-brand-accent/30 overflow-hidden relative bg-transparent">
+    const content = (
+        // overflow-clip (no hidden): hidden crea un contenedor de scroll propio y el sidebar sticky
+        // nunca se engancharía al scroll real de la página (#main-content).
+        <m.div key="content" exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.08 } }} className="flex flex-col md:flex-row h-full w-full text-on-surface-variant selection:bg-brand-accent/30 overflow-clip relative bg-transparent">
             {/* ── Mobile Segmented Tab Bar ────────────────────────────────────────── */}
-            <nav aria-label="Navegación de ajustes" className="md:hidden shrink-0 w-full flex flex-row overflow-x-auto no-scrollbar border-b border-white/10 sectionbar sectionbar-strong px-3 py-2.5 z-20">
+            {/* En móvil el h1 visible vive en la barra lateral de escritorio (oculta): este mantiene el título de página. */}
+            <h1 className="sr-only md:hidden">Ajustes</h1>
+            <div className="md:hidden relative shrink-0 w-full z-20 border-b border-[var(--neutral-separator)] sectionbar sectionbar-strong">
+            <nav
+                ref={mobileTabsRef}
+                onScroll={updateTabsFade}
+                aria-label="Navegación de ajustes"
+                className="w-full flex flex-row overflow-x-auto no-scrollbar px-3 py-2.5"
+            >
                 <SegmentedControl
                     aria-label="Pestañas de ajustes"
                     layoutId="activeMobileTabIndicator"
                     semantics="tablist"
                     tone="neutral"
                     surface="inset"
+                    labelStyle="sentence"
                     value={activeTab}
                     onChange={handleSelectTab}
                     onOptionHover={(val) => tabLoaders[val as keyof typeof tabLoaders]?.()}
                     options={mobilePillarOptions}
                     className="w-max"
                 />
+                <Link
+                    to="/admin"
+                    className="ml-2 shrink-0 min-h-[44px] px-3.5 inline-flex items-center gap-2 rounded-full text-sm font-semibold text-on-surface-variant active:scale-95 transition-[transform,color] duration-fast"
+                >
+                    <IconUiAdmin className="w-4 h-4 shrink-0" aria-hidden />
+                    Administración
+                </Link>
             </nav>
+            {/* Pista de scroll: degradé en el borde donde aún hay pestañas fuera de vista */}
+            <span aria-hidden="true" className={cn("pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/70 to-transparent transition-opacity duration-fast", tabsFade.left ? "opacity-100" : "opacity-0")} />
+            <span aria-hidden="true" className={cn("pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-black/70 to-transparent transition-opacity duration-fast", tabsFade.right ? "opacity-100" : "opacity-0")} />
+            </div>
 
             {/* ── Left Sidebar Nav for Desktop (5 Clean Pillars) ─────────────────── */}
+            {/* Envoltorio sticky del alto exacto de la ventana: acompaña al scroll y centra la tarjeta
+                a la izquierda. Centrar con flex (y no con top-1/2 + translate) evita que, al llegar al
+                final de la página, el navegador empuje la tarjeta hacia arriba (usa el borde sin
+                transformar). py-[4.5rem] deja libre la barra superior de la app. */}
+            <div className="hidden md:flex sticky top-0 h-dvh shrink-0 self-start items-center py-[calc(var(--chrome-top)+0.25rem)] pl-4 pointer-events-none">
             <nav
-                className="hidden md:flex relative md:w-60 lg:w-[280px] xl:w-[290px] shrink-0 h-full flex-col border-r border-white/10 sectionbar overflow-y-auto overflow-x-hidden no-scrollbar"
+                aria-label="Secciones de ajustes"
+                className="pointer-events-auto md:w-64 xl:w-[272px] max-h-full flex flex-col sectionbar rounded-3xl overflow-y-auto overflow-x-hidden no-scrollbar"
             >
                 {/* Sidebar header */}
-                <div className="relative z-10 px-6 pt-20 pb-5 border-b border-white/[0.08]">
+                <div className="relative z-10 px-5 pt-5 pb-4 border-b border-[var(--neutral-separator)]">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-white tracking-tight select-none font-display">
-                                AJUSTES
+                            <h1 className="type-title text-label-1 select-none">
+                                Ajustes
                             </h1>
-                            <p className="text-2xs font-mono text-on-surface-variant uppercase tracking-widest mt-0.5">
-                                Panel de Control
+                            <p className="type-caption text-on-surface-variant mt-0.5">
+                                Personaliza KameHouse
                             </p>
                         </div>
-                        <span className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
+                        {isDirty && (
+                            <span
+                                role="img"
+                                aria-label="Cambios sin guardar"
+                                title="Cambios sin guardar"
+                                className="w-2.5 h-2.5 rounded-full bg-brand-accent animate-text-swap-in"
+                            />
+                        )}
                     </div>
                 </div>
 
                 {/* 5 Pillars list */}
-                <div className="relative z-10 flex-1 px-4 py-5 flex flex-col space-y-1.5 w-full">
+                <div className="relative z-10 p-3 flex flex-col space-y-1 w-full">
                     {SETTINGS_PILLARS.map((pillar) => {
                         const isActive = activeTab === pillar.id
                         const Icon = pillar.icon
@@ -488,60 +592,83 @@ function SettingsPage() {
                             <m.button
                                 key={pillar.id}
                                 type="button"
-                                whileHover={{ scale: 1.015, x: 4 }}
+                                aria-current={isActive ? "page" : undefined}
                                 whileTap={{ scale: 0.98 }}
                                 transition={desktopPillarSpring}
                                 onMouseEnter={() => tabLoaders[pillar.id as keyof typeof tabLoaders]?.()}
                                 onFocus={() => tabLoaders[pillar.id as keyof typeof tabLoaders]?.()}
                                 onClick={() => handleSelectTab(pillar.id)}
                                 className={cn(
-                                    "w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-left group relative shrink-0 overflow-hidden",
-                                    "[transition:color_var(--duration-fast)_var(--ease-smooth-out),background-color_var(--duration-fast)_var(--ease-smooth-out)]",
+                                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left group relative shrink-0 overflow-hidden",
+                                    "[transition:color_var(--duration-base)_var(--ease-smooth-out),background-color_var(--duration-base)_var(--ease-smooth-out)]",
                                     isActive
-                                        ? "text-black font-bold"
-                                        : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04]"
+                                        ? "text-label-1"
+                                        : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)]"
                                 )}
                             >
                                 {isActive && (
                                     <m.div
                                         layoutId="activeDesktopPillarIndicator"
                                         transition={desktopIndicatorSpring}
-                                        className="absolute inset-0 bg-white rounded-2xl shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.8),0_4px_16px_rgba(0,0,0,0.5)]"
-                                    />
+                                        className="absolute inset-0 rounded-2xl bg-[var(--neutral-elev-3)] border border-[var(--neutral-separator)]"
+                                    >
+                                        <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-brand-accent" />
+                                    </m.div>
                                 )}
-                                <div className={cn(
+                                <div aria-hidden="true" className={cn(
                                     "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border relative z-10",
-                                    "[transition:background-color_var(--duration-fast)_var(--ease-smooth-out),border-color_var(--duration-fast)_var(--ease-smooth-out),color_var(--duration-fast)_var(--ease-smooth-out)]",
+                                    "[transition:background-color_var(--duration-base)_var(--ease-smooth-out),border-color_var(--duration-base)_var(--ease-smooth-out),color_var(--duration-base)_var(--ease-smooth-out)]",
                                     isActive
-                                        ? "bg-black/10 border-black/20 text-black"
-                                        : "bg-white/5 border-white/10 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-white/10"
+                                        ? "bg-brand-accent/15 border-brand-accent/30 text-brand-accent-readable"
+                                        : "bg-[var(--neutral-elev-3)] border-[var(--neutral-separator)] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-1"
                                 )}>
                                     <Icon className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1 min-w-0 relative z-10">
                                     <span className={cn(
-                                        "text-xs sm:text-sm block leading-snug [transition:color_var(--duration-fast)_var(--ease-smooth-out)]",
-                                        isActive ? "font-black text-black" : "font-semibold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white"
+                                        // 13px en md y 14px desde lg: cada etiqueta cabe en una línea y las filas quedan parejas.
+                                        "text-[13px] lg:text-sm block leading-snug font-semibold whitespace-nowrap truncate [transition:color_var(--duration-base)_var(--ease-smooth-out)]",
+                                        isActive ? "text-label-1" : "text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-1"
                                     )}>
                                         {pillar.label}
                                     </span>
-                                    <span className={cn(
-                                        "text-3xs block mt-0.5 font-normal truncate [transition:color_var(--duration-fast)_var(--ease-smooth-out)]",
-                                        isActive ? "text-black/70 font-medium" : "text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface-variant"
-                                    )}>
-                                        {pillar.desc}
-                                    </span>
                                 </div>
+                                {dirtyPillars.has(pillar.id) && (
+                                    <span
+                                        role="img"
+                                        aria-label="Cambios sin guardar en esta sección"
+                                        title="Cambios sin guardar"
+                                        className="relative z-10 w-1.5 h-1.5 rounded-full bg-brand-accent shrink-0 animate-text-swap-in"
+                                    />
+                                )}
                             </m.button>
                         )
                     })}
                 </div>
+
+                {/* Administración: vive dentro de Ajustes */}
+                <div className="relative z-10 px-3 pb-3 pt-1 border-t border-[var(--neutral-separator)]">
+                    <Link
+                        to="/admin"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left group text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [transition:color_var(--duration-base)_var(--ease-smooth-out),background-color_var(--duration-base)_var(--ease-smooth-out)]"
+                    >
+                        <div aria-hidden="true" className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border bg-[var(--neutral-elev-3)] border-[var(--neutral-separator)]">
+                            <IconUiAdmin className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <span className="text-[13px] lg:text-sm block leading-snug font-semibold whitespace-nowrap truncate text-on-surface">Administración</span>
+                        </div>
+                    </Link>
+                </div>
             </nav>
+            </div>
 
             {/* ── Main Content Area ────────────────────────────────────────────── */}
             <div className="flex-1 flex flex-col h-full overflow-hidden">
                 {/* Content header */}
-                <header className="shrink-0 px-6 sm:px-8 lg:px-10 pt-5 md:pt-20 pb-5 border-b border-white/[0.06] sectionbar sectionbar-minimal">
+                <header className="shrink-0 pt-5 md:pt-[calc(var(--chrome-top)+0.5rem)] pb-5 border-b border-[var(--neutral-separator)] sectionbar sectionbar-minimal">
+                    {/* Mismo contenedor y padding que el formulario: título y tarjetas comparten borde izquierdo y aprovechan el ancho disponible. */}
+                    <div className="w-full max-w-[1600px] px-4 sm:px-6 lg:px-8 xl:px-10">
                     <AnimatePresence mode="wait" initial={false}>
                         <m.div
                             key={activeTab}
@@ -550,8 +677,8 @@ function SettingsPage() {
                             exit={{ opacity: 0, transition: { duration: 0.08 } }}
                             transition={tabContentSpring}
                         >
-                            <div className="flex items-center gap-2 mb-1.5">
-                                <div className="w-7 h-7 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+                            <div className="flex items-center gap-3">
+                                <div aria-hidden="true" className="w-9 h-9 shrink-0 rounded-xl bg-surface-container border border-outline-variant/30 flex items-center justify-center overflow-hidden">
                                     <AnimatePresence mode="wait" initial={false}>
                                         <m.span
                                             key={activeTab + "-icon"}
@@ -561,20 +688,21 @@ function SettingsPage() {
                                             transition={desktopIndicatorSpring}
                                             className="flex"
                                         >
-                                            {React.createElement(activePillar.icon, { className: "h-3.5 w-3.5 text-brand-accent" })}
+                                            {React.createElement(activePillar.icon, { className: "h-4 w-4 text-brand-accent" })}
                                         </m.span>
                                     </AnimatePresence>
                                 </div>
-                                <span key={activeTab + "-short"} className="text-label-sm uppercase tracking-wider text-on-surface-variant font-mono animate-text-swap-in">
-                                    {activePillar.shortLabel}
-                                </span>
+                                <h2 className="type-title text-on-surface text-balance">
+                                    {activePillar.label}
+                                </h2>
                             </div>
-                            <h2 className="text-2xl md:text-3xl font-display tracking-wider text-on-surface leading-tight uppercase text-balance">
-                                {activePillar.label}
-                            </h2>
+                            <p className="mt-2 text-sm text-on-surface-variant text-pretty">
+                                {activePillar.summary}
+                            </p>
                         </m.div>
                     </AnimatePresence>
-                    <div className="h-[2px] w-12 bg-gradient-to-r from-white/40 to-transparent rounded-full mt-3" />
+                    <div className="h-[2px] w-12 bg-gradient-to-r from-label-3 to-transparent rounded-full mt-3" />
+                    </div>
                 </header>
 
                 {/* Scrollable form content */}
@@ -583,7 +711,7 @@ function SettingsPage() {
                         <form
                             id="settings-form"
                             onSubmit={handleSubmit(onSubmit as unknown as SubmitHandler<FieldValues>, onFormError)}
-                            className="w-full max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 py-7 pb-32 space-y-9 min-h-full"
+                            className="w-full max-w-[1600px] px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 lg:py-7 pb-28 md:pb-10 space-y-6 min-h-full"
                         >
                             <Suspense fallback={<SettingsTabSkeleton />}>
                                 <AnimatePresence mode="wait" initial={false}>
@@ -618,28 +746,28 @@ function SettingsPage() {
                         className={cn(
                             "fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] md:bottom-8 left-1/2 -translate-x-1/2 z-50",
                             "flex items-center gap-4 sm:gap-6",
-                            "sectionbar sectionbar-strong rounded-full px-5 py-2.5",
+                            "sectionbar sectionbar-strong sectionbar-pill rounded-full px-5 py-2.5",
                             "max-w-[calc(100vw-2rem)] w-max",
-                            isSaveSuccess && "border-status-success/40 shadow-[inset_0_1px_1px_0_rgba(var(--status-success-rgb),0.3),0_12px_36px_-6px_rgba(0,0,0,0.85)]"
+                            isSaveSuccess && "border-status-success/40 shadow-[shadow:var(--shadow-save-bar-success)]"
                         )}
                     >
                         <div className="flex items-center gap-2.5 pl-1">
                             {isSaveSuccess ? (
                                 <>
                                     <span className="relative flex h-2 w-2">
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-status-success shadow-[0_0_8px_rgba(var(--status-success-rgb),0.8)]" />
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-status-success" />
                                     </span>
-                                    <span className="text-xs font-mono font-bold text-status-success uppercase tracking-wider animate-text-swap-in">
-                                        Ajustes sincronizados
+                                    <span className="text-xs font-bold text-status-success animate-text-swap-in">
+                                        Cambios guardados
                                     </span>
                                 </>
                             ) : (
                                 <>
                                     <span className="relative flex h-2 w-2">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75" />
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))]" />
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-accent" />
                                     </span>
-                                    <span className="text-xs font-mono font-bold text-white uppercase tracking-wider animate-text-swap-in">
+                                    <span className="text-xs font-bold text-label-1 animate-text-swap-in">
                                         Cambios pendientes
                                     </span>
                                 </>
@@ -647,49 +775,33 @@ function SettingsPage() {
                         </div>
                         <div className="flex items-center gap-2">
                             {!isSaveSuccess && (
-                                <button
-                                    type="button"
-                                    onClick={handleDiscard}
-                                    className="text-xs font-semibold text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[color,background-color,transform] duration-fast ease-smooth-out px-3.5 py-1.5 rounded-full [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 active:scale-95 cursor-pointer min-h-[44px]"
-                                >
+                                <Button intent="ghost" size="md" onClick={handleDiscard}>
                                     Descartar
-                                 </button>
+                                </Button>
                             )}
-                            <button
+                            <Button
                                 type="submit"
                                 form="settings-form"
-                                disabled={isSaving || isSaveSuccess}
-                                className={cn(
-                                    "flex items-center gap-2 px-5 py-2 min-h-[44px] rounded-full text-xs font-black select-none cursor-pointer uppercase tracking-wider",
-                                    "transition-[background-color,box-shadow,opacity,transform] duration-fast ease-smooth-out",
-                                    isSaveSuccess
-                                        ? "bg-status-success text-black animate-success-pop"
-                                        : "bg-white text-black [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/90 [@media(hover:hover)_and_(pointer:fine)]:hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                                )}
+                                intent="primary"
+                                size="md"
+                                loading={isSaving}
+                                disabled={isSaveSuccess}
+                                leftIcon={isSaveSuccess ? <IconUiCheck className="w-3.5 h-3.5 animate-success-check" strokeWidth={3} /> : undefined}
+                                iconSpacing="0.5rem"
+                                className={cn(isSaveSuccess && "bg-status-success text-black animate-success-pop disabled:opacity-100")}
                             >
-                                <LoadSwap
-                                    loading={isSaving}
-                                    skeleton={
-                                        <span className="flex items-center gap-2">
-                                            <div className="w-3.5 h-3.5 rounded-full border-2 border-black border-t-transparent animate-spin" />
-                                            <span className="animate-text-swap-in">Guardando...</span>
-                                        </span>
-                                    }
-                                >
-                                    {isSaveSuccess ? (
-                                        <span className="flex items-center gap-2">
-                                            <IconUiCheck className="w-3.5 h-3.5 animate-success-check" strokeWidth={3} />
-                                            <span className="animate-text-swap-in">¡Guardado!</span>
-                                        </span>
-                                    ) : (
-                                        <span className="animate-text-swap-in">Guardar Ajustes</span>
-                                    )}
-                                </LoadSwap>
-                            </button>
+                                {isSaving ? "Guardando…" : isSaveSuccess ? "Guardado" : "Guardar ajustes"}
+                            </Button>
                         </div>
                     </m.div>
                 )}
             </AnimatePresence>
-        </div>
+        </m.div>
+    )
+
+    return (
+        <AnimatePresence mode="wait" initial={false}>
+            {showLoader ? <LoadingOverlayWithLogo key="loader" /> : content}
+        </AnimatePresence>
     )
 }

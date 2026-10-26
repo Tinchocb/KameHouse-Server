@@ -36,9 +36,12 @@ const GettingStarted = React.lazy(() =>
 )
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { useApplyCustomTheme, CustomThemeStyles } from "@/lib/theme/apply-custom-theme"
+import { usePerformanceGovernor } from "@/lib/hardware/performance-governor"
 import { prewarmVideoPlayer } from "@/components/video/prewarm"
 import { useMotionFeaturesReady } from "@/lib/motion-features-loader"
-import { SPINE_ART_URLS } from "@/lib/helpers/goku-panorama"
+import { SPINE_IDLE_ART_URLS } from "@/lib/helpers/goku-panorama"
+import { queueIdlePreload } from "@/lib/idle-preload-queue"
+import { prewarmImages } from "@/lib/helpers/images"
 
 const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() {
     const activeQueuePlayItem = useAppStore(state => state.activeQueuePlayItem)
@@ -113,50 +116,43 @@ function RootComponent() {
 
     const router = useRouter()
     const queryClient = useQueryClient()
-    const routerState = useRouterState()
     const isCollectionFetching = useIsFetching({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] }) > 0
     const [isInterfaceReady, setIsInterfaceReady] = React.useState(false)
+    // `isLoading` del router solo decide cuándo termina el arranque. Sin selector el root (que envuelve
+    // TODO el shell) se re-renderizaba con cada cambio del router (URL, búsqueda, y dos veces por
+    // navegación por isLoading true/false). Pasado el arranque el selector devuelve un valor constante
+    // y el root deja de depender del router.
+    const routerIsLoading = useRouterState({ select: (s) => (isInterfaceReady ? false : s.isLoading) })
 
     useApplyCustomTheme()
+    // Gobernador de FPS: baja los efectos si el rendimiento cae de forma sostenida. Corre en producción;
+    // el panel de diagnóstico (solo en desarrollo) ya no es quien lo activa.
+    usePerformanceGovernor(isInterfaceReady)
 
     // Warm the player chunk during idle so the first play is instant (no on-click
     // JS download, no Suspense fallback flash).
-    React.useEffect(() => { prewarmVideoPlayer() }, [])
-
-    // Precargar rutas de secciones principales en idle tras montar la interfaz
+    // Una sola cola tras el arranque: rutas primero, player después, arte al final.
     React.useEffect(() => {
         if (!isInterfaceReady) return
-        const runPreload = () => {
-            void router.preloadRoute({ to: "/movies" }).catch(() => {})
-            void router.preloadRoute({ to: "/series" }).catch(() => {})
-            // Figuras de la estantería: bajadas y decodificadas antes de entrar,
-            // así no aparecen ~100 ms después que el resto de la página.
-            for (const src of SPINE_ART_URLS) {
-                const img = new Image()
-                img.decoding = "async"
-                img.src = src
-                void img.decode?.().catch(() => {})
-            }
-        }
-        if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-            const handle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number; cancelIdleCallback: (id: number) => void }).requestIdleCallback(runPreload, { timeout: 3000 })
-            return () => (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(handle)
-        } else {
-            const timer = setTimeout(runPreload, 800)
-            return () => clearTimeout(timer)
-        }
+        const cancel = (["/series", "/movies", "/chronology", "/settings"] as const).map((to) =>
+            queueIdlePreload(`route:${to}`, () => router.preloadRoute({ to }), 0)
+        )
+        prewarmVideoPlayer()
+        prewarmImages([...SPINE_IDLE_ART_URLS])
+        return () => cancel.forEach((stop) => stop())
     }, [isInterfaceReady, router])
 
-    // Update the splash status text dynamically
+    // Texto + progreso del splash (ver window.khLoader en index.html). El progreso
+    // es monótono: las etapas solo avanzan, igual que el splash nativo de Tauri.
     React.useEffect(() => {
-        const textEl = document.getElementById("global-loader-text")
-        if (!textEl) return
+        const loader = window.khLoader
+        if (!loader) return
         if (isLoading || !status) {
-            textEl.textContent = "Iniciando KameHouse..."
+            loader.set("", 0.25)
         } else if (!isInterfaceReady) {
-            textEl.textContent = "Cargando biblioteca..."
+            loader.set("Cargando biblioteca...", 0.7)
         } else {
-            textEl.textContent = "Listo"
+            loader.set("Listo", 1)
         }
     }, [isLoading, status, isInterfaceReady])
 
@@ -166,7 +162,7 @@ function RootComponent() {
     const isReadyNow = motionReady && !isLoading && !!status && (
         !status.settings?.id ||
         showInitialSetup ||
-        (!routerState.isLoading && (!isCollectionFetching || !!queryClient.getQueryData([API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key])))
+        (!routerIsLoading && (!isCollectionFetching || !!queryClient.getQueryData([API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key])))
     )
 
     if (!isInterfaceReady && isReadyNow) {
@@ -197,15 +193,21 @@ function RootComponent() {
         const loader = document.getElementById("global-loader")
         if (!loader) return
 
-        // Transición splash → interfaz (estilos en index.html): el loader se abre y
-        // se desvanece mientras la interfaz entra con un leve zoom de asentamiento.
-        // En Tauri la ventana main se revela recién tras ready(); se espera un
-        // instante para que la transición se vea en vez de correr con la ventana oculta.
-        const startDelay = __isTauriDesktop__ ? 140 : 0
+        // Transición loader → interfaz (estilos en index.html): crossfade limpio y
+        // rápido (~220 ms) con un leve asentamiento de escala en compositor.
+        const startDelay = 60
         const root = document.getElementById("root")
         let removeTimer: ReturnType<typeof setTimeout> | undefined
+        let exitStarted = false
+        let disposed = false
+        let splashClosedSeen = false
+        let unlistenSplashClosed: (() => void) | undefined
 
-        const startTimer = setTimeout(() => {
+        // La salida arranca una sola vez: con el evento "splash-closed" de Tauri
+        // o tras el breve margen de 60 ms para que la barra complete el 100 %.
+        const beginExit = () => {
+            if (exitStarted) return
+            exitStarted = true
             loader.classList.add("is-exiting")
             if (root) {
                 root.classList.add("kh-root-enter")
@@ -217,28 +219,61 @@ function RootComponent() {
                 }
                 root.addEventListener("animationend", onEnd)
             }
-            removeTimer = setTimeout(() => loader.remove(), 600)
-        }, startDelay)
+            removeTimer = setTimeout(() => loader.remove(), 260)
+        }
+
+        const startTimer = setTimeout(beginExit, startDelay)
+
+        if (__isTauriDesktop__) {
+            import("@tauri-apps/api/event")
+                .then(({ listen }) =>
+                    listen("splash-closed", () => {
+                        splashClosedSeen = true
+                        clearTimeout(startTimer)
+                        beginExit()
+                        // Una sola vez: el escucha ya no hace falta después.
+                        unlistenSplashClosed?.()
+                        unlistenSplashClosed = undefined
+                    }),
+                )
+                .then((unlisten) => {
+                    if (disposed || splashClosedSeen) unlisten()
+                    else unlistenSplashClosed = unlisten
+                })
+                .catch(() => {})
+        }
 
         return () => {
+            disposed = true
             clearTimeout(startTimer)
             if (removeTimer) clearTimeout(removeTimer)
+            unlistenSplashClosed?.()
         }
     }, [isInterfaceReady])
 
+    // Una vez que el estado falló sin datos, el overlay de conexión no se desmonta hasta que llegue la respuesta.
+    const [hasFailedBefore, setHasFailedBefore] = React.useState(false)
+    if (isError && !status && !hasFailedBefore) {
+        setHasFailedBefore(true)
+    } else if (status && hasFailedBefore) {
+        setHasFailedBefore(false)
+    }
+
     // If server status errors completely, remove static loader and show interactive retry box
     React.useEffect(() => {
-        if (isError && !status) {
+        if ((isError || hasFailedBefore) && !status) {
             const loader = document.getElementById("global-loader")
             if (loader) {
                 loader.remove()
             }
         }
-    }, [isError, status])
+    }, [isError, hasFailedBefore, status])
 
     if (isLoading || !status) {
-        if (isError) {
-            return <LoadingOverlayWithLogo isError={isError} refetch={refetch} />
+        // Mantener el overlay montado mientras haya error sin datos: aunque el sondeo ponga
+        // isLoading en true en medio de un reintento, desmontarlo reiniciaba el aviso de conexión.
+        if (isError || hasFailedBefore) {
+            return <LoadingOverlayWithLogo isError refetch={refetch} />
         }
         // Anti-flash: no montar un segundo loader React sobre el HTML splash.
         // El #global-loader de index.html sigue visible hasta isInterfaceReady.
@@ -283,7 +318,7 @@ function RootComponent() {
                     id={MAIN_CONTENT_ID}
                     tabIndex={-1}
                     data-scroll-container="true"
-                    className={`flex-1 w-full overflow-y-auto outline-none ${!tvMode ? "pt-[calc(4rem+env(safe-area-inset-top,0px))] md:pt-0" : ""}`}
+                    className={`flex-1 w-full overflow-y-auto outline-none ${!tvMode ? "pt-[calc(4rem+env(safe-area-inset-top,0px))] md:pt-0 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] scroll-pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0 md:scroll-pb-0" : ""}`}
                 >
                     <Outlet />
                 </PageTransition>

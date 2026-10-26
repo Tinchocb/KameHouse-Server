@@ -1,5 +1,5 @@
 export type HardwareTier = "high" | "balanced" | "low_power"
-export type GpuVendor = "nvidia" | "amd" | "intel" | "apple" | "other"
+type GpuVendor = "nvidia" | "amd" | "intel" | "apple" | "other"
 
 export interface HardwareSpecs {
     gpuRenderer: string
@@ -68,7 +68,7 @@ function detectGpu(): { renderer: string; vendor: GpuVendor; isDedicated: boolea
         const gl = canvas.getContext("webgl2") || canvas.getContext("webgl") || (canvas.getContext("experimental-webgl") as WebGLRenderingContext | null)
         
         if (!gl) {
-            return { renderer: "Genérico / Sin Aceleración WebGL", vendor: "other", isDedicated: false }
+            return { renderer: "Genérico (sin aceleración WebGL)", vendor: "other", isDedicated: false }
         }
 
         const debugInfo = gl.getExtension("WEBGL_debug_renderer_info")

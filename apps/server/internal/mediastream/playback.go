@@ -8,8 +8,6 @@ import (
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/util/httprange"
 	"kamehouse/internal/util/result"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -46,6 +44,11 @@ type (
 		Eac3      bool `json:"eac3"`
 		Dts       bool `json:"dts"`
 		Matroska  bool `json:"matroska"` // can demux .mkv in <video> (Chromium yes, Firefox/Safari no)
+		// HlsHevc: el reproductor HLS del cliente lee HEVC dentro de MPEG-TS, que es lo que
+		// manda la copia de video (applyVideoPassthrough). hls.js sí; el HLS nativo de
+		// Chromium no (se queda cargando sin dar error). Sin informar se asume que sí, así
+		// los clientes que no lo mandan (la web) siguen igual.
+		HlsHevc *bool `json:"hlsHevc,omitempty"`
 	}
 
 	PlaybackManager struct {
@@ -59,10 +62,10 @@ type (
 		// so a hover-preload racing the play click runs ffprobe once instead of twice.
 		containerGroup singleflight.Group
 		// Tracks in-flight attachment/subtitle extractions keyed by file hash. The value
-		// is a chan struct{} that is closed when extraction finishes successfully; on
+		// is an *extractionJob whose done channel is closed when the job ends; on
 		// failure the entry is deleted so a later request can retry. The subtitles/PGS
 		// endpoints block on this (WaitForExtraction) instead of racing an empty dir.
-		extractionJobs sync.Map // hash -> chan struct{}
+		extractionJobs sync.Map // hash -> *extractionJob
 	}
 
 	MediaContainer struct {
@@ -192,9 +195,13 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 			defer cancel()
+			// One tracker client per preloaded file: with a shared id two overlapping preloads
+			// kept moving the same client between paths, and ClientTracker killed the session of
+			// the path it left on every move.
+			preloadClient := preloadClientID + ":" + ret.Hash
 			// Stop the heads the preload spawned once it is done (each head
 			// otherwise keeps encoding up to 100 segments of this episode).
-			defer tc.PreloadDone(preloadClientID)
+			defer tc.PreloadDone(preloadClient)
 
 			preloadSegments := 3
 			settingsOpt := p.repository.GetSettings()
@@ -207,7 +214,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 			p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Pre-transcoding video segments for zero-latency start")
 			for i := 0; i < preloadSegments; i++ {
-				_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, cassette.StartQuality(ret.MediaInfo), int32(i), preloadClientID)
+				_, _ = tc.GetVideoSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, cassette.StartQuality(ret.MediaInfo), int32(i), preloadClient)
 			}
 
 			if len(ret.MediaInfo.Audios) > 0 {
@@ -215,7 +222,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 				p.logger.Debug().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Int32("audioIndex", defaultAudioIdx).Msg("mediastream: Pre-transcoding audio segments for zero-latency start")
 				for i := 0; i < preloadSegments; i++ {
-					_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, int32(i), preloadClientID)
+					_, _ = tc.GetAudioSegment(ctx, ret.Filepath, ret.Hash, ret.MediaInfo, defaultAudioIdx, int32(i), preloadClient)
 				}
 			}
 			p.logger.Info().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Finished proactive pre-transcoding of segments")
@@ -248,8 +255,9 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 	// built for a HEVC-capable client must not be reused for one that isn't.
 	cacheKey := hash + "|" + caps.fingerprint()
 
-	// Fast path: cache hit (lock-free read). Only reuse if the stream type matches.
-	if mc, ok := p.mediaContainers.Get(cacheKey); ok && mc.StreamType == streamType {
+	// Fast path: cache hit (lock-free read). Only reuse if the stream type matches and a
+	// live-transcode container has not been outdated by a finished pre-transcode.
+	if mc, ok := p.mediaContainers.Get(cacheKey); ok && mc.StreamType == streamType && !p.preTranscodeFinished(mc) {
 		p.logger.Debug().Str("hash", hash).Bool("cached", true).Msg("mediastream: Media container cache HIT")
 		return mc, nil
 	}
@@ -261,7 +269,7 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 	key := cacheKey + ":" + string(streamType)
 	v, err, _ := p.containerGroup.Do(key, func() (interface{}, error) {
 		// Re-check the cache: a concurrent build may have completed while we queued.
-		if mc, ok := p.mediaContainers.Get(cacheKey); ok && mc.StreamType == streamType {
+		if mc, ok := p.mediaContainers.Get(cacheKey); ok && mc.StreamType == streamType && !p.preTranscodeFinished(mc) {
 			p.logger.Debug().Str("hash", hash).Bool("cached", true).Msg("mediastream: Media container cache HIT (deduped)")
 			return mc, nil
 		}
@@ -271,6 +279,19 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 		return nil, err
 	}
 	return v.(*MediaContainer), nil
+}
+
+// preTranscodeFinished reports whether a container cached as a live transcode is outdated
+// because the file has been pre-transcoded since. Containers live in the cache until the
+// transcoder module is re-initialized and buildMediaContainer only looks for the pre-transcoded
+// output when it builds one, so without this check a file played before its pre-transcode
+// finished keeps being transcoded live on every later play.
+func (p *PlaybackManager) preTranscodeFinished(mc *MediaContainer) bool {
+	if mc.StreamType != StreamTypeTranscode || mc.MediaInfo == nil {
+		return false
+	}
+	ptm, ok := p.repository.PreTranscoder()
+	return ok && ptm.Ready(mc.Hash, len(mc.MediaInfo.Audios))
 }
 
 // buildMediaContainer performs the expensive work (ffprobe media-info extraction,
@@ -290,7 +311,11 @@ func (p *PlaybackManager) buildMediaContainer(filePath string, hash string, stre
 	p.logger.Debug().Msg("mediastream: Extracting media info")
 
 	ffprobeStart := time.Now()
-	ret.MediaInfo, err = p.repository.mediaInfoExtractor.GetInfo(p.repository.settings.MustGet().FfprobePath, filePath)
+	ffprobePath := "ffprobe"
+	if s, ok := p.repository.GetSettings().Get(); ok && s != nil && s.FfprobePath != "" {
+		ffprobePath = s.FfprobePath
+	}
+	ret.MediaInfo, err = p.repository.mediaInfoExtractor.GetInfo(ffprobePath, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -306,12 +331,11 @@ func (p *PlaybackManager) buildMediaContainer(filePath string, hash string, stre
 	p.startAttachmentExtraction(filePath, hash, ret.MediaInfo, priority)
 
 	// Resolve the playback policy: the requested stream type is a hint, not a verdict.
-	policy := playbackPolicy{}
-	if p.repository.settings.IsPresent() {
-		if s := p.repository.settings.MustGet(); s != nil {
-			policy.directPlayOnly = s.DirectPlayOnly
-			policy.disableAutoSwitchToDirect = s.DisableAutoSwitchToDirectPlay
-		}
+	// Fail-closed: sin ajustes cargados el directo es la única salida; el ajuste real lo sobrescribe.
+	policy := playbackPolicy{directPlayOnly: true}
+	if s, ok := p.repository.GetSettings().Get(); ok && s != nil {
+		policy.directPlayOnly = s.DirectPlayOnly
+		policy.disableAutoSwitchToDirect = s.DisableAutoSwitchToDirectPlay
 	}
 
 	if resolved, reason := resolveStreamType(streamType, ret.MediaInfo, caps, policy); resolved != streamType {
@@ -328,13 +352,20 @@ func (p *PlaybackManager) buildMediaContainer(filePath string, hash string, stre
 	}
 
 	// A live transcode is pointless when this file was already pre-transcoded:
-	// serve the finished HLS off disk instead of re-encoding it every play.
-	if streamType == StreamTypeTranscode {
-		if ptm, ok := p.repository.PreTranscoder(); ok && ptm.IsAvailable(hash) {
-			p.logger.Info().Str("filepath", filePath).Msg("mediastream: Pre-transcoded output found. Serving the optimized stream.")
-			streamType = StreamTypeOptimized
-			ret.StreamType = StreamTypeOptimized
-		}
+	// serve the finished HLS off disk instead of re-encoding it every play. Ready also
+	// checks that the output holds every audio track, so the player can still switch them.
+	audioTracks := 0
+	if ret.MediaInfo != nil {
+		audioTracks = len(ret.MediaInfo.Audios)
+	}
+	preReady := false
+	if ptm, ok := p.repository.PreTranscoder(); ok {
+		preReady = ptm.Ready(hash, audioTracks)
+	}
+	if streamType == StreamTypeTranscode && preReady {
+		p.logger.Info().Str("filepath", filePath).Msg("mediastream: Pre-transcoded output found. Serving the optimized stream.")
+		streamType = StreamTypeOptimized
+		ret.StreamType = StreamTypeOptimized
 	}
 
 	streamURL := ""
@@ -346,10 +377,13 @@ func (p *PlaybackManager) buildMediaContainer(filePath string, hash string, stre
 		// Live transcode the file.
 		streamURL = "/api/v1/mediastream/transcode/master.m3u8"
 	case StreamTypeOptimized:
-		optimizedPath := filepath.Join(p.repository.PreTranscodeDir(), hash, "master.m3u8")
-		if _, err := os.Stat(optimizedPath); err == nil {
+		if preReady {
 			streamURL = "/api/v1/mediastream/hls/master.m3u8"
 		} else {
+			// Solo original: sin HLS previo no se convierte; el archivo queda en directo o falla.
+			if policy.directPlayOnly {
+				return nil, ErrDirectOnly
+			}
 			// Fall back gracefully to transcode stream
 			ret.StreamType = StreamTypeTranscode
 			streamURL = "/api/v1/mediastream/transcode/master.m3u8"
@@ -369,11 +403,27 @@ func (p *PlaybackManager) buildMediaContainer(filePath string, hash string, stre
 	return
 }
 
+// extractionJob is one attachment extraction in flight for a file hash.
+type extractionJob struct {
+	// done is closed when the job ends.
+	done chan struct{}
+
+	// promote is closed when the episode being played needs a job that is still queued behind
+	// the preload semaphore, so it starts at once instead of waiting for other files' jobs.
+	promote     chan struct{}
+	promoteOnce sync.Once
+}
+
+func (j *extractionJob) promoteNow() {
+	j.promoteOnce.Do(func() { close(j.promote) })
+}
+
 // startAttachmentExtraction launches (at most once per hash) the ffmpeg demux that
-// writes embedded subtitles and fonts to the cache. The registered channel is closed
-// when extraction succeeds so waiters can proceed; on failure the entry is removed so
+// writes embedded subtitles and fonts to the cache. The job's done channel is closed
+// when it ends so waiters can proceed; on failure the entry is removed so
 // a subsequent request can retry. priority=false routes the work through the global
-// attachmentSemaphore (preloads), priority=true bypasses it (the episode being played).
+// attachmentSemaphore (preloads), priority=true bypasses it (the episode being played),
+// including a job a preload registered first that is still waiting for a slot.
 func (p *PlaybackManager) startAttachmentExtraction(filePath string, hash string, mediaInfo *videofile.MediaInfo, priority bool) {
 	// Fuentes remotas (Drive por loopback): ffmpeg tendría que descargar el archivo
 	// completo para volcar subtítulos y fuentes. No se extraen; el handler no expone
@@ -381,20 +431,27 @@ func (p *PlaybackManager) startAttachmentExtraction(filePath string, hash string
 	if httprange.IsRemote(filePath) {
 		return
 	}
-	ch := make(chan struct{})
-	actual, loaded := p.extractionJobs.LoadOrStore(hash, ch)
+	job := &extractionJob{done: make(chan struct{}), promote: make(chan struct{})}
+	actual, loaded := p.extractionJobs.LoadOrStore(hash, job)
 	if loaded {
-		// Another request already started (or finished) extraction for this hash.
-		_ = actual
+		// Another request already started (or finished) extraction for this hash. If it is
+		// still queued behind the preload semaphore and the episode is now being played, let
+		// it start at once: the subtitle/PGS endpoints are waiting on it.
+		if priority {
+			actual.(*extractionJob).promoteNow()
+		}
 		return
 	}
 
 	go func() {
-		defer close(ch)
+		defer close(job.done)
 
 		if !priority {
-			attachmentSemaphore <- struct{}{}
-			defer func() { <-attachmentSemaphore }()
+			select {
+			case attachmentSemaphore <- struct{}{}:
+				defer func() { <-attachmentSemaphore }()
+			case <-job.promote:
+			}
 		}
 
 		// Read settings/cacheDir under settingsMu: InitializeModules may be
@@ -431,9 +488,9 @@ func (p *PlaybackManager) WaitForExtraction(ctx context.Context, hash string) er
 		// the files, otherwise it will report the appropriate error.
 		return nil
 	}
-	ch := v.(chan struct{})
+	job := v.(*extractionJob)
 	select {
-	case <-ch:
+	case <-job.done:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
@@ -472,6 +529,11 @@ func resolveStreamType(requested StreamType, info *videofile.MediaInfo, caps *Cl
 		}
 
 	case StreamTypeTranscode:
+		// directPlayOnly rige también los pedidos explícitos de transcode (fallback tras un
+		// error de decodificación, cambio de pista): el encoder no arranca y el cliente ve el fallo.
+		if policy.directPlayOnly {
+			return StreamTypeDirect, "direct-only: transcode disabled"
+		}
 		if policy.disableAutoSwitchToDirect || caps == nil {
 			return StreamTypeTranscode, ""
 		}

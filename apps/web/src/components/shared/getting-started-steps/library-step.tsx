@@ -1,46 +1,180 @@
-import { Field } from "@/components/ui/form"
-import { m } from "framer-motion"
-import { containerVariants, itemVariants } from "./variants"
+import { useGetFFmpegStatus } from "@/api/hooks/mediastream.hooks"
+import { DirectorySelector } from "@/components/shared/directory-selector"
+import { Button, IconButton } from "@/components/ui/button"
+import { IconStatusFolder, IconStatusFolderOpen, IconUiCheckCircle, IconUiDelete, IconUiPlus, IconUiSpinner } from "@/components/ui/icons"
+import { __isDesktop__ } from "@/types/constants"
+import { AnimatePresence, m } from "framer-motion"
+import React from "react"
 import { StepCard } from "./step-chrome"
+import { containerVariants, itemVariants } from "./variants"
+import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 
-/* ---------------- STEP 1: BIBLIOTECA ---------------- */
-export function LibraryStep() {
+// Salida de una carpeta quitada: --duration-quick con --ease-out, más corta que la entrada.
+const ROW_EXIT_TRANSITION = { duration: 0.15, ease: [0.23, 1, 0.32, 1] } as const
+
+// Etiqueta del botón de añadir: "Añadir carpeta" la primera vez, "Añadir otra carpeta" después.
+export const addFolderLabel = (count: number) => (count === 0 ? "Añadir carpeta" : "Añadir otra carpeta")
+
+// ÚNICO PASO OBLIGATORIO: ¿DÓNDE ESTÁN TUS EPISODIOS?
+export function LibraryStep({
+    paths,
+    onAdd,
+    onRemove,
+}: {
+    paths: string[]
+    onAdd: (path: string) => void
+    onRemove: (path: string) => void
+}) {
+    const [draft, setDraft] = React.useState("")
+    const [isPicking, setIsPicking] = React.useState(false)
+    const rowSpring = useSpringPreset("entrance")
+
+    const addDraft = () => {
+        const path = draft.trim()
+        if (!path) return
+        onAdd(path)
+        setDraft("")
+    }
+
+    // Desktop: el diálogo nativo añade la carpeta en un solo gesto.
+    const pickNative = async () => {
+        setIsPicking(true)
+        try {
+            const { open } = await import("@tauri-apps/plugin-dialog")
+            const selected = await open({ directory: true, multiple: false, title: "¿Dónde están tus episodios?" })
+            if (typeof selected === "string" && selected) onAdd(selected)
+        } catch {
+            // Sin plugin nativo: queda el campo de texto de abajo.
+        } finally {
+            setIsPicking(false)
+        }
+    }
+
     return (
-        <m.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="space-y-4 max-w-2xl mx-auto"
-        >
-            <m.div variants={itemVariants} className="text-center space-y-1">
-                <h2 className="text-xl sm:text-2xl font-display tracking-wide text-on-surface uppercase">
-                    1. Biblioteca y Rutas de Archivos
-                </h2>
-                <p className="text-on-surface-variant text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
-                    Indica las carpetas de tu equipo donde guardas tus animes. KameHouse escaneará y organizará automáticamente los episodios y sagas.
+        <m.div variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="space-y-5 max-w-xl mx-auto">
+            <m.div variants={itemVariants} className="text-center space-y-2">
+                <h1 className="text-2xl sm:text-3xl font-display text-on-surface">
+                    ¿Dónde están tus episodios?
+                </h1>
+                <p className="text-on-surface-variant text-sm max-w-md mx-auto leading-relaxed">
+                    Elige la carpeta donde guardas tus series y películas. KameHouse las encuentra y las organiza por ti; lo demás ya viene configurado.
                 </p>
             </m.div>
 
             <StepCard>
                 <m.div variants={itemVariants} className="space-y-4">
-                    <Field.MultiDirectorySelector
-                        name="library.seriesPaths"
-                        label="Carpetas de Series de Anime"
-                        help="Ubicaciones con episodios organizados por series, sagas o temporadas."
-                        shouldExist
-                    />
+                    {__isDesktop__ && (
+                        <Button
+                            intent="primary"
+                            size="lg"
+                            onClick={pickNative}
+                            disabled={isPicking}
+                            leftIcon={isPicking ? <IconUiSpinner className="w-4 h-4 animate-spin" /> : <IconStatusFolderOpen className="w-4 h-4" />}
+                            iconSpacing="0.5rem"
+                            className="w-full"
+                        >
+                            Elegir carpeta
+                        </Button>
+                    )}
 
-                    <div className="h-[1px] bg-border-subtle" />
+                    <div className="space-y-2">
+                        {__isDesktop__ && <p className="text-xs text-on-surface-variant">O escribe la ruta a mano:</p>}
+                        <DirectorySelector
+                            value={draft}
+                            onSelect={setDraft}
+                            shouldExist
+                            placeholder="D:\Anime"
+                            aria-label="Ruta de la carpeta de episodios"
+                            trailingAction={
+                                <Button
+                                    intent="primary"
+                                    size="sm"
+                                    onClick={addDraft}
+                                    disabled={!draft.trim()}
+                                    leftIcon={<IconUiPlus className="w-3.5 h-3.5" />}
+                                    iconSpacing="0.375rem"
+                                    className="shrink-0"
+                                >
+                                    {addFolderLabel(paths.length)}
+                                </Button>
+                            }
+                        />
+                    </div>
 
-                    <Field.MultiDirectorySelector
-                        name="library.moviePaths"
-                        label="Carpetas de Películas y OVAs"
-                        help="Ubicaciones que contienen películas individuales, especiales o películas animadas."
-                        shouldExist
-                    />
+                    <AnimatePresence initial={false}>
+                        {paths.length > 0 && (
+                            // La lista entra y sale entera con la primera y la última carpeta:
+                            // el AnimatePresence interno (initial={false}) no anima la fila
+                            // con la que se monta. `relative`: popLayout saca la fila que sale
+                            // con position absolute dentro de la lista.
+                            <m.ul
+                                key="paths"
+                                layout
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6, transition: ROW_EXIT_TRANSITION }}
+                                transition={rowSpring}
+                                className="relative space-y-2"
+                                aria-label="Carpetas añadidas"
+                            >
+                                <AnimatePresence initial={false} mode="popLayout">
+                                    {paths.map(dir => (
+                                        <m.li
+                                            key={dir}
+                                            layout
+                                            initial={{ opacity: 0, y: 6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -6, transition: ROW_EXIT_TRANSITION }}
+                                            transition={rowSpring}
+                                            className="flex items-center gap-2 rounded-xl border border-[var(--neutral-separator)] bg-surface-container-low pl-3 pr-1 py-1"
+                                        >
+                                            <IconStatusFolder className="w-4 h-4 shrink-0 text-brand-accent-readable" aria-hidden />
+                                            <span className="flex-1 min-w-0 truncate font-mono text-xs text-on-surface" title={dir}>{dir}</span>
+                                            <IconButton
+                                                intent="ghost"
+                                                size="md"
+                                                onClick={() => onRemove(dir)}
+                                                title="Quitar carpeta"
+                                                aria-label={`Quitar carpeta ${dir}`}
+                                                className="text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error [@media(hover:hover)_and_(pointer:fine)]:hover:bg-status-error/10"
+                                                icon={<IconUiDelete className="w-4 h-4" />}
+                                            />
+                                        </m.li>
+                                    ))}
+                                </AnimatePresence>
+                            </m.ul>
+                        )}
+                    </AnimatePresence>
                 </m.div>
             </StepCard>
+
+            <m.div variants={itemVariants}>
+                <EngineDetection />
+            </m.div>
         </m.div>
+    )
+}
+
+// Detección de FFmpeg/FFprobe en segundo plano: informa, nunca bloquea.
+function EngineDetection() {
+    const { data: status, isLoading } = useGetFFmpegStatus()
+    const ready = !!status?.ffmpegAvailable && !!status?.ffprobeAvailable
+
+    return (
+        <p role="status" className="flex items-center justify-center gap-2 text-xs text-on-surface-variant text-center">
+            {isLoading ? (
+                <>
+                    <IconUiSpinner className="w-3.5 h-3.5 animate-spin" aria-hidden />
+                    Buscando el motor de video (FFmpeg)…
+                </>
+            ) : ready ? (
+                <>
+                    <IconUiCheckCircle className="w-3.5 h-3.5 text-status-success" aria-hidden />
+                    Motor de video detectado
+                </>
+            ) : (
+                <>Motor de video (FFmpeg) no detectado: podrás instalarlo después con un clic.</>
+            )}
+        </p>
     )
 }

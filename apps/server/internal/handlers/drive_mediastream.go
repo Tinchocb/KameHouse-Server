@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"crypto/tls"
@@ -118,6 +119,26 @@ func (h *Handler) driveInternalURL(fileID, ext string) string {
 	return h.driveLoopbackBase() + drivePlayPath + "?" + q.Encode()
 }
 
+// driveInputURL devuelve lo que ffmpeg/ffprobe abren para una ruta de la biblioteca: las
+// gdrive:// pasan por el endpoint interno de loopback; cualquier otra ruta sigue igual.
+func (h *Handler) driveInputURL(path string) string {
+	if !strings.HasPrefix(path, "gdrive://") {
+		return path
+	}
+	fileID, fileName := parseDrivePath(path)
+	ext := strings.ToLower(filepath.Ext(fileName))
+	if ext == "" {
+		ext = ".mkv"
+	}
+	return h.driveInternalURL(fileID, ext)
+}
+
+// driveAuthExpiredMsg (424, no 401: el 401 hace que la UI redirija a Ajustes) lo reconoce la interfaz (player-orchestrator) para ofrecer reconectar Drive.
+const driveAuthExpiredMsg = "google drive authorization expired"
+
+// Sin cuenta conectada no hay token que venza, así que driveAuthExpiredMsg no aplica.
+const driveNotConnectedMsg = "Google Drive no está conectado. Conéctalo en Ajustes → Biblioteca → Google Drive."
+
 // parseDrivePath separa "gdrive://<fileId>/<ruta relativa>" en id y nombre.
 func parseDrivePath(p string) (fileID, fileName string) {
 	clean := strings.TrimPrefix(p, "gdrive://")
@@ -134,7 +155,8 @@ func parseDrivePath(p string) (fileID, fileName string) {
 
 // publicDriveContainer adapta un container construido sobre la URL interna para
 // devolverlo al cliente: no expone la URL con el token interno y quita subtítulos
-// y fuentes embebidos, que en Drive no se extraen (requeriría bajar el archivo entero).
+// y fuentes embebidos, que en Drive solo se exponen una vez extraídos
+// (addDriveEmbeddedSubtitles): extraerlos requiere bajar el archivo entero.
 func publicDriveContainer(mc *mediastream.MediaContainer, drivePath, publicURL string) *mediastream.MediaContainer {
 	out := *mc
 	out.Filepath = drivePath
@@ -162,6 +184,25 @@ func (h *Handler) requestDriveMediaContainer(c echo.Context, drivePath string, s
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid gdrive path"))
 	}
 
+	// Sin cuenta conectada (o sin carpeta): ni el token existe, así que AuthExpired no lo
+	// ve y la reproducción moría en ffprobe con "exit status 1" sin ninguna pista.
+	if h.App.DriveService == nil || !h.App.DriveService.IsEnabled() {
+		return h.RespondWithCodeError(c, http.StatusFailedDependency, errors.New(driveNotConnectedMsg))
+	}
+
+	// Token vencido o revocado: sin esto el direct play falla en el <video> y el
+	// fallback a HLS muere con "ffprobe exit status 1", que oculta la causa real.
+	// Con tope: si Google no responde, la comprobación no debe colgar la reproducción
+	// (un timeout no cuenta como "vencido": se sigue y falla más abajo con su causa real).
+	if h.App.DriveService != nil {
+		authCtx, cancelAuth := context.WithTimeout(c.Request().Context(), 5*time.Second)
+		expired := h.App.DriveService.AuthExpired(authCtx)
+		cancelAuth()
+		if expired {
+			return h.RespondWithCodeError(c, http.StatusFailedDependency, errors.New(driveAuthExpiredMsg))
+		}
+	}
+
 	ext := strings.ToLower(filepath.Ext(fileName))
 	if ext == "" {
 		ext = ".mkv"
@@ -170,24 +211,29 @@ func (h *Handler) requestDriveMediaContainer(c echo.Context, drivePath string, s
 	internalURL := h.driveInternalURL(fileID, ext)
 	repo := h.App.MediastreamRepository
 
+	// Solo original: un pedido de transcode u optimized (fallback, cambio de pista) se sirve directo.
+	if (streamType == mediastream.StreamTypeTranscode || streamType == mediastream.StreamTypeOptimized) && repo.DirectPlayOnly() {
+		streamType = mediastream.StreamTypeDirect
+	}
+
 	if streamType == mediastream.StreamTypeTranscode || streamType == mediastream.StreamTypeOptimized {
-		mc, err := repo.RequestTranscodeStream(internalURL, clientID, force, caps)
-		if err != nil {
-			return h.RespondWithError(c, err)
-		}
-		out := publicDriveContainer(mc, drivePath, publicURL)
-		h.signStreamURL(out)
-		return h.RespondWithData(c, out)
+		return h.respondDriveTranscode(c, drivePath, publicURL, internalURL, fileID, fileName, clientID, force, caps)
 	}
 
 	var dbFile models.LocalFile
 	var techInfo *dto.FileTechnicalInfo
-	dbFound := h.App.Database.Gorm().Where("path = ?", drivePath).First(&dbFile).Error == nil
+	dbFound := false
+	if h.App != nil && h.App.Database != nil {
+		dbFound = h.App.Database.Gorm().WithContext(c.Request().Context()).
+			Select("id, technical_info").
+			Where("path = ?", drivePath).
+			First(&dbFile).Error == nil
+	}
 	if dbFound && len(dbFile.TechnicalInfo) > 0 {
 		_ = json.Unmarshal(dbFile.TechnicalInfo, &techInfo)
 	}
 
-	mediaInfo, err := repo.GetMediaInfo(internalURL)
+	mediaInfo, err := repo.GetMediaInfoContext(c.Request().Context(), internalURL)
 	if err != nil {
 		// Sin ffprobe la reproducción directa sigue funcionando, solo sin pistas.
 		h.App.Logger.Warn().Err(err).Str("fileId", fileID).Msg("drive: no se pudo leer la media info, se reproduce sin pistas")
@@ -203,6 +249,12 @@ func (h *Handler) requestDriveMediaContainer(c echo.Context, drivePath string, s
 		h.persistDriveAudioStreams(dbFile.ID, techInfo, mediaInfo.Audios)
 	}
 
+	// Igual que en las rutas locales: directo solo si este cliente decodifica el archivo; si no, transcode.
+	// Antes Drive servia siempre directo, sin mirar codecs ni capacidades (audio AC-3 mudo, mkv no soportado).
+	if repo.ResolveClientStreamType(mediastream.StreamTypeDirect, mediaInfo, caps) == mediastream.StreamTypeTranscode {
+		return h.respondDriveTranscode(c, drivePath, publicURL, internalURL, fileID, fileName, clientID, force, caps)
+	}
+
 	mc := &mediastream.MediaContainer{
 		Filepath:   drivePath,
 		Hash:       util.CreateMD5(drivePath),
@@ -211,6 +263,25 @@ func (h *Handler) requestDriveMediaContainer(c echo.Context, drivePath string, s
 		MediaInfo:  mediaInfo,
 	}
 	out := publicDriveContainer(mc, drivePath, publicURL)
+	h.addDriveEmbeddedSubtitles(c.Request().Context(), out, mc.MediaInfo, drivePath)
+	h.addDriveExternalSubtitles(c.Request().Context(), out, drivePath, fileID, fileName)
+	h.signStreamURL(out)
+	return h.RespondWithData(c, out)
+}
+
+// respondDriveTranscode sirve un archivo de Drive en transcode (HLS). Los errores tipados del
+// transcoder salen con su codigo HTTP: 409 si la transcodificacion esta desactivada, 503 si no arranca.
+func (h *Handler) respondDriveTranscode(c echo.Context, drivePath, publicURL, internalURL, fileID, fileName, clientID string, force bool, caps *mediastream.ClientCapabilities) error {
+	mc, err := h.App.MediastreamRepository.RequestTranscodeStream(internalURL, clientID, force, caps)
+	if err != nil {
+		if errors.Is(err, mediastream.ErrTranscodeDisabled) || errors.Is(err, mediastream.ErrDirectOnly) {
+			return h.RespondWithCodeError(c, http.StatusConflict, err)
+		}
+		return h.RespondWithError(c, err)
+	}
+	out := publicDriveContainer(mc, drivePath, publicURL)
+	h.addDriveEmbeddedSubtitles(c.Request().Context(), out, mc.MediaInfo, drivePath)
+	h.addDriveExternalSubtitles(c.Request().Context(), out, drivePath, fileID, fileName)
 	h.signStreamURL(out)
 	return h.RespondWithData(c, out)
 }

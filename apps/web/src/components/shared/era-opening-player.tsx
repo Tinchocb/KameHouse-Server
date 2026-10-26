@@ -7,7 +7,7 @@ import { cn } from "@/components/ui/core/styling"
 import { getEraOpening, ERA_OPENINGS_SUBDIR } from "@/lib/config/era_openings"
 import { getServerBaseUrl } from "@/api/client/server-url"
 
-export interface EraOpeningPlayerProps {
+interface EraOpeningPlayerProps {
     sagaId: string
     className?: string
 }
@@ -111,7 +111,9 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
                     : "bg-surface-container-high/50 border-white/5 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container",
                 className
             )}
-            title={`Tema de la saga — ${opening.title}`}
+            title={`Tema de la saga: ${opening.title}`}
+            aria-label={`${isPlaying ? "Pausar" : "Reproducir"} el tema de la saga: ${opening.title}`}
+            aria-pressed={isPlaying}
         >
             <IconSwap swapKey={isPlaying ? "pause" : "play"} className="shrink-0 flex items-center justify-center">
                 {isPlaying ? (
@@ -121,7 +123,7 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
                 )}
             </IconSwap>
 
-            <span className="text-xs font-bold uppercase tracking-wider">
+            <span className="text-xs font-bold">
                 {opening.title}
             </span>
 

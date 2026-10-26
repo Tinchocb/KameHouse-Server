@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { LEGACY_VOLUME_TO_SPANS } from "@/components/chronology/data/volumes"
 import { computeSpanProgress, overrideFor, type SpanProgress, type SpanRange } from "@/components/chronology/data/spanProgress"
+import { TIMELINE_VIEW_KEY, readTimelineView, writePref, type TimelineView } from "@/components/chronology/data/timelinePrefs"
 import { useGetChronologyProgress, useSaveChronologySpanOverrides } from "@/api/hooks/chronology.hooks"
 
 /** Clave del progreso previo a guardarlo en el servidor; se migra una vez y se borra. */
@@ -133,4 +134,40 @@ export function useShowInterludes() {
     }, [])
 
     return { showInterludes, handleToggleInterludes }
+}
+
+/** Valor de una preferencia de este dispositivo (localStorage) con su setter. */
+function useStoredPref<T extends string>(key: string, read: () => T) {
+    const [value, setValue] = useState<T>(read)
+    const update = useCallback(
+        (next: T) => {
+            setValue(next)
+            writePref(key, next)
+        },
+        [key],
+    )
+    return [value, update] as const
+}
+
+/** Vista de la lista: Detallada (tarjetas) o Compacta (lista densa). */
+export function useTimelineView() {
+    return useStoredPref<TimelineView>(TIMELINE_VIEW_KEY, readTimelineView)
+}
+
+type TimelineZVariant = 'z' | 'kai'
+const TIMELINE_Z_VARIANT_KEY = 'dragonball_timeline_z_variant'
+
+function readTimelineZVariant(): TimelineZVariant {
+    try {
+        const saved = localStorage.getItem(TIMELINE_Z_VARIANT_KEY)
+        if (saved === 'kai') return 'kai'
+    } catch {
+        // default
+    }
+    return 'z'
+}
+
+/** Variante de la era Z: DBZ original (291 episodios) o Dragon Ball Kai (167 episodios). */
+export function useTimelineZVariant() {
+    return useStoredPref<TimelineZVariant>(TIMELINE_Z_VARIANT_KEY, readTimelineZVariant)
 }

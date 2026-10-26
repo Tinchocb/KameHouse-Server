@@ -142,7 +142,11 @@ func (c *Client) fetchThemes(ctx context.Context, malID int) ([]skipdetect.Theme
 		}
 		if resp.StatusCode == http.StatusTooManyRequests {
 			resp.Body.Close()
-			time.Sleep(2 * time.Second)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(2 * time.Second):
+			}
 			continue
 		}
 		break
@@ -278,6 +282,13 @@ func (c *Client) DownloadAudio(ctx context.Context, audioURL, destPath string) e
 		os.Remove(tmp)
 		return err
 	}
-	f.Close()
-	return os.Rename(tmp, destPath)
+	if err := f.Close(); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, destPath); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return nil
 }

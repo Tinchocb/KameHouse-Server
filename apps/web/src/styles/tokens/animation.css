@@ -7,8 +7,8 @@
 :root {
   /* Transitions.dev canonical scale + KameHouse extensions
      --duration-quick  = 150ms → modal/dropdown CLOSE, text swap, tooltip appear
-     --duration-fast   = 250ms → icon swap, dropdown/modal OPEN, tabs sliding, page slide
-     --duration-base   = 250ms → alias KameHouse (mismo valor que fast)
+     --duration-fast   = 150ms → alias de --duration-quick; igual que la clase duration-fast de Tailwind
+     --duration-base   = 250ms → icon swap, dropdown/modal OPEN, tabs sliding, page slide (usar este para 250 ms)
      --duration-medium = 350ms → panel close, toast close
      --duration-slow   = 400ms → panel open, skeleton reveal, input clear
      --duration-very-slow = 500ms → badge appear, text reveal, success check */
@@ -16,8 +16,8 @@
   --duration-instant:   50ms;
   --duration-micro:     80ms;
   --duration-quick:     150ms;
-  --duration-fast:      250ms;   /* transitions.dev canonical — icon swap, modal open, tabs */
-  --duration-base:      250ms;   /* alias KameHouse — mantiene compatibilidad existente */
+  --duration-fast:      var(--duration-quick);   /* alias de 150 ms: no usar para 250 ms, para eso --duration-base */
+  --duration-base:      250ms;   /* duración por defecto del sistema — mantiene compatibilidad existente */
   --duration-medium:    350ms;
   --duration-slow:      400ms;
   --duration-very-slow: 500ms;
@@ -25,7 +25,9 @@
   --duration-slowest:   800ms;
 
   /* Rotación automática de carruseles de Hero (Home Spotlight / Películas) */
-  --hero-rotation-duration: 8000ms;
+  --hero-rotation-duration: 5000ms;
+  --dot-accent: var(--brand-accent-hex);
+  --dot-wave-delay: 0ms;
 
   /* Alias --dur para uso inline en keyframes */
   --dur: var(--duration-base);
@@ -84,10 +86,13 @@
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1); }
 }
-/* ─── Cinematic Orb Animations (GPU-composited) ──────────────────────── */
-@keyframes pulse-glow-soft {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50%      { opacity: 1; transform: scale(1.08); }
+
+/* Anillo de esferas del dragón de la pantalla de carga: todas se encienden y apagan a la vez, en círculo,
+   como al invocar a Shenlong. index.html, public/splash.html y el overlay de React usan esta misma animación. */
+@keyframes ball-charge {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); }
+  35%      { filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.75)) grayscale(0) brightness(1.1); }
+  70%      { filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); }
 }
 
 /* Music Bars: barras de equalizer que oscilan mientras suena audio */
@@ -96,12 +101,33 @@
   50%      { transform: scaleY(1); }
 }
 
-/* Hero Progress: barra del carrusel del home (8s lineal, solo compositor).
+/* Hero Progress: barra del carrusel del home (5s lineal, solo compositor).
    Usa scaleX en lugar de width para evitar layout + paint en cada frame.
    El elemento debe tener w-full y transform-origin aplicado por la clase. */
 @keyframes hero-progress {
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
+}
+
+/* Apple Dynamic Island Carousel Dots: rebote elástico al activarse la cápsula,
+   ola sinusoidal en los puntos vecinos y anillo expansivo de aterrizaje. */
+@keyframes dot-impact-jelly {
+  0%   { transform: scaleX(0.68) scaleY(1.38); }
+  38%  { transform: scaleX(1.14) scaleY(0.86); }
+  70%  { transform: scaleX(0.96) scaleY(1.04); }
+  100% { transform: scaleX(1) scaleY(1); }
+}
+
+@keyframes dot-wave-hop {
+  0%   { transform: translateY(0) scale(1); }
+  40%  { transform: translateY(-4px) scale(1.18); }
+  75%  { transform: translateY(1px) scale(0.95); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes dot-shockwave-ring {
+  0%   { transform: translate(-50%, -50%) scale(0.45); opacity: 0.85; }
+  100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
 }
 
 /* ─── Clases de Animación ──────────────────────────────────────────── */
@@ -110,18 +136,17 @@
 .animate-slide-left    { animation: slide-left var(--duration-slow) var(--ease-smooth-out) both; }
 .animate-slide-right   { animation: slide-right var(--duration-slow) var(--ease-smooth-out) both; }
 .animate-scale-in      { animation: scale-in var(--duration-base) var(--ease-out) both; }
-.animate-pulse-glow-soft { animation: pulse-glow-soft 4s ease-in-out infinite; }
 .animate-music-bars    { animation: music-bars 0.9s ease-in-out infinite; transform-origin: bottom; }
+.animate-ball-charge   {
+  animation: ball-charge 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); /* apagada en reposo */
+}
 /* scaleX: solo compositor — sin layout ni paint. transform-origin: left para expandir desde el borde izquierdo. */
-.animate-hero-progress  { animation: hero-progress var(--hero-rotation-duration, 8s) linear forwards; transform-origin: left center; will-change: transform; }
+.animate-hero-progress  { animation: hero-progress var(--hero-rotation-duration, 5s) linear forwards; transform-origin: left center; will-change: transform; }
+.animate-dot-jelly      { animation: dot-impact-jelly 440ms var(--ease-smooth-out) both; }
+.animate-dot-wave       { animation: dot-wave-hop 360ms var(--ease-spring) var(--dot-wave-delay, 0ms) both; }
+.animate-dot-ring       { animation: dot-shockwave-ring 480ms var(--ease-expo-out) forwards; }
 
-@keyframes vhs-card-enter {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.vhs-shelf > article {
-  animation: vhs-card-enter 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
 
 /* ─── Transitions.dev Keyframes & Micro-interactions ────────────────── */
 
@@ -176,7 +201,6 @@
 .delay-150  { animation-delay: 150ms; }
 .delay-200  { animation-delay: 200ms; }
 .delay-250  { animation-delay: 250ms; }
-.delay-300  { animation-delay: 300ms; }
 .delay-350  { animation-delay: 350ms; }
 
 /* ─── Accesibilidad: Reducción de movimiento ──────────────────────────── */
@@ -186,9 +210,15 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    /* Sin retraso: con `both` el elemento seguiría oculto durante su `delay-*` aunque la animación dure 0,01 ms. */
+    animation-delay: 0s !important;
+    transition-delay: 0s !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* Anillo quieto al 70 %: sin ciclo de encendido. */
+  .animate-ball-charge { animation: none; opacity: 0.7; }
 
   /* Los pseudo-elementos de View Transitions no los alcanza el selector de
      arriba: sin esto el reproductor seguiría fundiéndose al abrir/cerrar. */

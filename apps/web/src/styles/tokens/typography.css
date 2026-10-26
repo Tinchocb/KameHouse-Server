@@ -4,6 +4,14 @@
    ╚════════════════════════════════════════════════════════════════════════╝ */
 
 :root {
+  /* ─── Micro-texto (text-2xs..5xs de Tailwind) ──────────────────────────
+     Etiquetas, badges y metadatos. En modo TV (10-foot UI) suben ~30%: a 2-3 m
+     9-11px no se leen. Tailwind los lee de acá (fontSize en tailwind.config.ts). */
+  --fs-2xs: 11px;
+  --fs-3xs: 11px;   /* mínimo legible (escala semántica: Caption 11); antes 10px */
+  --fs-4xs: 10px;   /* antes 9px */
+  --fs-5xs: 9px;    /* antes 8px */
+
   /* ─── Font Stacks ───────────────────────────────────────────────────── */
   --font-sans:      "Outfit Variable", "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display:   "Outfit Variable", "Outfit", ui-sans-serif, system-ui, sans-serif;
@@ -65,39 +73,66 @@
   --tracking-cinema-xl:  0.5em;   /* decoración vertical hero */
 
   /* ─── Estilos de Display (Hero, logos grandes) ──────────────────────── */
-  --display-xl:   var(--text-9xl) / var(--leading-none) var(--font-display) var(--weight-normal) var(--tracking-tighter);
-  --display-lg:   var(--text-8xl) / var(--leading-none) var(--font-display) var(--weight-normal) var(--tracking-tighter);
-  --display-md:   var(--text-7xl) / var(--leading-tight) var(--font-display) var(--weight-normal) var(--tracking-tight);
-  --display-sm:   var(--text-6xl) / var(--leading-tight) var(--font-display) var(--weight-normal) var(--tracking-tight);
-  --display-xs:   var(--text-5xl) / var(--leading-tight) var(--font-display) var(--weight-normal) var(--tracking-tight);
+  --display-xl:   var(--weight-normal) var(--text-9xl) / var(--leading-none) var(--font-display);
+  --display-lg:   var(--weight-normal) var(--text-8xl) / var(--leading-none) var(--font-display);
+  --display-md:   var(--weight-normal) var(--text-7xl) / var(--leading-tight) var(--font-display);
+  --display-sm:   var(--weight-normal) var(--text-6xl) / var(--leading-tight) var(--font-display);
+  --display-xs:   var(--weight-normal) var(--text-5xl) / var(--leading-tight) var(--font-display);
 
-  /* ─── Estilos de Heading (tracking-tight para look premium) ─────────── */
-  --h1:  var(--text-5xl) / var(--leading-tight) var(--font-display) var(--weight-medium) var(--tracking-tight);
-  --h2:  var(--text-4xl) / var(--leading-tight) var(--font-display) var(--weight-medium) var(--tracking-tight);
-  --h3:  var(--text-3xl) / var(--leading-snug) var(--font-display) var(--weight-medium) var(--tracking-tight);
-  --h4:  var(--text-2xl) / var(--leading-snug) var(--font-sans) var(--weight-normal) var(--tracking-normal);
-  --h5:  var(--text-xl)  / var(--leading-normal) var(--font-sans) var(--weight-normal) var(--tracking-normal);
-  --h6:  var(--text-lg)  / var(--leading-normal) var(--font-sans) var(--weight-normal) var(--tracking-wide);
+  /* ─── Estilos de Heading (look premium) ─────────── */
+  --h1:  var(--weight-medium) var(--text-5xl) / var(--leading-tight) var(--font-display);
+  --h2:  var(--weight-medium) var(--text-4xl) / var(--leading-tight) var(--font-display);
+  --h3:  var(--weight-medium) var(--text-3xl) / var(--leading-snug) var(--font-display);
+  --h4:  var(--weight-normal) var(--text-2xl) / var(--leading-snug) var(--font-sans);
+  --h5:  var(--weight-normal) var(--text-xl)  / var(--leading-normal) var(--font-sans);
+  --h6:  var(--weight-normal) var(--text-lg)  / var(--leading-normal) var(--font-sans);
 
   /* ─── Body Styles ───────────────────────────────────────────────────── */
-  --body-lg:   var(--text-lg)   / var(--leading-relaxed) var(--font-sans) var(--weight-normal) var(--tracking-normal);
-  --body-md:   var(--text-base) / var(--leading-relaxed) var(--font-sans) var(--weight-normal) var(--tracking-normal);
-  --body-sm:   var(--text-sm)   / var(--leading-normal) var(--font-sans) var(--weight-normal) var(--tracking-normal);
-  --body-xs:   var(--text-xs)   / var(--leading-normal) var(--font-sans) var(--weight-medium) var(--tracking-wide);
+  --body-lg:   var(--weight-normal) var(--text-lg)   / var(--leading-relaxed) var(--font-sans);
+  --body-md:   var(--weight-normal) var(--text-base) / var(--leading-relaxed) var(--font-sans);
+  --body-sm:   var(--weight-normal) var(--text-sm)   / var(--leading-normal) var(--font-sans);
+  --body-xs:   var(--weight-medium) var(--text-xs)   / var(--leading-normal) var(--font-sans);
 
   /* ─── UI Styles (botones, labels, badges) ───────────────────────────── */
-  --button-lg:  var(--text-base) / var(--leading-none) var(--font-sans) var(--weight-semibold) var(--tracking-wider);
-  --button-md:  var(--text-sm)   / var(--leading-none) var(--font-sans) var(--weight-semibold) var(--tracking-wider);
-  --button-sm:  var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-bold) var(--tracking-widest);
-  --button-xs:  var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-black) var(--tracking-ultra);
+  --button-lg:  var(--weight-semibold) var(--text-base) / var(--leading-none) var(--font-sans);
+  --button-md:  var(--weight-semibold) var(--text-sm)   / var(--leading-none) var(--font-sans);
+  --button-sm:  var(--weight-bold) var(--text-xs)   / var(--leading-none) var(--font-sans);
+  --button-xs:  var(--weight-black) var(--text-xs)   / var(--leading-none) var(--font-sans);
 
-  --label-lg:   var(--text-sm)   / var(--leading-normal) var(--font-sans) var(--weight-semibold) var(--tracking-wide);
-  --label-md:   var(--text-xs)   / var(--leading-normal) var(--font-sans) var(--weight-medium) var(--tracking-wider);
-  --label-sm:   var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-bold) var(--tracking-ultra);
+  --label-lg:   var(--weight-semibold) var(--text-sm)   / var(--leading-normal) var(--font-sans);
+  --label-md:   var(--weight-medium) var(--text-xs)   / var(--leading-normal) var(--font-sans);
+  --label-sm:   var(--weight-bold) var(--text-xs)   / var(--leading-none) var(--font-sans);
 
-  --badge:      var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-bold) var(--tracking-widest);
-  --caption:    var(--text-xs)   / var(--leading-normal) var(--font-sans) var(--weight-medium) var(--tracking-wide);
-  --overline:   var(--text-xs)   / var(--leading-none) var(--font-sans) var(--weight-black) var(--tracking-ultra);
+  --badge:      var(--weight-bold) var(--text-xs)   / var(--leading-none) var(--font-sans);
+  --caption:    var(--weight-medium) var(--text-xs)   / var(--leading-normal) var(--font-sans);
+  --overline:   var(--weight-black) var(--text-xs)   / var(--leading-none) var(--font-sans);
+
+  /* ─── Escala semántica (A-9) — 6 roles; los pasos de arriba se conservan ─────
+     Display 36–52/800 · Title 24/700 · Headline 16/600 · Body 14/400 ·
+     Label 12/600 · Caption 11/500 (mínimo). Mayúscula espaciada: solo
+     sobreetiquetas cortas y hero; mono: solo datos. Utilidades: .type-*  */
+  --type-display-size:     clamp(2.25rem, 1.6rem + 2vw, 3.25rem);   /* 36–52px */
+  --type-display-weight:   var(--weight-extrabold);
+  --type-display-leading:  var(--leading-tight);
+  --type-title-size:       1.5rem;                                   /* 24px */
+  --type-title-weight:     var(--weight-bold);
+  --type-title-leading:    var(--leading-snug);
+  --type-headline-size:    1rem;                                     /* 16px */
+  --type-headline-weight:  var(--weight-semibold);
+  --type-headline-leading: var(--leading-snug);
+  --type-body-size:        0.875rem;                                 /* 14px */
+  --type-body-weight:      var(--weight-normal);
+  --type-body-leading:     var(--leading-normal);
+  --type-label-size:       0.75rem;                                  /* 12px */
+  --type-label-weight:     var(--weight-semibold);
+  --type-label-leading:    var(--leading-normal);
+  --type-caption-size:     0.6875rem;                                /* 11px */
+  --type-caption-weight:   var(--weight-medium);
+  --type-caption-leading:  var(--leading-normal);
+  /* Título de página (h1 global): 28–34px, no el --display-xl de 104–128px */
+  --page-title-size:       clamp(1.75rem, 1.5rem + 0.8vw, 2.125rem);
+  --page-title-weight:     var(--weight-extrabold);
+  --page-title: var(--page-title-weight) var(--page-title-size) / var(--leading-tight) var(--font-display);
 
   /* ─── Numeric / Tabular ─────────────────────────────────────────────── */
   --numeric:    var(--text-base) / var(--leading-none) var(--font-numeric) var(--weight-medium) var(--tracking-normal);
@@ -105,19 +140,27 @@
 }
 
 /* ─── Clases utilitarias (solo las usadas en tsx; las variables --* se conservan) ─── */
-.text-h2 { font: var(--h2); }
-
 .text-body-md { font: var(--body-md); }
-
 
 .text-label-md { font: var(--label-md); }
 .text-label-sm { font: var(--label-sm); }
 
-.text-badge { font: var(--badge); }
 .text-caption { font: var(--caption); }
-
 
 .font-sans      { font-family: var(--font-sans); }
 .font-display   { font-family: var(--font-display); }
 .font-mono      { font-family: var(--font-mono); }
 .text-hero-title { font-size: var(--hero-title-size); line-height: var(--hero-title-leading); }
+
+/* Escala semántica (A-9). Prefijo `type-` para no chocar con los colores de texto. */
+.type-title    { font-family: var(--font-display); font-size: var(--type-title-size);    font-weight: var(--type-title-weight);    line-height: var(--type-title-leading);    letter-spacing: var(--tracking-tight); }
+.type-headline { font-family: var(--font-sans);    font-size: var(--type-headline-size); font-weight: var(--type-headline-weight); line-height: var(--type-headline-leading); }
+.type-body     { font-family: var(--font-sans);    font-size: var(--type-body-size);     font-weight: var(--type-body-weight);     line-height: var(--type-body-leading); }
+.type-label    { font-family: var(--font-sans);    font-size: var(--type-label-size);    font-weight: var(--type-label-weight);    line-height: var(--type-label-leading); }
+.type-caption  { font-family: var(--font-sans);    font-size: var(--type-caption-size);  font-weight: var(--type-caption-weight);  line-height: var(--type-caption-leading); }
+[data-tv="true"] {
+  --fs-2xs: 14px;
+  --fs-3xs: 13px;
+  --fs-4xs: 12px;
+  --fs-5xs: 11px;
+}

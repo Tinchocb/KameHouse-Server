@@ -55,6 +55,18 @@ func (h *Handler) HandleGetSeriesSagas(c echo.Context) error {
 		return h.RespondWithData(c, []dto.SagaDTO{})
 	}
 
+	etag := fmt.Sprintf(`W/"sagas-%d"`, media.TmdbID)
+	c.Response().Header().Set("ETag", etag)
+	c.Response().Header().Set("Cache-Control", "no-cache")
+
+	if c.Request().Method == http.MethodGet || c.Request().Method == http.MethodHead {
+		if ifNoneMatch := c.Request().Header.Get("If-None-Match"); ifNoneMatch != "" {
+			if ifNoneMatch == etag || ifNoneMatch == "*" {
+				return c.NoContent(http.StatusNotModified)
+			}
+		}
+	}
+
 	sagaInfos := scanner.GetDragonBallSagaInfo(media.TmdbID)
 	sagas := make([]dto.SagaDTO, 0, len(sagaInfos))
 	for _, s := range sagaInfos {

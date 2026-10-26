@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -22,6 +23,14 @@ type CachedFingerprint struct {
 // ruta absoluta, tamaño del archivo, timestamp de modificación (nano),
 // ventana de tiempo (startSec, lengthSec con 3 decimales) y audioIdx.
 func ComputeFingerprintCacheKey(path string, startSec, lengthSec float64, audioIdx int) (string, error) {
+	// Un archivo de Drive no tiene ruta en disco: no se puede hacer stat. Su identidad es el
+	// id de Drive dentro de la ruta gdrive://, así que la clave se arma con eso. Sin esto la
+	// caché no guardaba nada para Drive y cada escaneo volvía a bajar y huellar todo.
+	if strings.HasPrefix(path, "gdrive://") {
+		payload := fmt.Sprintf("gdrive|%s|%.3f|%.3f|%d", path, startSec, lengthSec, audioIdx)
+		sum := sha256.Sum256([]byte(payload))
+		return hex.EncodeToString(sum[:]), nil
+	}
 	fi, err := os.Stat(path)
 	if err != nil {
 		return "", err
@@ -108,12 +117,14 @@ func PutCachedFingerprint(cacheDir, key string, fp *CachedFingerprint) error {
 	return nil
 }
 
-// FingerprintRangeCached huella una ventana [startSec, startSec+lengthSec] de path
-// consultando primero la caché en disco si cacheDir != "".
-func FingerprintRangeCached(ctx context.Context, cacheDir, fpcalcBin, ffmpegPath, path string, startSec, lengthSec float64, audioIdx int) ([]int, float64, error) {
+// FingerprintRangeCached huella una ventana [startSec, startSec+lengthSec] consultando primero
+// la caché en disco si cacheDir != "". keyPath identifica el archivo en la clave (la ruta
+// estable, p. ej. gdrive://…); inputPath es lo que ffmpeg abre (p. ej. la URL interna de Drive).
+// Separarlos evita que la clave dependa de un token que cambia en cada arranque.
+func FingerprintRangeCached(ctx context.Context, cacheDir, fpcalcBin, ffmpegPath, keyPath, inputPath string, startSec, lengthSec float64, audioIdx int) ([]int, float64, error) {
 	var key string
 	if cacheDir != "" {
-		if k, err := ComputeFingerprintCacheKey(path, startSec, lengthSec, audioIdx); err == nil {
+		if k, err := ComputeFingerprintCacheKey(keyPath, startSec, lengthSec, audioIdx); err == nil {
 			key = k
 			if cached, ok := GetCachedFingerprint(cacheDir, key); ok {
 				return cached.Fingerprint, cached.Duration, nil
@@ -121,7 +132,7 @@ func FingerprintRangeCached(ctx context.Context, cacheDir, fpcalcBin, ffmpegPath
 		}
 	}
 
-	fp, dur, err := FingerprintRange(ctx, fpcalcBin, ffmpegPath, path, startSec, lengthSec, audioIdx)
+	fp, dur, err := FingerprintRange(ctx, fpcalcBin, ffmpegPath, inputPath, startSec, lengthSec, audioIdx)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -36,13 +36,14 @@ const REVEAL_EASING = "cubic-bezier(0.23, 1, 0.32, 1)"
  * corta y casi sin escalonado: con 520 ms y retrasos acumulados, al scrollear
  * rápido el contenido llegaba tarde y la lista se sentía lenta.
  */
-export type RevealVariant = "default" | "list"
+type RevealVariant = "default" | "list"
 
 export function revealConfigForTier(tier: MotionTier, variant: RevealVariant = "default"): RevealConfig | null {
     if (tier === "off") return null
     if (variant === "list") {
-        if (tier === "subtle") return { y: 0, duration: 200, stagger: 0, maxDelay: 0 }
-        return { y: 10, duration: 300, stagger: 24, maxDelay: 72 }
+        // Solo opacidad, 200 ms: con el ascenso de 10 px y 300 ms, cada fila que entra al scrollear
+        // se movía contra el scroll y quedaba a medio fundido (~1 por cuadro durante el scroll).
+        return { y: 0, duration: 200, stagger: 0, maxDelay: 0 }
     }
     if (tier === "subtle") return { y: 0, duration: 320, stagger: 30, maxDelay: 180 }
     return { y: 18, duration: 520, stagger: 45, maxDelay: 360 }
@@ -110,9 +111,29 @@ export function readingOrder(a: DOMRectReadOnly, b: DOMRectReadOnly): number {
     return a.left - b.left
 }
 
+/** Fracción del elemento que debe asomar para revelarlo. */
+const REVEAL_RATIO = 0.08
+/** Alto visible (px) que basta para revelar, aunque no llegue a la fracción: contenedores de listas largas. */
+const REVEAL_MIN_VISIBLE_PX = 64
+/**
+ * Umbrales finos: con uno solo (0.08), un contenedor más alto que ~12 pantallas
+ * (la sección de una grilla de cien títulos) nunca llegaba al 8 % visible y
+ * quedaba invisible para siempre.
+ */
+const REVEAL_THRESHOLDS = [0, 0.001, 0.0025, 0.005, 0.01, 0.02, 0.04, REVEAL_RATIO]
+
+function isRevealable(e: IntersectionObserverEntry): boolean {
+    if (!e.isIntersecting) return false
+    const ratio = e.intersectionRatio
+    const visible = e.intersectionRect?.height
+    // Sin datos de intersección (entornos de prueba, navegadores viejos): vale isIntersecting.
+    if (ratio === undefined || visible === undefined) return true
+    return ratio >= REVEAL_RATIO || visible >= REVEAL_MIN_VISIBLE_PX
+}
+
 function handleEntries(entries: IntersectionObserverEntry[]) {
     const entering = entries
-        .filter((e) => e.isIntersecting && tracked.has(e.target))
+        .filter((e) => isRevealable(e) && tracked.has(e.target))
         .sort((a, b) => readingOrder(a.boundingClientRect, b.boundingClientRect))
     entering.forEach((entry, i) => {
         const el = entry.target as HTMLElement
@@ -130,16 +151,65 @@ function getObserver(): IntersectionObserver | null {
     if (!observer) {
         // El borde inferior se achica un 8%: el elemento aparece cuando ya asoma,
         // no cuando apenas toca el borde (ahí el movimiento no se llega a ver).
-        observer = new IntersectionObserver(handleEntries, { threshold: 0.08, rootMargin: "0px 0px -8% 0px" })
+        observer = new IntersectionObserver(handleEntries, { threshold: REVEAL_THRESHOLDS, rootMargin: "0px 0px -8% 0px" })
     }
     return observer
+}
+
+interface QueuedReveal {
+    el: HTMLElement
+    config: RevealConfig
+    key: string | undefined
+    cancelled: boolean
+    release: (() => void) | null
+}
+let revealQueue: QueuedReveal[] = []
+let revealFlushScheduled = false
+
+function flushRevealQueue() {
+    revealFlushScheduled = false
+    const batch = revealQueue
+    revealQueue = []
+    const obs = getObserver()
+    if (!obs) return
+    const live = batch.filter((q) => !q.cancelled && !tracked.has(q.el) && !(q.key && revealedKeys.has(q.key)))
+    // Todas las lecturas antes de cualquier escritura: una sola medición de layout para el lote.
+    const inView = live.map((q) => isInViewport(q.el))
+    live.forEach((q, i) => {
+        q.release = registerReveal(obs, q.el, q.config, q.key, inView[i])
+    })
+}
+
+/**
+ * Como `observeReveal`, pero el registro se junta con el de los demás elementos que montan en
+ * el mismo commit y se resuelve en un microtask (antes del pintado, sin parpadeo). Un ref
+ * callback por fila de una lista leía su posición justo después de que la fila anterior se
+ * ocultó: un layout forzado por fila (70 ms con ~20 episodios, medido con perfil).
+ */
+export function observeRevealBatched(el: HTMLElement, config: RevealConfig, key?: string): () => void {
+    if (!getObserver() || tracked.has(el) || (key && revealedKeys.has(key))) return () => {}
+    const queued: QueuedReveal = { el, config, key, cancelled: false, release: null }
+    revealQueue.push(queued)
+    if (!revealFlushScheduled) {
+        revealFlushScheduled = true
+        queueMicrotask(flushRevealQueue)
+    }
+    return () => {
+        queued.cancelled = true
+        queued.release?.()
+    }
 }
 
 /** Registra un elemento para revelarlo al entrar en pantalla. Devuelve la baja. */
 export function observeReveal(el: HTMLElement, config: RevealConfig, key?: string): () => void {
     const obs = getObserver()
     if (!obs || tracked.has(el) || (key && revealedKeys.has(key))) return () => {}
-    if (isInViewport(el)) {
+    return registerReveal(obs, el, config, key, isInViewport(el))
+}
+
+/** Escritura del registro: separada de la lectura (`isInViewport`) para poder agrupar lecturas. */
+function registerReveal(obs: IntersectionObserver, el: HTMLElement, config: RevealConfig, key: string | undefined, inView: boolean): () => void {
+    if (inView) {
         rememberRevealed(key)
         return () => {}
     }
@@ -167,22 +237,6 @@ export function useScrollReveal<T extends HTMLElement>(ref: React.RefObject<T | 
 }
 
 /**
- * Revela los hijos directos del contenedor (grillas y listas) sin agregar
- * envoltorios, así no cambia el layout. `key` debe cambiar cuando cambian los
- * hijos (p. ej. la cantidad de ítems o el filtro) para registrar los nuevos.
- */
-export function useRevealChildren<T extends HTMLElement>(ref: React.RefObject<T | null>, key?: string | number | boolean | null) {
-    const tier = useMotionTier()
-    React.useLayoutEffect(() => {
-        const root = ref.current
-        const config = revealConfigForTier(tier)
-        if (!root || !config) return
-        const releases = [...root.children].map((child) => observeReveal(child as HTMLElement, config))
-        return () => releases.forEach((release) => release())
-    }, [ref, tier, key])
-}
-
-/**
  * Ref callback que revela el elemento al entrar en pantalla; con limpieza al
  * desmontar (React 19). Para ítems que montan y desmontan solos, como las
  * filas de una lista virtualizada: con `key`, cada ítem se revela una sola vez
@@ -194,6 +248,6 @@ export function useRevealRef<T extends HTMLElement>(key?: string, variant: Revea
     return React.useCallback((el: T | null) => {
         const config = revealConfigForTier(tier, variant)
         if (!el || !config) return undefined
-        return observeReveal(el, config, key ?? el.dataset.revealKey)
+        return observeRevealBatched(el, config, key ?? el.dataset.revealKey)
     }, [tier, key, variant])
 }

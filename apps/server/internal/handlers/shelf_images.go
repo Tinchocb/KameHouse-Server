@@ -67,6 +67,26 @@ func shelfImageURLs(media []models.LibraryMedia) []string {
 	return out
 }
 
+// episodeStillURLs devuelve los stills de episodios de TMDB en w300, el tamaño con que la
+// Cronología dibuja sus momentos (tmdbSize="w300" en EpisodeThumbnailImg). Sin esto, la
+// primera visita a la Cronología pedía a TMDB, uno por uno, cientos de stills.
+func episodeStillURLs(images []string) []string {
+	out := make([]string, 0, len(images))
+	seen := make(map[string]struct{}, len(images))
+	for _, img := range images {
+		if !strings.HasPrefix(img, "https://image.tmdb.org/") {
+			continue
+		}
+		u := tmdbSized(img, "w300")
+		if _, dup := seen[u]; dup {
+			continue
+		}
+		seen[u] = struct{}{}
+		out = append(out, u)
+	}
+	return out
+}
+
 // shelfImageProxy es el proxy de imágenes de las rutas (routes.go).
 var shelfImageProxy *util.ImageProxy
 
@@ -96,6 +116,19 @@ func (h *Handler) prewarmShelfImages(delay time.Duration) {
 		n := ip.Prewarm(urls, 3)
 		if n > 0 {
 			h.App.Logger.Info().Int("fetched", n).Int("total", len(urls)).Dur("elapsed", time.Since(start)).Msg("images: Shelf images cached locally")
+		}
+
+		// Stills de episodios: después de la estantería y con menos concurrencia, para no
+		// competir con lo que el usuario está mirando.
+		var stills []string
+		if err := h.App.Database.Gorm().Model(&models.LibraryEpisode{}).Where("image LIKE ?", "https://image.tmdb.org/%").Distinct().Pluck("image", &stills).Error; err != nil {
+			return
+		}
+		stillURLs := episodeStillURLs(stills)
+		start = time.Now()
+		n = ip.Prewarm(stillURLs, 2)
+		if n > 0 {
+			h.App.Logger.Info().Int("fetched", n).Int("total", len(stillURLs)).Dur("elapsed", time.Since(start)).Msg("images: Episode stills cached locally")
 		}
 	}()
 }

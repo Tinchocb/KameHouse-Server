@@ -7,6 +7,8 @@
 const RULES: Array<[RegExp, string]> = [
     [/too many requests/i, "La plataforma recibió demasiadas solicitudes. Espera un momento y vuelve a intentar."],
     [/library not available/i, "La biblioteca aún no está disponible. Reintenta en unos segundos."],
+    [/failed to fetch|networkerror|load failed/i, "No se pudo conectar con el servidor de KameHouse."],
+    [/database not initialized/i, "El servidor todavía se está iniciando. Reintenta en unos segundos."],
     [/google drive integration is not (active|enabled)/i, "Google Drive no está activo. Actívalo en Ajustes."],
     [/access denied|forbidden|not allowed/i, "No se puede acceder a ese archivo o carpeta desde KameHouse."],
     [/not found/i, "No se encontró ese contenido en tu biblioteca. Puede haberse movido o eliminado."],

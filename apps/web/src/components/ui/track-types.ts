@@ -88,6 +88,7 @@ export interface SubtitleTrack {
     title: string
     /**
      * Container codec: "ass" | "ssa" | "subrip" | "webvtt" | "hdmv_pgs_subtitle".
+     * Los subtítulos externos (.srt/.ass junto al video) usan índices desde 1000.
      * The player uses this to choose the renderer (jassub vs. native <track>).
      */
     codec?: string
@@ -112,6 +113,19 @@ export interface SubtitleTrack {
      * must NOT be used.
      */
     isImageBased?: boolean
+    /**
+     * Pista embebida en un archivo de Google Drive que todavía no se extrajo: ver la
+     * pista en el menú es posible, pero no tiene `url` hasta que el usuario la extrae
+     * (lee el archivo completo una vez).
+     */
+    needsExtraction?: boolean
+    /**
+     * Pista de texto de un archivo de Google Drive que el servidor lee por franjas de
+     * tiempo, siguiendo la posición del reproductor (no hace falta bajar el archivo
+     * entero). Tiene `url`, pero lo que devuelve crece mientras se reproduce: el
+     * reproductor la recarga cuando hay subtítulos nuevos cerca de la posición.
+     */
+    progressive?: boolean
 }
 
 // ── UI Props ─────────────────────────────────────────────────────────────────────
@@ -125,6 +139,12 @@ export interface PlayerSettingsMenuProps {
      * superficie con backdrop-filter: si no, el panel queda atrapado en su
      * stacking context (debajo de los overlays) y su blur no funciona. */
     panelContainer?: HTMLElement | null
+    /** Qué agrupa el menú: "media" = audio y subtítulos en un solo panel; "more" =
+     * velocidad, maratón, calidad e imagen; "all" (por defecto) = menú completo. */
+    variant?: "all" | "media" | "more"
+    /** Navegación por capítulos dentro de "Más" (solo si hay capítulos). */
+    onPrevChapter?: () => void
+    onNextChapter?: () => void
     audioTracks: AudioTrack[]
     activeAudioIndex: number
     onSelectAudio: (track: AudioTrack) => void

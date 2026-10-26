@@ -7,7 +7,7 @@ import { DRAGON_BALL_SERIES } from "./dragonball_sagas"
  * instalación). La resolución tmdbId → id interno se hace en tiempo de
  * ejecución contra la colección de la biblioteca del usuario.
  */
-export type TimelineEntry = {
+type TimelineEntry = {
     tmdbId: number
     /** Clave corta legible, útil para theming (`era-*`) y debugging. */
     key: string
@@ -22,7 +22,7 @@ export type TimelineEntry = {
  * a propósito (no forma parte del catálogo objetivo). Al terminar la última
  * entrega, la cadena simplemente no ofrece continuación.
  */
-export const DRAGON_BALL_TIMELINE: TimelineEntry[] = [
+const DRAGON_BALL_TIMELINE: TimelineEntry[] = [
     { tmdbId: DRAGON_BALL_SERIES.ORIGINAL, key: "original", label: "Dragon Ball",       canon: true },
     { tmdbId: DRAGON_BALL_SERIES.Z,        key: "z",        label: "Dragon Ball Z",     canon: true },
     { tmdbId: DRAGON_BALL_SERIES.GT,       key: "gt",       label: "Dragon Ball GT",    canon: false },

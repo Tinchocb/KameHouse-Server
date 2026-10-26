@@ -34,7 +34,15 @@ type ChunkedRange struct {
 }
 
 // ErrRangeNotSatisfiable is returned when the requested start lies past EOF.
-var ErrRangeNotSatisfiable = errors.New("drive: range not satisfiable")
+var ErrRangeNotSatisfiable error = rangeNotSatisfiableError{}
+
+// rangeNotSatisfiableError is the 416: the file is shorter than the reader believed (it
+// was replaced in Drive), which callers report as "changed" and not as a network failure.
+type rangeNotSatisfiableError struct{}
+
+func (rangeNotSatisfiableError) Error() string          { return "drive: range not satisfiable" }
+func (rangeNotSatisfiableError) DriveErrorKind() string { return ErrKindChanged }
+func (rangeNotSatisfiableError) DriveStatus() int       { return http.StatusRequestedRangeNotSatisfiable }
 
 // OpenChunkedRange opens [start, end] (end < 0 means up to EOF) fetching at most
 // chunk bytes per upstream request, with the next chunk prefetched while the
@@ -55,8 +63,13 @@ func OpenChunkedRange(ctx context.Context, fetch RangeFetcher, start, end, chunk
 	}
 
 	total := int64(-1)
+	responseEnd := firstEnd
 	if resp.StatusCode == http.StatusPartialContent {
-		total = totalFromContentRange(resp.Header.Get("Content-Range"))
+		responseEnd, total, err = validatePartialRange(resp, start, firstEnd, -1)
+		if err != nil {
+			_ = resp.Body.Close()
+			return nil, err
+		}
 	} else if resp.StatusCode == http.StatusOK && start == 0 {
 		// Upstream ignored the Range header and sends the whole file.
 		total = resp.ContentLength
@@ -79,18 +92,21 @@ func OpenChunkedRange(ctx context.Context, fetch RangeFetcher, start, end, chunk
 	}
 
 	r := &chunkReader{
-		ctx:   ctx,
-		fetch: fetch,
-		chunk: chunk,
-		pos:   start,
-		end:   effEnd,
-		cur:   resp.Body,
+		ctx:      ctx,
+		fetch:    fetch,
+		chunk:    chunk,
+		pos:      start,
+		end:      effEnd,
+		total:    total,
+		cur:      resp.Body,
+		curStart: start,
 	}
 	if resp.StatusCode == http.StatusOK {
 		// Full body already streaming: no further chunks needed.
 		r.single = true
+		r.curEnd = effEnd
 	} else {
-		r.curEnd = firstEnd
+		r.curEnd = responseEnd
 		r.prefetchNext()
 	}
 
@@ -101,6 +117,24 @@ func OpenChunkedRange(ctx context.Context, fetch RangeFetcher, start, end, chunk
 		Total:       total,
 		ContentType: resp.Header.Get("Content-Type"),
 	}, nil
+}
+
+// Validate every response before exposing bytes: a successful HTTP request can
+// still contain the wrong offset, a changed file, or an ignored Range header.
+func validatePartialRange(resp *http.Response, start, stop, expectedTotal int64) (int64, int64, error) {
+	v := resp.Header.Get("Content-Range")
+	spec, unitOK := strings.CutPrefix(v, "bytes ")
+	span, size, slashOK := strings.Cut(spec, "/")
+	a, b, dashOK := strings.Cut(span, "-")
+	first, e1 := strconv.ParseInt(a, 10, 64)
+	last, e2 := strconv.ParseInt(b, 10, 64)
+	total, e3 := strconv.ParseInt(size, 10, 64)
+	if resp.StatusCode != http.StatusPartialContent || !unitOK || !slashOK || !dashOK ||
+		e1 != nil || e2 != nil || e3 != nil || first != start || last < first ||
+		last > stop || total <= last || expectedTotal >= 0 && total != expectedTotal {
+		return 0, 0, fmt.Errorf("drive: unexpected upstream response %d (Content-Range %q) for bytes=%d-%d", resp.StatusCode, v, start, stop)
+	}
+	return last, total, nil
 }
 
 // chunkRetryDelays are the waits between attempts of one upstream chunk.
@@ -131,19 +165,6 @@ func retryingFetch(fetch RangeFetcher) RangeFetcher {
 	}
 }
 
-// totalFromContentRange parses the size from "bytes a-b/total" (-1 if unknown).
-func totalFromContentRange(v string) int64 {
-	i := strings.LastIndexByte(v, '/')
-	if i < 0 || v[i+1:] == "*" {
-		return -1
-	}
-	n, err := strconv.ParseInt(strings.TrimSpace(v[i+1:]), 10, 64)
-	if err != nil {
-		return -1
-	}
-	return n
-}
-
 type prefetched struct {
 	start int64
 	resp  *http.Response
@@ -151,14 +172,16 @@ type prefetched struct {
 }
 
 type chunkReader struct {
-	ctx    context.Context
-	fetch  RangeFetcher
-	chunk  int64
-	pos    int64 // next byte to deliver
-	end    int64 // last byte to deliver (inclusive)
-	cur    io.ReadCloser
-	curEnd int64 // last byte the current upstream response was asked for
-	single bool
+	ctx      context.Context
+	fetch    RangeFetcher
+	chunk    int64
+	pos      int64 // next byte to deliver
+	end      int64 // last byte to deliver (inclusive)
+	total    int64
+	cur      io.ReadCloser
+	curEnd   int64 // last byte the current upstream response was asked for
+	curStart int64
+	single   bool
 
 	next       chan prefetched
 	nextCancel context.CancelFunc
@@ -176,8 +199,23 @@ func (r *chunkReader) prefetchNext() {
 	r.next, r.nextCancel = ch, cancel
 	go func() {
 		resp, err := r.fetch(ctx, fmt.Sprintf("bytes=%d-%d", start, stop))
+		if err != nil {
+			cancel()
+		} else {
+			resp.Body = &cancelRangeBody{ReadCloser: resp.Body, cancel: cancel}
+		}
 		ch <- prefetched{start: start, resp: resp, err: err}
 	}()
+}
+
+type cancelRangeBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (b *cancelRangeBody) Close() error {
+	b.cancel()
+	return b.ReadCloser.Close()
 }
 
 // dropPrefetch cancels and releases a pending prefetch.
@@ -207,16 +245,30 @@ func (r *chunkReader) Read(p []byte) (int, error) {
 			p = p[:left]
 		}
 		if r.cur != nil {
+			if r.pos > r.curEnd {
+				_ = r.cur.Close()
+				r.cur = nil
+				continue
+			}
+			if left := r.curEnd - r.pos + 1; int64(len(p)) > left {
+				p = p[:left]
+			}
 			n, err := r.cur.Read(p)
 			r.pos += int64(n)
 			if n > 0 {
-				return n, nil
+				if errors.Is(err, io.EOF) {
+					err = nil
+				}
+				return n, err
 			}
 			if err == nil {
 				continue
 			}
-			if !errors.Is(err, io.EOF) || r.single {
+			if !errors.Is(err, io.EOF) {
 				return 0, err
+			}
+			if r.single || r.pos == r.curStart {
+				return 0, io.ErrUnexpectedEOF
 			}
 			_ = r.cur.Close()
 			r.cur = nil
@@ -238,7 +290,12 @@ func (r *chunkReader) openNext() error {
 		p := <-r.next
 		r.next, r.nextCancel = nil, nil
 		if p.err == nil && p.start == r.pos {
-			r.cur, r.curEnd = p.resp.Body, stop
+			last, _, err := validatePartialRange(p.resp, r.pos, stop, r.total)
+			if err != nil {
+				_ = p.resp.Body.Close()
+				return err
+			}
+			r.cur, r.curEnd, r.curStart = p.resp.Body, last, r.pos
 			r.prefetchNext()
 			return nil
 		}
@@ -250,7 +307,12 @@ func (r *chunkReader) openNext() error {
 	if err != nil {
 		return err
 	}
-	r.cur, r.curEnd = resp.Body, stop
+	last, _, err := validatePartialRange(resp, r.pos, stop, r.total)
+	if err != nil {
+		_ = resp.Body.Close()
+		return err
+	}
+	r.cur, r.curEnd, r.curStart = resp.Body, last, r.pos
 	r.prefetchNext()
 	return nil
 }

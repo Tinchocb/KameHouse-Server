@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
+import { AnimatePresence, m } from "framer-motion"
 import { AlertCircle, Check, Cloud, HardDrive, RefreshCw } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
+import { Button } from "@/components/ui/button"
+import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { IconSwap } from "@/components/ui/kinetics/icon-swap"
 import type { ScanLiveView } from "./views"
 
-export interface ScanStatusStat {
+interface ScanStatusStat {
     label: string
     value: number | string
     /** Con total se dibuja "valor / total" y una barra de cobertura. */
@@ -60,96 +64,108 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
     const failed = !running && view?.state === "error"
     const now = useNow(running || Boolean(view?.finishedAt))
     const SourceIcon = view?.source === "local" ? HardDrive : Cloud
+    const collapseSpring = useSpringPreset("tabContent")
 
     const title = running
-        ? view?.state === "running" ? view.title : "Iniciando escaneo…"
-        : failed ? view?.title ?? "Falló el escaneo"
+        ? view?.state === "running" ? view.title : "Iniciando el escaneo…"
+        : failed ? view?.title ?? "El escaneo falló"
         : "Biblioteca al día"
 
     const subtitle = running
         ? view?.state === "running" ? view.currentLine : "Conectando con las fuentes…"
-        : failed ? view?.error || "Revisá la conexión e intentá de nuevo."
+        : failed ? view?.error || "Revisa la conexión e inténtalo de nuevo."
         : view?.finishedAt
             ? [
-                `Último escaneo ${formatWhen(view.finishedAt, now)}`,
-                view.startedAt ? `duró ${formatDuration(view.finishedAt - view.startedAt)}` : null,
-                ...view.stats.filter(s => s.label === "Videos" || s.label === "Archivos").map(s => `${s.value} archivos`),
-                ...view.stats.filter(s => s.label === "Eliminados" && Number(s.value) > 0).map(s => `${s.value} eliminados`),
+                `Último escaneo: ${formatWhen(view.finishedAt, now)}`,
+                view.startedAt ? `duración ${formatDuration(view.finishedAt - view.startedAt)}` : null,
+                ...view.stats.filter(s => s.label === "Videos" || s.label === "Archivos").map(s => `${s.value === 1 ? "1 archivo" : `${s.value} archivos`}`),
+                ...view.stats.filter(s => s.label === "Eliminados" && Number(s.value) > 0).map(s => `${Number(s.value) === 1 ? "1 eliminado" : `${s.value} eliminados`}`),
             ].filter(Boolean).join(" · ")
-            : sourcesLabel ? "Todavía no escaneaste en esta sesión." : "Conectá Google Drive o agregá carpetas locales para escanear."
+            : sourcesLabel ? "Todavía no has escaneado en esta sesión." : "Conecta Google Drive o añade carpetas locales para escanear."
 
     return (
         <section
             aria-label="Estado del escáner"
             className={cn(
-                "rounded-2xl border overflow-hidden transition-colors duration-300",
+                "rounded-2xl border overflow-hidden transition-colors duration-base ease-smooth-out",
                 running ? "bg-brand-accent/[0.04] border-brand-accent/30"
-                    : failed ? "bg-red-950/20 border-red-500/25"
-                    : "bg-white/[0.02] border-white/10",
+                    : failed ? "bg-status-error/20 border-status-error/25"
+                    : "bg-[var(--neutral-elev-2)] border-[var(--neutral-separator)]",
             )}
         >
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5">
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                     <div
                         className={cn(
-                            "size-11 shrink-0 rounded-xl grid place-items-center border",
+                            "size-11 shrink-0 rounded-xl grid place-items-center border transition-colors duration-base ease-smooth-out",
                             running ? "bg-brand-accent/15 border-brand-accent/30 text-brand-accent"
-                                : failed ? "bg-red-500/10 border-red-500/30 text-red-400"
-                                : "bg-emerald-500/10 border-emerald-500/25 text-emerald-400",
+                                : failed ? "bg-status-error/10 border-status-error/30 text-status-error"
+                                : "bg-status-success/10 border-status-success/25 text-status-success",
                         )}
                         aria-hidden
                     >
-                        {running ? <RefreshCw className="size-5 animate-spin" />
-                            : failed ? <AlertCircle className="size-5" />
-                            : <Check className="size-5" />}
+                        {/* Fin del escaneo: el spinner cede su lugar a ✓ o ⚠ en la misma celda. */}
+                        <IconSwap swapKey={running ? "run" : failed ? "error" : "ok"}>
+                            {running ? <RefreshCw className="size-5 animate-spin" />
+                                : failed ? <AlertCircle className="size-5" />
+                                : <Check className="size-5" />}
+                        </IconSwap>
                     </div>
                     <div className="min-w-0" aria-live="polite">
                         <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-sm font-bold text-on-surface tracking-tight truncate">{title}</h3>
+                            <h3 key={title} className="text-sm font-bold text-on-surface tracking-tight truncate animate-text-swap-in">{title}</h3>
                             {sourcesLabel && (
-                                <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-3xs font-medium bg-white/5 border border-white/10 text-on-surface-variant shrink-0">
+                                <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-3xs font-medium bg-[var(--neutral-elev-3)] border border-[var(--neutral-separator)] text-on-surface-variant shrink-0">
                                     <SourceIcon className="size-3" />
                                     {running && view?.state === "running" ? view.sourceLabel : sourcesLabel}
                                 </span>
                             )}
                         </div>
-                        <p className={cn("text-2xs truncate mt-0.5", failed ? "text-red-300/90" : "text-on-surface-variant/75")} title={subtitle}>
+                        <p className={cn("text-2xs truncate mt-0.5", failed ? "text-status-error/90" : "text-label-2")} title={subtitle}>
                             {subtitle}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0 sm:flex-col sm:items-end sm:gap-1">
-                    <button
-                        type="button"
+                    <Button
+                        intent="primary"
+                        size="md"
                         onClick={onScan}
                         disabled={!canScan || running}
-                        className={cn(
-                            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-[filter,transform,background-color] duration-fast ease-smooth-out",
-                            !canScan || running
-                                ? "bg-white/[0.04] text-on-surface-variant/50 border border-white/10 cursor-not-allowed"
-                                : "bg-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 text-on-primary shadow-sm active:scale-95 cursor-pointer",
-                        )}
+                        leftIcon={<RefreshCw className="size-3.5" />}
+                        iconSpacing="0.5rem"
+                        className="flex-1 sm:flex-none"
                     >
-                        <RefreshCw className="size-3.5" />
-                        {running ? "Escaneando" : "Escanear"}
-                    </button>
+                        {running ? "Escaneando…" : "Escanear"}
+                    </Button>
                     {secondaryAction && (
-                        <button
-                            type="button"
+                        <Button
+                            intent="ghost"
+                            size="xs"
                             onClick={secondaryAction.onClick}
                             disabled={secondaryAction.disabled || running}
                             title={secondaryAction.title}
-                            className="text-3xs text-on-surface-variant/70 [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface underline-offset-2 hover:underline disabled:opacity-40 disabled:no-underline cursor-pointer disabled:cursor-not-allowed active:scale-95 transition-[color,transform] duration-fast"
+                            className="text-label-2"
                         >
                             {secondaryAction.label}
-                        </button>
+                        </Button>
                     )}
                 </div>
             </div>
 
-            {/* Progreso: solo mientras corre */}
+            {/* Progreso: solo mientras corre. Se colapsa como SectionBar: la altura anima
+                en el m.div y el padding va en el div interior, para que height 0 sea 0. */}
+            <AnimatePresence initial={false}>
             {running && (
+                <m.div
+                    key="progress"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={collapseSpring}
+                    className="overflow-hidden"
+                >
                 <div className="px-4 sm:px-5 pb-4 space-y-2">
                     {view?.state === "running" && (
                         <ol className="flex items-center gap-1.5 text-3xs font-medium" aria-label="Etapas del escaneo">
@@ -161,7 +177,7 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                                         aria-current={state === "active" ? "step" : undefined}
                                         className={cn(
                                             "flex items-center gap-1 min-w-0",
-                                            state === "active" ? "text-brand-accent" : state === "done" ? "text-emerald-300/80" : "text-on-surface-variant/40",
+                                            state === "active" ? "text-brand-accent" : state === "done" ? "text-status-success/80" : "text-on-surface-variant/40",
                                         )}
                                     >
                                         {state === "done" ? <Check className="size-3 shrink-0" /> : <step.icon className={cn("size-3 shrink-0", state === "active" && "animate-pulse")} />}
@@ -174,7 +190,7 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                         </ol>
                     )}
                     <div
-                        className="relative h-1.5 rounded-full bg-white/10 overflow-hidden"
+                        className="relative h-1.5 rounded-full bg-[var(--neutral-elev-3)] overflow-hidden"
                         role="progressbar"
                         aria-valuemin={0}
                         aria-valuemax={100}
@@ -184,22 +200,24 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                         {view?.state !== "running" || view.percent === null ? (
                             <div className="absolute inset-0 origin-left rounded-full bg-brand-accent/80 animate-indeterminate-progress motion-reduce:animate-none motion-reduce:w-1/3" />
                         ) : (
-                            <div className="h-full w-full rounded-full bg-brand-accent origin-left transition-transform duration-300 ease-out" style={{ transform: `scaleX(${Math.min(100, Math.max(0, view.percent)) / 100})` }} />
+                            <div className="h-full w-full rounded-full bg-brand-accent origin-left transition-transform duration-slow ease-smooth-out" style={{ transform: `scaleX(${Math.min(100, Math.max(0, view.percent)) / 100})` }} />
                         )}
                     </div>
                 </div>
+                </m.div>
             )}
+            </AnimatePresence>
 
             {/* Cobertura de la biblioteca */}
             {stats.length > 0 && (
-                <dl className="grid grid-cols-2 sm:grid-cols-4 border-t border-white/[0.06]">
+                <dl className="grid grid-cols-2 sm:grid-cols-4 border-t border-[var(--neutral-separator)]">
                     {stats.map((stat, i) => {
                         const pct = stat.total ? Math.min(100, Math.round((Number(stat.value) / stat.total) * 100)) : null
                         return (
                             <div
                                 key={stat.label}
                                 className={cn(
-                                    "px-4 sm:px-5 py-3 min-w-0 border-white/[0.06]",
+                                    "px-4 sm:px-5 py-3 min-w-0 border-[var(--neutral-separator)]",
                                     // 2 columnas en móvil, 4 en escritorio: separadores internos únicamente.
                                     i % 2 === 0 && "border-r",
                                     i < 2 && "max-sm:border-b",
@@ -207,22 +225,25 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                                     i === stats.length - 1 && "sm:border-r-0",
                                 )}
                             >
-                                <dt className="text-3xs font-mono uppercase tracking-wider text-on-surface-variant/65 truncate">{stat.label}</dt>
+                                <dt className="type-caption text-on-surface-variant truncate">{stat.label}</dt>
                                 <dd className="mt-0.5">
                                     <span className={cn(
                                         "text-base font-bold font-mono tabular-nums",
-                                        stat.tone === "warn" ? "text-amber-400" : stat.tone === "ok" ? "text-emerald-400" : "text-on-surface",
+                                        stat.tone === "warn" ? "text-status-warning" : stat.tone === "ok" ? "text-status-success" : "text-on-surface",
                                     )}>
                                         {stat.value}
                                     </span>
                                     {stat.total !== undefined && (
-                                        <span className="text-2xs font-mono text-on-surface-variant/55"> / {stat.total}</span>
+                                        <span className="text-2xs font-mono text-label-2"> / {stat.total}</span>
                                     )}
                                     {pct !== null && (
-                                        <div className="mt-1.5 h-1 rounded-full bg-white/10 overflow-hidden" aria-hidden>
+                                        <div className="mt-1.5 h-1 rounded-full bg-[var(--neutral-elev-3)] overflow-hidden" aria-hidden>
                                             <div
-                                                className={cn("h-full rounded-full", pct >= 100 ? "bg-emerald-400" : "bg-brand-accent")}
-                                                style={{ width: `${pct}%` }}
+                                                className={cn(
+                                                    "h-full w-full rounded-full origin-left transition-transform duration-base ease-smooth-out motion-reduce:transition-none",
+                                                    pct >= 100 ? "bg-status-success" : "bg-brand-accent",
+                                                )}
+                                                style={{ transform: `scaleX(${pct / 100})` }}
                                             />
                                         </div>
                                     )}

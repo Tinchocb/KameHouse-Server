@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy, useState } from "react"
+import { useEffect, Suspense, lazy, useState } from "react"
 import { createPortal } from "react-dom"
 import { IconUiSpinner } from "@/components/ui/icons";
 import { useUIStore } from "@/lib/store"
@@ -136,7 +136,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
     }
 
     return createPortal(
-        <PlayerErrorBoundary label="Video Player" onClose={props.onClose}>
+        <PlayerErrorBoundary label="El reproductor" onClose={props.onClose}>
             <div className="fixed inset-0 z-player animate-in fade-in zoom-in-95 duration-300 ease-out-strong fill-mode-forwards">
                 <Suspense fallback={<PlayerLoadingScreen />}>
                     {playerContent}

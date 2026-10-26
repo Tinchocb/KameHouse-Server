@@ -92,7 +92,7 @@ export interface PlayerCore {
         isSeeking: boolean
         flash: "play" | "pause" | null
         /** null = hidden, "intro" = showing skip-intro button, "outro" = showing skip-outro button */
-        skipMode: "intro" | "outro" | null
+        skipMode: "intro" | "outro" | "recap" | null
         skipRemainingSeconds: number
         /** 0–100: how much of the current skip segment has elapsed (used for progress fill on the button) */
         segmentProgress: number
@@ -129,7 +129,7 @@ export interface PlayerCore {
         /** AniSkip intervals exposed to child components for rendering timeline markers */
         skipTimesOp?: { startTime: number; endTime: number }
         skipTimesEd?: { startTime: number; endTime: number }
-        showAutoSkipToast: "intro" | "outro" | "segment" | null
+        showAutoSkipToast: "intro" | "outro" | "recap" | "segment" | null
         chapters: { startTime: number; endTime: number; name: string; type?: string }[]
         activeChapter: string | null
         absoluteLanUrl?: string

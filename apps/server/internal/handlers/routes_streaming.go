@@ -8,8 +8,6 @@ import (
 func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
 	// Media Stream
 	v1Mediastream := v1.Group("/mediastream")
-	v1Mediastream.GET("/settings", h.HandleGetMediastreamSettings)
-	v1Mediastream.PATCH("/settings", h.HandleSaveMediastreamSettings)
 	v1Mediastream.GET("/ffmpeg/status", h.HandleGetFFmpegStatus)
 	v1Mediastream.POST("/ffmpeg/install", h.HandleInstallFFmpeg)
 	v1Mediastream.POST("/request", h.HandleRequestMediastreamMediaContainer)
@@ -21,10 +19,9 @@ func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
 	v1Mediastream.GET("/direct/play", h.HandleMediastreamDirectPlay)
 	v1Mediastream.GET("/transcode/*", h.HandleMediastreamTranscode)
 	v1Mediastream.GET("/hls/*", h.HandleMediastreamServeOptimizedStatic)
-	v1Mediastream.GET("/subs", h.HandleMediastreamGetSubtitles)
+	// El front pide /subtitles (texto) y /subs/pgs (imagen/PGS); no hay mas alias.
 	v1Mediastream.GET("/subs/pgs", h.HandleMediastreamGetPGSEvents)
-	v1Mediastream.GET("/subtitles", h.HandleMediastreamGetSubtitles)     // alias matching frontend requests
-	v1Mediastream.GET("/subtitles/pgs", h.HandleMediastreamGetPGSEvents) // alias matching frontend requests
+	v1Mediastream.GET("/subtitles", h.HandleMediastreamGetSubtitles)
 	v1Mediastream.GET("/att/*", h.HandleMediastreamGetAttachments)
 	v1Mediastream.GET("/skip-times", h.HandleGetEpisodeSkipTimes)
 	v1Mediastream.POST("/skip-times", h.HandleSaveEpisodeSkipTimes)
@@ -34,7 +31,4 @@ func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
 
 	// Video Thumbnail
 	v1.GET("/video-thumbnail", h.HandleGetVideoThumbnail)
-
-	// Playback telemetry
-	v1.POST("/playback/sync", h.HandlePlaybackSync)
 }

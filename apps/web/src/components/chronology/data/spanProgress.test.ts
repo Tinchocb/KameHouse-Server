@@ -55,6 +55,17 @@ describe('computeSpanProgress', () => {
     expect(map.get('dbz-a')?.nextEpisode).toBe(2);
   });
 
+  it('seenEpisodes lista los episodios realmente vistos, sin rellenar los saltados', () => {
+    const map = computeSpanProgress(spans, {
+      series: [{ tmdbId: 12971, completed: false, watchedEpisodes: [1, 3, 5, 6] }],
+      overrides: { 'dbz-b': false },
+    });
+    expect(map.get('dbz-a')?.seenEpisodes).toEqual([1, 3]);
+    expect(map.get('dbz-b')?.seenEpisodes).toEqual([]);
+    const forced = computeSpanProgress(spans, { series: [], overrides: { 'dbz-a': true } });
+    expect(forced.get('dbz-a')?.seenEpisodes).toEqual([1, 2, 3, 4]);
+  });
+
   it('sin datos del servidor nada figura como visto', () => {
     const map = computeSpanProgress(spans, undefined);
     expect([...map.values()].every((p) => !p.watched && p.percent === 0)).toBe(true);
@@ -63,7 +74,7 @@ describe('computeSpanProgress', () => {
 
 describe('overrideFor', () => {
   it('borra la marca cuando el deseo coincide con el historial', () => {
-    const watchedByHistory = { derivedWatched: true, watched: false, percent: 0, watchedEpisodes: 2, totalEpisodes: 2 };
+    const watchedByHistory = { derivedWatched: true, watched: false, percent: 0, watchedEpisodes: 2, seenEpisodes: [1, 2], totalEpisodes: 2 };
     expect(overrideFor(watchedByHistory, true)).toBeNull();
     expect(overrideFor(watchedByHistory, false)).toBe(false);
     expect(overrideFor(undefined, true)).toBe(true);

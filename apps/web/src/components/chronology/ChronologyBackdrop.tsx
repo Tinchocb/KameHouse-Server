@@ -1,30 +1,31 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import type { EraFilter } from './types';
+import { eraAccentHex } from './data/spansToVolumes';
+import { ERA_FILTER_BY_SERIES } from './data/eraBar';
+import { ALL_ERAS_HEX, hexToRgbChannels } from './utils/eraColor';
 
-const ERA_ACCENT: Record<EraFilter, string> = {
-  all: '#f59e0b',
-  'db-clasico': '#e65100',
-  'db-z': '#1e88e5',
-  'db-super': '#0288d1',
-  'db-daima': '#8e24aa',
-  'db-gt': '#d81b60',
-};
+const TINTS: ReadonlyArray<{ era: EraFilter; channels: string }> = [
+  { era: 'all', channels: hexToRgbChannels(ALL_ERAS_HEX) },
+  ...(Object.entries(ERA_FILTER_BY_SERIES) as Array<[keyof typeof ERA_FILTER_BY_SERIES, EraFilter]>).map(
+    ([series, era]) => ({ era, channels: hexToRgbChannels(eraAccentHex(series)) }),
+  ),
+];
 
 interface ChronologyBackdropProps {
+  /** Era que se ve (la del scroll o la del filtro): su tinte entra y los demás salen. */
   eraFilter: EraFilter;
 }
 
 /**
  * Fondo minimalista y arquitectónico para la Cronología de Dragon Ball.
- * - Sin imágenes fotográficas borrosas ni resplandores/auras que saturen la vista.
- * - Lienzo oscuro profundo con textura sutil de matriz de puntos (dot-grid).
- * - Tinte ambiental superior extremadamente leve (3-4% opacidad) que identifica la era activa con elegancia.
+ * - Lienzo oscuro con textura sutil de puntos y un tinte superior leve con el color de la era.
+ * - Al cambiar de era los tintes se funden: cada era tiene su capa y solo cambian `opacity` y
+ *   `transform` (nada de animar el color), con los tokens de duración y curva de animation.css.
+ *   Con `prefers-reduced-motion` el cambio es instantáneo.
  * - Portaleado a document.body con z-index: -1 para mantener coordenadas fijas inmunes a filtros de scroll.
  */
 export const ChronologyBackdrop: React.FC<ChronologyBackdropProps> = ({ eraFilter }) => {
-  const accent = ERA_ACCENT[eraFilter] ?? ERA_ACCENT.all;
-
   // SPA sin SSR: document existe desde el primer render, no hace falta esperar al montaje.
   if (typeof document === 'undefined') return null;
 
@@ -45,13 +46,26 @@ export const ChronologyBackdrop: React.FC<ChronologyBackdropProps> = ({ eraFilte
         }}
       />
 
-      {/* 2. Tinte de era sutil y elegante en la cabecera (sin resplandor) */}
-      <div
-        className="absolute inset-x-0 top-0 h-96 pointer-events-none transition-colors duration-700 ease-out"
-        style={{
-          background: `linear-gradient(to bottom, color-mix(in srgb, ${accent} 4%, transparent) 0%, transparent 100%)`,
-        }}
-      />
+      {/* 2. Tinte de era: una capa por era; la activa sube a opacidad 1 y las demás se funden */}
+      {TINTS.map(({ era, channels }) => {
+        const active = era === eraFilter;
+        return (
+          <div
+            key={era}
+            data-era-tint={era}
+            data-active={active}
+            className={`absolute inset-x-0 top-0 h-96 pointer-events-none transition-[opacity,transform] duration-slower ease-smooth-out motion-reduce:transition-none ${
+              active ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+            }`}
+            style={
+              {
+                '--era': channels,
+                background: 'linear-gradient(to bottom, rgb(var(--era) / 0.05) 0%, transparent 100%)',
+              } as React.CSSProperties
+            }
+          />
+        );
+      })}
     </div>,
     document.body
   );

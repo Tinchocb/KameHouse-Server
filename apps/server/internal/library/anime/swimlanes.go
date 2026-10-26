@@ -7,37 +7,63 @@ import (
 	"kamehouse/internal/database/models"
 	"time"
 
+	"github.com/rs/zerolog"
+	"golang.org/x/sync/singleflight"
 	"kamehouse/internal/util/cache"
 )
 
 var curatedHomeCache = cache.NewCache[*CuratedHomeResponse](30 * time.Minute)
 var dynamicTagLanesCache = cache.NewCache[[]*CuratedSwimlane](30 * time.Minute)
+var curatedHomeFlight singleflight.Group
 
 func InvalidateCuratedHomeCache() {
 	curatedHomeCache.Clear()
 	dynamicTagLanesCache.Clear()
 }
 
-func GetCuratedHome(_ context.Context, database *db.Database) (*CuratedHomeResponse, error) {
+func GetCuratedHome(ctx context.Context, database *db.Database) (*CuratedHomeResponse, error) {
 	cacheKey := "curated_home"
 	if cached, ok := curatedHomeCache.Get(cacheKey); ok && cached != nil {
 		return cached, nil
 	}
 
-	svc := NewIntelligenceService(database, nil, nil)
-	resp, err := svc.GetCuratedSwimlanes(context.Background())
+	val, err, _ := curatedHomeFlight.Do(cacheKey, func() (interface{}, error) {
+		// Double check inside singleflight
+		if cached, ok := curatedHomeCache.Get(cacheKey); ok && cached != nil {
+			return cached, nil
+		}
+
+		var logger *zerolog.Logger
+		if database != nil {
+			logger = database.Logger
+		}
+		svc := NewIntelligenceService(database, nil, logger)
+
+		// Desacoplar del context del primer request HTTP usando context.WithoutCancel
+		// con un timeout de 20s para evitar que un aborto individual corte el cálculo compartido.
+		sfCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 20*time.Second)
+		defer cancel()
+
+		resp, err := svc.GetCuratedSwimlanes(sfCtx)
+		if err != nil {
+			return nil, err
+		}
+
+		curatedHomeCache.Set(cacheKey, resp)
+		return resp, nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-
-	curatedHomeCache.Set(cacheKey, resp)
-	return resp, nil
+	return val.(*CuratedHomeResponse), nil
 }
 
 func (s *IntelligenceService) buildEpisodeSwimlaneByTag(id, title, tag string) *CuratedSwimlane {
 	query := fmt.Sprintf(`%%"%s"%%`, tag)
 	var episodes []models.LibraryEpisode
 	if err := s.db.Gorm().
+		Select("id, library_media_id, episode_number, title").
 		Where("tags LIKE ?", query).
 		Order("episode_number ASC").
 		Limit(20).
@@ -113,13 +139,21 @@ func (s *IntelligenceService) buildEpisodeSwimlanesBatch(laneDefs []EpisodeLaneD
 		laneNames[i] = l.Name
 	}
 
+	// Tope de 20 episodios POR lane resuelto en SQL (ventana por suggested_swimlane):
+	// un LIMIT global ordenado por episode_number dejaba sin episodios a las lanes
+	// cuyos números de episodio son más altos.
+	const laneEpisodesSQL = `
+		SELECT id, library_media_id, episode_number, title, suggested_swimlane
+		FROM (
+			SELECT id, library_media_id, episode_number, title, suggested_swimlane,
+				ROW_NUMBER() OVER (PARTITION BY suggested_swimlane ORDER BY episode_number ASC) AS rn
+			FROM library_episodes
+			WHERE suggested_swimlane IN ?
+		)
+		WHERE rn <= 20
+		ORDER BY episode_number ASC`
 	var allEpisodes []models.LibraryEpisode
-	if err := s.db.Gorm().
-		Select("id, library_media_id, episode_number, title, suggested_swimlane").
-		Where("suggested_swimlane IN (?)", laneNames).
-		Order("episode_number ASC").
-		Limit(len(laneNames) * 50).
-		Find(&allEpisodes).Error; err != nil || len(allEpisodes) == 0 {
+	if err := s.db.Gorm().Raw(laneEpisodesSQL, laneNames).Scan(&allEpisodes).Error; err != nil || len(allEpisodes) == 0 {
 		return nil
 	}
 

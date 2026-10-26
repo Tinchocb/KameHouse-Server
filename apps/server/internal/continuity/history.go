@@ -59,27 +59,40 @@ type (
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+func (m *Manager) ensureLoaded() {
+	m.loadOnce.Do(func() {
+		m.mediaLatestIndex = make(map[int]*WatchHistoryItem)
+		m.historyItemIndex = make(map[string]*WatchHistoryItem)
+		if m.fileCacher != nil && m.watchHistoryFileCacheBucket != nil {
+			items, err := filecache.GetAll[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket)
+			if err == nil {
+				for key, item := range items {
+					if item == nil {
+						continue
+					}
+					m.historyItemIndex[key] = item
+					if prev, ok := m.mediaLatestIndex[item.MediaID]; !ok || item.TimeUpdated.After(prev.TimeUpdated) {
+						m.mediaLatestIndex[item.MediaID] = item
+					}
+				}
+			}
+		}
+	})
+}
+
 func (m *Manager) GetWatchHistory() WatchHistory {
 	defer util.HandlePanicInModuleThen("continuity/GetWatchHistory", func() {})
+
+	m.ensureLoaded()
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	items, err := filecache.GetAll[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket)
-	if err != nil {
-		m.logger.Error().Err(err).Msg("continuity: Failed to get watch history")
-		return nil
-	}
-
-	// Hay una clave por media+episodio: quedarse con el más reciente de cada
-	// media. Pisar sin comparar dependía del orden de iteración del map.
-	ret := make(WatchHistory)
-	for _, item := range items {
-		if item == nil {
-			continue
-		}
-		if prev, ok := ret[item.MediaID]; !ok || item.TimeUpdated.After(prev.TimeUpdated) {
-			ret[item.MediaID] = item
+	ret := make(WatchHistory, len(m.mediaLatestIndex))
+	for k, v := range m.mediaLatestIndex {
+		if v != nil {
+			copyItem := *v
+			ret[k] = &copyItem
 		}
 	}
 
@@ -89,27 +102,16 @@ func (m *Manager) GetWatchHistory() WatchHistory {
 func (m *Manager) GetWatchHistoryItem(mediaID int) *WatchHistoryItemResponse {
 	defer util.HandlePanicInModuleThen("continuity/GetWatchHistoryItem", func() {})
 
+	m.ensureLoaded()
+
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// Get all items and find the latest updated for this mediaID
-	items, err := filecache.GetAll[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket)
-	if err != nil {
-		return &WatchHistoryItemResponse{Found: false}
-	}
-
-	var latestItem *WatchHistoryItem
-	for _, item := range items {
-		if item != nil && item.MediaID == mediaID {
-			if latestItem == nil || item.TimeUpdated.After(latestItem.TimeUpdated) {
-				latestItem = item
-			}
-		}
-	}
-
-	if latestItem != nil {
+	item, ok := m.mediaLatestIndex[mediaID]
+	if ok && item != nil {
+		copyItem := *item
 		return &WatchHistoryItemResponse{
-			Item:  latestItem,
+			Item:  &copyItem,
 			Found: true,
 		}
 	}
@@ -124,14 +126,16 @@ func (m *Manager) GetWatchHistoryItem(mediaID int) *WatchHistoryItemResponse {
 func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (err error) {
 	defer util.HandlePanicInModuleWithError("continuity/UpdateWatchHistoryItem", &err)
 
+	m.ensureLoaded()
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
+	key := fmt.Sprintf("%d_%d", opts.MediaID, opts.EpisodeNumber)
 	added := false
 
 	// Get the current history
 	i, found := m.getWatchHistory(opts.MediaID, opts.EpisodeNumber)
-	if !found {
+	if !found || i == nil {
 		added = true
 		i = &WatchHistoryItem{
 			Kind:          opts.Kind,
@@ -144,6 +148,10 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 			TimeUpdated:   time.Now(),
 		}
 	} else {
+		// File-cache snapshots may be serialized after its own lock is released.
+		// Never mutate an item that has already been published there.
+		copyItem := *i
+		i = &copyItem
 		i.Kind = opts.Kind
 		i.EpisodeNumber = opts.EpisodeNumber
 		i.CurrentTime = opts.CurrentTime
@@ -151,8 +159,13 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 		i.TimeUpdated = time.Now()
 	}
 
-	// Save the i
-	err = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, fmt.Sprintf("%d_%d", opts.MediaID, opts.EpisodeNumber), i)
+	m.historyItemIndex[key] = i
+	if prev, ok := m.mediaLatestIndex[opts.MediaID]; !ok || i.TimeUpdated.After(prev.TimeUpdated) {
+		m.mediaLatestIndex[opts.MediaID] = i
+	}
+
+	// Save to file cache (async debounced, never blocks playback HTTP thread)
+	err = m.fileCacher.Set(*m.watchHistoryFileCacheBucket, key, i)
 	if err != nil {
 		return fmt.Errorf("continuity: Failed to save watch history item: %w", err)
 	}
@@ -167,25 +180,44 @@ func (m *Manager) UpdateWatchHistoryItem(opts *UpdateWatchHistoryItemOptions) (e
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func (m *Manager) getWatchHistory(mediaID, episodeNumber int) (ret *WatchHistoryItem, exists bool) {
 	defer util.HandlePanicInModuleThen("continuity/getWatchHistory", func() {
 		ret = nil
 		exists = false
 	})
 
-	exists, _ = m.fileCacher.Get(*m.watchHistoryFileCacheBucket, fmt.Sprintf("%d_%d", mediaID, episodeNumber), &ret)
+	m.ensureLoaded()
+	key := fmt.Sprintf("%d_%d", mediaID, episodeNumber)
+	item, ok := m.historyItemIndex[key]
+	if !ok || item == nil {
+		// Fallback to fileCacher in case of unindexed entry
+		var cached *WatchHistoryItem
+		if found, _ := m.fileCacher.Get(*m.watchHistoryFileCacheBucket, key, &cached); found && cached != nil {
+			item = cached
+			m.historyItemIndex[key] = item
+		} else {
+			return nil, false
+		}
+	}
 
-	if exists && ret != nil && ret.Duration > 0 {
+	if item.Duration > 0 {
 		// If the item completion ratio is equal or above IgnoreRatioThreshold, don't return anything
-		ratio := ret.CurrentTime / ret.Duration
+		ratio := item.CurrentTime / item.Duration
 		if ratio >= IgnoreRatioThreshold {
-			// Delete the item
-			go func() {
-				defer util.HandlePanicInModuleThen("continuity/getWatchHistory", func() {})
-				_ = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, fmt.Sprintf("%d_%d", mediaID, episodeNumber))
-			}()
+			delete(m.historyItemIndex, key)
+			if latest := m.mediaLatestIndex[mediaID]; latest == item {
+				delete(m.mediaLatestIndex, mediaID)
+				for _, it := range m.historyItemIndex {
+					if it != nil && it.MediaID == mediaID {
+						if cur, ok := m.mediaLatestIndex[mediaID]; !ok || it.TimeUpdated.After(cur.TimeUpdated) {
+							m.mediaLatestIndex[mediaID] = it
+						}
+					}
+				}
+			}
+			// Delete only the old entry, before UpdateWatchHistoryItem publishes
+			// its replacement under m.mu. Delete itself only schedules disk I/O.
+			_ = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, key)
 			return nil, false
 		}
 		if ratio < 0.05 {
@@ -193,34 +225,37 @@ func (m *Manager) getWatchHistory(mediaID, episodeNumber int) (ret *WatchHistory
 		}
 	}
 
-	return
+	return item, true
 }
 
-// removes the oldest WatchHistoryItem from the file cache.
+// removes the oldest WatchHistoryItem from the memory index and file cache.
 func (m *Manager) trimWatchHistoryItems() error {
 	defer util.HandlePanicInModuleThen("continuity/TrimWatchHistoryItems", func() {})
 
-	// Get all the items
-	items, err := filecache.GetAll[*WatchHistoryItem](m.fileCacher, *m.watchHistoryFileCacheBucket)
-	if err != nil {
-		return fmt.Errorf("continuity: Failed to get watch history items: %w", err)
-	}
-
-	// If there are too many items, remove the oldest one
-	if len(items) > MaxWatchHistoryItems {
+	if len(m.historyItemIndex) > MaxWatchHistoryItems {
 		var oldestKey string
-		for key, item := range items {
-			if item == nil { // entrada corrupta: es la primera en irse
+		var oldestItem *WatchHistoryItem
+		for key, item := range m.historyItemIndex {
+			if item == nil {
 				oldestKey = key
 				break
 			}
-			if oldestKey == "" || item.TimeUpdated.Before(items[oldestKey].TimeUpdated) {
+			if oldestItem == nil || item.TimeUpdated.Before(oldestItem.TimeUpdated) {
 				oldestKey = key
+				oldestItem = item
 			}
 		}
-		err = m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, oldestKey)
-		if err != nil {
-			return fmt.Errorf("continuity: Failed to remove oldest watch history item: %w", err)
+		if oldestKey != "" {
+			if oldestItem != nil {
+				delete(m.historyItemIndex, oldestKey)
+				if m.mediaLatestIndex[oldestItem.MediaID] == oldestItem {
+					delete(m.mediaLatestIndex, oldestItem.MediaID)
+				}
+			}
+			err := m.fileCacher.Delete(*m.watchHistoryFileCacheBucket, oldestKey)
+			if err != nil {
+				return fmt.Errorf("continuity: Failed to remove oldest watch history item: %w", err)
+			}
 		}
 	}
 

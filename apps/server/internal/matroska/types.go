@@ -7,9 +7,7 @@
 //   - Compression types used in Matroska tracks
 //   - Track types (video, audio, subtitle)
 //   - Tag target types
-//   - Seek types for navigation
-//   - Packet flags for demuxed data
-//   - Core data structures like Packet, TrackInfo, SegmentInfo, Attachment, Chapter, Cue, and Tag
+//   - Core data structures like TrackInfo, SegmentInfo, Attachment, Chapter, Cue, and Tag
 //
 // These types are used throughout the project to represent different aspects of Matroska files
 // and serve as the central location for all data type definitions used by other files in the project.
@@ -54,66 +52,6 @@ const (
 	// TargetEdition indicates that the tag applies to a specific edition.
 	TargetEdition = 3
 )
-
-// Seek types
-//
-// These constants define the different seeking behaviors that can be used when navigating
-// through a Matroska file. They control how the player handles seeking operations.
-const (
-	// SeekToPrevKeyFrame seeks to the previous key frame before the requested position.
-	SeekToPrevKeyFrame = 1
-	// SeekToPrevKeyFrameStrict seeks to the previous key frame before the requested position,
-	// but does not allow going beyond that point even if it means displaying nothing.
-	SeekToPrevKeyFrameStrict = 2
-)
-
-// Packet flags
-//
-// These constants define flags that can be returned with a matroska.Packet in its Flags member.
-// They provide additional information about the packet's properties and characteristics.
-const (
-	// UnknownStart indicates that the packet starts at an unknown position.
-	UnknownStart = 0x00000001
-	// UnknownEnd indicates that the packet ends at an unknown position.
-	UnknownEnd = 0x00000002
-	// KF indicates that the packet is a key frame.
-	KF = 0x00000004
-	// GAP indicates that the packet is a gap packet, which should be skipped during playback.
-	GAP = 0x00800000
-	// StreamMask is a bitmask used to extract the stream number from the Flags field.
-	StreamMask = 0xff000000
-	// StreamShift is the number of bits to shift right to extract the stream number from the Flags field.
-	StreamShift = 24
-)
-
-// Packet contains a demuxed packet from a Matroska file.
-//
-// A Packet represents a single unit of media data that has been extracted (demuxed) from
-// a Matroska container. It contains all the necessary information to process the media data,
-// including timing information, track association, and the actual data payload.
-type Packet struct {
-	// Track is the track number this packet belongs to.
-	// This corresponds to the TrackInfo.Number of the track.
-	Track uint8
-	// StartTime is the start time of this packet in nanoseconds.
-	// This is the timestamp when the packet should be presented.
-	StartTime uint64
-	// EndTime is the end time of this packet in nanoseconds.
-	// This is the timestamp when the packet should stop being presented.
-	EndTime uint64
-	// FilePos is the position in the input stream where this packet is located.
-	// This can be useful for seeking or debugging purposes.
-	FilePos uint64
-	// Data contains the actual packet data.
-	// This is the raw media data that needs to be decoded by the appropriate codec.
-	Data []byte
-	// Flags contains any packet flags. See the packet flag constants for details.
-	// These flags provide additional information about the packet's properties.
-	Flags uint32
-	// Discard indicates whether this packet can be discarded.
-	// A non-zero value suggests that the packet can be safely discarded without affecting playback.
-	Discard int64
-}
 
 // TrackInfo contains information about a track in a Matroska file.
 //

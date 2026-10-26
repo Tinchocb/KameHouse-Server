@@ -28,7 +28,7 @@ func main() {
 	}
 
 	if !skipTypes {
-		goStructStrs := codegen.GenerateTypescriptEndpointsFile("./generated/handlers.json", "./generated/public_structs.json", "../../web/src/api/generated", "../internal/events")
+		goStructStrs := codegen.GenerateTypescriptEndpointsFile("./generated/handlers.json", "./generated/public_structs.json", "../../web/src/api/generated")
 		codegen.GenerateTypescriptFile("./generated/handlers.json", "./generated/public_structs.json", "../../web/src/api/generated", goStructStrs)
 	}
 }

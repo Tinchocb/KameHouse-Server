@@ -17,6 +17,31 @@
 @tailwind utilities;
 
 
+/* ─── Cromo flotante ─────────────────────────────────────────────────── */
+/* Alto del cromo (islas de navegación) que el contenido debe respetar. Una sola fuente:
+   `.pt-nav`, los filtros sticky y la cabecera de Admin la usan. En móvil la barra es de flujo. */
+:root { --chrome-top: 1rem; --chrome-stick: calc(4rem + env(safe-area-inset-top, 0px)); }
+@media (min-width: 768px) { :root { --chrome-top: 4.25rem; --chrome-stick: var(--chrome-top); } }
+/* --chrome-stick: dónde se pegan los filtros al hacer scroll. En móvil la barra superior es fija
+   (4 rem) y <main> ya le reserva ese espacio, por eso --chrome-top sólo da aire de 1 rem. */
+
+/* ─── Selector de era (components/ui/era-rail) ───────────────────────── */
+/* Riel (≥ 1024 px) y barra (< 1024 px). `--era-rail-w` / `--era-bar-h` valen 0 salvo mientras hay un
+   selector montado (el componente marca <html data-era-rail>): así el contenido reserva su margen
+   con una variable y no con padding repartido por las páginas. */
+:root {
+  --era-rail-edge: 0.5rem;   /* separación con el borde de la ventana */
+  --era-rail-size: 3.5rem;   /* ancho colapsado: 44 px de botón + 6 px de aire a cada lado */
+  --era-rail-open: 16rem;    /* ancho expandido (se superpone al contenido, no lo empuja) */
+  --era-rail-w: 0px;
+  --era-bar-top: calc(var(--chrome-stick) + 0.25rem);
+  --era-bar-h: 0px;
+}
+html[data-era-rail="rail"] { --era-rail-w: calc(var(--era-rail-edge) + var(--era-rail-size)); }
+html[data-era-rail="bar"]  { --era-bar-h: 3.75rem; }
+html[data-era-rail="rail"] [data-scroll-container="true"] { padding-inline: var(--era-rail-w); }
+html[data-era-rail="bar"]  [data-scroll-container="true"]::before { content: ""; display: block; flex: none; height: var(--era-bar-h); }
+
 /* ─── Base Reset ─────────────────────────────────────────────────────── */
 @layer base {
   * {
@@ -28,14 +53,26 @@
   }
   *::-webkit-scrollbar { display: none; }
 
-  /* Selección de texto: solo habilitada en inputs y zonas de contenido */
+  /* Selección de texto: habilitada en áreas de contenido y lectura */
   ::selection {
     background: hsl(var(--brand-accent) / 0.35);
     color: inherit;
   }
 
+  p,
+  article,
+  pre,
+  code,
+  blockquote,
+  [data-selectable="true"],
+  .select-text,
+  .surface-content {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
   html, body {
-    @apply text-[var(--md-sys-color-on-surface)] font-sans antialiased;
+    @apply text-on-surface font-sans antialiased;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
     /* Sin inflado de fuentes al girar el celular a horizontal. */
@@ -77,12 +114,25 @@
     }
   }
 
-  /* Inputs y textareas sí permiten selección */
+  /* Inputs y textareas permiten selección y fondo transparente por defecto */
   input, textarea, select {
     background-color: transparent;
     color: inherit;
     user-select: text;
     -webkit-user-select: text;
+  }
+
+  /* Controles táctiles: tamaño mínimo accesible de 44px en pantallas táctiles.
+     Al estar en @layer base, las clases utilitarias de Tailwind (w-*, h-*, min-w-0) ganan por especificidad.
+     Se excluyen inputs nativos pequeños (checkbox, radio, range, hidden). */
+  @media (hover: none) {
+    button:not(.touch-target-auto, .touch-target-none),
+    [role="button"]:not(.touch-target-auto, .touch-target-none),
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .touch-target-auto, .touch-target-none),
+    select:not(.touch-target-auto, .touch-target-none) {
+      min-height: 44px;
+      min-width: 44px;
+    }
   }
 
   /* El color base vive SOLO en html (pinta el canvas). El body debe ser
@@ -97,26 +147,40 @@
     background: transparent;
   }
 
-
-  h1 { font: var(--display-xl); color: var(--md-sys-color-on-surface); }
-  h2 { font: var(--display-lg); color: var(--md-sys-color-on-surface); }
-  h3 { font: var(--display-md); color: var(--md-sys-color-on-surface); }
-  h4 { font: var(--h4); color: var(--md-sys-color-on-surface-variant); }
+  /* Encabezados con sintaxis CSS válida, balance tipográfico y colores de token */
+  h1 {
+    font: var(--page-title);
+    letter-spacing: var(--tracking-tight);
+    color: var(--on-surface);
+    text-wrap: balance;
+  }
+  h2 {
+    font: var(--weight-bold) var(--type-title-size, 1.5rem) / var(--leading-snug) var(--font-display);
+    letter-spacing: var(--tracking-tight);
+    color: var(--on-surface);
+    text-wrap: balance;
+  }
+  h3 {
+    font: var(--weight-semibold) var(--text-xl) / var(--leading-snug) var(--font-display);
+    letter-spacing: var(--tracking-tight);
+    color: var(--on-surface);
+    text-wrap: balance;
+  }
+  h4 {
+    font: var(--weight-semibold) var(--text-lg) / var(--leading-normal) var(--font-sans);
+    letter-spacing: var(--tracking-normal);
+    color: var(--md-sys-color-on-surface-variant);
+  }
 }
 
-/* ─── Focus ring — fuera de @layer para vencer a utilities ──────────── */
-/* Tailwind ring usa --tw-ring-shadow como variable, por eso no alcanza
-   con outline:none ni box-shadow:none dentro de @layer base.
-   Los rings de Tailwind se apagan siempre (un solo estilo de foco en toda la
-   app) y el outline solo se apaga cuando el foco NO es de teclado: antes se
-   apagaba también en :focus-visible y navegar con Tab no mostraba dónde se
-   estaba. Con mouse no cambia nada. */
+/* ─── Focus ring — fuera de @layer para unificar anillo de foco ──────── */
+/* Tailwind ring usa --tw-ring-shadow como variable, por eso no alcanza con outline:none.
+   Se anulan los anillos por defecto de Tailwind sin pisar el box-shadow de elevación ni sombras de componentes. */
 *:focus,
 *:focus-visible {
-  --tw-ring-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
   --tw-ring-color: transparent !important;
-  --tw-ring-offset-shadow: none !important;
-  box-shadow: var(--tw-shadow, 0 0 #0000) !important;
 }
 
 *:focus:not(:focus-visible),
@@ -137,21 +201,125 @@ select:focus-visible,
   outline-offset: 2px;
 }
 
+/* Campos: anillo propio y visible para inputs fuera de cmdk y sin data-field-embedded. */
+:root:not([data-tv="true"]) input:not([type="hidden"], [cmdk-input], [data-field-embedded]):focus-visible,
+:root:not([data-tv="true"]) textarea:focus-visible,
+:root:not([data-tv="true"]) select:focus-visible {
+  outline: 2px solid hsl(var(--focus-ring) / 0.9) !important;
+  outline-offset: 1px;
+}
+
+/* ─── TV Mode / Spatial Navigation ───────────────────────────────────── */
+[data-tv="true"] .tv-focusable:focus,
+[data-tv="true"] .tv-focusable:focus-visible {
+  outline: 3px solid hsl(var(--focus-ring)) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px hsl(var(--focus-ring) / 0.25) !important;
+  transform: scale(1.03);
+  transition:
+    transform var(--duration-quick) var(--ease-out),
+    box-shadow var(--duration-quick) var(--ease-out),
+    outline-color var(--duration-quick) var(--ease-out),
+    color var(--duration-quick) var(--ease-out),
+    background-color var(--duration-quick) var(--ease-out);
+}
+
+[data-tv="true"] .tv-focusable:focus-visible:active { transform: scale(0.98); }
+
+/* Red de seguridad TV: el anillo de teclado global se apaga bajo [data-tv], así que todo lo
+   enfocable que no sea .tv-focusable (cards, filtros, ajustes, campos) recibe indicador. */
+[data-tv="true"] :focus-visible:not(.tv-focusable, [tabindex="-1"]) {
+  outline: 3px solid hsl(var(--focus-ring)) !important;
+  outline-offset: 3px;
+}
+
+@media (hover: none) {
+  [data-tv="true"] .tv-focusable {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+.JASSUB {
+  position: absolute !important;
+  width: 100%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ─── Degradé de página fijo — Clásico (viñeta sutil) y Por Era ───────── */
+[data-mode="classic"] body::before,
+[data-mode="era"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--page-gradient);
+  pointer-events: none;
+  z-index: -5;
+}
+
+/* ─── Neutro: tipografía de etiquetas en sentence case ─────────────────── */
+[data-mode="classic"] .neutro-sentence :where(*) {
+  text-transform: none;
+  letter-spacing: normal;
+}
+[data-mode="classic"] .neutro-sentence .font-mono {
+  font-family: var(--font-sans);
+}
+
+[data-theme="era-universe"] .era-universe-layer {
+  opacity: 1 !important;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    color-mix(in srgb, var(--spotlight-db) 15%, transparent) 0deg,
+    color-mix(in srgb, var(--spotlight-dbz) 15%, transparent) 72deg,
+    color-mix(in srgb, var(--spotlight-dbgt) 15%, transparent) 144deg,
+    color-mix(in srgb, var(--spotlight-dbs) 15%, transparent) 216deg,
+    color-mix(in srgb, var(--spotlight-daima) 15%, transparent) 288deg,
+    color-mix(in srgb, var(--spotlight-db) 15%, transparent) 360deg
+  );
+}
+
+/* ─── Components ─────────────────────────────────────────────────────── */
+@layer components {
+  /* Badge base */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid;
+  }
+  .badge-primary {
+    background: hsl(var(--brand-accent) / 0.15);
+    color: var(--brand-accent-readable);
+    border-color: hsl(var(--brand-accent) / 0.30);
+  }
+  .badge-success {
+    background: hsl(var(--brand-success) / 0.15);
+    color: hsl(var(--brand-success));
+    border-color: hsl(var(--brand-success) / 0.30);
+  }
+}
+
 /* ─── Utilities ──────────────────────────────────────────────────────── */
 @layer utilities {
-  /* Esfera del dragón de las pantallas de carga (tokens en colors.css) */
-  .dragonball-orb {
-    border-radius: 9999px;
-    background: radial-gradient(circle at 35% 35%, var(--dragonball-orb-light), var(--dragonball-orb-mid) 60%, var(--dragonball-orb-dark) 100%);
-    box-shadow: 0 0 16px var(--dragonball-orb-glow);
-  }
   .page-container  { @apply w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10; }
   .text-balance    { text-wrap: balance; }
+  /* Padding superior que libera la barra flotante (reemplaza `pt-4 md:pt-20` repetido en cada página).
+     Las páginas con hero a pantalla completa NO lo usan: pintan bajo el cromo a propósito. */
+  .pt-nav          { padding-top: var(--chrome-top); }
 
-  /* Borde leve en letras difuminado de alto rendimiento (renderizado directo por rasterizador de fuentes sin filtros gaussianos pesados) */
+  /* Borde leve en letras difuminado de alto rendimiento */
   .text-edge-glow {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
   }
+
+  /* Safe Area Insets */
+  .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
 
   /* ─── Hero Scrims (cinematográficos — reactivos a var(--bg-primary) / var(--scrim-hero-base)) ─── */
   .scrim-hero-left {
@@ -174,7 +342,7 @@ select:focus-visible,
       transparent 66%
     );
   }
-  /* Sombra inferior en ascenso suave atada al contenido (Spotlight / Cards) */
+  /* Sombra inferior en ascenso suave atada al contenido (Spotlight, solo mobile: el texto va sobre el arte) */
   .scrim-hero-bottom-rise {
     background: linear-gradient(
       to bottom,
@@ -190,9 +358,7 @@ select:focus-visible,
       linear-gradient(to top, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 55%, transparent) 0%, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 25%, transparent) 30%, transparent 55%),
       linear-gradient(to right, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 50%, transparent) 0%, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 20%, transparent) 30%, transparent 50%);
   }
-  /* Máscara lateral del arte de hero según su composición (HeroArt.subject).
-     Solo desde sm: en mobile el texto va abajo y la imagen se encuadra por
-     punto focal, así que fundir la izquierda solo oscurecería al sujeto. */
+  /* Máscara lateral del arte de hero según su composición (HeroArt.subject). */
   @media (min-width: 640px) {
     .hero-art-mask-right {
       mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 18%, rgba(0, 0, 0, 0.75) 30%, black 42%);
@@ -213,116 +379,7 @@ select:focus-visible,
     );
   }
 
-  /* Badge base */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.125rem 0.5rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border: 1px solid;
-  }
-  .badge-primary   { background: hsl(var(--brand-accent) / 0.15); color: hsl(var(--brand-accent)); border-color: hsl(var(--brand-accent) / 0.30); }
-  .badge-success   { background: hsl(var(--brand-success) / 0.15); color: hsl(var(--brand-success)); border-color: hsl(var(--brand-success) / 0.30); }
-  .badge-warning   { background: hsl(var(--brand-warning) / 0.15); color: hsl(var(--brand-warning)); border-color: hsl(var(--brand-warning) / 0.30); }
-  .badge-muted     { background: var(--glass-bg); color: var(--md-sys-color-on-surface-variant); border-color: var(--glass-border-top); }
-}
-
-/* ─── TV Mode / Spatial Navigation ───────────────────────────────────── */
-[data-tv="true"] .tv-focusable:focus,
-[data-tv="true"] .tv-focusable:focus-visible {
-  outline: 3px solid hsl(var(--focus-ring)) !important;
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px hsl(var(--focus-ring) / 0.25) !important;
-  transform: scale(1.03);
-  transition: all 150ms ease;
-}
-
-[data-tv="true"] .tv-focusable:focus-visible:active { transform: scale(0.98); }
-
-@media (hover: none) {
-  [data-tv="true"] .tv-focusable {
-    min-width: 44px;
-    min-height: 44px;
-  }
-}
-
-/* ─── Video Player (Media Chrome) ────────────────────────────────────── */
-media-controller {
-  --base: 1rem;
-  font-family: var(--font-sans);
-  --media-menu-background: rgba(21, 21, 21, 0.92);
-  --media-range-track-height: 3px;
-  --media-range-thumb-height: 13px;
-  --media-range-thumb-width: 13px;
-  --media-tooltip-display: none;
-}
-
-media-controller[mediaisfullscreen] {
-  font-size: 17px;
-  --media-range-thumb-height: 20px;
-  --media-range-thumb-width: 20px;
-  --media-range-track-height: 4px;
-}
-
-media-control-bar {
-  position: absolute;
-  height: 36px;
-  bottom: 0;
-  left: 12px;
-  right: 12px;
-}
-
-media-time-range {
-  position: absolute;
-  bottom: 36px;
-  width: 100%;
-  height: 5px;
-  --media-range-thumb-background: hsl(var(--brand-accent));
-  --media-range-bar-color: hsl(var(--brand-accent));
-}
-
-.JASSUB {
-  position: absolute !important;
-  width: 100%;
-  z-index: 10;
-  pointer-events: none;
-}
-
-/* ─── Removed Container Queries for Swimlanes ────────────────────────────────── */
-
-/* ─── Degradé de página fijo — Clásico (viñeta sutil) y Por Era.
-   Cada modo define su propio --page-gradient en colors.css. ──────────── */
-[data-mode="classic"] body::before,
-[data-mode="era"] body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: var(--page-gradient);
-  pointer-events: none;
-  z-index: -5;
-}
-
-[data-theme="era-universe"] .era-universe-layer {
-  opacity: 1 !important;
-  background: conic-gradient(
-    from 180deg at 50% 50%,
-    color-mix(in srgb, var(--spotlight-db) 15%, transparent) 0deg,
-    color-mix(in srgb, var(--spotlight-dbz) 15%, transparent) 72deg,
-    color-mix(in srgb, var(--spotlight-dbgt) 15%, transparent) 144deg,
-    color-mix(in srgb, var(--spotlight-dbs) 15%, transparent) 216deg,
-    color-mix(in srgb, var(--spotlight-daima) 15%, transparent) 288deg,
-    color-mix(in srgb, var(--spotlight-db) 15%, transparent) 360deg
-  );
-}
-
-/* ─── Safe Area Insets ───────────────────────────────────────────────── */
-.safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
-
-/* ─── SectionBar — Contenedor unificado de sección ─────────────────────── */
-@layer utilities {
+  /* ─── SectionBar — Contenedor unificado de sección ─────────────────────── */
   .sectionbar {
     @apply rounded-2xl;
     border: 1px solid var(--sectionbar-border);
@@ -334,6 +391,9 @@ media-time-range {
     box-shadow: var(--sectionbar-shadow);
     @apply transition-[border-color,background-color,box-shadow] duration-base ease-smooth-out;
   }
+
+  .sectionbar-pill { border-radius: var(--radius-pill); }
+  .sectionbar.rounded-3xl { border-radius: var(--radius-3xl); }
 
   .sectionbar-strong {
     border-color: var(--sectionbar-border-strong);
@@ -350,13 +410,6 @@ media-time-range {
     box-shadow: none;
   }
 
-  /* Variante pill (segmented controls, barras de filtros). Hace falta como
-     clase propia: .sectionbar se emite después de .rounded-full y su
-     rounded-2xl le ganaría. */
-  .sectionbar-pill {
-    border-radius: 9999px;
-  }
-
   .sectionbar-divide > * + * {
     border-top: 1px solid rgba(255, 255, 255, 0.07);
   }
@@ -368,57 +421,42 @@ media-time-range {
     @apply w-8 h-8 rounded-xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center text-brand-accent shrink-0;
   }
   .sectionbar-header-title {
-    @apply text-xs font-black uppercase tracking-wider text-on-surface font-mono;
+    @apply text-sm font-semibold text-on-surface;
   }
   .sectionbar-header-desc {
-    @apply text-2xs text-on-surface-variant/70 leading-normal font-medium mt-0.5;
+    @apply text-2xs text-label-2 leading-normal font-medium mt-0.5;
   }
   .sectionbar-header-badge {
     @apply ml-2;
   }
-}
 
-/* ─── Global Touch Targets & Scroll Consistency ────────────────────── */
-@media (hover: none) {
-  /* Force interactive elements to have a minimum touch target size of 44px */
-  button,
-  a,
-  [role="button"],
-  input,
-  select {
-    min-height: 44px;
-    min-width: 44px;
+  /* ─── 3D Card Flip, Manga Halftone & Perspective ───────────────────── */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+
+  .bg-halftone {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 0);
+    background-size: 14px 14px;
+  }
+
+  .bg-manga-speed {
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.02),
+      rgba(255, 255, 255, 0.02) 2px,
+      transparent 2px,
+      transparent 8px
+    );
   }
 }
-
-/* ─── 3D Card Flip, Manga Halftone & Perspective ───────────────────── */
-.perspective-1000 {
-  perspective: 1200px;
-}
-.preserve-3d {
-  transform-style: preserve-3d;
-}
-.backface-hidden {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-.rotate-y-180 {
-  transform: rotateY(180deg);
-}
-
-.bg-halftone {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 0);
-  background-size: 14px 14px;
-}
-
-.bg-manga-speed {
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.02),
-    rgba(255, 255, 255, 0.02) 2px,
-    transparent 2px,
-    transparent 8px
-  );
-}
-
-

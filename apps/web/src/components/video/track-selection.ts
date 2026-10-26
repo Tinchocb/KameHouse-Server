@@ -13,7 +13,65 @@ export function computeAudioTracksKey(audioTracks: AudioTrack[]): string {
  * Computes a stable content-based key for an array of subtitle tracks.
  */
 export function computeSubtitleTracksKey(subtitleTracks: SubtitleTrack[]): string {
-    return subtitleTracks.map((t) => `${t.index}:${t.language ?? ""}`).join("|")
+    // Una pista pendiente de extracción cambia de clave al quedar lista, así la
+    // auto-selección vuelve a correr cuando las pistas de Drive pasan a estar disponibles.
+    return subtitleTracks.map((t) => `${t.index}:${t.language ?? ""}${t.needsExtraction ? ":pending" : ""}`).join("|")
+}
+
+// ── Idiomas ────────────────────────────────────────────────────────────────────
+
+// Códigos ISO 639-1/2 (y alias frecuentes en nombres de archivo y pistas) → ISO 639-2.
+const LANGUAGE_FAMILIES: Record<string, string> = {
+    es: "spa", spa: "spa", esp: "spa", lat: "spa", latino: "spa", spanish: "spa", castellano: "spa", espanol: "spa", "español": "spa",
+    en: "eng", eng: "eng", english: "eng",
+    ja: "jpn", jpn: "jpn", jap: "jpn", japanese: "jpn",
+    pt: "por", por: "por", ptbr: "por", portuguese: "por",
+    fr: "fra", fra: "fra", fre: "fra", french: "fra",
+    de: "deu", deu: "deu", ger: "deu", german: "deu",
+    it: "ita", ita: "ita", italian: "ita",
+    ru: "rus", rus: "rus", russian: "rus",
+    zh: "zho", zho: "zho", chi: "zho", chinese: "zho",
+    ko: "kor", kor: "kor", korean: "kor",
+    ar: "ara", ara: "ara", arabic: "ara",
+    ca: "cat", cat: "cat",
+}
+
+/**
+ * Familia de idioma en ISO 639-2 de un código: "es", "spa", "es-MX", "spa-lat" y
+ * "es_419" son todos "spa". Devuelve "" para vacío o "und" (sin idioma).
+ */
+export function languageFamily(code: string | null | undefined): string {
+    const base = (code ?? "").trim().toLowerCase().split(/[-_]/)[0]
+    if (!base || base === "und" || base === "unknown") return ""
+    return LANGUAGE_FAMILIES[base] ?? base
+}
+
+const TITLE_LANGUAGE_HINTS: Array<[RegExp, string]> = [
+    [/espa[nñ]ol|spanish|latino|castellano|latam/i, "spa"],
+    [/english|ingl[eé]s/i, "eng"],
+    [/japon|japanese/i, "jpn"],
+    [/portugu/i, "por"],
+    [/franc|french/i, "fra"],
+]
+
+/** Familia de idioma de una pista; si no trae código ("und"/vacío), se infiere del título. */
+function trackLanguageFamily(track: { language?: string | null; title?: string | null }): string {
+    const fam = languageFamily(track.language)
+    if (fam) return fam
+    const title = track.title ?? ""
+    return TITLE_LANGUAGE_HINTS.find(([re]) => re.test(title))?.[1] ?? ""
+}
+
+const LATAM_REGIONS = new Set(["la", "lat", "419", "mx", "ar", "co", "cl", "pe", "ve", "uy"])
+
+/** Variante regional del español de un código o título: "latam", "iberian" o "". */
+function spanishVariant(track: { language?: string | null; title?: string | null }): "latam" | "iberian" | "" {
+    const parts = (track.language ?? "").toLowerCase().split(/[-_]/)
+    const region = parts[1] ?? ""
+    const title = (track.title ?? "").toLowerCase()
+    if (parts[0] === "lat" || LATAM_REGIONS.has(region) || /latino|latam|mexic/.test(title)) return "latam"
+    if (region === "es" || /castellano|espa[nñ]a|spain|iberi/.test(title)) return "iberian"
+    return ""
 }
 
 /**
@@ -88,11 +146,29 @@ export function resolveNativeAudioTrackPosition(
     return playable.findIndex(t => t.index === target.index)
 }
 
-export interface MatchAudioOptions {
+interface MatchAudioOptions {
     tracks: AudioTrack[]
     preferredAudioProfile?: string
     preferredAudioLang?: string
     preferredAudioTrackIndex?: number
+}
+
+/**
+ * Perfil de audio que aplica a una serie. El perfil propio de la serie (p. ej. Daima:
+ * japonés) pisa al global, salvo que el usuario ya haya elegido una pista en esa serie:
+ * entonces manda su elección, resuelta por idioma e índice ("auto").
+ */
+export function effectiveAudioProfile({
+    globalProfile,
+    seriesProfile,
+    rememberedTrackIndex,
+}: {
+    globalProfile: string
+    seriesProfile?: string
+    rememberedTrackIndex: number
+}): string {
+    if (!seriesProfile) return globalProfile
+    return rememberedTrackIndex >= 0 ? "auto" : seriesProfile
 }
 
 /**
@@ -221,52 +297,56 @@ export function matchPreferredAudioTrack({
 }
 
 /**
- * Checks whether an audio track is considered dubbed into the viewer's native/dub languages
- * (e.g. Spanish or English) for automatic subtitle disabling.
+ * Checks whether an audio track is considered dubbed into the viewer's language
+ * (so the subtitles are redundant). `viewerLangs` son familias ISO 639-2; sin ellas
+ * se asume español o inglés.
  */
-export function isAudioTrackDubbed(track: AudioTrack | null | undefined): boolean {
+export function isAudioTrackDubbed(track: AudioTrack | null | undefined, viewerLangs: string[] = ["spa", "eng"]): boolean {
     if (!track) return false
-    const currentLang = track.language?.toLowerCase() || ""
-    return (
-        ["spa", "es", "eng"].includes(currentLang) ||
-        currentLang.startsWith("spa-") ||
-        currentLang.startsWith("es-")
-    )
+    const family = trackLanguageFamily(track)
+    return family !== "" && viewerLangs.includes(family)
 }
 
 /**
- * Matches a preferred subtitle track tolerantly (exact match, prefix match,
- * or Spanish variants like "spa", "es", "es-la"), falling back to default or forced tracks.
+ * Matches a preferred subtitle track tolerantly: cualquier código ISO 639-1/2 o
+ * variante regional del mismo idioma ("es", "spa", "es-MX", "spa-lat"), con título
+ * como respaldo cuando la pista no trae idioma. Entre varias del mismo idioma gana la
+ * variante pedida y, después, la que no es forzada (carteles/canciones). Si ninguna
+ * coincide, cae a la pista por defecto o a la forzada. Las pistas pendientes de
+ * extracción (Drive) nunca se eligen.
  */
 export function matchPreferredSubtitleTrack(
     tracks: SubtitleTrack[],
     preferredSubtitleLang: string,
 ): SubtitleTrack | undefined {
-    if (tracks.length === 0) return undefined
+    const usable = tracks.filter((t) => !t.needsExtraction)
+    if (usable.length === 0) return undefined
 
-    const pref = (preferredSubtitleLang || "").toLowerCase()
-    const isSpanish = (l: string) =>
-        l === "spa" || l === "es" || l.startsWith("spa-") || l.startsWith("es-")
+    const pref = (preferredSubtitleLang || "").trim().toLowerCase()
+    const prefFamily = languageFamily(pref)
 
-    const matchesPref = (t: SubtitleTrack) => {
-        const lang = t.language?.toLowerCase() || ""
-        if (pref && (lang === pref || lang.startsWith(pref + "-") || pref.startsWith(lang + "-"))) {
-            return true
+    if (prefFamily) {
+        const prefVariant = prefFamily === "spa" ? spanishVariant({ language: pref }) : ""
+        const candidates = usable
+            .map((track, order) => ({ track, order }))
+            .filter(({ track }) => trackLanguageFamily(track) === prefFamily)
+        if (candidates.length > 0) {
+            const score = (t: SubtitleTrack) => {
+                let s = 0
+                if ((t.language ?? "").toLowerCase() === pref) s += 4
+                if (prefVariant && spanishVariant(t) === prefVariant) s += 2
+                if (!t.forced) s += 1
+                return s
+            }
+            candidates.sort((a, b) => score(b.track) - score(a.track) || a.order - b.order)
+            return candidates[0].track
         }
-        if ((pref === "spa" || pref === "es") && isSpanish(lang)) {
-            return true
-        }
-        return false
     }
 
-    return (
-        tracks.find(matchesPref) ??
-        tracks.find((t) => t.default) ??
-        tracks.find((t) => t.forced)
-    )
+    return usable.find((t) => t.default) ?? usable.find((t) => t.forced)
 }
 
-export interface ResolveAutoSubtitleOptions {
+interface ResolveAutoSubtitleOptions {
     subtitleTracks: SubtitleTrack[]
     currentAudio?: AudioTrack
     subtitlesEnabled: boolean
@@ -288,7 +368,12 @@ export function resolveAutoSubtitleTarget({
 }: ResolveAutoSubtitleOptions): SubtitleTrack | null {
     if (!subtitlesEnabled) return null
 
-    const isDubbed = isAudioTrackDubbed(currentAudio)
+    // "Doblado" = el audio está en un idioma que el espectador no necesita leer: español
+    // o el idioma de subtítulos que prefiere. Con subtítulos en español, un audio en
+    // inglés NO cuenta como doblado (antes apagaba los subtítulos por error).
+    const prefFamily = languageFamily(preferredSubtitleLang)
+    const viewerLangs = prefFamily ? Array.from(new Set(["spa", prefFamily])) : undefined
+    const isDubbed = isAudioTrackDubbed(currentAudio, viewerLangs)
     if (autoDisableSubtitlesWhenDubbed && isDubbed) {
         return null
     }

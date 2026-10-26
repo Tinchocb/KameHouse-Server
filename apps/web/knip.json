@@ -1,0 +1,17 @@
+{
+  "entry": [
+    "src/main.tsx",
+    "src/routeTree.gen.ts",
+    "src/sw.ts",
+    "rsbuild.config.ts",
+    "rsbuild.pwa.ts",
+    "rsbuild.jassub.ts",
+    "vitest.config.ts",
+    "tailwind.config.ts",
+    "eslint.config.js",
+    "scripts/**/*.mjs"
+  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["src/api/generated/**"],
+  "ignoreDependencies": ["babel-plugin-react-compiler"]
+}

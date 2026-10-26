@@ -28,18 +28,6 @@ func (m *RWMutexMap) Store(key, value interface{}) {
 	m.mu.Unlock()
 }
 
-func (m *RWMutexMap) LoadAndDelete(key interface{}) (value interface{}, loaded bool) {
-	m.mu.Lock()
-	value, loaded = m.dirty[key]
-	if !loaded {
-		m.mu.Unlock()
-		return nil, false
-	}
-	delete(m.dirty, key)
-	m.mu.Unlock()
-	return value, loaded
-}
-
 func (m *RWMutexMap) Delete(key interface{}) {
 	m.mu.Lock()
 	delete(m.dirty, key)

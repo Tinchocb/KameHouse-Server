@@ -2,12 +2,14 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import type Hls from "hls.js"
 import { useShallow } from "zustand/react/shallow"
+import { useMediaAudioProfiles } from "@/api/hooks/media_audio.hooks"
 import { usePlayerStore } from "@/lib/store"
 import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import type { PlayerCoreProps } from "./player-core.types"
 import {
     computeAudioTracksKey,
     computeSubtitleTracksKey,
+    effectiveAudioProfile,
     matchPendingAudioTrack,
     matchPreferredAudioTrack,
     resolveAutoSubtitleTarget,
@@ -92,6 +94,18 @@ export function usePlayerTrackSelection({
     )
 
     const preferredAudioTrackIndex = mediaId ? (preferredAudioTrackIndexMap[mediaId] ?? -1) : -1
+    // Perfil propio de la serie (p. ej. Daima: japonés), guardado en el servidor. Si el
+    // usuario ya eligió una pista en esta serie, esa elección manda ("auto").
+    const audioProfilesQuery = useMediaAudioProfiles()
+    const audioProfilesReady = !audioProfilesQuery.isPending
+    const seriesAudioProfile = mediaId
+        ? audioProfilesQuery.data?.find(p => p.mediaId === mediaId)?.audioProfile
+        : undefined
+    const audioProfile = effectiveAudioProfile({
+        globalProfile: preferredAudioProfile,
+        seriesProfile: seriesAudioProfile,
+        rememberedTrackIndex: preferredAudioTrackIndex,
+    })
     const setPreferredAudioTrackIndex = useCallback((index: number) => {
         if (mediaId) setPreferredAudioTrackIndexMap(mediaId, index)
     }, [mediaId, setPreferredAudioTrackIndexMap])
@@ -212,6 +226,8 @@ export function usePlayerTrackSelection({
     const audioTracksKey = computeAudioTracksKey(audioTracks)
     useEffect(() => {
         if (audioTracks.length === 0) return
+        // Sin el perfil de la serie todavía, elegir ahora daría el global: esperar a la lista.
+        if (!audioProfilesReady) return
 
         // Prioridad máxima: pista elegida explícitamente por el usuario antes
         // de un cambio de stream (direct → transcode).
@@ -231,7 +247,7 @@ export function usePlayerTrackSelection({
 
         const preferred = matchPreferredAudioTrack({
             tracks: audioTracks,
-            preferredAudioProfile,
+            preferredAudioProfile: audioProfile,
             preferredAudioLang,
             preferredAudioTrackIndex,
         })
@@ -240,7 +256,7 @@ export function usePlayerTrackSelection({
             // Pasar { auto: true } para que en direct play no dispare transcode.
             onSelectAudio(preferred, { auto: true })
         }
-    }, [audioTracksKey, preferredAudioProfile, preferredAudioLang, preferredAudioTrackIndex, activeAudioIndex, onSelectAudio, audioTracks])
+    }, [audioTracksKey, audioProfile, audioProfilesReady, preferredAudioLang, preferredAudioTrackIndex, activeAudioIndex, onSelectAudio, audioTracks])
 
     // Misma guarda que el audio: auto-configurar subtítulos UNA vez por lista
     // de pistas.

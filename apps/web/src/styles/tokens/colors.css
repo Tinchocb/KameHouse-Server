@@ -18,12 +18,14 @@
 
   --md-sys-color-secondary: hsl(var(--brand-secondary) / 0.9);
   --md-sys-color-on-secondary: #FFFFFF;
-  /* color de contraste sobre bg-brand-secondary (era: blanco; Clásico lo pisa a oscuro) */
+  /* color de contraste sobre bg-brand-secondary: blanco en las eras de secundario oscuro; oscuro
+     en Kai, Daima y Universo (ahí el blanco no llega a 4,5:1). Clásico lo pisa a oscuro. */
   --md-sys-color-secondary-container: hsl(var(--brand-secondary) / 0.2);
   --md-sys-color-on-secondary-container: hsl(var(--brand-secondary));
 
   --md-sys-color-tertiary: hsl(var(--brand-tertiary) / 0.9);
-  --md-sys-color-on-tertiary: hsl(var(--brand-tertiary) / 0.1);
+  /* Texto sobre tertiary: oscuro (antes era el color al 10 %, es decir, invisible). Sin consumidores hoy. */
+  --md-sys-color-on-tertiary: #0A0A0B;
   --md-sys-color-tertiary-container: hsl(var(--brand-tertiary) / 0.2);
   --md-sys-color-on-tertiary-container: hsl(var(--brand-tertiary));
 
@@ -35,6 +37,7 @@
   /* ─── Surface Roles (Liquid Glass / Frosted) ────────────────────────────────── */
   --md-sys-color-surface: color-mix(in srgb, var(--brand-accent-hex) 2%, rgba(13, 13, 16, 0.4));
   --md-sys-color-on-surface: #F5F5F7;
+  --on-surface: var(--md-sys-color-on-surface);
   --on-surface-rgb: 245, 245, 247;
   /* #F5F5F7 — for Tailwind opacity modifiers */
   --md-sys-color-surface-variant: color-mix(in srgb, var(--brand-accent-hex) 6%, rgba(20, 20, 24, 0.5));
@@ -77,6 +80,43 @@
   --bg-quaternary: #1B1B20;
   /* Hover/Active surface — superficies elevadas */
 
+  /* ═══ ESCALA NEUTRO (referencia única; la consume solo el modo Clásico) ═══
+     Dos variantes con la MISMA estructura de capas:
+
+       capa  uso                                  VIDRIO (por defecto)  PLANO (data-flat)
+       ────  ───────────────────────────────────  ────────────────────  ─────────────────
+       0     fondo de la página                   #0A0A0D  L* 3         #000000  (negro puro)
+       1     tarjetas, filas, islas, barras       #15151C  L* 7         #1C1C1E  (HIG)
+       2     menús, hojas, popovers, modales      #20202A  L* 11        #2C2C2E
+       3     hover, seleccionado, pistas          #2C2C38  L* 16        #3A3A3C
+       sep.  separador / borde de contenido       blanco 10 %           #38383A
+
+     · Con vidrio es "negro cine" con tinte frío (B = R + 7): pasos de ~4 L*, lo
+       justo para leerse como capas sin llegar a gris. Los grises HIG puros son
+       SOLO del plano (blur.css → --flat-*; el bloque `:root[data-flat]` de más
+       abajo los asigna acá). El usuario no quiere un Neutro gris con vidrio.
+     · Las superficies de contenido (`.surface-content`, blur.css) son la capa 1 al
+       72 % sobre el fondo con degradé (--classic-page-gradient) + desenfoque suave;
+       el chrome flotante (`.glass-*`) usa --glass-bg* (capas 1–2 al 78–90 %).
+     · Texto (--label-*): label-1 #F5F5F7, label-2 #C0C0C7, label-3 = label-1 al 62 %.
+       Contraste medido (06/10, vidrio): label-1 ≥ 13,6 · label-2 ≥ 8,2 · label-3 ≥ 6,1
+       sobre las 4 capas; plano: ≥ 10,4 / 6,3 / 5,1. Peor caso de la superficie al 72 %
+       sobre un fondo claro desenfocado (L ≈ 0,45): label-3 ≥ 4,5. Nunca poner
+       texto con alfa propio (`/45 /60 /75`) sobre estas capas.
+     · Por era NO usa esta escala: usa --bg-* teñidos con el acento (y --flat-* teñidos en plano). */
+  --neutral-cine-0: #0A0A0D;
+  --neutral-cine-1: #15151C;
+  --neutral-cine-2: #20202A;
+  --neutral-cine-3: #2C2C38;
+  --neutral-elev-0: var(--neutral-cine-0);
+  --neutral-elev-1: var(--neutral-cine-1);
+  --neutral-elev-2: var(--neutral-cine-2);
+  --neutral-elev-3: var(--neutral-cine-3);
+  --neutral-separator: rgba(255, 255, 255, 0.10);
+  /* Por era con vidrio: --neutral-elev-* sobre la rampa --bg-* de la era (ver el bloque
+     `:root[data-mode="era"]:not([data-flat])` más abajo); los componentes siguen usando solo
+     --neutral-elev-* sin mirar el modo. */
+
   /* ─── Escala Black Cinema (solo Clásico — Por Era usa color) ─────── */
   --classic-hover: #24242A;
   --classic-active: #2C2C33;
@@ -105,14 +145,15 @@
      DynamicBackdrop (-z-10); el color sólido vive en html (bg-primary). */
   --classic-page-gradient:
     radial-gradient(
-      120% 90% at 20% 0%,
-      rgba(255, 255, 255, 0.035),
-      transparent 55%
+      120% 85% at 15% -5%,
+      rgba(255, 255, 255, 0.085),
+      rgba(255, 255, 255, 0.02) 40%,
+      transparent 62%
     ),
     radial-gradient(
-      100% 80% at 100% 100%,
-      rgba(60, 60, 70, 0.06),
-      transparent 60%
+      90% 75% at 105% 105%,
+      rgba(96, 96, 140, 0.16),
+      transparent 62%
     );
 
   /* ─── Glassmorphism & Frosted Glass (Vidrio Esmerilado Canónico) ────────── */
@@ -162,42 +203,61 @@
   --spotlight-border-dbs: color-mix(in srgb, var(--spotlight-dbs) 70%, transparent);
   --spotlight-border-daima: color-mix(in srgb, var(--spotlight-daima) 70%, transparent);
 
-  /* Paleta vibrante propia del spotlight (gradiente primary + ambient glows del
-     ERA_COLOR_MAP). Distinta del tinte de era de arriba — se conserva a propósito
-     (ver /code-review: se eligió tokenizar sin cambiar color). */
-  --spotlight-db-vivid: #F2762E;
-  --spotlight-db-vivid-2: #F7A06E;
-  --spotlight-dbz-vivid: #F5C242;
-  --spotlight-dbz-vivid-2: #F9D77F;
-  --spotlight-dbgt-vivid: #E23A55;
-  --spotlight-dbgt-vivid-2: #EC7589;
-  --spotlight-dbkai-vivid: #2EC4B6;
-  --spotlight-dbkai-vivid-2: #72D8CE;
-  --spotlight-dbs-vivid: #3D8BFF;
-  --spotlight-dbs-vivid-2: #7DB1FF;
-  --spotlight-daima-vivid: #A56EF0;
-  --spotlight-daima-vivid-2: #C39EF5;
+  /* Vibrante del spotlight (gradiente primary + ambient glows del ERA_COLOR_MAP): el primario
+     es el hex de la era, una sola fuente; los -2 son tintes claros propios para gradientes. */
+  --spotlight-db-vivid: var(--era-db-hex);
+  --spotlight-db-vivid-2: #FDBA74;
+  --spotlight-dbz-vivid: var(--era-dbz-hex);
+  --spotlight-dbz-vivid-2: #FDE68A;
+  --spotlight-dbgt-vivid: var(--era-dbgt-hex);
+  --spotlight-dbgt-vivid-2: #FDA4AF;
+  --spotlight-dbkai-vivid: var(--era-dbkai-hex);
+  --spotlight-dbkai-vivid-2: #6EE7B7;
+  --spotlight-dbs-vivid: var(--era-dbs-hex);
+  --spotlight-dbs-vivid-2: #38BDF8;
+  --spotlight-daima-vivid: var(--era-daima-hex);
+  --spotlight-daima-vivid-2: #D8B4FE;
 
   /* ─── Era Colors — Dragon Ball (HSL para Tailwind/shadcn) ─────────────── */
-  --era-db-hsl: 22 88% 56%;
-  /* F2762E - Naranja gi de Goku */
-  --era-dbz-hsl: 43 90% 61%;
-  /* F5C242 - Dorado Super Saiyajin */
-  --era-dbgt-hsl: 350 74% 56%;
-  /* E23A55 - Carmesí Super Saiyajin 4 */
-  --era-dbkai-hsl: 174 62% 47%;
-  /* 2EC4B6 - Turquesa remaster (separado del azul de Super) */
-  --era-dbs-hsl: 216 100% 62%;
-  /* 3D8BFF - Azul Super Saiyajin Blue */
-  --era-daima-hsl: 265 81% 69%;
-  /* A56EF0 - Violeta Reino Demoníaco */
+  --era-db-hsl: 25 95% 53%;
+  /* F97316 - Naranja gi de Goku */
+  --era-dbz-hsl: 45 96% 56%;
+  /* FBBF24 - Dorado Super Saiyajin */
+  --era-dbgt-hsl: 350 89% 60%;
+  /* F43F5E - Carmesí Super Saiyajin 4 */
+  --era-dbkai-hsl: 160 84% 39%;
+  /* 10B981 - Verde Esmeralda remaster (kanji 改) */
+  --era-dbs-hsl: 217 91% 60%;
+  /* 3B82F6 - Azul Super Saiyajin Blue */
+  --era-daima-hsl: 270 91% 65%;
+  /* A855F7 - Violeta Reino Demoníaco */
 
-  --era-db-hex: #F2762E;
-  --era-dbz-hex: #F5C242;
-  --era-dbgt-hex: #E23A55;
-  --era-dbkai-hex: #2EC4B6;
-  --era-dbs-hex: #3D8BFF;
-  --era-daima-hex: #A56EF0;
+  --era-db-hex: #F97316;
+  --era-dbz-hex: #FBBF24;
+  --era-dbgt-hex: #F43F5E;
+  --era-dbkai-hex: #10B981;
+  --era-dbs-hex: #3B82F6;
+  --era-daima-hex: #A855F7;
+
+  /* Texto de era para WCAG AA (≥ 4,5:1 en fondos oscuros): versiones calibradas
+     para texto y micro-etiquetas. Fondos, bordes y acentos siguen con --era-*-hex. */
+  --era-dbgt-text: #FB7185;
+  --era-dbgt-text-rgb: 251 113 133;
+
+  --era-db-text: #FB923C;
+  --era-db-text-rgb: 251 146 60;
+
+  --era-dbz-text: #FCD34D;
+  --era-dbz-text-rgb: 252 211 77;
+
+  --era-dbkai-text: #34D399;
+  --era-dbkai-text-rgb: 52 211 153;
+
+  --era-dbs-text: #60A5FA;
+  --era-dbs-text-rgb: 96 165 250;
+
+  --era-daima-text: #C084FC;
+  --era-daima-text-rgb: 192 132 252;
 
   /* Glows por Era (RGBA) — sincronizados con los hex de arriba */
   --glow-db: color-mix(in srgb, var(--era-db-hex) 40%, transparent);
@@ -222,17 +282,6 @@
      del SeriesCard). Deriva de --brand-secondary-hex, así trackea la era sin
      hardcodear un naranja fijo. */
   --brand-secondary-light: color-mix(in srgb, var(--brand-secondary-hex) 65%, white);
-
-  /* ─── Botón Reproducir por era (Clásico: rojo sólido, sin degradé) ────── */
-  --era-btn-from: #C8102E;
-  --era-btn-to: #C8102E;
-  --era-btn-hover-from: #E0202A;
-  --era-btn-hover-to: #E0202A;
-
-  /* ─── Shimmer del título romaji por era (Clásico: rojo→rosa→rojo) ────── */
-  --era-shimmer-1: #C8102E;
-  --era-shimmer-2: #EC4899;
-  --era-shimmer-3: #C8102E;
 
   /* Ambient Orbs colors (KameHouse v3 background glow elements) */
   --glow-color-1: transparent;
@@ -270,6 +319,11 @@
      decorativos (teal/rosa), NO sirven para estado — por eso esto es aparte. */
   --status-error: #ef4444;
   --status-error-rgb: 239, 68, 68;
+  /* Texto de error pequeño sobre superficie tintada (rojo del aviso / HoldConfirm):
+     #ef4444 da 4,1:1 sobre #312022; este rojo claro da ≥ 5,5:1 sobre las capas
+     oscuras y sobre el tinte rojo del 12–30 %. Usar para TEXTO; el relleno sigue siendo --status-error. */
+  --status-error-fg: #F87171;
+  --status-error-fg-rgb: 248, 113, 113;
   --status-success: #22c55e;
   --status-success-rgb: 34, 197, 94;
   --status-warning: #f59e0b;
@@ -354,12 +408,12 @@
   --md-sys-color-on-surface-variant: #A5A5AD;
   --on-surface-variant-rgb: 165, 165, 173;
 
-  /* Escala Black Cinema OLED — negros con ligerísima diferencia de
-     temperatura: fondo casi neutro, cards ligeramente azuladas. */
-  --bg-primary: #08080A;
-  --bg-secondary: #0D0D10;
-  --bg-tertiary: #141418;
-  --bg-quaternary: #1B1B20;
+  /* Escala de elevación Neutro (Apple HIG): fondo negro, capas más claras.
+     Repetida acá porque las fichas pueden fijar data-theme local. */
+  --bg-primary: var(--neutral-elev-0);
+  --bg-secondary: var(--neutral-elev-1);
+  --bg-tertiary: var(--neutral-elev-2);
+  --bg-quaternary: var(--neutral-elev-3);
 
   --classic-hover: #24242A;
   --classic-active: #2C2C33;
@@ -391,16 +445,6 @@
   --glass-border-side: rgba(255, 255, 255, 0.07);
   --glass-border-strong: rgba(255, 255, 255, 0.13);
 
-  /* CTA y shimmer en blanco premium (monocromo nítido) */
-  --era-btn-from: #F5F5F7;
-  --era-btn-to: #E7E7E7;
-  --era-btn-hover-from: #FFFFFF;
-  --era-btn-hover-to: #F0F0F0;
-
-  --era-shimmer-1: #FFFFFF;
-  --era-shimmer-2: #FFFFFF;
-  --era-shimmer-3: #D9D9D9;
-
   --sidebar-accent-gradient: none;
   /* Sidebar más negro que el contenido principal */
   --sidebar-bg: rgba(4, 4, 6, 0.92);
@@ -421,13 +465,16 @@
   --brand-accent-700: color-mix(in oklab, var(--brand-accent-hex) 64%, black);
   --brand-accent-800: color-mix(in oklab, var(--brand-accent-hex) 45%, black);
   --brand-accent-900: color-mix(in oklab, var(--brand-accent-hex) 28%, black);
+  /* Acento para TEXTO chico sobre fondo oscuro: el 500 (#C8102E por defecto) da ~3.3:1;
+     aclarado al 70% supera 4.5:1 conservando el tono de la era. Rellenos/bordes usan 500. */
+  --brand-accent-readable: color-mix(in oklab, var(--brand-accent-hex) 70%, white);
 }
 
 [data-theme="era-db"] {
-  /* ─── Primario: Naranja gi de Goku (#F2762E). Tonos 100–900 en la escala de arriba ─── */
-  --brand-accent: 22 88% 56%;
-  --brand-accent-hex: #F2762E;
-  --brand-glow: color-mix(in srgb, #F2762E 25%, transparent);
+  /* ─── Primario: Naranja gi de Goku (#F97316) ─── */
+  --brand-accent: 25 95% 53%;
+  --brand-accent-hex: #F97316;
+  --brand-glow: color-mix(in srgb, #F97316 25%, transparent);
   /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
   --primary-foreground: 240 10% 4%;
   --md-sys-color-on-primary: #0A0A0B;
@@ -437,32 +484,23 @@
   /* ─── Secundario: Azul Báculo/Cinta ─── */
   --brand-secondary: 213 79% 55%;
   --brand-secondary-hex: #3474C8;
-  /* ─── Terciario: Verde aventura ─── */
+  /* ─── Terciario: Verde aventura Shenron ─── */
   --brand-tertiary: 142 63% 46%;
   --brand-tertiary-hex: #38A070;
   /* ─── Fondos Temáticos de Era (Cálido / Aventura 80s) ─── */
-  --bg-primary: #0B0907;
-  --bg-secondary: #100D0A;
-  --bg-tertiary: #17120D;
-  --bg-quaternary: #211A12;
-  --glass-bg: color-mix(in srgb, #F2762E 3%, rgba(255, 255, 255, 0.03));
+  --bg-primary: #0C0906;
+  --bg-secondary: #120E09;
+  --bg-tertiary: #18130D;
+  --bg-quaternary: #221B13;
+  --glass-bg: color-mix(in srgb, #F97316 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
-  --era-btn-from: var(--brand-accent-500);
-  --era-btn-to: var(--brand-accent-600);
-  --era-btn-hover-from: var(--brand-accent-400);
-  --era-btn-hover-to: var(--brand-accent-300);
-  /* ─── Shimmer título ─── */
-  --era-shimmer-1: #F2762E;
-  --era-shimmer-2: #FCD34D;
-  --era-shimmer-3: #F2762E;
 }
 
 [data-theme="era-dbz"] {
-  /* ─── Primario: Dorado Super Saiyajin (#F5C242). Tonos 100–900 en la escala de arriba ─── */
-  --brand-accent: 43 90% 61%;
-  --brand-accent-hex: #F5C242;
-  --brand-glow: color-mix(in srgb, #F5C242 25%, transparent);
+  /* ─── Primario: Dorado Super Saiyajin (#FBBF24) ─── */
+  --brand-accent: 45 96% 56%;
+  --brand-accent-hex: #FBBF24;
+  --brand-glow: color-mix(in srgb, #FBBF24 25%, transparent);
   /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
   --primary-foreground: 240 10% 4%;
   --md-sys-color-on-primary: #0A0A0B;
@@ -473,31 +511,22 @@
   --brand-secondary: 221 83% 53%;
   --brand-secondary-hex: #315FBD;
   /* ─── Terciario: Rojo Kaio-ken ─── */
-  --brand-tertiary: 0 75% 52%;
-  --brand-tertiary-hex: #C94A55;
+  --brand-tertiary: 0 84% 60%;
+  --brand-tertiary-hex: #EF4444;
   /* ─── Fondos Temáticos de Era (Azul Marino Noche VHS) ─── */
-  --bg-primary: #080A0F;
-  --bg-secondary: #0D1119;
-  --bg-tertiary: #121722;
-  --bg-quaternary: #1A2230;
-  --glass-bg: color-mix(in srgb, #F5C242 3%, rgba(255, 255, 255, 0.03));
+  --bg-primary: #06080F;
+  --bg-secondary: #0B0E19;
+  --bg-tertiary: #101422;
+  --bg-quaternary: #171D30;
+  --glass-bg: color-mix(in srgb, #FBBF24 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
-  --era-btn-from: var(--brand-accent-500);
-  --era-btn-to: var(--brand-accent-600);
-  --era-btn-hover-from: var(--brand-accent-400);
-  --era-btn-hover-to: var(--brand-accent-300);
-  /* ─── Shimmer título ─── */
-  --era-shimmer-1: #F5C242;
-  --era-shimmer-2: #FEF08A;
-  --era-shimmer-3: #F5C242;
 }
 
 [data-theme="era-dbgt"] {
-  /* ─── Primario: Carmesí Super Saiyajin 4 (#E23A55). Tonos 100–900 en la escala de arriba ─── */
-  --brand-accent: 350 74% 56%;
-  --brand-accent-hex: #E23A55;
-  --brand-glow: color-mix(in srgb, #E23A55 25%, transparent);
+  /* ─── Primario: Carmesí Escarlata Super Saiyajin 4 (#F43F5E) ─── */
+  --brand-accent: 350 89% 60%;
+  --brand-accent-hex: #F43F5E;
+  --brand-glow: color-mix(in srgb, #F43F5E 25%, transparent);
   /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
   --primary-foreground: 240 10% 4%;
   --md-sys-color-on-primary: #0A0A0B;
@@ -511,126 +540,96 @@
   --brand-tertiary: 40 90% 55%;
   --brand-tertiary-hex: #D2A94B;
   /* ─── Fondos Temáticos de Era (Espacio Cósmico Ciruela) ─── */
-  --bg-primary: #0D080F;
-  --bg-secondary: #140B16;
-  --bg-tertiary: #1B101D;
-  --bg-quaternary: #27172A;
-  --glass-bg: color-mix(in srgb, #E23A55 3%, rgba(255, 255, 255, 0.03));
+  --bg-primary: #0A060A;
+  --bg-secondary: #110A12;
+  --bg-tertiary: #180F1A;
+  --bg-quaternary: #241627;
+  --glass-bg: color-mix(in srgb, #F43F5E 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
-  --era-btn-from: var(--brand-accent-500);
-  --era-btn-to: var(--brand-accent-600);
-  --era-btn-hover-from: var(--brand-accent-400);
-  --era-btn-hover-to: var(--brand-accent-300);
-  /* ─── Shimmer título ─── */
-  --era-shimmer-1: #E23A55;
-  --era-shimmer-2: #FDE047;
-  --era-shimmer-3: #E23A55;
 }
 
 [data-theme="era-dbkai"] {
-  /* ─── Primario: Turquesa remaster (#2EC4B6). Tonos 100–900 en la escala de arriba ─── */
-  --brand-accent: 174 62% 47%;
-  --brand-accent-hex: #2EC4B6;
-  --brand-glow: color-mix(in srgb, #2EC4B6 25%, transparent);
+  /* ─── Primario: Verde Esmeralda Remaster (#10B981) - Kanji 改 ─── */
+  --brand-accent: 160 84% 39%;
+  --brand-accent-hex: #10B981;
+  --brand-glow: color-mix(in srgb, #10B981 25%, transparent);
   /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
   --primary-foreground: 240 10% 4%;
   --md-sys-color-on-primary: #0A0A0B;
   --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
   --md-sys-color-on-surface: #EEF8F6;
-  /* ─── Secundario: Naranja gi (misma historia que Z) ─── */
+  /* ─── Secundario: Naranja gi ─── */
   --brand-secondary: 26 79% 57%;
   --brand-secondary-hex: #E8843A;
-  /* ─── Terciario: Blanco Manga Pura ─── */
-  --brand-tertiary: 210 40% 98%;
-  --brand-tertiary-hex: #E4E9EE;
-  /* ─── Fondos Temáticos de Era (Verde Azulado HD) ─── */
-  --bg-primary: #050B0B;
-  --bg-secondary: #081211;
-  --bg-tertiary: #0C1918;
-  --bg-quaternary: #132422;
-  --glass-bg: color-mix(in srgb, #2EC4B6 3%, rgba(255, 255, 255, 0.03));
+  /* Naranja claro: texto oscuro sobre el secundario (el blanco no llega a 4,5:1) */
+  --md-sys-color-on-secondary: #0A0A0B;
+  --on-secondary-rgb: 10, 10, 11;
+  /* ─── Terciario: Azul Cielo HD Remaster ─── */
+  --brand-tertiary: 199 89% 48%;
+  --brand-tertiary-hex: #0EA5E9;
+  /* ─── Fondos Temáticos de Era (Verde Esmeralda Nocturno HD) ─── */
+  --bg-primary: #040B08;
+  --bg-secondary: #07130E;
+  --bg-tertiary: #0B1B14;
+  --bg-quaternary: #11271D;
+  --glass-bg: color-mix(in srgb, #10B981 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
-  --era-btn-from: var(--brand-accent-500);
-  --era-btn-to: var(--brand-accent-600);
-  --era-btn-hover-from: var(--brand-accent-400);
-  --era-btn-hover-to: var(--brand-accent-300);
-  /* ─── Shimmer título ─── */
-  --era-shimmer-1: #2EC4B6;
-  --era-shimmer-2: #A7F3EC;
-  --era-shimmer-3: #2EC4B6;
 }
 
 [data-theme="era-dbs"] {
-  /* ─── Primario: Azul Super Saiyajin Blue (#3D8BFF). Tonos 100–900 en la escala de arriba ─── */
-  --brand-accent: 216 100% 62%;
-  --brand-accent-hex: #3D8BFF;
-  --brand-glow: color-mix(in srgb, #3D8BFF 25%, transparent);
+  /* ─── Primario: Azul Super Saiyajin Blue (#3B82F6) ─── */
+  --brand-accent: 217 91% 60%;
+  --brand-accent-hex: #3B82F6;
+  --brand-glow: color-mix(in srgb, #3B82F6 25%, transparent);
   /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
   --primary-foreground: 240 10% 4%;
   --md-sys-color-on-primary: #0A0A0B;
   --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
   --md-sys-color-on-surface: #EDF3FA;
-  /* ─── Secundario: Púrpura Dios Destructor ─── */
-  --brand-secondary: 275 75% 55%;
-  --brand-secondary-hex: #7653B5;
-  /* ─── Terciario: Plata Ultra Instinto ─── */
-  --brand-tertiary: 214 25% 88%;
-  --brand-tertiary-hex: #C9D0DA;
+  /* ─── Secundario: Púrpura Dios Destructor Beerus ─── */
+  --brand-secondary: 271 81% 56%;
+  --brand-secondary-hex: #8B5CF6;
+  /* ─── Terciario: Cian Divino Aura Ki ─── */
+  --brand-tertiary: 190 95% 39%;
+  --brand-tertiary-hex: #0284C7;
   /* ─── Fondos Temáticos de Era (Azul Astral Divino) ─── */
-  --bg-primary: #06090E;
-  --bg-secondary: #09101A;
-  --bg-tertiary: #0D1520;
-  --bg-quaternary: #162438;
-  --glass-bg: color-mix(in srgb, #3D8BFF 3%, rgba(255, 255, 255, 0.03));
+  --bg-primary: #05080F;
+  --bg-secondary: #080D1A;
+  --bg-tertiary: #0C1322;
+  --bg-quaternary: #131D33;
+  --glass-bg: color-mix(in srgb, #3B82F6 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
-  --era-btn-from: var(--brand-accent-500);
-  --era-btn-to: var(--brand-accent-600);
-  --era-btn-hover-from: var(--brand-accent-400);
-  --era-btn-hover-to: var(--brand-accent-300);
-  /* ─── Shimmer título ─── */
-  --era-shimmer-1: #3D8BFF;
-  --era-shimmer-2: #C9D0DA;
-  --era-shimmer-3: #3D8BFF;
 }
 
 [data-theme="era-daima"] {
-  /* ─── Primario: Violeta Reino Demoníaco (#A56EF0). Tonos 100–900 en la escala de arriba ─── */
-  --brand-accent: 265 81% 69%;
-  --brand-accent-hex: #A56EF0;
-  --brand-glow: color-mix(in srgb, #A56EF0 25%, transparent);
+  /* ─── Primario: Violeta Reino Demoníaco (#A855F7) ─── */
+  --brand-accent: 270 91% 65%;
+  --brand-accent-hex: #A855F7;
+  --brand-glow: color-mix(in srgb, #A855F7 25%, transparent);
   /* Texto sobre el acento: casi negro (≥ 4.7:1 en todas las eras; el blanco no llega a 4.5) */
   --primary-foreground: 240 10% 4%;
   --md-sys-color-on-primary: #0A0A0B;
   --on-primary-rgb: 10, 10, 11;
   --foreground: 0 0% 98%;
   --md-sys-color-on-surface: #F3EEF8;
-  /* ─── Secundario: Dorado Demonio ─── */
+  /* ─── Secundario: Dorado Demonio Magia ─── */
   --brand-secondary: 45 85% 60%;
   --brand-secondary-hex: #D59A45;
-  /* ─── Terciario: Verde Demon Realm ─── */
-  --brand-tertiary: 142 65% 42%;
-  --brand-tertiary-hex: #35947C;
+  /* Dorado: texto oscuro sobre el secundario (el blanco no llega a 4,5:1) */
+  --md-sys-color-on-secondary: #0A0A0B;
+  --on-secondary-rgb: 10, 10, 11;
+  /* ─── Terciario: Verde Glind / Demon Realm ─── */
+  --brand-tertiary: 158 64% 52%;
+  --brand-tertiary-hex: #10B981;
   /* ─── Fondos Temáticos de Era (Bosque Místico Demon Realm) ─── */
-  --bg-primary: #0D090F;
-  --bg-secondary: #120D16;
-  --bg-tertiary: #18111C;
-  --bg-quaternary: #231A28;
-  --glass-bg: color-mix(in srgb, #A56EF0 3%, rgba(255, 255, 255, 0.03));
+  --bg-primary: #0A060F;
+  --bg-secondary: #100A18;
+  --bg-tertiary: #160E21;
+  --bg-quaternary: #201530;
+  --glass-bg: color-mix(in srgb, #A855F7 3%, rgba(255, 255, 255, 0.03));
   --glass-border-top: rgba(255, 255, 255, 0.12);
-  /* ─── Botón Reproducir: del tono base al 600; en hover hacia los claros ─── */
-  --era-btn-from: var(--brand-accent-500);
-  --era-btn-to: var(--brand-accent-600);
-  --era-btn-hover-from: var(--brand-accent-400);
-  --era-btn-hover-to: var(--brand-accent-300);
-  /* ─── Shimmer título ─── */
-  --era-shimmer-1: #A56EF0;
-  --era-shimmer-2: #D8B4FE;
-  --era-shimmer-3: #A56EF0;
 }
 
 [data-theme="era-universe"] {
@@ -643,6 +642,9 @@
   --md-sys-color-on-surface: #F3EFFB;
   --brand-secondary: 335 75% 60%;
   --brand-secondary-hex: #C95D8C;
+  /* Rosa medio: texto oscuro sobre el secundario (el blanco no llega a 4,5:1) */
+  --md-sys-color-on-secondary: #0A0A0B;
+  --on-secondary-rgb: 10, 10, 11;
   --brand-tertiary: 175 65% 45%;
   --brand-tertiary-hex: #31998F;
   /* Fondos Temáticos (Violeta Cósmico Profundo) */
@@ -651,15 +653,6 @@
   --bg-tertiary: #171020;
   --bg-quaternary: #22182D;
   --sidebar-active-border: color-mix(in srgb, #805AC2 45%, transparent);
-  /* ─── Botón: Violeta → Rosa ─── */
-  --era-btn-from: #805AC2;
-  --era-btn-to: #A855F7;
-  --era-btn-hover-from: #9A6EEE;
-  --era-btn-hover-to: #C479F7;
-  /* ─── Shimmer: violeta → rosa → teal ─── */
-  --era-shimmer-1: #805AC2;
-  --era-shimmer-2: #EC4899;
-  --era-shimmer-3: #31998F;
 }
 
 /* ─── Temas Especiales ─────────────────────────────────────────────────── */
@@ -714,9 +707,6 @@
   --glow-color-4: transparent;
   --glow-color-5: transparent;
 
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-bg-strong: rgba(255, 255, 255, 0.07);
-  --glass-bg-hover: rgba(255, 255, 255, 0.055);
   --glass-border-top: rgba(255, 255, 255, 0.07);
   --glass-border-bottom: rgba(255, 255, 255, 0.04);
   --glass-border-side: rgba(255, 255, 255, 0.07);
@@ -725,20 +715,44 @@
   --glass-rim-cool: rgba(255, 255, 255, 0.04);
   --glass-rim-warm: rgba(255, 255, 255, 0.04);
 
-  /* Cards grandes: #101013–#151519, planas — nada de gris claro ni
-     gradientes visibles fuertes en Clásico. */
-  --glass-card-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.025), rgba(16, 16, 19, 0.62) 55%, rgba(255, 255, 255, 0.01) 100%);
-  --glass-panel-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.02), rgba(13, 13, 16, 0.58) 100%);
-  --glass-panel-bg-strong: linear-gradient(165deg, rgba(255, 255, 255, 0.03), rgba(13, 13, 16, 0.82) 100%);
+  /* Cards y paneles: planos sobre la escala de elevación, sin degradé. */
+  --glass-card-bg: color-mix(in srgb, var(--neutral-elev-1) 80%, transparent);
+  --glass-panel-bg: color-mix(in srgb, var(--neutral-elev-1) 78%, transparent);
+  --glass-panel-bg-strong: color-mix(in srgb, var(--neutral-elev-2) 90%, transparent);
   --glass-liquid-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03) 45%, rgba(255, 255, 255, 0.015) 100%);
 
-  /* Superficies MD3 coherentes con la escala Black Cinema */
-  --md-sys-color-surface-container: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
-  --md-sys-color-surface-container-high: color-mix(in srgb, var(--bg-tertiary) 88%, transparent);
+  /* Escala de elevación Neutro (Apple HIG): contenido sobre negro puro;
+     tarjetas = elevada 1, menús/hojas/popovers = elevada 2. */
+  --bg-primary: var(--neutral-elev-0);
+  --bg-secondary: var(--neutral-elev-1);
+  --bg-tertiary: var(--neutral-elev-2);
+  --bg-quaternary: var(--neutral-elev-3);
+  --classic-hover: var(--neutral-elev-3);
+  --classic-active: var(--neutral-elev-3);
+  --switch-track-off: var(--neutral-elev-3);
+  --control-secondary-bg: var(--neutral-elev-1);
+  --control-secondary-hover: var(--neutral-elev-2);
 
-  /* Gradiente ambiental negro, casi imperceptible: evita el fondo plano
-     sin leerse como color. Translúcido para preservar DynamicBackdrop. */
-  --page-gradient: var(--classic-page-gradient, radial-gradient(120% 90% at 20% 0%, rgba(255, 255, 255, 0.035), transparent 55%), radial-gradient(100% 80% at 100% 100%, rgba(60, 60, 70, 0.06), transparent 60%));
+  /* Chrome (vidrio) con base de elevación: el menú se lee como capa por su
+     luminancia aunque el desenfoque esté apagado. */
+  --glass-bg: color-mix(in srgb, var(--neutral-elev-1) 78%, transparent);
+  --glass-bg-strong: color-mix(in srgb, var(--neutral-elev-2) 90%, transparent);
+  --glass-bg-hover: color-mix(in srgb, var(--neutral-elev-2) 80%, transparent);
+
+  /* Superficies MD3 sobre la escala de elevación */
+  --md-sys-color-surface-container: color-mix(in srgb, var(--neutral-elev-1) 88%, transparent);
+  --md-sys-color-surface-container-high: color-mix(in srgb, var(--neutral-elev-2) 92%, transparent);
+
+  /* shadcn: fondo, tarjeta y popover = capas 0 / 1 / 2 */
+  --background: 240 13% 4%;
+  --card: 240 14% 10%;
+  --popover: 240 12% 14%;
+  --secondary: 240 12% 14%;
+  --muted: 240 14% 10%;
+  --accent: 240 12% 19%;
+
+  /* Fondo de contenido: negro cine con degradé ambiental (el plano lo apaga). */
+  --page-gradient: var(--classic-page-gradient);
 
   /* Sidebar un escalón más negro que el contenido principal */
   --sidebar-bg: rgba(4, 4, 6, 0.92);
@@ -748,8 +762,6 @@
   /* SectionBar en Clásico: vive en shadows.css (acá quedaba pisado por su
      :root, que carga después con igual especificidad). */
 }
-
-
 
 /* Por Era: Degradés sutiles curados por el anime (DRY) */
 [data-mode="era"] {
@@ -810,7 +822,6 @@
   --glow-color-5: transparent;
 }
 
-
 /* ════════════════════════════════════════════════════════════════════════════
    Flat Mode — superficies sólidas, sin glass ni blur
    Activado cuando Vidrio Líquido está desactivado
@@ -866,4 +877,80 @@
 
 [data-mode="era"][data-flat="true"] {
   --sidebar-bg: color-mix(in srgb, var(--bg-primary) 50%, transparent);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Capa semántica mínima (A-10/A-11) — solo alias sobre los tokens existentes.
+   Va al final y en :root (= <html>, donde viven data-mode/data-flat), así que
+   las var() se resuelven con los valores finales de cada modo/era.
+   ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Superficies: chrome = vidrio (islas, paneles flotantes, paleta, popovers);
+     content = opaca con borde 1px y sin blur (tarjetas, filas, métricas). */
+  --surface-chrome:          var(--glass-bg);
+  --surface-chrome-strong:   var(--glass-bg-strong);
+  --surface-chrome-border:   var(--glass-border);
+  --surface-content:         var(--bg-secondary);
+  --surface-content-raised:  var(--bg-tertiary);
+  --surface-content-border:  rgba(255, 255, 255, 0.10);
+
+  /* Etiquetas de texto (sobre --surface-content: ≥ 7 / ≥ 7 / ≥ 4,5) */
+  --label-1: var(--md-sys-color-on-surface);
+  --label-2: var(--md-sys-color-on-surface-variant);
+  --label-3: rgba(var(--on-surface-rgb), 0.62);
+
+  /* Estado "seleccionado" (receta bg-white/95 text-black repetida) */
+  --selected-bg: rgba(255, 255, 255, 0.95);
+  --selected-fg: #000000;
+}
+
+/* Neutro (Clásico): separador HIG para el contenido opaco. (0,2,0) para ganarle
+   al :root de arriba; Increase Contrast (blur.css, :root:root) carga después. */
+:root[data-mode="classic"] {
+  --surface-content-border: var(--neutral-separator);
+  /* label-2 ≥ 6:1 sobre elev-3 (6,27) y siempre por encima de label-3, que sobre
+     elev-2/3 daba 5,91 / 5,12 contra 5,70 / 4,64 del secundario. */
+  --label-2: #C0C0C7;
+}
+
+/* Por era: label-2 un poco más claro (#A5A5AD → #B4B4BC) para que sobre --neutral-elev-3
+   teñido (hover/seleccionado) llegue a 5,4:1 y siga por encima de label-3 (antes 4,51 vs 5,02). */
+:root[data-mode="era"] {
+  --label-2: #B4B4BC;
+}
+
+/* Plano ("Reducir transparencia" / ahorro): la escala de elevación del modo se
+   toma de --flat-* (blur.css). Neutro = grises sólidos HIG sobre negro puro;
+   Por era = la misma escala teñida con el acento de la era. (0,3,0) para
+   ganarle al :root y a [data-mode]. */
+:root[data-mode="classic"][data-flat="true"],
+:root[data-mode="era"][data-flat="true"] {
+  --neutral-elev-0: var(--flat-0);
+  --neutral-elev-1: var(--flat-1);
+  --neutral-elev-2: var(--flat-2);
+  --neutral-elev-3: var(--flat-3);
+  --neutral-separator: var(--flat-separator);
+}
+
+/* Por era con vidrio: --neutral-elev-* sobre la rampa --bg-* de la era (3/4/6 % de acento),
+   la misma base que --flat-* en plano. Con la base fría --neutral-cine las tarjetas de DB salían
+   malva y las de DBZ grises sobre fondos azules. Así Mi Lista, buscador, notificaciones, filtros y filas
+   internas no quedan "frías" dentro de tarjetas teñidas. Neutro no cambia
+   (data-mode="classic"). (0,3,0): gana a :root y a [data-mode]. */
+:root[data-mode="era"]:not([data-flat="true"]) {
+  --neutral-elev-0: var(--bg-primary);
+  --neutral-elev-1: color-mix(in srgb, var(--brand-accent-hex) 3%, var(--bg-secondary));
+  --neutral-elev-2: color-mix(in srgb, var(--brand-accent-hex) 4%, var(--bg-tertiary));
+  --neutral-elev-3: color-mix(in srgb, var(--brand-accent-hex) 6%, var(--bg-quaternary));
+  --neutral-separator: color-mix(in srgb, var(--brand-accent-hex) 14%, rgba(255, 255, 255, 0.08));
+}
+
+/* shadcn en Neutro sin desenfoque: grises sólidos (mismos valores que --flat-1/2: #1C1C1E y #2C2C2E). */
+[data-mode="classic"][data-flat="true"] {
+  --background: 0 0% 0%;
+  --card: 240 3% 11%;
+  --popover: 240 2% 18%;
+  --secondary: 240 3% 11%;
+  --muted: 240 3% 11%;
+  --accent: 240 2% 18%;
 }

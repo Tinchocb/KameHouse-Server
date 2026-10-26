@@ -33,14 +33,6 @@ func (scn *Scanner) discoverFilePaths(ctx context.Context, _ time.Time) ([]strin
 		return len(sortedLibraryPaths[i]) > len(sortedLibraryPaths[j])
 	})
 
-	existingFolders := make(map[string]struct{})
-	for _, lf := range scn.ExistingLocalFiles {
-		if lf == nil {
-			continue
-		}
-		existingFolders[util.NormalizePath(filepath.Dir(lf.Path))] = struct{}{}
-	}
-
 	retrievedPathMap := make(map[string]struct{})
 	paths := make([]string, 0, len(scn.ExistingLocalFiles))
 	var mu sync.Mutex
@@ -53,6 +45,9 @@ func (scn *Scanner) discoverFilePaths(ctx context.Context, _ time.Time) ([]strin
 			var retrievedPaths []string
 
 			err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
 				if err != nil {
 					// Intercept and skip directory or file on permission error
 					if os.IsPermission(err) || errors.Is(err, fs.ErrPermission) {
@@ -68,7 +63,7 @@ func (scn *Scanner) discoverFilePaths(ctx context.Context, _ time.Time) ([]strin
 					return nil
 				}
 				ext := strings.ToLower(filepath.Ext(path))
-				if util.IsValidMediaFile(path) && util.IsValidVideoExtension(ext) {
+				if util.IsValidMediaFile(d.Name()) && util.IsValidVideoExtension(ext) {
 					retrievedPaths = append(retrievedPaths, path)
 				}
 				return nil
@@ -102,13 +97,26 @@ func (scn *Scanner) discoverFilePaths(ctx context.Context, _ time.Time) ([]strin
 }
 
 func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, libraryPaths []string, skippedLfs map[string]*dto.LocalFile) []*dto.LocalFile {
+	if len(paths) == 0 {
+		return []*dto.LocalFile{}
+	}
 	maxWorkers := runtime.NumCPU() * 2
 	if maxWorkers < 4 {
 		maxWorkers = 4
 	}
+	maxWorkers = min(maxWorkers, len(paths))
 
-	jobs := make(chan string, len(paths))
-	results := make(chan *dto.LocalFile, len(paths))
+	// Cada escaneo ordena su propia copia: las raíces pueden provenir de opciones compartidas.
+	libraryPaths = append([]string(nil), libraryPaths...)
+	// El prefijo más largo gana en SeparateFilePathS; dejar libraryPaths ordenado de mayor a
+	// menor longitud, una sola vez y antes de lanzar los workers, conserva el orden que luego
+	// usa ParseFolderStructure con raíces anidadas sin que N goroutines reordenen el mismo slice.
+	sort.SliceStable(libraryPaths, func(i, j int) bool {
+		return len(libraryPaths[i]) > len(libraryPaths[j])
+	})
+
+	jobs := make(chan string, maxWorkers)
+	results := make(chan *dto.LocalFile, maxWorkers)
 	var skipped atomic.Int64
 
 	// Pre-map existing files by path for O(1) lookup in workers
@@ -137,26 +145,62 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 					results <- nil
 					continue
 				}
-				lf := dto.NewLocalFileS(path, libraryPaths)
-
-				if stat, err := os.Stat(path); err == nil {
-					lf.FileSize = stat.Size()
-					lf.FileModTime = stat.ModTime().Unix()
+				stat, err := os.Stat(path)
+				if err != nil {
+					scn.Logger.Debug().Err(err).Str("path", path).Msg("scanner: File unavailable after discovery, skipping")
+					continue
 				}
+				fileSize := stat.Size()
+				fileModTime := stat.ModTime().Unix()
 
-				// Preservation logic: If we already know this file, keep its associations
-				// unless the scanner explicitly changes them later.
-				if existing, ok := existingMap[normPath]; ok {
-					lf.MediaID = existing.MediaID
-					lf.LibraryMediaId = existing.LibraryMediaId
-					lf.Locked = existing.Locked
-					lf.Ignored = existing.Ignored
-					if lf.FileSize == existing.FileSize && lf.FileModTime == existing.FileModTime {
-						lf.FileHash = existing.FileHash
+				var lf *dto.LocalFile
+				existing, hasExisting := existingMap[normPath]
+				// Fast path: if the file was already scanned and size & mtime haven't changed,
+				// reuse existing parsed structures directly without invoking habari regex parsing.
+				if hasExisting && existing != nil && existing.ParsedData != nil && fileSize == existing.FileSize && fileModTime == existing.FileModTime {
+					lf = &dto.LocalFile{
+						Path:             path,
+						Name:             existing.Name,
+						ParsedData:       existing.ParsedData,
+						ParsedFolderData: existing.ParsedFolderData,
+						EmbeddedMetadata: existing.EmbeddedMetadata,
+						Metadata:         existing.Metadata,
+						TechnicalInfo:    existing.TechnicalInfo,
+						Locked:           existing.Locked,
+						Ignored:          existing.Ignored,
+						LibraryMediaId:   existing.LibraryMediaId,
+						MediaID:          existing.MediaID,
+						FileHash:         existing.FileHash,
+						FileSize:         fileSize,
+						FileModTime:      fileModTime,
+						DriveFileID:      existing.DriveFileID,
 					}
-					// Copy metadata if it was already matched
-					if lf.MediaID != 0 {
-						lf.Metadata = existing.Metadata
+					if lf.Metadata == nil {
+						lf.Metadata = &dto.LocalFileMetadata{
+							Episodes:     nil,
+							AniDBEpisode: "",
+							Type:         "",
+						}
+					}
+				} else {
+					lf = dto.NewLocalFileS(path, libraryPaths)
+					lf.FileSize = fileSize
+					lf.FileModTime = fileModTime
+
+					// Preservation logic: If we already know this file, keep its associations
+					// unless the scanner explicitly changes them later.
+					if hasExisting && existing != nil {
+						lf.MediaID = existing.MediaID
+						lf.LibraryMediaId = existing.LibraryMediaId
+						lf.Locked = existing.Locked
+						lf.Ignored = existing.Ignored
+						if lf.FileSize == existing.FileSize && lf.FileModTime == existing.FileModTime {
+							lf.FileHash = existing.FileHash
+						}
+						// Copy metadata if it was already matched
+						if lf.MediaID != 0 {
+							lf.Metadata = existing.Metadata
+						}
 					}
 				}
 
@@ -165,10 +209,16 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 		}()
 	}
 
-	for _, p := range paths {
-		jobs <- p
-	}
-	close(jobs)
+	go func() {
+		defer close(jobs)
+		for _, p := range paths {
+			select {
+			case jobs <- p:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	go func() {
 		workerWg.Wait()

@@ -39,7 +39,7 @@ func KillCmd(cmd *exec.Cmd) error {
 		return nil
 	}
 	// Use taskkill with /T (tree kill) and /F (force)
-	killCmd := exec.Command("taskkill", "/F", "/T", "/PID", string([]byte(strconv.Itoa(cmd.Process.Pid))))
+	killCmd := exec.Command("taskkill", "/F", "/T", "/PID", strconv.Itoa(cmd.Process.Pid))
 	killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // Hide window
 	return killCmd.Run()
 }

@@ -36,6 +36,10 @@ func (h *Handler) HandleGetSettings(c echo.Context) error {
 
 	// Attach separate-table sub-settings for the full settings view
 	settings.Mediastream, _ = h.App.Database.GetMediastreamSettings()
+	if settings.Mediastream != nil {
+		ms := *settings.Mediastream
+		settings.Mediastream = &ms
+	}
 	settings.Theme, _ = h.App.Database.GetTheme()
 
 	// Coalesce defaults para columnas nuevas en filas pre-migración (sin persistir).
@@ -145,9 +149,8 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 		go func() {
 			defer util.HandlePanicThen(func() {})
 			if prev, found := h.App.Database.GetMediastreamSettings(); found && prev != nil {
-				ms := *prev // copia: prev es el valor cacheado y compartido
-				ms.TranscodeEnabled = true
-				if _, err := h.App.Database.UpsertMediastreamSettings(&ms); err != nil {
+				// Sólo la columna: una fila completa escrita desde la caché podría revertir Solo original.
+				if err := h.App.Database.Gorm().Model(&models.MediastreamSettings{}).Where("id = ?", prev.ID).Update("transcode_enabled", true).Error; err != nil {
 					h.App.Logger.Error().Err(err).Msg("settings: no se pudo habilitar el transcoder")
 				}
 			}
@@ -314,9 +317,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		if _, ok := rawLibrary["scannerMatchingThreshold"]; ok {
 			merged.Library.ScannerMatchingThreshold = b.Library.ScannerMatchingThreshold
 		}
-		if _, ok := rawLibrary["primaryMetadataProvider"]; ok && b.Library.PrimaryMetadataProvider != "" {
-			merged.Library.PrimaryMetadataProvider = b.Library.PrimaryMetadataProvider
-		}
 		if _, ok := rawLibrary["scannerProvider"]; ok && b.Library.ScannerProvider != "" {
 			merged.Library.ScannerProvider = b.Library.ScannerProvider
 		}
@@ -329,9 +329,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		}
 		if _, ok := rawLibrary["scannerStrictStructure"]; ok {
 			merged.Library.ScannerStrictStructure = b.Library.ScannerStrictStructure
-		}
-		if _, ok := rawLibrary["scannerUseLegacyMatching"]; ok {
-			merged.Library.ScannerUseLegacyMatching = b.Library.ScannerUseLegacyMatching
 		}
 		if _, ok := rawLibrary["disableLocalScanning"]; ok {
 			merged.Library.DisableLocalScanning = b.Library.DisableLocalScanning
@@ -348,9 +345,6 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		if _, ok := rawLibrary["autoSkipOutro"]; ok {
 			merged.Library.AutoSkipOutro = b.Library.AutoSkipOutro
 		}
-		if _, ok := rawLibrary["autoSkipFiller"]; ok {
-			merged.Library.AutoSkipFiller = b.Library.AutoSkipFiller
-		}
 		if _, ok := rawLibrary["autoDisableSubtitlesWhenDubbed"]; ok {
 			merged.Library.AutoDisableSubtitlesWhenDubbed = b.Library.AutoDisableSubtitlesWhenDubbed
 		}
@@ -361,17 +355,8 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 			merged.Library.TvMode = b.Library.TvMode
 		}
 
-		if merged.Library.TmdbApiKey != "" && merged.Library.PrimaryMetadataProvider == "" {
-			merged.Library.PrimaryMetadataProvider = "tmdb"
-		}
 		if merged.Library.TmdbApiKey != "" && merged.Library.ScannerProvider == "" {
 			merged.Library.ScannerProvider = "tmdb"
-		}
-		// Si solo llega primary (cliente parcial), mantener scanner alineado.
-		if _, primaryOk := rawLibrary["primaryMetadataProvider"]; primaryOk {
-			if _, scannerOk := rawLibrary["scannerProvider"]; !scannerOk && b.Library.PrimaryMetadataProvider != "" {
-				merged.Library.ScannerProvider = b.Library.PrimaryMetadataProvider
-			}
 		}
 		// Defaults para columnas nuevas en filas pre-migración.
 		if merged.Library.PreferredAudioProfile == "" {
@@ -522,10 +507,8 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 	// ── 7. Invalidate settings cache ──────────────────────────────────────────
 	h.invalidateSettingsCache()
 
-	// El transcoder hornea el perfil HW al construirse: si cambió mediastream,
-	// reinicializar igual que el endpoint dedicado (corta streams activos;
-	// el frontend avisa con toast). Sin esto, GPU/preset/policy persistían
-	// pero no se aplicaban hasta reiniciar.
+	// El repositorio compara la configuración efectiva: conserva sesiones si
+	// sólo cambiaron preferencias UI/fechas y aplica cambios reales del motor.
 	if mediastreamSaved {
 		h.App.InitOrRefreshMediastreamSettings()
 	}

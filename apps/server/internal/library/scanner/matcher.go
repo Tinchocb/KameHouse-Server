@@ -24,12 +24,12 @@ var reYear = regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
 // Instead of binary matching, it uses Bayesian Probabilities to evaluate file paths,
 // contextual folders, and metadata to establish confidence in an identity match.
 type Matcher struct { // Keep struct name 'Matcher' for backwards compatibility
-	LocalFiles        []*dto.LocalFile
-	MediaContainer    *MediaContainer
-	Logger            *zerolog.Logger
-	Database          *db.Database
-	Threshold         float64
-	StrictStructure   bool
+	LocalFiles      []*dto.LocalFile
+	MediaContainer  *MediaContainer
+	Logger          *zerolog.Logger
+	Database        *db.Database
+	Threshold       float64
+	StrictStructure bool
 }
 
 // MatchLocalFilesWithMedia orchestrates the Thinking Workers that will probabilistically evaluate all files.
@@ -94,8 +94,9 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 
 	// Evaluate against all media (The API catalog)
 	if m.MediaContainer != nil {
+		pre := newBayesPre(pm.Title)
 		for _, media := range m.MediaContainer.NormalizedMedia {
-			confidence, matchedTitle := m.calculateBayesianScore(pm, media)
+			confidence, matchedTitle := m.calculateBayesianScore(pm, pre, media)
 
 			if confidence > bestConfidence {
 				bestConfidence = confidence
@@ -144,8 +145,9 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 		if healedTitle != pm.Title {
 			pm.Title = healedTitle
 			if m.MediaContainer != nil {
+				healedPre := newBayesPre(pm.Title)
 				for _, media := range m.MediaContainer.NormalizedMedia {
-					conf, _ := m.calculateBayesianScore(pm, media)
+					conf, _ := m.calculateBayesianScore(pm, healedPre, media)
 					if conf > bestConfidence {
 						bestConfidence = conf
 						bestMatch = media
@@ -163,9 +165,10 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 			if folderTitle != "" {
 				folderPM := pm
 				folderPM.Title = folderTitle
+				folderPre := newBayesPre(folderTitle)
 
 				for _, media := range m.MediaContainer.NormalizedMedia {
-					conf, _ := m.calculateBayesianScore(folderPM, media)
+					conf, _ := m.calculateBayesianScore(folderPM, folderPre, media)
 					if pm.IsEpisodeOnly || isGenericOrNumericTitle(pm.Title) {
 						conf = conf * 0.90
 					} else {
@@ -228,8 +231,28 @@ verdict:
 
 }
 
+// bayesPre agrupa lo que calculateBayesianScore deriva solo del título parseado (no del media).
+// Se calcula una vez por archivo y no una vez por archivo × media: ResolveDragonBallID corre
+// varias regexp y asigna decenas de cadenas, y su resultado no depende del media evaluado.
+type bayesPre struct {
+	lowerTitle string
+	year       int
+	dbID       int
+	isDb       bool
+}
+
+func newBayesPre(title string) bayesPre {
+	dbID, _, isDb := ResolveDragonBallID(title)
+	return bayesPre{
+		lowerTitle: strings.ToLower(title),
+		year:       extractYear(title),
+		dbID:       dbID,
+		isDb:       isDb,
+	}
+}
+
 // calculateBayesianScore implements a naive Bayes estimation for identity correlation.
-func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.NormalizedMedia) (float64, string) {
+func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, pre bayesPre, media *dto.NormalizedMedia) (float64, string) {
 	prior := 0.50 // Base probability that ANY file matches ANY media
 	bestMatchedTitle := ""
 
@@ -268,7 +291,7 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 		// a prefix of "Dragon Ball Z: Los tres grandes Super Saiyans"), it's a strong signal,
 		// especially for movies where the filename has extra words.
 		lTitle := strings.ToLower(title)
-		lQuery := strings.ToLower(pm.Title)
+		lQuery := pre.lowerTitle
 		if strings.HasPrefix(lQuery, lTitle) || strings.HasPrefix(lTitle, lQuery) {
 			// Calculate how much of the longer string is covered by the shorter
 			shorter := float64(min(len(lTitle), len(lQuery)))
@@ -291,7 +314,7 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 	posterior := updateBayes(prior, bestDice, 0.20)
 
 	// DBZ OVERRIDE: Check if the parsed title guarantees a match to this specific media
-	if dbId, _, isDb := ResolveDragonBallID(pm.Title); isDb {
+	if dbId, isDb := pre.dbID, pre.isDb; isDb {
 		// Movie IDs have a +1,000,000 offset in the resolver; strip it to get the real TMDB ID
 		realDbId := dbId
 		if dbId >= 1_000_000 {
@@ -324,7 +347,7 @@ func (m *Matcher) calculateBayesianScore(pm parser.ParsedMedia, media *dto.Norma
 	// Evidence 4: Year/Air-Date Contextual Inference (Self-Healing Metadata Agent)
 	// If the filename contains a year like "(1993)" and the media has a matching start date,
 	// it's an extremely strong signal — especially for movies and specials.
-	fileYear := extractYear(pm.Title)
+	fileYear := pre.year
 	if fileYear > 0 && media.StartDate != nil && media.StartDate.Year != nil {
 		if fileYear == *media.StartDate.Year {
 			posterior = updateBayes(posterior, 0.95, 0.10) // Massive boost: year matches

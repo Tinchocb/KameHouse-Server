@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
 interface UseHoverPreloadOptions {
     delay?: number
@@ -8,8 +8,9 @@ interface UseHoverPreloadOptions {
 export function useHoverPreload({ delay = 300, onPreload }: UseHoverPreloadOptions) {
     const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
     const onPreloadRef = useRef(onPreload)
-    // eslint-disable-next-line react-hooks/refs -- intentional: update ref to latest callback for useEffect
-    onPreloadRef.current = onPreload
+    useLayoutEffect(() => {
+        onPreloadRef.current = onPreload
+    }, [onPreload])
 
     useEffect(() => {
         const timeouts = timeoutsRef.current

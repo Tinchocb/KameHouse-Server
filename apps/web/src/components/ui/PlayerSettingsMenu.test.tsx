@@ -76,4 +76,23 @@ describe("PlayerSettingsMenu", () => {
         expect(host.textContent).toContain("Configuración")
         host.remove()
     })
+
+    it("variante media: audio y subtítulos en un solo panel, sin submenús", () => {
+        mockViewport(true)
+        const props = renderMenu({ variant: "media" })
+        expect(screen.getByRole("dialog", { name: "Audio y subtítulos" })).toBeInTheDocument()
+        const spanish = screen.getAllByRole("button", { name: /Español/ })
+        fireEvent.click(spanish[0])
+        expect(props.onSelectAudio).toHaveBeenCalledWith(audioTracks[1])
+        fireEvent.click(spanish[1])
+        expect(props.onSelectSubtitle).toHaveBeenCalledWith(subtitleTracks[0])
+    })
+
+    it("variante more: agrupa velocidad y maratón y no repite audio/subtítulos", () => {
+        mockViewport(true)
+        renderMenu({ variant: "more", onPrevChapter: vi.fn(), onNextChapter: vi.fn() })
+        expect(screen.getByRole("button", { name: /Velocidad y maratón/ })).toBeInTheDocument()
+        expect(screen.getByRole("button", { name: /Siguiente capítulo/ })).toBeInTheDocument()
+        expect(screen.queryByRole("button", { name: /^Audio/ })).toBeNull()
+    })
 })

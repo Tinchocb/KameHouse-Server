@@ -20,27 +20,25 @@ import (
 var ErrNoLocalFiles = errors.New("[matcher] no local files")
 
 type Scanner struct {
-	DirPath                    string
-	OtherDirPaths              []string
-	SeriesPaths                []string
-	MoviePaths                 []string
-	Enhanced                   bool
-	PlatformRef                platform.Platform
-	Logger                     *zerolog.Logger
-	WSEventManager             events.WSEventManagerInterface
-	ExistingLocalFiles         []*dto.LocalFile
-	SkipLockedFiles            bool
-	SkipIgnoredFiles           bool
-	ScanSummaryLogger          *summary.ScanSummaryLogger
-	ScanLogger                 *ScanLogger
-	Database                   *db.Database // Used to save LibraryMedia found via NFO
-	MetadataProviderRef        metadata_provider.Provider
-	MetadataProviders          []librarymetadata.Provider
-	UseLegacyMatching          bool
-	MatchingThreshold          float64 // only used by legacy
+	DirPath             string
+	OtherDirPaths       []string
+	SeriesPaths         []string
+	MoviePaths          []string
+	Enhanced            bool
+	PlatformRef         platform.Platform
+	Logger              *zerolog.Logger
+	WSEventManager      events.WSEventManagerInterface
+	ExistingLocalFiles  []*dto.LocalFile
+	SkipLockedFiles     bool
+	SkipIgnoredFiles    bool
+	ScanSummaryLogger   *summary.ScanSummaryLogger
+	ScanLogger          *ScanLogger
+	Database            *db.Database // Used to save LibraryMedia found via NFO
+	MetadataProviderRef metadata_provider.Provider
+	MetadataProviders   []librarymetadata.Provider
+	MatchingThreshold   float64 // only used by legacy
 
-	MatchingAlgorithm string // only used by legacy
-	StrictStructure   bool   // new matching mode
+	StrictStructure bool // new matching mode
 
 	// If true, locked files whose library path doesn't exist will be put aside
 	WithShelving         bool
@@ -67,84 +65,83 @@ type Scanner struct {
 // way to initialise a Scanner via NewScanner. Adding a new option here
 // forces every call-site to be updated (no silent zero-value surprises).
 type ScannerOptions struct {
-	DirPath                    string
-	OtherDirPaths              []string
-	SeriesPaths                []string
-	MoviePaths                 []string
-	Enhanced                   bool
-	PlatformRef                platform.Platform
-	Logger                     *zerolog.Logger
-	WSEventManager             events.WSEventManagerInterface
-	ExistingLocalFiles         []*dto.LocalFile
-	SkipLockedFiles            bool
-	SkipIgnoredFiles           bool
-	ScanSummaryLogger          *summary.ScanSummaryLogger
-	ScanLogger                 *ScanLogger
-	Database                   *db.Database
-	MetadataProviderRef        metadata_provider.Provider
-	MetadataProviders          []librarymetadata.Provider
-	UseLegacyMatching          bool
-	MatchingThreshold          float64
-	MatchingAlgorithm          string
-	StrictStructure            bool
-	WithShelving               bool
-	ExistingShelvedFiles       []*dto.LocalFile
-	Config                     *Config
-	ConfigAsString             string
-	AnimeCollection            *platform.UnifiedCollection
-	UseTMDB                    bool
-	EventDispatcher            events.Dispatcher
-	TMDBClient                 *tmdb.Client
-	ScanMode                   string
-	TargetPaths                []string
-	FFprobePath                string
-	BackgroundQueue            *BackgroundQueue
-	UnifiedScan                bool
+	DirPath              string
+	OtherDirPaths        []string
+	SeriesPaths          []string
+	MoviePaths           []string
+	Enhanced             bool
+	PlatformRef          platform.Platform
+	Logger               *zerolog.Logger
+	WSEventManager       events.WSEventManagerInterface
+	ExistingLocalFiles   []*dto.LocalFile
+	SkipLockedFiles      bool
+	SkipIgnoredFiles     bool
+	ScanSummaryLogger    *summary.ScanSummaryLogger
+	ScanLogger           *ScanLogger
+	Database             *db.Database
+	MetadataProviderRef  metadata_provider.Provider
+	MetadataProviders    []librarymetadata.Provider
+	MatchingThreshold    float64
+	StrictStructure      bool
+	WithShelving         bool
+	ExistingShelvedFiles []*dto.LocalFile
+	Config               *Config
+	ConfigAsString       string
+	AnimeCollection      *platform.UnifiedCollection
+	UseTMDB              bool
+	EventDispatcher      events.Dispatcher
+	TMDBClient           *tmdb.Client
+	ScanMode             string
+	TargetPaths          []string
+	FFprobePath          string
+	BackgroundQueue      *BackgroundQueue
+	UnifiedScan          bool
 }
 
 // NewScanner constructs a Scanner from the given options.
 // Internal state fields (e.g. shelvedLocalFiles) are always zero-initialised.
 func NewScanner(opts *ScannerOptions) *Scanner {
 	return &Scanner{
-		DirPath:                    opts.DirPath,
-		OtherDirPaths:              opts.OtherDirPaths,
-		SeriesPaths:                opts.SeriesPaths,
-		MoviePaths:                 opts.MoviePaths,
-		Enhanced:                   opts.Enhanced,
-		PlatformRef:                opts.PlatformRef,
-		Logger:                     opts.Logger,
-		WSEventManager:             opts.WSEventManager,
-		ExistingLocalFiles:         opts.ExistingLocalFiles,
-		SkipLockedFiles:            opts.SkipLockedFiles,
-		SkipIgnoredFiles:           opts.SkipIgnoredFiles,
-		ScanSummaryLogger:          opts.ScanSummaryLogger,
-		ScanLogger:                 opts.ScanLogger,
-		Database:                   opts.Database,
-		MetadataProviderRef:        opts.MetadataProviderRef,
-		MetadataProviders:          opts.MetadataProviders,
-		UseLegacyMatching:          opts.UseLegacyMatching,
-		MatchingThreshold:          opts.MatchingThreshold,
-		MatchingAlgorithm:          opts.MatchingAlgorithm,
-		StrictStructure:            opts.StrictStructure,
-		WithShelving:               opts.WithShelving,
-		ExistingShelvedFiles:       opts.ExistingShelvedFiles,
-		Config:                     opts.Config,
-		ConfigAsString:             opts.ConfigAsString,
-		AnimeCollection:            opts.AnimeCollection,
-		UseTMDB:                    opts.UseTMDB,
-		EventDispatcher:            opts.EventDispatcher,
-		TMDBClient:                 opts.TMDBClient,
-		ScanMode:                   opts.ScanMode,
-		TargetPaths:                opts.TargetPaths,
-		FFprobePath:                opts.FFprobePath,
-		BackgroundQueue:            opts.BackgroundQueue,
-		UnifiedScan:                opts.UnifiedScan,
+		DirPath:              opts.DirPath,
+		OtherDirPaths:        opts.OtherDirPaths,
+		SeriesPaths:          opts.SeriesPaths,
+		MoviePaths:           opts.MoviePaths,
+		Enhanced:             opts.Enhanced,
+		PlatformRef:          opts.PlatformRef,
+		Logger:               opts.Logger,
+		WSEventManager:       opts.WSEventManager,
+		ExistingLocalFiles:   opts.ExistingLocalFiles,
+		SkipLockedFiles:      opts.SkipLockedFiles,
+		SkipIgnoredFiles:     opts.SkipIgnoredFiles,
+		ScanSummaryLogger:    opts.ScanSummaryLogger,
+		ScanLogger:           opts.ScanLogger,
+		Database:             opts.Database,
+		MetadataProviderRef:  opts.MetadataProviderRef,
+		MetadataProviders:    opts.MetadataProviders,
+		MatchingThreshold:    opts.MatchingThreshold,
+		StrictStructure:      opts.StrictStructure,
+		WithShelving:         opts.WithShelving,
+		ExistingShelvedFiles: opts.ExistingShelvedFiles,
+		Config:               opts.Config,
+		ConfigAsString:       opts.ConfigAsString,
+		AnimeCollection:      opts.AnimeCollection,
+		UseTMDB:              opts.UseTMDB,
+		EventDispatcher:      opts.EventDispatcher,
+		TMDBClient:           opts.TMDBClient,
+		ScanMode:             opts.ScanMode,
+		TargetPaths:          opts.TargetPaths,
+		FFprobePath:          opts.FFprobePath,
+		BackgroundQueue:      opts.BackgroundQueue,
+		UnifiedScan:          opts.UnifiedScan,
 	}
 }
 
 // Scan will scan the directory and return a list of dto.LocalFile.
 func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) {
 	defer util.HandlePanicWithError(&err)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	// ── Non-blocking telemetry ────────────────────────────────────────────────
 	// All WSEventManager calls are routed through a buffered channel so workers
@@ -204,6 +201,9 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	}
 
 	localFiles, skippedLfs, libraryPaths, sortedLibraryPaths := scn.gatherLocalFiles(ctx, telemetry)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	// DEVNOTE: Removed library path checking because it causes some issues with symlinks
 
@@ -215,9 +215,15 @@ func (scn *Scanner) Scan(ctx context.Context) (lfs []*dto.LocalFile, err error) 
 	if err != nil {
 		return nil, err
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	localFiles, err = scn.hydrateAndPersist(ctx, localFiles, skippedLfs, libraryPaths, mf, mc, telemetry)
 	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 

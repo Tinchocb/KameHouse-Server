@@ -35,12 +35,17 @@ type GovernorStats struct {
 	TotalWaitTime   time.Duration `json:"totalWaitTime"`
 }
 
+// defaultNVENCSessions es el tope de sesiones NVENC simultáneas si no hay KAMEHOUSE_NVENC_SESSIONS.
+// Con 2, en Broly (MKV 33 Mbps desde Drive) casi todas las cabezas caían a CPU y el reproductor
+// bajaba a 240p; 3 deja una cabeza más en GPU.
+const defaultNVENCSessions = 3
+
 // nvencCapFromEnv returns the configured NVENC limit
 func nvencCapFromEnv() int {
-	val := getEnvOr("KAMEHOUSE_NVENC_SESSIONS", "2")
+	val := getEnvOr("KAMEHOUSE_NVENC_SESSIONS", strconv.Itoa(defaultNVENCSessions))
 	parsed, err := strconv.Atoi(val)
 	if err != nil || parsed < 1 {
-		return 2
+		return defaultNVENCSessions
 	}
 	return parsed
 }
@@ -118,7 +123,22 @@ func (g *Governor) Acquire(ctx context.Context) (release func(), err error) {
 		return nil, ctx.Err()
 	}
 
-	waited := time.Since(start)
+	return g.granted(time.Since(start)), nil
+}
+
+// TryAcquire takes a slot only if one is free right now. Speculative work uses it so it never
+// queues in front of the heads a player is actually waiting for.
+func (g *Governor) TryAcquire() (release func(), ok bool) {
+	select {
+	case g.sem <- struct{}{}:
+		return g.granted(0), true
+	default:
+		return nil, false
+	}
+}
+
+// granted records a slot that was just taken and returns its (idempotent) release function.
+func (g *Governor) granted(waited time.Duration) func() {
 	n := g.active.Add(1)
 
 	g.mu.Lock()
@@ -146,7 +166,7 @@ func (g *Governor) Acquire(ctx context.Context) (release func(), err error) {
 			g.mu.Unlock()
 			<-g.sem
 		})
-	}, nil
+	}
 }
 
 // Stats returns the governor metrics

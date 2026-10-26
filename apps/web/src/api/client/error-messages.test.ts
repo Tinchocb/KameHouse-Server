@@ -10,6 +10,8 @@ describe("translateServerError", () => {
         ["google drive integration is not active", /Google Drive no está activo/],
         ["valid positive tmdbId is required", /solicitud no es válida/],
         ["Too many requests", /demasiadas solicitudes/],
+        ["Failed to fetch", /No se pudo conectar con el servidor/],
+        ["database not initialized", /se está iniciando/],
     ])("%s → español", (raw, expected) => {
         expect(translateServerError(raw)).toMatch(expected)
     })

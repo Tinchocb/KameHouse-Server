@@ -44,18 +44,17 @@ type Status struct {
 	VersionName         string                      `json:"versionName"`
 	ThemeSettings       *models.Theme               `json:"themeSettings"`
 	MediastreamSettings *models.MediastreamSettings `json:"mediastreamSettings"`
-	Updating           bool              `json:"updating"`         // If true, a new screen will be displayed
-	IsDesktopSidecar   bool              `json:"isDesktopSidecar"` // The server is running as a desktop sidecar
-	FeatureFlags       core.FeatureFlags `json:"featureFlags"`
-	DisabledFeatures   []core.FeatureKey `json:"disabledFeatures"`
-	ServerReady        bool              `json:"serverReady"`
-	ServerHasPassword  bool              `json:"serverHasPassword"`
-	ShowChangelogTour  string            `json:"showChangelogTour"`
-	ServerIPs          []string          `json:"serverIPs"`
-	ServerPort         int               `json:"serverPort"`
-	Pid                int               `json:"pid"`                // OS process id of the server; used by the desktop sidecar to reap orphans
-	TMDBDegraded       bool              `json:"tmdbDegraded"`       // True when no usable TMDB token is configured (placeholder/missing)
-	TMDBDegradedReason string            `json:"tmdbDegradedReason"` // "", "missing" or "placeholder"
+	Updating            bool                        `json:"updating"`         // If true, a new screen will be displayed
+	IsDesktopSidecar    bool                        `json:"isDesktopSidecar"` // The server is running as a desktop sidecar
+	FeatureFlags        core.FeatureFlags           `json:"featureFlags"`
+	DisabledFeatures    []core.FeatureKey           `json:"disabledFeatures"`
+	ServerReady         bool                        `json:"serverReady"`
+	ServerHasPassword   bool                        `json:"serverHasPassword"`
+	ServerIPs           []string                    `json:"serverIPs"`
+	ServerPort          int                         `json:"serverPort"`
+	Pid                 int                         `json:"pid"`                // OS process id of the server; used by the desktop sidecar to reap orphans
+	TMDBDegraded        bool                        `json:"tmdbDegraded"`       // True when no usable TMDB token is configured (placeholder/missing)
+	TMDBDegradedReason  string                      `json:"tmdbDegradedReason"` // "", "missing" or "placeholder"
 }
 
 // Acotada: /status es pública y la key (User-Agent) la elige el cliente.
@@ -95,16 +94,15 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		VersionName:         constants.VersionName,
 		ThemeSettings:       theme,
 		MediastreamSettings: h.App.SecondarySettings.Mediastream,
-		Updating:          false,
-		IsDesktopSidecar:  h.App.IsDesktopSidecar,
-		FeatureFlags:      h.App.FeatureFlags,
-		ServerReady:       h.App.ServerReady,
-		ServerHasPassword: h.App.Config.Server.Password != "",
-		DisabledFeatures:  h.App.FeatureManager.GetDisabledFeatures(),
-		ShowChangelogTour: h.App.ShowTour,
-		ServerIPs:         util.GetLocalIPv4Addresses(),
-		ServerPort:        h.App.Config.Server.Port,
-		Pid:               os.Getpid(),
+		Updating:            false,
+		IsDesktopSidecar:    h.App.IsDesktopSidecar,
+		FeatureFlags:        h.App.FeatureFlags,
+		ServerReady:         h.App.ServerReady,
+		ServerHasPassword:   h.App.Config.Server.Password != "",
+		DisabledFeatures:    h.App.FeatureManager.GetDisabledFeatures(),
+		ServerIPs:           util.GetLocalIPv4Addresses(),
+		ServerPort:          h.App.Config.Server.Port,
+		Pid:                 os.Getpid(),
 	}
 
 	if tmdbDegraded, tmdbReason := tmdb.DegradedState(settings.Library.TmdbApiKey, h.App.Config.Metadata.TMDBApiKey); tmdbDegraded {

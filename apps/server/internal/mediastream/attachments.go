@@ -18,33 +18,37 @@ import (
 )
 
 func (r *Repository) ServeEchoExtractedSubtitles(c echo.Context) error {
+	// Subtítulos externos (.srt/.ass junto al video): no pasan por la extracción ffmpeg.
+	if idx, ok := externalSubtitleIndex(c); ok {
+		return r.serveExternalSubtitle(c, idx)
+	}
 
 	if !r.IsInitialized() {
 		r.wsEventManager.SendEvent(events.MediastreamShutdownStream, "Module not initialized")
 		return errors.New("module not initialized")
 	}
 
-	// Get current media
-	clientID := c.QueryParam("clientId")
-	if clientID == "" {
-		clientID = c.QueryParam("clientID")
-	}
-	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientID)
-	if !found {
-		mediaContainer, found = r.playbackManager.getCurrentMediaContainer()
-		if !found {
-			return echo.NewHTTPError(404, "no file has been loaded")
+	// Subtítulos embebidos de un archivo de Drive: se leen por ventanas de tiempo en
+	// vez de bajar el archivo entero.
+	if p := c.QueryParam("path"); strings.HasPrefix(p, "gdrive://") && r.DriveSubtitleStatus(p).State != DriveSubtitlesDone {
+		if handled, err := r.serveDriveWindowSubtitle(c, p); handled {
+			return err
 		}
+	}
+
+	mediaHash, err := r.subtitleMediaHash(c)
+	if err != nil {
+		return err
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 90*time.Second)
 	defer cancel()
-	if err := r.playbackManager.WaitForExtraction(ctx, mediaContainer.Hash); err != nil {
+	if err := r.playbackManager.WaitForExtraction(ctx, mediaHash); err != nil {
 		c.Response().Header().Set("Retry-After", "5")
 		return echo.NewHTTPError(503, "subtitle extraction in progress")
 	}
 
-	cacheDir := videofile.GetFileSubsCacheDir(r.cacheDir, mediaContainer.Hash)
+	cacheDir := videofile.GetFileSubsCacheDir(r.cacheDir, mediaHash)
 	if cacheDir == "" {
 		return echo.NewHTTPError(404, "could not find subtitles")
 	}
@@ -80,27 +84,19 @@ func (r *Repository) ServeEchoParsedPGS(c echo.Context) error {
 		return errors.New("module not initialized")
 	}
 
-	// Get current media
-	clientID := c.QueryParam("clientId")
-	if clientID == "" {
-		clientID = c.QueryParam("clientID")
-	}
-	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientID)
-	if !found {
-		mediaContainer, found = r.playbackManager.getCurrentMediaContainer()
-		if !found {
-			return echo.NewHTTPError(404, "no file has been loaded")
-		}
+	mediaHash, err := r.subtitleMediaHash(c)
+	if err != nil {
+		return err
 	}
 
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 90*time.Second)
 	defer cancel()
-	if err := r.playbackManager.WaitForExtraction(ctx, mediaContainer.Hash); err != nil {
+	if err := r.playbackManager.WaitForExtraction(ctx, mediaHash); err != nil {
 		c.Response().Header().Set("Retry-After", "5")
 		return echo.NewHTTPError(503, "subtitle extraction in progress")
 	}
 
-	cacheDir := videofile.GetFileSubsCacheDir(r.cacheDir, mediaContainer.Hash)
+	cacheDir := videofile.GetFileSubsCacheDir(r.cacheDir, mediaHash)
 	if cacheDir == "" {
 		return echo.NewHTTPError(404, "could not find subtitles")
 	}
@@ -157,29 +153,21 @@ func (r *Repository) ServeEchoExtractedAttachments(c echo.Context) error {
 	// Get the parameter group
 	subFilePath := c.Param("*")
 
-	// Get current media
-	clientID := c.QueryParam("clientId")
-	if clientID == "" {
-		clientID = c.QueryParam("clientID")
-	}
-	mediaContainer, found := r.playbackManager.clientMediaContainers.Get(clientID)
-	if !found {
-		mediaContainer, found = r.playbackManager.getCurrentMediaContainer()
-		if !found {
-			return echo.NewHTTPError(http.StatusNotFound, "no file has been loaded")
-		}
+	mediaHash, err := r.subtitleMediaHash(c)
+	if err != nil {
+		return err
 	}
 
 	// Fonts are written by the same extraction job as subtitles; wait for it so the
 	// first play of a cold file doesn't 404 the fonts before ffmpeg has written them.
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 90*time.Second)
 	defer cancel()
-	if err := r.playbackManager.WaitForExtraction(ctx, mediaContainer.Hash); err != nil {
+	if err := r.playbackManager.WaitForExtraction(ctx, mediaHash); err != nil {
 		c.Response().Header().Set("Retry-After", "5")
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "attachment extraction in progress")
 	}
 
-	retPath := videofile.GetFileAttCacheDir(r.cacheDir, mediaContainer.Hash)
+	retPath := videofile.GetFileAttCacheDir(r.cacheDir, mediaHash)
 
 	if retPath == "" {
 		return echo.NewHTTPError(http.StatusNotFound, "could not find attachments")

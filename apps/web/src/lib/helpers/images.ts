@@ -1,5 +1,7 @@
 import { getServerBaseUrl } from "@/api/client/server-url"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { queueIdlePreload } from "@/lib/idle-preload-queue"
+import { isDataSavingEnabled } from "@/lib/network-preferences"
 
 /**
  * Utility to ensure we always get the highest resolution image possible from TMDB or other providers.
@@ -13,9 +15,35 @@ export function isTmdbImageUrl(url: string): boolean {
 
 const TMDB_SIZE_SEGMENT = /\/t\/p\/(?:original|w\d+)/
 
-/** Cambia el tamaño de una URL de TMDB (`w185`, `w780`, `original`…). */
+const IMAGE_PROXY_QUERY = "/api/v1/image-proxy?url="
+
+/** URL original de TMDB detrás de una del proxy local; cualquier otra se devuelve igual. */
+export function unproxyImage(url: string): string {
+    const at = url.indexOf(IMAGE_PROXY_QUERY)
+    if (at < 0) return url
+    const rest = url.slice(at + IMAGE_PROXY_QUERY.length)
+    const end = rest.indexOf("&")
+    try {
+        return decodeURIComponent(end < 0 ? rest : rest.slice(0, end))
+    } catch {
+        return url
+    }
+}
+
+/**
+ * Cambia el tamaño de una URL de TMDB (`w185`, `w780`, `original`…). También
+ * entiende las del proxy local, así el orden de `localImage` y los tamaños es
+ * indistinto.
+ */
 export function withTmdbSize(url: string, size: string): string {
-    return url.replace(TMDB_SIZE_SEGMENT, `/t/p/${size}`)
+    const at = url.indexOf(IMAGE_PROXY_QUERY)
+    if (at < 0) return url.replace(TMDB_SIZE_SEGMENT, `/t/p/${size}`)
+    const raw = unproxyImage(url)
+    if (raw === url) return url
+    const resized = raw.replace(TMDB_SIZE_SEGMENT, `/t/p/${size}`)
+    const rest = url.slice(at + IMAGE_PROXY_QUERY.length)
+    const tail = rest.indexOf("&") < 0 ? "" : rest.slice(rest.indexOf("&"))
+    return `${url.slice(0, at)}${IMAGE_PROXY_QUERY}${encodeURIComponent(resized)}${tail}`
 }
 
 const cacheMap = new Map<string, string>()
@@ -153,13 +181,15 @@ export const buildVideoThumbnailUrl = (
     return `${base}${API_ENDPOINTS.THUMBNAIL.GetVideoThumbnail.endpoint}?${params.toString()}`
 }
 
-const MAX_PREWARMED_URLS = 200
+// Solo son cadenas: topes holgados para que una biblioteca grande (cientos de episodios y
+// pósters) no pierda el recuerdo de lo ya visto y vuelva a mostrar el shimmer al regresar.
+const MAX_PREWARMED_URLS = 1500
 const prewarmedUrls = new Set<string>()
 
 // URLs cuya descarga ya terminó (onLoad real): sirven para no flashear
 // el skeleton al rotar a una era cuya imagen ya vimos o ya se prewarmeó.
 const loadedUrls = new Set<string>()
-const MAX_LOADED_URLS = 200
+const MAX_LOADED_URLS = 1500
 
 export const markImageLoaded = (url: string | null | undefined): void => {
     if (!url) return
@@ -175,57 +205,44 @@ export const isImageLoaded = (url: string | null | undefined): boolean => {
     return loadedUrls.has(url)
 }
 
-/**
- * Precarga imágenes predictivamente en segundo plano en idle time
- * usando HTMLImageElement sin bloquear el hilo principal.
- */
-// Pocas a la vez: con HTTP/1.1 el navegador abre ~6 conexiones por host, y
-// cientos de pósters en vuelo encolaban detrás las llamadas reales a la API.
-const PREWARM_CONCURRENCY = 4
-const prewarmQueue: string[] = []
-let prewarmInFlight = 0
-
-const pumpPrewarmQueue = () => {
-    while (prewarmInFlight < PREWARM_CONCURRENCY && prewarmQueue.length > 0) {
-        const url = prewarmQueue.shift()
-        if (!url) break
-        prewarmInFlight++
-        const img = new Image()
-        img.decoding = 'async'
-        if ('fetchPriority' in img) {
-            (img as { fetchPriority: string }).fetchPriority = 'low'
-        }
-        const done = () => {
-            prewarmInFlight--
-            pumpPrewarmQueue()
-        }
-        img.onload = () => {
-            markImageLoaded(url)
-            // Decodificada de antemano: el primer pintado no espera el bitmap.
-            if (img.decode) void img.decode().catch(() => {}).finally(done)
-            else done()
-        }
-        img.onerror = done
-        img.src = url
-    }
-}
-
+/** Descarga y decodifica una imagen por turno de la cola compartida. */
 export const prewarmImages = (urls: (string | null | undefined)[]) => {
-    if (typeof window === "undefined") return
-
-    const schedule = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 200))
-    schedule(() => {
-        urls.forEach((url) => {
-            if (!url || prewarmedUrls.has(url)) return
-            if (prewarmedUrls.size >= MAX_PREWARMED_URLS) {
-                const first = prewarmedUrls.values().next().value
-                if (first) prewarmedUrls.delete(first)
+    if (typeof window === "undefined" || isDataSavingEnabled()) return
+    for (const url of urls) {
+        if (!url || prewarmedUrls.has(url)) continue
+        if (prewarmedUrls.size >= MAX_PREWARMED_URLS) {
+            const first = prewarmedUrls.values().next().value
+            if (first) prewarmedUrls.delete(first)
+        }
+        prewarmedUrls.add(url)
+        queueIdlePreload(`image:${url}`, () => new Promise<void>((resolve) => {
+            const img = new Image()
+            img.decoding = "async"
+            img.fetchPriority = "low"
+            let settled = false
+            const finish = (loaded: boolean) => {
+                if (settled) return
+                settled = true
+                clearTimeout(timeout)
+                img.onload = null
+                img.onerror = null
+                if (loaded) markImageLoaded(url)
+                else {
+                    prewarmedUrls.delete(url)
+                    img.removeAttribute("src")
+                }
+                resolve()
             }
-            prewarmedUrls.add(url)
-            prewarmQueue.push(url)
-        })
-        pumpPrewarmQueue()
-    }, { timeout: 2000 })
+            // Un host que no responde no puede detener las demás precargas.
+            const timeout = setTimeout(() => finish(false), 15000)
+            img.onload = () => {
+                void (img.decode ? img.decode() : Promise.resolve())
+                    .then(() => finish(true), () => finish(false))
+            }
+            img.onerror = () => finish(false)
+            img.src = url
+        }))
+    }
 }
 
 

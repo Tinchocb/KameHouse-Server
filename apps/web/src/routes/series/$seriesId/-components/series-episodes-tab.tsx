@@ -3,6 +3,7 @@ import { CharacterCarousel } from "./character-carousel"
 import { SagaSelector } from "./saga-selector"
 import { PremiumEpisodeList } from "./premium-episode-list"
 import { IconNavigationLayers } from "@/components/ui/icons";
+import { Button } from "@/components/ui/button";
 import type { SagaDTO, PremiumEpisode } from "@/api/types/series.types"
 import type { SagaDefinition } from "@/lib/config/dragonball_sagas"
 import type { Anime_Episode } from "@/api/generated/types"
@@ -85,7 +86,7 @@ export function SeriesEpisodesTab({
     }, [isSagasSidebarCollapsed, sagas?.length])
 
     return (
-        <div key="episodes" className="space-y-8 lg:space-y-6 animate-fade-in">
+        <div key="episodes" className="space-y-8 lg:space-y-6">
             {/* Key Characters for this Saga */}
             <CharacterCarousel
                 sagaId={activeSaga?.id}
@@ -107,13 +108,14 @@ export function SeriesEpisodesTab({
                             </span>
                         </div>
                     </div>
-                    <button
-                        type="button"
+                    <Button
+                        intent="outline"
+                        size="sm"
                         onClick={onOpenMobileSagas}
-                        className="min-h-[44px] inline-flex items-center justify-center px-3.5 py-1.5 rounded-full bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/20 border border-white/15 text-xs font-mono font-bold uppercase tracking-wider text-white active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out cursor-pointer shrink-0"
+                        className="shrink-0"
                     >
                         Cambiar
-                    </button>
+                    </Button>
                 </div>
             )}
 
@@ -154,6 +156,7 @@ export function SeriesEpisodesTab({
                         fillerStats={fillerStats}
                         scrollElement={scrollElement}
                         seriesMediaId={seriesMediaId}
+                        onClearSubSaga={() => onSelectSubSaga("")}
                     />
                 </div>
             </div>

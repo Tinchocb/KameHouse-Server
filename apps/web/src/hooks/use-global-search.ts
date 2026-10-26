@@ -1,11 +1,13 @@
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { useGetUnlinkedFiles } from "@/api/hooks/unlinked.hooks"
 import { useServerQuery } from "@/api/client/requests"
+import { keepPreviousData } from "@tanstack/react-query"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { IntelligentEntry } from "@/api/types/intelligence.types"
 import { useState, useMemo, useEffect } from "react"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 import type { VolumeData } from "@/components/chronology/types"
+import { searchTimeline } from "@/components/chronology/data/timelineSearch"
 
 // Los volúmenes de la Cronología (historias, lore y spans: ~300 KB) se cargan
 // recién cuando se usa el buscador. Importados arriba viajaban en el JS inicial
@@ -35,6 +37,19 @@ interface SemanticSearchResult {
     matchLabel: string
 }
 
+interface SearchResultMedia {
+    titleRomaji: string
+    titleEnglish: string
+    titleOriginal: string
+    titleSpanish?: string
+    year?: string | number
+    format?: string
+    posterImage?: string
+    description?: string
+    score?: number
+    totalEpisodes?: number
+}
+
 export type GlobalSearchResultItem =
     | {
           mediaId: string | number
@@ -44,17 +59,7 @@ export type GlobalSearchResultItem =
           semanticData?: never
           badgeLabel?: string
           path?: string
-          media?: {
-              titleRomaji?: string
-              titleEnglish?: string
-              titleOriginal?: string
-              titleSpanish?: string
-              year?: string | number
-              format?: string
-              posterImage?: string
-              description?: string
-              score?: number
-          } | null
+          media?: SearchResultMedia | null
           vibes?: string[] | null
           [key: string]: unknown
       }
@@ -66,17 +71,7 @@ export type GlobalSearchResultItem =
           semanticData?: never
           badgeLabel?: string
           path: string
-          media: {
-              titleRomaji: string
-              titleEnglish: string
-              titleOriginal: string
-              titleSpanish?: string
-              year: string | number
-              format: string
-              posterImage: string
-              description?: string
-              score?: number
-          }
+          media: SearchResultMedia
           vibes?: string[]
           [key: string]: unknown
       }
@@ -86,16 +81,7 @@ export type GlobalSearchResultItem =
           isUnlinked?: false
           isChronology?: false
           semanticData: SemanticSearchResult["entity"]
-          media: {
-              titleRomaji: string
-              titleEnglish: string
-              titleOriginal: string
-              titleSpanish?: string
-              year: string | number
-              format: string
-              posterImage: string
-              description: string
-          }
+          media: SearchResultMedia
           badgeLabel: string
           [key: string]: unknown
       }
@@ -106,19 +92,16 @@ export type GlobalSearchResultItem =
           isSemantic?: false
           volumeId: string
           era?: string
+          /** Por qué coincidió ("Personaje", "Esferas"…) y el fragmento donde aparece. */
+          matchLabel?: string
+          matchSnippet?: string
           badgeLabel: "CRONOLOGÍA"
-          media: {
-              titleRomaji: string
-              titleEnglish: string
-              titleOriginal: string
-              titleSpanish: string
-              year: string
-              format: "CRONOLOGÍA"
-              posterImage: string
-              description?: string
-          }
+          media: SearchResultMedia
           [key: string]: unknown
       }
+
+/** Resultados que muestra el modo «@» (en el modo normal la cronología aporta 4). */
+const CHRONO_MODE_LIMIT = 20
 
 export function useGlobalSearch(enabled = true) {
     const [query, setQuery] = useState("")
@@ -140,9 +123,12 @@ export function useGlobalSearch(enabled = true) {
         return () => { cancelled = true }
     }, [enabled, volumes])
 
-    const isSearchActive = debouncedQuery.length >= 2
+    // Prefijo «@»: busca solo en la cronología (personaje, saga, esferas, lapso…).
+    const isChronoMode = debouncedQuery.startsWith("@")
+    const chronoQuery = isChronoMode ? debouncedQuery.slice(1).trim() : ""
+    const isSearchActive = isChronoMode ? chronoQuery.length >= 1 : debouncedQuery.length >= 2
     // La paleta usa prefijo ">" para comandos: no disparar búsqueda semántica.
-    const isSemanticEnabled = isSearchActive && !debouncedQuery.startsWith(">")
+    const isSemanticEnabled = isSearchActive && !isChronoMode && !debouncedQuery.startsWith(">")
 
     // Semantic intelligence search query
     const { data: semanticResults, isLoading: isLoadingSemantic } = useServerQuery<SemanticSearchResult[], { q: string }>({
@@ -153,9 +139,15 @@ export function useGlobalSearch(enabled = true) {
         staleTime: 60000,
         enabled: isSemanticEnabled,
         muteError: true,
+        // Mientras llega la consulta nueva se conservan los resultados anteriores: sin esto,
+        // cada pausa al escribir volvía a `isLoading` y la paleta cambiaba la lista por el orbe.
+        placeholderData: keepPreviousData,
     })
 
-    const isLoading = isLoadingCol || isLoadingUnlinked || (isSemanticEnabled && isLoadingSemantic)
+    // En modo «@» solo importan los lapsos (se cargan al abrir el buscador).
+    const isLoading = isChronoMode
+        ? !volumes
+        : isLoadingCol || isLoadingUnlinked || (isSemanticEnabled && isLoadingSemantic)
 
     const allEntries = useMemo(() => {
         return getSafeCollectionEntries(collection)
@@ -183,6 +175,9 @@ export function useGlobalSearch(enabled = true) {
     }, [unlinkedFiles])
 
     const results = useMemo<GlobalSearchResultItem[]>(() => {
+        // «@» sin texto todavía: no hay nada que mostrar (la paleta explica qué escribir).
+        if (isChronoMode && !isSearchActive) return []
+
         if (!isSearchActive) {
             const combined: GlobalSearchResultItem[] = [...allEntries, ...syntheticUnlinked]
             return combined.slice(0, 10)
@@ -191,65 +186,37 @@ export function useGlobalSearch(enabled = true) {
         const q = debouncedQuery.toLowerCase().trim()
 
         const chronologyMatches: GlobalSearchResultItem[] = []
-        if (isSearchActive) {
-            const directMatches: GlobalSearchResultItem[] = []
-            const secondaryMatches: GlobalSearchResultItem[] = []
-
-            for (const vol of volumes ?? []) {
-                const title = vol.title.toLowerCase()
-                const subtitle = (vol.subtitle ?? "").toLowerCase()
-                const sagaLabel = (vol.sagaLabel ?? "").toLowerCase()
-                const sagaId = (vol.sagaId ?? "").toLowerCase()
-                const volNum = vol.volumeNumber.toLowerCase()
-                const seriesTag = vol.seriesTag.toLowerCase()
-                const inYears = (vol.officialYear ?? "").toLowerCase()
-
-                const isDirect =
-                    title.includes(q) ||
-                    subtitle.includes(q) ||
-                    sagaLabel.includes(q) ||
-                    sagaId.includes(q) ||
-                    volNum.includes(q) ||
-                    seriesTag.includes(q) ||
-                    inYears.includes(q)
-
-                const isSecondary =
-                    !isDirect &&
-                    (vol.characters?.some((c) => c.toLowerCase().includes(q)) ||
-                        vol.narrative?.climax?.decisiveBattle?.toLowerCase().includes(q) ||
-                        vol.narrative?.detonante?.title?.toLowerCase().includes(q))
-
-                if (isDirect || isSecondary) {
-                    const item: GlobalSearchResultItem = {
-                        mediaId: `chrono-${vol.id}`,
-                        isChronology: true,
-                        isUnlinked: false,
-                        isSemantic: false,
-                        volumeId: vol.id,
-                        era: vol.seriesTag,
-                        badgeLabel: "CRONOLOGÍA",
-                        media: {
-                            titleRomaji: vol.title,
-                            titleSpanish: vol.title,
-                            titleEnglish: vol.subtitle || vol.sagaLabel,
-                            titleOriginal: vol.volumeNumber,
-                            year: vol.officialYear,
-                            format: "CRONOLOGÍA",
-                            posterImage: vol.posterUrl || "",
-                            description: vol.subtitle || `${vol.seriesTag} • ${vol.episodesRange}`,
-                        },
-                    }
-                    if (isDirect) {
-                        directMatches.push(item)
-                    } else {
-                        secondaryMatches.push(item)
-                    }
-                }
-            }
-
-            chronologyMatches.push(...directMatches, ...secondaryMatches)
+        const volumeById = new Map((volumes ?? []).map((v) => [v.id, v]))
+        for (const hit of searchTimeline(volumes ?? [], isChronoMode ? chronoQuery : q, isChronoMode ? CHRONO_MODE_LIMIT : 4)) {
+            const vol = volumeById.get(hit.volumeId)
+            if (!vol) continue
+            chronologyMatches.push({
+                mediaId: `chrono-${vol.id}`,
+                isChronology: true,
+                isUnlinked: false,
+                isSemantic: false,
+                volumeId: vol.id,
+                era: vol.seriesTag,
+                badgeLabel: "CRONOLOGÍA",
+                // Si coincidió el título, repetirlo no aporta: se muestra la saga.
+                matchLabel: hit.field === "title" && hit.snippet === vol.title ? "Saga" : hit.label,
+                matchSnippet: hit.field === "title" && hit.snippet === vol.title ? vol.sagaLabel : hit.snippet,
+                media: {
+                    titleRomaji: vol.title,
+                    titleSpanish: vol.title,
+                    titleEnglish: vol.subtitle || vol.sagaLabel,
+                    titleOriginal: vol.volumeNumber,
+                    year: vol.officialYear,
+                    format: "CRONOLOGÍA",
+                    posterImage: vol.posterUrl || "",
+                    description: vol.subtitle || `${vol.seriesTag} • ${vol.episodesRange}`,
+                },
+            })
         }
-        
+
+        // Modo «@»: solo la cronología.
+        if (isChronoMode) return chronologyMatches
+
         const semanticConverted: GlobalSearchResultItem[] = (semanticResults || []).map(sr => {
             const ent = sr.entity
             return {
@@ -290,7 +257,7 @@ export function useGlobalSearch(enabled = true) {
         ]
 
         return combined.slice(0, 12)
-    }, [allEntries, syntheticUnlinked, semanticResults, debouncedQuery, isSearchActive, volumes])
+    }, [allEntries, syntheticUnlinked, semanticResults, debouncedQuery, isSearchActive, isChronoMode, chronoQuery, volumes])
 
     return {
         query,
@@ -298,6 +265,7 @@ export function useGlobalSearch(enabled = true) {
         results,
         isLoading,
         isSearchActive,
+        isChronoMode,
     }
 }
 

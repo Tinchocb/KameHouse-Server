@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"bytes"
@@ -122,7 +122,7 @@ func TestOptionalAuthMiddleware_LANWritesRestricted(t *testing.T) {
 		name, method, path, remote string
 		want                       int
 	}{
-		{"LAN reporta progreso", http.MethodPost, "/api/v1/progress", "192.168.1.50:1", http.StatusOK},
+		{"LAN reporta progreso", http.MethodPatch, "/api/v1/continuity/item", "192.168.1.50:1", http.StatusOK},
 		{"LAN inicia streaming", http.MethodPost, "/api/v1/mediastream/request", "192.168.1.50:1", http.StatusOK},
 		{"LAN lee la biblioteca", http.MethodGet, "/api/v1/library/local-files", "192.168.1.50:1", http.StatusOK},
 		{"LAN no dispara escaneo", http.MethodPost, "/api/v1/library/scan", "192.168.1.50:1", http.StatusForbidden},

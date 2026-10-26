@@ -11,6 +11,7 @@ func TestCanPassthroughVideo(t *testing.T) {
 	hevc10 := &videofile.MediaInfo{Video: &videofile.Video{Codec: "hevc", PixFmt: "yuv420p10le"}}
 	hevc8 := &videofile.MediaInfo{Video: &videofile.Video{Codec: "hevc", PixFmt: "yuv420p"}}
 	av1 := &videofile.MediaInfo{Video: &videofile.Video{Codec: "av1"}}
+	yes, no := true, false
 
 	cases := []struct {
 		name string
@@ -24,6 +25,10 @@ func TestCanPassthroughVideo(t *testing.T) {
 		{"hevc 10-bit soportado", hevc10, &ClientCapabilities{Hevc: true, Hevc10Bit: true}, true},
 		{"cliente sin hevc", hevc8, &ClientCapabilities{}, false},
 		{"av1 no va en MPEG-TS", av1, &ClientCapabilities{Av1: true}, false},
+		// HLS nativo de Chromium: decodifica HEVC en MP4 pero no lo lee en MPEG-TS
+		{"hls sin hevc en TS", hevc8, &ClientCapabilities{Hevc: true, HlsHevc: &no}, false},
+		{"hls con hevc en TS", hevc8, &ClientCapabilities{Hevc: true, HlsHevc: &yes}, true},
+		{"hls con hevc pero decoder sin hevc", hevc8, &ClientCapabilities{HlsHevc: &yes}, false},
 	}
 	for _, c := range cases {
 		if got := canPassthroughVideo(c.info, c.caps); got != c.want {

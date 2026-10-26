@@ -1,9 +1,3 @@
-export { useUIStore, type UIState, type BackgroundMusicTrack } from "./ui-store"
-export { usePlayerStore, type PlayerState } from "./player-store"
-export { useQueueStore, type QueueState, type QueueRepeatMode, type PlaylistItem } from "./queue-store"
-export { useSkipTimesStore, type SkipTimesState } from "./skip-times-store"
-export { useScannerStore, type ScanEvent, type ScannerState } from "./scanner-store"
-
 import { useUIStore } from "./ui-store"
 import { usePlayerStore } from "./player-store"
 import { useQueueStore } from "./queue-store"
@@ -148,8 +142,9 @@ if (typeof window !== "undefined") {
                 (state.eraOpeningPlaying && !prevState.eraOpeningPlaying)
             ) {
                 bgAudio.pause()
+                window.__kamehouse_bg_audio_outgoing?.pause()
             }
-            if (state.bgMusicVolume !== prevState.bgMusicVolume) {
+            if (state.bgMusicVolume !== prevState.bgMusicVolume && !window.__kamehouse_bg_audio_outgoing) {
                 bgAudio.volume = Math.pow(state.bgMusicVolume, 2)
             }
         } catch {}

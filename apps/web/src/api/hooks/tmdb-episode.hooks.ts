@@ -1,7 +1,7 @@
 import { useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
-export interface TMDBEpisodeStillResponse {
+interface TMDBEpisodeStillResponse {
     tvId: number
     season: number
     episode: number

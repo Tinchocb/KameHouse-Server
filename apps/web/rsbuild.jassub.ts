@@ -9,8 +9,13 @@ const require = createRequire(import.meta.url)
 export const pluginJassubTranspile = (): RsbuildPlugin => ({
     name: "jassub-transpile",
     setup(api) {
-        api.onBeforeBuild(processJassub)
-        api.onBeforeStartDevServer(processJassub)
+        // Antes de que Rsbuild copie `public/` a la salida. Con `onBeforeBuild` el copiado ya
+        // había leído `public/sw-custom.js`: `out/` recibía el SW del build anterior (o ninguno
+        // en un checkout limpio, y el `sw.js` generado lo importa). `preview` no compila nada.
+        api.modifyRsbuildConfig((config) => {
+            if (api.context.action === "build" || api.context.action === "dev") processJassub()
+            return config
+        })
 
         function processJassub() {
             const isProd = process.env.NODE_ENV === "production"

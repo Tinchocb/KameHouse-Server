@@ -2,6 +2,7 @@ import React from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { IconUiClose, IconMediaPlay } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
+import { IconButton } from "@/components/ui/button"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { useQueueStore, type PlaylistItem } from "@/lib/store"
 import { PlayerPanelReveal } from "./player-panel-reveal"
@@ -31,13 +32,13 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
         <PlayerPanelReveal
             isOpen={isOpen}
             onClose={onClose}
-            title="Cola"
+            title="Mi Lista"
             titleBadge={
-                <span className="flex items-center text-sm text-white/40 font-normal tabular-nums">
+                <span className="flex items-center text-sm text-label-2 font-normal tabular-nums">
                     <ElasticCounter value={playlistQueue.length} />
                 </span>
             }
-            ariaLabel="Cola de reproducción"
+            ariaLabel="Mi Lista"
         >
             {/* Queue Items List */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1 no-scrollbar">
@@ -54,8 +55,8 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                 exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
                                 transition={itemSpring}
                                 className={cn(
-                                    "w-full flex items-center gap-1 p-2 rounded-xl transition-colors duration-150 group relative",
-                                    isCurrent ? "bg-white/10" : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06]"
+                                    "w-full flex items-center gap-1 p-2 rounded-xl transition-colors duration-quick group relative",
+                                    isCurrent ? "bg-[var(--neutral-elev-3)]" : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)]"
                                 )}
                             >
                                 {/* Clickable Area to play */}
@@ -70,7 +71,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                     className="flex-1 min-w-0 flex items-center gap-3 cursor-pointer text-left active:scale-[0.985] transition-transform duration-fast ease-out-strong"
                                 >
                                     {/* Thumbnail */}
-                                    <div className="relative w-24 aspect-video rounded-sm overflow-hidden shrink-0 bg-white/5">
+                                    <div className="relative w-24 aspect-video rounded-sm overflow-hidden shrink-0 bg-[var(--neutral-elev-2)]">
                                         {item.thumbnail && (
                                             <DeferredImage
                                                 src={item.thumbnail}
@@ -87,29 +88,29 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         {item.subtitle && (
-                                            <div className={cn("text-2xs font-semibold uppercase tracking-widest tabular-nums truncate", isCurrent ? "text-brand-accent" : "text-on-surface-variant")}>
+                                            <div className={cn("text-xs font-medium truncate", isCurrent ? "text-brand-accent-readable" : "text-label-2")}>
                                                 {item.subtitle}
                                             </div>
                                         )}
-                                        <div className={cn("text-xs font-semibold tracking-wide truncate mt-0.5", isCurrent ? "text-white" : "text-white/80")}>
+                                        <div className={cn("text-xs font-semibold tracking-wide truncate mt-0.5", "text-label-1")}>
                                             {item.title}
                                         </div>
                                     </div>
                                 </button>
 
                                 {/* Remove button (accessible hit area min-h-[44px]) */}
-                                <button
-                                    type="button"
+                                <IconButton
+                                    intent="ghost"
+                                    size="md"
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         useQueueStore.getState().removeFromQueue(idx)
                                     }}
-                                    aria-label={`Eliminar ${item.title} de la cola`}
-                                    className="w-9 h-9 shrink-0 flex items-center justify-center text-white/40 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 rounded-full transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out cursor-pointer active:scale-95"
-                                    title="Eliminar de la cola"
-                                >
-                                    <IconUiClose className="w-4 h-4" />
-                                </button>
+                                    aria-label={`Quitar ${item.title} de Mi Lista`}
+                                    title="Quitar de Mi Lista"
+                                    className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1"
+                                    icon={<IconUiClose className="w-4 h-4" />}
+                                />
                             </m.div>
                         )
                     })}
@@ -117,8 +118,8 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
 
                 {playlistQueue.length === 0 && (
                     <div className="py-20 flex flex-col items-center justify-center text-center">
-                        <p className="text-xs font-semibold tracking-wide text-on-surface-variant">
-                            La cola está vacía
+                        <p className="text-xs font-semibold tracking-wide text-label-2">
+                            Tu lista está vacía
                         </p>
                     </div>
                 )}
@@ -126,16 +127,16 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
 
             {/* Footer / Actions with HoldConfirm */}
             {playlistQueue.length > 0 && (
-                <div className="p-3 border-t border-white/10 shrink-0 flex">
+                <div className="p-3 border-t border-[var(--neutral-separator)] shrink-0 flex">
                     <HoldConfirm
                         holdDurationMs={800}
-                        label="Mantener para vaciar cola"
-                        confirmLabel="¡Cola vaciada!"
+                        label="Mantén pulsado para vaciar la lista"
+                        confirmLabel="Lista vaciada"
                         variant="destructive"
                         onConfirm={() => {
                             useQueueStore.getState().clearQueue()
                         }}
-                        className="w-full h-10 rounded-full text-xs font-semibold tracking-wide text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 transition-[color,background-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
+                        className="w-full h-10 rounded-full text-xs font-semibold tracking-wide text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-[color,background-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                     />
                 </div>
             )}

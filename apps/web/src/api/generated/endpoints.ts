@@ -96,6 +96,18 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/cache/thumbnails/warm",
         },
     },
+    CACHE_LOCATION: {
+        GetCacheLocation: {
+            key: "CACHE-LOCATION-get-cache-location",
+            methods: ["GET"],
+            endpoint: "/api/v1/system/cache/location",
+        },
+        SaveCacheLocation: {
+            key: "CACHE-LOCATION-save-cache-location",
+            methods: ["PATCH"],
+            endpoint: "/api/v1/system/cache/location",
+        },
+    },
     CHRONOLOGY_FRAMES: {
         /**
          *  @description
@@ -215,6 +227,11 @@ export const API_ENDPOINTS = {
             methods: ["GET"],
             endpoint: "/api/v1/drive/auth-url",
         },
+        DriveCallback: {
+            key: "DRIVE-drive-callback",
+            methods: ["GET"],
+            endpoint: "/api/v1/drive/callback",
+        },
         DriveStatus: {
             key: "DRIVE-drive-status",
             methods: ["GET"],
@@ -231,27 +248,29 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/drive/scan",
         },
     },
+    DRIVE_SUBTITLES: {
+        DriveSubtitlesStatus: {
+            key: "DRIVE-SUBTITLES-drive-subtitles-status",
+            methods: ["GET"],
+            endpoint: "/api/v1/drive/subtitles/status",
+        },
+        DriveSubtitlesExtract: {
+            key: "DRIVE-SUBTITLES-drive-subtitles-extract",
+            methods: ["POST"],
+            endpoint: "/api/v1/drive/subtitles/extract",
+        },
+        DriveSubtitlesCancel: {
+            key: "DRIVE-SUBTITLES-drive-subtitles-cancel",
+            methods: ["POST"],
+            endpoint: "/api/v1/drive/subtitles/cancel",
+        },
+        DriveSubtitlesWindow: {
+            key: "DRIVE-SUBTITLES-drive-subtitles-window",
+            methods: ["POST"],
+            endpoint: "/api/v1/drive/subtitles/window",
+        },
+    },
     INTELLIGENCE: {
-        /**
-         *  @description
-         *  Route get best source for playback.
-         *  Evaluates all available sources (local + Jellyfin) and returns the winner.
-         */
-        GetBestSource: {
-            key: "INTELLIGENCE-get-best-source",
-            methods: ["GET"],
-            endpoint: "/api/v1/intelligence/best-source",
-        },
-        /**
-         *  @description
-         *  Route get intelligence engine stats.
-         *  Returns cache stats and scoring configuration.
-         */
-        GetIntelligenceStats: {
-            key: "INTELLIGENCE-get-intelligence-stats",
-            methods: ["GET"],
-            endpoint: "/api/v1/intelligence/stats",
-        },
         /**
          *  @description
          *  Route search lore entities and sagas.
@@ -263,23 +282,33 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/intelligence/search",
         },
     },
-    LOCALFILES: {
-        /**
-         *  @description
-         *  Route returns all local files.
-         *  Reminder that local files are scanned from the library path.
-         */
-        GetLocalFiles: {
-            key: "LOCALFILES-get-local-files",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/local-files",
-        },
-    },
     LORE: {
         GetDragonballLore: {
             key: "LORE-get-dragonball-lore",
             methods: ["GET"],
             endpoint: "/api/v1/lore/dragonball",
+        },
+    },
+    MEDIA_AUDIO_PROFILE: {
+        /**
+         *  @description
+         *  Route lists the per-series audio profiles.
+         *  Series without a row play with the global audio profile from Settings.
+         */
+        GetAudioProfiles: {
+            key: "MEDIA-AUDIO-PROFILE-get-audio-profiles",
+            methods: ["GET"],
+            endpoint: "/api/v1/library/audio-profiles",
+        },
+        /**
+         *  @description
+         *  Route sets the audio profile of a series.
+         *  "latino", "castellano", "japanese", "english" or "auto". An empty profile removes the series' own profile, so it follows the global one again.
+         */
+        SetAudioProfile: {
+            key: "MEDIA-AUDIO-PROFILE-set-audio-profile",
+            methods: ["POST"],
+            endpoint: "/api/v1/library/audio-profile",
         },
     },
     MEDIA_SOURCE: {
@@ -305,26 +334,6 @@ export const API_ENDPOINTS = {
         },
     },
     MEDIASTREAM: {
-        /**
-         *  @description
-         *  Route get mediastream settings.
-         *  This returns the mediastream settings.
-         */
-        GetMediastreamSettings: {
-            key: "MEDIASTREAM-get-mediastream-settings",
-            methods: ["GET"],
-            endpoint: "/api/v1/mediastream/settings",
-        },
-        /**
-         *  @description
-         *  Route save mediastream settings.
-         *  This saves the mediastream settings.
-         */
-        SaveMediastreamSettings: {
-            key: "MEDIASTREAM-save-mediastream-settings",
-            methods: ["PATCH"],
-            endpoint: "/api/v1/mediastream/settings",
-        },
         /**
          *  @description
          *  Route request media stream.
@@ -477,18 +486,6 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/notifications",
         },
     },
-    PLAYBACK_SYNC: {
-        /**
-         *  @description
-         *  Route receives playback telemetry from the frontend.
-         *  Updates continuity watch history and, when progress >= 85%,
-         */
-        PlaybackSync: {
-            key: "PLAYBACK-SYNC-playback-sync",
-            methods: ["POST"],
-            endpoint: "/api/v1/playback/sync",
-        },
-    },
     PRETRANSCODE: {
         /**
          *  @description
@@ -535,18 +532,6 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route returns the latest scan summary.
-         *  Returns metadata about the most recent library scan:
-         *  - timestamp, duration, matched/unmatched file counts, errors.
-         *  Clients can poll this endpoint instead of relying solely on WebSocket events.
-         */
-        GetScanStatus: {
-            key: "SCAN-get-scan-status",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/scan/status",
-        },
-        /**
-         *  @description
          *  Route returns all files the scanner failed to identify.
          *  These are files stored as GhostAssociations in the database.
          */
@@ -564,13 +549,6 @@ export const API_ENDPOINTS = {
             key: "SCAN-resolve-unlinked-file",
             methods: ["POST"],
             endpoint: "/api/v1/library/unlinked/resolve",
-        },
-    },
-    SCAN_SUMMARY: {
-        GetScanSummaries: {
-            key: "SCAN-SUMMARY-get-scan-summaries",
-            methods: ["GET"],
-            endpoint: "/api/v1/library/scan-summaries",
         },
     },
     SERIES_DETAILS: {
@@ -754,16 +732,6 @@ export const API_ENDPOINTS = {
         },
         /**
          *  @description
-         *  Route get TMDB (or Jikan) anime details and alternative titles.
-         *  Returns detailed metadata and alternative titles for a show.
-         */
-        TMDBGetDetails: {
-            key: "TMDB-t-m-d-b-get-details",
-            methods: ["POST"],
-            endpoint: "/api/v1/tmdb/details",
-        },
-        /**
-         *  @description
          *  Route manually assign a metadata ID to a set of local files.
          *  Fetches full details from TMDB or Jikan, upserts LibraryMedia, and updates local files.
          */
@@ -781,16 +749,6 @@ export const API_ENDPOINTS = {
             key: "TMDB-t-m-d-b-episode-still",
             methods: ["GET"],
             endpoint: "/api/v1/tmdb/episode/:tvId/:absolute",
-        },
-        /**
-         *  @description
-         *  Route get TMDB images (backdrops, posters, logos)
-         *  Fetches backdrops, posters, and logos from TMDb with caching.
-         */
-        TMDBImages: {
-            key: "TMDB-t-m-d-b-images",
-            methods: ["GET"],
-            endpoint: "/api/v1/tmdb/images/:type/:id",
         },
     },
 } satisfies ApiEndpoints

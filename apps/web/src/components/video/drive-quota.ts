@@ -1,6 +1,6 @@
 /** Mensaje cuando Google limitó las descargas diarias de un archivo de Drive. */
 export const DRIVE_QUOTA_MSG =
-    "Google Drive limitó por hoy las descargas de este archivo. Suele liberarse en unas horas; mientras tanto, probá con otra copia."
+    "Google Drive limitó por hoy las descargas de este archivo. Suele liberarse en unas horas; mientras tanto, prueba con otra copia."
 
 const DRIVE_PLAY_PATH = "/api/v1/drive/play"
 

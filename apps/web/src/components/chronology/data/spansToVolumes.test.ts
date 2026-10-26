@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest"
 import { SPAN_VOLUMES, groupVolumesBySaga, groupVolumesByEra, compareInUniverse, formatYearShort } from "./spansToVolumes"
 import { VOLUMES_DATA } from "./volumes"
 
-describe("Chronology spans -> volumes (35 lapsos)", () => {
-  it("exposes 35 lapso volumes in global order", () => {
-    expect(VOLUMES_DATA.length).toBe(35)
-    expect(SPAN_VOLUMES.length).toBe(35)
+describe("Chronology spans -> volumes (70 lapsos)", () => {
+  it("exposes 70 lapso volumes in global order", () => {
+    expect(VOLUMES_DATA.length).toBe(70)
+    expect(SPAN_VOLUMES.length).toBe(70)
     const orders = SPAN_VOLUMES.map((v) => v.order ?? 0)
-    expect(orders).toEqual(Array.from({ length: 35 }, (_, i) => i + 1))
+    expect(orders).toEqual(Array.from({ length: 70 }, (_, i) => i + 1))
   })
 
   it("keeps episode ranges contiguous within each series", () => {
@@ -21,16 +21,16 @@ describe("Chronology spans -> volumes (35 lapsos)", () => {
         bySeries.set(key, [v])
       }
     }
-    expect(bySeries.get("classic")?.length).toBe(7)
-    expect(bySeries.get("z")?.length).toBe(14)
-    expect(bySeries.get("super")?.length).toBe(8)
-    expect(bySeries.get("daima")?.length).toBe(2)
-    expect(bySeries.get("gt")?.length).toBe(4)
+    expect(bySeries.get("classic")?.length).toBe(16)
+    expect(bySeries.get("z")?.length).toBe(28)
+    expect(bySeries.get("super")?.length).toBe(15)
+    expect(bySeries.get("daima")?.length).toBe(4)
+    expect(bySeries.get("gt")?.length).toBe(7)
   })
 
-  it("groups volumes by saga (28 saga groups)", () => {
+  it("groups volumes by saga (27 saga groups)", () => {
     const groups = groupVolumesBySaga(SPAN_VOLUMES)
-    expect(groups.length).toBe(28)
+    expect(groups.length).toBe(27)
     const superGroups = groups.filter((g) => g.seriesId === "super")
     expect(superGroups.map((g) => g.sagaId)).toContain("copy-vegeta")
     expect(superGroups.map((g) => g.sagaId)).toContain("exhibicion-zen")
@@ -48,19 +48,18 @@ describe("Chronology spans -> volumes (35 lapsos)", () => {
     }
   })
 
-  it("compareInUniverse deja a Daima después de dbz-buu-vegetto-kidbuu-final y antes de dbs-batalla-dioses, y los años quedan no decrecientes", () => {
+  it("compareInUniverse deja a Daima después de dbz-buu-mundo-en-paz y antes de dbs-dioses-llegada, y los años quedan no decrecientes", () => {
     const sorted = [...SPAN_VOLUMES].sort(compareInUniverse)
-    expect(sorted.length).toBe(35)
+    expect(sorted.length).toBe(70)
 
-    const finalBuuIndex = sorted.findIndex((v) => v.id === "dbz-buu-vegetto-kidbuu-final")
+    const finalBuuIndex = sorted.findIndex((v) => v.id === "dbz-buu-mundo-en-paz")
     const daima1Index = sorted.findIndex((v) => v.id === "db-daima-conspiracion")
-    const daima2Index = sorted.findIndex((v) => v.id === "db-daima-climax")
-    const godsIndex = sorted.findIndex((v) => v.id === "dbs-batalla-dioses")
+    const daimaLastIndex = sorted.findIndex((v) => v.id === "db-daima-climax")
+    const godsIndex = sorted.findIndex((v) => v.id === "dbs-dioses-llegada")
 
     expect(finalBuuIndex).toBeGreaterThan(-1)
     expect(daima1Index).toBe(finalBuuIndex + 1)
-    expect(daima2Index).toBe(finalBuuIndex + 2)
-    expect(godsIndex).toBe(daima2Index + 1)
+    expect(godsIndex).toBe(daimaLastIndex + 1)
 
     // Los años oficiales quedan no decrecientes
     for (let i = 1; i < sorted.length; i++) {

@@ -29,7 +29,9 @@ Se apoya tanto en las skills curadas localmente en `.agents/skills/` como en el 
    - **Microcopy, tono en español y empty states**: usar `interface-copy`.
    - **Mantenimiento y sincronización de DESIGN-GUIDE.md**: usar `maintain-design-guide`.
    - **Auditoría arquitectural y calidad de código (Read-Only)**: usar `codebase-audit`.
-   - **Adopción/Adaptación de componentes de Obsidian**: usar `design-system` + `emil-design-eng` (filtro obligatorio contra `docs/OBSIDIAN-MAP.md`).
+   - **Auditoría de cumplimiento de Web Interface Guidelines (a11y, UX, buenas prácticas) sobre archivos de UI**: usar `web-design-guidelines`.
+   - **Dirección estética para UI nueva o rediseños de pantalla completa**: usar `frontend-design` (sujeto a la regla de canon de abajo).
+   - **Adopción/Adaptación de componentes externos**: usar `design-system` + `emil-design-eng` (filtro obligatorio contra `docs/DESIGN-GUIDE.md`).
    - **Búsqueda en catálogo extendido externo**: consultar `npx ui-skills list --category <categoria>`.
 4. Cargar únicamente la(s) skill(s) estrictamente necesarias (máximo 1 o 2 por tarea).
 5. Implementar o auditar con ese contexto.
@@ -40,3 +42,4 @@ Se apoya tanto en las skills curadas localmente en `.agents/skills/` como en el 
 - Usar 2 solo cuando haya dos ángulos claros (ej. `design-system` + `baseline-ui`, o `micro-interaction` + `mobile-native`).
 - Nunca usar más de 3 al mismo tiempo.
 - No contradecir las decisiones canónicas de `docs/DESIGN-GUIDE.md` (tokens `SectionBar`, dark-first glass, springs `480/34` y `380/30`).
+- `frontend-design` busca una dirección distintiva y evita defaults; en KameHouse esa libertad aplica solo donde el canon no fija nada. Si una recomendación choca con `docs/DESIGN-GUIDE.md` (paleta, tipografía, tokens, motion), gana el canon.

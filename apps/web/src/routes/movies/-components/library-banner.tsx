@@ -26,7 +26,7 @@ export function LibraryBanner() {
                         opacity,
                     }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-[var(--bg-primary)]/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-[color-mix(in_srgb,var(--bg-primary)_40%,transparent)] to-transparent" />
             </section>
         )
     }

@@ -5,7 +5,7 @@ import type { StoryBattle } from '../types';
  * compartían un único relato legacy: Super partido en 8, GT en 4 y Daima en 2.
  * Los hitos de episodios se generan en `spansToVolumes.ts` desde el JSON canónico.
  */
-export interface SpanStoryNarrative {
+interface SpanStoryNarrative {
   prologue: string;
   escalation: string;
   turningPoint: string;

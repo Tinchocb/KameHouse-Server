@@ -6,9 +6,26 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
+
+	ffprobe "gopkg.in/vansante/go-ffprobe.v2"
 
 	"kamehouse/internal/util"
 )
+
+// probeJapaneseAudioIndex hace el ffprobe de path y devuelve el track japonés, o -1 si no
+// hay ninguno o el probe falla. Reemplaza al envoltorio que existía en producción: el
+// camino real es japaneseAudioIndex sobre el probe que ya hace el detector.
+func probeJapaneseAudioIndex(ctx context.Context, path string) int {
+	probeCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	data, err := ffprobe.ProbeURL(probeCtx, path)
+	if err != nil {
+		return -1
+	}
+	return japaneseAudioIndex(data)
+}
 
 // testFpcalc resuelve fpcalc para los tests sin depender de que esté en el PATH:
 // EnsureFpcalcBinary busca en el PATH, después en {cacheDir}/bin, y si no lo
@@ -18,7 +35,7 @@ func testFpcalc(t *testing.T) string {
 	t.Helper()
 	cacheDir := filepath.Join(os.TempDir(), "kamehouse-test-cache")
 	logger := util.NewLogger()
-	bin, err := EnsureFpcalcBinary(cacheDir, logger)
+	bin, err := EnsureFpcalcBinary(context.Background(), cacheDir, logger)
 	if err != nil {
 		t.Fatalf("no se pudo resolver fpcalc (¿sin red para la descarga inicial?): %v", err)
 	}
@@ -121,13 +138,13 @@ func TestFingerprintRangeSelectsAudioTrack(t *testing.T) {
 	}
 
 	// Y el track pedido debe ser el japonés cuando se resuelve por idioma.
-	if idx := preferredAudioIndex(ctx, src); idx != 0 {
-		t.Errorf("preferredAudioIndex = %d, want 0 (el track jpn)", idx)
+	if idx := probeJapaneseAudioIndex(ctx, src); idx != 0 {
+		t.Errorf("probeJapaneseAudioIndex = %d, want 0 (el track jpn)", idx)
 	}
 }
 
-// Sin tracks japoneses, preferredAudioIndex devuelve -1 (deja elegir a ffmpeg).
-func TestPreferredAudioIndexNoJapanese(t *testing.T) {
+// Sin tracks japoneses, japaneseAudioIndex devuelve -1 (deja elegir a ffmpeg).
+func TestJapaneseAudioIndexNoJapanese(t *testing.T) {
 	ffmpeg, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		t.Skip("ffmpeg no está en el PATH")
@@ -140,7 +157,7 @@ func TestPreferredAudioIndexNoJapanese(t *testing.T) {
 	if out, err := gen.CombinedOutput(); err != nil {
 		t.Fatalf("no se pudo generar el mkv: %v (%s)", err, out)
 	}
-	if idx := preferredAudioIndex(ctx, src); idx != -1 {
-		t.Errorf("preferredAudioIndex = %d, want -1 (sin track japonés)", idx)
+	if idx := probeJapaneseAudioIndex(ctx, src); idx != -1 {
+		t.Errorf("probeJapaneseAudioIndex = %d, want -1 (sin track japonés)", idx)
 	}
 }

@@ -40,6 +40,9 @@
   --shadow-player:      var(--elevation-4);
   --shadow-overlay:     var(--elevation-5);
 
+  /* Póster al pasar el puntero (movie-poster-card, spotlight-saga-card). Mismo valor que tenían escrito a mano. */
+  --shadow-poster-hover: 0 15px 35px rgba(0, 0, 0, 0.9);
+
   /* Legacy glass shadows (DEPRECATED - mantener por compatibilidad temporal) */
   --shadow-glass:
     0 4px 30px rgba(0, 0, 0, 0.30),
@@ -78,11 +81,38 @@
   /* Punta luminosa de barras de progreso (reemplaza shadow-[0_0_12px_#ffffff]) */
   --shadow-glow-tip:        0 0 12px rgb(255 255 255 / 0.9);
 
+  /* Brillo del punto de estado activo (OsSelect de Ajustes): verde de éxito al 80 % */
+  --shadow-glow-status-success: 0 0 8px rgba(var(--status-success-rgb), 0.8);
+
+  /* Barra flotante de Ajustes en estado "Guardado": brillo verde interior + caída.
+     Mismos valores que tenía escritos inline en index.lazy.tsx. */
+  --shadow-save-bar-success:
+    inset 0 1px 1px 0 rgba(var(--status-success-rgb), 0.3),
+    0 12px 36px -6px rgba(0, 0, 0, 0.85);
+
   /* Sombra cinematográfica de los heroes (Spotlight y Películas) */
   --shadow-hero:                   0 25px 60px -15px rgba(0, 0, 0, 0.95);
+  --shadow-hero-platter:
+    var(--glass-highlight-lg),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 18px 36px -8px rgba(0, 0, 0, 0.55);
   --shadow-hero-cta-primary:       inset 0 1px 1px 0 rgba(255, 255, 255, 0.6), 0 8px 24px rgba(255, 255, 255, 0.25);
   --shadow-hero-cta-primary-hover: 0 12px 32px rgba(255, 255, 255, 0.35);
   --shadow-hero-dot-active:        0 0 10px rgba(255, 255, 255, 0.4);
+
+  /* Botón de play de los pósteres (hub de Inicio): sombra de caída + brillo interior, sin rgba inline.
+     Los valores son los que tenía escritos a mano el botón. */
+  --shadow-play-cta: 0 2px 12px rgba(0, 0, 0, 0.5), var(--glass-highlight-md);
+
+  /* Sombras de alfa (filter: drop-shadow) para arte transparente: logos y el corazón de favorito.
+     Van en [filter:var(--…)] porque siguen la silueta del PNG o del icono, no la caja. */
+  --drop-shadow-logo:     drop-shadow(0 2px 12px rgba(0, 0, 0, 0.45));
+  --drop-shadow-favorite: drop-shadow(0 0 8px rgba(var(--status-error-rgb), 0.5));
+
+  /* Halo de los chips de metadatos (media-metadata-capsule): brillo interior + resplandor del estado. */
+  --glow-chip-success: inset 0 1px 1px 0 rgba(var(--status-success-rgb), 0.35), 0 0 12px rgba(var(--status-success-rgb), 0.2);
+  --glow-chip-warning: inset 0 1px 1px 0 rgba(var(--status-warning-rgb), 0.35), 0 0 12px rgba(var(--status-warning-rgb), 0.2);
+  --glow-chip-accent:  inset 0 1px 1px 0 hsl(var(--brand-accent) / 0.35), 0 0 12px hsl(var(--brand-accent) / 0.2);
 
   /* ─── Alias semánticos para componentes ─────────────────────────────────── */
   --shadow-sm:  var(--elevation-1);
@@ -125,16 +155,16 @@
    matcheaba; y con igual especificidad que :root, un override en colors.css
    quedaba pisado porque este archivo carga después. ─── */
 
-/* Clásico (Black Cinema): bordes 7–13%, fondos #101013–#1B1B20, igual que el
-   resto de su glass. */
+/* Clásico (Neutro, Apple HIG): la barra es una capa elevada 1 (fuerte = 2);
+   se distingue por luminancia, el borde es solo un separador. */
 [data-mode="classic"] {
-  --sectionbar-border:              rgba(255, 255, 255, 0.07);
-  --sectionbar-border-top:          rgba(255, 255, 255, 0.13);
-  --sectionbar-border-bottom:       rgba(255, 255, 255, 0.05);
-  --sectionbar-bg:                  rgba(16, 16, 19, 0.55);
-  --sectionbar-border-strong:       rgba(255, 255, 255, 0.13);
-  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.20);
-  --sectionbar-bg-strong:           rgba(27, 27, 32, 0.60);
+  --sectionbar-border:              rgba(255, 255, 255, 0.10);
+  --sectionbar-border-top:          rgba(255, 255, 255, 0.20);
+  --sectionbar-border-bottom:       rgba(255, 255, 255, 0.06);
+  --sectionbar-bg:                  color-mix(in srgb, var(--neutral-elev-1) 60%, transparent);
+  --sectionbar-border-strong:       rgba(255, 255, 255, 0.14);
+  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.28);
+  --sectionbar-bg-strong:           color-mix(in srgb, var(--neutral-elev-2) 72%, transparent);
 }
 
 /* Flat: superficies sólidas, sin blur. Declarado después de Clásico para
@@ -152,6 +182,13 @@
   --sectionbar-shadow-strong:       0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
+/* Por era (vidrio): la base de la barra sale de la rampa de la era, igual que las capas de
+   elevación. Con el gris frío de arriba quedaba azul-gris sobre fondos cálidos (DB) o azules. */
+:root[data-mode="era"]:not([data-flat="true"]) {
+  --sectionbar-bg:                  color-mix(in srgb, var(--bg-tertiary) 45%, transparent);
+  --sectionbar-bg-strong:           color-mix(in srgb, var(--bg-quaternary) 55%, transparent);
+}
+
 /* ─── Clases Utilitarias ───────────────────────────────────────────────────── */
 .shadow-elevation-1 { box-shadow: var(--elevation-1); }
 .shadow-elevation-2 { box-shadow: var(--elevation-2); }
@@ -164,11 +201,8 @@
 
 .shadow-brand-primary   { box-shadow: var(--shadow-brand-primary); }
 .shadow-brand-secondary { box-shadow: var(--shadow-brand-secondary); }
-.shadow-brand-destructive { box-shadow: var(--shadow-brand-destructive); }
 .shadow-brand-success   { box-shadow: var(--shadow-brand-success); }
 .shadow-brand-magic     { box-shadow: var(--shadow-brand-magic); }
 .shadow-brand-focus     { box-shadow: var(--shadow-brand-focus); }
 .shadow-hero               { box-shadow: var(--shadow-hero); }
-.shadow-hero-cta           { box-shadow: var(--shadow-hero-cta-primary); }
-.shadow-hero-cta-hover     { box-shadow: var(--shadow-hero-cta-primary-hover); }
 .shadow-hero-dot           { box-shadow: var(--shadow-hero-dot-active); }

@@ -8,17 +8,17 @@ const getSpansBySeriesId = (seriesId: string) =>
   DRAGON_BALL_STORY_SPANS.filter(s => s.seriesId === seriesId)
 
 describe("Dragon Ball Story Spans Dataset", () => {
-  it("should contain exactly 35 story spans covering all eras", () => {
+  it("should contain exactly 70 story spans covering all eras with shorter chapter intervals", () => {
     expect(DRAGON_BALL_STORY_SPANS).toBeDefined()
-    expect(DRAGON_BALL_STORY_SPANS.length).toBe(35)
+    expect(DRAGON_BALL_STORY_SPANS.length).toBe(70)
   })
 
   it("should have correct counts per series", () => {
-    expect(getSpansBySeriesId("classic").length).toBe(7)
-    expect(getSpansBySeriesId("z").length).toBe(14)
-    expect(getSpansBySeriesId("super").length).toBe(8)
-    expect(getSpansBySeriesId("daima").length).toBe(2)
-    expect(getSpansBySeriesId("gt").length).toBe(4)
+    expect(getSpansBySeriesId("classic").length).toBe(16)
+    expect(getSpansBySeriesId("z").length).toBe(28)
+    expect(getSpansBySeriesId("super").length).toBe(15)
+    expect(getSpansBySeriesId("daima").length).toBe(4)
+    expect(getSpansBySeriesId("gt").length).toBe(7)
   })
 
   it("should have valid sequential orders and contiguous episode ranges within each series", () => {
@@ -41,6 +41,18 @@ describe("Dragon Ball Story Spans Dataset", () => {
     }
   })
 
+  it("should have contiguous Kai episode coverage in Z canonical spans", () => {
+    const zSpans = getSpansBySeriesId("z")
+    const nonFillerKai = zSpans.filter(s => !s.kaiFiller)
+    let expectedKaiEp = 1
+    for (const s of nonFillerKai) {
+      expect(s.kaiStartEpisode).toBe(expectedKaiEp)
+      expect(s.kaiEndEpisode).toBeGreaterThanOrEqual(s.kaiStartEpisode ?? 0)
+      expectedKaiEp = (s.kaiEndEpisode ?? 0) + 1
+    }
+    expect(expectedKaiEp - 1).toBe(167)
+  })
+
   it("should match TMDB IDs with official series constants", () => {
     const classicSpans = getSpansBySeriesId("classic")
     expect(classicSpans.every(s => s.tmdbId === DRAGON_BALL_SERIES.ORIGINAL)).toBe(true)
@@ -59,25 +71,25 @@ describe("Dragon Ball Story Spans Dataset", () => {
   })
 
   it("should correctly find story span by ID and by episode number", () => {
-    const span = DRAGON_BALL_STORY_SPANS.find(s => s.id === "dbz-juegos-de-cell")
+    const span = DRAGON_BALL_STORY_SPANS.find(s => s.id === "dbz-cell-goku-vs-cell")
     expect(span).toBeDefined()
     expect(span?.sagaId).toBe("cell")
-    expect(span?.startEpisode).toBe(166)
-    expect(span?.endEpisode).toBe(194)
+    expect(span?.startEpisode).toBe(177)
+    expect(span?.endEpisode).toBe(183)
 
-    // Episode 95 (SSJ First Transformation) should be in Freezer Super Saiyajin span
+    // Episode 96 (SSJ First Transformation) should be in Freezer Super Saiyajin span
     const ssjSpan = DRAGON_BALL_STORY_SPANS.find(
-      s => s.tmdbId === DRAGON_BALL_SERIES.Z && 95 >= s.startEpisode && 95 <= s.endEpisode
+      s => s.tmdbId === DRAGON_BALL_SERIES.Z && 96 >= s.startEpisode && 96 <= s.endEpisode
     )
     expect(ssjSpan).toBeDefined()
     expect(ssjSpan?.id).toBe("dbz-freezer-super-saiyajin")
 
-    // Episode 232 (Majin Vegeta Explosion) should be in Majin Vegeta span
+    // Episode 237 (Majin Vegeta Explosion) should be in Majin Vegeta sacrifice span
     const vegetaSpan = DRAGON_BALL_STORY_SPANS.find(
-      s => s.tmdbId === DRAGON_BALL_SERIES.Z && 232 >= s.startEpisode && 232 <= s.endEpisode
+      s => s.tmdbId === DRAGON_BALL_SERIES.Z && 237 >= s.startEpisode && 237 <= s.endEpisode
     )
     expect(vegetaSpan).toBeDefined()
-    expect(vegetaSpan?.id).toBe("dbz-buu-majin-vegeta")
+    expect(vegetaSpan?.id).toBe("dbz-buu-despertar-sacrificio")
   })
 
   it("should have all milestone episodes within the span range, and valid mm:ss format when time is present", () => {

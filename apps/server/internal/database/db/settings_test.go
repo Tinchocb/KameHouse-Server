@@ -30,13 +30,10 @@ func TestSettingsPersistence(t *testing.T) {
 			SeriesPaths:                    []string{"/path/to/series1", "/path/to/series2"},
 			MoviePaths:                     []string{"/path/to/movies"},
 			ScannerProvider:                "tmdb",
-			PrimaryMetadataProvider:        "tmdb",
 			TmdbApiKey:                     "test_tmdb_api_key",
-			ScannerUseLegacyMatching:       true,
 			PreferredAudioProfile:          "latino",
 			AutoSkipIntro:                  true,
 			AutoSkipOutro:                  false,
-			AutoSkipFiller:                 true,
 			AutoDisableSubtitlesWhenDubbed: true,
 			MarathonMode:                   true,
 			TvMode:                         false,
@@ -81,18 +78,11 @@ func TestSettingsPersistence(t *testing.T) {
 		t.Errorf("Series paths not retrieved correctly: %v", retrievedSettings.Library.SeriesPaths)
 	}
 
-	if retrievedSettings.Library.ScannerUseLegacyMatching != true {
-		t.Errorf("ScannerUseLegacyMatching was not persisted as true")
-	}
-
 	if retrievedSettings.Library.PreferredAudioProfile != "latino" {
 		t.Errorf("PreferredAudioProfile was not persisted, got '%s'", retrievedSettings.Library.PreferredAudioProfile)
 	}
 	if retrievedSettings.Library.AutoSkipIntro != true {
 		t.Errorf("AutoSkipIntro was not persisted as true")
-	}
-	if retrievedSettings.Library.AutoSkipFiller != true {
-		t.Errorf("AutoSkipFiller was not persisted as true")
 	}
 	if retrievedSettings.Library.AutoDisableSubtitlesWhenDubbed != true {
 		t.Errorf("AutoDisableSubtitlesWhenDubbed was not persisted as true")

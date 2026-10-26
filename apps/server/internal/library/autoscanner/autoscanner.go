@@ -232,7 +232,6 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		UseTMDB:             as.settings.ScannerProvider == "tmdb",
 		EventDispatcher:     as.eventDispatcher,
 		MatchingThreshold:   as.settings.ScannerMatchingThreshold,
-		UseLegacyMatching:   as.settings.ScannerUseLegacyMatching,
 		StrictStructure:     as.settings.ScannerStrictStructure,
 		ScanSummaryLogger:   summary.NewScanSummaryLogger(),
 		WithShelving:        true,

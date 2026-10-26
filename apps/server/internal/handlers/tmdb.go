@@ -40,7 +40,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("query is required"))
 	}
 
-	client := h.App.Metadata.TMDBClient
+	client := h.App.Metadata.GetTMDBClient()
 	if client == nil && b.BearerToken != "" {
 		client = tmdb.NewClient(b.BearerToken)
 	}
@@ -97,7 +97,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 
 	// Fallback to Jikan if TMDB search produced no results or no TMDB key is configured
 	if len(combined) == 0 {
-		jikanClient := jikan.NewClient(h.App.Logger)
+		jikanClient := jikan.Shared(h.App.Logger)
 		jikanRes, err := jikanClient.SearchAnimeAdvanced(c.Request().Context(), b.Query, 1, 20)
 		if err == nil && jikanRes != nil {
 			for _, r := range jikanRes.Data {
@@ -125,88 +125,6 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 	}
 
 	return h.RespondWithData(c, combined)
-}
-
-// HandleTMDBGetDetails ...
-//
-//	@summary get TMDB (or Jikan) anime details and alternative titles.
-//	@desc Returns detailed metadata and alternative titles for a show.
-//	@returns map[string]interface{}
-//	@route /api/v1/tmdb/details [POST]
-func (h *Handler) HandleTMDBGetDetails(c echo.Context) error {
-	type body struct {
-		ID          int    `json:"id"`
-		TVID        int    `json:"tvId"` // Legacy
-		MediaType   string `json:"mediaType"`
-		BearerToken string `json:"bearerToken"`
-	}
-
-	var b body
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	id := b.ID
-	if id == 0 {
-		id = b.TVID
-	}
-
-	if id <= 0 {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive id is required"))
-	}
-	if b.MediaType != "" && b.MediaType != "tv" && b.MediaType != "movie" {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid mediaType, expected 'tv' or 'movie'"))
-	}
-
-	client := h.App.Metadata.TMDBClient
-	var altTitles []tmdb.AlternativeTitle
-	var err error
-
-	if client != nil && client.HasApiKey() {
-		if b.MediaType == "movie" {
-			altTitles, err = client.GetMovieAlternativeTitles(c.Request().Context(), id)
-		} else {
-			altTitles, err = client.GetTVAlternativeTitles(c.Request().Context(), id)
-		}
-	}
-
-	if client == nil || !client.HasApiKey() || err != nil || len(altTitles) == 0 {
-		// Fallback: fetch details from Jikan
-		jikanClient := jikan.NewClient(h.App.Logger)
-		if fullRes, jErr := jikanClient.GetAnimeFull(c.Request().Context(), id); jErr == nil && fullRes != nil {
-			if fullRes.Data.TitleEng != "" {
-				altTitles = append(altTitles, tmdb.AlternativeTitle{
-					Title:    fullRes.Data.TitleEng,
-					ISO31661: "US",
-					Type:     "English Title",
-				})
-			}
-			if fullRes.Data.TitleJpn != "" {
-				altTitles = append(altTitles, tmdb.AlternativeTitle{
-					Title:    fullRes.Data.TitleJpn,
-					ISO31661: "JP",
-					Type:     "Japanese Title",
-				})
-			}
-			if fullRes.Data.Title != "" && fullRes.Data.Title != fullRes.Data.TitleEng {
-				altTitles = append(altTitles, tmdb.AlternativeTitle{
-					Title:    fullRes.Data.Title,
-					ISO31661: "RO",
-					Type:     "Romaji Title",
-				})
-			}
-			err = nil
-		}
-	}
-
-	if err != nil && len(altTitles) == 0 {
-		return h.RespondWithError(c, err)
-	}
-
-	return h.RespondWithData(c, map[string]interface{}{
-		"id":                id,
-		"alternativeTitles": altTitles,
-	})
 }
 
 // HandleTMDBAssign ...
@@ -347,7 +265,7 @@ func (h *Handler) HandleTMDBEpisodeStill(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive absolute episode is required"))
 	}
 
-	client := h.App.Metadata.TMDBClient
+	client := h.App.Metadata.GetTMDBClient()
 	if client == nil || !client.HasApiKey() {
 		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("tmdb client not configured"))
 	}
@@ -373,38 +291,4 @@ func (h *Handler) HandleTMDBEpisodeStill(c echo.Context) error {
 		"stillUrl":        stillURL,
 		"airDate":         ep.AirDate,
 	})
-}
-
-// HandleTMDBImages fetches all backdrops, posters, and logos for a TV show or movie from TMDb.
-//
-//	@summary get TMDB images (backdrops, posters, logos)
-//	@desc Fetches backdrops, posters, and logos from TMDb with caching.
-//	@route /api/v1/tmdb/images/:type/:id [GET]
-func (h *Handler) HandleTMDBImages(c echo.Context) error {
-	mediaType := c.Param("type") // "tv" or "movie"
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive id is required"))
-	}
-
-	client := h.App.Metadata.TMDBClient
-	if client == nil || !client.HasApiKey() {
-		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("tmdb client not configured"))
-	}
-
-	var resp *tmdb.ImagesResponse
-	if mediaType == "movie" {
-		resp, err = client.GetMovieImages(c.Request().Context(), id)
-	} else if mediaType == "tv" {
-		resp, err = client.GetTVImages(c.Request().Context(), id)
-	} else {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid type, expected 'tv' or 'movie'"))
-	}
-
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	return h.RespondWithData(c, resp)
 }

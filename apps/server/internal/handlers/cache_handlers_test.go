@@ -80,7 +80,8 @@ func TestCacheHandlers_GetStatsAndClear(t *testing.T) {
 	assert.Equal(t, http.StatusOK, recClear.Code)
 
 	// Memory should be empty
-	assert.Equal(t, 0, thumbCache.Len())
+	_, _, memItems := thumbCache.Stats()
+	assert.Equal(t, 0, memItems)
 	// Disk file should be removed
 	assert.NoFileExists(t, dummyFile)
 

@@ -9,6 +9,8 @@ import {
     getPixelSampleImage,
     buildVideoThumbnailUrl,
     localImage,
+    unproxyImage,
+    withTmdbSize,
 } from "./images"
 
 describe("images helper", () => {
@@ -84,11 +86,14 @@ describe("images helper", () => {
             markImageLoaded("")
         })
 
-        it("evicts oldest loaded URL when exceeding MAX_LOADED_URLS (200)", () => {
-            for (let i = 0; i < 210; i++) {
+        it("evicts oldest loaded URL when exceeding MAX_LOADED_URLS (1500)", () => {
+            for (let i = 0; i < 1510; i++) {
                 markImageLoaded(`https://example.com/loaded_${i}.jpg`)
             }
-            expect(isImageLoaded("https://example.com/loaded_209.jpg")).toBe(true)
+            expect(isImageLoaded("https://example.com/loaded_1509.jpg")).toBe(true)
+            expect(isImageLoaded("https://example.com/loaded_0.jpg")).toBe(false)
+            // Una biblioteca de cientos de episodios no pierde lo recién visto.
+            expect(isImageLoaded("https://example.com/loaded_900.jpg")).toBe(true)
         })
     })
 
@@ -137,5 +142,42 @@ describe("localImage", () => {
         expect(localImage("https://example.com/a.jpg")).toBe("https://example.com/a.jpg")
         expect(localImage(null)).toBe("")
         expect(localImage("")).toBe("")
+    })
+})
+
+describe("proxy local y tamaños de TMDB", () => {
+    const raw = "https://image.tmdb.org/t/p/w780/abc.jpg"
+
+    it("localImage es idempotente: aplicarlo dos veces no re-codifica la URL", () => {
+        const once = localImage(raw)
+        expect(localImage(once)).toBe(once)
+    })
+
+    it("unproxyImage devuelve la URL original de TMDB (y deja igual cualquier otra)", () => {
+        expect(unproxyImage(localImage(raw))).toBe(raw)
+        expect(unproxyImage(raw)).toBe(raw)
+        expect(unproxyImage("/api/v1/image-proxy?url=%E0%A4%A")).toBe("/api/v1/image-proxy?url=%E0%A4%A")
+        expect(unproxyImage("/sagas/a.webp")).toBe("/sagas/a.webp")
+    })
+
+    it("withTmdbSize cambia el tamaño también dentro de una URL del proxy", () => {
+        const resized = withTmdbSize(localImage(raw), "w300")
+        expect(resized).toMatch(/\/api\/v1\/image-proxy\?url=/)
+        expect(unproxyImage(resized)).toBe("https://image.tmdb.org/t/p/w300/abc.jpg")
+        // El resultado es exactamente el que se obtiene redimensionando primero y proxeando después.
+        expect(resized).toBe(localImage(withTmdbSize(raw, "w300")))
+    })
+
+    it("withTmdbSize conserva los parámetros extra de la URL del proxy", () => {
+        const withExtra = `${localImage(raw)}&kh-cors=1`
+        const resized = withTmdbSize(withExtra, "w185")
+        expect(resized.endsWith("&kh-cors=1")).toBe(true)
+        expect(unproxyImage(resized)).toBe("https://image.tmdb.org/t/p/w185/abc.jpg")
+    })
+
+    it("withTmdbSize no toca una URL del proxy que no es de TMDB ni una ruta local", () => {
+        const odd = "/api/v1/image-proxy?url=" + encodeURIComponent("https://example.com/a.jpg")
+        expect(withTmdbSize(odd, "w300")).toBe(odd)
+        expect(withTmdbSize("/sagas/a.webp", "w300")).toBe("/sagas/a.webp")
     })
 })

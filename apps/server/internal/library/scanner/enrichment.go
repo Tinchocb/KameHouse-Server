@@ -147,6 +147,8 @@ func (scn *Scanner) enrichSingleMedia(
 		episodesBySeason[ep.SeasonNumber] = append(episodesBySeason[ep.SeasonNumber], ep)
 	}
 
+	filesByEpisode := indexFilesByEpisode(localFiles, positiveTmdbId)
+
 	var seasons []*models.LibrarySeason
 	var episodes []*models.LibraryEpisode
 
@@ -234,20 +236,20 @@ func (scn *Scanner) enrichSingleMedia(
 			libEp.SuggestedSwimlane = analysis.SuggestedSwimlane
 
 			// Extract languages from local files (read-only, safe for concurrent access).
+			// El índice se armó una sola vez por media: recorrer todos los archivos por cada
+			// episodio era O(episodios × archivos).
 			var audioLangs []string
 			var subtitleLangs []string
-			for _, lf := range localFiles {
-				if lf.MediaID == positiveTmdbId && lf.Metadata != nil && lf.Metadata.Episode == ep.EpisodeNumber && lf.GetSeasonNumber() == ep.SeasonNumber {
-					if lf.TechnicalInfo != nil {
-						for _, a := range lf.TechnicalInfo.AudioStreams {
-							if a.Language != "" {
-								audioLangs = append(audioLangs, a.Language)
-							}
+			for _, lf := range filesByEpisode[episodeKey{season: ep.SeasonNumber, episode: ep.EpisodeNumber}] {
+				if lf.TechnicalInfo != nil {
+					for _, a := range lf.TechnicalInfo.AudioStreams {
+						if a.Language != "" {
+							audioLangs = append(audioLangs, a.Language)
 						}
-						for _, s := range lf.TechnicalInfo.SubtitleStreams {
-							if s.Language != "" {
-								subtitleLangs = append(subtitleLangs, s.Language)
-							}
+					}
+					for _, s := range lf.TechnicalInfo.SubtitleStreams {
+						if s.Language != "" {
+							subtitleLangs = append(subtitleLangs, s.Language)
 						}
 					}
 				}
@@ -272,4 +274,20 @@ func (scn *Scanner) enrichSingleMedia(
 	}
 
 	return enrichWorkerResult{seasons: seasons, episodes: episodes}
+}
+
+// episodeKey identifica un episodio dentro de una media.
+type episodeKey struct{ season, episode int }
+
+// indexFilesByEpisode agrupa los archivos locales de una media por (temporada, episodio).
+func indexFilesByEpisode(localFiles []*dto.LocalFile, mediaID int) map[episodeKey][]*dto.LocalFile {
+	out := make(map[episodeKey][]*dto.LocalFile)
+	for _, lf := range localFiles {
+		if lf == nil || lf.MediaID != mediaID || lf.Metadata == nil {
+			continue
+		}
+		k := episodeKey{season: lf.GetSeasonNumber(), episode: lf.Metadata.Episode}
+		out[k] = append(out[k], lf)
+	}
+	return out
 }

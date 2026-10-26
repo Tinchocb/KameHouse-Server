@@ -1,5 +1,6 @@
 import * as React from "react"
 import { m, AnimatePresence, type Variants } from "framer-motion"
+import { cn } from "@/components/ui/core/styling"
 import { IconNavigationLayers, IconNavigationFilm } from "@/components/ui/icons";
 import { SectionBar } from "@/components/ui/sectionbar/sectionbar"
 import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control"
@@ -47,7 +48,7 @@ const hubGridFade = {
     transition: { duration: 0.15, ease: "easeOut" },
 } as const
 
-export interface SpotlightLowerHubProps {
+interface SpotlightLowerHubProps {
     activeEraId: EraId
     /** Sentido del último cambio de era (1 adelante, -1 atrás). */
     direction?: number
@@ -77,6 +78,8 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
     onNavigateMovie,
     onHoverSound,
 }: SpotlightLowerHubProps) {
+    const hubId = React.useId()
+    const panelId = `${hubId}-panel`
     const isFullMotion = useMotionTier() === "full"
     const hasSagas = activeEraSagas.length > 0
     const hasMovies = activeEraMovies.length > 0
@@ -87,17 +90,21 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
     const hubOptions = React.useMemo<SegmentedOption<LowerHubTab>[]>(() => [
         {
             value: "sagas",
-            label: "Sagas & Arcos",
+            id: `${hubId}-sagas`,
+            panelId,
+            label: "Sagas y arcos",
             icon: <IconNavigationLayers size={14} />,
             count: activeEraSagas.length,
         },
         {
             value: "movies",
+            id: `${hubId}-movies`,
+            panelId,
             label: "Películas",
             icon: <IconNavigationFilm size={14} />,
             count: activeEraMovies.length,
         },
-    ], [activeEraSagas.length, activeEraMovies.length])
+    ], [hubId, panelId, activeEraSagas.length, activeEraMovies.length])
 
     // Al cambiar de era, volver al tab con contenido (sagas primero, como antes).
     // Se ajusta durante el render (no en un efecto): así el grid de la era nueva
@@ -162,16 +169,18 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
         >
             <SectionBar
                 variant="minimal"
-                label={activeTab === "sagas" ? "Sagas & Arcos" : "Películas de la Era"}
+                label={activeTab === "sagas" ? "Sagas y arcos" : "Películas de la era"}
                 icon={activeTab === "sagas" ? IconNavigationLayers : IconNavigationFilm}
                 className="p-0 md:p-0"
                 badge={
-                    <span className="px-2 py-0.5 rounded-full text-3xs font-mono font-bold bg-[var(--glass-bg)] text-on-surface-variant border border-[var(--glass-border-side)]">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-[var(--neutral-elev-1)] text-on-surface-variant border border-[var(--neutral-separator)]">
                         <ElasticCounter
                             value={activeTab === "sagas" ? activeEraSagas.length : activeEraMovies.length}
                             className="font-bold"
                         />{" "}
-                        {activeTab === "sagas" ? "arcos" : "películas"}
+                        {activeTab === "sagas"
+                            ? (activeEraSagas.length === 1 ? "arco" : "arcos")
+                            : (activeEraMovies.length === 1 ? "película" : "películas")}
                     </span>
                 }
             >
@@ -196,7 +205,13 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
                     lugar en el mismo frame (sin hueco ni salto de altura entre eras).
                     El wrapper relative es el ancla del saliente y deja los márgenes
                     y bordes de SectionBar en él, no en los grids. */}
-                <div className="relative w-full">
+                <div
+                    id={panelId}
+                    role={showSwitch ? "tabpanel" : undefined}
+                    aria-labelledby={showSwitch ? `${hubId}-${activeTab}` : undefined}
+                    tabIndex={showSwitch ? 0 : undefined}
+                    className="relative w-full"
+                >
                     <AnimatePresence mode="popLayout" custom={slideDir}>
                         {activeTab === "sagas" && hasSagas && (
                             <m.div
@@ -223,7 +238,12 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
                             <m.div
                                 key={`movies-${activeEraId}`}
                                 {...gridMotion}
-                                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 pt-1 pb-4 w-full"
+                                className={cn(
+                                    "pt-1 pb-4 w-full",
+                                    activeEraMovies.length <= 6
+                                        ? "flex flex-col sm:flex-row gap-3.5 h-auto sm:h-[320px] md:h-[350px]"
+                                        : "flex gap-3.5 overflow-x-auto no-scrollbar snap-x h-auto sm:h-[320px] md:h-[350px]"
+                                )}
                             >
                                 {activeEraMovies.map((movie, idx) => (
                                     <SpotlightMovieCard
@@ -233,6 +253,12 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
                                         colors={colors}
                                         onNavigate={onNavigateMovie}
                                         onHover={onHoverSound}
+                                        className={cn(
+                                            "push-slot",
+                                            activeEraMovies.length <= 6
+                                                ? "flex-1 sm:[@media(hover:hover)_and_(pointer:fine)]:hover:flex-[2.15] transition-[flex,transform] duration-300 ease-smooth-out h-full"
+                                                : "w-[160px] md:w-[180px] shrink-0 [@media(hover:hover)_and_(pointer:fine)]:hover:w-[310px] md:[@media(hover:hover)_and_(pointer:fine)]:hover:w-[340px] transition-[width,transform] duration-300 ease-smooth-out snap-start h-full"
+                                        )}
                                     />
                                 ))}
                             </m.div>

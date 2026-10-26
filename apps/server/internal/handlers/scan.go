@@ -130,34 +130,33 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 	// Create a new scanner
 	sc := scanner.NewScanner(&scanner.ScannerOptions{
-		DirPath:                    libraryPath,
-		OtherDirPaths:              additionalLibraryPaths,
-		SeriesPaths:                h.App.Settings.GetLibrary().SeriesPaths,
-		MoviePaths:                 h.App.Settings.GetLibrary().MoviePaths,
-		Enhanced:                   true,
-		ScanMode:                   b.Mode, // Pass the mode
-		PlatformRef:                h.App.Metadata.Platform,
-		Logger:                     h.App.Logger,
-		WSEventManager:             h.App.WSEventManager,
-		EventDispatcher:            h.App.WSEventManager.Dispatcher(),
-		ExistingLocalFiles:         existingLfs,
-		SkipLockedFiles:            b.SkipLockedFiles,
-		SkipIgnoredFiles:           b.SkipIgnoredFiles,
-		ScanSummaryLogger:          scanSummaryLogger,
-		ScanLogger:                 scanLogger,
-		Database:                   h.App.Database,
-		MetadataProviderRef:        h.App.Metadata.Provider,
-		MatchingThreshold:          h.App.Settings.GetLibrary().ScannerMatchingThreshold,
-		UseLegacyMatching:          h.App.Settings.GetLibrary().ScannerUseLegacyMatching,
-		StrictStructure:            h.App.Settings.GetLibrary().ScannerStrictStructure,
-		WithShelving:               true,
-		ExistingShelvedFiles:       existingShelvedLfs,
-		AnimeCollection:            ac,
-		UseTMDB:                    h.App.Settings.GetLibrary().ScannerProvider == "tmdb",
-		TMDBClient:                 h.App.Metadata.TMDBClient,
-		FFprobePath:                ffprobePath,
-		BackgroundQueue:            h.App.BackgroundQueue,
-		UnifiedScan:                h.App.Settings.GetLibrary().UnifiedScan,
+		DirPath:              libraryPath,
+		OtherDirPaths:        additionalLibraryPaths,
+		SeriesPaths:          h.App.Settings.GetLibrary().SeriesPaths,
+		MoviePaths:           h.App.Settings.GetLibrary().MoviePaths,
+		Enhanced:             true,
+		ScanMode:             b.Mode, // Pass the mode
+		PlatformRef:          h.App.Metadata.Platform,
+		Logger:               h.App.Logger,
+		WSEventManager:       h.App.WSEventManager,
+		EventDispatcher:      h.App.WSEventManager.Dispatcher(),
+		ExistingLocalFiles:   existingLfs,
+		SkipLockedFiles:      b.SkipLockedFiles,
+		SkipIgnoredFiles:     b.SkipIgnoredFiles,
+		ScanSummaryLogger:    scanSummaryLogger,
+		ScanLogger:           scanLogger,
+		Database:             h.App.Database,
+		MetadataProviderRef:  h.App.Metadata.Provider,
+		MatchingThreshold:    h.App.Settings.GetLibrary().ScannerMatchingThreshold,
+		StrictStructure:      h.App.Settings.GetLibrary().ScannerStrictStructure,
+		WithShelving:         true,
+		ExistingShelvedFiles: existingShelvedLfs,
+		AnimeCollection:      ac,
+		UseTMDB:              h.App.Settings.GetLibrary().ScannerProvider == "tmdb",
+		TMDBClient:           h.App.Metadata.GetTMDBClient(),
+		FFprobePath:          ffprobePath,
+		BackgroundQueue:      h.App.BackgroundQueue,
+		UnifiedScan:          h.App.Settings.GetLibrary().UnifiedScan,
 	})
 
 	cleanupLock = false
@@ -233,6 +232,8 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		ClearLibraryCollectionCache()
 		anime.InvalidateCuratedHomeCache()
 		h.prewarmShelfImages(0) // series nuevas: sus fondos al disco local
+		// Frames que faltan, en segundo plano y de a uno.
+		h.warmThumbnailsAfterScan(2 * time.Second)
 		if h.App.Metadata.Platform != nil {
 			_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(scanCtx)
 		}
@@ -242,37 +243,6 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	// Sending an empty array `[]` avoids React TypeScript schema mismatches on the Frontend.
 	return h.RespondWithData(c, make([]interface{}, 0))
 
-}
-
-// HandleGetScanStatus ...
-//
-//	@summary returns the latest scan summary.
-//	@desc Returns metadata about the most recent library scan:
-//	@desc  - timestamp, duration, matched/unmatched file counts, errors.
-//	@desc Clients can poll this endpoint instead of relying solely on WebSocket events.
-//	@route /api/v1/library/scan/status [GET]
-//	@returns dto.ScanSummaryItem
-func (h *Handler) HandleGetScanStatus(c echo.Context) error {
-	summaries, err := db.GetScanSummaries(h.App.Database)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if len(summaries) == 0 {
-		return h.RespondWithData(c, map[string]any{
-			"status":  "idle",
-			"message": "No scan has been performed yet",
-		})
-	}
-
-	// Return the most recent summary (GetScanSummaries returns them in insertion order).
-	latest := summaries[len(summaries)-1]
-	return h.RespondWithData(c, map[string]any{
-		"status":     "done",
-		"lastScanAt": latest.CreatedAt,
-		"summary":    latest.ScanSummary,
-		"engine":     "Antigravity-v2",
-	})
 }
 
 // HandleGetUnlinkedFiles ...

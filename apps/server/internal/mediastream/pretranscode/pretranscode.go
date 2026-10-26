@@ -11,6 +11,7 @@ package pretranscode
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -153,6 +154,20 @@ func (m *Manager) IsAvailable(hash string) bool {
 	return err == nil
 }
 
+// Ready reports whether the pre-transcode of hash can stand in for the live transcode
+// of a file with audioTracks audio tracks. Output built before the audio renditions
+// existed holds one track only, so it is not ready for a file with several.
+func (m *Manager) Ready(hash string, audioTracks int) bool {
+	if !m.IsAvailable(hash) {
+		return false
+	}
+	if audioTracks <= 1 {
+		return true
+	}
+	_, err := os.Stat(filepath.Join(m.OutputDirFor(hash), fmt.Sprintf("a%d", audioTracks-1), "index.m3u8"))
+	return err == nil
+}
+
 // Enqueue schedules a file for pre-transcoding. It is idempotent: an already
 // pre-transcoded file, or one already queued/running, returns its existing job
 // without starting duplicate work.
@@ -178,10 +193,15 @@ func (m *Manager) Enqueue(filePath string) (*PreTranscodeJob, error) {
 	}
 
 	// Already on disk from a previous run: record it as done rather than redoing it.
+	// Output from before the audio renditions is rebuilt for a file with several tracks.
 	if m.IsAvailable(hash) {
-		job := &PreTranscodeJob{Hash: hash, FilePath: filePath, Status: StatusCompleted, Progress: 100, QueuedAt: time.Now()}
-		m.jobs[hash] = job
-		return job, nil
+		streams, probeErr := probeStreams(context.Background(), m.opts.FfprobePath, filePath)
+		if probeErr != nil || m.Ready(hash, len(streams.Audio)) {
+			job := &PreTranscodeJob{Hash: hash, FilePath: filePath, Status: StatusCompleted, Progress: 100, QueuedAt: time.Now()}
+			m.jobs[hash] = job
+			return job, nil
+		}
+		_ = os.RemoveAll(m.OutputDirFor(hash))
 	}
 
 	job := &PreTranscodeJob{Hash: hash, FilePath: filePath, Status: StatusQueued, QueuedAt: time.Now()}
@@ -231,19 +251,6 @@ func (m *Manager) Jobs() []*PreTranscodeJob {
 		out = append(out, &clone)
 	}
 	return out
-}
-
-// Get returns a snapshot of one job.
-func (m *Manager) Get(hash string) (*PreTranscodeJob, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	job, ok := m.jobs[hash]
-	if !ok {
-		return nil, false
-	}
-	clone := *job
-	return &clone, true
 }
 
 // Delete removes a file's pre-transcoded output and forgets its job.
@@ -325,6 +332,10 @@ func (m *Manager) run(job *PreTranscodeJob) {
 }
 
 func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
+	// Un Stop (cambio de ajustes) cancela el job: no arrancar probes ni ffmpeg ya cancelado.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	outDir := m.OutputDirFor(job.Hash)
 
 	// Build into a temp dir and rename on success, so IsAvailable never sees a
@@ -338,7 +349,12 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	totalDuration := m.probeDuration(job.FilePath)
+	totalDuration := m.probeDuration(ctx, job.FilePath)
+
+	src, err := probeStreams(ctx, m.opts.FfprobePath, job.FilePath)
+	if err != nil {
+		return fmt.Errorf("could not probe streams: %w", err)
+	}
 
 	hw := cassette.BuildHwAccelProfile(cassette.HwAccelOptions{
 		Kind:           m.opts.HwAccel.Kind,
@@ -346,7 +362,7 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 		CustomSettings: m.opts.HwAccel.CustomSettings,
 	}, m.opts.FfmpegPath, m.logger)
 
-	args := buildFfmpegArgs(hw, job.FilePath, tmpDir)
+	args := buildFfmpegArgs(hw, job.FilePath, tmpDir, len(src.Audio))
 
 	cmd := exec.CommandContext(ctx, m.opts.FfmpegPath, args...)
 	stdout, err := cmd.StdoutPipe()
@@ -384,6 +400,10 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 		return fmt.Errorf("ffmpeg failed: %s: %w", lastLine(msg), err)
 	}
 
+	if err := writeMasterPlaylist(tmpDir, src); err != nil {
+		return fmt.Errorf("could not write master playlist: %w", err)
+	}
+
 	if err := os.RemoveAll(outDir); err != nil {
 		return fmt.Errorf("could not clear output dir: %w", err)
 	}
@@ -397,14 +417,16 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 
 // buildFfmpegArgs assembles a VOD HLS encode. Decode flags must precede -i and
 // encode flags follow it — that ordering is what makes hwaccel actually engage.
-func buildFfmpegArgs(hw cassette.HwAccelProfile, inputPath string, outDir string) []string {
+// Every audio track becomes a rendition (see variantStreamMap), so the player can
+// switch tracks on the pre-transcode too.
+func buildFfmpegArgs(hw cassette.HwAccelProfile, inputPath string, outDir string, audioTracks int) []string {
 	args := []string{"-y", "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-nostats"}
 	args = append(args, hw.DecodeFlags...)
 	args = append(args, "-i", inputPath)
 
-	// Only the first video and the default audio track: a pre-transcode is the
-	// "just play it" path, and extra tracks multiply encode time for little gain.
-	args = append(args, "-map", "0:v:0", "-map", "0:a:0?")
+	// The audio encode is cheap next to the video: a few extra AAC tracks cost a
+	// small fraction of the job, and the job is background work.
+	args = append(args, "-map", "0:v:0", "-map", "0:a?")
 	args = append(args, hw.EncodeFlags...)
 
 	if hw.ForcedIDR {
@@ -420,11 +442,205 @@ func buildFfmpegArgs(hw cassette.HwAccelProfile, inputPath string, outDir string
 		"-hls_time", strconv.Itoa(segmentDuration),
 		"-hls_playlist_type", "vod",
 		"-hls_flags", "independent_segments",
-		"-hls_segment_filename", filepath.Join(outDir, "seg%05d.ts"),
-		filepath.Join(outDir, "master.m3u8"),
+		// ffmpeg writes one playlist per variant (v/, a0/, ...); writeMasterPlaylist
+		// writes the master. No -master_pl_name: ffmpeg's own master is wrong here.
+		"-var_stream_map", variantStreamMap(audioTracks),
+		"-hls_segment_filename", filepath.Join(outDir, "%v", "seg%05d.ts"),
+		filepath.Join(outDir, "%v", "index.m3u8"),
 	)
 
 	return args
+}
+
+// variantStreamMap declares the HLS variants: the video, and one audio rendition per
+// source track (a0, a1, ...) in the same group, so the master can reference them.
+func variantStreamMap(audioTracks int) string {
+	if audioTracks == 0 {
+		return "v:0,name:v"
+	}
+	parts := []string{"v:0,agroup:aud,name:v"}
+	for i := 0; i < audioTracks; i++ {
+		parts = append(parts, fmt.Sprintf("a:%d,agroup:aud,name:a%d", i, i))
+	}
+	return strings.Join(parts, " ")
+}
+
+// sourceAudio is one audio track of the source file, in ffmpeg's 0:a:N order.
+type sourceAudio struct {
+	Title     string
+	Language  string
+	IsDefault bool
+}
+
+// sourceStreams is what the master playlist needs from the source file.
+type sourceStreams struct {
+	Width, Height int // first video stream (0:v:0)
+	Audio         []sourceAudio
+}
+
+// probeStreams lists the video and audio streams of a file in one ffprobe run.
+func probeStreams(ctx context.Context, ffprobePath, filePath string) (sourceStreams, error) {
+	if ffprobePath == "" {
+		ffprobePath = "ffprobe"
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	out, err := exec.CommandContext(ctx, ffprobePath,
+		"-v", "error",
+		"-print_format", "json",
+		"-show_streams",
+		filePath,
+	).Output()
+	if err != nil {
+		return sourceStreams{}, err
+	}
+
+	var doc struct {
+		Streams []struct {
+			CodecType string `json:"codec_type"`
+			Width     int    `json:"width"`
+			Height    int    `json:"height"`
+			Tags      struct {
+				Language string `json:"language"`
+				Title    string `json:"title"`
+			} `json:"tags"`
+			Disposition struct {
+				Default int `json:"default"`
+			} `json:"disposition"`
+		} `json:"streams"`
+	}
+	if err := json.Unmarshal(out, &doc); err != nil {
+		return sourceStreams{}, fmt.Errorf("unparseable ffprobe output: %w", err)
+	}
+
+	var src sourceStreams
+	sawVideo := false
+	for _, s := range doc.Streams {
+		switch s.CodecType {
+		case "video":
+			if !sawVideo {
+				src.Width, src.Height = s.Width, s.Height
+				sawVideo = true
+			}
+		case "audio":
+			src.Audio = append(src.Audio, sourceAudio{
+				Title:     s.Tags.Title,
+				Language:  s.Tags.Language,
+				IsDefault: s.Disposition.Default == 1,
+			})
+		}
+	}
+	return src, nil
+}
+
+// writeMasterPlaylist writes master.m3u8 into dir, next to the variant directories
+// ffmpeg produced. The bandwidth is measured from the segments on disk.
+func writeMasterPlaylist(dir string, src sourceStreams) error {
+	duration, err := playlistDuration(filepath.Join(dir, "v", "index.m3u8"))
+	if err != nil {
+		return err
+	}
+
+	segments, err := filepath.Glob(filepath.Join(dir, "*", "seg*.ts"))
+	if err != nil {
+		return err
+	}
+	var total int64
+	for _, seg := range segments {
+		fi, err := os.Stat(seg)
+		if err != nil {
+			return err
+		}
+		total += fi.Size()
+	}
+	bandwidth := int64(float64(total) * 8 / duration)
+
+	return os.WriteFile(filepath.Join(dir, "master.m3u8"), []byte(masterPlaylist(src, bandwidth)), 0644)
+}
+
+// masterPlaylist builds a pre-transcode master: one video variant and an EXT-X-MEDIA
+// rendition per audio track (a<N>/index.m3u8). It is the shape the live transcode
+// serves, so the player switches audio the same way for both. ffmpeg can't write
+// this: its master adds audio-only entries as if they were video qualities.
+func masterPlaylist(src sourceStreams, bandwidth int64) string {
+	var b strings.Builder
+	b.WriteString("#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-INDEPENDENT-SEGMENTS\n")
+
+	defaultAudio := 0
+	for i, a := range src.Audio {
+		if a.IsDefault {
+			defaultAudio = i
+			break
+		}
+	}
+	for i, a := range src.Audio {
+		fmt.Fprintf(&b, `#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="%s",`, audioRenditionName(a, i))
+		if a.Language != "" && a.Language != "und" {
+			fmt.Fprintf(&b, `LANGUAGE="%s",`, a.Language)
+		}
+		def := "NO"
+		if i == defaultAudio {
+			def = "YES"
+		}
+		fmt.Fprintf(&b, `DEFAULT=%s,AUTOSELECT=YES,CHANNELS="2",URI="a%d/index.m3u8"`+"\n", def, i)
+	}
+
+	codecs := "avc1.640028"
+	audioAttr := ""
+	if len(src.Audio) > 0 {
+		codecs += ",mp4a.40.2"
+		audioAttr = `,AUDIO="aud"`
+	}
+	fmt.Fprintf(&b, "#EXT-X-STREAM-INF:BANDWIDTH=%d,AVERAGE-BANDWIDTH=%d", bandwidth, bandwidth)
+	if src.Width > 0 && src.Height > 0 {
+		fmt.Fprintf(&b, ",RESOLUTION=%dx%d", src.Width, src.Height)
+	}
+	fmt.Fprintf(&b, `,CODECS="%s"%s`+"\nv/index.m3u8\n", codecs, audioAttr)
+	return b.String()
+}
+
+// audioRenditionName is the label the player shows: the track's own title, or "Audio N".
+func audioRenditionName(a sourceAudio, i int) string {
+	name := strings.TrimSpace(a.Title)
+	if name == "" {
+		name = fmt.Sprintf("Audio %d", i+1)
+	}
+	return strings.ReplaceAll(name, `"`, "'")
+}
+
+// playlistDuration sums the EXTINF durations of a media playlist.
+func playlistDuration(path string) (float64, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+
+	var total float64
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		value, ok := strings.CutPrefix(scanner.Text(), "#EXTINF:")
+		if !ok {
+			continue
+		}
+		if i := strings.IndexByte(value, ','); i >= 0 {
+			value = value[:i]
+		}
+		d, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+		if err != nil {
+			return 0, fmt.Errorf("unparseable EXTINF %q: %w", value, err)
+		}
+		total += d
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+	if total <= 0 {
+		return 0, errors.New("empty video playlist")
+	}
+	return total, nil
 }
 
 // probeDuration returns the file's duration in seconds, or 0 when unknown —
@@ -434,14 +650,14 @@ func buildFfmpegArgs(hw cassette.HwAccelProfile, inputPath string, outDir string
 // file already and its result is cached, but it is not required: falling back to
 // a direct ffprobe keeps the progress bar working instead of silently pinning it
 // at 0%.
-func (m *Manager) probeDuration(filePath string) float64 {
+func (m *Manager) probeDuration(ctx context.Context, filePath string) float64 {
 	if m.opts.Extractor != nil && m.opts.FfprobePath != "" {
-		if info, err := m.opts.Extractor.GetInfo(m.opts.FfprobePath, filePath); err == nil && info != nil && info.Duration > 0 {
+		if info, err := m.opts.Extractor.GetInfoContext(ctx, m.opts.FfprobePath, filePath); err == nil && info != nil && info.Duration > 0 {
 			return float64(info.Duration)
 		}
 	}
 
-	d, err := probeDurationWithFfprobe(m.opts.FfprobePath, filePath)
+	d, err := probeDurationWithFfprobe(ctx, m.opts.FfprobePath, filePath)
 	if err != nil {
 		m.logger.Debug().Err(err).Str("filepath", filePath).Msg("pretranscode: Could not probe duration, progress will stay at 0 until the job finishes")
 		return 0
@@ -450,12 +666,12 @@ func (m *Manager) probeDuration(filePath string) float64 {
 }
 
 // probeDurationWithFfprobe asks ffprobe for the container duration directly.
-func probeDurationWithFfprobe(ffprobePath string, filePath string) (float64, error) {
+func probeDurationWithFfprobe(ctx context.Context, ffprobePath string, filePath string) (float64, error) {
 	if ffprobePath == "" {
 		ffprobePath = "ffprobe"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, ffprobePath,

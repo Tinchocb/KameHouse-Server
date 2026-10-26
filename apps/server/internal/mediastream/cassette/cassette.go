@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -30,8 +31,10 @@ type NewCassetteOptions struct {
 // Cassette is the top-level transcoding orchestrator.
 // it manages sessions, client tracking, and resource allocation.
 type Cassette struct {
-	sessions   sync.Map // map[string]*Session keyed by file path.
-	sessionsMu sync.Mutex
+	sessions    sync.Map // map[string]*Session keyed by file path.
+	sessionsMu  sync.Mutex
+	destroyed   atomic.Bool
+	destroyOnce sync.Once
 
 	clientChan chan ClientInfo
 	tracker    *ClientTracker
@@ -98,28 +101,42 @@ func (c *Cassette) GovernorStats() GovernorStats {
 
 // Destroy stops all sessions and clears the output directory.
 func (c *Cassette) Destroy() {
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.Warn().Interface("recover", r).Msg("cassette: recovered during destroy")
-		}
-	}()
+	c.destroyOnce.Do(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				c.logger.Warn().Interface("recover", r).Msg("cassette: recovered during destroy")
+			}
+		}()
 
-	c.tracker.Stop()
-	c.logger.Debug().Msg("cassette: destroying all sessions")
+		// Serialize the terminal state with creation. Detach sessions while holding
+		// the short lock; their potentially blocking teardown happens after unlock.
+		c.sessionsMu.Lock()
+		c.destroyed.Store(true)
+		var sessions []*Session
+		c.sessions.Range(func(key, value any) bool {
+			if s, ok := value.(*Session); ok {
+				sessions = append(sessions, s)
+			}
+			c.sessions.Delete(key)
+			return true
+		})
+		c.sessionsMu.Unlock()
 
-	c.sessions.Range(func(key, value any) bool {
-		if s, ok := value.(*Session); ok {
+		c.tracker.Stop()
+		c.logger.Debug().Msg("cassette: destroying all sessions")
+
+		for _, s := range sessions {
 			s.Destroy()
 		}
-		c.sessions.Delete(key)
-		return true
+
+		// clear keyframe cache
+		ClearKeyframeCache()
+
+		c.logger.Debug().Msg("cassette: destroyed")
 	})
-
-	// clear keyframe cache
-	ClearKeyframeCache()
-
-	c.logger.Debug().Msg("cassette: destroyed")
 }
+
+var errCassetteDestroyed = errors.New("cassette: engine destroyed")
 
 // session management
 
@@ -128,6 +145,9 @@ func (c *Cassette) getSession(
 	filePath, hash string,
 	mediaInfo *videofile.MediaInfo,
 ) (*Session, error) {
+	if c.destroyed.Load() {
+		return nil, errCassetteDestroyed
+	}
 	// session already exists
 	if v, ok := c.sessions.Load(filePath); ok {
 		s, ok := v.(*Session)
@@ -141,6 +161,10 @@ func (c *Cassette) getSession(
 
 	// create session
 	c.sessionsMu.Lock()
+	if c.destroyed.Load() {
+		c.sessionsMu.Unlock()
+		return nil, errCassetteDestroyed
+	}
 	if v, ok := c.sessions.Load(filePath); ok {
 		c.sessionsMu.Unlock()
 		s, ok := v.(*Session)
@@ -168,6 +192,9 @@ func (c *Cassette) waitSession(ctx context.Context, filePath string, s *Session)
 			c.sessions.CompareAndDelete(filePath, s)
 		}
 		return nil, err
+	}
+	if c.destroyed.Load() {
+		return nil, errCassetteDestroyed
 	}
 	return s, nil
 }

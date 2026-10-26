@@ -88,7 +88,7 @@ const config: Config = {
                 // verdad) para que Tailwind y CSS no se desvíen. duration-base es el
                 // default del sistema.
                 // `fast` conserva los 150ms que siempre renderizó Tailwind (117 usos);
-                // en animation.css --duration-fast vale 250ms, igual que base.
+                // en animation.css --duration-fast también vale 150ms (alias de --duration-quick).
                 fast: "var(--duration-quick)",
                 quick: "var(--duration-quick)",
                 base: "var(--duration-base)",
@@ -97,6 +97,17 @@ const config: Config = {
                 "very-slow": "var(--duration-very-slow)",
                 slower: "var(--duration-slower)",
                 slowest: "var(--duration-slowest)",
+            },
+            // Pasos que ya usa el código (cascada de la cinta abierta en -SeriesCard) y
+            // que Tailwind 3.4 no trae: sin esto delay-250/delay-350 solo existían como
+            // animation-delay (animation.css) y no retrasaban ninguna transition.
+            transitionDelay: {
+                "80": "80ms",
+                "120": "120ms",
+                "160": "160ms",
+                "240": "240ms",
+                "250": "250ms",
+                "350": "350ms",
             },
             transitionTimingFunction: {
                 DEFAULT: "cubic-bezier(0.2, 0, 0.38, 0.9)",
@@ -125,10 +136,10 @@ const config: Config = {
                     from: { transform: "translateY(-1rem)", opacity: "0" },
                     to: { transform: "translateY(0)", opacity: "1" },
                 },
-                "slide-up": {
-                    from: { transform: "translateY(0)", opacity: "1" },
-                    to: { transform: "translateY(-1rem)", opacity: "0" },
-                },
+                // `slide-up` NO se define acá: el sistema de motion (styles/tokens/animation.css) tiene el
+                // suyo (entrada: opacity 0→1 y sube 10 px). Un keyframe con el mismo nombre aquí lo pisaba
+                // en el build (la salida 1→0 de 150 ms) y todo `.animate-slide-up` (título, acciones y
+                // portada de las fichas) parpadeaba: visible → se apagaba → volvía a aparecer.
                 "indeterminate-progress": {
                     "0%": { transform: " translateX(0) scaleX(0)" },
                     "40%": { transform: "translateX(0) scaleX(0.4)" },
@@ -146,7 +157,6 @@ const config: Config = {
                 "accordion-down": "accordion-down 0.15s linear",
                 "accordion-up": "accordion-up 0.15s linear",
                 "slide-down": "slide-down 0.15s ease-in-out",
-                "slide-up": "slide-up 0.15s ease-in-out",
                 "indeterminate-progress": "indeterminate-progress 1s infinite ease-out",
                 "shimmer": "shimmer 2s infinite",
                 "spin-slow": "spin 8s linear infinite",
@@ -158,10 +168,11 @@ const config: Config = {
             // antes eran arbitrarios text-[8px]..text-[11px] repartidos en ~450 usos.
             // Solo font-size (sin line-height), igual que los arbitrarios.
             fontSize: {
-                "2xs": "11px",
-                "3xs": "10px",
-                "4xs": "9px",
-                "5xs": "8px",
+                // Valen 11/10/9/8px; en modo TV suben (typography.css, [data-tv])
+                "2xs": "var(--fs-2xs)",
+                "3xs": "var(--fs-3xs)",
+                "4xs": "var(--fs-4xs)",
+                "5xs": "var(--fs-5xs)",
             },
             letterSpacing: {
                 // Escala 0.2em del design system (typography.css --tracking-ultra),
@@ -310,16 +321,22 @@ const config: Config = {
                     DEFAULT: "hsl(var(--card) / <alpha-value>)",
                     foreground: "hsl(var(--card-foreground) / <alpha-value>)",
                 },
-            overlay: "hsl(var(--overlay) / <alpha-value>)",
-            "border-subtle": "hsl(var(--border-subtle) / <alpha-value>)",
-            "border-strong": "hsl(var(--border-strong) / <alpha-value>)",
+            // Tokens con alfa propio (`H S% L% / A`): sin <alpha-value>, que produciría `hsl(… / A / 1)` (inválido).
+            overlay: "hsl(var(--overlay))",
+            "border-subtle": "hsl(var(--border-subtle))",
+            "border-strong": "hsl(var(--border-strong))",
             "on-surface": "rgba(var(--on-surface-rgb), <alpha-value>)",
             "on-surface-variant": "rgba(var(--on-surface-variant-rgb), <alpha-value>)",
+            // Etiquetas de texto (--label-1/2/3): jerarquía garantizada sobre las superficies de contenido.
+            "label-1": "var(--label-1)",
+            "label-2": "var(--label-2)",
+            "label-3": "var(--label-3)",
             "on-primary": "rgba(var(--on-primary-rgb), <alpha-value>)",
             "on-secondary": "rgba(var(--on-secondary-rgb), <alpha-value>)",
             "on-accent": "rgba(var(--on-primary-rgb), <alpha-value>)",
             // Familia semántica de estado (error/success/warning)
             "status-error": "rgba(var(--status-error-rgb), <alpha-value>)",
+            "status-error-fg": "rgba(var(--status-error-fg-rgb), <alpha-value>)",
             "status-success": "rgba(var(--status-success-rgb), <alpha-value>)",
             "status-warning": "rgba(var(--status-warning-rgb), <alpha-value>)",
             "secondary-container": "var(--md-sys-color-secondary-container)",
@@ -337,6 +354,8 @@ const config: Config = {
                 700: "var(--brand-accent-700)",
                 800: "var(--brand-accent-800)",
                 900: "var(--brand-accent-900)",
+                // Texto chico (≥4.5:1 sobre fondo oscuro); relleno y bordes siguen en DEFAULT
+                readable: "var(--brand-accent-readable)",
             },
             "brand-primary": "hsl(var(--brand-primary) / <alpha-value>)",
             "brand-secondary": "hsl(var(--brand-secondary) / <alpha-value>)",

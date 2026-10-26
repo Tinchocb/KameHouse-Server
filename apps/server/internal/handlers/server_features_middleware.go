@@ -39,7 +39,6 @@ var staticPathFeatureRules = []pathFeatureRule{
 		"/api/v1/library/scan-summaries": {},
 	}},
 	// proxy
-	{"/api/v1/proxy", core.Proxy, nil, nil},
 	{"/api/v1/image-proxy", core.Proxy, nil, nil},
 	// logs
 	{"/api/v1/log", core.ViewLogs, nil, nil},
@@ -50,13 +49,9 @@ var staticPathFeatureRules = []pathFeatureRule{
 		"/api/v1/mediastream/settings": {},
 	}},
 	{"/api/v1/mediastream", core.WatchingLocalAnime, nil, nil},
-	{"/api/v1/metadata-provider", core.ManageLocalAnimeLibrary, updateMethodsMap, nil},
 	{"/api/v1/library", core.ManageLocalAnimeLibrary, updateMethodsMap, map[string]struct{}{
-		"/api/v1/library/anime-entry/progress":       {},
-		"/api/v1/library/scan":                       {},
-		"/api/v1/library/scan-summaries":             {},
-		"/api/v1/library/explorer/file-tree":         {},
-		"/api/v1/library/explorer/file-tree/refresh": {},
+		"/api/v1/library/anime-entry/progress": {},
+		"/api/v1/library/scan":                 {},
 	}},
 }
 
@@ -70,7 +65,7 @@ func (h *Handler) FeaturesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		method := strings.ToUpper(c.Request().Method)
 
 		for _, rule := range staticPathFeatureRules {
-			if h.App.FeatureManager.IsDisabled(rule.feature) && strings.HasPrefix(path, rule.pathStartsWith) {
+			if strings.HasPrefix(path, rule.pathStartsWith) && h.App.FeatureManager.IsDisabled(rule.feature) {
 				if rule.excludePaths != nil {
 					if _, excluded := rule.excludePaths[path]; excluded {
 						continue

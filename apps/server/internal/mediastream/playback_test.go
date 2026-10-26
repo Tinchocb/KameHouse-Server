@@ -107,6 +107,10 @@ func TestResolveStreamType(t *testing.T) {
 		// nil caps must never trigger the upgrade — this is what keeps an audio-track
 		// switch (which deliberately withholds caps) on HLS.
 		{"nil caps never upgrades", StreamTypeTranscode, playable, nil, playbackPolicy{}, StreamTypeTranscode},
+		// directPlayOnly is a hard promise for transcode requests too: the fallback after
+		// a decode error and the audio-track switch (nil caps) must both stay direct.
+		{"directPlayOnly serves transcode request direct", StreamTypeTranscode, unplayable, chromium, playbackPolicy{directPlayOnly: true}, StreamTypeDirect},
+		{"directPlayOnly keeps audio switch direct", StreamTypeTranscode, playable, nil, playbackPolicy{directPlayOnly: true}, StreamTypeDirect},
 
 		// Optimized is resolved elsewhere and must pass through untouched.
 		{"optimized untouched", StreamTypeOptimized, playable, chromium, playbackPolicy{}, StreamTypeOptimized},

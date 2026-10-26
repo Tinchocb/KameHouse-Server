@@ -184,13 +184,16 @@ func (m *WSEventManager) AddConn(id string, conn *websocket.Conn) {
 	}
 }
 
-// RemoveConn removes a websocket connection by ID and cleans up its subscribers.
-func (m *WSEventManager) RemoveConn(id string) {
+// RemoveConnIfSame quita y cierra la conexion registrada bajo id solo si sigue siendo conn.
+// Un cliente que reconecta con el mismo id reemplaza (y cierra) la anterior en AddConn: el
+// handler viejo, al fallar su lectura, o un envio fallido sobre ella no deben sacar ni
+// cerrar la conexion nueva que ahora lleva ese id.
+func (m *WSEventManager) RemoveConnIfSame(id string, conn *websocket.Conn) {
 	m.connsMu.Lock()
 	var connToClose *WSConn
-	for i, conn := range m.Conns {
-		if conn.ID == id {
-			connToClose = conn
+	for i, c := range m.Conns {
+		if c.ID == id && c.Conn == conn {
+			connToClose = c
 			m.Conns = append(m.Conns[:i], m.Conns[i+1:]...)
 			break
 		}
@@ -257,7 +260,7 @@ func (m *WSEventManager) SendEvent(t string, payload interface{}) {
 	}
 
 	var deadConnsMu sync.Mutex
-	var deadConns []string
+	var deadConns []*WSConn
 
 	writeConn := func(c *WSConn) {
 		c.writeMu.Lock()
@@ -266,14 +269,14 @@ func (m *WSEventManager) SendEvent(t string, payload interface{}) {
 			if r := recover(); r != nil {
 				m.Logger.Error().Interface("panic", r).Msg("ws: Recovered from panic in SendEvent write (possibly closed websocket)")
 				deadConnsMu.Lock()
-				deadConns = append(deadConns, c.ID)
+				deadConns = append(deadConns, c)
 				deadConnsMu.Unlock()
 			}
 		}()
 		_ = c.Conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
 		if err := c.Conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			deadConnsMu.Lock()
-			deadConns = append(deadConns, c.ID)
+			deadConns = append(deadConns, c)
 			deadConnsMu.Unlock()
 		}
 	}
@@ -296,8 +299,8 @@ func (m *WSEventManager) SendEvent(t string, payload interface{}) {
 		wg.Wait()
 	}
 
-	for _, id := range deadConns {
-		m.RemoveConn(id)
+	for _, dead := range deadConns {
+		m.RemoveConnIfSame(dead.ID, dead.Conn)
 	}
 }
 
@@ -341,7 +344,6 @@ func (m *WSEventManager) SendEventTo(clientID string, t string, payload interfac
 	defer targetConn.writeMu.Unlock()
 	_ = targetConn.Conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
 	if err := targetConn.Conn.WriteMessage(websocket.TextMessage, data); err != nil {
-		go m.RemoveConn(clientID)
+		go m.RemoveConnIfSame(clientID, targetConn.Conn)
 	}
 }
-

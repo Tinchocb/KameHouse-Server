@@ -4,11 +4,18 @@ import { ChronologyEraNav, type EraProgress } from './ChronologyEraNav';
 import { ERA_COLOR_MAP } from '@/lib/config/eras';
 import { ElasticCounter } from '@/components/ui/kinetics/elastic-counter';
 import { cn } from '@/components/ui/core/styling';
+import type { TimelineOrder } from './data/releaseOrder';
 
 interface HeaderProps {
   currentEraFilter: EraFilter;
   onSelectEraFilter: (era: EraFilter) => void;
   eraProgress: Record<EraFilter, EraProgress>;
+  /** Era que se ve al desplazarse (scroll-spy). */
+  spyEraId?: EraFilter;
+  /** Orden de la línea de tiempo: reordena las eras de la barra. */
+  order?: TimelineOrder;
+  /** Controles de vista y orden, a la derecha del título. */
+  actions?: React.ReactNode;
 }
 
 const ERA_HEADER_META: Record<
@@ -69,49 +76,51 @@ export const Header: React.FC<HeaderProps> = ({
   currentEraFilter,
   onSelectEraFilter,
   eraProgress,
+  spyEraId,
+  order = 'chronological',
+  actions,
 }) => {
   const meta = ERA_HEADER_META[currentEraFilter] ?? ERA_HEADER_META.all;
 
   return (
     <section className="relative page-container pt-4 md:pt-20 pb-4 select-none flex flex-col justify-start space-y-4 shrink-0">
 
-      {/* 1. Barra de Navegación Horizontal de Eras (misma posición y altura que Home y Películas) */}
-      <div className="relative z-10 w-full mt-4">
-        <ChronologyEraNav activeEraId={currentEraFilter} onSelectEra={onSelectEraFilter} eraProgress={eraProgress} />
-      </div>
+      {/* 1. Barra de eras: riel fijo (portal) con avance y era visible; no ocupa una franja del flujo */}
+      <ChronologyEraNav activeEraId={currentEraFilter} onSelectEra={onSelectEraFilter} eraProgress={eraProgress} spyEraId={spyEraId} order={order} />
 
       {/* 2. Fila: título y progreso de completitud */}
-      <div className="relative z-10 flex items-center gap-3 min-w-0 pt-1">
+      <div className="relative z-10 flex flex-wrap items-center gap-x-3 gap-y-3 min-w-0 pt-1">
         <div
-          className="w-10 h-10 rounded-xl p-[2px] shrink-0 transition-colors duration-300"
+          className="w-10 h-10 rounded-xl p-[2px] shrink-0 transition-colors duration-base"
           style={{
             background: `linear-gradient(135deg, ${meta.accent}, transparent 80%)`,
           }}
         >
           <div
             className={cn(
-              "w-full h-full rounded-[10px] flex items-center justify-center border transition-colors duration-300",
+              "w-full h-full rounded-xl flex items-center justify-center border transition-colors duration-base",
               meta.badgeBg,
               meta.badgeBorder
             )}
           >
-            <span className={cn("font-kanji font-black text-xl leading-none transition-colors duration-300", meta.badgeText)}>
+            <span className={cn("font-kanji font-black text-xl leading-none transition-colors duration-base", meta.badgeText)}>
               {meta.kanji}
             </span>
           </div>
         </div>
 
         <div className="min-w-0">
-          <p className="font-mono text-2xs uppercase tracking-[0.18em] sm:tracking-[0.3em] text-on-surface-variant tabular-nums">
-            Dragon Ball · <span className="whitespace-nowrap">Año 749–790</span>{' '}
+          <p className="text-xs text-label-2 tabular-nums">
+            Dragon Ball · <span className="whitespace-nowrap">{order === 'release' ? 'Orden de estreno' : 'Año 749–790'}</span>{' '}
             <span className="whitespace-nowrap">
-              · <ElasticCounter value={eraProgress.all.read} className="align-bottom" />/{eraProgress.all.count} vistos
+              · <ElasticCounter value={eraProgress.all.read} className="align-bottom" />/{eraProgress.all.count} lapsos vistos
             </span>
           </p>
-          <h1 className="mt-0.5 font-display text-2xl sm:text-3xl font-black tracking-tight uppercase text-white leading-none text-balance">
+          <h1 className="mt-0.5 font-display text-2xl sm:text-3xl font-black tracking-tight uppercase text-on-surface leading-none text-balance">
             Línea de tiempo
           </h1>
         </div>
+        {actions && <div className="sm:ml-auto">{actions}</div>}
       </div>
     </section>
   );

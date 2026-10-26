@@ -38,7 +38,6 @@ type (
 	AnimeFillerList struct {
 		baseUrl string
 		client  *req.Client
-		logger  *zerolog.Logger
 	}
 )
 
@@ -48,7 +47,6 @@ func NewAnimeFillerList(logger *zerolog.Logger) *AnimeFillerList {
 		client: req.C().
 			SetTimeout(10 * time.Second).
 			ImpersonateChrome(),
-		logger: logger,
 	}
 }
 

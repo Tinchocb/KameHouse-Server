@@ -1,6 +1,28 @@
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { useTransientFlag } from "./icon-swap"
+import { iconSwapStates, useTransientFlag } from "./icon-swap"
+
+describe("iconSwapStates", () => {
+    it("en tier full anima scale y blur", () => {
+        const { hidden, shown } = iconSwapStates("full")
+        expect(hidden).toEqual({ opacity: 0, scale: 0.25, filter: "blur(4px)" })
+        expect(shown).toEqual({ opacity: 1, scale: 1, filter: "blur(0px)" })
+    })
+
+    it("en tier subtle anima scale y opacity, sin filter", () => {
+        const { hidden, shown } = iconSwapStates("subtle")
+        expect(hidden).toEqual({ opacity: 0, scale: 0.25 })
+        expect(shown).toEqual({ opacity: 1, scale: 1 })
+        expect(hidden).not.toHaveProperty("filter")
+        expect(shown).not.toHaveProperty("filter")
+    })
+
+    it("con movimiento reducido (tier off) solo hace fade, como antes", () => {
+        const { hidden, shown } = iconSwapStates("off")
+        expect(hidden).toEqual({ opacity: 0 })
+        expect(shown).toEqual({ opacity: 1 })
+    })
+})
 
 describe("useTransientFlag", () => {
     beforeEach(() => vi.useFakeTimers())

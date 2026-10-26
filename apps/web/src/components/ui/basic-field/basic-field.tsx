@@ -6,7 +6,7 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const BasicFieldAnatomy = defineStyleAnatomy({
+const BasicFieldAnatomy = defineStyleAnatomy({
     fieldLabel: cva([
         "UI-BasicField__fieldLabel",
         "text-base w-fit font-semibold self-start",
@@ -122,7 +122,7 @@ export function extractBasicFieldProps<Props extends BasicFieldOptions>(props: P
  * BasicField
  * -----------------------------------------------------------------------------------------------*/
 
-export type BasicFieldProps = React.ComponentPropsWithoutRef<"div"> & BasicFieldOptions
+type BasicFieldProps = React.ComponentPropsWithoutRef<"div"> & BasicFieldOptions
 
 export const BasicField = React.memo(React.forwardRef<HTMLDivElement, BasicFieldProps>((props, ref) => {
 

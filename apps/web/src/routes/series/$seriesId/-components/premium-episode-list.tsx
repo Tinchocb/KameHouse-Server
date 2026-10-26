@@ -5,27 +5,58 @@ import { EpisodeBadge } from "@/components/ui/episode-badge"
 import { IconStatusFolderPlus, IconNavigationSearch, IconUiClose, IconMediaPlay, IconUiListPlus, IconUiCheck } from "@/components/ui/icons";
 import type { PremiumEpisode } from "@/api/types/series.types"
 import { cn } from "@/components/ui/core/styling"
+import { IconButton } from "@/components/ui/button"
 import { useHoverPreload } from "@/hooks/use-hover-preload"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { DeferredImage } from "@/components/shared/deferred-image"
-import { WatchProgressBar } from "@/components/ui/watch-progress-bar"
-import { MagneticIndicator, ElasticCounter, IconSwap } from "@/components/ui/kinetics"
-import { useRevealRef } from "@/components/ui/kinetics/scroll-reveal"
+import { ElasticCounter, IconSwap } from "@/components/ui/kinetics"
+import { useReducedMotion } from "@/components/ui/kinetics/hooks"
 import { isImageLoaded } from "@/lib/helpers/images"
 import { toast } from "sonner"
 import { useQueueStore } from "@/lib/store"
 import { cleanEpisodeTitle } from "../-hooks/use-series-data"
+import { useSagaEpisodesReady } from "../-hooks/use-saga-episodes-ready"
 
-// Alto del `pb-4` de cada fila, que estimateSize tiene que contar junto con la tarjeta.
-const ROW_GAP_PX = 16
+// Alto medido de cada fila (tarjeta + padding inferior) por breakpoint. Móvil ~163 px
+// (154–193 según título y descripción), tablet ~156 y escritorio ~181. Una estimación lejana
+// obligaba a corregir cada fila al montarla y el alto total del scroll quedaba mal.
+const ROW_HEIGHT_PX = { mobile: 164, tablet: 156, desktop: 181 } as const
 // Filas montadas fuera de pantalla: sus miniaturas se piden antes de asomar
-// (~1.5 pantallas por delante), así al scrollear ya están descargadas.
-const LIST_OVERSCAN = 8
+// (16 episodios por lado), dando más margen de carga al desplazarse rápido.
+const LIST_OVERSCAN = 16
+// Al entrar a la ficha casi todas las filas están bajo el pliegue. Montarlas todas junto con la
+// entrada de la página costaba un commit y un layout largos; se empieza con pocas y se amplía
+// cuando la entrada ya terminó.
+const LIST_OVERSCAN_ON_MOUNT = 4
+const LIST_OVERSCAN_DELAY_MS = 450
+// Al llevar el arco activo arriba, su primer episodio no debe quedar bajo la píldora de navegación flotante (~72 px).
+const ARC_SCROLL_PADDING_PX = 88
 // Ancho real de la miniatura por breakpoint (w-32 / sm:w-48 / md:w-56 / lg:w-60).
 const THUMBNAIL_SIZES = "(max-width: 639px) 128px, (max-width: 767px) 192px, (max-width: 1023px) 224px, 240px"
 const THUMBNAIL_TRANSITION: React.CSSProperties = {
     transition: "opacity 450ms var(--ease-out), transform 500ms var(--ease-out)",
+}
+const NO_EPISODES: PremiumEpisode[] = []
+
+/** Primera carga de la ficha: filas vacías del alto real mientras bajan las miniaturas. */
+function EpisodeListSkeleton() {
+    return (
+        <div aria-busy="true" aria-label="Cargando episodios" className="flex flex-col gap-3.5 sm:gap-4">
+            {Array.from({ length: 4 }, (_, i) => (
+                <div
+                    key={i}
+                    className="surface-content flex items-stretch gap-3.5 sm:gap-5 p-3 sm:p-3.5 rounded-2xl h-[150px] sm:h-[142px] md:h-[165px]"
+                >
+                    <div className="relative aspect-[16/9] w-32 sm:w-48 md:w-56 lg:w-60 shrink-0 rounded-xl bg-surface-container-high animate-pulse motion-reduce:animate-none" />
+                    <div className="flex-1 flex flex-col justify-center gap-2">
+                        <div className="h-4 w-2/3 rounded-md bg-surface-container-high animate-pulse motion-reduce:animate-none" />
+                        <div className="h-3 w-1/3 rounded-md bg-surface-container-high animate-pulse motion-reduce:animate-none" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
 }
 
 
@@ -44,6 +75,8 @@ interface PremiumEpisodeListProps {
   fillerStats?: { filler: number; total: number; percent: number }
   /** Elemento contenedor con scroll (para virtualización correcta) */
   scrollElement?: HTMLElement | null
+  /** Callback para limpiar el sub-arco activo */
+  onClearSubSaga?: () => void
 }
 
 export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
@@ -54,14 +87,44 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
   onPlay,
   onPreload,
   seriesMediaId,
-  sagaProgress,
-  fillerStats,
   scrollElement,
+  onClearSubSaga,
 }: PremiumEpisodeListProps) {
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [typeFilter, setTypeFilter] = React.useState<"all" | "canon" | "filler" | "unwatched">("all")
   const [isSearchFocused, setIsSearchFocused] = React.useState(false)
+  const searchInputRef = React.useRef<HTMLInputElement>(null)
   const ts = useThemeSettings()
+
+  const hasKeyboard = React.useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches,
+    []
+  )
+
+  // Atajo '/' para enfocar el buscador instantáneamente
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        searchInputRef.current?.focus()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true)
+    return () => window.removeEventListener("keydown", handleKeyDown, true)
+  }, [])
+
+  // La saga nueva se muestra entera cuando sus primeras miniaturas ya están descargadas;
+  // mientras tanto queda la anterior en pantalla (o un esqueleto en la primera carga).
+  const { episodes: readyEpisodes, pending: isSagaPending } = useSagaEpisodesReady(
+    episodes,
+    `${seriesMediaId ?? ""}:${activeSagaId ?? "all"}`,
+    THUMBNAIL_SIZES,
+  )
+  const shownEpisodes = readyEpisodes ?? NO_EPISODES
 
   const { onMouseEnter, onMouseLeave } = useHoverPreload({
     delay: 300,
@@ -71,37 +134,15 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
     },
   })
 
-  const filterCounts = React.useMemo(() => {
-    let canonCount = 0
-    let fillerCount = 0
-    let unwatchedCount = 0
-    for (const ep of episodes) {
-      if (ep.episodeType === "Filler") fillerCount++
-      else canonCount++
-      if (!ep.isWatched) unwatchedCount++
-    }
-    return {
-      all: episodes.length,
-      canon: canonCount,
-      filler: fillerCount,
-      unwatched: unwatchedCount,
-    }
-  }, [episodes])
-
   const filteredEpisodes = React.useMemo(() => {
-    let result = episodes
-    if (typeFilter === "canon") result = result.filter(ep => ep.episodeType !== "Filler")
-    if (typeFilter === "filler") result = result.filter(ep => ep.episodeType === "Filler")
-    if (typeFilter === "unwatched") result = result.filter(ep => !ep.isWatched)
-
-    if (!searchQuery.trim()) return result
+    if (!searchQuery.trim()) return shownEpisodes
     const query = searchQuery.toLowerCase().trim()
-    return result.filter(ep => {
+    return shownEpisodes.filter(ep => {
       const matchesNumber = (ep.number?.toString() ?? "").includes(query)
       const matchesTitle = (ep.title?.toLowerCase() ?? "").includes(query)
       return matchesNumber || matchesTitle
     })
-  }, [episodes, searchQuery, typeFilter])
+  }, [shownEpisodes, searchQuery])
 
   const hasLocalEpisodes = episodes.length > 0
   const navigate = useNavigate()
@@ -132,172 +173,119 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ── Saga Metrics Header ──────────────────────────────────────────────── */}
-      {sagaProgress && sagaProgress.total > 0 && (
-        <div className="flex items-center justify-between gap-4 px-4 py-3 min-h-[60px] rounded-2xl bg-gradient-to-r from-surface-container-high/60 via-surface-container/40 to-surface-container-lowest/60 border border-white/[0.12] shadow-[0_4px_20px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent))] animate-pulse shrink-0" />
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-on-surface-variant truncate inline-flex items-center gap-1">
-              <span className="text-white font-extrabold"><ElasticCounter value={sagaProgress.watched} /></span> / {sagaProgress.total} EPISODIOS VISTOS
-            </span>
-            {fillerStats && fillerStats.filler > 0 && (
-              <span className="text-3xs font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/10 text-amber-400 border border-amber-400/25 uppercase tracking-wider shrink-0">
-                {fillerStats.filler} RELLENO{fillerStats.filler !== 1 ? "S" : ""}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 w-36 sm:w-48 shrink-0">
-            <div className="flex-1">
-              <WatchProgressBar percent={sagaProgress.percent} variant="compact" animateOnMount />
-            </div>
-            <span className="text-xs font-mono font-extrabold text-brand-accent shrink-0 inline-flex items-center">
-              <ElasticCounter value={sagaProgress.percent} />%
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* ── Active Sub-saga Indicator ────────────────────────────────────────── */}
       {activeSubSagaStart != null && activeSubSagaEnd != null && (
         <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-brand-accent/[0.08] border border-brand-accent/25">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-1.5 h-1.5 rounded-full bg-brand-accent shrink-0" />
-            <span className="text-xs font-semibold text-white truncate">
+            <span className="text-xs font-semibold text-on-surface truncate">
               Arco activo · Eps {activeSubSagaStart}–{activeSubSagaEnd}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setTypeFilter("all")}
-            className="text-3xs font-mono font-bold text-on-surface-variant hover:text-white uppercase tracking-wider shrink-0 transition-[color,transform] duration-fast active:scale-95 cursor-pointer"
-          >
-            Ver todos
-          </button>
-        </div>
-      )}
-
-      {/* ── Search and Filters ──────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search Input — Sculpted Glass */}
-        <div className="relative flex-1">
-          {/* z-10: el input tiene backdrop-blur (contexto de apilamiento propio) y,
-              al venir después en el DOM, se pintaba encima del ícono. */}
-          <div
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 w-4 h-4 text-on-surface-variant/70 pointer-events-none"
-          >
-            <IconNavigationSearch className="w-4 h-4" />
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar episodio... (/)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setIsSearchFocused(false)}
-            className={cn(
-              "w-full pl-10 pr-10 py-2.5 rounded-full text-xs font-medium",
-              "bg-surface-container-lowest/50 border border-white/[0.12] backdrop-blur-xl text-white placeholder:text-on-surface-variant/50 shadow-glass-highlight-sm",
-              "focus:outline-none focus:ring-0 focus:border-white/40 focus:bg-surface-container-lowest/80",
-              "hover:border-white/25",
-              "transition-[background-color,border-color,box-shadow] duration-200 ease-out",
-              isSearchFocused && "bg-surface-container-lowest/90 border-white/50 shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.08)]",
-            )}
-          />
-          {searchQuery && (
+          {onClearSubSaga && (
             <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white active:scale-95 transition-[color,transform] duration-fast ease-smooth-out cursor-pointer animate-scale-in"
-              aria-label="Limpiar búsqueda"
+              type="button"
+              onClick={onClearSubSaga}
+              className="text-3xs font-mono font-bold text-on-surface-variant hover:text-on-surface uppercase tracking-wider shrink-0 transition-[color,transform] duration-fast active:scale-95 cursor-pointer"
             >
-              <IconUiClose className="w-4 h-4" />
+              Ver todos
             </button>
           )}
         </div>
+      )}
 
-        {/* Type Filter Capsule */}
-        <div className="flex bg-surface-container-lowest/50 border border-white/[0.12] rounded-full p-1 shadow-glass-highlight-sm backdrop-blur-xl overflow-x-auto hide-scrollbar shrink-0 gap-1">
-          {[
-            { id: "all" as const, label: "Todos", count: filterCounts.all },
-            { id: "canon" as const, label: "Canon", count: filterCounts.canon },
-            { id: "filler" as const, label: "Relleno", count: filterCounts.filler },
-            { id: "unwatched" as const, label: "No vistos", count: filterCounts.unwatched }
-          ].map(f => {
-            const isSelected = typeFilter === f.id
-            return (
-              <button
-                key={f.id}
-                onClick={() => setTypeFilter(f.id)}
-                className={cn(
-                  "relative px-3 sm:px-3.5 py-1 text-xs font-mono font-bold uppercase tracking-wider rounded-full transition-[color,background-color,transform] duration-fast ease-out-strong active:scale-95 whitespace-nowrap cursor-pointer select-none inline-flex items-center gap-1.5",
-                  isSelected
-                    ? "text-black font-extrabold"
-                    : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08]"
-                )}
-              >
-                {isSelected && (
-                  <MagneticIndicator
-                    layoutId="activeEpisodeFilterCapsule"
-                    className="bg-white shadow-md rounded-full"
-                  />
-                )}
-                <span className="relative z-10">{f.label}</span>
-                <span
-                  className={cn(
-                    "relative z-10 text-3xs font-mono tabular-nums px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center font-bold leading-none transition-colors duration-fast",
-                    isSelected
-                      ? "bg-black/15 text-black"
-                      : "bg-white/[0.08] text-on-surface-variant/80 group-hover:text-white"
-                  )}
-                >
-                  <ElasticCounter value={f.count} />
-                </span>
-              </button>
-            )
-          })}
+      {/* ── Search Bar — Sculpted Glass ────────────────────────────────────── */}
+      <div className="relative w-full">
+        {/* z-10: el input tiene backdrop-blur (contexto de apilamiento propio) y,
+            al venir después en el DOM, se pintaba encima del ícono. */}
+        <div
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 z-10 w-4 h-4 text-on-surface-variant/70 pointer-events-none flex items-center justify-center"
+        >
+          <IconNavigationSearch className="w-4 h-4" />
         </div>
+        <input
+          ref={searchInputRef}
+          type="text"
+          placeholder={hasKeyboard ? "Buscar episodio… (/)" : "Buscar episodio…"}
+          aria-label="Buscar episodio"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
+          autoComplete="off"
+          spellCheck={false}
+          className={cn(
+            "glass-frosted-pill w-full h-11 pl-10 pr-10 text-xs font-medium text-on-surface placeholder:text-on-surface-variant/60",
+            "focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-brand-accent/40",
+            "transition-[border-color,box-shadow] duration-base ease-smooth-out",
+            isSearchFocused && "border-white/50 shadow-elevation-2",
+          )}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 min-w-8 min-h-8 w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface active:scale-95 transition-[color,transform] duration-fast ease-smooth-out cursor-pointer animate-scale-in [animation-duration:var(--duration-base)] [animation-timing-function:var(--ease-out)]"
+            aria-label="Limpiar búsqueda"
+          >
+            <IconUiClose className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Results count */}
       {searchQuery && (
         <div className="text-label-sm text-on-surface-variant px-1 flex items-center gap-1 font-mono">
           <ElasticCounter value={filteredEpisodes.length} />
-          <span>de {episodes.length} episodios</span>
+          <span>de {shownEpisodes.length} episodios</span>
         </div>
       )}
 
       {/* Episode List — instancia estable, sin remount al cambiar saga */}
-      {filteredEpisodes.length === 0 ? (
+      {readyEpisodes === null ? (
+        <EpisodeListSkeleton />
+      ) : filteredEpisodes.length === 0 ? (
         <div className="sectionbar flex flex-col items-center justify-center text-center p-8 sm:p-12 animate-fade-in">
           <div className="w-12 h-12 rounded-2xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center mb-4 shadow-[0_0_12px_hsl(var(--brand-accent)/0.15)]">
             <IconNavigationSearch className="w-6 h-6 text-brand-accent" />
           </div>
           <p className="sectionbar-header-title !text-sm">No se encontraron episodios</p>
           <p className="text-xs text-on-surface-variant mt-1.5 max-w-sm leading-relaxed font-medium">
-            No hay coincidencias para los filtros actuales. Prueba con otro término de búsqueda o restablece los filtros.
+            {searchQuery
+              ? `No hay coincidencias para "${searchQuery}". Prueba con otro número o término de búsqueda.`
+              : "No se encontraron episodios en esta selección."}
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchQuery("")
-              setTypeFilter("all")
-            }}
-            className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
-          >
-            Restablecer filtros
-          </button>
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
+            >
+              Limpiar búsqueda
+            </button>
+          )}
         </div>
       ) : (
-        <EpisodeVirtualList
-            filteredEpisodes={filteredEpisodes}
-            activeSubSagaStart={activeSubSagaStart}
-            activeSubSagaEnd={activeSubSagaEnd}
-            ts={ts}
-            onPlay={onPlay}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
-            scrollElement={scrollElement}
-            seriesMediaId={seriesMediaId}
-        />
+        <div
+          aria-busy={isSagaPending || undefined}
+          inert={isSagaPending}
+          className={cn(
+            "transition-opacity duration-fast ease-out",
+            isSagaPending && "opacity-60 pointer-events-none",
+          )}
+        >
+          <EpisodeVirtualList
+              filteredEpisodes={filteredEpisodes}
+              activeSubSagaStart={activeSubSagaStart}
+              activeSubSagaEnd={activeSubSagaEnd}
+              ts={ts}
+              onPlay={isSagaPending ? undefined : onPlay}
+              onMouseEnter={onMouseEnter}
+              onMouseLeave={onMouseLeave}
+              scrollElement={scrollElement}
+              seriesMediaId={seriesMediaId}
+          />
+        </div>
       )}
     </div>
   )
@@ -360,7 +348,6 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
     onMouseLeave,
     seriesMediaId,
 }: EpisodeVirtualRowProps) {
-    const revealRef = useRevealRef<HTMLDivElement>(`ep:${seriesMediaId ?? ""}:${ep.number}`, "list")
     const handlePlay = React.useCallback(() => {
         onPlay?.(ep.number)
     }, [onPlay, ep.number])
@@ -436,20 +423,19 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                 contain: "layout style paint",
             }}
         >
-            {/* Revelado al bajar: va en este div y no en el contenedor posicionado
-                con translate3d, que perdería su posición si se le pisa el transform. */}
-            <div ref={revealRef} className="h-full">
+            {/* Sin revelado por fila: la saga se muestra completa de una vez (ver useSagaEpisodesReady). */}
+            <div className="h-full">
                     <article
                         id={`episode-${ep.number}`}
                         aria-labelledby={`episode-title-${ep.number}`}
                         onMouseEnter={handleMouseEnter}
                         onMouseLeave={handleMouseLeave}
                         className={cn(
-                            "group h-full w-full flex items-stretch gap-2 p-3 sm:p-3.5 rounded-2xl select-none",
-                            "border transition-colors duration-200",
+                            "surface-content surface-content-row group h-full w-full flex items-stretch gap-2 p-3 sm:p-3.5 rounded-2xl select-none",
+                            "transition-[background-color,border-color,box-shadow] duration-base ease-smooth-out",
                             isHighlighted
-                                ? "bg-surface-container-highest/95 border-brand-accent/50 shadow-[0_6px_28px_rgba(0,0,0,0.7),0_0_16px_hsl(var(--brand-accent)/0.2)] ring-1 ring-brand-accent/30"
-                                : "bg-gradient-to-r from-surface-container-high/50 via-surface-container/35 to-surface-container-lowest/50 border-white/[0.09] hover:border-white/20 hover:bg-surface-container-high/70 shadow-[shadow:0_6px_24px_rgba(0,0,0,0.5),var(--glass-highlight-sm)]"
+                                ? "border-brand-accent/50 shadow-[shadow:var(--glass-highlight-sm),var(--elevation-3),0_0_16px_hsl(var(--brand-accent)/0.2)] ring-1 ring-brand-accent/30"
+                                : "hover:border-white/25 hover:bg-[color-mix(in_srgb,var(--surface-content)_85%,transparent)] shadow-[shadow:var(--glass-highlight-sm),var(--elevation-2)]"
                         )}
                     >
                         <button
@@ -529,13 +515,13 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                         {/* Episode Info */}
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                             {/* Title over Episode */}
-                            <span id={`episode-title-${ep.number}`} className="block font-display text-sm sm:text-base font-bold uppercase tracking-wide leading-snug line-clamp-1 sm:line-clamp-2 text-white group-hover:text-white transition-colors">
+                            <span id={`episode-title-${ep.number}`} className="block font-display text-sm sm:text-base font-bold uppercase tracking-wide leading-snug line-clamp-1 sm:line-clamp-2 text-on-surface group-hover:text-on-surface transition-colors">
                                 {displayTitle}
                             </span>
 
                             {/* Episode Badges Row */}
                             <div className="flex items-center gap-2 mt-1.5 mb-1 flex-wrap">
-                                <span className="px-2 py-0.5 rounded-md bg-brand-accent/15 border border-brand-accent/30 text-brand-accent text-2xs font-mono font-bold tracking-wider">
+                                <span className="px-2 py-0.5 rounded-md bg-brand-accent/15 border border-brand-accent/30 text-brand-accent-readable text-2xs font-mono font-bold tracking-wider">
                                     EP {ep.number}
                                 </span>
                                 <span className="text-on-surface-variant text-xs font-mono font-medium">
@@ -565,35 +551,32 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                         </button>
                         {/* Acciones rápidas: hermanas del botón principal, no anidadas */}
                         <div className="flex flex-col items-center justify-center gap-2 shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={handleQuickQueue}
-                                        aria-label={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
-                                        title="Añadir a la cola"
-                                        className={cn(
-                                            "relative min-w-[44px] min-h-[44px] w-11 h-11 rounded-full border flex items-center justify-center active:scale-95 transition-[transform,color,background-color,border-color] duration-fast ease-out-strong cursor-pointer",
-                                            justQueued
-                                                ? "bg-status-success/15 border-status-success/40 text-status-success"
-                                                : "bg-white/[0.06] border-white/15 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.12] [@media(hover:hover)_and_(pointer:fine)]:hover:text-white [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30"
+                            <IconButton
+                                intent="secondary"
+                                size="md"
+                                onClick={handleQuickQueue}
+                                aria-label={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
+                                title="Añadir a la cola"
+                                className={cn(justQueued && "text-status-success")}
+                                icon={
+                                    <IconSwap swapKey={justQueued ? "check" : "queue"} className="flex items-center justify-center">
+                                        {justQueued ? (
+                                            <IconUiCheck className="w-4 h-4" />
+                                        ) : (
+                                            <IconUiListPlus className="w-4 h-4" />
                                         )}
-                                    >
-                                        <IconSwap swapKey={justQueued ? "check" : "queue"} className="flex items-center justify-center">
-                                            {justQueued ? (
-                                                <IconUiCheck className="w-4 h-4" />
-                                            ) : (
-                                                <IconUiListPlus className="w-4 h-4" />
-                                            )}
-                                        </IconSwap>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handlePlay}
-                                        aria-label="Reproducir episodio"
-                                        title="Reproducir"
-                                        className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-brand-accent text-on-primary flex items-center justify-center [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-fast ease-out-strong shadow-brand-primary cursor-pointer"
-                                    >
-                                        <IconMediaPlay className="w-4 h-4 ml-px" />
-                                    </button>
+                                    </IconSwap>
+                                }
+                            />
+                            <IconButton
+                                intent="primary"
+                                size="md"
+                                onClick={handlePlay}
+                                aria-label="Reproducir episodio"
+                                title="Reproducir"
+                                className="shadow-brand-primary"
+                                icon={<IconMediaPlay className="w-4 h-4 ml-px fill-current" />}
+                            />
                         </div>
                     </article>
             </div>
@@ -625,6 +608,13 @@ function EpisodeVirtualList({
     seriesMediaId,
 }: EpisodeVirtualListProps) {
     const listRef = React.useRef<HTMLDivElement>(null)
+    // El salto a una sub-saga respeta movimiento reducido (C-02): antes era `smooth` fijo.
+    const reduceMotion = useReducedMotion()
+    const [overscan, setOverscan] = React.useState(LIST_OVERSCAN_ON_MOUNT)
+    React.useEffect(() => {
+        const timer = window.setTimeout(() => setOverscan(LIST_OVERSCAN), LIST_OVERSCAN_DELAY_MS)
+        return () => window.clearTimeout(timer)
+    }, [])
     const [scrollMargin, setScrollMargin] = React.useState(() => {
         if (typeof window === "undefined") return 0
         return window.innerWidth < 768 ? 550 : 700
@@ -669,11 +659,10 @@ function EpisodeVirtualList({
 
     const estimateSize = React.useCallback(() => {
         if (typeof window !== "undefined") {
-            if (window.innerWidth < 640) return 90 + ROW_GAP_PX
-            if (window.innerWidth < 768) return 134 + ROW_GAP_PX
-            return 164 + ROW_GAP_PX
+            if (window.innerWidth < 640) return ROW_HEIGHT_PX.mobile
+            if (window.innerWidth < 768) return ROW_HEIGHT_PX.tablet
         }
-        return 164 + ROW_GAP_PX
+        return ROW_HEIGHT_PX.desktop
     }, [])
 
     // eslint-disable-next-line react-hooks/incompatible-library -- useVirtualizer devuelve funciones no memoizables por diseño; React Compiler lo omite a proposito.
@@ -681,14 +670,23 @@ function EpisodeVirtualList({
         count: filteredEpisodes.length,
         getScrollElement,
         estimateSize,
+        // Sin leer el DOM en el ref: al montar, la fila recibe el tamaño que ya se conoce (o la
+        // estimación) y el ResizeObserver la mide con borderBoxSize después del layout. Por defecto
+        // cada fila leía offsetHeight dentro del commit (un layout forzado por fila, ~67 ms al cargar).
+        measureElement: (element, entry, instance) => {
+            if (entry) return Math.round(entry.borderBoxSize?.[0]?.blockSize ?? (element as HTMLElement).offsetHeight)
+            const cached = instance.measurementsCache[Number(element.getAttribute("data-index"))]
+            return cached ? cached.size : estimateSize()
+        },
         initialRect: {
             width: typeof window !== "undefined" ? window.innerWidth : 1280,
             height: typeof window !== "undefined" ? window.innerHeight : 800,
         },
         // Clave por episodio: las alturas medidas siguen al episodio al filtrar o reordenar.
         getItemKey: (index) => filteredEpisodes[index]?.id ?? index,
-        overscan: LIST_OVERSCAN,
+        overscan,
         scrollMargin,
+        scrollPaddingStart: ARC_SCROLL_PADDING_PX,
         useFlushSync: false,
     })
 
@@ -698,15 +696,16 @@ function EpisodeVirtualList({
             prevActiveSubSagaStart.current = activeSubSagaStart
             const targetIndex = filteredEpisodes.findIndex(e => e.number === activeSubSagaStart)
             if (targetIndex >= 0) {
-                virtualizer.scrollToIndex(targetIndex, { align: "start", behavior: "smooth" })
+                virtualizer.scrollToIndex(targetIndex, { align: "start", behavior: reduceMotion ? "auto" : "smooth" })
             }
         }
-    }, [activeSubSagaStart, filteredEpisodes, virtualizer])
+    }, [activeSubSagaStart, filteredEpisodes, virtualizer, reduceMotion])
 
     return (
         <div ref={listRef} className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
                 const ep = filteredEpisodes[virtualRow.index]
+                if (!ep) return null
                 const isHighlighted = activeSubSagaStart != null &&
                                     activeSubSagaEnd != null &&
                                     ep.number >= activeSubSagaStart &&

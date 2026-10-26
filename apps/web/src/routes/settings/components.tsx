@@ -2,6 +2,7 @@ import React from "react"
 import { m, AnimatePresence } from "framer-motion"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { cn } from "@/components/ui/core/styling"
+import { Button, IconButton } from "@/components/ui/button"
 import { IconNavigationChevronDown, IconUiEyeOff, IconUiEye, IconUiDelete, IconUiPlus, IconUiCheck, IconUiAlertTriangle } from "@/components/ui/icons";
 import { DirectorySelector } from "@/components/shared/directory-selector"
 import { useDirectorySelector } from "@/api/hooks/directory_selector.hooks"
@@ -23,9 +24,9 @@ export function DirtyPill({ show }: { show?: boolean }) {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.6 }}
                     transition={popSpring}
-                    className="text-4xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25 shrink-0"
+                    className="text-2xs font-bold px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25 shrink-0"
                 >
-                    Requiere Guardar
+                    Requiere guardar
                 </m.span>
             )}
         </AnimatePresence>
@@ -33,7 +34,7 @@ export function DirtyPill({ show }: { show?: boolean }) {
 }
 
 /** Suscripción por campo a dirtyFields: evita re-render global de isDirty. */
-export function useFieldDirty<T extends FieldValues>(control: Control<T>, name: string): boolean {
+function useFieldDirty<T extends FieldValues>(control: Control<T>, name: string): boolean {
     const { dirtyFields } = useFormState({ control })
     return !!get(dirtyFields, name)
 }
@@ -82,7 +83,7 @@ function Toggle({
 
 // ─── OsToggle ─────────────────────────────────────────────────────────────────
 
-export interface OsToggleProps {
+interface OsToggleProps {
     label: string
     description?: string
     checked: boolean
@@ -107,6 +108,10 @@ export const OsToggle = React.memo(function OsToggle({
     dirty = false,
 }: OsToggleProps) {
     const [isRowPressing, setIsRowPressing] = React.useState(false)
+    // El switch se nombra con su etiqueta: la ayuda va en aria-describedby y la pastilla
+    // "Requiere guardar" no forma parte del nombre.
+    const labelId = React.useId()
+    const descriptionId = React.useId()
 
     const handleToggle = () => {
         if (!disabled) {
@@ -118,6 +123,9 @@ export const OsToggle = React.memo(function OsToggle({
         <div
             role="switch"
             aria-checked={checked}
+            aria-disabled={disabled || undefined}
+            aria-labelledby={labelId}
+            aria-describedby={description ? descriptionId : undefined}
             tabIndex={disabled ? -1 : 0}
             onKeyDown={(e) => {
                 if (e.key === " " || e.key === "Enter") {
@@ -130,25 +138,31 @@ export const OsToggle = React.memo(function OsToggle({
             onPointerUp={() => setIsRowPressing(false)}
             onPointerLeave={() => setIsRowPressing(false)}
             className={cn(
-                "flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 min-h-[44px] transition-[background-color,transform] duration-fast ease-out-strong gap-4 select-none group outline-none",
-                "focus-visible:ring-2 focus-visible:ring-brand-accent/40 focus-visible:ring-offset-1 focus-visible:ring-offset-black",
-                disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.03] active:bg-white/[0.05] active:scale-[0.985]",
+                // El resaltado vive en un ::before inset y redondeado: el divisor de la fila
+                // (border-top de .sectionbar-divide) queda recto y la banda no toca los bordes.
+                "relative isolate flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 min-h-[44px] gap-4 select-none group outline-none",
+                "before:content-[''] before:absolute before:inset-x-1 before:inset-y-1 before:-z-10 before:rounded-xl before:bg-[var(--neutral-elev-2)] before:opacity-0",
+                "before:transition-[opacity,background-color] before:duration-fast before:ease-out-strong motion-reduce:before:transition-none",
+                "focus-visible:before:opacity-100 focus-visible:before:ring-2 focus-visible:before:ring-inset focus-visible:before:ring-brand-accent",
+                disabled
+                    ? "opacity-40 cursor-not-allowed"
+                    : "cursor-pointer [@media(hover:hover)_and_(pointer:fine)]:hover:before:opacity-100 active:before:opacity-100 active:before:bg-[var(--neutral-elev-3)]",
                 className
             )}
         >
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
                 {Icon && (
-                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/20 border-t-white/30 flex items-center justify-center text-on-surface-variant shrink-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-white/30 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white transition-colors duration-fast ease-smooth-out">
+                    <div className="w-7 h-7 rounded-lg bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center text-on-surface-variant shrink-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface transition-colors duration-fast ease-smooth-out">
                         <Icon className="w-3.5 h-3.5" />
                     </div>
                 )}
                 <div className="space-y-0.5 min-w-0 flex-1 py-0.5">
-                    <p className="text-xs font-bold text-on-surface tracking-tight leading-snug [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-white transition-colors duration-fast ease-smooth-out flex items-center gap-2 flex-wrap">
-                        {label}
+                    <p className="text-xs font-bold text-on-surface tracking-tight leading-snug [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-1 transition-colors duration-fast ease-smooth-out flex items-center gap-2 flex-wrap">
+                        <span id={labelId}>{label}</span>
                         <DirtyPill show={dirty} />
                     </p>
                     {description && (
-                        <p className="text-2xs text-on-surface-variant/70 leading-normal font-medium line-clamp-2">
+                        <p id={descriptionId} className="text-2xs text-label-2 leading-normal font-medium line-clamp-2">
                             {description}
                         </p>
                     )}
@@ -172,7 +186,7 @@ export const OsToggle = React.memo(function OsToggle({
 // Custom glass dropdown (Radix) — reemplaza el <select> nativo cuyo popup
 // lo pinta el SO (fondo negro plano, sin radius/shadow, se recorta).
 
-export interface OsSelectOption {
+interface OsSelectOption {
     value: string
     label: string
     desc?: string
@@ -180,7 +194,7 @@ export interface OsSelectOption {
     disabled?: boolean
 }
 
-export interface OsSelectProps {
+interface OsSelectProps {
     label: string
     description?: string
     options: OsSelectOption[]
@@ -223,16 +237,16 @@ export const OsSelect = React.memo(function OsSelect({
     }
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3 hover:bg-white/[0.04] transition-colors duration-fast ease-smooth-out">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
                 {Icon && (
-                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/20 border-t-white/30 flex items-center justify-center text-on-surface-variant shrink-0">
+                    <div className="w-7 h-7 rounded-lg bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center text-on-surface-variant shrink-0">
                         <Icon className="w-3.5 h-3.5" />
                     </div>
                 )}
                 <div className="space-y-0.5 min-w-0 flex-1 py-0.5">
                     <p className="text-xs font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2 flex-wrap">{label}<DirtyPill show={dirty} /></p>
-                    {description && <p className="text-2xs text-on-surface-variant/70 leading-normal font-medium line-clamp-2">{description}</p>}
+                    {description && <p className="text-2xs text-label-2 leading-normal font-medium line-clamp-2">{description}</p>}
                 </div>
             </div>
 
@@ -248,12 +262,11 @@ export const OsSelect = React.memo(function OsSelect({
                     aria-label={label}
                     className={cn(
                         "group relative flex items-center justify-between gap-3 shrink-0 w-full sm:w-auto sm:min-w-[264px] sm:max-w-[320px] min-h-[44px]",
-                        "rounded-full bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10",
+                        "rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)]",
                         "pl-4 pr-1.5 py-1.5 text-left outline-none select-none cursor-pointer",
-                        "shadow-glass-highlight-sm",
-                        "transition-[border-color,background-color,box-shadow,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.06] active:scale-95",
-                        "focus-visible:ring-2 focus-visible:ring-white/40",
-                        "data-[state=open]:border-white/35 data-[state=open]:bg-white/[0.07] data-[state=open]:shadow-[shadow:var(--glass-highlight-lg),0_0_16px_rgba(255,255,255,0.12)]",
+                        "transition-[border-color,background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] active:scale-95",
+                        "focus-visible:ring-2 focus-visible:ring-brand-accent",
+                        "data-[state=open]:bg-[var(--neutral-elev-3)]",
                         "data-[disabled]:opacity-40 data-[disabled]:cursor-not-allowed",
                         className
                     )}
@@ -264,11 +277,11 @@ export const OsSelect = React.memo(function OsSelect({
                             transition={dotSpring}
                             className={cn(
                                 "w-1.5 h-1.5 rounded-full shrink-0",
-                                selected ? "bg-status-success shadow-[0_0_8px_rgba(var(--status-success-rgb),0.8)]" : "bg-outline/60"
+                                selected ? "bg-status-success shadow-[shadow:var(--shadow-glow-status-success)]" : "bg-outline/60"
                             )}
                         />
-                        <span className="block truncate text-xs font-semibold text-white min-w-0">
-                            {selected?.label ?? <span className="text-on-surface-variant/60 font-medium">{placeholder}</span>}
+                        <span className="block truncate text-xs font-semibold text-label-1 min-w-0">
+                            {selected?.label ?? <span className="text-label-3 font-medium">{placeholder}</span>}
                         </span>
                         <span className="hidden">
                             <SelectPrimitive.Value placeholder={placeholder} />
@@ -278,8 +291,8 @@ export const OsSelect = React.memo(function OsSelect({
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={chevronSpring}
                         className={cn(
-                            "w-6 h-6 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center text-on-surface-variant shrink-0",
-                            "transition-[background-color,color,border-color] duration-fast ease-smooth-out group-hover:bg-white/[0.12] group-hover:text-white group-data-[state=open]:bg-white group-data-[state=open]:text-black group-data-[state=open]:border-white"
+                            "w-6 h-6 rounded-full bg-[var(--neutral-elev-3)] flex items-center justify-center text-on-surface-variant shrink-0",
+                            "transition-[background-color,color,border-color] duration-fast ease-smooth-out group-hover:text-label-1 group-data-[state=open]:bg-[var(--selected-bg)] group-data-[state=open]:text-[var(--selected-fg)] group-data-[state=open]:border-[var(--selected-bg)]"
                         )}
                     >
                         <IconNavigationChevronDown className="w-3.5 h-3.5" />
@@ -297,7 +310,7 @@ export const OsSelect = React.memo(function OsSelect({
                             // Mismos bordes que .sectionbar vía tokens: siguen a Clásico y Flat.
                             "rounded-2xl border border-[var(--sectionbar-border)] border-t-[var(--sectionbar-border-top)] border-b-[var(--sectionbar-border-bottom)]",
                             "bg-surface-container-lowest/90 backdrop-blur-overlay-md backdrop-saturate-[180%]",
-                            "shadow-[shadow:var(--glass-highlight-md),0_12px_36px_-6px_rgba(0,0,0,0.75)]",
+                            "shadow-elevation-3",
                             "p-1.5 origin-[var(--radix-select-content-transform-origin)]",
                             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-2 data-[state=open]:duration-base data-[state=open]:ease-smooth-out",
                             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-top-1 data-[state=closed]:duration-fast data-[state=closed]:ease-standard",
@@ -316,10 +329,10 @@ export const OsSelect = React.memo(function OsSelect({
                                         className={cn(
                                             "relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 outline-none cursor-pointer select-none min-h-[38px]",
                                             "transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95",
-                                            "data-[highlighted]:bg-white/[0.08] data-[highlighted]:text-white",
-                                            "data-[state=checked]:bg-white/[0.08]",
+                                            "data-[highlighted]:bg-[var(--neutral-elev-3)] data-[highlighted]:text-label-1",
+                                            "data-[state=checked]:bg-[var(--neutral-elev-3)]",
                                             "data-[disabled]:opacity-40 data-[disabled]:pointer-events-none",
-                                            "focus-visible:ring-1 focus-visible:ring-white/30",
+                                            "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent",
                                             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1",
                                             "motion-reduce:animate-none motion-reduce:transition-none"
                                         )}
@@ -327,15 +340,15 @@ export const OsSelect = React.memo(function OsSelect({
                                         <span className={cn(
                                             "w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-[background-color,border-color,color,transform,box-shadow] duration-fast ease-bounce-spring",
                                             isActive
-                                                ? "bg-white border-white text-black shadow-[0_0_10px_rgba(255,255,255,0.5)] scale-100"
-                                                : "border-white/25 bg-transparent text-transparent scale-90"
+                                                ? "bg-[var(--selected-bg)] text-[var(--selected-fg)] border-[var(--selected-bg)] scale-100"
+                                                : "border-[var(--neutral-separator)] bg-transparent text-transparent scale-90"
                                         )}>
                                             <IconUiCheck className="w-3 h-3" strokeWidth={3} />
                                         </span>
                                         <span className="flex-1 min-w-0">
                                             <span className={cn(
                                                 "block truncate text-xs leading-tight",
-                                                isActive ? "font-bold text-white" : "font-semibold text-on-surface-variant"
+                                                isActive ? "font-bold text-label-1" : "font-semibold text-label-2"
                                             )}>
                                                 {/* ItemText registra la <option> del <select> nativo que Radix
                                                     usa dentro de un <form>. Sin él, el nativo no tenía la opción,
@@ -344,17 +357,17 @@ export const OsSelect = React.memo(function OsSelect({
                                                 <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
                                             </span>
                                             {opt.desc && (
-                                                <span className="block truncate text-2xs text-on-surface-variant/70 leading-tight mt-0.5">
+                                                <span className="block truncate text-2xs text-label-2 leading-tight mt-0.5">
                                                     {opt.desc}
                                                 </span>
                                             )}
                                         </span>
                                         {opt.badge && (
                                             <span className={cn(
-                                                "shrink-0 text-4xs font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                                                "shrink-0 text-2xs font-bold px-2 py-0.5 rounded-full border",
                                                 isActive
-                                                    ? "bg-white text-black border-white"
-                                                    : "bg-white/[0.06] text-on-surface-variant border-white/15"
+                                                    ? "bg-[var(--selected-bg)] text-[var(--selected-fg)] border-[var(--selected-bg)]"
+                                                    : "bg-[var(--neutral-elev-3)] text-label-2 border-[var(--neutral-separator)]"
                                             )}>
                                                 {opt.badge}
                                             </span>
@@ -372,7 +385,7 @@ export const OsSelect = React.memo(function OsSelect({
 
 // ─── OsInput ──────────────────────────────────────────────────────────────────
 
-export interface OsInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface OsInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label: string
     description?: string
     isSecure?: boolean
@@ -383,7 +396,7 @@ export interface OsInputProps extends React.InputHTMLAttributes<HTMLInputElement
     dirty?: boolean
 }
 
-export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
+const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
     label,
     description,
     placeholder,
@@ -400,61 +413,63 @@ export const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
     const iconSwapSpring = useSpringPreset("press")
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3 hover:bg-white/[0.04] transition-colors duration-fast ease-smooth-out min-h-[44px]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3 min-h-[44px]">
             <div className="flex items-center gap-3 min-w-0 flex-1">
                 {Icon && (
-                    <div className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/20 border-t-white/30 flex items-center justify-center text-on-surface-variant shrink-0">
+                    <div className="w-7 h-7 rounded-lg bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center text-on-surface-variant shrink-0">
                         <Icon className="w-3.5 h-3.5" />
                     </div>
                 )}
                 <div className="space-y-0.5 min-w-0 max-w-xl py-0.5">
                     <p className="text-xs font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2 flex-wrap">{label}<DirtyPill show={dirty} /></p>
-                    {description && <p className="text-2xs text-on-surface-variant/70 leading-normal font-medium line-clamp-2">{description}</p>}
-                    {error && <p className="text-3xs text-status-error font-mono tracking-tight mt-0.5 animate-fade-in">{error}</p>}
+                    {description && <p className="text-2xs text-label-2 leading-normal font-medium line-clamp-2">{description}</p>}
+                    {error && <p className="text-2xs text-status-error mt-0.5 animate-fade-in">{error}</p>}
                 </div>
             </div>
 
             <div className={cn(
-                "flex items-center gap-2 bg-surface-container-lowest/60 border border-white/20 border-t-white/40 border-b-white/10 rounded-full pl-4 pr-3 py-2 w-full sm:w-64 lg:w-72 transition-[border-color,background-color,box-shadow] duration-fast ease-smooth-out relative",
-                "shadow-glass-highlight-sm",
-                "focus-within:border-white/35 focus-within:bg-white/[0.06] focus-within:shadow-[shadow:var(--glass-highlight-md),0_0_16px_rgba(255,255,255,0.1)] hover:border-white/30",
-                error && "border-status-error/50 focus-within:border-status-error focus-within:shadow-[inset_0_1px_1px_0_rgba(var(--status-error-rgb),0.2),0_0_16px_rgba(var(--status-error-rgb),0.2)] animate-error-shake",
+                "flex items-center gap-2 bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] rounded-full min-h-11 pl-4 pr-3 py-2 w-full sm:w-64 lg:w-72 transition-[border-color,background-color] duration-fast ease-smooth-out relative",
+                "has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:[outline-color:hsl(var(--focus-ring)/0.9)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)]",
+                error && "border-status-error/60 animate-error-shake",
                 className
             )}>
                 <input
                     ref={ref}
+                    data-field-embedded
                     type={isSecure ? (showSecure ? "text" : "password") : type}
                     placeholder={placeholder}
                     // La etiqueta visible es un <p> suelto: sin esto el campo no tenía nombre accesible.
                     aria-label={typeof label === "string" ? label : undefined}
                     className={cn(
-                        "flex-1 bg-transparent text-on-surface placeholder:text-on-surface-variant/40 text-xs focus:outline-none",
+                        "min-w-0 flex-1 border-0 p-0 bg-transparent text-on-surface placeholder:text-label-3 text-base md:text-xs focus:outline-none",
                         isSecure && "pr-6",
-                        isMono && "font-mono text-2xs"
+                        isMono && "font-mono md:text-2xs"
                     )}
                     {...props}
                 />
 
                 {isSecure && (
-                    <button
-                        type="button"
+                    <IconButton
+                        intent="ghost"
+                        size="xs"
                         onClick={() => setShowSecure(!showSecure)}
                         aria-label={showSecure ? "Ocultar contenido" : "Mostrar contenido"}
-                        className="absolute right-3 text-on-surface-variant/70 hover:text-on-surface transition-[color,transform,background-color] duration-fast ease-smooth-out p-1 active:scale-95 rounded-full hover:bg-white/10"
-                    >
-                        <AnimatePresence mode="wait" initial={false}>
-                            <m.span
-                                key={showSecure ? "hide" : "show"}
-                                initial={{ opacity: 0, scale: 0.6 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.6 }}
-                                transition={iconSwapSpring}
-                                className="flex"
-                            >
-                                {showSecure ? <IconUiEyeOff className="w-3.5 h-3.5" /> : <IconUiEye className="w-3.5 h-3.5" />}
-                            </m.span>
-                        </AnimatePresence>
-                    </button>
+                        className="absolute right-1.5 text-label-2 hover:text-label-1"
+                        icon={
+                            <AnimatePresence mode="wait" initial={false}>
+                                <m.span
+                                    key={showSecure ? "hide" : "show"}
+                                    initial={{ opacity: 0, scale: 0.6 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.6 }}
+                                    transition={iconSwapSpring}
+                                    className="flex"
+                                >
+                                    {showSecure ? <IconUiEyeOff className="w-3.5 h-3.5" /> : <IconUiEye className="w-3.5 h-3.5" />}
+                                </m.span>
+                            </AnimatePresence>
+                        }
+                    />
                 )}
             </div>
         </div>
@@ -497,38 +512,39 @@ function PathRow({ dir, showFullPath, onRemove }: { dir: string, showFullPath: b
             layout
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            // Salida más corta que la entrada: --duration-quick y --ease-out.
+            exit={{ opacity: 0, y: -8, transition: { duration: 0.15, ease: [0.23, 1, 0.32, 1] } }}
             transition={rowSpring}
             className={cn(
-            "flex items-center justify-between gap-2 bg-white/[0.03] border rounded-xl px-3.5 py-2 group/path transition-[border-color,background-color] duration-fast ease-smooth-out",
-            missing ? "border-status-warning/30 hover:border-status-warning/50" : "border-white/10 hover:border-white/20",
+            "flex items-center justify-between gap-2 bg-[var(--neutral-elev-2)] border rounded-xl px-3.5 py-2 group/path transition-[border-color,background-color] duration-fast ease-smooth-out",
+            missing ? "border-status-warning/30 hover:border-status-warning/50" : "border-[var(--neutral-separator)] hover:bg-[var(--neutral-elev-3)]",
         )}>
             <span className="text-xs text-on-surface-variant font-mono truncate" title={dir}>{displayPath}</span>
             <div className="flex items-center gap-1.5 shrink-0">
                 {missing && (
                     <span
                         className="flex items-center gap-1 text-3xs font-semibold text-status-warning"
-                        title="La carpeta no existe o no está accesible. Revisá que el disco esté conectado."
+                        title="La carpeta no existe o no está accesible. Revisa que el disco esté conectado."
                     >
                         <IconUiAlertTriangle className="w-3 h-3" aria-hidden="true" />
                         No encontrada
                     </span>
                 )}
-                <button
-                    type="button"
+                <IconButton
+                    intent="ghost"
+                    size="md"
                     onClick={() => onRemove(dir)}
-                    className="relative text-on-surface-variant/70 hover:text-status-error transition-[color,background-color,transform] duration-fast ease-smooth-out min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-status-error/10 active:scale-95 before:absolute before:-inset-2"
-                    title="Eliminar ruta"
-                    aria-label={`Eliminar ruta ${dir}`}
-                >
-                    <IconUiDelete className="w-3.5 h-3.5" />
-                </button>
+                    className="text-label-2 hover:text-status-error hover:bg-status-error/10"
+                    title="Quitar carpeta"
+                    aria-label={`Quitar carpeta ${dir}`}
+                    icon={<IconUiDelete className="w-3.5 h-3.5" />}
+                />
             </div>
         </m.div>
     )
 }
 
-export interface PathListProps {
+interface PathListProps {
     label: string
     directories: string[]
     onAdd: (path: string) => void
@@ -560,19 +576,24 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                 <div className="flex items-center justify-between gap-2 min-h-[26px]">
                     <div className="flex items-center gap-2 min-w-0">
                         {Icon && <Icon className="w-4 h-4 text-brand-accent shrink-0" />}
-                        <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider truncate">{label}</h4>
+                        <h3 className="text-xs font-bold text-on-surface truncate">{label}</h3>
                     </div>
-                    <span key={directories.length} className="text-3xs font-mono px-2 py-0.5 rounded-full bg-white/5 text-on-surface-variant border border-white/10 shrink-0 tabular-nums animate-number-pop-in">
-                        {directories.length} {directories.length === 1 ? "ruta" : "rutas"}
+                    <span key={directories.length} className="text-3xs font-mono px-2 py-0.5 rounded-full bg-[var(--neutral-elev-2)] text-label-2 border border-[var(--neutral-separator)] shrink-0 tabular-nums animate-number-pop-in">
+                        {directories.length} {directories.length === 1 ? "carpeta" : "carpetas"}
                     </span>
                 </div>
 
                 <AnimatePresence initial={false} mode="popLayout">
                 {directories.length > 0 ? (
                     <m.div key="list" layout className="space-y-2">
-                        {directories.map((dir) => (
-                            <PathRow key={dir} dir={dir} showFullPath={showFullPath} onRemove={onRemove} />
-                        ))}
+                        {/* Modo por defecto, no popLayout: PathRow no reenvía ref y PopChild lo
+                            necesita para sacar la fila del flujo. La fila sale en su lugar y
+                            `layout` reacomoda las de abajo al terminar. */}
+                        <AnimatePresence initial={false}>
+                            {directories.map((dir) => (
+                                <PathRow key={dir} dir={dir} showFullPath={showFullPath} onRemove={onRemove} />
+                            ))}
+                        </AnimatePresence>
                     </m.div>
                 ) : (
                     <m.div
@@ -581,9 +602,9 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
                         transition={{ type: "tween", duration: 0.15 }}
-                        className="p-3 rounded-xl border border-dashed border-white/10 text-center"
+                        className="p-3 rounded-xl border border-dashed border-[var(--neutral-separator)] text-center"
                     >
-                        <p className="text-2xs text-on-surface-variant/50 font-medium animate-text-swap-in">
+                        <p className="text-2xs text-label-2 font-medium animate-text-swap-in">
                             Sin carpetas añadidas
                         </p>
                     </m.div>
@@ -600,18 +621,20 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                     shouldExist={true}
                     placeholder={placeholder}
                     label={false}
-                    aria-label={`Agregar carpeta: ${label}`}
+                    aria-label={`Añadir carpeta: ${label}`}
                     trailingAction={
-                        <button
-                            type="button"
+                        <Button
+                            intent="primary"
+                            size="sm"
                             onClick={handleAdd}
                             disabled={!selectedPath.trim()}
-                            title={selectedPath.trim() ? `Agregar ${selectedPath.trim()}` : "Escribe o explora una carpeta"}
-                            className="h-9 pl-3.5 pr-4 rounded-full text-xs font-bold shrink-0 flex items-center gap-1.5 transition-[background-color,color,box-shadow,transform,filter] duration-fast ease-smooth-out active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 bg-brand-accent text-white shadow-brand-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 cursor-pointer disabled:bg-white/[0.07] disabled:text-on-surface-variant/50 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:brightness-100"
+                            title={selectedPath.trim() ? `Añadir ${selectedPath.trim()}` : "Escribe o elige una carpeta"}
+                            leftIcon={<IconUiPlus className="w-3.5 h-3.5" />}
+                            iconSpacing="0.375rem"
+                            className="shrink-0"
                         >
-                            <IconUiPlus className="w-3.5 h-3.5" />
-                            <span>Agregar</span>
-                        </button>
+                            Añadir
+                        </Button>
                     }
                 />
             </div>

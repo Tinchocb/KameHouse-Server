@@ -30,7 +30,7 @@ export const WSEvents = {
 } as const
 export type WSEvents = (typeof WSEvents)[keyof typeof WSEvents]
 
-export interface ScanProgressDetailedPayload {
+interface ScanProgressDetailedPayload {
     stage: string
     fileCount?: number
     skipped?: number
@@ -53,9 +53,9 @@ export interface ScannerMessage {
 }
 
 /** Espejo de drive.ScanProgress (apps/server/internal/drive/types.go). */
-export type DriveScanPhase = "listing" | "indexing" | "saving" | "pruning" | "done" | "error"
+type DriveScanPhase = "listing" | "indexing" | "saving" | "pruning" | "done" | "error"
 
-export interface DriveScanItem {
+interface DriveScanItem {
     name: string
     folder: string
     series: string
@@ -81,14 +81,14 @@ export interface DriveScanProgress {
     error?: string
 }
 
-export interface SkipScanStatusPayload {
+interface SkipScanStatusPayload {
     mediaId: number
     status: "idle" | "initializing" | "fingerprinting" | "matching" | "done" | "error"
     percent?: number
     message?: string
 }
 
-export interface NotificationPayload {
+interface NotificationPayload {
     id: number
     type: string
     title: string

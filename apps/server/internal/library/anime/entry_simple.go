@@ -38,6 +38,9 @@ type (
 		MetadataProviderRef metadata_provider.Provider
 		LibraryEpisodes     map[string]*models.LibraryEpisode
 		IntelligenceSvc     *IntelligenceService
+		// SkipAnimeMetadata evita otra consulta de metadatos cuando la ficha ya la intentó y falló:
+		// con Jikan lento, cada consulta extra esperaba su espera completa (1,5 s) en la misma visita.
+		SkipAnimeMetadata bool
 	}
 )
 
@@ -140,7 +143,7 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	// Fetch anime metadata so episode images, titles, saga info, etc. are available
 	// even in the simple (no-AniDB) path.
 	var fetchedAnimeMetadata *metadata.AnimeMetadata
-	if opts.MetadataProviderRef != nil {
+	if opts.MetadataProviderRef != nil && !opts.SkipAnimeMetadata {
 		if am, err := opts.MetadataProviderRef.GetAnimeMetadata(int(fetchedMedia.ID)); err == nil && am != nil {
 			fetchedAnimeMetadata = am
 		}

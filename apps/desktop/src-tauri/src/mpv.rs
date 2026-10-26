@@ -60,6 +60,27 @@ struct MpvSession {
 pub struct MpvManager {
     session: Arc<Mutex<Option<MpvSession>>>,
     generation: std::sync::atomic::AtomicU64,
+    /// Verdadero mientras `play` espera a que mpv conecte por IPC (hasta 10 s).
+    launching: std::sync::atomic::AtomicBool,
+}
+
+/// Marca un lanzamiento en curso. `None` si ya hay otro: quien llama lo rechaza.
+/// Sin esto, un segundo `play` en ese lapso no ve sesión guardada y abre otra ventana de mpv.
+fn begin_launch(flag: &std::sync::atomic::AtomicBool) -> Option<LaunchGuard<'_>> {
+    if flag.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        None
+    } else {
+        Some(LaunchGuard(flag))
+    }
+}
+
+/// Libera el flag al salir de `play`, tanto en éxito como en error.
+struct LaunchGuard<'a>(&'a std::sync::atomic::AtomicBool);
+
+impl Drop for LaunchGuard<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
 }
 
 impl MpvManager {
@@ -67,6 +88,7 @@ impl MpvManager {
         Self {
             session: Arc::new(Mutex::new(None)),
             generation: std::sync::atomic::AtomicU64::new(0),
+            launching: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -134,6 +156,8 @@ impl MpvManager {
         req: MpvPlayRequest,
     ) -> Result<(), String> {
         Self::validate_request(&req)?;
+        let _launch = begin_launch(&self.launching)
+            .ok_or_else(|| "mpv ya se está abriendo".to_string())?;
         // Replace any existing session: ask it to quit, then drop the handle.
         {
             let mut session = self.session.lock().await;
@@ -378,5 +402,21 @@ async fn connect_ipc(path: &str, timeout: Duration) -> Result<IpcStream, String>
                 tokio::time::sleep(Duration::from_millis(150)).await;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod launch_guard_tests {
+    use super::begin_launch;
+    use std::sync::atomic::AtomicBool;
+
+    #[test]
+    fn segundo_lanzamiento_se_rechaza_hasta_soltar_el_primero() {
+        let flag = AtomicBool::new(false);
+        let primero = begin_launch(&flag);
+        assert!(primero.is_some());
+        assert!(begin_launch(&flag).is_none());
+        drop(primero);
+        assert!(begin_launch(&flag).is_some());
     }
 }

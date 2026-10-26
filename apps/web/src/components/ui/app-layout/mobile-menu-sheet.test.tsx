@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { act, fireEvent, render, screen } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useUIStore } from "@/lib/store"
 import { MobileMenuSheet } from "./mobile-menu-sheet"
 
@@ -20,27 +20,41 @@ describe("MobileMenuSheet", () => {
         useUIStore.getState().setGlobalQueueOpen(false)
     })
 
-    it("ofrece Ajustes, la cola y el modo aleatorio (lo que la barra inferior no tiene)", () => {
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it("ofrece Ajustes, Mi Lista y Sorpréndeme (lo que la barra inferior no tiene)", () => {
         render(<MobileMenuSheet open onOpenChange={() => {}} />)
         expect(screen.getByRole("dialog", { name: "Menú" })).toBeTruthy()
         expect(screen.getByRole("link", { name: "Ajustes" }).getAttribute("href")).toBe("/settings")
-        expect(screen.getByRole("button", { name: /Mi lista/ })).toBeTruthy()
-        expect(screen.getByRole("button", { name: "Reproducción aleatoria" })).toBeTruthy()
+        expect(screen.getByRole("button", { name: /Mi Lista/ })).toBeTruthy()
+        expect(screen.getByRole("button", { name: "Sorpréndeme" })).toBeTruthy()
     })
 
-    it("la cola se abre y el menú se cierra", () => {
+    it("el menú se cierra y la cola se abre después del cierre", () => {
+        vi.useFakeTimers()
         const onOpenChange = vi.fn()
         render(<MobileMenuSheet open onOpenChange={onOpenChange} />)
-        fireEvent.click(screen.getByRole("button", { name: /Mi lista/ }))
-        expect(useUIStore.getState().globalQueueOpen).toBe(true)
+        fireEvent.click(screen.getByRole("button", { name: /Mi Lista/ }))
         expect(onOpenChange).toHaveBeenCalledWith(false)
+        expect(useUIStore.getState().globalQueueOpen).toBe(false)
+        act(() => {
+            vi.advanceTimersByTime(150)
+        })
+        expect(useUIStore.getState().globalQueueOpen).toBe(true)
     })
 
-    it("el modo aleatorio emite su evento", () => {
+    it("el modo aleatorio emite su evento después del cierre", () => {
+        vi.useFakeTimers()
         const onEvent = vi.fn()
         window.addEventListener("open-random-picker", onEvent)
         render(<MobileMenuSheet open onOpenChange={() => {}} />)
-        fireEvent.click(screen.getByRole("button", { name: "Reproducción aleatoria" }))
+        fireEvent.click(screen.getByRole("button", { name: "Sorpréndeme" }))
+        expect(onEvent).not.toHaveBeenCalled()
+        act(() => {
+            vi.advanceTimersByTime(150)
+        })
         expect(onEvent).toHaveBeenCalledTimes(1)
         window.removeEventListener("open-random-picker", onEvent)
     })

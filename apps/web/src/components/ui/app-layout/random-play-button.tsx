@@ -9,7 +9,9 @@ import { cn } from "@/components/ui/core/styling"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
 import { useSound } from "@/hooks/use-sound"
-import { LoadSwap } from "@/components/ui/kinetics"
+import { LoadSwap, useSpringPreset } from "@/components/ui/kinetics"
+import { useMinWidth } from "@/components/ui/app-layout/use-nav-compact"
+import { useFocusTrap } from "@/hooks/use-focus-trap"
 import { useAppStore, usePlayerStore, useQueueStore, useUIStore, PlaylistItem } from "@/lib/store"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 
@@ -19,6 +21,11 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
     const { playSound } = useSound()
     const [showPicker, setShowPicker] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState<"movie" | "episode" | false>(false)
+    // La escala de hover solo desde `sm`: en celular el hover de framer queda pegado tras el toque.
+    // La pulsación (whileTap) sigue activa en todos los tamaños.
+    const canHoverScale = useMinWidth(640)
+    // Resorte del diálogo (preset "selector"): antes estaba escrito a mano en el motion.div del modal.
+    const selectorSpring = useSpringPreset("selector")
     const tvMode = useAppStore(state => state.tvMode)
     const setTvMode = usePlayerStore(state => state.setTvMode)
 
@@ -26,7 +33,28 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
 
     const modalRef = React.useRef<HTMLDivElement>(null)
     const triggerRef = React.useRef<HTMLButtonElement>(null)
-    const lastActiveElementRef = React.useRef<HTMLElement | null>(null)
+
+    const operationRef = React.useRef(0)
+    const pickingRef = React.useRef(false)
+    const pickerOpenRef = React.useRef(false)
+    const closePicker = React.useCallback(() => {
+        pickerOpenRef.current = false
+        operationRef.current += 1
+        pickingRef.current = false
+        setIsLoading(false)
+        setShowPicker(false)
+    }, [])
+    const openPicker = React.useCallback(() => {
+        pickerOpenRef.current = true
+        operationRef.current += 1
+        pickingRef.current = false
+        setIsLoading(false)
+        setShowPicker(true)
+    }, [])
+    React.useEffect(() => () => {
+        pickerOpenRef.current = false
+        operationRef.current += 1
+    }, [])
 
     // All library entries flattened (sin huecos nulos del backend)
     const allEntries = React.useMemo(() => {
@@ -37,59 +65,19 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
         playSound("random", 0.5)
     }, [playSound])
 
-    // Focus management: Trap focus when open, restore focus when closed
-    React.useEffect(() => {
-        if (showPicker) {
-            const timer = setTimeout(() => {
-                const firstFocusable = modalRef.current?.querySelector<HTMLElement>(
-                    'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-                )
-                firstFocusable?.focus()
-            }, 50)
-            return () => clearTimeout(timer)
-        } else if (lastActiveElementRef.current && typeof lastActiveElementRef.current.focus === "function") {
-            lastActiveElementRef.current.focus()
-        }
-    }, [showPicker])
+    // Focus management: trampa de foco canónica (lleva el foco adentro y lo devuelve al cerrar)
+    useFocusTrap(modalRef, showPicker)
 
-    // Keyboard navigation (ESC to close, Tab to cycle) & custom event listener
+    // Keyboard navigation (ESC to close) & custom event listener
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (!showPicker) return
-
             if (e.key === "Escape") {
-                setShowPicker(false)
-                return
-            }
-
-            if (e.key === "Tab" && modalRef.current) {
-                const focusables = Array.from(
-                    modalRef.current.querySelectorAll<HTMLElement>(
-                        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-                    )
-                ).filter(el => el.offsetParent !== null)
-
-                if (focusables.length === 0) return
-
-                const first = focusables[0]
-                const last = focusables[focusables.length - 1]
-
-                if (e.shiftKey) {
-                    if (document.activeElement === first || !modalRef.current.contains(document.activeElement)) {
-                        e.preventDefault()
-                        last.focus()
-                    }
-                } else {
-                    if (document.activeElement === last || !modalRef.current.contains(document.activeElement)) {
-                        e.preventDefault()
-                        first.focus()
-                    }
-                }
+                closePicker()
             }
         }
         const handleOpenPicker = () => {
-            lastActiveElementRef.current = (document.activeElement as HTMLElement) || triggerRef.current
-            setShowPicker(true)
+            openPicker()
         }
 
         window.addEventListener("keydown", handleKeyDown)
@@ -98,9 +86,12 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
             window.removeEventListener("keydown", handleKeyDown)
             window.removeEventListener("open-random-picker", handleOpenPicker)
         }
-    }, [showPicker])
+    }, [showPicker, closePicker, openPicker])
 
     const pick = async (type: "movie" | "episode") => {
+        if (!pickerOpenRef.current || pickingRef.current) return
+        pickingRef.current = true
+        const operation = ++operationRef.current
         playRandomSound()
         setIsLoading(type)
 
@@ -116,7 +107,9 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
             })
 
             if (candidates.length === 0) {
-                toast.error(isMovie ? "No hay películas en tu biblioteca" : "No hay series en tu biblioteca")
+                toast.error(isMovie ? "No hay películas en tu biblioteca" : "No hay series en tu biblioteca", {
+                    description: "Escanea la biblioteca desde Ajustes para añadirlas.",
+                })
                 setIsLoading(false)
                 return
             }
@@ -126,9 +119,12 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
 
             // ── 3. Fetch full entry to get local file paths ────────────────
             const localFiles = await fetchAnimeEntryLocalFiles(randomEntry.mediaId)
+            if (operation !== operationRef.current) return
 
             if (!localFiles || localFiles.length === 0) {
-                toast.error("No se encontraron archivos locales para reproducir")
+                toast.error("No se encontraron archivos de este título", {
+                    description: "Revisa que la carpeta esté disponible e inténtalo de nuevo.",
+                })
                 setIsLoading(false)
                 return
             }
@@ -154,7 +150,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
             if (isMovie) {
                 const selectedFile = sortedLocalFiles[0]
                 if (!selectedFile?.path) {
-                    toast.error("Archivo no disponible")
+                    toast.error("El archivo no está disponible", { description: "Revisa que la carpeta esté disponible e inténtalo de nuevo." })
                     setIsLoading(false)
                     return
                 }
@@ -172,7 +168,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                 newQueue = [activeItem]
             } else {
                 if (sortedLocalFiles.length === 0 || !sortedLocalFiles[0]?.path) {
-                    toast.error("Archivo no disponible")
+                    toast.error("El archivo no está disponible", { description: "Revisa que la carpeta esté disponible e inténtalo de nuevo." })
                     setIsLoading(false)
                     return
                 }
@@ -208,6 +204,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
             }
 
             // Close full-screen modal
+            pickerOpenRef.current = false
             setShowPicker(false)
 
             useQueueStore.setState({
@@ -219,15 +216,19 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
 
             setTvMode(true)
 
-            toast.success(`📺 Modo TV ${isMovie ? "Películas" : "Series"} iniciado`, {
-                description: `${seriesTitle}${!isMovie ? ` — Ep. ${activeItem.episodeNumber}` : ""}`,
+            toast.success(isMovie ? "Película al azar en modo TV" : "Serie al azar en modo TV", {
+                description: `${seriesTitle}${!isMovie ? ` · ep. ${activeItem.episodeNumber}` : ""}`,
                 duration: 3000,
             })
         } catch (err) {
+            if (operation !== operationRef.current) return
             console.error("[RandomPlay] error:", err)
-            toast.error("Ocurrió un error al seleccionar el contenido")
+            toast.error("No se pudo elegir algo al azar", { description: "Inténtalo de nuevo." })
         } finally {
-            setIsLoading(false)
+            if (operation === operationRef.current) {
+                pickingRef.current = false
+                setIsLoading(false)
+            }
         }
     }
 
@@ -240,26 +241,26 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                         ref={triggerRef}
                         id="random-play-btn"
                         disabled={Boolean(isLoading)}
-                        title="Modo TV"
+                        title="Sorpréndeme"
+                        aria-label="Sorpréndeme"
                         onClick={() => {
-                            lastActiveElementRef.current = (document.activeElement as HTMLElement) || triggerRef.current
                             playRandomSound()
-                            setShowPicker(true)
+                            openPicker()
                         }}
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={canHoverScale ? { scale: 1.02 } : undefined}
                         whileTap={{ scale: 0.96 }}
                         className={cn(
-                            "group relative flex items-center rounded-2xl transition-[width,height,padding,gap,background-color,border-color,color,box-shadow,transform] duration-300 w-full outline-none overflow-hidden",
+                            "group relative flex items-center rounded-2xl transition-[width,height,padding,gap,background-color,border-color,color,box-shadow,transform] duration-base ease-smooth-out w-full outline-none overflow-hidden",
                             "border shadow-elevation-2",
                             "h-14 md:w-14 w-full justify-center px-0",
                             tvMode || showPicker
                                 ? "bg-brand-accent/20 border-brand-accent/50 text-on-surface shadow-brand-accent/20"
-                                : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.08] text-on-surface-variant hover:text-on-surface"
+                                : "bg-white/[0.04] border-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface"
                         )}
                     >
                         {/* Glowing background hint */}
                         <div className={cn(
-                            "absolute inset-0 bg-gradient-to-r from-brand-accent/20 via-transparent to-transparent opacity-0 transition-opacity duration-300 pointer-events-none",
+                            "absolute inset-0 bg-gradient-to-r from-brand-accent/20 via-transparent to-transparent opacity-0 transition-opacity duration-base ease-smooth-out pointer-events-none",
                             (tvMode || showPicker) ? "opacity-100" : "group-hover:opacity-100"
                         )} />
 
@@ -286,11 +287,11 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                         
                         {/* Text Label */}
                         <div className="z-10 flex flex-col text-left transition-colors duration-fast ease-out-strong whitespace-nowrap overflow-hidden hidden md:hidden">
-                            <span className="uppercase tracking-ultra text-label-md font-black text-on-surface leading-tight">
-                                Modo TV
+                            <span className="text-label-md font-bold text-on-surface leading-tight">
+                                Sorpréndeme
                             </span>
-                            <span className="text-3xs font-bold text-on-surface-variant/70 tracking-wider uppercase">
-                                {tvMode ? "Activado" : "TV / Maratón"}
+                            <span className="text-3xs font-medium text-label-2">
+                                {tvMode ? "Modo TV activado" : "Algo al azar"}
                             </span>
                         </div>
                     </m.button>
@@ -307,7 +308,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.25 }}
-                            onClick={() => setShowPicker(false)}
+                            onClick={closePicker}
                             className="absolute inset-0 bg-black/65 backdrop-blur-overlay-xs pointer-events-auto cursor-pointer"
                         />
 
@@ -320,9 +321,9 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                             initial={{ opacity: 0, y: 100, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 80, scale: 0.95 }}
-                            transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                            transition={selectorSpring}
                             className={cn(
-                                "glass-frosted relative z-10 w-full max-w-2xl flex flex-col rounded-3xl overflow-hidden pointer-events-auto text-on-surface shadow-[shadow:var(--glass-highlight-lg),0_24px_48px_rgba(0,0,0,0.9)]"
+                                "glass-frosted relative z-10 w-full max-w-2xl flex flex-col rounded-3xl overflow-hidden pointer-events-auto text-on-surface"
                             )}
                         >
                             {/* Top Ambient Glow */}
@@ -335,16 +336,11 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                         <IconNavigationTv className="w-7 h-7" />
                                     </div>
                                     <div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="px-2 py-0.5 rounded-md bg-brand-accent/20 text-brand-accent text-caption font-black uppercase tracking-widest border border-brand-accent/30">
-                                                Experiencia TV
-                                            </span>
-                                        </div>
-                                        <h2 id="tv-mode-dialog-title" className="text-2xl md:text-3xl font-black uppercase tracking-wider text-on-surface mt-1">
-                                            Modo TV
+                                        <h2 id="tv-mode-dialog-title" className="text-2xl md:text-3xl font-black tracking-tight text-on-surface text-balance">
+                                            Sorpréndeme
                                         </h2>
-                                        <p className="text-xs md:text-sm text-on-surface-variant/80 font-medium">
-                                            Selecciona la modalidad para iniciar la reproducción inmersiva aleatoria
+                                        <p className="text-xs md:text-sm text-label-2 font-medium text-pretty">
+                                            Elige qué quieres ver. Empezamos con algo al azar de tu biblioteca, en modo TV.
                                         </p>
                                     </div>
                                 </div>
@@ -354,10 +350,11 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     type="button"
                                     onClick={(e) => {
                                         e.stopPropagation()
-                                        setShowPicker(false)
+                                        closePicker()
                                     }}
                                     className="p-2.5 rounded-xl bg-white/[0.05] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-glass-highlight-md"
-                                    title="Cerrar (ESC)"
+                                    title="Cerrar (Esc)"
+                                    aria-label="Cerrar"
                                 >
                                     <IconUiClose className="w-5 h-5" />
                                 </button>
@@ -377,7 +374,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     whileTap={{ scale: 0.95 }}
                                     className={cn(
                                         "group relative flex flex-col p-6 rounded-2xl text-left transition-[background-color,border-color,box-shadow] duration-base ease-smooth-out outline-none pointer-events-auto cursor-pointer",
-                                        "bg-surface-container-lowest/60 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70 border border-white/15 border-t-white/35",
+                                        "surface-content surface-content-row [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70",
                                         "shadow-glass-highlight-md [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-brand-accent/15",
                                         isLoading === "episode" && "opacity-75 pointer-events-none"
                                     )}
@@ -391,21 +388,21 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                                 <IconNavigationTv className="w-7 h-7" />
                                             </LoadSwap>
                                         </div>
-                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-accent/20 text-on-surface-variant group-hover:text-brand-accent text-3xs font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-accent/30">
+                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-accent/20 text-on-surface-variant group-hover:text-brand-accent-readable text-2xs font-semibold transition-colors border border-white/10 group-hover:border-brand-accent/30">
                                             Maratón
                                         </span>
                                     </div>
 
-                                    <h3 className="text-lg font-black uppercase tracking-wide text-on-surface group-hover:text-brand-accent transition-colors">
+                                    <h3 className="text-lg font-bold text-on-surface group-hover:text-brand-accent-readable transition-colors">
                                         Series
                                     </h3>
-                                    <p className="text-xs text-on-surface-variant/80 mt-1 leading-relaxed font-medium">
-                                        Inicia un maratón continuado de episodios de anime seleccionando una serie al azar.
+                                    <p className="text-xs text-label-2 mt-1 leading-relaxed font-medium">
+                                        Empieza un maratón con una serie al azar.
                                     </p>
 
-                                    <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-accent group-hover:translate-x-1 transition-transform">
-                                        <span>Iniciar Series</span>
-                                        <span>›</span>
+                                    <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-accent-readable group-hover:translate-x-1 transition-transform">
+                                        <span>Ver una serie</span>
+                                        <span aria-hidden="true">›</span>
                                     </div>
                                 </m.button>
 
@@ -418,7 +415,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     whileTap={{ scale: 0.95 }}
                                     className={cn(
                                         "group relative flex flex-col p-6 rounded-2xl text-left transition-[background-color,border-color,box-shadow] duration-base ease-smooth-out outline-none pointer-events-auto cursor-pointer",
-                                        "bg-surface-container-lowest/60 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70 border border-white/15 [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-secondary/60 border-t-white/35",
+                                        "surface-content surface-content-row [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70 [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-secondary/60",
                                         "shadow-glass-highlight-md [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-brand-secondary/15",
                                         isLoading === "movie" && "opacity-75 pointer-events-none"
                                     )}
@@ -432,29 +429,29 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                                 <IconMediaClapperboard className="w-7 h-7" />
                                             </LoadSwap>
                                         </div>
-                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-secondary/20 text-on-surface-variant group-hover:text-brand-secondary text-3xs font-black uppercase tracking-widest transition-colors border border-white/10 group-hover:border-brand-secondary/30">
+                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-secondary/20 text-on-surface-variant group-hover:text-brand-secondary text-2xs font-semibold transition-colors border border-white/10 group-hover:border-brand-secondary/30">
                                             Cine
                                         </span>
                                     </div>
 
-                                    <h3 className="text-lg font-black uppercase tracking-wide text-on-surface group-hover:text-brand-secondary transition-colors">
+                                    <h3 className="text-lg font-bold text-on-surface group-hover:text-brand-secondary transition-colors">
                                         Películas
                                     </h3>
-                                    <p className="text-xs text-on-surface-variant/80 mt-1 leading-relaxed font-medium">
-                                        Reproduce un largometraje, OVA o especial al azar directo desde tu biblioteca.
+                                    <p className="text-xs text-label-2 mt-1 leading-relaxed font-medium">
+                                        Reproduce una película, OVA o especial al azar.
                                     </p>
 
                                     <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-secondary group-hover:translate-x-1 transition-transform">
-                                        <span>Iniciar Cine</span>
-                                        <span>›</span>
+                                        <span>Ver una película</span>
+                                        <span aria-hidden="true">›</span>
                                     </div>
                                 </m.button>
                             </div>
 
                             {/* Footer info note */}
                             <div className="px-6 md:px-8 pb-6 text-center">
-                                <p className="text-2xs text-on-surface-variant/60 font-medium">
-                                    Presiona <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-on-surface text-3xs font-mono">ESC</kbd> o haz clic afuera para salir
+                                <p className="text-2xs text-label-2 font-medium">
+                                    Pulsa <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-on-surface text-3xs font-mono">Esc</kbd> o haz clic afuera para salir
                                 </p>
                             </div>
                         </m.div>

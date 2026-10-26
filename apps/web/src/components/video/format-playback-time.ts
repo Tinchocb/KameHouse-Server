@@ -1,6 +1,9 @@
-/** Tiempo de reproducción como "mm:ss" o "h:mm:ss". 0/NaN → "00:00". */
+/**
+ * Tiempo de reproducción como "mm:ss" o "h:mm:ss". Lo que no es un tiempo válido se muestra
+ * como "00:00": 0, NaN, infinito (duración de un stream en vivo) y negativos.
+ */
 export function formatPlaybackTime(secs: number): string {
-    if (!secs || isNaN(secs)) return "00:00"
+    if (!Number.isFinite(secs) || secs <= 0) return "00:00"
     const h = Math.floor(secs / 3600)
     const m = Math.floor((secs % 3600) / 60)
     const s = Math.floor(secs % 60)

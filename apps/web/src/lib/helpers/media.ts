@@ -54,7 +54,7 @@ const FORMAT_LABELS: Record<string, string> = {
     OVA: "OVA",
     ONA: "ONA",
     SPECIAL: "Especial",
-    MUSIC: "Musical",
+    MUSIC: "Video musical",
 }
 
 /** Etiqueta en español para un formato; formatos desconocidos se muestran tal cual. */

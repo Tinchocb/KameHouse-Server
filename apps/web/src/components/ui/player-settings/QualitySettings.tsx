@@ -1,4 +1,3 @@
-import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { IconUiCheck } from "@/components/ui/icons";
 import type { EpisodeSource } from "@/api/types/unified.types"
@@ -29,10 +28,10 @@ export function QualitySettings({
             {sources.map((source, idx) => {
                 const isActive = idx === activeIdx
                 const sourceSubtext = source.type === 'direct'
-                    ? "Direct Play (Nativo sin conversión)"
+                    ? "Original, sin conversión"
                     : source.type === 'transcode'
-                        ? "Transcodificación HLS (Adaptativo)"
-                        : (source.type === 'local' ? "Archivo Local" : "Proveedor")
+                        ? "Convertido, con calidad adaptativa"
+                        : (source.type === 'local' ? "Archivo local" : "Proveedor")
 
                 return (
                     <button
@@ -40,7 +39,7 @@ export function QualitySettings({
                         onClick={() => onSourceChange(source)}
                         className={cn(
                             "w-full flex items-center justify-between min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer group text-left relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
-                            isActive ? "bg-white/10 text-white" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:text-white"
+                            isActive ? "bg-[var(--neutral-elev-3)] text-label-1" : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1"
                         )}
                     >
                         {/* Hover/Active left-edge accent indicator */}
@@ -52,13 +51,13 @@ export function QualitySettings({
                         <div className="flex flex-col [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-1.5 transition-transform duration-base ease-out">
                             <span className={cn(
                                 "text-xs font-bold leading-none transition-colors duration-base",
-                                isActive ? "text-brand-accent" : "text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
+                                isActive ? "text-brand-accent-readable" : "text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
                             )}>
                                 {source.title || source.quality || "Original"}
                             </span>
                             <span className={cn(
                                 "text-label-sm font-bold mt-1.5 transition-colors duration-base",
-                                isActive ? "text-on-surface/70" : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
+                                isActive ? "text-label-2" : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
                             )}>
                                 {sourceSubtext}
                             </span>

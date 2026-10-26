@@ -22,7 +22,9 @@ const FADE_IN: React.CSSProperties = {
 const FADE_OUT: React.CSSProperties = {
     opacity: 0,
     visibility: "hidden",
-    transition: "opacity var(--duration-fast) var(--ease-smooth), visibility 0s linear var(--duration-fast)",
+    // --duration-base (250 ms): el valor que antes tenía --duration-fast en CSS. Esa variable
+    // ahora vale 150 ms, igual que la clase duration-fast de Tailwind.
+    transition: "opacity var(--duration-base) var(--ease-smooth), visibility 0s linear var(--duration-base)",
 }
 
 const GLASS_MASK = "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%)"
@@ -37,7 +39,7 @@ interface ScrollEdgeBlurProps {
     container?: HTMLElement | null
     /** Clases CSS adicionales. */
     className?: string
-    /** Altura de la viñeta superior en Tailwind (default: "h-24 md:h-28"). */
+    /** Altura de la viñeta superior en Tailwind (default: "h-20 md:h-24"). */
     heightClass?: string
 }
 
@@ -55,7 +57,7 @@ interface ScrollEdgeBlurProps {
 export function ScrollEdgeBlur({
     container,
     className,
-    heightClass = "h-24 md:h-28",
+    heightClass = "h-20 md:h-24",
 }: ScrollEdgeBlurProps) {
     const tier = useMotionTier()
     const scrollBlurEnabled = useUIStore((s) => s.scrollBlurEnabled)
@@ -125,13 +127,13 @@ export function ScrollEdgeBlur({
             {isSubtle ? (
                 /* Fallback de ultra-bajo consumo: degradado puro sin backdrop-filter */
                 <div
-                    className="absolute inset-0 bg-gradient-to-b from-[var(--bg-primary)]/80 via-[var(--bg-primary)]/30 to-transparent"
+                    className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_srgb,var(--bg-primary)_80%,transparent)] via-[color-mix(in_srgb,var(--bg-primary)_30%,transparent)] to-transparent"
                     style={fadeStyle}
                 />
             ) : (
                 /* Superficie GPU optimizada con refracción y máscara continua */
                 <div
-                    className="absolute inset-0 backdrop-blur-[20px] backdrop-saturate-[180%]"
+                    className="absolute inset-0 backdrop-blur-overlay-xs"
                     style={{ ...GLASS_SURFACE, ...fadeStyle }}
                 />
             )}

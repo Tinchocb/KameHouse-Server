@@ -1,7 +1,6 @@
 package filecache
 
 import (
-	"kamehouse/internal/test_utils"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,8 +14,6 @@ import (
 )
 
 func TestCacherFunctions(t *testing.T) {
-	test_utils.InitTestProvider(t)
-
 	tempDir := t.TempDir()
 	t.Log(tempDir)
 
@@ -66,8 +63,6 @@ func TestCacherFunctions(t *testing.T) {
 }
 
 func TestCacherSetAndGet(t *testing.T) {
-	test_utils.InitTestProvider(t)
-
 	tempDir := t.TempDir()
 	t.Log(tempDir)
 
@@ -195,18 +190,6 @@ func TestCacherClearAndTrimIsolation(t *testing.T) {
 	foundAfter, err := cacher.Get(generalBucket, "item1", &generalValAfter)
 	require.NoError(t, err)
 	assert.False(t, foundAfter, "general bucket should be deleted after RemoveAllBy")
-
-	// Probar Clear(): debe limpiar todo en memoria y en disco
-	err = cacher.Set(generalBucket, "item2", "new_val")
-	require.NoError(t, err)
-	err = cacher.Clear()
-	require.NoError(t, err)
-
-	entries, err := os.ReadDir(cacher.dir)
-	require.NoError(t, err)
-	for _, e := range entries {
-		assert.False(t, filepath.Ext(e.Name()) == ".cache", "no .cache file should remain after Clear()")
-	}
 }
 
 func TestMediastreamMediaInfoUnifiedAndMigration(t *testing.T) {
@@ -260,4 +243,60 @@ func TestMediastreamMediaInfoUnifiedAndMigration(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, genFound)
 	assert.Equal(t, "val1", genOut)
+}
+
+func TestFastTypeAssertionAndLazyHydration(t *testing.T) {
+	tempDir := t.TempDir()
+	cacher, err := NewCacher(filepath.Join(tempDir, "cache"))
+	require.NoError(t, err)
+	defer cacher.Close()
+
+	bucket := Bucket{name: "fast_test", ttl: 1 * time.Hour}
+
+	type Sample struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+
+	val := &Sample{ID: 42, Name: "KameHouse"}
+	require.NoError(t, cacher.Set(bucket, "k1", val))
+
+	// Fast path Get
+	var retrieved *Sample
+	found, err := cacher.Get(bucket, "k1", &retrieved)
+	require.NoError(t, err)
+	assert.True(t, found)
+	assert.Equal(t, val, retrieved)
+
+	// Range fast path
+	count := 0
+	err = Range[*Sample](cacher, bucket, func(key string, item *Sample) bool {
+		assert.Equal(t, "k1", key)
+		assert.Equal(t, 42, item.ID)
+		count++
+		return true
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// Flush to disk
+	require.NoError(t, cacher.Close())
+
+	// Reload from new cacher instance to test disk hydration
+	cacher2, err := NewCacher(filepath.Join(tempDir, "cache"))
+	require.NoError(t, err)
+	defer cacher2.Close()
+
+	var diskRetrieved *Sample
+	found2, err := cacher2.Get(bucket, "k1", &diskRetrieved)
+	require.NoError(t, err)
+	assert.True(t, found2)
+	assert.Equal(t, 42, diskRetrieved.ID)
+
+	// Second get hits lazy hydrated fast path
+	var diskRetrieved2 *Sample
+	found3, err := cacher2.Get(bucket, "k1", &diskRetrieved2)
+	require.NoError(t, err)
+	assert.True(t, found3)
+	assert.Equal(t, "KameHouse", diskRetrieved2.Name)
 }

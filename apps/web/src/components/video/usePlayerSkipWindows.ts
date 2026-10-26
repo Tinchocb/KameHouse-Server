@@ -3,7 +3,7 @@ import { useEffect, useMemo } from "react"
 import { useShallow } from "zustand/react/shallow"
 import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import { useSkipTimesStore } from "@/lib/store"
-import { resolveEdWindow, resolveOpWindow } from "./skip-windows"
+import { resolveEdWindow, resolveOpWindow, resolveRecapWindow } from "./skip-windows"
 import type { Chapter, SkipWindow } from "./skip-windows"
 
 interface UsePlayerSkipWindowsProps {
@@ -71,5 +71,6 @@ export function usePlayerSkipWindows({ malId, mediaId, episodeNumber, duration, 
         }
     }, [storeKey, duration, skipTimesOp, skipTimesEd, seriesSkipTimes, saveSeriesSkipTimes])
 
-    return { skipTimesOp, skipTimesEd }
+    const skipTimesRecap = useMemo(() => resolveRecapWindow(skipTimes, chapters), [skipTimes, chapters])
+    return { skipTimesOp, skipTimesEd, skipTimesRecap }
 }

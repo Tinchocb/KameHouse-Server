@@ -29,6 +29,15 @@ describe("DirectorySelector", () => {
     beforeEach(() => vi.useFakeTimers())
     afterEach(() => vi.useRealTimers())
 
+    it("avisa onChange inmediatamente y desactiva el explorador con el campo", () => {
+        const onChange = vi.fn()
+        const { rerender } = render(<DirectorySelector value="" onSelect={() => {}} onChange={onChange} aria-label="Carpeta" />)
+        fireEvent.change(screen.getByLabelText("Carpeta"), { target: { value: "D:/Cache" } })
+        expect(onChange).toHaveBeenCalledTimes(1)
+        rerender(<DirectorySelector value="" onSelect={() => {}} disabled aria-label="Carpeta" />)
+        expect(screen.getByRole("button", { name: /Abrir explorador/ }).hasAttribute("disabled")).toBe(true)
+    })
+
     // Regresión: el efecto de sincronización dependía de `input` y con cada tecla
     // volvía a poner el valor viejo: no se podía escribir una ruta a mano.
     it("conserva lo que se escribe y lo avisa tras el debounce", () => {

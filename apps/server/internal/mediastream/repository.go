@@ -4,7 +4,6 @@ package mediastream
 import (
 	"context"
 	"errors"
-	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
 	"kamehouse/internal/mediastream/cassette"
@@ -32,24 +31,24 @@ type (
 		mediaInfoExtractor *videofile.MediaInfoExtractor
 		logger             *zerolog.Logger
 		wsEventManager     events.WSEventManagerInterface
-		fileCacher         *filecache.Cacher
 		reqMu              sync.Mutex
-		cacheDir           string // where attachments are stored
-		transcodeDir       string // where stream segments are stored
-		database           *db.Database
+		cacheDir           string      // where attachments are stored
+		transcodeDir       string      // where stream segments are stored
 		warmingActive      atomic.Bool // guards WarmMediaInfo against overlapping runs
 		settingsMu         sync.RWMutex
+		initMu             sync.Mutex // serialize configuration comparison and module replacement
 		// modulesMu guards transcoder and preTranscoder. They are read by every
 		// HLS request while initializeTranscoder/initializePreTranscoder swap
 		// them, so they must never be touched directly — use the accessors.
 		modulesMu sync.RWMutex
+		// driveWin: subtítulos embebidos de Drive leídos por ventanas de tiempo.
+		driveWin driveWindowRegistry
 	}
 
 	NewRepositoryOptions struct {
 		Logger         *zerolog.Logger
 		WSEventManager events.WSEventManagerInterface
 		FileCacher     *filecache.Cacher
-		Database       *db.Database
 	}
 )
 
@@ -60,9 +59,7 @@ func NewRepository(opts *NewRepositoryOptions) *Repository {
 		transcoder:         mo.None[*cassette.Cassette](),
 		preTranscoder:      mo.None[*pretranscode.Manager](),
 		wsEventManager:     opts.WSEventManager,
-		fileCacher:         opts.FileCacher,
 		mediaInfoExtractor: videofile.NewMediaInfoExtractor(opts.FileCacher, opts.Logger),
-		database:           opts.Database,
 	}
 	ret.playbackManager = NewPlaybackManager(ret)
 
@@ -115,26 +112,35 @@ func (r *Repository) OnCleanup() {
 	}
 }
 
-func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cacheDir string, transcodeDir string) {
+func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cacheDir string, transcodeDir string) bool {
+	r.initMu.Lock()
+	defer r.initMu.Unlock()
 	if settings == nil {
 		r.logger.Error().Msg("mediastream: Settings not present")
-		return
+		return false
+	}
+	// Resolve paths on a private snapshot: database settings are shared/read-only.
+	view := *settings
+	settings = &view
+	settings.FfmpegPath = ffmpegutil.ResolveFFmpegPath(cacheDir, settings.FfmpegPath)
+	settings.FfprobePath = ffmpegutil.ResolveFFprobePath(cacheDir, settings.FfprobePath)
+
+	r.settingsMu.Lock()
+	previous, present := r.settings.Get()
+	unchanged := present && previous != nil && engineSettings(*previous, r.cacheDir) == engineSettings(*settings, cacheDir) && r.cacheDir == cacheDir && r.transcodeDir == transcodeDir
+	r.settings = mo.Some(settings)
+	r.cacheDir = cacheDir
+	r.transcodeDir = transcodeDir
+	currentSettings := r.settings
+	r.settingsMu.Unlock()
+	if unchanged {
+		return false
 	}
 	// Create the temp directory
 	err := os.MkdirAll(transcodeDir, 0755)
 	if err != nil {
 		r.logger.Error().Err(err).Msg("mediastream: Failed to create transcode directory")
 	}
-
-	settings.FfmpegPath = ffmpegutil.ResolveFFmpegPath(cacheDir, settings.FfmpegPath)
-	settings.FfprobePath = ffmpegutil.ResolveFFprobePath(cacheDir, settings.FfprobePath)
-
-	r.settingsMu.Lock()
-	r.settings = mo.Some(settings)
-	r.cacheDir = cacheDir
-	r.transcodeDir = transcodeDir
-	currentSettings := r.settings
-	r.settingsMu.Unlock()
 
 	// Initialize the transcoder (respects the TranscodeEnabled setting on startup)
 	_ = r.initializeTranscoder(currentSettings, false)
@@ -146,6 +152,37 @@ func (r *Repository) InitializeModules(settings *models.MediastreamSettings, cac
 	r.ClearTranscodeDir()
 
 	r.logger.Info().Msg("mediastream: Module initialized")
+	return true
+}
+
+// Ignore persistence metadata and browser preferences when deciding whether
+// active streaming modules must be replaced. Keep all engine/policy fields.
+func engineSettings(s models.MediastreamSettings, cacheDir string) models.MediastreamSettings {
+	s.BaseModel = models.BaseModel{}
+	s.PerformanceProfile = ""
+	s.AutoGovernorEnabled = false
+	if s.TranscodePreset == "" {
+		s.TranscodePreset = "fast"
+	}
+	switch s.TranscodeHwAccel {
+	case "", "cpu", "none":
+		s.TranscodeHwAccel = "disabled"
+	case "amd":
+		s.TranscodeHwAccel = "amf"
+	case "intel":
+		s.TranscodeHwAccel = "qsv"
+	case "nvidia", "cuda":
+		s.TranscodeHwAccel = "nvenc"
+	}
+	s.PreTranscodeLibraryDir = strings.TrimSpace(s.PreTranscodeLibraryDir)
+	if s.PreTranscodeLibraryDir == "" {
+		s.PreTranscodeLibraryDir = filepath.Join(cacheDir, "optimized")
+	}
+	s.PreTranscodeLibraryDir = filepath.Clean(s.PreTranscodeLibraryDir)
+	if s.TranscodeThreads < 0 {
+		s.TranscodeThreads = 0
+	}
+	return s
 }
 
 // PreTranscodeDir returns the base directory holding pre-transcoded output. The
@@ -171,7 +208,8 @@ func (r *Repository) initializePreTranscoder(settings *models.MediastreamSetting
 		prev.Stop()
 	}
 
-	if !settings.PreTranscodeEnabled {
+	// Solo original: el worker de pre-transcode no arranca (ni encola ni codifica).
+	if !settings.PreTranscodeEnabled || settings.DirectPlayOnly {
 		r.logger.Debug().Msg("mediastream: Pre-transcoding is disabled")
 		return
 	}
@@ -224,10 +262,9 @@ func (r *Repository) TranscoderStats() (cassette.GovernorStats, bool) {
 // ffprobe. GetInfo is cache-aware (30-day disk TTL keyed by path hash), so
 // already-warmed files are near-free. Best-effort: failures are logged at debug
 // and never block. Safe to call from a goroutine; overlapping calls are skipped.
-// GetMediaInfo devuelve la media info (ffprobe, cacheada por hash) de una ruta
-// local o de una URL remota. La usan las fuentes que no pasan por el playback
-// manager, como la reproducción directa de Google Drive.
-func (r *Repository) GetMediaInfo(path string) (*videofile.MediaInfo, error) {
+// GetMediaInfoContext devuelve la media info (ffprobe, cacheada por hash) de una ruta
+// local o de una URL remota con soporte de cancelación (el ffprobe se corta si ctx termina).
+func (r *Repository) GetMediaInfoContext(ctx context.Context, path string) (*videofile.MediaInfo, error) {
 	if !r.IsInitialized() {
 		return nil, errors.New("module not initialized")
 	}
@@ -238,7 +275,7 @@ func (r *Repository) GetMediaInfo(path string) (*videofile.MediaInfo, error) {
 	}
 	ffprobePath := r.settings.MustGet().FfprobePath
 	r.settingsMu.RUnlock()
-	return r.mediaInfoExtractor.GetInfo(ffprobePath, path)
+	return r.mediaInfoExtractor.GetInfoContext(ctx, ffprobePath, path)
 }
 
 func (r *Repository) WarmMediaInfo(paths []string) {
@@ -377,6 +414,10 @@ func (r *Repository) TranscoderIsInitialized() bool {
 func (r *Repository) RequestTranscodeStream(filepath string, clientID string, force bool, caps *ClientCapabilities) (ret *MediaContainer, err error) {
 	r.logger.Debug().Str("filepath", filepath).Bool("force", force).Msg("mediastream: Transcode stream requested")
 
+	if r.DirectPlayOnly() {
+		return nil, ErrDirectOnly
+	}
+
 	if !r.IsInitialized() {
 		return nil, errors.New("module not initialized")
 	}
@@ -392,9 +433,9 @@ func (r *Repository) RequestTranscodeStream(filepath string, clientID string, fo
 			if ok := r.initializeTranscoder(settings, force); !ok {
 				r.reqMu.Unlock()
 				if !force && settings.IsPresent() && !settings.MustGet().TranscodeEnabled {
-					return nil, errors.New("La transcodificación está desactivada. Actívala en Ajustes -> Streaming.")
+					return nil, ErrTranscodeDisabled
 				}
-				return nil, errors.New("real-time transcoder not initialized, check your settings")
+				return nil, ErrTranscoderUnavailable
 			}
 		}
 		r.reqMu.Unlock()
@@ -427,6 +468,11 @@ func (r *Repository) applyVideoPassthrough(ret *MediaContainer, caps *ClientCapa
 	}
 	c := *ret
 	c.VideoPassthrough = true
+	// The HLS master and segment URLs carry no client id (the player only gets the bare
+	// /transcode/master.m3u8), so they resolve through the current-media fallback in
+	// ServeEchoTranscodeStream. Bind the copy there too: otherwise the player gets the
+	// full re-encode ladder (240p-1080p on NVENC) while this client was promised a copy.
+	r.playbackManager.setCurrentMediaContainer(&c)
 	if clientID != "" {
 		r.playbackManager.clientMediaContainers.Set(clientID, &c)
 	}
@@ -444,6 +490,11 @@ func canPassthroughVideo(info *videofile.MediaInfo, caps *ClientCapabilities) bo
 	}
 	switch strings.ToLower(info.Video.Codec) {
 	case "hevc", "h265":
+		// Decodificar HEVC no alcanza: el reproductor HLS tiene que leerlo en MPEG-TS
+		// (la app de la TV en un Chromium de escritorio avisa que no).
+		if caps.HlsHevc != nil && !*caps.HlsHevc {
+			return false
+		}
 		highBitDepth := strings.Contains(info.Video.PixFmt, "10") || strings.Contains(info.Video.PixFmt, "12")
 		return caps.Hevc && (!highBitDepth || caps.Hevc10Bit)
 	}
@@ -458,6 +509,11 @@ func canPassthroughVideo(info *videofile.MediaInfo, caps *ClientCapabilities) bo
 func (r *Repository) WarmTranscodeSession(filepath string) error {
 	if !r.IsInitialized() {
 		return errors.New("module not initialized")
+	}
+
+	// Solo original: calentar una sesión de transcode arrancaría el encoder sin necesidad.
+	if r.DirectPlayOnly() {
+		return nil
 	}
 
 	// Same as an audio-track switch: that switch forces the transcoder on even
@@ -502,6 +558,11 @@ func (r *Repository) WarmTranscodeSession(filepath string) error {
 
 func (r *Repository) RequestPreloadTranscodeStream(filepath string, preferredAudioLang string) (err error) {
 	r.logger.Debug().Str("filepath", filepath).Str("preferredAudioLang", preferredAudioLang).Msg("mediastream: Transcode stream preloading requested")
+
+	// Solo original: un preload de transcode no arranca el encoder ni encola pre-transcodificación.
+	if r.DirectPlayOnly() {
+		return nil
+	}
 
 	if !r.IsInitialized() {
 		return errors.New("module not initialized")
@@ -552,7 +613,10 @@ func (r *Repository) RequestDirectPlay(filepath string, clientID string, caps *C
 		if _, ok := r.getTranscoder(); !ok { // double-check under the lock
 			settings := r.GetSettings()
 			if ok := r.initializeTranscoder(settings, true); !ok {
+				// Sin transcoder no hay forma de servir ese HLS: error, no un contenedor muerto
+				r.reqMu.Unlock()
 				r.logger.Error().Str("filepath", filepath).Msg("mediastream: Direct→transcode fallback could not initialize the transcoder on-demand")
+				return nil, ErrTranscoderUnavailable
 			}
 		}
 		r.reqMu.Unlock()
@@ -581,6 +645,10 @@ func (r *Repository) RequestPreloadDirectPlay(filepath string) (err error) {
 func (r *Repository) RequestOptimizedStream(filepath string, clientID string) (ret *MediaContainer, err error) {
 	r.logger.Debug().Str("filepath", filepath).Msg("mediastream: Optimized stream requested")
 
+	if r.DirectPlayOnly() {
+		return nil, ErrDirectOnly
+	}
+
 	if !r.IsInitialized() {
 		return nil, errors.New("module not initialized")
 	}
@@ -593,6 +661,11 @@ func (r *Repository) RequestOptimizedStream(filepath string, clientID string) (r
 
 func (r *Repository) RequestPreloadOptimizedStream(filepath string) (err error) {
 	r.logger.Debug().Str("filepath", filepath).Msg("mediastream: Optimized stream preloading requested")
+
+	// Solo original: un preload optimized podría encolar una pre-transcodificación.
+	if r.DirectPlayOnly() {
+		return nil
+	}
 
 	if !r.IsInitialized() {
 		return errors.New("module not initialized")
@@ -614,6 +687,13 @@ func (r *Repository) initializeTranscoder(settings mo.Option[*models.Mediastream
 	// Unpublish and destroy the old transcoder if it exists
 	if prev, ok := r.swapTranscoder(mo.None[*cassette.Cassette]()).Get(); ok {
 		prev.Destroy()
+	}
+
+	// Solo original: el engine no se construye, así que ningún probe de hwaccel ni ffmpeg
+	// arranca. Va antes de cassette.New y también ante force: ningún camino puede saltárselo.
+	if directPlayOnlyOf(settings) {
+		r.logger.Info().Msg("mediastream: Solo original activo: el transcoder no se inicializa")
+		return false
 	}
 
 	// If the transcoder is not enabled and this isn't an explicit (forced) request,

@@ -18,6 +18,7 @@ const TYPOGRAPHY_SCALE = [
     "button-lg", "button-md", "button-sm", "button-xs",
     "label-lg", "label-md", "label-sm",
     "badge", "caption", "overline",
+    "hero-title",
     "numeric", "numeric-lg",
     // Micro-tipografía de tailwind.config.ts (fontSize)
     "2xs", "3xs", "4xs", "5xs",

@@ -447,11 +447,16 @@ func resolveCorsOrigins(cfg *Config) {
 	cfg.Server.CorsOrigins = origins
 }
 
-// desktopWebviewOrigins son los orígenes que Tauri asigna a su webview.
+// desktopWebviewOrigins son los orígenes que Tauri asigna a su webview y los
+// orígenes de la aplicación empaquetada para Smart TV (Tizen / WebOS / WGT).
 var desktopWebviewOrigins = []string{
 	"http://tauri.localhost",
 	"https://tauri.localhost",
 	"tauri://localhost",
+	"file://",
+	"null",
+	"widget://tinchocbTV.KameHouseTV",
+	"app://tinchocbTV.KameHouseTV",
 }
 
 func containsString(slice []string, s string) bool {

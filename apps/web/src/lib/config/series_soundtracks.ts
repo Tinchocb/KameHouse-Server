@@ -1,9 +1,9 @@
 import type { BackgroundMusicTrack } from "@/lib/store"
 import { getServerBaseUrl } from "@/api/client/server-url"
 
-export type SeriesEraKey = "db" | "dbz" | "dbkai" | "dbgt" | "dbs" | "dbdaima"
+type SeriesEraKey = "db" | "dbz" | "dbkai" | "dbgt" | "dbs" | "dbdaima"
 
-export interface SeriesSoundtrackInfo {
+interface SeriesSoundtrackInfo {
     id: SeriesEraKey
     name: string
     shortName: string
@@ -21,68 +21,66 @@ export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
         id: "db",
         name: "Dragon Ball (Original)",
         shortName: "Dragon Ball",
-        color: "#F2762E", // Naranja gi de Goku (= --era-db-hex)
+        color: "#F97316", // Naranja gi de Goku (= --era-db-hex)
         tmdbIds: [12609, 1033499, 1033500, 1033513, 116776, 39145, 39144, 39148],
-        keywords: ["dragon ball", "makafushigi", "kikuchi", "romantic ageru yo", "mezase tenkaichi"],
+        keywords: ["makafushigi adventure"],
         defaultTracks: [
-            { title: "Makafushigi Adventure!", file: "/sounds/music/Dragon ball dvd.m4a" },
-            { title: "Dragon Ball Classic BGM", file: "/sounds/music/Dragon ball dvd 2.m4a" },
+            { title: "Makafushigi Adventure! (instrumental)", file: "/sounds/music/opening-instrumentals/db.m4a" },
         ],
     },
     dbz: {
         id: "dbz",
         name: "Dragon Ball Z",
         shortName: "Dragon Ball Z",
-        color: "#F5C242", // Dorado Super Saiyajin (= --era-dbz-hex)
-        tmdbIds: [12971, 1015448, 1015449, 1015450, 1015451, 1015452, 1015453, 1015454, 1015455, 1015456, 1015457, 1015458, 1012704, 1015459, 1015460, 28609, 39100, 39101, 39102, 24752, 39103, 39104, 34433, 39105, 44251, 39106, 39107, 39108, 126963, 303857, 39323, 39324, 38594, 120475, 55127],
-        keywords: ["dragon ball z", "dbz", "cha-la", "chala", "head-cha-la", "we gotta power", "faulconer", "kikuchi", "solid state", "tamashii", "meteor"],
+        color: "#FBBF24", // Dorado Super Saiyajin (= --era-dbz-hex)
+        tmdbIds: [12971, 1015448, 1015449, 1015449, 1015450, 1015451, 1015452, 1015453, 1015454, 1015455, 1015456, 1015457, 1015458, 1012704, 1015459, 1015460, 28609, 39100, 39101, 39102, 24752, 39103, 39104, 34433, 39105, 44251, 39106, 39107, 39108, 126963, 303857, 39323, 39324, 38594, 120475, 55127],
+        keywords: ["cha la head cha la"],
         defaultTracks: [
-            { title: "The Meteor (DBZ OST)", file: "/sounds/music/the-meteor.m4a" },
-            { title: "Cha-La Head-Cha-La", file: "/sounds/music/Dragon ball dvd 2.m4a" },
+            { title: "Cha-La Head-Cha-La (instrumental)", file: "/sounds/music/opening-instrumentals/dbz.m4a" },
         ],
     },
     dbkai: {
         id: "dbkai",
         name: "Dragon Ball Kai",
         shortName: "DBZ Kai",
-        color: "#2EC4B6", // Turquesa remaster (= --era-dbkai-hex)
+        color: "#10B981", // Verde Esmeralda remaster (= --era-dbkai-hex)
         tmdbIds: [61709, 1061709, 60572, 1060572, 6033, 20635],
-        keywords: ["kai", "dbkai", "dragon soul", "kuu-zen-zetsu-go", "sumitomo", "break care break"],
+        keywords: ["dragon soul"],
         defaultTracks: [
-            { title: "Dragon Soul (Kai)", file: "/sounds/music/the-meteor.m4a" },
+            { title: "Dragon Soul (instrumental)", file: "/sounds/music/opening-instrumentals/dbkai.m4a" },
         ],
     },
     dbgt: {
         id: "dbgt",
         name: "Dragon Ball GT",
         shortName: "Dragon Ball GT",
-        color: "#E23A55", // Carmesí Super Saiyajin 4 (= --era-dbgt-hex)
+        color: "#F43F5E", // Carmesí Super Saiyajin 4 (= --era-dbgt-hex)
         tmdbIds: [12697, 1012697, 1039149, 18095],
-        keywords: ["dragon ball gt", "dbgt", "gt", "dan dan", "hitori ja nai", "tokunaga", "blue velvet", "don't you see"],
+        keywords: ["dan dan kokoro"],
         defaultTracks: [
-            { title: "Dan Dan Kokoro Hikareteku", file: "/sounds/music/Dragon ball dvd.m4a" },
+            { title: "Dan Dan Kokoro Hikareteku (instrumental)", file: "/sounds/music/opening-instrumentals/dbgt.m4a" },
         ],
     },
     dbs: {
         id: "dbs",
         name: "Dragon Ball Super",
         shortName: "Dragon Ball Super",
-        color: "#3D8BFF", // Azul Super Saiyajin Blue (= --era-dbs-hex)
+        color: "#3B82F6", // Azul Super Saiyajin Blue (= --era-dbs-hex)
         tmdbIds: [62715, 1062715, 503314, 1503314, 610150, 1610150],
-        keywords: ["dragon ball super", "dbs", "super", "chouzetsu", "limit break", "kachi daze", "ultimate battle", "sumitomo", "genki dama"],
+        keywords: ["chouzetsu", "chōzetsu"],
         defaultTracks: [
-            { title: "Limit Break x Survivor", file: "/sounds/music/the-meteor.m4a" },
+            { title: "Chōzetsu☆Dynamic! (instrumental)", file: "/sounds/music/opening-instrumentals/dbs.m4a" },
         ],
     },
     dbdaima: {
         id: "dbdaima",
         name: "Dragon Ball Daima",
         shortName: "Dragon Ball Daima",
-        color: "#A56EF0", // Violeta Reino Demoníaco (= --era-daima-hex)
+        color: "#A855F7", // Violeta Reino Demoníaco (= --era-daima-hex)
         tmdbIds: [236994, 1236994],
-        keywords: ["daima", "dbdaima", "jaka jaan", "zedd", "nakama"],
+        keywords: ["jaka jaan", "jaka☆jaan"],
         defaultTracks: [
-            { title: "Jaka Jaan (Daima Theme)", file: "/sounds/music/the-meteor.m4a" },
+            { title: "Jaka Jaan (instrumental)", file: "/sounds/music/opening-instrumentals/dbdaima.m4a" },
         ],
     },
 }
@@ -93,7 +91,7 @@ export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
 export function getSeriesEraKey(seriesIdOrEra: string | number | null | undefined): SeriesEraKey | null {
     if (!seriesIdOrEra) return null
 
-    const str = String(seriesIdOrEra).toLowerCase().trim()
+    const str = String(seriesIdOrEra).toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim()
     const num = Number(seriesIdOrEra)
 
     // Check direct era keys
@@ -114,21 +112,33 @@ export function getSeriesEraKey(seriesIdOrEra: string | number | null | undefine
     }
 
     // Title / substring matching
-    if (str.includes("daima")) return "dbdaima"
-    if (str.includes("super")) return "dbs"
-    if (str.includes("gt")) return "dbgt"
-    if (str.includes("kai")) return "dbkai"
-    if (str.includes("dbz") || str.includes("dragon ball z")) return "dbz"
-    if (str.includes("dragon ball")) return "db"
+    if (/\b(?:dbdaima|daima)\b/.test(str)) return "dbdaima"
+    if (/\b(?:dbs|dragon ball super)\b/.test(str)) return "dbs"
+    if (/\b(?:dbgt|dragon ball gt)\b/.test(str)) return "dbgt"
+    if (/\b(?:dbkai|kai)\b/.test(str)) return "dbkai"
+    if (/\b(?:dbz|dragon ball z)\b/.test(str)) return "dbz"
+    if (/\b(?:db|dragon ball)\b/.test(str)) return "db"
 
     return null
 }
 
-export interface ResolvedSoundtrackTrack {
+interface ResolvedSoundtrackTrack {
     title: string
     url: string
     seriesKey: SeriesEraKey
     isLocal: boolean
+}
+
+// Una pista local debe identificar el opening y su versión sin voz.
+// El nombre es una convención de catálogo; no es un análisis acústico del archivo.
+const INSTRUMENTAL_VERSION = /\b(?:instrumental|karaoke|off[ -]?vocal|sin voz)\b/i
+
+function isSeriesInstrumental(track: BackgroundMusicTrack, eraKey: SeriesEraKey): boolean {
+    const text = `${track.name} ${track.file}`.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ")
+    if (!INSTRUMENTAL_VERSION.test(text)) return false
+    const trackEra = getSeriesEraKey(text)
+    if (trackEra && trackEra !== eraKey) return false
+    return SERIES_SOUNDTRACKS[eraKey].keywords.some(keyword => text.includes(keyword))
 }
 
 /**
@@ -149,11 +159,7 @@ export function resolveSeriesSoundtrackPlaylist(
     // 1. Filtrar pistas locales que coincidan con las palabras clave de la serie
     if (bgMusicDir && localTracks.length > 0) {
         const base = getServerBaseUrl() || window.location.origin
-        const matchingLocal = localTracks.filter(track => {
-            const fileName = track.file.toLowerCase()
-            const name = (track.name || "").toLowerCase()
-            return info.keywords.some(kw => fileName.includes(kw) || name.includes(kw))
-        })
+        const matchingLocal = localTracks.filter(track => isSeriesInstrumental(track, eraKey))
 
         for (const track of matchingLocal) {
             const params = new URLSearchParams({ dir: bgMusicDir, file: track.file })

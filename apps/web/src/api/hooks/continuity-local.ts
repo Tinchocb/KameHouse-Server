@@ -8,7 +8,7 @@ import type { Continuity_WatchHistoryItem, Continuity_WatchHistoryItemResponse }
 
 const STORAGE_KEY = "kamehouse:continuity:local:v1"
 
-export interface LocalProgress {
+interface LocalProgress {
     mediaId: number
     episodeNumber: number
     currentTime: number

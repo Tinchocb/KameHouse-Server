@@ -39,6 +39,8 @@ interface UsePlayerHlsProps {
     setIsBuffering: (buffering: boolean) => void
     setErrorMsg: (msg: string) => void
     setHlsLevels: (levels: { index: number; label: string; height: number }[]) => void
+    /** Se llama con el nivel más alto cuando se fija como calidad por defecto (ver MANIFEST_PARSED). */
+    onMaxLevelLocked?: (index: number) => void
     setAudioTracks: (tracks: AudioTrack[]) => void
     setSubtitleTracks: (tracks: SubtitleTrack[]) => void
     setActiveAudioIndex: (index: number) => void
@@ -73,6 +75,7 @@ export function usePlayerHls({
     setIsBuffering,
     setErrorMsg,
     setHlsLevels,
+    onMaxLevelLocked,
     setAudioTracks,
     setSubtitleTracks,
     setActiveAudioIndex,
@@ -135,7 +138,7 @@ export function usePlayerHls({
             })
             const timer = setTimeout(() => {
                 setStatus("error")
-                setErrorMsg("No se pudo obtener el stream del servidor (timeout 30s). Verifica la conexión o reintenta.")
+                setErrorMsg("El servidor tardó más de 30 s en responder. Revisa tu conexión e inténtalo de nuevo.")
                 setIsBuffering(false)
             }, 30000)
             return () => clearTimeout(timer)
@@ -248,7 +251,7 @@ export function usePlayerHls({
                         setIsStreamSwitching?.(false)
                     } catch {}
                     setStatus("error")
-                    setErrorMsg(video.error?.message || "Ocurrió un error al cargar el archivo de video.")
+                    setErrorMsg(video.error?.message || "No se pudo cargar el archivo de video.")
                 }
                 return
             }
@@ -256,7 +259,7 @@ export function usePlayerHls({
                 setIsStreamSwitching?.(false)
             } catch {}
             setStatus("error")
-            setErrorMsg(video.error?.message || "Ocurrió un error al cargar el archivo de video.")
+            setErrorMsg(video.error?.message || "No se pudo cargar el archivo de video.")
         }
 
         const resolvedUrl = (() => {
@@ -364,6 +367,16 @@ export function usePlayerHls({
                 }))
                 setHlsLevels(levels)
 
+                // Calidad máxima por defecto: se fija el nivel más alto en vez de dejar que el ABR
+                // baje a tiers re-codificados cuando un segmento tarda. Cada bajada obliga al servidor
+                // a levantar encoders nuevos y el stream igual se corta; el arranque puede demorar un
+                // poco, pero se mantiene la calidad. "Automática" en el menú devuelve el ABR.
+                if (levels.length > 1) {
+                    const top = levels.reduce((best, l) => (l.height > best.height ? l : best))
+                    hls.currentLevel = top.index
+                    onMaxLevelLocked?.(top.index)
+                }
+
                 // startPosition in Hls constructor handles seeking to progressSeconds natively
 
                 // Autoplay when HLS manifest is parsed and stream is ready
@@ -425,7 +438,7 @@ export function usePlayerHls({
                             const code = data.response?.code
                             console.error("HLS: no se pudo cargar el manifiesto", data.details, code)
                             setStatus("error")
-                            setErrorMsg(`El servidor no pudo preparar el video${code ? ` (error ${code})` : ""}. Revisá que el archivo esté disponible y reintentá.`)
+                            setErrorMsg(`El servidor no pudo preparar el video${code ? ` (error ${code})` : ""}. Revisa que el archivo esté disponible e inténtalo de nuevo.`)
                             setIsBuffering(false)
                             destroyOnce()
                             return
@@ -437,7 +450,7 @@ export function usePlayerHls({
                         } else {
                             console.error("HLS: Network error is unrecoverable after 5 attempts")
                             setStatus("error")
-                            setErrorMsg("No se pudo restablecer la conexión con el flujo de video tras 5 intentos.")
+                            setErrorMsg("Se perdió la conexión con el servidor y no se pudo recuperar tras 5 intentos. Revisa tu conexión e inténtalo de nuevo.")
                             destroyOnce()
                         }
                     } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -455,13 +468,13 @@ export function usePlayerHls({
                             // Recuperación fallida — mostrar pantalla de error
                             console.error("HLS: Media error is unrecoverable after 2 attempts:", data.details)
                             setStatus("error")
-                            setErrorMsg(video.error?.message || `Error de decodificación: ${data.details}`)
+                            setErrorMsg(video.error?.message || `No se pudo decodificar el video (${data.details}).`)
                             destroyOnce()
                         }
                     } else {
                         // Error irrecuperable
                         setStatus("error")
-                        setErrorMsg(`Error fatal de reproducción HLS: ${data.details}`)
+                        setErrorMsg(`La reproducción falló y no se pudo recuperar (${data.details}).`)
                         destroyOnce()
                     }
                 } else {
@@ -482,7 +495,7 @@ export function usePlayerHls({
                             if (stallRecoveries > 3) {
                                 console.error("HLS: stalls persistentes tras 3 recoveries — mostrando error")
                                 setStatus("error")
-                                setErrorMsg("La reproducción se detuvo por stalls persistentes. Reintenta o cambia a Direct Play.")
+                                setErrorMsg("La reproducción se detuvo varias veces por falta de datos. Inténtalo de nuevo o cambia la fuente en Más opciones.")
                                 setIsBuffering(false)
                                 destroyOnce()
                             } else {
@@ -544,6 +557,7 @@ export function usePlayerHls({
         setIsBuffering,
         setErrorMsg,
         setHlsLevels,
+        onMaxLevelLocked,
         setAudioTracks,
         setSubtitleTracks,
         setActiveAudioIndex,

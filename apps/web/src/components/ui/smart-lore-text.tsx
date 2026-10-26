@@ -31,7 +31,7 @@ export const LORE_KEYWORD_RULES: KeywordRule[] = [
   { pattern: /\b(anillos?\s+del\s+tiempo)\b/i, termKey: 'anillo-del-tiempo' },
 ];
 
-export interface SmartLoreTextProps {
+interface SmartLoreTextProps {
   text?: string;
   className?: string;
 }

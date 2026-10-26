@@ -3,12 +3,14 @@ import type { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import {
     computeAudioTracksKey,
     computeSubtitleTracksKey,
+    effectiveAudioProfile,
     matchPendingAudioTrack,
     matchPreferredAudioTrack,
     resolveNativeAudioTrackPosition,
     isAudioTrackDubbed,
     matchPreferredSubtitleTrack,
     resolveAutoSubtitleTarget,
+    languageFamily,
 } from "./track-selection"
 
 describe("track-selection", () => {
@@ -370,5 +372,128 @@ describe("resolveNativeAudioTrackPosition", () => {
 
     it("conteo distinto al nativo → -1 (mapeo no confiable)", () => {
         expect(resolveNativeAudioTrackPosition(tracks, tracks[2], 3, playable)).toBe(-1)
+    })
+})
+
+describe("languageFamily", () => {
+    it("unifica ISO 639-1, 639-2 y variantes regionales", () => {
+        for (const code of ["es", "spa", "ES", "es-MX", "es_419", "spa-lat", "es-la", "castellano", "Español"]) {
+            expect(languageFamily(code), code).toBe("spa")
+        }
+        expect(languageFamily("en-US")).toBe("eng")
+        expect(languageFamily("ja")).toBe("jpn")
+        expect(languageFamily("pt-BR")).toBe("por")
+        expect(languageFamily("fre")).toBe("fra")
+    })
+
+    it("sin idioma devuelve vacío", () => {
+        expect(languageFamily("und")).toBe("")
+        expect(languageFamily("")).toBe("")
+        expect(languageFamily(undefined)).toBe("")
+    })
+})
+
+describe("matchPreferredSubtitleTrack: códigos y variantes", () => {
+    const tracks: SubtitleTrack[] = [
+        { index: 0, language: "eng", title: "English" },
+        { index: 1, language: "spa", title: "Español (España)" },
+        { index: 2, language: "spa", title: "Español Latino" },
+    ]
+
+    it("acepta ISO 639-1 y regionales aunque la pista venga en 639-2", () => {
+        expect(matchPreferredSubtitleTrack(tracks, "es")?.index).toBe(1)
+        expect(matchPreferredSubtitleTrack(tracks, "spa")?.index).toBe(1)
+        expect(matchPreferredSubtitleTrack(tracks, "es-MX")?.index).toBe(2)
+        expect(matchPreferredSubtitleTrack(tracks, "es-419")?.index).toBe(2)
+        expect(matchPreferredSubtitleTrack(tracks, "es-ES")?.index).toBe(1)
+        expect(matchPreferredSubtitleTrack(tracks, "en")?.index).toBe(0)
+    })
+
+    it("prefiere la pista completa a la forzada (carteles) del mismo idioma", () => {
+        const forcedFirst: SubtitleTrack[] = [
+            { index: 0, language: "spa", title: "Forzado", forced: true },
+            { index: 1, language: "spa", title: "Completo" },
+        ]
+        expect(matchPreferredSubtitleTrack(forcedFirst, "spa")?.index).toBe(1)
+    })
+
+    it("infiere el idioma del título cuando la pista no trae código", () => {
+        const noLang: SubtitleTrack[] = [
+            { index: 1000, language: "und", title: "Subtítulos externos" },
+            { index: 1001, language: "und", title: "Español" },
+        ]
+        expect(matchPreferredSubtitleTrack(noLang, "spa")?.index).toBe(1001)
+    })
+
+    it("nunca elige una pista pendiente de extracción", () => {
+        const pending: SubtitleTrack[] = [
+            { index: 0, language: "spa", title: "Español", needsExtraction: true, default: true },
+            { index: 1, language: "eng", title: "English", needsExtraction: true },
+        ]
+        expect(matchPreferredSubtitleTrack(pending, "spa")).toBeUndefined()
+    })
+})
+
+describe("isAudioTrackDubbed / auto-ocultar subtítulos", () => {
+    it("usa el título cuando el audio no trae idioma", () => {
+        expect(isAudioTrackDubbed({ index: 0, language: "und", title: "Latino" })).toBe(true)
+        expect(isAudioTrackDubbed({ index: 0, language: "und", title: "Audio 1" })).toBe(false)
+    })
+
+    it("con subtítulos en español, un audio en inglés NO es doblado", () => {
+        const subs: SubtitleTrack[] = [{ index: 0, language: "spa", title: "Español" }]
+        const target = resolveAutoSubtitleTarget({
+            subtitleTracks: subs,
+            currentAudio: { index: 0, language: "eng", title: "English" },
+            subtitlesEnabled: true,
+            autoDisableSubtitlesWhenDubbed: true,
+            preferredSubtitleLang: "es-MX",
+        })
+        expect(target?.index).toBe(0)
+    })
+
+    it("con audio en español y subtítulos en español sí se ocultan", () => {
+        const target = resolveAutoSubtitleTarget({
+            subtitleTracks: [{ index: 0, language: "spa", title: "Español" }],
+            currentAudio: { index: 0, language: "es-419", title: "" },
+            subtitlesEnabled: true,
+            autoDisableSubtitlesWhenDubbed: true,
+            preferredSubtitleLang: "es",
+        })
+        expect(target).toBeNull()
+    })
+
+    it("si el espectador prefiere subtítulos en inglés, el audio en inglés cuenta como doblado", () => {
+        const target = resolveAutoSubtitleTarget({
+            subtitleTracks: [{ index: 0, language: "eng", title: "English" }],
+            currentAudio: { index: 0, language: "eng", title: "English" },
+            subtitlesEnabled: true,
+            autoDisableSubtitlesWhenDubbed: true,
+            preferredSubtitleLang: "eng",
+        })
+        expect(target).toBeNull()
+    })
+})
+
+describe("computeSubtitleTracksKey con pistas pendientes", () => {
+    it("cambia cuando una pista deja de estar pendiente (re-dispara la auto-selección)", () => {
+        const pending = [{ index: 0, language: "spa", title: "Español", needsExtraction: true }]
+        const ready = [{ index: 0, language: "spa", title: "Español", needsExtraction: false }]
+        expect(computeSubtitleTracksKey(pending)).not.toBe(computeSubtitleTracksKey(ready))
+        expect(computeSubtitleTracksKey(ready)).toBe("0:spa")
+    })
+})
+
+describe("effectiveAudioProfile: perfil por serie", () => {
+    it("sin perfil de serie, manda el global (latino para todas)", () => {
+        expect(effectiveAudioProfile({ globalProfile: "latino", rememberedTrackIndex: -1 })).toBe("latino")
+    })
+
+    it("el perfil de la serie (Daima: japonés) pisa al global", () => {
+        expect(effectiveAudioProfile({ globalProfile: "latino", seriesProfile: "japanese", rememberedTrackIndex: -1 })).toBe("japanese")
+    })
+
+    it("una pista elegida a mano en la serie manda sobre su perfil", () => {
+        expect(effectiveAudioProfile({ globalProfile: "latino", seriesProfile: "japanese", rememberedTrackIndex: 2 })).toBe("auto")
     })
 })

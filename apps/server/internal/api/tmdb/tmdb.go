@@ -76,6 +76,12 @@ func (c *Client) SetPersistentCache(pc Cache) {
 	c.persistentCache = pc
 }
 
+// SetHTTPClient configures the transport. Like SetPersistentCache, it must not
+// run concurrently with requests; configure it before publication in production.
+func (c *Client) SetHTTPClient(client *http.Client) {
+	c.httpClient = client
+}
+
 // ClearCache flushes the in-memory cache of TMDB API responses.
 func (c *Client) ClearCache() {
 	if c != nil && c.cache != nil {

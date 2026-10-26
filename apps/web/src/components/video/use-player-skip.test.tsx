@@ -75,6 +75,58 @@ describe("usePlayerSkip", () => {
         expect(result.current.skipTimesEd).toEqual({ startTime: 1300, endTime: 1390, source: "aniskip" })
     })
 
+    it.each(["Resumen", "Recap", "Prólogo"])("ofrece saltar %s y aterriza en su final sin saltar el opening", (name) => {
+        const chapters = [{ name, startTime: 0, endTime: 45 }]
+        const { result, video } = setup({ chapters }, { op: { startTime: 45, endTime: 135 } })
+        video.currentTime = 10
+        act(() => result.current.processTimeUpdates(10, 1400))
+        expect(result.current.skipMode).toBe("recap")
+        expect(result.current.skipRemainingSeconds).toBe(35)
+        act(() => result.current.handleSkipIntro())
+        expect(video.currentTime).toBe(45)
+        expect(result.current.skipMode).toBeNull()
+    })
+
+    it.each(["chapters", "aniskip"])("en maratón salta el resumen de %s desde el segundo cero y permite deshacer", (source) => {
+        usePlayerStore.setState({ marathonMode: true })
+        const { result, video } = setup(
+            { chapters: source === "chapters" ? [{ name: "Resumen", startTime: 0, endTime: 45 }] : [] },
+            source === "aniskip" ? { recap: { startTime: 0, endTime: 45 } } : undefined,
+        )
+        act(() => result.current.processTimeUpdates(0, 1400))
+        expect(video.currentTime).toBe(45)
+        expect(result.current.showAutoSkipToast).toBe("recap")
+        act(() => result.current.undoSkip())
+        expect(video.currentTime).toBe(0)
+        vi.setSystemTime(Date.now() + 2000)
+        act(() => result.current.processTimeUpdates(1, 1400))
+        expect(video.currentTime).toBe(0)
+        expect(result.current.skipMode).toBe("recap")
+    })
+
+    it("oculta el botón al salir del resumen y no lo repite en otro episodio sin marcas", () => {
+        const { result, rerender, props } = setup({}, { recap: { startTime: 0, endTime: 45 } })
+        act(() => result.current.processTimeUpdates(10, 1400))
+        expect(result.current.skipMode).toBe("recap")
+        act(() => result.current.processTimeUpdates(200, 1400))
+        expect(result.current.skipMode).toBeNull()
+        mocks.aniskip = undefined
+        rerender({ ...props, episodeNumber: 2, playableUrl: "http://x/ep2.m3u8" })
+        act(() => result.current.processTimeUpdates(10, 1400))
+        expect(result.current.skipMode).not.toBe("recap")
+    })
+
+    it("activar maratón durante un resumen lo salta aunque el auto-salto de intro esté apagado", () => {
+        const { result, video } = setup({}, { recap: { startTime: 0, endTime: 45 } })
+        video.currentTime = 10
+        act(() => result.current.processTimeUpdates(10, 1400))
+        expect(result.current.skipMode).toBe("recap")
+        act(() => result.current.handleSetMarathonMode(true))
+        act(() => result.current.processTimeUpdates(10, 1400))
+        expect(video.currentTime).toBe(45)
+        expect(result.current.skipMode).toBeNull()
+    })
+
     it("dentro de la intro sin auto-skip muestra el botón y el tiempo restante", () => {
         const { result, video } = setup({}, OP)
         act(() => result.current.processTimeUpdates(20, 1400))
@@ -195,6 +247,15 @@ describe("usePlayerSkip", () => {
         expect(b.onNextEpisode).not.toHaveBeenCalled()
     })
 
+    it("en maratón la intro no se salta sola: el botón queda visible", () => {
+        usePlayerStore.setState({ marathonMode: true })
+        const { result, video } = setup({}, OP)
+        act(() => result.current.processTimeUpdates(20, 1400))
+        expect(video.currentTime).toBe(0)
+        expect(result.current.showAutoSkipToast).toBeNull()
+        expect(result.current.skipMode).toBe("intro")
+    })
+
     it("en maratón avanza en cuanto termina el video", async () => {
         usePlayerStore.setState({ marathonMode: true })
         const { video, onNextEpisode } = setup()
@@ -237,5 +298,20 @@ describe("usePlayerSkip", () => {
         video.currentTime = 55
         act(() => result.current.undoSkip())
         expect(video.currentTime).toBe(55)
+    })
+
+    it("tras el auto-salto por capítulo el botón de intro se apaga (misma ventana que el botón)", () => {
+        const chapters: Chapter[] = [{ startTime: 0, endTime: 80, name: "OP" }]
+        const { result, video } = setup(
+            { autoSkipIntroPref: true, chapters },
+            { op: { startTime: 0, endTime: 90 }, opSource: "heuristic" },
+        )
+        act(() => result.current.processTimeUpdates(20, 1400))
+        expect(video.currentTime).toBe(80)
+        expect(result.current.showAutoSkipToast).toBe("intro")
+
+        vi.setSystemTime(Date.now() + 2000) // fuera del enfriamiento de seek
+        act(() => result.current.processTimeUpdates(80.2, 1400))
+        expect(result.current.skipMode).toBeNull()
     })
 })

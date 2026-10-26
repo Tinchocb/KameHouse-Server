@@ -6,13 +6,14 @@ import { DeferredImage } from "@/components/shared/deferred-image"
 import { HeroBackdrop, heroHighResSrc, heroLowResSrc, useHeroTone } from "@/components/ui/spotlight/hero-backdrop"
 import { heroArtFromUrl, heroObjectPosition, type HeroArt } from "@/lib/config/hero-art"
 import { cn } from "@/components/ui/core/styling"
+import { useMotionTier } from "@/components/ui/kinetics/hooks"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { useImagePalette } from "@/hooks/use-image-palette"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 
-const MEDIA_HERO_TITLE_CLASS = "font-display font-extrabold text-hero-title tracking-tight text-on-surface text-edge-glow uppercase text-balance break-words max-w-5xl";
+const MEDIA_HERO_TITLE_CLASS = "font-display font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-[2.6rem] tracking-tight text-on-surface text-edge-glow text-balance break-words max-w-3xl leading-[1.08]";
 
-export interface MediaHeroProps {
+interface MediaHeroProps {
     /** El contenedor principal (`div`) para aplicar parallax al hacer scroll */
     scrollContainerRef?: React.RefObject<HTMLElement | HTMLDivElement | null>
 
@@ -20,6 +21,8 @@ export interface MediaHeroProps {
     /** Arte curado (punto focal + composición). Si falta, se encuadra `backdropUrl` por defecto. */
     backdropArt?: HeroArt | null
     posterUrl?: string | null
+    /** Clave de elemento compartido de la portada (`series:<id>`): la tarjeta de origen vuela hasta acá. */
+    posterShareKey?: string
     hasBannerImage: boolean
     
     /** El título puede ser un string (se formateará por defecto) o un ReactNode (para custom shimmer etc.) */
@@ -59,6 +62,8 @@ export interface MediaHeroProps {
     /** Eventos opcionales */
     onBackdropClick?: () => void
     onTitleClick?: () => void
+    /** false: sin parallax del arte (p. ej. cuando el contenedor ya se mueve al scrollear). */
+    parallax?: boolean
 }
 
 /**
@@ -66,7 +71,7 @@ export interface MediaHeroProps {
  * Tipo de Banner. The "-when-unavailable" variants only kick in for media with
  * no real banner art, where the fallback image tends to look poor behind text.
  */
-export type BackdropTreatment = "show" | "blur" | "dim" | "hide"
+type BackdropTreatment = "show" | "blur" | "dim" | "hide"
 
 export function resolveBackdropTreatment(bannerType: string, hasBannerImage: boolean): BackdropTreatment {
     switch (bannerType) {
@@ -111,6 +116,7 @@ export function MediaHero({
     backdropUrl,
     backdropArt,
     posterUrl,
+    posterShareKey,
     hasBannerImage,
     title,
     topBadge,
@@ -123,11 +129,15 @@ export function MediaHero({
     sidePanel,
     className,
     onBackdropClick,
-    onTitleClick
+    onTitleClick,
+    parallax = true,
 }: MediaHeroProps) {
     const heroRef = useRef<HTMLDivElement>(null)
     const backdropRef = useRef<HTMLDivElement>(null)
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
+    // Parallax solo en tier full: "off" es movimiento reducido (un transform
+    // escrito por JS no lo frena la regla global) y "subtle" es TV / bajo consumo.
+    const parallaxEnabled = useMotionTier() === "full" && parallax
     const ts = useThemeSettings()
     const isSmallBanner = ts.themeMediaPageBannerSize === "small"
     const backdropTreatment = resolveBackdropTreatment(ts.themeMediaPageBannerType, hasBannerImage)
@@ -162,6 +172,11 @@ export function MediaHero({
     // Smooth Parallax: escucha el scroll container real (detalle de serie hace
     // scroll en <main>, no en window) además de window como fallback.
     useEffect(() => {
+        if (!parallaxEnabled) {
+            // Si el tier cambia a mitad de sesión, la capa vuelve a su lugar.
+            if (backdropRef.current) backdropRef.current.style.transform = ""
+            return
+        }
         let rafId: number | null = null
         const handleScroll = (e: Event) => {
             if (rafId) return
@@ -194,7 +209,7 @@ export function MediaHero({
             window.removeEventListener("scroll", handleScroll, { capture: true })
             if (rafId) cancelAnimationFrame(rafId)
         }
-    }, [scrollContainerRef])
+    }, [scrollContainerRef, parallaxEnabled])
 
 
 
@@ -204,7 +219,7 @@ export function MediaHero({
             className={cn(
                 "relative w-full flex flex-col justify-end overflow-hidden select-none",
                 fullHeight
-                    ? "min-h-screen lg:min-h-screen pb-10 sm:pb-12 md:pb-16 pt-20 md:pt-24 shrink-0"
+                    ? "min-h-screen lg:min-h-screen pb-16 sm:pb-20 md:pb-24 pt-20 md:pt-24 shrink-0"
                     : isSmallBanner
                         ? "min-h-[360px] md:min-h-[420px] pb-12 sm:pb-16 md:pb-20 pt-16 md:pt-24 shrink-0"
                         : "min-h-[70svh] lg:min-h-[80svh] pb-12 sm:pb-16 md:pb-20 pt-16 md:pt-24 shrink-0",
@@ -259,8 +274,9 @@ export function MediaHero({
                     >
                         <HeroBackdrop
                             art={art}
-                            alt="Backdrop"
+                            alt=""
                             variant="bleed"
+                            scrims={true}
                             imgClassName={cn(
                                 // Solo opacity: transition-all animaría también el
                                 // filter y mantendría vivo el repaint del fondo,
@@ -293,22 +309,22 @@ export function MediaHero({
                 <div className="hidden lg:flex absolute right-0 top-0 bottom-0 z-hero-controls w-72 xl:w-80 pointer-events-auto">
                     {/* Gradiente de fusión lateral: difumina el panel hacia el backdrop */}
                     <div className="absolute inset-y-0 -left-16 w-16 bg-gradient-to-r from-transparent to-black/60 pointer-events-none z-10" />
-                    <div className="flex-1 bg-surface/70 backdrop-blur-overlay-xl border-l border-border-subtle overflow-hidden flex flex-col">
+                    <div className="flex-1 bg-[var(--surface-content)] border-l border-[var(--surface-content-border)] overflow-hidden flex flex-col">
                         {sidePanel}
                     </div>
                 </div>
             )}
 
-            {/* Content Container */}
+            {/* Content Container: Platter D compacta en la esquina inferior izquierda */}
             <div className={cn(
                 "relative z-hero-content w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10 flex",
-                showPosterColumn ? "flex-col sm:flex-row items-start sm:items-end gap-6 md:gap-10 lg:gap-14" : "flex-col pointer-events-none"
+                showPosterColumn ? "flex-col sm:flex-row items-start sm:items-end gap-6 md:gap-8" : "flex-col items-start justify-end pointer-events-none"
             )}>
                 {showPosterColumn && posterUrl && (
-                    <div className="animate-slide-up delay-50 w-24 sm:w-32 md:w-36 lg:w-44 shrink-0 aspect-[2/3] rounded-container overflow-hidden border border-border-subtle bg-surface-container shadow-elevation-5 pointer-events-auto">
+                    <div data-shared-poster={posterShareKey} className="animate-slide-up [animation-duration:var(--duration-base)] delay-50 w-24 sm:w-32 md:w-36 lg:w-44 shrink-0 aspect-[2/3] rounded-container overflow-hidden border border-border-subtle bg-surface-container shadow-elevation-5 pointer-events-auto">
                         <DeferredImage
                             src={posterUrl}
-                            alt="Poster"
+                            alt={typeof title === "string" ? `Póster de ${title}` : "Póster"}
                             className="w-full h-full block"
                             imgClassName="!w-full !h-full !object-cover"
                         />
@@ -316,11 +332,9 @@ export function MediaHero({
                 )}
 
                 <div className={cn(
-                    "flex-1 flex flex-col gap-6 text-left w-full",
-                    !showPosterColumn && typeof title === "string" && "max-w-3xl space-y-5 md:space-y-6",
-                    // "boxed" lifts the copy off the backdrop onto a glass panel, so it
-                    // stays readable over busy art; "fluid" (default) sits directly on it.
-                    isBoxedInfo && "pointer-events-auto bg-glass-bg backdrop-blur-overlay-xl border border-border-subtle rounded-container p-6 md:p-8"
+                    "flex flex-col gap-3.5 sm:gap-4 pointer-events-auto text-left",
+                    showPosterColumn ? "flex-1 w-full" : "w-full sm:w-[65%] sm:max-w-2xl",
+                    isBoxedInfo && "surface-content rounded-container p-6 md:p-8"
                 )}>
                     {topBadge && (
                         // fade-only (sin transform): animar translateY en el
@@ -331,13 +345,7 @@ export function MediaHero({
                         </div>
                     )}
 
-                    {metadataRow && (
-                        <div className="animate-fade-in delay-100 pointer-events-auto">
-                            {metadataRow}
-                        </div>
-                    )}
-
-                    <div className="animate-slide-up delay-150 space-y-2 pointer-events-auto flex items-start justify-start flex-col">
+                    <div className="animate-slide-up [animation-duration:var(--duration-base)] delay-50 space-y-1 pointer-events-auto flex items-start justify-start flex-col">
                         {typeof title === "string" ? (
                             onTitleClick ? (
                                 <button
@@ -346,10 +354,9 @@ export function MediaHero({
                                     className="text-left p-0 border-0 bg-transparent cursor-pointer group/title active:scale-[0.99] transition-transform duration-fast ease-out-strong"
                                 >
                                     <h1 
-                                        className={cn(
-                                            MEDIA_HERO_TITLE_CLASS,
-                                            "group-hover/title:text-brand-secondary transition-colors duration-slow"
-                                        )} 
+                                        // Sin cn(): twMerge toma `text-hero-title` por color y lo descartaba
+                                        // ante `text-on-surface`, dejando el h1 de la ficha de serie en 16 px.
+                                        className={`${MEDIA_HERO_TITLE_CLASS} group-hover/title:text-brand-secondary transition-colors duration-slow`}
                                     >
                                         {title}
                                     </h1>
@@ -364,20 +371,26 @@ export function MediaHero({
                         ) : title}
                     </div>
 
+                    {metadataRow && (
+                        <div className="animate-fade-in delay-50 pointer-events-auto">
+                            {metadataRow}
+                        </div>
+                    )}
+
                     {synopsis && (
-                        <p className="animate-slide-up delay-200 text-on-surface-variant text-sm md:text-base leading-relaxed line-clamp-3 drop-shadow-md font-medium max-w-3xl border-l-2 border-brand-secondary/30 pl-4 py-0.5 pointer-events-auto text-pretty">
+                        <p className="animate-slide-up [animation-duration:var(--duration-base)] delay-100 text-on-surface/90 text-xs sm:text-sm leading-relaxed line-clamp-3 text-edge-glow font-normal pointer-events-auto text-pretty max-w-[54ch]">
                             {synopsis}
                         </p>
                     )}
 
                     {footerText && (
-                        <p className="animate-slide-up delay-250 text-on-surface-variant text-xs font-semibold tracking-wide drop-shadow-sm pointer-events-auto">
+                        <p className="animate-slide-up [animation-duration:var(--duration-base)] delay-150 text-on-surface/85 text-xs font-semibold tracking-wide drop-shadow-sm pointer-events-auto">
                             {footerText}
                         </p>
                     )}
 
                     {actionButtons && (
-                        <div className="animate-slide-up delay-300 flex flex-wrap items-center gap-4 pt-2 pointer-events-auto">
+                        <div className="animate-slide-up [animation-duration:var(--duration-base)] delay-200 flex flex-wrap items-center gap-3 pt-1 pointer-events-auto">
                             {actionButtons}
                         </div>
                     )}

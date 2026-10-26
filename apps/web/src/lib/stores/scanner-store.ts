@@ -14,7 +14,6 @@ export interface ScannerState {
     scanProgress: number
     currentScanningFile: string
     events: ScanEvent[]
-    activeStageIdx: number
     lastFinish: ScanEvent | null
     pruneCount: number
     /** Epoch ms del START del escaneo local en curso (o del último). */
@@ -37,7 +36,6 @@ export const useScannerStore = create<ScannerState>()(
             scanProgress: 0,
             currentScanningFile: "",
             events: [],
-            activeStageIdx: -1,
             lastFinish: null,
             pruneCount: 0,
             startedAt: null,

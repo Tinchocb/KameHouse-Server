@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useGetTMDBEpisodeStill, buildTmdbStillUrl } from '@/api/hooks/tmdb-episode.hooks';
 import { useGetAniListEpisodeThumbnail } from '@/api/hooks/anilist-episode.hooks';
 import { useGetLibraryEpisodeFile } from '@/api/hooks/library-episode.hooks';
-import { isImageLoaded, markImageLoaded } from '@/lib/helpers/images';
+import { isImageLoaded, localImage, markImageLoaded } from '@/lib/helpers/images';
 import {
   getTmdbIdForVolume,
   getAnilistIdForVolume,
@@ -52,7 +52,7 @@ const SOURCE_LABELS: Record<ThumbnailStage, string> = {
   4: 'saga',
 };
 
-export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = ({
+export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = React.memo(({
   volume,
   milestone,
   startSec,
@@ -76,7 +76,9 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = ({
 
   const { thumbnailUrl: libRawSrc, isExactFrame, settled: libSettled } = useGetLibraryEpisodeFile(tvId, absolute, effectiveStartSec);
   // La biblioteca guarda los stills de TMDB en w780; se pide el tamaño que la miniatura necesita.
-  const libSrc = !isExactFrame && libRawSrc ? libRawSrc.replace(TMDB_SIZE_SEGMENT, `/t/p/${tmdbSize}/`) : libRawSrc;
+  // Los stills de TMDB pasan por el proxy local: el servidor los guarda y el navegador los
+  // cachea como inmutables (directo a TMDB se bajaban de nuevo en cada visita).
+  const libSrc = !isExactFrame && libRawSrc ? localImage(libRawSrc.replace(TMDB_SIZE_SEGMENT, `/t/p/${tmdbSize}/`)) : libRawSrc;
   const exactFrameFirst = hasSpecificSecond && isExactFrame && usable(libSrc);
 
   // La biblioteca ya trae el still del episodio (llega precargada con la página): TMDB solo se
@@ -84,7 +86,7 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = ({
   const libIsImage = usable(libSrc) && !isExactFrame;
   const needTmdb = !usable(localSrc) && libSettled && !libIsImage && !exactFrameFirst;
   const tmdbQuery = useGetTMDBEpisodeStill(tvId, absolute, { enabled: needTmdb });
-  const tmdbSrc = buildTmdbStillUrl(tmdbQuery.data?.stillPath ?? tmdbQuery.data?.stillUrl, tmdbSize);
+  const tmdbSrc = localImage(buildTmdbStillUrl(tmdbQuery.data?.stillPath ?? tmdbQuery.data?.stillUrl, tmdbSize)) || undefined;
   const tmdbSettled = !tvId || !absolute || tmdbQuery.isFetched;
 
   const needAniList = needTmdb && tmdbSettled && !usable(tmdbSrc) && libSettled && !usable(libSrc);
@@ -101,13 +103,8 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = ({
   const effectiveSrc = chosen?.[1];
 
   // Una imagen ya descargada en esta sesión se muestra directo, sin shimmer ni fundido.
-  const [loaded, setLoaded] = useState(() => isImageLoaded(effectiveSrc));
-  const [prevSrc, setPrevSrc] = useState(effectiveSrc);
-
-  if (effectiveSrc !== prevSrc) {
-    setPrevSrc(effectiveSrc);
-    setLoaded(isImageLoaded(effectiveSrc));
-  }
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const loaded = loadedSrc === effectiveSrc || isImageLoaded(effectiveSrc);
 
   // No effectiveSrc available -> render nothing (but hooks still called)
   if (!effectiveSrc || effectiveStage === undefined) {
@@ -116,10 +113,11 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = ({
 
   return (
     <>
-      {/* Shimmer loading behind image */}
+      {/* Pulso de carga translúcido: deja ver el fondo del contenedor (el degradado de la era en la
+          tarjeta y en la fila compacta) en vez de tapar la portada con un gris. */}
       {!loaded && (
         <div
-          className="absolute inset-0 animate-pulse motion-reduce:animate-none bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800"
+          className="absolute inset-0 animate-pulse motion-reduce:animate-none bg-on-surface/[0.08]"
           aria-hidden="true"
         />
       )}
@@ -133,13 +131,16 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = ({
         referrerPolicy="no-referrer"
         // De dónde salió la miniatura, para depurar desde DevTools sin mostrarlo en pantalla.
         data-thumb-source={SOURCE_LABELS[effectiveStage]}
-        // Aparece asentándose (fundido + 2% de escala) en vez de saltar sobre el shimmer.
-        className={`${className} transition-[opacity,transform] duration-base ease-smooth-out motion-reduce:transition-none ${
+        // Aparece asentándose (fundido + 2% de escala) en vez de saltar sobre el pulso de carga.
+        // La transición se declara solo acá y cubre también el zoom de hover y el filtro de "visto":
+        // si el llamador pasa su propio `transition-*`, Tailwind lo emite después (orden alfabético) y
+        // pisa esta lista, con lo que el fundido de carga deja de correr.
+        className={`${className} transition-[opacity,transform,filter] duration-base ease-smooth-out motion-reduce:transition-none ${
           loaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[1.02]'
         }`}
         onLoad={() => {
           markImageLoaded(effectiveSrc);
-          setLoaded(true);
+          setLoadedSrc(effectiveSrc);
         }}
         onError={() => {
           setFailedSrcs((prev) => new Set(prev).add(effectiveSrc));
@@ -147,4 +148,6 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = ({
       />
     </>
   );
-};
+});
+
+EpisodeThumbnailImg.displayName = 'EpisodeThumbnailImg';

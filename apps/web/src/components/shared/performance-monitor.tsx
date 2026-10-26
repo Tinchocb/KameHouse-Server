@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { IconStatusActivity, IconUiTrash, IconUiClose, IconStatusZap, IconStatusCpu, IconUiAlert, IconUiCheckCircle } from "@/components/ui/icons";
-import { useRouterState } from "@tanstack/react-router"
+import { useRouteLatency } from "./use-route-latency"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
+import { createFrameWindow } from "@/lib/hardware/frame-window"
 
 // Custom global event to toggle performance monitor from sidebar/settings
 const TOGGLE_PERF_MONITOR_EVENT = "kamehouse:toggle-perf-monitor"
@@ -13,19 +14,14 @@ export function PerformanceMonitor() {
     const [droppedFrames, setDroppedFrames] = useState(0)
     const [totalFrames, setTotalFrames] = useState(0)
     const [smoothFrames, setSmoothFrames] = useState(0)
+    const [longestFrame, setLongestFrame] = useState(0)
     const [memory, setMemory] = useState<{ used: number; total: number } | null>(null)
-    const [routeLatency, setRouteLatency] = useState<number | null>(null)
-
-    const currentPath = useRouterState({ select: s => s.location.pathname })
+    const routeLatency = useRouteLatency()
     const rafIdRef = useRef<number | null>(null)
-    const lastFrameTimeRef = useRef<number>(0)
-    const fpsTicksRef = useRef<number[]>([])
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
     const fpsHistoryRef = useRef<number[]>([])
-    const routeStartTimeRef = useRef<number>(0)
 
     const hardwareSpecs = usePerformanceStore(s => s.hardwareSpecs)
-    const autoGovernorEnabled = usePerformanceStore(s => s.autoGovernorEnabled)
     const autoThrottleActive = usePerformanceStore(s => s.autoThrottleActive)
     const setAutoThrottleActive = usePerformanceStore(s => s.setAutoThrottleActive)
     const getEffectiveTier = usePerformanceStore(s => s.getEffectiveTier)
@@ -34,6 +30,7 @@ export function PerformanceMonitor() {
     const totalFramesRef = useRef(0)
     const smoothFramesRef = useRef(0)
     const droppedFramesRef = useRef(0)
+    const longestFrameRef = useRef(0)
     const lastUpdateRef = useRef<number>(0)
 
     // Toggle visibility with keyboard shortcut (Ctrl + Shift + F)
@@ -58,75 +55,8 @@ export function PerformanceMonitor() {
         }
     }, [])
 
-    // Track route change transition latency
-    useEffect(() => {
-        routeStartTimeRef.current = performance.now()
-        
-        // Measure time taken to render/layout after path updates
-        const timer = requestAnimationFrame(() => {
-            if (routeStartTimeRef.current > 0) {
-                const latency = performance.now() - routeStartTimeRef.current
-                setRouteLatency(Math.round(latency))
-                routeStartTimeRef.current = 0
-            }
-        })
-
-        return () => cancelAnimationFrame(timer)
-    }, [currentPath])
-
-    // ─── Loop de MEDICIÓN (siempre activo si autoGovernorEnabled) ────────────────
-    // Corre independientemente de si el panel está abierto. Detecta caídas de FPS
-    // y activa el gobernador automático. No actualiza estado React → sin renders.
-    useEffect(() => {
-        if (!autoGovernorEnabled) return
-
-        let rafId: number | null = null
-        const monitorStartTime = performance.now()
-        const fpsTicksGov: number[] = []
-        let lowFpsStreak = 0
-
-        const loop = (now: number) => {
-            // FPS rolling 1 s
-            fpsTicksGov.push(now)
-            const oneSecondAgo = now - 1000
-            // Limpiar entradas antiguas
-            let start = 0
-            while (start < fpsTicksGov.length && fpsTicksGov[start] <= oneSecondAgo) start++
-            if (start > 0) fpsTicksGov.splice(0, start)
-
-            const currentFps = fpsTicksGov.length
-            const targetHz = hardwareSpecs?.screenRefreshRate || 60
-            const minHealthyFps = targetHz >= 120 ? 45 : 30
-            const recoveryFps = targetHz >= 120 ? 70 : 45
-            const isWarmedUp = now - monitorStartTime > 2000
-
-            if (isWarmedUp) {
-                if (currentFps < minHealthyFps) {
-                    lowFpsStreak++
-                    if (lowFpsStreak >= 3 && !autoThrottleActive) {
-                        setAutoThrottleActive(true)
-                    }
-                } else {
-                    lowFpsStreak = 0
-                    if (autoThrottleActive && currentFps >= recoveryFps) {
-                        setAutoThrottleActive(false)
-                    }
-                }
-            }
-
-            rafId = requestAnimationFrame(loop)
-        }
-
-        rafId = requestAnimationFrame(loop)
-        return () => {
-            if (rafId) cancelAnimationFrame(rafId)
-        }
-    }, [autoGovernorEnabled, autoThrottleActive, hardwareSpecs, setAutoThrottleActive])
-
     // ─── Loop de DISPLAY (solo cuando el panel está abierto) ─────────────────────
     // Actualiza estado React (FPS, dropped frames, memoria) y dibuja el canvas.
-    // Al estar separado del loop de medición, el panel puede abrirse/cerrarse
-    // sin afectar al gobernador.
     useEffect(() => {
         if (!isOpen) {
             if (rafIdRef.current) {
@@ -136,19 +66,29 @@ export function PerformanceMonitor() {
             return
         }
 
-        lastFrameTimeRef.current = performance.now()
         lastUpdateRef.current = performance.now()
-        const recentDeltas: number[] = []
+        const frames = createFrameWindow()
+        const resetWindow = () => frames.reset()
+        document.addEventListener("visibilitychange", resetWindow)
+        window.addEventListener("blur", resetWindow)
+        window.addEventListener("focus", resetWindow)
 
         const loop = (now: number) => {
-            const delta = now - lastFrameTimeRef.current
-            lastFrameTimeRef.current = now
+            if (document.visibilityState !== "visible" || !document.hasFocus()) {
+                frames.reset()
+                rafIdRef.current = requestAnimationFrame(loop)
+                return
+            }
+            const sample = frames.sample(now)
+            if (!sample) {
+                rafIdRef.current = requestAnimationFrame(loop)
+                return
+            }
+            const { delta, fps: currentFps } = sample
 
-            // Ignorar spikes de cambio de pestaña (> 200 ms)
-            if (delta > 0 && delta < 200) {
-                recentDeltas.push(delta)
-                if (recentDeltas.length > 120) recentDeltas.shift()
-
+            // En primer plano un delta largo es un bloqueo, no una muestra descartable.
+            if (delta > 0) {
+                longestFrameRef.current = Math.max(longestFrameRef.current, delta)
                 totalFramesRef.current += 1
 
                 const targetHz = hardwareSpecs?.screenRefreshRate || 60
@@ -162,12 +102,6 @@ export function PerformanceMonitor() {
                 }
             }
 
-            // FPS rolling 1 s
-            fpsTicksRef.current.push(now)
-            const oneSecondAgo = now - 1000
-            fpsTicksRef.current = fpsTicksRef.current.filter(t => t > oneSecondAgo)
-            const currentFps = fpsTicksRef.current.length
-
             // Throttle React state updates a 400 ms para no saturar el Virtual DOM
             if (now - lastUpdateRef.current >= 400) {
                 lastUpdateRef.current = now
@@ -175,6 +109,7 @@ export function PerformanceMonitor() {
                 setDroppedFrames(droppedFramesRef.current)
                 setTotalFrames(totalFramesRef.current)
                 setSmoothFrames(smoothFramesRef.current)
+                setLongestFrame(Math.round(longestFrameRef.current))
 
                 const perfMemory = (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit?: number; totalJSHeapSize?: number } }).memory
                 if (perfMemory) {
@@ -218,7 +153,7 @@ export function PerformanceMonitor() {
                     const targetHz = hardwareSpecs?.screenRefreshRate || 60
                     const healthyThreshold = targetHz >= 120 ? 80 : 50
                     const warnThreshold = targetHz >= 120 ? 55 : 35
-                    ctx.strokeStyle = currentFps >= healthyThreshold ? "#10b981" : currentFps >= warnThreshold ? "#f59e0b" : "#ef4444"
+                    ctx.strokeStyle = currentFps >= healthyThreshold ? "#22c55e" : currentFps >= warnThreshold ? "#f59e0b" : "#ef4444"
                     ctx.lineWidth = 1.5
                     ctx.beginPath()
 
@@ -231,7 +166,7 @@ export function PerformanceMonitor() {
                     ctx.stroke()
 
                     ctx.fillStyle = currentFps >= healthyThreshold
-                        ? "rgba(16, 185, 129, 0.08)"
+                        ? "rgba(34, 197, 94, 0.08)"
                         : currentFps >= warnThreshold
                             ? "rgba(245, 158, 11, 0.08)"
                             : "rgba(239, 68, 68, 0.08)"
@@ -254,6 +189,9 @@ export function PerformanceMonitor() {
         rafIdRef.current = requestAnimationFrame(loop)
 
         return () => {
+            document.removeEventListener("visibilitychange", resetWindow)
+            window.removeEventListener("blur", resetWindow)
+            window.removeEventListener("focus", resetWindow)
             if (rafIdRef.current) {
                 cancelAnimationFrame(rafIdRef.current)
                 rafIdRef.current = null
@@ -265,9 +203,11 @@ export function PerformanceMonitor() {
         totalFramesRef.current = 0
         smoothFramesRef.current = 0
         droppedFramesRef.current = 0
+        longestFrameRef.current = 0
         setDroppedFrames(0)
         setTotalFrames(0)
         setSmoothFrames(0)
+        setLongestFrame(0)
         fpsHistoryRef.current = []
         setAutoThrottleActive(false)
     }
@@ -307,7 +247,7 @@ export function PerformanceMonitor() {
         if (droppedFrames > 40 && smoothnessIndex < 75) {
             tips.push({
                 id: "stuttering",
-                text: "Micro-tirones detectados: El movimiento del ratón en fondos difuminados dinámicos (DynamicBackdrop) puede estar sobrecargando la GPU.",
+                text: "Se detectaron cuadros lentos. Un perfil de rendimiento permite identificar si el coste está en JavaScript, layout o pintura.",
                 level: "warning"
             })
         }
@@ -352,7 +292,7 @@ export function PerformanceMonitor() {
                         <div className="flex items-center gap-1.5">
                             <button
                                 onClick={handleClearStats}
-                                className="p-1 rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
+                                className="p-1 rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                                 aria-label="Reiniciar estadísticas"
                                 title="Reiniciar estadísticas"
                             >
@@ -360,7 +300,7 @@ export function PerformanceMonitor() {
                             </button>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1 rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
+                                className="p-1 rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
                                 aria-label="Cerrar diagnóstico de rendimiento"
                                 title="Cerrar diagnóstico"
                             >
@@ -383,7 +323,7 @@ export function PerformanceMonitor() {
                                     THROTTLED
                                 </span>
                             )}
-                            <span className="text-caption font-black uppercase px-2 py-0.5 rounded bg-surface-container-high text-brand-accent border border-outline-variant/40">
+                            <span className="text-caption font-black uppercase px-2 py-0.5 rounded bg-surface-container-high text-brand-accent-readable border border-outline-variant/40">
                                 {getEffectiveTier() === "high" ? "TIER 1 (ULTRA)" : getEffectiveTier() === "balanced" ? "TIER 2 (BALANCED)" : "TIER 3 (ECO)"}
                             </span>
                         </div>
@@ -415,10 +355,11 @@ export function PerformanceMonitor() {
 
                         {/* Dropped Frames */}
                         <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
-                            <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60">Cuadros Perdidos</span>
+                            <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60">Cuadros lentos</span>
                             <span className="text-xl font-bold text-status-error mt-2 font-mono tabular-nums">
                                 {droppedFrames}
                             </span>
+                            <span className="text-caption text-on-surface-variant/60 font-mono tabular-nums">Máximo: {longestFrame} ms</span>
                         </div>
 
                         {/* JS Memory */}
@@ -430,7 +371,7 @@ export function PerformanceMonitor() {
                                     <span className="text-caption font-bold text-on-surface-variant/50">/{memory.total}MB</span>
                                 </div>
                             ) : (
-                                <span className="text-xs text-on-surface-variant/50 font-bold mt-2">N/A (No Chrome)</span>
+                                <span className="text-xs text-on-surface-variant/75 font-bold mt-2">N/A (No Chrome)</span>
                             )}
                         </div>
                     </div>
@@ -445,7 +386,7 @@ export function PerformanceMonitor() {
                     <div className="mt-4 p-3 bg-surface-container-low border border-outline-variant/30 rounded-xl flex items-center justify-between">
                         <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60 flex items-center gap-1.5">
                             <IconStatusCpu size={12} className="text-brand-accent" />
-                            Latencia Carga Ruta
+                            Navegación estimada
                         </span>
                         <span className="text-xs font-bold text-on-surface-variant/80 font-mono">
                             {routeLatency !== null ? `${routeLatency} ms` : "---"}

@@ -31,6 +31,12 @@ declare global {
         __TAURI__?: unknown;
         __TAURI_INTERNALS__?: unknown;
         __kamehouse_bg_audio?: HTMLAudioElement;
+        __kamehouse_bg_audio_outgoing?: HTMLAudioElement;
         __KAMEHOUSE_PORT__?: number | string;
+        /** Loader estático de index.html: texto de estado y progreso monótono (0..1). */
+        khLoader?: { set: (text?: string, progress?: number) => void };
+
+        requestIdleCallback?: (callback: (deadline: IdleDeadline) => void, options?: IdleRequestOptions) => number;
+        cancelIdleCallback?: (handle: number) => void;
     }
 }

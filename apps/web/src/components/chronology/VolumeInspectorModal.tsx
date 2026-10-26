@@ -1,34 +1,28 @@
-import React, { useState } from 'react';
-import { VolumeData, AspectRatioType, ChapterMilestone } from './types';
-import { PosterCard } from './PosterCard';
+import React, { useState, useRef, useEffect } from 'react';
+import type { VolumeData, ChapterMilestone } from './types';
 import { EpisodeThumbnailImg } from './EpisodeThumbnailImg';
-import { NarrativeInspector } from './NarrativeInspector';
-import { sounds } from './utils/audio';
+import { eraTextColor } from './utils/eraColor';
+import { formatSecondsToTime } from './data/spansToVolumes';
 import { Modal } from '@/components/ui/modal';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Button, IconButton } from '@/components/ui/button';
+import { useReducedMotion } from '@/components/ui/kinetics/hooks';
 import {
   IconUiClose,
-  IconUiRotateCcw,
-  IconStatusSparkles,
-  IconNavigationLayers,
-  IconUiBookOpen,
   IconMediaPlay,
+  IconNavigationChevronLeft,
+  IconNavigationChevronRight,
 } from '@/components/ui/icons';
 
 interface VolumeInspectorModalProps {
   volume: VolumeData;
   isOpen: boolean;
   onClose: () => void;
-  aspectRatio: AspectRatioType;
-  onChangeAspectRatio: (ratio: AspectRatioType) => void;
-  isFlipped: boolean;
-  onToggleFlip: () => void;
+  /** Se llama cuando el Modal terminó su salida (Radix lo desmonta): el llamador puede soltar el lapso. */
+  onCloseAutoFocus?: (event: Event) => void;
   onPrevVolume?: () => void;
   onNextVolume?: () => void;
   hasPrev?: boolean;
   hasNext?: boolean;
-  isRead?: boolean;
-  onToggleRead?: () => void;
   onPlayVolume?: (volume: VolumeData, episodeNum?: number) => void;
 }
 
@@ -36,26 +30,73 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
   volume,
   isOpen,
   onClose,
-  aspectRatio,
-  onChangeAspectRatio: _onChangeAspectRatio,
-  isFlipped,
-  onToggleFlip,
+  onCloseAutoFocus,
   onPrevVolume,
   onNextVolume,
   hasPrev = false,
   hasNext = false,
-  isRead = false,
-  onToggleRead,
   onPlayVolume,
 }) => {
-  const [modalViewMode, setModalViewMode] = useState<'episodes-deck' | 'vertical-poster'>('episodes-deck');
   const episodes: ChapterMilestone[] = volume.detailedStory?.episodeMilestones || [];
   const [selectedEpIdx, setSelectedEpIdx] = useState(0);
+  const [selectionContext, setSelectionContext] = useState({
+    volumeId: volume.id,
+    isOpen,
+  });
+
+  // Ajustar antes del commit: un lapso nuevo no hereda el hito del anterior.
+  if (selectionContext.volumeId !== volume.id || selectionContext.isOpen !== isOpen) {
+    setSelectionContext({ volumeId: volume.id, isOpen });
+    if (isOpen) setSelectedEpIdx(0);
+  }
+  const reduceMotion = useReducedMotion();
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Auto-scroll del filmstrip cuando cambia el episodio activo
+  useEffect(() => {
+    if (!isOpen) return;
+    const activeTarget = itemRefs.current[selectedEpIdx];
+    if (activeTarget && scrollContainerRef.current) {
+      activeTarget.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [selectedEpIdx, isOpen, reduceMotion]);
+
+  // Navegación con teclado (flechas ← y →)
+  useEffect(() => {
+    if (!isOpen || episodes.length <= 1) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setSelectedEpIdx((prev) => Math.min(episodes.length - 1, prev + 1));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setSelectedEpIdx((prev) => Math.max(0, prev - 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, episodes.length]);
+
   const eraColor = volume.coverArt.accentHex;
 
   const handleClose = () => {
-    sounds.playSelect();
     onClose();
+  };
+
+  const scrollRail = (offset: number) => {
+    scrollContainerRef.current?.scrollBy({
+      left: offset,
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    });
   };
 
   const currentEp = episodes[selectedEpIdx] || {
@@ -65,8 +106,10 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
     sceneHighlight: volume.narrative.climax.decisiveBattle,
     accentColor: volume.coverArt.accentHex,
     iconEmoji: '⚡',
-    characterFocus: volume.characters.join(', '),
+    characterFocus: volume.characters?.join(', ') || '',
   };
+
+  const hasMany = episodes.length > 4;
 
   return (
     <Modal
@@ -74,345 +117,345 @@ export const VolumeInspectorModal: React.FC<VolumeInspectorModalProps> = ({
       onOpenChange={(open) => {
         if (!open) handleClose();
       }}
-      title={<span className="sr-only">Inspección del tomo {volume.volumeNumber}: {volume.title}</span>}
+      onCloseAutoFocus={onCloseAutoFocus}
+      title={<span className="sr-only">Inspector del lapso {volume.volumeNumber}: {volume.title}</span>}
       hideCloseButton
-      contentClass="max-w-6xl p-4 sm:p-6 max-h-[95vh] overflow-y-auto"
+      contentClass="max-w-6xl p-4 sm:p-6 max-h-[92dvh] overflow-y-auto"
     >
       <div
         className="flex flex-col contents"
-        style={{ '--poster-accent': eraColor } as React.CSSProperties}
+        style={{ '--poster-accent': eraColor, '--poster-text': eraTextColor(eraColor) } as React.CSSProperties}
       >
-            {/* Modal Top Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-white/10 shrink-0">
-              <div className="flex items-center gap-3">
-                <span
-                  className="w-3.5 h-3.5 rounded-full shrink-0 shadow-elevation-1"
-                  style={{ backgroundColor: 'var(--poster-accent)' }}
-                />
+        {/* Modal Top Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 shrink-0 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_12px_var(--poster-accent)]"
+              style={{ backgroundColor: 'var(--poster-accent)' }}
+            />
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-display text-2xl sm:text-3xl tracking-wider text-white">
+                <span className="font-display font-bold text-lg sm:text-xl leading-snug text-on-surface text-balance">
                   {volume.volumeNumber}: {volume.title}
                 </span>
-                <span className="text-2xs font-mono px-2 py-0.5 rounded bg-surface-container-low text-on-surface-variant border border-white/10">
+                <span className="text-2xs px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant border border-white/10 font-mono tabular-nums">
                   {volume.officialYear} · {volume.episodesRange}
                 </span>
               </div>
-              <span className="text-xs text-on-surface-variant font-mono">
-                {volume.sagaLabel} · {volume.coverArt.dominantToneDescription}
+              <span className="text-xs text-label-2">
+                {volume.sagaLabel} · {volume.seriesTag}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Play CTA Button */}
-            {onPlayVolume && (
-              <button
-                type="button"
-                onClick={() => {
-                  sounds.playSelect();
-                  const epNum = currentEp.absoluteEpisode || Number(currentEp.episode.match(/\d+/)?.[0]) || volume.recommendedStartEpisode || volume.startEpisode;
-                  onPlayVolume(volume, epNum);
-                }}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 text-black font-display font-black uppercase text-xs flex items-center gap-1.5 cursor-pointer shadow-brand-primary active:scale-95 transition-[transform,filter] duration-fast ease-out-strong"
-              >
-                <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
-                <span>Reproducir lapso</span>
-              </button>
+          <div className="flex items-center gap-2 flex-wrap self-start sm:self-center">
+            {/* Navegación rápida entre lapsos */}
+            {(onPrevVolume || onNextVolume) && (
+              <div className="inline-flex items-center rounded-full border border-white/10 bg-surface-container-low p-0.5">
+                <button
+                  type="button"
+                  onClick={onPrevVolume}
+                  disabled={!hasPrev}
+                  aria-label="Lapso anterior"
+                  title="Lapso anterior"
+                  className="px-2.5 py-1 rounded-full text-xs font-medium text-label-2 hover:text-on-surface disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                >
+                  ← Ant.
+                </button>
+                <span className="text-white/20 text-xs select-none">|</span>
+                <button
+                  type="button"
+                  onClick={onNextVolume}
+                  disabled={!hasNext}
+                  aria-label="Lapso siguiente"
+                  title="Lapso siguiente"
+                  className="px-2.5 py-1 rounded-full text-xs font-medium text-label-2 hover:text-on-surface disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                >
+                  Sig. →
+                </button>
+              </div>
             )}
 
-            {/* View Mode Toggle: Tarjetas de Episodios vs. Portada Vertical (Canónico SegmentedControl §5.3) */}
-            <SegmentedControl<'episodes-deck' | 'vertical-poster'>
-              layoutId="volume-inspector-modal-view-mode"
-              surface="inset"
-              tone="accent"
-              value={modalViewMode}
-              onChange={(mode) => {
-                sounds.playSelect();
-                setModalViewMode(mode);
-              }}
-              aria-label="Modo de visualización del tomo"
-              options={[
-                {
-                  value: 'episodes-deck',
-                  label: `Tarjetas Agrupadas (${episodes.length})`,
-                  icon: <IconNavigationLayers className="w-3.5 h-3.5" />,
-                },
-                {
-                  value: 'vertical-poster',
-                  label: 'Tomo 3D',
-                  icon: <IconUiBookOpen className="w-3.5 h-3.5" />,
-                },
-              ]}
-            />
+            {/* Play Lapso Button */}
+            {onPlayVolume && (
+              <Button
+                intent="secondary"
+                size="sm"
+                onClick={() => {
+                  const epNum =
+                    volume.recommendedStartEpisode ||
+                    volume.startEpisode ||
+                    currentEp.absoluteEpisode ||
+                    Number(currentEp.episode.match(/\d+/)?.[0]);
+                  onPlayVolume(volume, epNum);
+                }}
+                leftIcon={<IconMediaPlay className="w-3.5 h-3.5 fill-current" />}
+              >
+                Reproducir lapso
+              </Button>
+            )}
 
             {/* Close Button */}
-            <button
+            <IconButton
               id="btn-close-volume-modal"
+              intent="secondary"
               onClick={handleClose}
-              aria-label="Cerrar inspección del tomo"
-              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-surface-container-low border border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-white flex items-center justify-center transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
-              title="Cerrar Inspección"
-            >
-              <IconUiClose className="w-5 h-5" />
-            </button>
+              aria-label="Cerrar inspector del lapso"
+              title="Cerrar"
+              icon={<IconUiClose className="w-5 h-5" />}
+            />
           </div>
         </div>
 
         {/* ============================================================ */}
-        {/* VIEW 1: BARAJA DE EPISODIOS AGRUPADOS (Grouped Cards View)   */}
+        {/* ESCENARIO PANORÁMICO + FILMSTRIP CON AUTO-SCROLL              */}
         {/* ============================================================ */}
-        {modalViewMode === 'episodes-deck' && (
-          <div className="flex flex-col gap-6">
-            {/* Active Selected Episode Cinema Card */}
-            <div
-              className="w-full bg-surface-container/90 border border-white/15 rounded-2xl p-5 sm:p-6 shadow-elevation-3 relative overflow-hidden"
-              style={{
-                background: `linear-gradient(135deg, var(--md-sys-color-surface-container-lowest) 0%, var(--md-sys-color-surface-container-low) 50%, color-mix(in srgb, var(--poster-accent) 13%, transparent) 100%)`,
-                borderColor: 'color-mix(in srgb, var(--poster-accent) 25%, transparent)',
-              }}
-            >
-              {/* Retro scanlines */}
-              <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,0,0,0.2)_3px)] pointer-events-none" />
-
-              <div className="relative z-10 flex flex-col md:flex-row items-start justify-between gap-6">
-                {/* Left: Frame Art Miniature Banner */}
-                <div
-                  className="w-full md:w-80 h-44 sm:h-48 rounded-xl border border-white/15 relative overflow-hidden flex flex-col justify-between p-3.5 shadow-elevation-2 shrink-0"
-                  style={{
-                    background: `linear-gradient(145deg, var(--md-sys-color-surface-container-lowest) 0%, color-mix(in srgb, var(--poster-accent) 19%, transparent) 100%)`,
-                  }}
-                >
-                  <EpisodeThumbnailImg
-                    volume={volume}
-                    milestone={currentEp}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/45 pointer-events-none" />
-                  <div className="relative z-10 flex items-center justify-between">
-                    <span
-                      className="px-2 py-0.5 rounded text-xs font-mono font-bold tracking-wider uppercase border shadow-elevation-1"
-                      style={{
-                        backgroundColor: 'color-mix(in srgb, var(--poster-accent) 19%, transparent)',
-                        borderColor: 'color-mix(in srgb, var(--poster-accent) 44%, transparent)',
-                        color: 'var(--poster-accent)',
-                      }}
-                    >
-                      {currentEp.episode}
+        <div className="space-y-5 pt-3">
+          {/* 1. Escenario Panorámico cinematográfico */}
+          <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-surface-container-lowest grid grid-cols-1 lg:grid-cols-12 min-h-[300px]">
+            {/* Columna Izquierda: Ficha rica, Hito, Sinopsis, Impacto y CTA */}
+            <div className="lg:col-span-7 p-4 sm:p-6 flex flex-col justify-between z-10 relative space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-accent/15 border border-brand-accent/35 text-xs font-mono font-semibold text-brand-accent-readable">
+                    <span>Hito {selectedEpIdx + 1} de {episodes.length}</span>
+                    <span>·</span>
+                    <span>{currentEp.episode}</span>
+                    {currentEp.startSec != null && (
+                      <>
+                        <span>·</span>
+                        <span className="tabular-nums">Min. {formatSecondsToTime(currentEp.startSec)}</span>
+                      </>
+                    )}
+                  </div>
+                  {currentEp.characterFocus && (
+                    <span className="text-xs text-label-2 font-medium line-clamp-1 max-w-[220px]">
+                      {currentEp.characterFocus}
                     </span>
-                    <span className="text-xl drop-shadow">{currentEp.iconEmoji || '⚡'}</span>
-                  </div>
-
-                  <div className="relative z-10 bg-surface-container-high/90 p-2 rounded-lg border border-white/10">
-                    <span className="text-3xs font-mono text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
-                      <IconStatusSparkles className="w-3 h-3 text-brand-accent" />
-                      <span>{currentEp.characterFocus}</span>
-                    </span>
-                    <p className="text-xs font-bold text-white mt-0.5 line-clamp-2">
-                      {currentEp.sceneHighlight}
-                    </p>
-                  </div>
-
-                  <div className="relative z-10 flex items-center justify-between text-3xs font-mono text-on-surface-variant border-t border-white/10 pt-1">
-                    <span>Frame televisivo canónico</span>
-                    <span className="text-brand-accent font-bold">{selectedEpIdx + 1} de {episodes.length}</span>
-                  </div>
+                  )}
                 </div>
 
-                {/* Right: Detailed Synopsis & Narrative Impact */}
-                <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-0.5 rounded text-2xs font-mono bg-surface-container-low text-on-surface-variant border border-white/10">
-                        {volume.seriesTag}
+                <h3 className="font-display font-bold text-2xl sm:text-3xl text-on-surface leading-tight text-balance">
+                  {currentEp.title}
+                </h3>
+
+                <p className="text-sm text-on-surface-variant leading-relaxed text-pretty line-clamp-3 sm:line-clamp-4">
+                  {currentEp.synopsis}
+                </p>
+
+                {/* Caja de impacto narrativo (del hito o del lapso) */}
+                {(currentEp.sceneHighlight || volume.narrative?.climax?.iconicMoment || volume.threatLevel) && (
+                  <div className="p-3 rounded-xl bg-surface-container-low/70 border border-white/5 flex items-start gap-2.5">
+                    <span className="text-brand-accent text-sm shrink-0 mt-0.5">⚡</span>
+                    <div className="space-y-0.5 text-xs">
+                      <span className="font-mono font-bold text-brand-accent-readable uppercase tracking-wider block">
+                        Impacto en la trama
                       </span>
-                      <span className="px-2 py-0.5 rounded text-2xs font-mono text-brand-accent bg-brand-accent/10 border border-brand-accent/20">
-                        {volume.officialYear}
-                      </span>
-                    </div>
-
-                    <h3 className="font-display text-3xl sm:text-4xl text-white tracking-wide leading-tight text-balance">
-                      {currentEp.title}
-                    </h3>
-
-                    <p className="text-sm sm:text-base text-on-surface mt-2.5 leading-relaxed font-sans">
-                      {currentEp.synopsis}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-on-surface-variant">
-                    <div className="flex items-center gap-2">
-                      <span className="text-on-surface-variant/70">Personajes destacados:</span>
-                      <span className="text-white font-semibold">{currentEp.characterFocus}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-on-surface-variant/70">Hito visual:</span>
-                      <span className="text-brand-accent/80">{currentEp.sceneHighlight}</span>
+                      <p className="text-on-surface/90 leading-relaxed line-clamp-2">
+                        {currentEp.sceneHighlight || volume.narrative?.climax?.iconicMoment || volume.threatLevel}
+                      </p>
                     </div>
                   </div>
+                )}
+              </div>
 
+              {/* Acciones principales: Play + Navegación entre hitos + Chips */}
+              <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
                   {onPlayVolume && (
-                    <div className="pt-3">
+                    <Button
+                      intent="primary"
+                      onClick={() => {
+                        const epNum =
+                          currentEp.absoluteEpisode ||
+                          Number(currentEp.episode.match(/\d+/)?.[0]) ||
+                          volume.recommendedStartEpisode ||
+                          volume.startEpisode;
+                        onPlayVolume(volume, epNum);
+                      }}
+                      leftIcon={<IconMediaPlay className="w-3.5 h-3.5 fill-current" />}
+                    >
+                      Reproducir {currentEp.episode}
+                    </Button>
+                  )}
+
+                  {episodes.length > 1 && (
+                    <div className="inline-flex items-center rounded-full border border-white/10 bg-surface-container-low p-0.5">
                       <button
                         type="button"
-                        onClick={() => {
-                          sounds.playSelect();
-                          const epNum = currentEp.absoluteEpisode || Number(currentEp.episode.match(/\d+/)?.[0]) || volume.startEpisode || 1;
-                          onPlayVolume(volume, epNum);
-                        }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-accent text-black text-xs font-mono font-bold shadow-brand-primary active:scale-95 transition-[transform,filter] duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 cursor-pointer"
+                        onClick={() => setSelectedEpIdx((prev) => Math.max(0, prev - 1))}
+                        disabled={selectedEpIdx === 0}
+                        aria-label="Hito anterior"
+                        title="Hito anterior (←)"
+                        className="px-2.5 py-1.5 rounded-full text-xs font-medium text-label-2 hover:text-on-surface disabled:opacity-30 disabled:pointer-events-none transition-colors"
                       >
-                        <IconMediaPlay className="w-3.5 h-3.5 fill-current" />
-                        <span>Reproducir {currentEp.episode}</span>
+                        ← Ant.
+                      </button>
+                      <span className="text-white/20 text-xs select-none">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEpIdx((prev) => Math.min(episodes.length - 1, prev + 1))}
+                        disabled={selectedEpIdx === episodes.length - 1}
+                        aria-label="Siguiente hito"
+                        title="Siguiente hito (→)"
+                        className="px-2.5 py-1.5 rounded-full text-xs font-medium text-label-2 hover:text-on-surface disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                      >
+                        Sig. →
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {volume.characters && volume.characters.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {volume.characters.slice(0, 4).map((c) => (
+                      <span
+                        key={c}
+                        className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-2xs text-label-2"
+                      >
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Columna Derecha: Fotograma 16:9 panorámico integrado */}
+            <div className="lg:col-span-5 relative min-h-[220px] lg:min-h-full aspect-video lg:aspect-auto overflow-hidden bg-surface-container-lowest">
+              <EpisodeThumbnailImg
+                key={currentEp.episode}
+                volume={volume}
+                milestone={currentEp}
+                eager
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Fundido suave lateral y vertical */}
+              <div className="hidden lg:block absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-surface-container-lowest to-transparent pointer-events-none" />
+              <div className="lg:hidden absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-surface-container-lowest to-transparent pointer-events-none" />
+
+              <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/75 border border-white/15 text-2xs font-mono tabular-nums text-neutral-200">
+                {currentEp.episode}
+                {currentEp.startSec != null && ` · Min. ${formatSecondsToTime(currentEp.startSec)}`}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Filmstrip con Riel de Tiempo y Desplazamiento Inteligente */}
+          {episodes.length > 0 && (
+            <section aria-label="Línea de momentos del lapso" className="space-y-2.5 pt-1">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold text-on-surface">Línea de momentos del lapso</h4>
+                  <span className="text-white/20 select-none">·</span>
+                  <span className="text-label-2">
+                    {hasMany ? 'Riel interactivo (se autocentra al avanzar)' : `${episodes.length} hitos clave`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-label-2 font-mono tabular-nums">
+                    Hito {selectedEpIdx + 1} de {episodes.length}
+                  </span>
+                  {hasMany && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => scrollRail(-260)}
+                        aria-label="Desplazar riel a la izquierda"
+                        className="w-6 h-6 rounded-lg border border-white/10 bg-surface-container-low hover:bg-surface-container-high flex items-center justify-center text-label-2 hover:text-on-surface transition-colors"
+                      >
+                        <IconNavigationChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollRail(260)}
+                        aria-label="Desplazar riel a la derecha"
+                        className="w-6 h-6 rounded-lg border border-white/10 bg-surface-container-low hover:bg-surface-container-high flex items-center justify-center text-label-2 hover:text-on-surface transition-colors"
+                      >
+                        <IconNavigationChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Bottom: Horizontal Grouped Cards Deck (Baraja de miniaturas para seleccionar) */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <IconNavigationLayers className="w-4 h-4 text-brand-accent" />
-                  <h4 className="text-xs sm:text-sm font-mono font-bold uppercase tracking-wider text-white">
-                    Baraja de Episodios del Lapso ({episodes.length} tarjetas agrupadas)
-                  </h4>
+              {/* Scrubber indicator bar */}
+              <div className="relative py-0.5">
+                <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full w-full origin-left bg-gradient-to-r from-brand-accent to-amber-400 transition-transform duration-base ease-smooth-out motion-reduce:transition-none"
+                    style={{
+                      transform: `scaleX(${selectedEpIdx / Math.max(1, episodes.length - 1)})`,
+                    }}
+                  />
                 </div>
-                <span className="text-xs text-on-surface-variant font-mono hidden sm:inline">
-                  Selecciona una tarjeta para proyectar su contenido
-                </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                {episodes.map((ep, idx) => {
-                  const isSelected = idx === selectedEpIdx;
-                  return (
-                    <div
-                      key={ep.episode}
-                      role="button"
-                      tabIndex={0}
-                      aria-pressed={isSelected}
-                      aria-label={`Ver episodio ${ep.episode}: ${ep.title}`}
-                      onClick={() => {
-                        sounds.playSelect();
-                        setSelectedEpIdx(idx);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          sounds.playSelect();
-                          setSelectedEpIdx(idx);
-                        }
-                      }}
-                      className={`relative rounded-xl p-3 border transition-[transform,border-color,background-color,box-shadow] duration-fast ease-smooth-out active:scale-95 cursor-pointer flex flex-col justify-between min-h-[120px] shadow-elevation-1 group/epcard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent ${
-                        isSelected
-                          ? 'bg-surface-container border-brand-accent transform -translate-y-1'
-                          : 'bg-surface-container-low/80 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-low border-white/10 [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/30'
-                      }`}
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-3xs font-mono font-bold ${
-                            isSelected ? 'bg-brand-accent text-on-primary' : 'bg-surface-container-low text-on-surface'
-                          }`}
-                        >
-                          {ep.episode}
-                        </span>
-                        <span className="text-sm">{ep.iconEmoji || '⚡'}</span>
-                      </div>
-
-                      {/* Title */}
-                      <p className="text-xs font-bold text-white [@media(hover:hover)_and_(pointer:fine)]:group-hover/epcard:text-brand-accent/80 transition-colors line-clamp-2 leading-snug">
-                        {ep.title}
-                      </p>
-
-                      {/* Scene hint */}
-                      <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-4xs font-mono text-on-surface-variant">
-                        <span className="truncate max-w-[100px]">{ep.sceneHighlight}</span>
-                        {isSelected && (
-                          <span className="text-brand-accent font-bold">Activo</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================ */}
-        {/* VIEW 2: PORTADA VERTICAL TRADICIONAL (Classic Poster View)   */}
-        {/* ============================================================ */}
-        {modalViewMode === 'vertical-poster' && (
-          <div className="flex flex-col lg:flex-row items-start justify-center gap-8 flex-1">
-            {/* Left: Master Poster with 3D Flip */}
-            <div className="w-full lg:w-[380px] flex flex-col items-center shrink-0">
-              <div className="w-full flex items-center justify-between mb-2 px-1 text-xs font-mono">
-                <span className="text-on-surface-variant uppercase tracking-wider">
-                  Portada Vertical ({aspectRatio})
-                </span>
-                <button
-                  onClick={() => {
-                    sounds.playFlip();
-                    onToggleFlip();
-                  }}
-                  className="text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:text-brand-secondary underline flex items-center gap-1 cursor-pointer transition-[color,transform] duration-fast ease-smooth-out active:scale-95"
+              {/* Scroll container snap-x con auto-centrado */}
+              <div className="relative">
+                <div
+                  ref={scrollContainerRef}
+                  className="flex gap-3 overflow-x-auto scroll-smooth py-1 no-scrollbar snap-x focus-visible:outline-none"
+                  tabIndex={0}
+                  aria-label="Lista deslizable de momentos del lapso"
                 >
-                  <IconUiRotateCcw className="w-3.5 h-3.5" />
-                  <span>{isFlipped ? 'Ver Anverso' : 'Ver Dorso de Lore'}</span>
-                </button>
+                  {episodes.map((ep, idx) => {
+                    const isSelected = idx === selectedEpIdx;
+                    const widthClass = hasMany
+                      ? 'w-56 sm:w-64 shrink-0 snap-center'
+                      : 'flex-1 min-w-[200px]';
+                    return (
+                      <button
+                        key={ep.episode}
+                        ref={(el) => {
+                          itemRefs.current[idx] = el;
+                        }}
+                        type="button"
+                        aria-pressed={isSelected}
+                        aria-label={`Ver episodio ${ep.episode}: ${ep.title}`}
+                        onClick={() => setSelectedEpIdx(idx)}
+                        className={`group rounded-2xl p-2.5 text-left transition-[background-color,border-color,box-shadow] duration-fast flex flex-col justify-between ${widthClass} border ${
+                          isSelected
+                            ? 'bg-brand-accent/15 border-brand-accent shadow-[0_0_24px_-6px_color-mix(in_srgb,var(--poster-accent)_35%,transparent)]'
+                            : 'bg-surface-container-low/60 border-white/10 hover:bg-surface-container-high/70 hover:border-white/20'
+                        } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent`}
+                      >
+                        <div>
+                          <div
+                            className={`relative aspect-video w-full rounded-xl overflow-hidden mb-2.5 bg-surface-container-lowest border ${
+                              isSelected ? 'border-brand-accent/50' : 'border-white/10'
+                            }`}
+                          >
+                            <EpisodeThumbnailImg volume={volume} milestone={ep} />
+                            <span
+                              className={`absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 text-2xs font-mono font-bold ${
+                                isSelected ? 'text-brand-accent-readable' : 'text-neutral-200'
+                              }`}
+                            >
+                              {idx + 1}. {ep.episode}
+                            </span>
+                            {ep.startSec != null && (
+                              <span className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/75 text-2xs font-mono tabular-nums text-neutral-300">
+                                {formatSecondsToTime(ep.startSec)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-sm font-semibold text-on-surface line-clamp-1">
+                            {ep.title}
+                          </p>
+                          <p className="text-2xs text-label-2 line-clamp-1 mt-0.5">
+                            {ep.characterFocus || ep.synopsis}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-
-              <PosterCard
-                volume={volume}
-                aspectRatio={aspectRatio}
-                isFlipped={isFlipped}
-                onToggleFlip={onToggleFlip}
-                isSelected={true}
-                size="hero"
-                isRead={isRead}
-                onToggleRead={onToggleRead}
-              />
-
-              {/* Concept Info Box */}
-              <div className="w-full mt-4 bg-surface-container/60 border border-white/10 rounded-xl p-3 text-xs font-mono space-y-1 text-on-surface-variant">
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant/70">Cabecera Oficial:</span>
-                  <span className="text-white font-semibold">
-                    {volume.volumeNumber} · {volume.episodesRange}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant/70">Calendario Oficial:</span>
-                  <span className="text-brand-accent font-semibold">{volume.officialYear}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant/70">Filtro Cromático:</span>
-                  <span className="text-on-surface-variant/80 truncate max-w-[200px] text-right">
-                    {volume.coverArt.dominantToneDescription}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: 3 Narrative Levels */}
-            <div className="flex-1 w-full">
-              <NarrativeInspector
-                volume={volume}
-                isPosterFlipped={isFlipped}
-                onToggleFlip={onToggleFlip}
-                onPrevVolume={onPrevVolume || (() => {})}
-                onNextVolume={onNextVolume || (() => {})}
-                hasPrev={hasPrev}
-                hasNext={hasNext}
-              />
-            </div>
-          </div>
-        )}
+            </section>
+          )}
+        </div>
       </div>
     </Modal>
   );

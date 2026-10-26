@@ -11,7 +11,7 @@ class FakeIO {
 }
 vi.stubGlobal("IntersectionObserver", FakeIO)
 
-import { observeReveal, readingOrder, revealConfigForTier, type RevealConfig } from "./scroll-reveal"
+import { observeReveal, observeRevealBatched, readingOrder, revealConfigForTier, type RevealConfig } from "./scroll-reveal"
 import { scrollProgress } from "./scroll-progress"
 
 const FULL = revealConfigForTier("full") as RevealConfig
@@ -71,6 +71,22 @@ describe("scroll reveal", () => {
         expect(many[19].style.transition).toContain(` ${FULL.maxDelay}ms`)
     })
 
+    it("un contenedor altísimo se revela con un tramo visible, aunque no llegue al 8 % de su alto", () => {
+        const tall = el(1200)
+        observeReveal(tall, FULL)
+        const entry = (ratio: number, visible: number) => ({
+            target: tall, isIntersecting: true, boundingClientRect: tall.getBoundingClientRect(),
+            intersectionRatio: ratio, intersectionRect: { height: visible } as DOMRectReadOnly,
+        })
+        // Asoma apenas (ratio 0,0001, 2 px): todavía no.
+        ioCallback?.([entry(0.0001, 2)])
+        expect(tall.style.opacity).toBe("0")
+        // Un tramo de 90 px de un contenedor de 18 000 px (0,5 %): ya se revela.
+        ioCallback?.([entry(0.005, 90)])
+        expect(tall.style.opacity).toBe("")
+        expect(observed.has(tall)).toBe(false)
+    })
+
     it("la baja restaura el elemento", () => {
         const e = el(2000)
         const release = observeReveal(e, FULL)
@@ -124,5 +140,62 @@ describe("scroll reveal con clave", () => {
         const remount = el(1500)
         observeReveal(remount, FULL, "ep:1:1")
         expect(remount.style.opacity).toBe("")
+    })
+})
+
+describe("registro por lotes (useRevealRef)", () => {
+    beforeEach(() => {
+        Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 })
+        Object.defineProperty(window, "innerWidth", { configurable: true, value: 1200 })
+        document.body.innerHTML = ""
+        observed.clear()
+    })
+
+    it("resuelve el registro después del commit, con el mismo resultado que el registro directo", async () => {
+        const visible = el(100)
+        const below = el(1500)
+        observeRevealBatched(visible, FULL)
+        observeRevealBatched(below, FULL)
+        // Antes del microtask no se tocó nada (el commit no paga lecturas ni escrituras).
+        expect(below.style.opacity).toBe("")
+        await Promise.resolve()
+        expect(visible.style.opacity).toBe("")
+        expect(observed.has(visible)).toBe(false)
+        expect(below.style.opacity).toBe("0")
+        expect(observed.has(below)).toBe(true)
+    })
+
+    it("lee todas las posiciones antes de escribir estilos", async () => {
+        const els = [el(1200), el(1300), el(1400)]
+        const log: string[] = []
+        for (const e of els) {
+            const rectFn = e.getBoundingClientRect
+            e.getBoundingClientRect = () => { log.push("lee"); return rectFn.call(e) }
+            const style = e.style
+            let opacity = ""
+            Object.defineProperty(style, "opacity", { configurable: true, get: () => opacity, set: (v: string) => { log.push("escribe"); opacity = v } })
+        }
+        for (const e of els) observeRevealBatched(e, FULL)
+        await Promise.resolve()
+        expect(log).toEqual(["lee", "lee", "lee", "escribe", "escribe", "escribe"])
+    })
+
+    it("dar de baja antes del microtask evita el registro", async () => {
+        const below = el(1500)
+        const release = observeRevealBatched(below, FULL)
+        release()
+        await Promise.resolve()
+        expect(below.style.opacity).toBe("")
+        expect(observed.has(below)).toBe(false)
+    })
+
+    it("dar de baja después del registro limpia estilos y observador", async () => {
+        const below = el(1500)
+        const release = observeRevealBatched(below, FULL)
+        await Promise.resolve()
+        expect(below.style.opacity).toBe("0")
+        release()
+        expect(below.style.opacity).toBe("")
+        expect(observed.has(below)).toBe(false)
     })
 })

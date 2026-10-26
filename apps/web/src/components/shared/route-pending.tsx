@@ -5,11 +5,12 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
  * defaultPendingMs (800ms), por ejemplo con un chunk lento o el prefetch
  * bloqueante de la ficha de serie. Indicador neutro a propósito: un skeleton
  * con forma de grid no coincidiría con la ruta destino y, en las fichas,
- * se sumaría al skeleton propio de la vista.
+ * se sumaría al skeleton propio de la vista. `data-route-pending` (ver ROUTE_PENDING_ATTR)
+ * lo distingue de la página nueva en PageTransition.
  */
 export function RoutePending() {
     return (
-        <div role="status" aria-label="Cargando" className="min-h-[60vh] flex items-center justify-center animate-fade-in">
+        <div role="status" aria-label="Cargando" data-route-pending="" className="min-h-[60vh] flex items-center justify-center animate-fade-in">
             <LoadingSpinner iconClass="w-7 h-7 mr-0 text-on-surface-variant/60" />
         </div>
     )

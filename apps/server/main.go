@@ -107,6 +107,13 @@ func run(ctx context.Context) error {
 		app.Config.Server.CorsOrigins = append(app.Config.Server.CorsOrigins, fmt.Sprintf("http://127.0.0.1:%d", bindPort))
 	}
 
+	if bindHost == "0.0.0.0" || os.Getenv("KAMEHOUSE_ALLOW_LAN") == "1" || strings.EqualFold(os.Getenv("KAMEHOUSE_ALLOW_LAN"), "true") {
+		for _, ip := range util.GetLocalIPv4Addresses() {
+			origin := fmt.Sprintf("http://%s:%d", ip, bindPort)
+			app.Config.Server.CorsOrigins = append(app.Config.Server.CorsOrigins, origin)
+		}
+	}
+
 	// Initialize routes AFTER CORS origins have been resolved and finalized!
 	handlers.InitRoutes(app, e)
 	addr := fmt.Sprintf("%s:%d", bindHost, bindPort)

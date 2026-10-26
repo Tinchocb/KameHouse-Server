@@ -106,22 +106,3 @@ type MovieBelongsToCollection struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
-
-// TMDBImage represents a backdrop, poster, or logo from TMDb.
-type TMDBImage struct {
-	AspectRatio float64 `json:"aspect_ratio"`
-	FilePath    string  `json:"file_path"`
-	Height      int     `json:"height"`
-	ISO6391     *string `json:"iso_639_1"`
-	VoteAverage float64 `json:"vote_average"`
-	VoteCount   int     `json:"vote_count"`
-	Width       int     `json:"width"`
-}
-
-// ImagesResponse is the response from /tv/{id}/images or /movie/{id}/images.
-type ImagesResponse struct {
-	ID        int         `json:"id"`
-	Backdrops []TMDBImage `json:"backdrops"`
-	Posters   []TMDBImage `json:"posters"`
-	Logos     []TMDBImage `json:"logos"`
-}

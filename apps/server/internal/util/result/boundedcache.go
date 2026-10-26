@@ -114,3 +114,12 @@ func (c *BoundedCache[K, V]) evictOldest() {
 		c.delete(item.key)
 	}
 }
+
+// Clear removes all items from the cache
+func (c *BoundedCache[K, V]) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items = make(map[K]*list.Element)
+	c.order.Init()
+}
+

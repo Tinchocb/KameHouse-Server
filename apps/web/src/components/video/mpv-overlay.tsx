@@ -1,6 +1,5 @@
-import React from "react"
 import { IconStatusMonitorPlay, IconMediaStop } from "@/components/ui/icons";
-import { PLAYER_PRIMARY_BTN } from "./player-theme"
+import { Button } from "@/components/ui/button"
 
 interface MpvOverlayProps {
     title?: string
@@ -19,23 +18,25 @@ export function MpvOverlay({ title, episodeLabel, onStop }: MpvOverlayProps) {
             <div className="max-w-md w-full mx-6 flex flex-col items-center gap-5 text-center">
                 <IconStatusMonitorPlay className="w-10 h-10 text-brand-accent" />
                 <div className="flex flex-col gap-1">
-                    <span className="text-2xs font-semibold uppercase tracking-widest text-brand-accent">
+                    <span className="text-xs font-medium text-brand-accent-readable">
                         Reproduciendo en mpv
                     </span>
-                    <h2 className="font-display text-white text-2xl font-medium tracking-tight truncate max-w-full">
-                        {episodeLabel || title || "Reproducción externa"}
+                    <h2 className="font-display text-label-1 text-2xl font-medium tracking-tight truncate max-w-full">
+                        {episodeLabel || title || "Reproducción en mpv"}
                     </h2>
-                    <p className="text-on-surface-variant text-sm">
+                    <p className="text-label-2 text-sm">
                         El progreso se sigue guardando automáticamente.
                     </p>
                 </div>
-                <button
+                <Button
+                    intent="primary"
+                    size="lg"
                     onClick={onStop}
-                    className={PLAYER_PRIMARY_BTN}
+                    leftIcon={<IconMediaStop className="w-4 h-4" />}
+                    iconSpacing="0.5rem"
                 >
-                    <IconMediaStop className="w-4 h-4" />
-                    Detener
-                </button>
+                    Detener y cerrar
+                </Button>
             </div>
         </div>
     )

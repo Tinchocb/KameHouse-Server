@@ -33,6 +33,23 @@ type Settings struct {
 
 	hwAccelMu sync.RWMutex
 	hwAccel   HwAccelProfile
+	// hwFailStreak counts hardware failures since the last clean ffmpeg exit.
+	hwFailStreak int
+}
+
+// RecordHwFailure adds one hardware failure to the streak and returns it.
+func (s *Settings) RecordHwFailure() int {
+	s.hwAccelMu.Lock()
+	defer s.hwAccelMu.Unlock()
+	s.hwFailStreak++
+	return s.hwFailStreak
+}
+
+// ResetHwFailures ends the streak: an ffmpeg process just exited cleanly.
+func (s *Settings) ResetHwFailures() {
+	s.hwAccelMu.Lock()
+	defer s.hwAccelMu.Unlock()
+	s.hwFailStreak = 0
 }
 
 // GetHwAccel returns the active hardware acceleration profile thread-safely

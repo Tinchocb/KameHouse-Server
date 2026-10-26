@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react"
 
-export interface ResponsiveBreakpoints {
+interface ResponsiveBreakpoints {
     isMobile: boolean
     isTablet: boolean
 }

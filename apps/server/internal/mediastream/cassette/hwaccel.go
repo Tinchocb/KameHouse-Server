@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"kamehouse/internal/mediastream/videofile"
-	"os/exec"
+	"kamehouse/internal/util"
+	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -83,12 +85,40 @@ func BuildHwAccelProfile(opts HwAccelOptions, ffmpegPath string, logger *zerolog
 
 // hardware probing
 
-// probeHardwareEncoder tests encoders and returns the best backend
+// probeCache guarda el resultado de la sonda por binario (ruta + tamaño + mtime). La sonda
+// lanza un proceso por candidato, y pretranscode llamaba a BuildHwAccelProfile("auto") en
+// cada trabajo: sin caché, cada episodio repetía la misma búsqueda de encoder.
+var (
+	probeMu    sync.Mutex
+	probeCache = map[string]string{}
+)
+
+// probeHardwareEncoder returns the best backend, probing once per ffmpeg binary.
+// A missing binary is not cached: the probe fails at once and a later install is
+// picked up without restarting.
 func probeHardwareEncoder(ffmpegPath string, logger *zerolog.Logger) string {
 	if ffmpegPath == "" {
 		ffmpegPath = "ffmpeg"
 	}
 
+	fi, err := os.Stat(ffmpegPath)
+	if err != nil {
+		return detectHardwareEncoder(ffmpegPath, logger)
+	}
+	key := fmt.Sprintf("%s|%d|%d", ffmpegPath, fi.Size(), fi.ModTime().UnixNano())
+
+	probeMu.Lock()
+	defer probeMu.Unlock()
+	if name, ok := probeCache[key]; ok {
+		return name
+	}
+	name := detectHardwareEncoder(ffmpegPath, logger)
+	probeCache[key] = name
+	return name
+}
+
+// detectHardwareEncoder runs the candidate encoders one by one (uncached).
+func detectHardwareEncoder(ffmpegPath string, logger *zerolog.Logger) string {
 	type candidate struct {
 		name    string
 		encoder string
@@ -126,7 +156,7 @@ func testEncoder(ffmpegPath, encoder string) bool {
 
 	// Generate 1 frame of black video and encode it with the candidate
 	// encoder. If this succeeds, the encoder is functional.
-	cmd := exec.CommandContext(ctx, ffmpegPath,
+	cmd := util.NewCmdCtx(ctx, ffmpegPath,
 		"-f", "lavfi",
 		"-i", "color=black:s=64x64:d=0.04",
 		"-c:v", encoder,
@@ -416,6 +446,17 @@ func qualityRateControl(encoder string, avg, max uint32) []string {
 		// videotoolbox and any unknown encoder: keep the classic ABR/VBV model.
 		return []string{"-b:v", fmt.Sprint(avg), "-maxrate", maxStr, "-bufsize", bufStr}
 	}
+}
+
+// maxHwFailureStreak is how many hardware failures in a row, with the encoder still
+// answering the probe, are tolerated before the GPU is dropped for the session.
+const maxHwFailureStreak = 2
+
+// hwFallbackNeeded decides whether a hardware failure turns the GPU off. The re-probe
+// (a 64x64 encode) only catches a dead encoder: a decode failure on one file passes it,
+// so a streak of failures still drops the GPU instead of retrying it forever.
+func hwFallbackNeeded(encoderAlive bool, streak int) bool {
+	return !encoderAlive || streak >= maxHwFailureStreak
 }
 
 // DetectHwAccelFailure checks for hardware acceleration failures in ffmpeg's stderr.

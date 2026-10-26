@@ -186,6 +186,9 @@ func (h *Handler) HandleGetDiagnosticsReport(c echo.Context) error {
 		_ = zipWriter.Close()
 	}()
 
+	// Si el cliente corta la descarga, c.Stream deja de leer pero no cierra el lector: sin esto
+	// la goroutine del zip quedaria bloqueada en pw.Write con el log abierto.
+	defer pr.Close()
 	return c.Stream(200, "application/zip", pr)
 }
 

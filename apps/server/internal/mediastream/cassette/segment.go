@@ -102,8 +102,9 @@ func (st *SegmentTable) EncoderID(seg int32) int {
 func (st *SegmentTable) WaitFor(ctx context.Context, seg int32, kill <-chan struct{}) error {
 	st.mu.RLock()
 	if seg < 0 || int(seg) >= len(st.segments) {
+		length := len(st.segments)
 		st.mu.RUnlock()
-		return fmt.Errorf("%w: index %d (len=%d)", ErrSegmentOutOfRange, seg, len(st.segments))
+		return fmt.Errorf("%w: index %d (len=%d)", ErrSegmentOutOfRange, seg, length)
 	}
 	ch := st.segments[seg].ch
 	st.mu.RUnlock()

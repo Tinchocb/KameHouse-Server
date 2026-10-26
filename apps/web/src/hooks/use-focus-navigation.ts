@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from "react"
+import { isNavigable, pickNext } from "./tv-spatial"
 
 interface SpatialNode {
     element: HTMLElement
@@ -20,55 +21,6 @@ interface UseFocusNavigationOptions {
     onEnter?: (element: HTMLElement) => void
     /** Navigation mode: 'four-way' for TV, 'two-way' for horizontal carousels */
     direction?: "four-way" | "two-way"
-}
-
-/**
- * Calcula un puntaje de idoneidad para navegar desde un nodo actual a un candidato
- * en la dirección dada. Un puntaje más bajo significa mejor candidato.
- *
- * Utiliza distancia euclidiana ponderada con penalización por dirección opuesta.
- */
-function calculateScore(
-    current: SpatialNode,
-    candidate: SpatialNode,
-    direction: "left" | "right" | "up" | "down"
-): number {
-    const dx = candidate.centerX - current.centerX
-    const dy = candidate.centerY - current.centerY
-    const distance = Math.sqrt(dx * dx + dy * dy)
-
-    if (distance === 0) return Infinity
-
-    // Determinar si el candidato está en la dirección correcta
-    let isInDirection = false
-    let perpendicularPenalty = 1.0
-
-    switch (direction) {
-        case "right":
-            isInDirection = dx > 0
-            // Penalizar candidatos que están muy arriba o abajo
-            perpendicularPenalty = 1.0 + Math.abs(dy) / (Math.abs(dx) + 1) * 0.5
-            break
-        case "left":
-            isInDirection = dx < 0
-            perpendicularPenalty = 1.0 + Math.abs(dy) / (Math.abs(dx) + 1) * 0.5
-            break
-        case "down":
-            isInDirection = dy > 0
-            perpendicularPenalty = 1.0 + Math.abs(dx) / (Math.abs(dy) + 1) * 0.5
-            break
-        case "up":
-            isInDirection = dy < 0
-            perpendicularPenalty = 1.0 + Math.abs(dx) / (Math.abs(dy) + 1) * 0.5
-            break
-    }
-
-    // Si no está en la dirección correcta, penalizar fuertemente
-    if (!isInDirection) {
-        return distance * 3.0
-    }
-
-    return distance * perpendicularPenalty
 }
 
 /**
@@ -106,7 +58,7 @@ export function useFocusNavigation({
         for (const el of elements) {
             if (el.offsetParent === null && el.offsetWidth === 0) continue
             const rect = el.getBoundingClientRect()
-            if (rect.width > 0 && rect.height > 0) {
+            if (rect.width > 0 && rect.height > 0 && isNavigable(el)) {
                 nodes.push({
                     element: el,
                     rect,
@@ -124,20 +76,12 @@ export function useFocusNavigation({
             nodes: SpatialNode[],
             arrowDirection: "left" | "right" | "up" | "down"
         ): HTMLElement | null => {
-            let bestCandidate: HTMLElement | null = null
-            let bestScore = Infinity
-
-            for (const candidateNode of nodes) {
-                if (candidateNode.element === current.element) continue
-
-                const score = calculateScore(current, candidateNode, arrowDirection)
-                if (score < bestScore) {
-                    bestScore = score
-                    bestCandidate = candidateNode.element
-                }
-            }
-
-            return bestCandidate
+            return pickNext(
+                current.rect,
+                nodes.map(n => ({ el: n.element, rect: n.rect })),
+                arrowDirection,
+                current.element
+            )
         },
         []
     )

@@ -6,14 +6,17 @@ import (
 	"testing"
 	"time"
 
-	"kamehouse/internal/events"
-
 	"github.com/rs/zerolog"
 )
 
+type noopWSEventManager struct{}
+
+func (noopWSEventManager) SendEvent(string, interface{})                         {}
+func (noopWSEventManager) SendEventTo(string, string, interface{}, ...bool) {}
+
 func TestWatcher_StopWatching_NoError(t *testing.T) {
 	logger := zerolog.New(zerolog.NewTestWriter(t))
-	wsEvents := events.NewMockWSEventManager(&logger)
+	wsEvents := noopWSEventManager{}
 
 	w, err := NewWatcher(&NewWatcherOptions{
 		Logger:         &logger,
@@ -32,7 +35,7 @@ func TestWatcher_DynamicDirRegistration(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	logger := zerolog.New(zerolog.NewTestWriter(t))
-	wsEvents := events.NewMockWSEventManager(&logger)
+	wsEvents := noopWSEventManager{}
 
 	w, err := NewWatcher(&NewWatcherOptions{
 		Logger:         &logger,

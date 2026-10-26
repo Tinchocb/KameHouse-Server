@@ -19,7 +19,7 @@ const SkeletonAnatomy = defineStyleAnatomy({
  * Skeleton
  * -----------------------------------------------------------------------------------------------*/
 
-export type SkeletonProps = React.ComponentPropsWithoutRef<"div">
+type SkeletonProps = React.ComponentPropsWithoutRef<"div">
 
 const SKELETON_BASE_CLASS = SkeletonAnatomy.root()
 

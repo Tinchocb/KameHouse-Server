@@ -295,6 +295,46 @@ function resolveRangeDynamicThumbnail({
 }
 
 /**
+ * Episodio icónico por defecto para cada saga cuando `saga.iconicEp` no viene
+ * definido en la configuración generada, evitando caer en la mitad aritmética
+ * del rango (que suele mostrar escenas secundarias o de transición).
+ */
+const SAGA_DEFAULT_ICONIC_EP: Record<string, { startEp: number; iconicEp: number }> = {
+    // Dragon Ball Clásico
+    "pilaf": { startEp: 1, iconicEp: 12 },
+    "torneo-21": { startEp: 14, iconicEp: 28 },
+    "red-ribbon": { startEp: 29, iconicEp: 62 },
+    "uranai-baba": { startEp: 69, iconicEp: 78 },
+    "torneo-22": { startEp: 83, iconicEp: 100 },
+    "piccolo-daimaku": { startEp: 102, iconicEp: 122 },
+    "piccolo-jr": { startEp: 123, iconicEp: 148 },
+    // Dragon Ball Z
+    "saiyajin": { startEp: 1, iconicEp: 30 },
+    "namek-freezer": { startEp: 36, iconicEp: 95 },
+    "garlic-jr": { startEp: 108, iconicEp: 115 },
+    "androides": { startEp: 118, iconicEp: 120 },
+    "cell": { startEp: 140, iconicEp: 191 },
+    "torneo-otro-mundo": { startEp: 195, iconicEp: 198 },
+    "majin-buu": { startEp: 200, iconicEp: 286 },
+    // Dragon Ball GT
+    "black-star": { startEp: 1, iconicEp: 1 },
+    "baby": { startEp: 17, iconicEp: 35 },
+    "super-17": { startEp: 41, iconicEp: 47 },
+    "shadow-dragons": { startEp: 48, iconicEp: 63 },
+    // Dragon Ball Super
+    "batalla-dioses": { startEp: 1, iconicEp: 13 },
+    "resurreccion-f": { startEp: 15, iconicEp: 25 },
+    "universo-6": { startEp: 28, iconicEp: 39 },
+    "copy-vegeta": { startEp: 42, iconicEp: 46 },
+    "trunks-futuro": { startEp: 47, iconicEp: 66 },
+    "exhibicion-zen": { startEp: 77, iconicEp: 81 },
+    "reclutamiento-u7": { startEp: 82, iconicEp: 95 },
+    "torneo-poder": { startEp: 97, iconicEp: 130 },
+    // Dragon Ball Daima
+    "daima": { startEp: 1, iconicEp: 19 },
+}
+
+/**
  * Resolves a dynamic thumbnail for a saga from the actual episodes of the series in the library.
  * Prioritizes the iconic/climax episode's TMDB broadcast still or local video file frame,
  * completely avoiding hardcoded static image assets.
@@ -310,10 +350,15 @@ export function resolveSagaDynamicThumbnail({
     serverBase?: string
     fallbackUrl?: string
 }): string | null {
+    const curated = SAGA_DEFAULT_ICONIC_EP[saga.id]
+    const effectiveIconic =
+        saga.iconicEp ??
+        (curated && curated.startEp === saga.startEp ? curated.iconicEp : undefined)
+
     return resolveRangeDynamicThumbnail({
         startEp: saga.startEp,
         endEp: saga.endEp,
-        iconicEp: saga.iconicEp,
+        iconicEp: effectiveIconic,
         episodes,
         serverBase,
         fallbackUrl,

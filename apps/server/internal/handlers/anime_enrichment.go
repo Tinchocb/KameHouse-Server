@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"kamehouse/internal/api/jikan"
 	"kamehouse/internal/api/tmdb"
@@ -106,6 +109,14 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		if tmdbID == 0 && entry.Media.MyanimelistId > 0 {
 			lookUpID = strconv.Itoa(entry.Media.MyanimelistId)
 		}
+		// El id desplazado (tmdbID + 1.000.000) solo lo entiende TMDB: Jikan espera un id de
+		// MyAnimeList y esa consulta era una llamada de red inútil en cada visita.
+		if _, isTMDB := provider.(*librarymetadata.TMDBProvider); !isTMDB {
+			if entry.Media.MyanimelistId <= 0 {
+				return
+			}
+			lookUpID = strconv.Itoa(entry.Media.MyanimelistId)
+		}
 		movie, err := provider.GetMediaDetails(ctx, lookUpID)
 		if err == nil && movie != nil {
 			for i := range entry.Episodes {
@@ -132,7 +143,7 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		// Fallback to Jikan for episode list enrichment
 		malID := entry.Media.MyanimelistId
 		if malID > 0 {
-			jClient := jikan.NewClient(h.App.Logger)
+			jClient := jikan.Shared(h.App.Logger)
 			if epList, err := jClient.GetAnimeEpisodes(ctx, malID); err == nil && epList != nil {
 				jEpMap := make(map[int]string)
 				jSynMap := make(map[int]string)
@@ -503,4 +514,95 @@ func (h *Handler) enrichMediaWithTMDB(ctx context.Context, entry *anime.Entry, s
 			h.App.Logger.Info().Int("tmdbID", entry.Media.TmdbID).Int("malID", entry.Media.MyanimelistId).Str("poster", entry.Media.PosterImage).Msg("enrichMediaWithTMDB: updated series metadata in DB from API")
 		}
 	}
+}
+
+// episodesEnriched dice si todos los episodios ya traen imagen y sinopsis del proveedor principal.
+func episodesEnriched(entry *anime.Entry) bool {
+	for _, ep := range entry.Episodes {
+		if ep == nil {
+			continue
+		}
+		md := ep.EpisodeMetadata
+		if md == nil || !md.HasImage || md.Overview == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// animeEntryNeedsEnrichment dice si la ficha tiene algo que TMDB/Jikan pueden completar y no está
+// en enfriamiento por un intento anterior que agotó el tiempo.
+func animeEntryNeedsEnrichment(mID int, entry *anime.Entry) bool {
+	if entry == nil || entry.Media == nil || (entry.Media.TmdbID == 0 && entry.Media.MyanimelistId == 0) {
+		return false
+	}
+	if entry.MetadataPending {
+		return true
+	}
+	if until, ok := enrichmentCooldown.Load(mID); ok && time.Now().Before(until.(time.Time)) {
+		return false
+	}
+	if entry.Media.Format == string(platform.MediaFormatMovie) {
+		return true
+	}
+	return len(entry.Episodes) > 0 && !episodesEnriched(entry)
+}
+
+// enrichmentInFlight evita que la misma ficha se enriquezca dos veces a la vez.
+var enrichmentInFlight sync.Map
+
+// Cuánto espera el trabajo de segundo plano a que Jikan responda antes de rendirse.
+const (
+	metadataWaitBudget   = 30 * time.Second
+	metadataPollInterval = time.Second
+)
+
+// scheduleAnimeEnrichment completa la ficha en segundo plano y la guarda en caché cuando termina.
+// Usa su propia copia de la ficha: la respuesta que ya salió no comparte memoria con este trabajo.
+// Si Jikan todavía no respondió, espera sus datos (hasta metadataWaitBudget) antes de completarla.
+func (h *Handler) scheduleAnimeEnrichment(mID int) {
+	if _, busy := enrichmentInFlight.LoadOrStore(mID, struct{}{}); busy {
+		return
+	}
+	go func() {
+		defer enrichmentInFlight.Delete(mID)
+		defer func() {
+			if r := recover(); r != nil {
+				h.App.Logger.Error().Interface("panic", r).Int("mediaId", mID).Msg("anime: panic enriqueciendo la ficha")
+			}
+		}()
+
+		lfs, err := db.GetLocalFilesByMediaID(h.App.Database, mID)
+		if err != nil {
+			return
+		}
+		lfs = h.visibleLocalFiles(lfs)
+
+		deadline := time.Now().Add(metadataWaitBudget)
+		var entry *anime.Entry
+		for {
+			e, err := h.getAnimeEntry(context.Background(), lfs, mID)
+			if err != nil {
+				return
+			}
+			entry = e
+			if !entry.MetadataPending || time.Now().After(deadline) {
+				break
+			}
+			time.Sleep(metadataPollInterval)
+		}
+		if entry.MetadataPending {
+			return // Jikan no llegó: la próxima visita vuelve a intentarlo.
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), enrichmentTimeBudget)
+		defer cancel()
+		settings, _ := h.App.Database.GetSettings()
+		h.enrichEpisodesWithTMDB(ctx, entry, settings)
+		h.enrichMediaWithTMDB(ctx, entry, settings)
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			enrichmentCooldown.Store(mID, time.Now().Add(enrichmentCooldownFor))
+		}
+		animeEntryCache.SetT(mID, entry, animeEntryCacheTTL)
+	}()
 }

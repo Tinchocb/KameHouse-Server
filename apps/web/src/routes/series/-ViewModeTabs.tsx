@@ -1,25 +1,16 @@
-import { IconNavigationLayers, IconStatusImage } from '@/components/ui/icons';
-import { SegmentedControl, type SegmentedOption } from '@/components/ui/segmented-control';
+import { IconNavigationLibrary, IconStatusImage } from '@/components/ui/icons';
+import { EraRail, type EraRailItem } from '@/components/ui/era-rail';
 
 export type SeriesViewMode = 'shelf' | 'etapas';
 
-export const SERIES_TABS: ReadonlyArray<SegmentedOption<SeriesViewMode>> = [
-    {
-        value: 'shelf',
-        label: 'Estantería',
-        icon: <IconNavigationLayers size={14} className="shrink-0" />,
-    },
-    {
-        value: 'etapas',
-        label: 'Portadas',
-        icon: <IconStatusImage size={14} className="shrink-0" />,
-    },
+const SERIES_VIEWS: ReadonlyArray<EraRailItem<SeriesViewMode>> = [
+    { id: 'shelf', label: 'Estantería', kanji: '棚', icon: <IconNavigationLibrary className="size-5" aria-hidden="true" />, accent: 'var(--label-1)', years: 'Series por estante' },
+    { id: 'etapas', label: 'Portadas', kanji: '絵', icon: <IconStatusImage className="size-5" aria-hidden="true" />, accent: 'var(--label-1)', years: 'Series por portada' },
 ];
 
 /**
- * Selector de vista de Series. Usa el SegmentedControl canónico (DESIGN-GUIDE §5.3):
- * roving tabindex, pill con layoutId y respeto por reduce-motion y por el nivel de
- * rendimiento del equipo.
+ * Selector de vista de Series (Estantería / Portadas). Reutiliza el EraRail de la sidebar de eras:
+ * riel vertical en escritorio, barra compacta en móvil y tableta.
  */
 export function ViewModeTabs({
     mode,
@@ -28,18 +19,5 @@ export function ViewModeTabs({
     mode: SeriesViewMode;
     onChange: (next: SeriesViewMode) => void;
 }) {
-    return (
-        <SegmentedControl<SeriesViewMode>
-            options={SERIES_TABS}
-            value={mode}
-            onChange={onChange}
-            layoutId="activeSeriesTopPill"
-            aria-label="Modo de visualización de series"
-            semantics="tablist"
-            tone="neutral"
-            surface="glass"
-            fullWidth
-            className="relative z-20 p-2 sm:p-2.5"
-        />
-    );
+    return <EraRail eras={SERIES_VIEWS} activeId={mode} onSelect={onChange} label="Vista de series" />;
 }

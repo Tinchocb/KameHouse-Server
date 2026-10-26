@@ -191,6 +191,10 @@ func (scn *Scanner) parseNfoEntries(ctx context.Context, localFiles []*dto.Local
 	// for the same folder-level NFO. LoadOrStore acts as a non-blocking mutex.
 	var nfoFolderClaimed sync.Map // folder path → true
 
+	// folderNfoCache memoriza qué NFO de carpeta existen en cada directorio (folder path →
+	// []string): cientos de episodios comparten carpeta y cada uno repetía los mismos stat.
+	var folderNfoCache sync.Map
+
 	var nfoEntriesMu sync.Mutex
 	var nfoEntries []*nfoEntry
 
@@ -225,17 +229,22 @@ func (scn *Scanner) parseNfoEntries(ctx context.Context, localFiles []*dto.Local
 
 				lfDir := filepath.Dir(lf.Path)
 
-				// Typical Kodi NFO paths
-				nfoPaths := []string{
-					util.ReplaceExtension(lf.Path, ".nfo"), // [filename].nfo (Per-file NFO takes priority)
-					filepath.Join(lfDir, "tvshow.nfo"),
-					filepath.Join(lfDir, "anime.nfo"),
-					filepath.Join(lfDir, "movie.nfo"),
+				// [filename].nfo (el NFO por archivo tiene prioridad) y después los NFO de
+				// carpeta típicos de Kodi que existan en este directorio.
+				perFileNfo := util.ReplaceExtension(lf.Path, ".nfo")
+				nfoPaths := make([]string, 0, 4)
+				if filesystem.FileExists(perFileNfo) {
+					nfoPaths = append(nfoPaths, perFileNfo)
 				}
+				nfoPaths = append(nfoPaths, folderNfoPaths(&folderNfoCache, lfDir)...)
 
 				for _, nfoPath := range nfoPaths {
-					if !filesystem.FileExists(nfoPath) {
-						continue
+					// NFO de carpeta ya reclamado por otro episodio: parsearlo de nuevo por cada
+					// archivo (cientos por serie) solo para descartarlo después.
+					if !strings.EqualFold(nfoPath, perFileNfo) {
+						if _, claimed := nfoFolderClaimed.Load(lfDir); claimed {
+							break
+						}
 					}
 					nfo, err := ParseNfoFile(nfoPath)
 					if err != nil || nfo == nil {
@@ -288,6 +297,23 @@ func (scn *Scanner) parseNfoEntries(ctx context.Context, localFiles []*dto.Local
 	nfoWg.Wait()
 
 	return nfoEntries
+}
+
+// folderNfoPaths devuelve los NFO de carpeta típicos de Kodi que existen en dir, en orden de
+// prioridad. El resultado se memoriza en cache (por dir) durante una pasada de parseNfoEntries.
+func folderNfoPaths(cache *sync.Map, dir string) []string {
+	if v, ok := cache.Load(dir); ok {
+		return v.([]string)
+	}
+	var found []string
+	for _, name := range [...]string{"tvshow.nfo", "anime.nfo", "movie.nfo"} {
+		p := filepath.Join(dir, name)
+		if filesystem.FileExists(p) {
+			found = append(found, p)
+		}
+	}
+	cache.Store(dir, found)
+	return found
 }
 
 // persistNfoEntries es la única fase que escribe a la DB: los registros con

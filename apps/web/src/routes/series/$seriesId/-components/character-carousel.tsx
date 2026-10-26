@@ -19,12 +19,15 @@ export const CharacterCarousel = memo(function CharacterCarousel({ characters, s
   const carouselKey = sagaId ?? (characters.map(c => c.name).slice(0, 4).join("-") || "characters")
 
   return (
-    <div className="w-full py-6">
-      <h3 className="font-display text-2xl tracking-widest text-on-surface/95 uppercase mb-4">Personajes Clave</h3>
+    <section aria-label="Personajes" className="w-full">
+      <h2 className="type-title font-bold text-on-surface mb-4">Personajes</h2>
 
+      {/* px-1/pt-1 dan 4 px al anillo de foco (outline 2 px + offset 2 px) dentro
+          del recorte del scroller; -mx-1/-mt-1 lo compensan para no mover los avatares.
+          scroll-px-1 mantiene ese margen al hacer snap. */}
       <div
         key={carouselKey}
-        className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x"
+        className="flex overflow-x-auto gap-4 -mx-1 -mt-1 px-1 pt-1 pb-4 scroll-px-1 no-scrollbar snap-x"
       >
         {characters.map((char, idx) => (
           <div
@@ -41,6 +44,6 @@ export const CharacterCarousel = memo(function CharacterCarousel({ characters, s
           </div>
         ))}
       </div>
-    </div>
+    </section>
   )
 })

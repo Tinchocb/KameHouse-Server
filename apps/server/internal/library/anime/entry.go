@@ -20,7 +20,9 @@ type (
 	// Entry is a container for all data related to a media.
 	// It is the primary data structure used by the frontend.
 	Entry struct {
-		MediaID             int                     `json:"mediaId"`
+		MediaID int `json:"mediaId"`
+		// MetadataPending: Jikan aún no respondió; la ficha se completa en segundo plano (no se cachea sin ella).
+		MetadataPending     bool                    `json:"-"`
 		Media               *models.LibraryMedia    `json:"media"`
 		EntryListData       *EntryListData          `json:"listData"`
 		EntryLibraryData    *EntryLibraryData       `json:"libraryData"`
@@ -58,6 +60,14 @@ type (
 		IntelligenceSvc     *IntelligenceService
 	}
 )
+
+// errSkipJikanMovie marca que la ficha no consulta Jikan (película sin ID de MyAnimeList).
+var errSkipJikanMovie = errors.New("película sin ID de MyAnimeList: no se consulta Jikan")
+
+// isMovieWithoutMAL dice si el título es una película sin ID de MyAnimeList.
+func isMovieWithoutMAL(m *models.LibraryMedia) bool {
+	return m != nil && m.Type == "MOVIE" && m.MyanimelistId == 0
+}
 
 // NewEntry creates a new Entry based on the media id and a list of local files.
 // A Entry is a container for all data related to a media.
@@ -227,7 +237,15 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	// +---------------------+
 
 	// Fetch AniDB data and cache it for 30 minutes
-	animeMetadata, err := opts.MetadataProviderRef.GetAnimeMetadata(opts.MediaID)
+	// Las películas de la biblioteca casi nunca tienen ID de MyAnimeList: Jikan las busca por título y
+	// no encuentra nada, pero cada visita esperaba su tope (1,5 s). Para ellas los datos salen de la
+	// biblioteca y de TMDB (enriquecimiento en segundo plano), así que no se consulta Jikan.
+	var animeMetadata *metadata.AnimeMetadata
+	if isMovieWithoutMAL(fetchedMedia) {
+		err = errSkipJikanMovie
+	} else {
+		animeMetadata, err = opts.MetadataProviderRef.GetAnimeMetadata(opts.MediaID)
+	}
 	if err != nil {
 
 		// +---------------- Start
@@ -236,6 +254,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 		// +---------------------+
 
 		// If metadata is not found, we will still create the Entry without it
+		pending := metadata_provider.IsMetadataPending(err)
 		simpleAnimeEntry, err := NewSimpleEntry(ctx, &NewSimpleAnimeEntryOptions{
 			MediaID:             opts.MediaID,
 			LocalFiles:          opts.LocalFiles,
@@ -244,6 +263,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 			MetadataProviderRef: opts.MetadataProviderRef,
 			LibraryEpisodes:     opts.LibraryEpisodes,
 			IntelligenceSvc:     opts.IntelligenceSvc,
+			SkipAnimeMetadata:   true,
 		})
 		if err != nil {
 			return nil, err
@@ -259,6 +279,7 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 			LocalFiles:          simpleAnimeEntry.LocalFiles,
 			AnidbId:             0,
 			CurrentEpisodeCount: simpleAnimeEntry.CurrentEpisodeCount,
+			MetadataPending:     pending,
 		}, nil
 		// +--------------- End
 

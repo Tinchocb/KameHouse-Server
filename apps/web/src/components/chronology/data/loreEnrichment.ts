@@ -1,4 +1,4 @@
-export interface VolumeLoreEnrichment {
+interface VolumeLoreEnrichment {
   volumeId: string;
   fillerEpisodes: number[];
   previouslyOn: string;
@@ -6,7 +6,7 @@ export interface VolumeLoreEnrichment {
   recommendedStartEpisode?: number;
 }
 
-export const LORE_ENRICHMENT_BY_VOLUME: Record<string, VolumeLoreEnrichment> = {
+const LORE_ENRICHMENT_BY_VOLUME: Record<string, VolumeLoreEnrichment> = {
   'vol-clasico-origen': {
     volumeId: 'vol-clasico-origen',
     fillerEpisodes: [],

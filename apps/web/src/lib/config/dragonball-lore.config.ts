@@ -1,4 +1,4 @@
-export const SCOUTER_POWER_LEVELS: Record<string, string> = {
+const SCOUTER_POWER_LEVELS: Record<string, string> = {
     goku: "> 150,000,000",
     vegeta: "> 150,000,000",
     vegetto: "INCONMENSURABLE",

@@ -10,7 +10,7 @@ import type { BehindTheScenesNote, InterChapterEntry, KeyFact } from '../types';
  * Regla editorial: solo hechos que se cuentan en la obra o que dijo su autor, citando
  * obra y saga; nada de niveles de poder de fans, fechas sin fuente ni páginas sin verificar.
  */
-export interface SpanLore {
+interface SpanLore {
   keyFacts?: KeyFact[];
   interChapter?: InterChapterEntry[];
   behindTheScenes?: BehindTheScenesNote[];
@@ -18,7 +18,7 @@ export interface SpanLore {
 
 export const SPAN_LORE: Record<string, SpanLore> = {
   // ── CLÁSICO ──────────────────────────────────────────────────────────────
-  'db-pilaf': {
+  'db-pilaf-busqueda': {
     keyFacts: [
       { label: 'Primer encuentro', value: 'Goku y Bulma en el Monte Paoz' },
       { label: 'Deseo a Shenlong', value: 'Oolong pide unas bragas para frustrar a Pilaf' },
@@ -50,7 +50,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'db-torneo-21': {
+  'db-torneo-21-combates': {
     keyFacts: [
       { label: 'Ganador', value: 'Jackie Chun (el Maestro Roshi)' },
       { label: 'Finalista', value: 'Son Goku' },
@@ -82,7 +82,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'db-red-ribbon': {
+  'db-rr-tao-pai-pai': {
     keyFacts: [
       { label: 'Objetivo de Red', value: 'Crecer de estatura con las esferas' },
       { label: 'Torre Karin', value: 'Goku entrena tres días con el maestro Karin' },
@@ -114,7 +114,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'db-uranai-baba': {
+  'db-uranai-baba-reencuentro': {
     keyFacts: [
       { label: 'Condición de Baba', value: '10 millones de zenis o vencer a cinco campeones' },
       { label: 'Último contrincante', value: 'Son Gohan (el abuelo de Goku con máscara)' },
@@ -146,7 +146,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'db-torneo-22': {
+  'db-torneo-22-combates': {
     keyFacts: [
       { label: 'Campeón', value: 'Tenshinhan' },
       { label: 'Duelo de escuelas', value: 'Estilo Tortuga contra Estilo Grulla' },
@@ -178,7 +178,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'db-piccolo-daimaku': {
+  'db-piccolo-daimaku-climax': {
     keyFacts: [
       { label: 'Bajas clave', value: 'Krilin, Roshi, Chaoz y el dragón Shenlong' },
       { label: 'Deseo de Piccolo', value: 'Recuperar su juventud y vigor eterno' },
@@ -210,7 +210,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'db-piccolo-jr': {
+  'db-piccolo-jr-torneo-final': {
     keyFacts: [
       { label: 'Campeón', value: 'Son Goku (su único campeonato mundial oficial)' },
       { label: 'Finalista', value: 'Piccolo Jr.' },
@@ -288,7 +288,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-saiyajin-vegeta': {
+  'dbz-saiyajin-nappa-vegeta': {
     keyFacts: [
       { label: 'Bajas', value: 'Yamcha, Chaoz, Tenshinhan y Piccolo' },
       { label: 'Esferas del Dragón', value: 'Desaparecen al morir Piccolo y Kami' },
@@ -327,7 +327,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-namek-viaje': {
+  'dbz-namek-viaje-llegada': {
     keyFacts: [
       { label: 'Nave de Kami', value: 'Viaje de Bulma, Krilin y Gohan a Namek' },
       { label: 'Nave de Goku', value: 'Gravedad x100 construida por el Dr. Brief' },
@@ -359,7 +359,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-namek-ginyu-freezer': {
+  'dbz-namek-fuerzas-ginyu': {
     keyFacts: [
       { label: 'Llegada de élite', value: 'Fuerzas Especiales Ginyu convocadas por Freezer' },
       { label: 'Alianza forzada', value: 'Vegeta pacta con Krilin y Gohan' },
@@ -487,7 +487,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-cell-imperfecto-perfeccion': {
+  'dbz-cell-semiperfecto': {
     keyFacts: [
       { label: 'Fusión namekiana', value: 'Piccolo se asimila con Kamisama' },
       { label: 'Absorción primera', value: 'Cell absorbe al Androide 17' },
@@ -519,7 +519,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-juegos-de-cell': {
+  'dbz-cell-gohan-ssj2-final': {
     keyFacts: [
       { label: 'Detonante', value: 'Cell destruye la cabeza del Androide 16' },
       { label: 'Transformación', value: 'Gohan alcanza el Super Saiyajin 2' },
@@ -596,7 +596,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-buu-majin-vegeta': {
+  'dbz-buu-despertar-sacrificio': {
     keyFacts: [
       { label: 'Permiso terrenal', value: 'Goku regresa por 24 horas para el torneo' },
       { label: 'Mundo demoníaco', value: 'Dabura, rey del mal, actúa a las órdenes de Babidi' },
@@ -628,7 +628,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-buu-ssj3-fusion': {
+  'dbz-buu-ssj3-fusion-dance': {
     keyFacts: [
       { label: 'Forma divina', value: 'Goku exhibe el Super Saiyajin 3' },
       { label: 'Danza metamorana', value: 'Goku enseña la Fusión a Goten y Trunks' },
@@ -660,7 +660,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-buu-gotenks-gohan-mistico': {
+  'dbz-buu-gohan-mistico': {
     keyFacts: [
       { label: 'Fusión cómica', value: 'Gotenks SSJ3 y los Fantasmas Kamikaze' },
       { label: 'Poder definitivo', value: 'Gohan Místico domina a Super Buu sin esfuerzo' },
@@ -692,7 +692,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbz-buu-vegetto-kidbuu-final': {
+  'dbz-buu-vegetto-kidbuu': {
     keyFacts: [
       { label: 'Unión Pothala', value: 'Fusión de Goku y Vegeta en Vegetto' },
       { label: 'Involución letal', value: 'Nacimiento de Kid Buu tras arrancar al Buu gordo' },
@@ -790,7 +790,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
   },
 
   // ── DRAGON BALL SUPER ────────────────────────────────────────────────────
-  'dbs-batalla-dioses': {
+  'dbs-dioses-batalla': {
     keyFacts: [
       { label: 'Despertar divino', value: 'Lord Beerus despierta tras 39 años de siesta' },
       { label: 'Ritual mítico', value: 'Seis saiyajin de corazón puro invocan al Super Saiyajin Dios' },
@@ -822,7 +822,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbs-resurreccion-f': {
+  'dbs-resurreccion-dorado': {
     keyFacts: [
       { label: 'Resurrección', value: 'Sorbet utiliza las esferas terrestres para revivir a Freezer' },
       { label: 'Nueva forma', value: 'Golden Freezer tras cuatro meses de entrenamiento' },
@@ -854,7 +854,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbs-torneo-u6': {
+  'dbs-torneo-u6-hit': {
     keyFacts: [
       { label: 'Recompensa cósmica', value: 'Las siete Súper Esferas del Dragón del tamaño de planetas' },
       { label: 'Técnica de Hit', value: 'Salto Temporal (Tokitobashi)' },
@@ -918,7 +918,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbs-goku-black': {
+  'dbs-black-zamasu-guerra': {
     keyFacts: [
       { label: 'Identidad del villano', value: 'Zamasu del Universo 10 en el cuerpo robado de Goku' },
       { label: 'Poder oscuro', value: 'Super Saiyajin Rosé de Goku Black' },
@@ -1014,7 +1014,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbs-torneo-del-poder': {
+  'dbs-torneo-poder-climax': {
     keyFacts: [
       { label: 'Escenario cósmico', value: 'Mundo de la Nada con 80 guerreros y 8 universos' },
       { label: 'Estado supremo', value: 'Goku alcanza el Ultra Instinto Dominado' },
@@ -1047,7 +1047,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
   },
 
   // ── DRAGON BALL GT ───────────────────────────────────────────────────────
-  'dbgt-black-star': {
+  'dbgt-black-star-origen': {
     keyFacts: [
       { label: 'Error de Pilaf', value: 'Desea por accidente que Goku vuelva a ser niño' },
       { label: 'Cuenta atrás cósmica', value: 'La Tierra estallará en un año si no regresan las esferas' },
@@ -1143,7 +1143,7 @@ export const SPAN_LORE: Record<string, SpanLore> = {
     ],
   },
 
-  'dbgt-dragones-malignos': {
+  'dbgt-dragones-climax': {
     keyFacts: [
       { label: 'Causa del desastre', value: 'Sobrecarga de energía negativa acumulada en las esferas' },
       { label: 'Rival supremo', value: 'Omega Shenron (Yi Xing Long con las 7 esferas)' },

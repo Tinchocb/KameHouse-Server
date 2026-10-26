@@ -37,7 +37,6 @@ func TestThumbnailCache_MemoryMetrics(t *testing.T) {
 	assert.Equal(t, uint64(1), hits)
 	assert.Equal(t, uint64(1), misses)
 	assert.Equal(t, 1, count)
-	assert.Equal(t, 1, c.Len())
 }
 
 func TestThumbnailCache_ByteLimitEviction(t *testing.T) {
@@ -66,7 +65,8 @@ func TestThumbnailCache_ByteLimitEviction(t *testing.T) {
 
 	c.Purge()
 	assert.Equal(t, int64(0), c.BytesUsed())
-	assert.Equal(t, 0, c.Len())
+	_, _, items := c.Stats()
+	assert.Equal(t, 0, items)
 }
 
 func TestThumbnailCache_ReplaceKeyKeepsByteCount(t *testing.T) {
@@ -77,7 +77,8 @@ func TestThumbnailCache_ReplaceKeyKeepsByteCount(t *testing.T) {
 	c.Set("img", make([]byte, 30))
 	c.Set("img", make([]byte, 10))
 	assert.Equal(t, int64(10), c.BytesUsed())
-	assert.Equal(t, 1, c.Len())
+	_, _, items := c.Stats()
+	assert.Equal(t, 1, items)
 
 	// Con el contador correcto entran dos imágenes más sin desalojar "img".
 	c.Set("a", make([]byte, 40))
@@ -91,8 +92,8 @@ func TestPruneDirectory_Generic(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Crear archivos .json y .tmp
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "kf1.json"), make([]byte, 500), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "kf2.json"), make([]byte, 500), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "kf1.json"), make([]byte, 500), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "kf2.json"), make([]byte, 500), 0600))
 
 	// Prune con maxSizeBytes = 700 debe desalojar el más viejo hasta quedar <= 80% (560)
 	past := time.Now().Add(-2 * time.Hour)
@@ -112,8 +113,8 @@ func TestPruneDiskCache_TTLEviction(t *testing.T) {
 	freshFile := filepath.Join(tmpDir, "fresh.jpg")
 	expiredFile := filepath.Join(tmpDir, "expired.jpg")
 
-	require.NoError(t, os.WriteFile(freshFile, make([]byte, 1000), 0644))
-	require.NoError(t, os.WriteFile(expiredFile, make([]byte, 2000), 0644))
+	require.NoError(t, os.WriteFile(freshFile, make([]byte, 1000), 0600))
+	require.NoError(t, os.WriteFile(expiredFile, make([]byte, 2000), 0600))
 
 	_ = os.Chtimes(freshFile, now.Add(-10*time.Minute), now.Add(-10*time.Minute))
 	_ = os.Chtimes(expiredFile, now.Add(-40*24*time.Hour), now.Add(-40*24*time.Hour))
@@ -137,9 +138,9 @@ func TestPruneDiskCache_SizeEviction(t *testing.T) {
 	f2 := filepath.Join(tmpDir, "file2.jpg") // Middle
 	f3 := filepath.Join(tmpDir, "file3.jpg") // Newest
 
-	require.NoError(t, os.WriteFile(f1, make([]byte, 1000), 0644))
-	require.NoError(t, os.WriteFile(f2, make([]byte, 1000), 0644))
-	require.NoError(t, os.WriteFile(f3, make([]byte, 1000), 0644))
+	require.NoError(t, os.WriteFile(f1, make([]byte, 1000), 0600))
+	require.NoError(t, os.WriteFile(f2, make([]byte, 1000), 0600))
+	require.NoError(t, os.WriteFile(f3, make([]byte, 1000), 0600))
 
 	_ = os.Chtimes(f1, now.Add(-3*time.Hour), now.Add(-3*time.Hour))
 	_ = os.Chtimes(f2, now.Add(-2*time.Hour), now.Add(-2*time.Hour))
@@ -167,8 +168,8 @@ func TestPruneDiskCache_OrphanedTmpFiles(t *testing.T) {
 	staleTmp := filepath.Join(tmpDir, "thumb.12345.tmp")
 	freshTmp := filepath.Join(tmpDir, "thumb.67890.tmp")
 
-	require.NoError(t, os.WriteFile(staleTmp, make([]byte, 500), 0644))
-	require.NoError(t, os.WriteFile(freshTmp, make([]byte, 500), 0644))
+	require.NoError(t, os.WriteFile(staleTmp, make([]byte, 500), 0600))
+	require.NoError(t, os.WriteFile(freshTmp, make([]byte, 500), 0600))
 
 	_ = os.Chtimes(staleTmp, now.Add(-2*time.Hour), now.Add(-2*time.Hour))
 	_ = os.Chtimes(freshTmp, now.Add(-5*time.Minute), now.Add(-5*time.Minute))
@@ -185,7 +186,7 @@ func TestPruneDiskCache_OrphanedTmpFiles(t *testing.T) {
 func TestTouchDiskCache(t *testing.T) {
 	tmpDir := t.TempDir()
 	f := filepath.Join(tmpDir, "test.jpg")
-	require.NoError(t, os.WriteFile(f, []byte("data"), 0644))
+	require.NoError(t, os.WriteFile(f, []byte("data"), 0600))
 
 	past := time.Now().Add(-10 * time.Hour)
 	_ = os.Chtimes(f, past, past)
@@ -204,7 +205,7 @@ func TestTouchDiskCache(t *testing.T) {
 func TestTouchDiskCacheIfOlder(t *testing.T) {
 	tmpDir := t.TempDir()
 	f := filepath.Join(tmpDir, "test.jpg")
-	require.NoError(t, os.WriteFile(f, []byte("data"), 0644))
+	require.NoError(t, os.WriteFile(f, []byte("data"), 0600))
 
 	recent := time.Now().Add(-1 * time.Hour)
 	_ = os.Chtimes(f, recent, recent)

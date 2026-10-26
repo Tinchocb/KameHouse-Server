@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 
 
-export type SfxType = 
+type SfxType = 
     | "hover"    // /sounds/seleccion de hover.wav
     | "series"   // /sounds/serie.wav
     | "detail"   // /sounds/entrar detalle serie-peliculas.wav

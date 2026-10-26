@@ -4,13 +4,13 @@ import { useServerQuery, useServerMutation, buildApiQuery } from "../client/requ
 import { API_ENDPOINTS } from "../generated/endpoints"
 import type { ChronologyProgressResponse } from "../generated/types"
 
-export interface SaveChronologyMomentTimeVariables {
+interface SaveChronologyMomentTimeVariables {
     momentKey: string
     seconds?: number | null
 }
 
 /** spanId -> visto; null borra la marca y el lapso vuelve a seguir el historial. */
-export interface SaveChronologySpanOverridesVariables {
+interface SaveChronologySpanOverridesVariables {
     overrides: Record<string, boolean | null>
 }
 

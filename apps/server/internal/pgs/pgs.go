@@ -98,7 +98,6 @@ func NewPgsDecoder() *PgsDecoder {
 func (d *PgsDecoder) DecodePacket(packet []byte) (image.Image, error) {
 	var resultImg image.Image
 	offset := 0
-	segmentCount := 0
 
 	// Process all segments in the packet
 	for offset < len(packet) {
@@ -114,7 +113,6 @@ func (d *PgsDecoder) DecodePacket(packet []byte) (image.Image, error) {
 		}
 
 		payload := packet[offset+3 : offset+3+int(segSize)]
-		segmentCount++
 
 		var img image.Image
 		var err error

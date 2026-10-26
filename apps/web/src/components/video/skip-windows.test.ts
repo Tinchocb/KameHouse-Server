@@ -8,10 +8,30 @@ import {
     resolveActiveOp,
     resolveEdWindow,
     resolveOpWindow,
+    resolveRecapWindow,
     shouldAutoSkip,
     shouldAutoSkipOutro,
     type Chapter,
 } from "./skip-windows"
+
+describe("resolveRecapWindow", () => {
+    it("prioriza las marcas del archivo sobre AniSkip", () => {
+        expect(resolveRecapWindow({ recap: { startTime: 0, endTime: 60 } }, [
+            { name: "Resumen", startTime: 0, endTime: 45 },
+        ])).toEqual({ startTime: 0, endTime: 45, source: "chapters" })
+    })
+
+    it("reconoce el tipo prologue aun con nombre genérico", () => {
+        expect(resolveRecapWindow(undefined, [{ name: "Chapter 1", type: "prologue", startTime: 0, endTime: 45 }])?.endTime).toBe(45)
+    })
+
+    it("no inventa resumen ni admite intervalos inválidos", () => {
+        expect(resolveRecapWindow(undefined, [{ name: "Episode", startTime: 0, endTime: 200 }])).toBeUndefined()
+        expect(resolveRecapWindow({ recap: { startTime: 0, endTime: NaN } }, [
+            { name: "Resumen", startTime: 45, endTime: 0 },
+        ])).toBeUndefined()
+    })
+})
 
 describe("resolveActiveOp", () => {
     it("respeta datos explícitos", () => {
@@ -108,6 +128,15 @@ describe("resolveOpWindow", () => {
             .toEqual({ startTime: 5, endTime: 95, source: "community" })
         expect(resolveOpWindow({ op: { startTime: 5, endTime: 95 } }, [], undefined))
             .toEqual({ startTime: 5, endTime: 95, source: "aniskip" })
+    })
+
+    it("una ventana heurística (copia del episodio anterior) no pisa al capítulo OP", () => {
+        // El auto-salto por capítulo y el botón deben apuntar al mismo final de intro.
+        const opChapters: Chapter[] = [{ startTime: 0, endTime: 80, name: "OP" }]
+        expect(resolveOpWindow({ op: { startTime: 0, endTime: 90 }, opSource: "heuristic" }, opChapters, undefined))
+            .toEqual({ startTime: 0, endTime: 80, source: "chapters" })
+        expect(resolveOpWindow({ op: { startTime: 0, endTime: 90 }, opSource: "heuristic" }, [], undefined))
+            .toEqual({ startTime: 0, endTime: 90, source: "heuristic" })
     })
 
     it("sin AniSkip usa el capítulo del archivo", () => {

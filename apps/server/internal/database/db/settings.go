@@ -22,6 +22,7 @@ func (db *Database) UpsertSettings(settings *models.Settings) (*models.Settings,
 	}
 
 	db.currSettings.Store(settings)
+	db.currLibraryPaths.Store(nil)
 
 	db.Logger.Debug().Msg("db: Settings saved")
 	return settings, nil
@@ -47,6 +48,7 @@ func (db *Database) SetSettingsOverride(fn SettingsOverride) {
 		db.settingsOverride.Store(&fn)
 	}
 	db.effSettings.Store(nil)
+	db.currLibraryPaths.Store(nil)
 }
 
 // GetSettings devuelve los ajustes EFECTIVOS: los guardados más los overrides de
@@ -106,11 +108,16 @@ func (db *Database) GetStoredSettings() (*models.Settings, error) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (db *Database) GetAllLibraryPathsFromSettings() ([]string, error) {
+	if cached := db.currLibraryPaths.Load(); cached != nil {
+		return *cached, nil
+	}
 	settings, err := db.GetSettings()
 	if err != nil {
 		return []string{}, err
 	}
-	return settings.Library.GetAllPaths(), nil
+	paths := settings.Library.GetAllPaths()
+	db.currLibraryPaths.Store(&paths)
+	return paths, nil
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

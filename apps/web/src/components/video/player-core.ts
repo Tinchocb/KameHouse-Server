@@ -3,6 +3,7 @@ import Hls from "hls.js"
 import type JASSUB from "jassub"
 import { usePlayerShortcuts } from "./usePlayerShortcuts"
 import { usePlayerJassub } from "./usePlayerJassub"
+import { useDriveSubtitleWindow } from "./useDriveSubtitleWindow"
 import { usePlayerPgs } from "./usePlayerPgs"
 import { usePlayerMediaSession } from "./usePlayerMediaSession"
 import { PlayerPreviewManager } from "./player-preview"
@@ -33,7 +34,7 @@ import { usePlayerHlsLevel } from "./usePlayerHlsLevel"
 
 
 
-export type { PlayerStats, PlayerCoreProps, PlayerCore }
+export type { PlayerStats, PlayerCore }
 
 
 export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
@@ -82,6 +83,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const progressInputRef = useRef<HTMLInputElement>(null)
 
     const flashTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    useEffect(() => {
+        return () => {
+            if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current)
+        }
+    }, [])
 
     const [isPlaying, setIsPlaying] = useState(false)
     // Duración saneada con fallback a ffprobe (ver usePlayerDuration).
@@ -115,7 +121,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [isJassubActive, setIsJassubActive] = useState(false)
     const [isPgsLoading, setIsPgsLoading] = useState(false)
     const [isPgsActive, setIsPgsActive] = useState(false)
-    const { hlsLevels, setHlsLevels, activeHlsLevel, setHlsLevel } = usePlayerHlsLevel({ hlsRef })
+    const { hlsLevels, setHlsLevels, activeHlsLevel, setActiveHlsLevel, setHlsLevel } = usePlayerHlsLevel({ hlsRef })
 
     // Auto-ocultado de controles y panel de ajustes (ver usePlayerControlsVisibility).
     const { controlsVisible, setControlsVisible, isSettingsOpen, setIsSettingsOpen, triggerControlsVisibility } = usePlayerControlsVisibility({ isPlaying })
@@ -335,6 +341,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setIsBuffering,
         setErrorMsg,
         setHlsLevels,
+        onMaxLevelLocked: setActiveHlsLevel,
         setAudioTracks,
         setSubtitleTracks,
         setActiveAudioIndex,
@@ -345,6 +352,15 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         streamRequestError,
     })
 
+    // Subtítulos embebidos de Drive leídos por franjas: informa la posición al servidor y
+    // avisa cuando hay subtítulos nuevos para recargar la pista.
+    const activeSubtitleTrack = subtitleTracks.find((t) => t.index === activeSubtitleIndex)
+    const subtitleRefreshKey = useDriveSubtitleWindow({
+        videoRef,
+        path: streamUrl,
+        active: !!activeSubtitleTrack?.progressive,
+    })
+
     // JASSUB Subtitle renderer hook
     usePlayerJassub({
         videoRef,
@@ -353,6 +369,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         subtitleTracks,
         subtitleSizePref,
         fontUrls: backendTracks?.fontUrls,
+        refreshKey: subtitleRefreshKey,
         setIsJassubLoading,
         setIsJassubActive,
     })
@@ -496,6 +513,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
         if (progressInputRef.current) {
             progressInputRef.current.value = String(curr)
+            progressInputRef.current.setAttribute("aria-valuetext", `${formatPlaybackTime(curr)} de ${formatPlaybackTime(total)}`)
         }
 
         if (timeTextRef.current) {

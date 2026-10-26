@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,10 +17,7 @@ import (
 	"github.com/ziflex/lecho/v3"
 	"golang.org/x/time/rate"
 	"gorm.io/gorm"
-	"kamehouse/internal/api/dragonball"
 	"kamehouse/internal/core"
-	"kamehouse/internal/database/models"
-	"kamehouse/internal/intelligence"
 	util "kamehouse/internal/util/proxies"
 )
 
@@ -47,21 +43,18 @@ const (
 	apiRateBurst = 300
 )
 
-var (
-	limiterMu        sync.Mutex
-	limitersCache, _ = lru.New[string, *rate.Limiter](1000)
-)
+// limitersCache es seguro entre goroutines por si mismo (lru.Cache lleva su propio lock) y
+// lru.New solo falla con tamano <= 0: no hace falta mutex externo ni reconstruirlo.
+var limitersCache, _ = lru.New[string, *rate.Limiter](1000)
 
 func getLimiter(key string, r rate.Limit, b int) *rate.Limiter {
-	limiterMu.Lock()
-	defer limiterMu.Unlock()
-	if limitersCache == nil {
-		limitersCache, _ = lru.New[string, *rate.Limiter](1000)
+	if l, ok := limitersCache.Get(key); ok {
+		return l
 	}
-	l, ok := limitersCache.Get(key)
-	if !ok {
-		l = rate.NewLimiter(r, b)
-		limitersCache.Add(key, l)
+	l := rate.NewLimiter(r, b)
+	// PeekOrAdd es atomico: si otra goroutine creo el limitador entre el Get y aca, gana el primero.
+	if prev, ok, _ := limitersCache.PeekOrAdd(key, l); ok {
+		return prev
 	}
 	return l
 }
@@ -103,11 +96,25 @@ func authRateLimitMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+// isGzipSkippedPath indicates which routes should bypass the Gzip middleware.
+// Media chunks, video direct play, image proxies and websockets are already
+// compressed binary data; gzip only burns CPU on them.
+// In contrast, text and JSON endpoints under /api/v1/mediastream (e.g. subtitles,
+// request container metadata, skip-times) benefit heavily from gzip compression.
+func isGzipSkippedPath(path string) bool {
+	return strings.HasPrefix(path, "/api/v1/mediastream/direct/play") ||
+		strings.HasPrefix(path, "/api/v1/mediastream/transcode/") ||
+		strings.HasPrefix(path, "/api/v1/mediastream/hls/") ||
+		strings.HasPrefix(path, "/api/v1/mediastream/att/") ||
+		strings.HasPrefix(path, "/api/v1/drive/play") ||
+		strings.HasPrefix(path, "/api/v1/video-thumbnail") ||
+		strings.HasPrefix(path, "/api/v1/image-proxy") ||
+		strings.HasPrefix(path, "/api/v1/events") ||
+		strings.HasPrefix(path, "/api/v1/ws")
+}
+
 type Handler struct {
-	App                  *core.App
-	settingsMu           sync.RWMutex
-	settings             *models.Settings
-	IntelligenceSelector *intelligence.Selector
+	App *core.App
 }
 
 func InitRoutes(app *core.App, e *echo.Echo) {
@@ -162,7 +169,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		"/api/v1/mediastream/direct/play",
 		"/api/v1/mediastream/hls/",
 		"/api/v1/mediastream/video-thumbnail",
-		"/api/v1/proxy",
 	}
 
 	e.Use(lecho.Middleware(lecho.Config{
@@ -195,15 +201,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
 		Level: 5,
 		Skipper: func(c echo.Context) bool {
-			path := c.Request().URL.Path
-			// Images and video are already compressed: gzip only burns CPU on them.
-			return strings.HasPrefix(path, "/api/v1/mediastream") ||
-				strings.HasPrefix(path, "/api/v1/drive/play") ||
-				strings.HasPrefix(path, "/api/v1/video-thumbnail") ||
-				strings.HasPrefix(path, "/api/v1/image-proxy") ||
-				strings.HasPrefix(path, "/api/v1/proxy") ||
-				strings.HasPrefix(path, "/api/v1/events") ||
-				strings.HasPrefix(path, "/api/v1/ws")
+			return isGzipSkippedPath(c.Request().URL.Path)
 		},
 	}))
 
@@ -242,9 +240,9 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	e.Use(headMethodMiddleware)
 
 	h := &Handler{
-		App:                  app,
-		IntelligenceSelector: intelligence.NewSelector(app.Database, app.Logger),
+		App: app,
 	}
+	app.DriveInputURL = h.driveInputURL
 
 	app.AddOnRefreshAnimeCollectionFunc("ClearLibraryCollectionCache", func() {
 		ClearLibraryCollectionCache()
@@ -270,8 +268,11 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	// Imágenes de la estantería al disco local (el front las pide por el proxy).
 	shelfImageProxy = imageProxy
 	h.prewarmShelfImages(8 * time.Second)
-	v1.GET("/proxy", h.VideoProxy)
-	v1.HEAD("/proxy", h.VideoProxy)
+	// Fichas de la biblioteca a la caché de Jikan, de a una y en segundo plano (ver anime_metadata_prewarm.go).
+	h.prewarmAnimeMetadata(20 * time.Second)
+	// Frames que falten (archivos nuevos o una biblioteca recién importada), de a uno y a
+	// baja prioridad; los que ya están en disco se saltan sin tocar ffmpeg ni Drive.
+	h.warmThumbnailsAfterScan(45 * time.Second)
 	v1.GET("/status", h.HandleGetStatus)
 	v1.GET("/home/curated", h.HandleGetHomeCurated)
 	v1.GET("/home/continue-watching", h.HandleGetContinueWatching)
@@ -286,6 +287,8 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	v1.GET("/memory/cpu", h.HandleGetCPUProfile)
 	v1.POST("/memory/gc", h.HandleForceGC)
 	v1.GET("/system/cache/stats", h.HandleGetCacheStats)
+	v1.GET("/system/cache/location", h.HandleGetCacheLocation)
+	v1.PATCH("/system/cache/location", h.HandleSaveCacheLocation)
 	v1.POST("/system/cache/clear", h.HandleClearSystemCache)
 	v1.POST("/cache/thumbnails/warm", h.HandleWarmThumbnailCache)
 	v1.GET("/notifications", h.HandleGetNotifications)
@@ -304,16 +307,11 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	h.RegisterLocalRoutes(v1)
 	h.RegisterIntelligenceRoutes(v1)
 	h.RegisterAdminRoutes(v1)
-
-	// Enciclopedia de Dragon Ball (arquitectura limpia en internal/api/dragonball).
-	dragonball.Register(v1)
 }
 
 // RegisterIntelligenceRoutes registra las rutas del motor de selección e inteligencia.
 func (h *Handler) RegisterIntelligenceRoutes(v1 *echo.Group) {
 	intel := v1.Group("/intelligence")
-	intel.GET("/best-source", h.HandleGetBestSource)
-	intel.GET("/stats", h.HandleGetIntelligenceStats)
 	intel.GET("/chronology", h.HandleGetChronologyProgress)
 	intel.POST("/chronology/overrides", h.HandleSaveChronologySpanOverrides)
 	intel.GET("/chronology/moment-times", h.HandleGetChronologyMomentTimes)
@@ -386,9 +384,6 @@ func (h *Handler) RespondWithCodeError(c echo.Context, code int, err error) erro
 }
 
 func (h *Handler) invalidateSettingsCache() {
-	h.settingsMu.Lock()
-	h.settings = nil
-	h.settingsMu.Unlock()
 	ClearLibraryCollectionCache()
 }
 

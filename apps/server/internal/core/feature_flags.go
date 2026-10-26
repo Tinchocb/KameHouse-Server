@@ -17,7 +17,6 @@ type (
 		mu               sync.RWMutex
 		disabledFeatures map[FeatureKey]bool
 		DisabledFeatures []FeatureKey
-		logger           *zerolog.Logger
 	}
 )
 
@@ -44,7 +43,6 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 	ret := &FeatureManager{
 		disabledFeatures: make(map[FeatureKey]bool),
 		DisabledFeatures: flags.DisableFeatures,
-		logger:           logger,
 	}
 
 	if flags.LockDown {

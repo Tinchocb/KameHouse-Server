@@ -4,7 +4,7 @@ import { LORE_GLOSSARY_TERMS } from '@/lib/config/lore/glossary-terms';
 import type { LoreGlossaryTerm } from '@/lib/config/lore/types';
 import { Sparkles, BookOpen } from 'lucide-react';
 
-export interface LoreTermProps {
+interface LoreTermProps {
   /** Clave del término en LORE_GLOSSARY_TERMS (ej. 'mafuba', 'zenkai', 'senzu') */
   termKey?: string;
   /** O definición directa de término */
@@ -15,12 +15,21 @@ export interface LoreTermProps {
 }
 
 const CATEGORY_COLORS: Record<LoreGlossaryTerm['category'], { badge: string; text: string }> = {
-  técnica: { badge: 'bg-red-500/15 border-red-500/30 text-red-300', text: 'text-red-400' },
+  técnica: { badge: 'bg-status-error/15 border-status-error/30 text-status-error', text: 'text-status-error' },
   objeto: { badge: 'bg-blue-500/15 border-blue-500/30 text-blue-300', text: 'text-blue-400' },
-  raza: { badge: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300', text: 'text-emerald-400' },
-  'concepto-ki': { badge: 'bg-amber-500/15 border-amber-500/30 text-amber-300', text: 'text-amber-400' },
+  raza: { badge: 'bg-status-success/15 border-status-success/30 text-status-success', text: 'text-status-success' },
+  'concepto-ki': { badge: 'bg-status-warning/15 border-status-warning/30 text-status-warning', text: 'text-status-warning' },
   lugar: { badge: 'bg-purple-500/15 border-purple-500/30 text-purple-300', text: 'text-purple-400' },
   evento: { badge: 'bg-orange-500/15 border-orange-500/30 text-orange-300', text: 'text-orange-400' },
+};
+
+const CATEGORY_LABELS: Record<LoreGlossaryTerm['category'], string> = {
+  técnica: 'Técnica',
+  objeto: 'Objeto',
+  raza: 'Raza',
+  'concepto-ki': 'Concepto de ki',
+  lugar: 'Lugar',
+  evento: 'Evento',
 };
 
 /**
@@ -44,10 +53,10 @@ export const LoreTerm: React.FC<LoreTermProps> = ({
   const trigger = (
     <button
       type="button"
-      className={`inline-flex items-center gap-0.5 font-medium underline decoration-amber-400/50 decoration-dotted underline-offset-4 hover:decoration-amber-400 hover:text-amber-300 active:scale-[0.97] transition-[color,text-decoration-color,transform] duration-fast ease-out-strong cursor-pointer select-text text-inherit ${className}`}
+      className={`inline-flex items-center gap-0.5 min-h-[32px] -my-1.5 [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:-my-3 font-medium underline decoration-status-warning/50 decoration-dotted underline-offset-4 hover:decoration-status-warning hover:text-status-warning active:scale-[0.97] transition-[color,text-decoration-color,transform] duration-fast ease-out-strong cursor-pointer select-text text-inherit ${className}`}
     >
       <span>{children ?? term.term}</span>
-      <Sparkles className="w-2.5 h-2.5 text-amber-400 inline shrink-0 ml-0.5 opacity-80" />
+      <Sparkles aria-hidden="true" className="w-2.5 h-2.5 text-status-warning inline shrink-0 ml-0.5 opacity-80" />
     </button>
   );
 
@@ -62,26 +71,26 @@ export const LoreTerm: React.FC<LoreTermProps> = ({
       <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-2">
         <div className="space-y-0.5">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <h4 className="font-display font-black text-sm text-white tracking-wide uppercase">
+            <h4 className="font-display font-black text-sm text-on-surface tracking-wide">
               {term.term}
             </h4>
             {term.kanji && (
-              <span className="font-kanji text-xs text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+              <span className="font-kanji text-xs text-status-warning font-bold bg-status-warning/10 px-1.5 py-0.5 rounded border border-status-warning/20">
                 {term.kanji}
               </span>
             )}
           </div>
           {term.romaji && (
-            <span className="text-3xs font-mono text-on-surface-variant block">
+            <span className="text-2xs text-label-2 block">
               {term.romaji}
             </span>
           )}
         </div>
 
         <span
-          className={`px-2 py-0.5 rounded-full text-3xs font-mono font-bold uppercase tracking-wider border shrink-0 ${categoryStyle.badge}`}
+          className={`px-2 py-0.5 rounded-full text-2xs font-semibold border shrink-0 ${categoryStyle.badge}`}
         >
-          {term.category}
+          {CATEGORY_LABELS[term.category] ?? term.category}
         </span>
       </div>
 
@@ -91,18 +100,18 @@ export const LoreTerm: React.FC<LoreTermProps> = ({
       </p>
 
       {/* Detailed Context */}
-      <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-on-surface-variant text-3xs font-mono leading-relaxed space-y-1">
-        <span className="text-amber-400 font-bold uppercase tracking-wider block">
-          Contexto Oficial:
+      <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-label-2 text-2xs leading-relaxed space-y-1">
+        <span className="text-status-warning font-semibold block">
+          Contexto oficial
         </span>
-        <p className="font-sans text-xs text-on-surface/90">
+        <p className="text-xs text-on-surface">
           {term.detailedContext}
         </p>
       </div>
 
       {/* Source Citation */}
-      <div className="flex items-center gap-1.5 pt-1 border-t border-white/10 text-3xs font-mono text-on-surface-variant/80">
-        <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
+      <div className="flex items-center gap-1.5 pt-1 border-t border-white/10 text-2xs text-label-2">
+        <BookOpen aria-hidden="true" className="w-3 h-3 text-status-warning shrink-0" />
         <span className="truncate">Fuente: {term.sourceCitation}</span>
       </div>
     </Popover>

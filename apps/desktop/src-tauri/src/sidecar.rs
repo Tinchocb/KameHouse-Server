@@ -17,6 +17,38 @@ const DESKTOP_SERVER_HOST: &str = "127.0.0.1";
 const DESKTOP_SERVER_DEFAULT_PORT: u16 = 43211;
 const DESKTOP_SERVER_DEV_PORT: u16 = 43212;
 
+/// Sin esta bandera, Windows abre una ventana de consola para cada proceso de consola que
+/// lanza la app (el servidor en desarrollo, `taskkill`) porque la app es de subsistema GUI.
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// `taskkill` oculto: cerrar o reaprovechar el puerto no debe mostrar un parpadeo de consola.
+fn hidden_std_command(program: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
+}
+
+/// Intervalo entre sondeos de /api/v1/status mientras el servidor arranca. Antes era un
+/// escalón 250/500/1000 ms: si el servidor empezaba a responder justo después de un sondeo,
+/// la detección esperaba hasta 1 s, y la navegación a la interfaz del sidecar (que depende
+/// de esa detección) se retrasaba lo mismo. Con 100 ms el sondeo es barato: mientras Go no
+/// sirve HTTP, la conexión queda en backlog o se rechaza al instante.
+const READY_PROBE_INTERVAL_MS: u64 = 100;
+
+/// Un sondeo: `true` si el servidor en `port` responde 2xx a /api/v1/status dentro de 1 s.
+async fn probe_server_ready(client: &reqwest::Client, port: u16) -> bool {
+    let url = format!("http://{}:{}/api/v1/status", DESKTOP_SERVER_HOST, port);
+    matches!(
+        timeout(Duration::from_secs(1), client.get(&url).send()).await,
+        Ok(Ok(resp)) if resp.status().is_success()
+    )
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum ServerStatus {
@@ -175,7 +207,7 @@ impl SidecarManager {
         // kill only if the port is still occupied. Never target our own PID.
         #[cfg(windows)]
         {
-            let _ = std::process::Command::new("taskkill")
+            let _ = hidden_std_command("taskkill")
                 .args(["/PID", &pid.to_string()])
                 .output();
         }
@@ -211,7 +243,7 @@ impl SidecarManager {
         warn!("[Sidecar] Orphan pid {} still alive, force-killing", pid);
         #[cfg(windows)]
         {
-            let _ = std::process::Command::new("taskkill")
+            let _ = hidden_std_command("taskkill")
                 .args(["/PID", &pid.to_string(), "/F"])
                 .output();
         }
@@ -257,7 +289,7 @@ impl SidecarManager {
         let binary_path = self.get_binary_path(app_handle)
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
         info!("[Sidecar] Using binary: {:?}", binary_path);
-        window_manager.set_splash_status(app_handle, "Iniciando servidor...");
+        window_manager.set_splash_status(app_handle, "Iniciando servidor...", 0.25);
 
         // In dev mode, wait for the server binary to be built if it doesn't exist yet
         if self.is_dev && !binary_path.exists() {
@@ -350,6 +382,17 @@ impl SidecarManager {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .kill_on_drop(true);
+            // Instalada, la app puede arrancar con otro directorio actual (menú Inicio, acceso
+            // directo): el servidor resuelve sus recursos junto a su propio ejecutable.
+            if !self.is_dev {
+                if let Some(dir) = binary_path.parent() {
+                    cmd.current_dir(dir);
+                }
+            }
+            #[cfg(windows)]
+            {
+                cmd.creation_flags(CREATE_NO_WINDOW);
+            }
 
             match cmd.spawn() {
                 Ok(child) => {
@@ -450,7 +493,6 @@ impl SidecarManager {
         let app_handle = app_handle_clone;
 
         tokio::spawn(async move {
-            let mut delay_ms = 250;
             let start_time = std::time::Instant::now();
             const MAX_DURATION: Duration = Duration::from_secs(30);
 
@@ -458,13 +500,11 @@ impl SidecarManager {
             let client = reqwest::Client::new();
 
             loop {
-                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-                // Exponential backoff capped at 1000ms
-                if delay_ms < 1000 {
-                    delay_ms = (delay_ms * 2).min(1000);
-                }
+                tokio::time::sleep(Duration::from_millis(READY_PROBE_INTERVAL_MS)).await;
 
-                if is_shutdown.load(Ordering::SeqCst) {
+                // Una vez resuelto el arranque (p. ej. por el WebSocket) no hace falta sondear más:
+                // las salidas de abajo solo actúan si el arranque no se resolvió.
+                if is_shutdown.load(Ordering::SeqCst) || startup_resolved.load(Ordering::SeqCst) {
                     break;
                 }
 
@@ -493,15 +533,12 @@ impl SidecarManager {
                 } else {
                     DESKTOP_SERVER_DEFAULT_PORT
                 };
-                let url = format!("http://{}:{}/api/v1/status", DESKTOP_SERVER_HOST, port);
-                if let Ok(Ok(resp)) = timeout(Duration::from_secs(1), client.get(&url).send()).await {
-                    if resp.status().is_success() && !startup_resolved.load(Ordering::SeqCst) {
-                        info!("[Sidecar] Server ready via HTTP probe");
-                        startup_resolved.store(true, Ordering::SeqCst);
-                        status.store(2, Ordering::SeqCst); // Running
-                        window_manager.finalize_startup(&app_handle, "HTTP status probe");
-                        break;
-                    }
+                if probe_server_ready(&client, port).await && !startup_resolved.load(Ordering::SeqCst) {
+                    info!("[Sidecar] Server ready via HTTP probe");
+                    startup_resolved.store(true, Ordering::SeqCst);
+                    status.store(2, Ordering::SeqCst); // Running
+                    window_manager.finalize_startup(&app_handle, "HTTP status probe");
+                    break;
                 }
 
                 if start_time.elapsed() >= MAX_DURATION {
@@ -544,7 +581,7 @@ impl SidecarManager {
                     #[cfg(windows)]
                     {
                         if let Some(id) = child.id() {
-                            let _ = std::process::Command::new("taskkill")
+                            let _ = hidden_std_command("taskkill")
                                 .args(["/PID", &id.to_string(), "/F", "/T"])
                                 .output();
                         }
@@ -572,5 +609,68 @@ impl SidecarManager {
 impl Default for SidecarManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod ready_probe_tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
+    /// Servidor de prueba: responde `reply` (p. ej. "200 OK") solo a `GET /api/v1/status`; el resto, 404.
+    async fn serve_status(reply: &'static str) -> u16 {
+        let listener = TcpListener::bind((DESKTOP_SERVER_HOST, 0)).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            loop {
+                let Ok((mut sock, _)) = listener.accept().await else { return };
+                tokio::spawn(async move {
+                    let mut buf = [0u8; 2048];
+                    let n = sock.read(&mut buf).await.unwrap_or(0);
+                    let req = String::from_utf8_lossy(&buf[..n]);
+                    let status = if req.starts_with("GET /api/v1/status ") { reply } else { "404 Not Found" };
+                    let resp = format!("HTTP/1.1 {status}\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{{}}");
+                    let _ = sock.write_all(resp.as_bytes()).await;
+                });
+            }
+        });
+        port
+    }
+
+    #[tokio::test]
+    async fn puerto_cerrado_no_esta_listo() {
+        let l = TcpListener::bind((DESKTOP_SERVER_HOST, 0)).await.unwrap();
+        let port = l.local_addr().unwrap().port();
+        drop(l);
+        assert!(!probe_server_ready(&reqwest::Client::new(), port).await);
+    }
+
+    #[tokio::test]
+    async fn status_2xx_cuenta_como_listo() {
+        let port = serve_status("200 OK").await;
+        assert!(probe_server_ready(&reqwest::Client::new(), port).await);
+    }
+
+    #[tokio::test]
+    async fn status_no_2xx_no_cuenta_como_listo() {
+        let port = serve_status("503 Service Unavailable").await;
+        assert!(!probe_server_ready(&reqwest::Client::new(), port).await);
+    }
+
+    #[tokio::test]
+    async fn socket_sin_respuesta_espera_el_timeout() {
+        // El socket acepta conexiones pero nadie responde: así se ve Go entre el listen y el Serve.
+        let listener = TcpListener::bind((DESKTOP_SERVER_HOST, 0)).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            let _keep = listener;
+            tokio::time::sleep(Duration::from_secs(30)).await;
+        });
+        let started = std::time::Instant::now();
+        assert!(!probe_server_ready(&reqwest::Client::new(), port).await);
+        let waited = started.elapsed();
+        assert!(waited >= Duration::from_millis(900), "debía esperar el timeout, esperó {waited:?}");
+        assert!(waited < Duration::from_millis(1500), "no debía colgarse más de 1 s, esperó {waited:?}");
     }
 }

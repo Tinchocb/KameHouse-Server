@@ -2,11 +2,13 @@ package ffmpegutil
 
 import (
 	"context"
+	"kamehouse/internal/util"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -79,7 +81,7 @@ func ResolveFFmpegPath(cacheDir, customPath string) string {
 		return p
 	}
 
-	return "ffmpeg"
+	return installTarget(cacheDir, "ffmpeg")
 }
 
 // ResolveFFprobePath resolves the absolute or system path for ffprobe.
@@ -108,27 +110,73 @@ func ResolveFFprobePath(cacheDir, customPath string) string {
 		return p
 	}
 
-	return "ffprobe"
+	return installTarget(cacheDir, "ffprobe")
 }
+
+// installTarget es la ruta donde la descarga automática deja el binario: si aún no existe,
+// la resolución devuelve esta ruta (no el nombre pelado) para que, cuando la descarga termine,
+// los componentes que ya la guardaron al arrancar encuentren el binario sin reiniciar.
+// Sin cacheDir no hay dónde instalar: se devuelve el nombre del sistema.
+func installTarget(cacheDir, tool string) string {
+	if cacheDir == "" {
+		return tool
+	}
+	ext := ""
+	if runtime.GOOS == "windows" {
+		ext = ".exe"
+	}
+	return filepath.Join(cacheDir, "bin", tool+ext)
+}
+
+// binaryVersionEntry guarda la versión de un binario junto con el tamaño y la fecha con que
+// se leyó: si el archivo cambia (reinstalación, actualización), la entrada deja de valer.
+type binaryVersionEntry struct {
+	size    int64
+	modTime time.Time
+	version string
+}
+
+// versionCache evita relanzar `<bin> -version` en cada consulta de estado: la pantalla de
+// inicio pide el estado de FFmpeg al cargar, y cada consulta costaba dos procesos (~200 ms).
+var versionCache sync.Map // ruta resuelta -> binaryVersionEntry
 
 // GetBinaryVersion returns the first line of `<bin> -version` or empty string if not executable.
 func GetBinaryVersion(binPath string) string {
 	if binPath == "" {
 		return ""
 	}
+	// LookPath resuelve rutas y nombres del PATH, igual que exec.Command.
+	resolved, err := exec.LookPath(binPath)
+	if err != nil {
+		return ""
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return ""
+	}
+	if cached, ok := versionCache.Load(resolved); ok {
+		entry := cached.(binaryVersionEntry)
+		if entry.size == info.Size() && entry.modTime.Equal(info.ModTime()) {
+			return entry.version
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	out, err := exec.CommandContext(ctx, binPath, "-version").Output()
+	// util.NewCmdCtx oculta la consola: sin esto Windows abre una ventana por cada sondeo.
+	out, err := util.NewCmdCtx(ctx, resolved, "-version").Output()
 	if err != nil {
 		return ""
 	}
 
+	version := ""
 	lines := strings.Split(string(out), "\n")
 	if len(lines) > 0 {
-		return strings.TrimSpace(lines[0])
+		version = strings.TrimSpace(lines[0])
 	}
-	return ""
+	versionCache.Store(resolved, binaryVersionEntry{size: info.Size(), modTime: info.ModTime(), version: version})
+	return version
 }
 
 // GetStatus returns the current status and resolved paths for FFmpeg and FFprobe.

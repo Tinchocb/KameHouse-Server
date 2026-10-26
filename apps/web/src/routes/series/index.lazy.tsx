@@ -1,31 +1,30 @@
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router';
-import { Fragment, useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Fragment, useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { useGetLibraryCollection } from '@/api/hooks/anime_collection.hooks';
-import { SeriesCard, getVhsColor } from './-SeriesCard';
+import { useGetContinuityWatchHistory } from '@/api/hooks/continuity.hooks';
+import { SeriesCard, getVhsColor, SPINE_EXPANDED_BASIS, SPINE_COLLAPSED_BASIS, SPINE_EXPANDED_GROW, SPINE_SHELF_GAP, SPINE_SHELF_PADDING } from './-SeriesCard';
 import { SeriesSpineRow } from './-SeriesSpineRow';
-import { getMediumResImage, getLowResImage, localImage, prewarmImages } from '@/lib/helpers/images';
-import { IconNavigationLayers } from '@/components/ui/icons';
-import { LoadSwap, loadSwapVariants, viewSwapVariants } from '@/components/ui/kinetics';
-import { getSeriesIdFromMedia, getSeriesYear, getSeriesEraAccent, DRAGON_BALL_SERIES_ORDER, DRAGON_BALL_SERIES_INFO, DAIMA_VERTICAL_POSTER } from '@/lib/helpers/series';
-import { getSafeCollectionEntries } from '@/lib/helpers/collection';
+import { getHighResImage, getLowResImage, localImage, prewarmImages } from '@/lib/helpers/images';
+import { IconNavigationChevronLeft, IconNavigationChevronRight } from '@/components/ui/icons';
+import { loadSwapVariants, useMotionTier, viewSwapVariants } from '@/components/ui/kinetics';
+import { getSeriesEraAccent } from '@/lib/helpers/series';
 import { Skeleton } from '@/components/ui/skeleton/skeleton';
-import { SectionBar } from '@/components/ui/sectionbar/sectionbar';
-import { PosterGridSkeleton } from '@/components/ui/shimmer-skeleton';
-import { useRevealChildren } from '@/components/ui/kinetics/scroll-reveal';
-import { EmptyState } from '@/components/shared/empty-state';
+import { IconButton } from '@/components/ui/button';
+import { LibraryEmptyState } from '@/components/shared/library-empty-state';
+import { LibraryErrorState } from '@/components/shared/library-error-state';
 import { useResponsive } from '@/hooks/use-responsive';
 import { useSound } from '@/hooks/use-sound';
 import { useThemeSettings } from '@/lib/theme/theme-hooks';
+import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
 import { useUIStore } from '@/lib/store';
 import { cn } from '@/components/ui/core/styling';
-import { usePerformanceStore, selectIsHeavyEffectsAllowed, selectEffectiveTier } from '@/lib/hardware/performance-store';
+import { usePerformanceStore, selectEffectiveTier } from '@/lib/hardware/performance-store';
 import { HERO_AURA_CLASS, HERO_STAGE_CLASS } from '@/lib/config/hero-stage';
-import { SeriesViewMode, ViewModeTabs } from './-ViewModeTabs';
+import { ViewModeTabs, type SeriesViewMode } from './-ViewModeTabs';
 import { getGlowTransform, AmbientAura } from './-AmbientAura';
 import { SeriesPosterGridItem } from './-SeriesPosterGridItem';
-
-export type { SeriesViewMode } from './-ViewModeTabs';
+import { buildSeriesList, loadSeriesPrefs, saveSeriesPrefs, sortSeries } from './-series-model';
 
 /** Delay de stagger por card, en ms (tope acotado para fluidez). */
 const ENTRY_STAGGER_MS = 40;
@@ -39,34 +38,66 @@ export const Route = createLazyFileRoute('/series/')({
     component: SeriesFullscreenIndex,
 });
 
+const GRID_CLASS = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 w-full';
+
+/** Misma geometría que la grilla de Portadas: tarjetas 2:3 en las mismas columnas. */
+function PosterGridPlaceholder() {
+    return (
+        <div role="status" aria-busy="true" aria-label="Cargando series" className={GRID_CLASS}>
+            {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-[2/3] h-auto w-full rounded-2xl" />
+            ))}
+        </div>
+    );
+}
+
+/** Misma geometría que las cintas de la estantería móvil (72 px de alto, 8 px entre ellas). */
+function SpineListPlaceholder() {
+    return (
+        <div role="status" aria-busy="true" aria-label="Cargando series" className="flex flex-col gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-[74px] w-full rounded-xl" />
+            ))}
+        </div>
+    );
+}
+
 function SeriesFullscreenIndex() {
     const navigate = useNavigate();
     const { view: viewParam } = Route.useSearch();
-    const view: SeriesViewMode = viewParam ?? 'shelf';
+    // Preferencias de este dispositivo (vista y orden). La URL manda si trae `view`.
+    const [prefs] = useState(loadSeriesPrefs);
+    const view: SeriesViewMode = viewParam ?? prefs.view ?? 'shelf';
     const { playSound } = useSound();
     const ts = useThemeSettings();
     const reduceMotion = useReducedMotion();
-    const isHeavyAllowed = usePerformanceStore(selectIsHeavyEffectsAllowed);
     const effectiveTier = usePerformanceStore(selectEffectiveTier);
-    // Glows caros (blur 80-100px + animaciones 8s) solo con GPU capaz y sin reduced-m.
-    const allowGlowFx = isHeavyAllowed && !reduceMotion;
+    // Glows caros (blur 80-100px + animaciones 8s) solo con tier "full": GPU capaz, sin reduced-motion ni modo TV.
+    const allowGlowFx = useMotionTier() === 'full';
     // En eco (low_power) se apagan incluso los blurs estáticos de los glows.
     const isEco = effectiveTier === 'low_power';
     const [selectedId, setSelectedId] = useState<number | null>(null);
-    const shelfRef = useRef<HTMLDivElement>(null);
+    const shelfRef = useRef<HTMLDivElement | null>(null);
+    // El shelf se monta y desmonta con AnimatePresence al cambiar de vista: el efecto de anchos
+    // necesita el nodo como estado para volver a correr cuando aparece.
+    const [shelfEl, setShelfEl] = useState<HTMLDivElement | null>(null);
+    const setShelfNode = useCallback((node: HTMLDivElement | null) => {
+        shelfRef.current = node;
+        setShelfEl(node);
+    }, []);
     // Tablet (768-1023) usa el grid de posters en vez del shelf horizontal
     const { isMobile: isPhone, isTablet } = useResponsive();
     const isMobile = isPhone || isTablet;
 
-    const { data: collection, isLoading } = useGetLibraryCollection();
+    const { data: collection, isLoading, isError, error, refetch } = useGetLibraryCollection();
+    const { data: history } = useGetContinuityWatchHistory();
 
     const handleNavigate = useCallback((id: string) => {
         navigate({ to: '/series/$seriesId', params: { seriesId: id } });
     }, [navigate]);
 
-    // Estantería móvil: una sola cinta abierta. `undefined` = todavía sin tocar,
-    // se abre sola la primera serie a medio ver.
-    const [openSpineId, setOpenSpineId] = useState<number | null | undefined>(undefined);
+    // Estantería móvil: una sola cinta abierta. Al entrar todas arrancan colapsadas.
+    const [openSpineId, setOpenSpineId] = useState<number | null>(null);
 
     const handlePlayEpisode = useCallback((id: number, episode: number) => {
         navigate({
@@ -78,114 +109,95 @@ function SeriesFullscreenIndex() {
 
     const handleViewChange = useCallback((nextView: SeriesViewMode) => {
         playSound('category', 0.1);
+        saveSeriesPrefs({ view: nextView });
         // Sin startViewTransition: el cambio de panel ya lo anima AnimatePresence
         // (viewSwapVariants); el cross-fade del navegador lo duplicaba y dejaba
         // fantasma la píldora del tab mientras se desplaza.
-        navigate({ to: '/series', search: { view: nextView === 'shelf' ? undefined : nextView }, replace: true });
+        // La vista va siempre explícita en la URL: así "estantería" no se confunde con "sin elegir".
+        navigate({ to: '/series', search: { view: nextView }, replace: true });
     }, [navigate, playSound]);
 
-    const seriesList = useMemo(() => {
-        if (!collection?.lists) return [];
-        const raw = getSafeCollectionEntries(collection)
-            .filter(entry => {
-                if (!entry) return false;
-                const media = entry?.media;
-                const format = media?.format?.toUpperCase();
-                const type = media?.type?.toUpperCase();
-                if (format === 'MOVIE' || format === 'OVA' || format === 'SPECIAL') return false;
-                if (type === 'MOVIE') return false;
-
-                const allTitles = [
-                    media?.titleSpanish,
-                    media?.titleEnglish,
-                    media?.titleRomaji,
-                    media?.titleOriginal,
-                ].filter(Boolean).join(' ').toLowerCase();
-
-                const totalEps = media?.totalEpisodes || entry.libraryData?.mainFileCount || 0;
-                if (totalEps <= 1 && (
-                    allTitles.includes('movie') ||
-                    allTitles.includes('pelicula') ||
-                    allTitles.includes('película') ||
-                    allTitles.includes('film')
-                )) return false;
-
-                return true;
-            });
-
-        const unique = new Map<number, NonNullable<typeof raw[0]>>();
-        raw.forEach(s => { if (s.mediaId) unique.set(s.mediaId, s); });
-        const filtered = Array.from(unique.values());
-
-        const mapped = filtered.filter(s => s != null).map((s) => {
-            const media = s?.media;
-            const title = media?.titleSpanish || media?.titleEnglish || media?.titleRomaji || media?.titleOriginal || 'Sin título';
-            const seriesId = getSeriesIdFromMedia(media, title);
-            const canonicalInfo = seriesId ? DRAGON_BALL_SERIES_INFO[seriesId] : undefined;
-
-            const rawTotalEps = media?.totalEpisodes || s.libraryData?.mainFileCount || 0;
-            const totalEps = rawTotalEps > 0 ? rawTotalEps : (canonicalInfo?.episodes || 0);
-
-            const watchedFromLibrary = s.libraryData
-                ? Math.max(0, (s.libraryData.mainFileCount || 0) - (s.libraryData.unwatchedCount || 0))
-                : 0;
-            const watched = s.listData?.progress || watchedFromLibrary;
-            const progressPercent = totalEps > 0 ? Math.min(100, Math.round((watched / totalEps) * 100)) : 0;
-            const yearVal = getSeriesYear(title, media?.year, media?.startDate, seriesId);
-
-            const rawDesc = media?.description?.replace(/<[^>]*>?/gm, '').trim();
-            const desc = canonicalInfo?.description || ((rawDesc && rawDesc.toLowerCase() !== 'sin descripción') ? rawDesc : 'Sin sinopsis disponible.');
-
-            const posterImg = seriesId === 'dragon_ball_daima'
-                ? DAIMA_VERTICAL_POSTER
-                : (media?.posterImage || media?.bannerImage || canonicalInfo?.poster || '');
-            const bannerImg = media?.bannerImage || media?.posterImage || canonicalInfo?.banner || '';
-
-            return {
-                id: s.mediaId as number,
-                title: canonicalInfo?.title || title,
-                eps: totalEps,
-                year: yearVal,
-                yearNum: yearVal === 'N/A' ? 9999 : Number(yearVal),
-                progress: progressPercent,
-                watched: totalEps > 0 ? Math.min(watched, totalEps) : watched,
-                img: getMediumResImage(bannerImg),
-                poster: getMediumResImage(posterImg),
-                desc,
-                seriesId,
-                orderNum: DRAGON_BALL_SERIES_ORDER[seriesId] ?? 999,
-            };
-        });
-
-        const sorted = [...mapped];
-        sorted.sort((a, b) => {
-            if (a.orderNum !== b.orderNum) return a.orderNum - b.orderNum;
-            if (a.yearNum !== b.yearNum) return a.yearNum - b.yearNum;
-            return a.title.localeCompare(b.title);
-        });
-        return sorted;
-    }, [collection]);
+    const allSeries = useMemo(() => buildSeriesList(collection, history), [collection, history]);
+    const displayedList = useMemo(
+        () => sortSeries(allSeries, 'saga'),
+        [allSeries],
+    );
 
     // Pre-cargar portadas + banners visibles iniciales una sola vez por montaje.
     // El hero expandido y el aura usan el banner (item.img); sin esto el primer
     // paint del aura siempre falla la caché aunque el póster ya esté cargado.
     const preloadedRef = useRef(false);
     useEffect(() => {
-        if (preloadedRef.current || !seriesList.length) return;
+        if (preloadedRef.current || !displayedList.length) return;
         preloadedRef.current = true;
-        prewarmImages(seriesList.slice(0, 4).flatMap(item => [
+        prewarmImages(displayedList.slice(0, 4).flatMap(item => [
             item.poster,
             getLowResImage(item.poster),
             item.img,
             getLowResImage(item.img),
         ].map(localImage)));
-    }, [seriesList]);
+    }, [displayedList]);
 
-    // Selección efectiva: cae al primer item si no hay selección explícita
-    const displayedList = seriesList;
-    // Las portadas entran en ola al bajar (solo las que no se ven al cargar).
-    const posterGridRef = useRef<HTMLDivElement>(null);
-    useRevealChildren(posterGridRef, `${view}:${displayedList.map(s => s.id).join(',')}`);
+    // Anchos reales de lomo abierto/cerrado (misma cuenta que el flex de SeriesCard). Las capas
+    // internas de cada lomo se fijan a estos anchos para que la transición de flex-grow solo recorte
+    // y no vuelva a pintar imágenes con blur en cada frame.
+    const shelfCount = displayedList.length;
+    // Sin lomo abierto cada lomo ocupa W/N: el ancho de las capas internas tiene que seguirlo,
+    // si no quedan huecos a los costados. Con uno abierto se mantiene el cálculo de siempre.
+    const hayLomoAbierto = displayedList.some(s => s.id === selectedId);
+    useLayoutEffect(() => {
+        const el = shelfEl;
+        if (!el || shelfCount === 0) return;
+        const apply = () => {
+            const availableWidth = el.clientWidth - SPINE_SHELF_PADDING * 2 - SPINE_SHELF_GAP * (shelfCount - 1);
+            const free = Math.max(0, availableWidth - (SPINE_EXPANDED_BASIS + SPINE_COLLAPSED_BASIS * (shelfCount - 1)));
+            const share = free / (shelfCount - 1 + SPINE_EXPANDED_GROW);
+            const expW = Math.round(SPINE_EXPANDED_BASIS + SPINE_EXPANDED_GROW * share);
+            el.style.setProperty('--spine-exp-w', `${expW}px`);
+            el.style.setProperty('--spine-exp-width', String(expW));
+            el.style.setProperty('--spine-art-height', String(Math.max(1, el.clientHeight - SPINE_SHELF_PADDING * 2 - 144)));
+            const colW = hayLomoAbierto
+                ? SPINE_COLLAPSED_BASIS + share
+                : Math.max(SPINE_COLLAPSED_BASIS, availableWidth / shelfCount);
+            el.style.setProperty('--spine-col-w', `${Math.round(colW)}px`);
+            el.style.setProperty('--spine-col-width', String(Math.round(colW)));
+        };
+        apply();
+        const ro = new ResizeObserver(apply);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [shelfEl, shelfCount, hayLomoAbierto]);
+
+    // Flechas del estante: solo aparecen cuando los lomos no caben y hay hacia dónde desplazarse.
+    const [canScroll, setCanScroll] = useState({ left: false, right: false });
+    useEffect(() => {
+        const el = shelfEl;
+        if (!el) return;
+        const update = () => {
+            const left = el.scrollLeft > 4;
+            const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+            setCanScroll(prev => (prev.left === left && prev.right === right ? prev : { left, right }));
+        };
+        update();
+        el.addEventListener('scroll', update, { passive: true });
+        el.addEventListener('transitionend', update);
+        // En el siguiente frame: actualizar estado dentro del callback del observer provoca "ResizeObserver loop".
+        let raf = 0;
+        const ro = new ResizeObserver(() => {
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(update);
+        });
+        ro.observe(el);
+        return () => {
+            cancelAnimationFrame(raf);
+            el.removeEventListener('scroll', update);
+            el.removeEventListener('transitionend', update);
+            ro.disconnect();
+        };
+    }, [shelfEl, shelfCount, hayLomoAbierto]);
+    const scrollShelf = useCallback((dir: -1 | 1) => {
+        shelfRef.current?.scrollBy({ left: dir * SPINE_EXPANDED_BASIS * 0.8, behavior: reduceMotion ? 'auto' : 'smooth' });
+    }, [reduceMotion]);
 
     const effectiveSelectedId = displayedList.some(s => s.id === selectedId)
         ? selectedId
@@ -195,6 +207,7 @@ function SeriesFullscreenIndex() {
         return displayedList.findIndex(item => item.id === effectiveSelectedId);
     }, [displayedList, effectiveSelectedId]);
     const selectedItem = displayedList[selectedIndex] ?? null;
+    const isClassic = useIsClassicMode();
     const selectedAccent = getSeriesEraAccent(selectedItem?.seriesId, selectedItem ? getVhsColor(selectedItem.id) : undefined);
 
     // Aura ambiental sin flash: arte difuminado ultra-liviano (w185) con crossfade nativo
@@ -210,17 +223,13 @@ function SeriesFullscreenIndex() {
         indices.forEach((idx) => {
             const it = displayedList[idx];
             if (!it) return;
-            if (it.poster) targets.push(it.poster, getLowResImage(it.poster));
+            if (it.poster) targets.push(it.poster, getHighResImage(it.poster), getLowResImage(it.poster));
             if (it.img) targets.push(it.img, getLowResImage(it.img));
         });
         prewarmImages(targets.map(localImage));
     }, [selectedIndex, displayedList]);
 
-    const defaultOpenSpineId = useMemo(
-        () => displayedList.find(s => s.progress > 0 && s.progress < 100)?.id ?? null,
-        [displayedList]
-    );
-    const activeSpineId = openSpineId === undefined ? defaultOpenSpineId : openSpineId;
+    const activeSpineId = openSpineId;
 
     const handleToggleSpine = useCallback((id: number) => {
         setOpenSpineId(id === activeSpineId ? null : id);
@@ -230,10 +239,17 @@ function SeriesFullscreenIndex() {
         }
     }, [activeSpineId, playSound]);
 
+    // Callback estable (lee lo último vía ref): si cambiara de identidad con cada selección
+    // rompería el memo de SeriesCard y las 6 tarjetas se renderizarían de nuevo (~35 ms).
+    const selectionRef = useRef({ id: selectedId, playSound });
+    useLayoutEffect(() => {
+        selectionRef.current = { id: selectedId, playSound };
+    });
     const handleSelectSeries = useCallback((id: number) => {
-        if (id !== effectiveSelectedId) playSound('series', 0.1);
+        const { id: currentId, playSound: play } = selectionRef.current;
+        if (id !== currentId) play('series', 0.1);
         setSelectedId(id);
-    }, [effectiveSelectedId, playSound]);
+    }, []);
 
     // NOTA perf: sin useHeroBackdrop en el listado. DynamicBackdrop omite su
     // capa de imagen cuando el hero local ya pinta la misma arte
@@ -243,17 +259,16 @@ function SeriesFullscreenIndex() {
     const setActiveSeriesContext = useUIStore(s => s.setActiveSeriesContext);
     const listingContextWrittenRef = useRef<string | null>(null);
     useEffect(() => {
-        const key = selectedItem?.seriesId || (selectedItem?.id ? String(selectedItem.id) : null);
-        if (key) {
-            listingContextWrittenRef.current = key;
-            setActiveSeriesContext(key);
-        }
+        const expandedItem = displayedList.find(item => item.id === selectedId);
+        const key = expandedItem?.seriesId || (expandedItem?.id ? String(expandedItem.id) : null);
+        listingContextWrittenRef.current = key;
+        setActiveSeriesContext(key);
         return () => {
             if (useUIStore.getState().activeSeriesContext === listingContextWrittenRef.current) {
                 setActiveSeriesContext(null);
             }
         };
-    }, [selectedItem?.seriesId, selectedItem?.id, setActiveSeriesContext]);
+    }, [displayedList, selectedId, setActiveSeriesContext]);
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -262,7 +277,7 @@ function SeriesFullscreenIndex() {
             const n = Number(e.key);
             if (Number.isInteger(n) && n >= 1 && n <= displayedList.length) {
                 const target = displayedList[n - 1];
-                if (target && target.id !== effectiveSelectedId) {
+                if (target && target.id !== selectedId) {
                     playSound('series', 0.1);
                     setSelectedId(target.id);
                 }
@@ -270,11 +285,14 @@ function SeriesFullscreenIndex() {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [displayedList, effectiveSelectedId, view, isMobile, playSound]);
+    }, [displayedList, selectedId, view, isMobile, playSound]);
 
     // Scroll automático hacia la card seleccionada
     useEffect(() => {
         if (!effectiveSelectedId || isMobile || view === 'etapas') return;
+        // Sin selección del usuario la tarjeta activa es la primera, que ya está a la izquierda del
+        // estante: medir rects acá forzaba un layout completo dentro del montaje de la página.
+        if (selectedId === null) return;
         const cardEl = document.getElementById(`series-card-${effectiveSelectedId}`);
         if (cardEl && shelfRef.current) {
             const shelfRect = shelfRef.current.getBoundingClientRect();
@@ -283,46 +301,44 @@ function SeriesFullscreenIndex() {
                 cardEl.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
             }
         }
-    }, [effectiveSelectedId, isMobile, view, reduceMotion]);
+    }, [effectiveSelectedId, selectedId, isMobile, view, reduceMotion]);
+
+    if (isError && !collection) return <LibraryErrorState error={error} onRetry={() => { void refetch(); }} />;
+
+    const loadingList = isLoading && allSeries.length === 0;
+    const hasList = displayedList.length > 0;
+
+    const emptyLibrary = (
+        <LibraryEmptyState
+            title="No hay series en tu biblioteca"
+            message="Escanea tus carpetas desde Ajustes para añadir series."
+        />
+    );
 
     return (
-        <div className="relative w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-4 md:pt-20 pb-8 select-none flex flex-col justify-start space-y-4 text-on-surface">
-            <h1 className="sr-only">Series</h1>
+        <div className="neutro-sentence relative w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-nav pb-8 select-none flex flex-col justify-start space-y-4 text-on-surface">
             {/* ── Ambient Aura Background (mismo tamaño que Home / Películas) ── */}
             <div className={cn(HERO_AURA_CLASS, "[contain:paint]")}>
                 <AmbientAura src={lowAuraSrc} allowGlowFx={allowGlowFx} />
                 {/* Tinte de la era sobre todo el hero (sin esto el wash queda gris). Antes era
-                    un orbe que respiraba arriba a la izquierda; ahora es un velo sin forma visible. */}
-                {selectedItem && (
+                    un orbe que respiraba arriba a la izquierda; ahora es un velo sin forma visible.
+                    Color en background-color y forma en la máscara: un degradado en `background` no se
+                    interpola y el tinte saltaba de golpe al cambiar de serie. */}
+                {selectedItem && !isClassic && (
                     <div
-                        className="absolute inset-0 pointer-events-none transition-[background] duration-500"
+                        className="absolute inset-0 pointer-events-none transition-[background-color] duration-slow ease-smooth-out"
                         style={{
-                            background: `radial-gradient(ellipse 80% 60% at 30% 30%, color-mix(in srgb, ${selectedAccent} 16%, transparent) 0%, transparent 70%)`,
+                            backgroundColor: `color-mix(in srgb, ${selectedAccent} 16%, transparent)`,
+                            maskImage: 'radial-gradient(ellipse 80% 60% at 30% 30%, black 0%, transparent 70%)',
+                            WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 30% 30%, black 0%, transparent 70%)',
                         }}
                     />
                 )}
             </div>
 
-            {/* ── CRT scanlines (solo vista Portadas; el shelf tiene el suyo recortado) ── */}
-            {(view !== 'shelf' || isMobile) && (
-                <div className="absolute inset-0 pointer-events-none z-[49] opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
-            )}
-
-            {/* ── Tab Estantería / Portadas (posición original, primera barra) ── */}
-            <div className="relative flex justify-center items-center w-full z-20 shrink-0">
-                {/* Wash de aura para que el blur de la píldora tenga qué refractar */}
-                {selectedItem && (
-                    <div
-                        aria-hidden
-                        className="absolute inset-x-4 -inset-y-4 pointer-events-none blur-2xl"
-                        style={{
-                            background: `radial-gradient(ellipse 60% 100% at 50% 50%, color-mix(in srgb, ${selectedAccent} 18%, transparent), transparent 70%)`,
-                            opacity: allowGlowFx ? 1 : 0.5,
-                        }}
-                    />
-                )}
-                <ViewModeTabs mode={view} onChange={handleViewChange} />
-            </div>
+            <h1 className="sr-only">Series</h1>
+            {/* Selector de vista (Estantería / Portadas): riel fijo, no ocupa espacio en el flujo. */}
+            <ViewModeTabs mode={view} onChange={handleViewChange} />
 
             {/* ── Main Content ── */}
             {/* Cambio de vista: el panel saliente se va antes de que entre el nuevo. */}
@@ -331,16 +347,18 @@ function SeriesFullscreenIndex() {
                 /* ═══════════════════════ VISTA VHS SHELF (desktop, mismo stage que Home/Películas) ═══════════════════════ */
                 <m.div key="shelf" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full">
                 <div
-                    className={cn("sectionbar w-full relative z-10 flex flex-col rounded-3xl overflow-hidden border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] flex-none md:mb-8", HERO_STAGE_CLASS)}
+                    className={cn("w-full relative z-10 flex flex-col rounded-hero overflow-hidden flex-none", HERO_STAGE_CLASS)}
                 >
                     <div
-                        ref={shelfRef}
-                        role="listbox"
-                        aria-orientation="horizontal"
-                        aria-label="Colección de series"
-                        aria-activedescendant={selectedItem ? `series-card-${selectedItem.id}` : undefined}
+                        ref={setShelfNode}
+                        // Sin tarjetas (cargando o vacío) no hay `option` hijos: un listbox vacío
+                        // rompe `aria-required-children`, así que el rol solo existe con contenido.
+                        // El foco vive en cada lomo (roving tabindex), no en el contenedor.
+                        role={hasList ? "listbox" : undefined}
+                        aria-orientation={hasList ? "horizontal" : undefined}
+                        aria-label={hasList ? "Series" : undefined}
                         className="vhs-shelf w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10"
-                        style={{ scrollSnapType: 'x proximity', scrollPadding: '0 16px' }}
+                        style={{ scrollSnapType: 'x proximity', scrollPadding: '0 16px', gap: SPINE_SHELF_GAP, padding: SPINE_SHELF_PADDING }}
                     >
                         {/* Glow interno del shelf (respira como Home) */}
                         {selectedItem && !isEco && (
@@ -358,14 +376,17 @@ function SeriesFullscreenIndex() {
                                     }}
                                 />
                             ) : (
-                                // balanced: gradiente sin blur
+                                // balanced: gradiente sin blur. Color en background-color y forma en la máscara
+                                // (el degradado en `background` no se interpola): el color se funde con el del tinte.
                                 <div
                                     className="absolute top-1/2 left-0 w-[500px] h-[500px] pointer-events-none z-0"
                                     style={{
                                         opacity: 0.07,
-                                        background: `radial-gradient(circle, ${selectedAccent} 0%, transparent 60%)`,
+                                        backgroundColor: selectedAccent,
+                                        maskImage: 'radial-gradient(circle, black 0%, transparent 60%)',
+                                        WebkitMaskImage: 'radial-gradient(circle, black 0%, transparent 60%)',
                                         transform: getGlowTransform(selectedIndex, displayedList.length, 250),
-                                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background 700ms ease-out',
+                                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background-color var(--duration-slow) var(--ease-smooth-out)',
                                     }}
                                 />
                             )
@@ -373,29 +394,17 @@ function SeriesFullscreenIndex() {
 
                         {/* mode="wait": las cintas entran (con su propia cascada) recién cuando el skeleton terminó de irse. */}
                         <AnimatePresence mode="wait" initial={false}>
-                        {isLoading && displayedList.length === 0 ? (
-                            <m.div key="skeleton" variants={loadSwapVariants} exit="exit" className="w-full h-full flex items-stretch gap-0 relative z-10 p-2">
-                                {Array.from({ length: 8 }).map((_, i) => (
-                                    <div key={i} className="h-full flex flex-col gap-2 p-2 shrink-0" style={{ flex: '1 0 150px' }}>
-                                        <Skeleton className="flex-1 h-auto rounded-xl" />
+                        {loadingList ? (
+                            <m.div key="skeleton" role="status" aria-busy="true" aria-label="Cargando series" variants={loadSwapVariants} exit="exit" className="w-full h-full flex items-stretch gap-2 relative z-10">
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} className="h-full flex flex-col shrink-0" style={{ flex: `1 0 ${SPINE_COLLAPSED_BASIS}px` }}>
+                                        <Skeleton className="flex-1 h-auto rounded-2xl" />
                                     </div>
                                 ))}
                             </m.div>
-                        ) : displayedList.length === 0 ? (
+                        ) : !hasList ? (
                             <div key="empty" className="w-full h-full flex items-center justify-center relative z-10 p-6">
-                                <EmptyState
-                                    title="No hay series en tu colección"
-                                    message="Agregá series a tu biblioteca para verlas acá."
-                                    action={
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate({ to: '/settings' })}
-                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-elevation-1 cursor-pointer"
-                                        >
-                                            Configurar Biblioteca
-                                        </button>
-                                    }
-                                />
+                                {emptyLibrary}
                             </div>
                         ) : (
                             <Fragment key="list">
@@ -403,11 +412,14 @@ function SeriesFullscreenIndex() {
                                 <SeriesCard
                                     key={item.id}
                                     item={item}
-                                    isSelected={item.id === effectiveSelectedId}
+                                    index={i}
+                                    total={displayedList.length}
+                                    isSelected={item.id === selectedId}
+                                    isTabStop={item.id === effectiveSelectedId}
                                     showUnwatchedCount={ts.themeShowAnimeUnwatchedCount}
                                     onNavigate={handleNavigate}
                                     onSelect={handleSelectSeries}
-                                    entryDelayMs={!reduceMotion && i < ENTRY_STAGGER_MAX_ITEMS ? i * ENTRY_STAGGER_MS : 0}
+                                    entryDelayMs={!reduceMotion ? Math.min(i, ENTRY_STAGGER_MAX_ITEMS - 1) * ENTRY_STAGGER_MS : 0}
                                     eager={i < SHELF_EAGER_ITEMS}
                                 />
                             ))}
@@ -415,11 +427,8 @@ function SeriesFullscreenIndex() {
                         )}
                         </AnimatePresence>
                     </div>
-                    {/* Zócalo continuo unificador de mural para la base del shelf */}
-                    <div
-                        aria-hidden
-                        className="absolute bottom-0 inset-x-0 h-[22%] bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-[25]"
-                    />
+                    {/* El zócalo oscuro de la base vive ahora en cada lomo colapsado (-SeriesCard): a nivel de
+                        shelf tapaba con un degradé gris el botón y el panel de la tarjeta seleccionada. */}
                     {/* Fades laterales del shelf */}
                     <div
                         aria-hidden
@@ -431,75 +440,69 @@ function SeriesFullscreenIndex() {
                         className="absolute inset-y-0 right-0 w-10 z-20 pointer-events-none"
                         style={{ background: 'linear-gradient(to left, color-mix(in srgb, var(--md-sys-color-surface) 65%, transparent), transparent)' }}
                     />
-                    {/* CRT scanlines recortado al shelf */}
-                    <div className="absolute inset-0 pointer-events-none z-30 opacity-[0.015] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%]" />
+                    {/* Flechas: solo si hay lomos fuera de pantalla (con la biblioteca actual caben todos) */}
+                    {canScroll.left && (
+                        <IconButton
+                            intent="glass"
+                            size="lg"
+
+                            aria-label="Ver series anteriores"
+                            icon={<IconNavigationChevronLeft />}
+                            onClick={() => scrollShelf(-1)}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 rounded-full"
+                        />
+                    )}
+                    {canScroll.right && (
+                        <IconButton
+                            intent="glass"
+                            size="lg"
+
+                            aria-label="Ver más series"
+                            icon={<IconNavigationChevronRight />}
+                            onClick={() => scrollShelf(1)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 rounded-full"
+                        />
+                    )}
                 </div>
                 </m.div>
-            ) : view === 'shelf' && isMobile && displayedList.length > 0 ? (
+            ) : view === 'shelf' && isMobile ? (
                 /* ═══════════════════════ VISTA ESTANTERÍA MÓVIL (cintas apiladas) ═══════════════════════ */
                 <m.div key="spines" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="w-full max-w-2xl mx-auto pt-1 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
-                    <ul aria-label="Colección de series" className="flex flex-col gap-2">
-                        {displayedList.map((item, i) => (
-                            <SeriesSpineRow
-                                key={item.id}
-                                item={item}
-                                index={i}
-                                watched={item.watched}
-                                isOpen={item.id === activeSpineId}
-                                onToggle={handleToggleSpine}
-                                onNavigate={handleNavigate}
-                                onPlay={handlePlayEpisode}
-                            />
-                        ))}
-                    </ul>
+                    {loadingList ? <SpineListPlaceholder /> : !hasList ? (emptyLibrary) : (
+                        <ul aria-label="Series" className="flex flex-col gap-2">
+                            {displayedList.map((item, i) => (
+                                <SeriesSpineRow
+                                    key={item.id}
+                                    item={item}
+                                    index={i}
+                                    watched={item.watched ?? 0}
+                                    isOpen={item.id === activeSpineId}
+                                    onToggle={handleToggleSpine}
+                                    onNavigate={handleNavigate}
+                                    onPlay={handlePlayEpisode}
+                                />
+                            ))}
+                        </ul>
+                    )}
                 </m.div>
             ) : (
-                /* ═══════════════════════ VISTA PORTADAS (grid / mobile) ═══════════════════════ */
-                <m.div key="grid" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="flex-1 overflow-y-auto no-scrollbar [contain:paint]">
-                    <div className="w-full page-container py-7 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] space-y-6 min-h-full">
-                        <LoadSwap loading={isLoading && displayedList.length === 0} skeleton={<PosterGridSkeleton count={12} />}>
-                        {displayedList.length === 0 ? (
-                            <div className="min-h-[50vh] flex items-center justify-center p-6">
-                                <EmptyState
-                                    title="No hay series en tu colección"
-                                    message="Agregá series a tu biblioteca para verlas acá."
-                                    action={
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate({ to: '/settings' })}
-                                            className="px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-elevation-1 cursor-pointer"
-                                        >
-                                            Configurar Biblioteca
-                                        </button>
-                                    }
+                /* ═══════════════════════ VISTA PORTADAS (grid) ═══════════════════════ */
+                <m.div key="grid" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
+                    {loadingList ? <PosterGridPlaceholder /> : !hasList ? (
+                        <div className="min-h-[50vh] flex items-center justify-center p-2">{emptyLibrary}</div>
+                    ) : (
+                        <div className={GRID_CLASS}>
+                            {displayedList.map((item, i) => (
+                                <SeriesPosterGridItem
+                                    key={item.id}
+                                    item={item}
+                                    index={i}
+                                    showUnwatchedCount={ts.themeShowAnimeUnwatchedCount}
+                                    onNavigate={handleNavigate}
                                 />
-                            </div>
-                        ) : (
-                            <SectionBar
-                                label="Colección de Series"
-                                icon={IconNavigationLayers}
-                                variant="minimal"
-                                className="p-0 md:p-0"
-                                badge={
-                                    <span className="px-2 py-0.5 rounded-full text-3xs font-mono font-bold bg-[var(--glass-bg)] text-on-surface-variant border border-[var(--glass-border-side)]">
-                                        {displayedList.length} {displayedList.length === 1 ? "serie" : "series"}
-                                    </span>
-                                }
-                            >
-                                <div ref={posterGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 w-full">
-                                    {displayedList.map((item, i) => (
-                                        <SeriesPosterGridItem
-                                            key={item.id}
-                                            item={item}
-                                            index={i}
-                                            onNavigate={handleNavigate}
-                                        />
-                                    ))}
-                                </div>
-                            </SectionBar>
-                        )}
-                        </LoadSwap>
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </m.div>
             )}
             </AnimatePresence>

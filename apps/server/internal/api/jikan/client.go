@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -24,22 +26,56 @@ var ErrUnavailable = errors.New("jikan: servicio no disponible")
 const DefaultBaseURL = "https://api.jikan.moe/v4"
 
 type Client struct {
-	logger     *zerolog.Logger
 	httpClient *http.Client
 	limiter    *rate.Limiter
 	// baseURL permite apuntar a un servidor de prueba (tests); por defecto, DefaultBaseURL.
 	baseURL string
+	// outageUntil (UnixNano) corta las consultas mientras Jikan no sea alcanzable: sin esto,
+	// cada ficha nueva esperaba el timeout completo de la red antes de mostrarse sin datos.
+	outageUntil atomic.Int64
 }
 
-func NewClient(logger *zerolog.Logger) *Client {
+// jikanOutageTTL es cuánto se deja de consultar a Jikan tras un error de red.
+const jikanOutageTTL = 2 * time.Minute
+
+func (c *Client) inOutage() bool {
+	return time.Now().UnixNano() < c.outageUntil.Load()
+}
+
+// RestoreOutage vuelve a marcar Jikan como caído hasta `until` (p. ej. lo guardado antes de reiniciar).
+func (c *Client) RestoreOutage(until time.Time) {
+	if until.After(time.Now()) && until.UnixNano() > c.outageUntil.Load() {
+		c.outageUntil.Store(until.UnixNano())
+	}
+}
+
+func (c *Client) markOutage() {
+	c.outageUntil.Store(time.Now().Add(jikanOutageTTL).UnixNano())
+}
+
+func NewClient(_ *zerolog.Logger) *Client {
 	return &Client{
-		logger:     logger,
 		httpClient: httputil.NewFastClient(),
 		// Jikan has a rate limit of 3 requests per second, 60 requests per minute.
 		// We set a conservative 2 req/s with burst of 3.
 		limiter: rate.NewLimiter(rate.Limit(2), 3),
 		baseURL: DefaultBaseURL,
 	}
+}
+
+var (
+	sharedClientOnce sync.Once
+	sharedClient     *Client
+)
+
+// Shared devuelve el cliente Jikan del proceso. El corte por caída (outageUntil) y el limitador
+// de tasa viven en el cliente: si cada pedido creaba uno, el corte nunca se acumulaba (cada
+// consulta esperaba el timeout completo con Jikan caído) y el límite de 2 req/s no se aplicaba.
+func Shared(logger *zerolog.Logger) *Client {
+	sharedClientOnce.Do(func() {
+		sharedClient = NewClient(logger)
+	})
+	return sharedClient
 }
 
 type AnimeSearchResponse struct {
@@ -142,6 +178,9 @@ func (c *Client) executeRequest(ctx context.Context, reqURL string, target inter
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		if c.inOutage() {
+			return fmt.Errorf("%w: Jikan no responde, no se consulta por ahora", ErrUnavailable)
+		}
 
 		if err := c.limiter.Wait(ctx); err != nil {
 			return err
@@ -157,7 +196,13 @@ func (c *Client) executeRequest(ctx context.Context, reqURL string, target inter
 		resp, err := c.httpClient.Do(req)
 		switch {
 		case err != nil:
-			lastErr = err
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			// Error de red o timeout: reintentar aquí solo repite la espera. Se corta la
+			// consulta y el resto de las fichas no se intenta durante un rato.
+			c.markOutage()
+			return fmt.Errorf("%w: sin conexión con Jikan: %w", ErrUnavailable, err)
 		case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
 			resp.Body.Close()
 			lastErr = fmt.Errorf("http status: %d", resp.StatusCode)

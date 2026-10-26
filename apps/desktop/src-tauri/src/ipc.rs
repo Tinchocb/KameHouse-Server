@@ -3,37 +3,9 @@ use tauri::{AppHandle, State};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::mpv::{MpvManager, MpvPlayRequest};
-use crate::settings::{DesktopSettings, SettingsManager};
+use crate::settings::SettingsManager;
 use crate::sidecar::SidecarManager;
 use crate::window_manager::WindowManager;
-
-#[tauri::command]
-pub async fn get_desktop_settings(
-    settings_manager: State<'_, Arc<SettingsManager>>,
-    app_handle: AppHandle,
-) -> Result<DesktopSettings, String> {
-    let path = settings_manager.get_settings_path(&app_handle);
-    let settings = settings_manager.load_from_path(&path);
-    Ok(settings)
-}
-
-#[tauri::command]
-pub async fn set_desktop_settings(
-    settings_manager: State<'_, Arc<SettingsManager>>,
-    app_handle: AppHandle,
-    updates: std::collections::HashMap<String, serde_json::Value>,
-) -> Result<DesktopSettings, String> {
-    settings_manager.update_partial(&app_handle, updates)
-}
-
-
-#[tauri::command]
-pub async fn kill_server(
-    sidecar_manager: State<'_, Arc<SidecarManager>>,
-) -> Result<bool, String> {
-    sidecar_manager.kill().await;
-    Ok(true)
-}
 
 #[tauri::command]
 pub async fn get_local_server_port(
@@ -46,8 +18,11 @@ pub async fn get_local_server_port(
 pub async fn startup_renderer_ready(
     window_manager: State<'_, Arc<WindowManager>>,
     app_handle: AppHandle,
+    window: tauri::WebviewWindow,
 ) -> Result<(), String> {
-    window_manager.on_renderer_ready(&app_handle);
+    // La URL de quien avisa permite ignorar a la página vieja mientras se cambia de interfaz.
+    let page_url = window.url().ok();
+    window_manager.on_renderer_ready_from(&app_handle, page_url.as_ref());
     Ok(())
 }
 
@@ -79,6 +54,17 @@ pub async fn mpv_is_available(
     let path = settings_manager.get_settings_path(&app_handle);
     let settings = settings_manager.load_from_path(&path);
     Ok(MpvManager::is_available(&settings.mpv_path).await)
+}
+
+/// Abre la carpeta de registros (la misma que lista la pestaña Sistema de los ajustes).
+#[tauri::command]
+pub async fn open_logs_folder(app_handle: AppHandle) -> Result<(), String> {
+    let dir = crate::shared_logs_dir(cfg!(debug_assertions));
+    let _ = std::fs::create_dir_all(&dir);
+    app_handle
+        .opener()
+        .open_path(dir.to_string_lossy().into_owned(), None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// Open a URL in the system default browser.

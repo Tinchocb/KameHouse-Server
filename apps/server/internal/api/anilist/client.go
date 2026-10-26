@@ -10,24 +10,28 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
 	httputil "kamehouse/internal/util/http"
 )
 
 const graphQLEndpoint = "https://graphql.anilist.co"
 
+// anilistFetchTimeout acota la consulta compartida de GetMediaByID (espera del limitador incluida).
+const anilistFetchTimeout = 30 * time.Second
+
 // Client handles AniList public GraphQL queries.
 type Client struct {
-	logger     *zerolog.Logger
 	httpClient *http.Client
 	limiter    *rate.Limiter
 	cache      sync.Map
+	// flights colapsa las consultas simultaneas por el mismo ID de media.
+	flights singleflight.Group
 }
 
 // NewClient creates a new AniList GraphQL client with rate limiting (90 req/min).
-func NewClient(logger *zerolog.Logger) *Client {
+func NewClient(_ *zerolog.Logger) *Client {
 	return &Client{
-		logger:     logger,
 		httpClient: httputil.NewFastClient(),
 		limiter:    rate.NewLimiter(rate.Every(time.Minute/90), 10),
 	}
@@ -237,12 +241,41 @@ query ($search: String, $page: Int, $perPage: Int) {
 `
 
 // GetMediaByID fetches complete anime metadata by AniList ID.
+//
+// Las llamadas simultaneas por el mismo ID comparten una sola consulta: la Cronologia pide
+// la miniatura de cientos de episodios a la vez (todas del mismo media) y, sin esto, cada una
+// gastaba un token del limitador y repetia el mismo POST mientras la cache seguia vacia.
 func (c *Client) GetMediaByID(ctx context.Context, id int) (*AniListMedia, error) {
 	cacheKey := fmt.Sprintf("id:%d", id)
 	if cached, ok := c.cache.Load(cacheKey); ok {
 		return cached.(*AniListMedia), nil
 	}
 
+	flight := c.flights.DoChan(cacheKey, func() (interface{}, error) {
+		// Otro vuelo pudo llenar la cache entre el Load de arriba y este punto.
+		if cached, ok := c.cache.Load(cacheKey); ok {
+			return cached.(*AniListMedia), nil
+		}
+		// Desacoplado del request: lo comparten todos los que esperan, y que el primero
+		// se vaya (tile fuera de vista, pestana cerrada) no debe cancelarles la consulta.
+		fetchCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), anilistFetchTimeout)
+		defer cancel()
+		return c.fetchMediaByID(fetchCtx, id, cacheKey)
+	})
+
+	select {
+	case res := <-flight:
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		return res.Val.(*AniListMedia), nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// fetchMediaByID hace la consulta real a AniList (limitador incluido) y la deja en la cache.
+func (c *Client) fetchMediaByID(ctx context.Context, id int, cacheKey string) (*AniListMedia, error) {
 	if err := c.limiter.Wait(ctx); err != nil {
 		return nil, err
 	}

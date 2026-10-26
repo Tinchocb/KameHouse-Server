@@ -3,8 +3,10 @@ package skipdetect
 import (
 	"context"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Parámetros de aceptación del matching contra AnimeThemes.
@@ -68,9 +70,14 @@ func (d *Detector) animeThemesScan(ctx context.Context, fpcalcBin string, malID 
 		byNum[ep.EpisodeNumber] = ep
 	}
 
-	// Cache de fingerprints de themes por URL de audio (dedupe de descargas).
+	// Cache de fingerprints de themes por URL de audio (dedupe de descargas). Los workers
+	// de mas abajo la comparten: fpCacheMu serializa la descarga/huella de cada theme para
+	// que el mismo audio no se baje dos veces en paralelo.
+	var fpCacheMu sync.Mutex
 	fpCache := make(map[string]*themeFingerprint)
 	themeFP := func(t Theme) *themeFingerprint {
+		fpCacheMu.Lock()
+		defer fpCacheMu.Unlock()
 		if tf, ok := fpCache[t.AudioURL]; ok {
 			return tf
 		}
@@ -92,23 +99,18 @@ func (d *Detector) animeThemesScan(ctx context.Context, fpcalcBin string, malID 
 	}
 
 	results := make(map[int]detResult)
-	for epNum := range need {
-		select {
-		case <-ctx.Done():
-			return results
-		default:
-		}
-		ep, ok := byNum[epNum]
-		if !ok {
-			continue
-		}
+	var resultsMu sync.Mutex
 
+	// scanEpisode huella la ventana de OP y la de ED de un episodio y las correlaciona
+	// contra los themes. Es la unidad de trabajo de cada worker.
+	scanEpisode := func(ep episodeFile) {
+		epNum := ep.EpisodeNumber
 		var r detResult
 
 		// ── OP ──
 		// Vía ffmpeg (no fpcalc directo) porque fpcalc no sabe elegir track de
 		// audio y en archivos multi-audio hay que huellar el japonés.
-		if epFP, _, err := FingerprintRangeCached(ctx, d.cacheDir, fpcalcBin, d.ffmpegPath, ep.Path, 0, athEpisodeProbeSec, ep.AudioIdx); err == nil {
+		if epFP, _, err := FingerprintRangeCached(ctx, d.cacheDir, fpcalcBin, d.ffmpegPath, ep.Path, ep.inputPath(), 0, athEpisodeProbeSec, ep.AudioIdx); err == nil {
 			if start, end, score, ok := bestThemeMatch(epFP, 0, opThemes, epNum, themeFP); ok && ValidOpWindow(start, end) {
 				r.OpStart = start
 				r.OpEnd = end
@@ -120,7 +122,7 @@ func (d *Detector) animeThemesScan(ctx context.Context, fpcalcBin string, malID 
 		// ── ED ──
 		if athMatchED && len(edThemes) > 0 {
 			windowStart := ep.Duration - athOutroProbeSec
-			if edFP, _, err := FingerprintRangeCached(ctx, d.cacheDir, fpcalcBin, d.ffmpegPath, ep.Path, windowStart, athOutroProbeSec, ep.AudioIdx); err == nil {
+			if edFP, _, err := FingerprintRangeCached(ctx, d.cacheDir, fpcalcBin, d.ffmpegPath, ep.Path, ep.inputPath(), windowStart, athOutroProbeSec, ep.AudioIdx); err == nil {
 				if start, end, score, ok := bestThemeMatch(edFP, windowStart, edThemes, epNum, themeFP); ok && ValidEdWindow(start, end, ep.Duration) {
 					r.EdOffset = start
 					r.EdEnd = end
@@ -133,9 +135,49 @@ func (d *Detector) animeThemesScan(ctx context.Context, fpcalcBin string, malID 
 		}
 
 		if r.OpEnd > 0 || r.EdOffset > 0 {
+			resultsMu.Lock()
 			results[epNum] = r
+			resultsMu.Unlock()
 		}
 	}
+
+	// Mismo tamano de pool que el Metodo B (crossEpisodeScan): cada episodio son dos
+	// pipelines ffmpeg|fpcalc independientes de baja prioridad.
+	epChan := make(chan episodeFile, len(need))
+	for epNum := range need {
+		if ep, ok := byNum[epNum]; ok {
+			epChan <- ep
+		}
+	}
+	close(epChan)
+
+	numWorkers := runtime.NumCPU()
+	if numWorkers > 4 {
+		numWorkers = 4
+	}
+	if numWorkers < 2 {
+		numWorkers = 2
+	}
+	if len(epChan) < numWorkers {
+		numWorkers = len(epChan)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for ep := range epChan {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				scanEpisode(ep)
+			}
+		}()
+	}
+	wg.Wait()
 	return results
 }
 

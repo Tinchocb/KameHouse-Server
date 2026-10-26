@@ -96,3 +96,4 @@ export function useHeroParallax<T extends HTMLElement = HTMLDivElement>(
 
     return ref
 }
+

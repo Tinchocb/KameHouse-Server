@@ -30,10 +30,7 @@ const enum ThemeMediaPageInfoBoxSize {
     Boxed = "boxed",
 }
 
-export type ThemeSettings = Omit<Models_Theme, "id" | "createdAt" | "updatedAt"> & {
-    sidebarBackgroundColor?: string
-    homeItems?: string[]
-}
+type ThemeSettings = Omit<Models_Theme, "id" | "createdAt" | "updatedAt">
 
 export type ThemeMode = "classic" | "era"
 
@@ -57,11 +54,9 @@ const THEME_DEFAULT_VALUES: ThemeSettings = {
     enableColorSettings: false,
     backgroundColor: "#050506",
     accentColor: "#C8102E",
-    sidebarBackgroundColor: "",
     themeEra: "classic",
     themeMode: "",
     themeEnableLiquidGlass: false,
-    homeItems: [],
     themeSmallerEpisodeCarouselSize: false,
     themeExpandSidebarOnHover: false,
     themeDisableSidebarTransparency: false,
@@ -102,7 +97,6 @@ const THEME_DEFAULT_VALUES: ThemeSettings = {
 }
 
 type ThemeSettingsHook = {
-    hasCustomBackgroundColor: boolean
     hasEraTheme: boolean
     hasCustomBackground: boolean
     hasCustomAccentColor: boolean
@@ -152,7 +146,6 @@ export function useThemeSettings(): ThemeSettingsHook {
                 themeEra: "classic",
                 themeMode: "classic" as const,
                 effectiveMode: "classic" as ThemeMode,
-                hasCustomBackgroundColor: false,
                 hasEraTheme: false,
                 hasCustomBackground: false,
                 hasCustomAccentColor: false,
@@ -201,7 +194,6 @@ export function useThemeSettings(): ThemeSettingsHook {
             // en Por Era es el glass completo con tintes de saga.
             themeEnableBlurringEffects: merged.themeEnableBlurringEffects,
             effectiveMode,
-            hasCustomBackgroundColor: merged.enableColorSettings && !!merged.backgroundColor,
             hasEraTheme: effectiveEra !== "",
             hasCustomBackground: rawBackgroundColor !== "",
             hasCustomAccentColor: rawAccentColor !== "",

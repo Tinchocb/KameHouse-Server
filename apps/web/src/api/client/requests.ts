@@ -28,7 +28,12 @@ export function isBackendUnavailableError(error: unknown): boolean {
     return error instanceof ApiError && isTransientStatus(error.status)
 }
 
-export type ApiQuery<D> = {
+/** true si el servidor respondió 404: el recurso no existe (distinto de un servidor caído). */
+export function isNotFoundError(error: unknown): boolean {
+    return error instanceof ApiError && error.status === 404
+}
+
+type ApiQuery<D> = {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
     data?: D

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { MovieLoreDefinition } from "@/lib/config/dragonball_movies_lore"
-import { getMovieSynopsis, looksEnglish } from "./movies-utils"
+import { getMovieSynopsis, looksEnglish, getMovieProgress, getMovieStatus, getEntryDecade, parseMoviesPrefs, gridHeading } from "./movies-utils"
 
 const lore: MovieLoreDefinition = {
     id: "test",
@@ -44,5 +44,56 @@ describe("looksEnglish", () => {
         expect(looksEnglish("After the defeat of Frieza, Goku trains with his son.")).toBe(true)
         expect(looksEnglish("Goku se enfrenta a Cooler, el hermano mayor de Freezer.")).toBe(false)
         expect(looksEnglish("Tras la derrota de Freezer, Goku entrena con su hijo.")).toBe(false)
+    })
+})
+
+describe('getMovieProgress / getMovieStatus', () => {
+    const entry = { media: { watched: false, totalEpisodes: 1 }, listData: { progress: 0 } } as never
+
+    it('marks 30 s or less as not started', () => {
+        expect(getMovieProgress(entry, { currentTime: 20, duration: 6000 }).hasProgress).toBe(false)
+        expect(getMovieStatus(entry, { currentTime: 20, duration: 6000 })).toBe('pending')
+    })
+
+    it('computes the percentage for a partial watch', () => {
+        expect(getMovieProgress(entry, { currentTime: 1500, duration: 6000 })).toEqual({ isCompleted: false, hasProgress: true, progressPercent: 25 })
+        expect(getMovieStatus(entry, { currentTime: 1500, duration: 6000 })).toBe('continue')
+    })
+
+    it('treats watched flag or full list progress as watched', () => {
+        expect(getMovieStatus({ media: { watched: true } } as never)).toBe('watched')
+        expect(getMovieStatus({ media: { totalEpisodes: 1 }, listData: { progress: 1 } } as never, { currentTime: 100, duration: 6000 })).toBe('watched')
+    })
+
+    it('ignores a finished watch (currentTime >= duration)', () => {
+        expect(getMovieProgress(entry, { currentTime: 6000, duration: 6000 }).hasProgress).toBe(false)
+    })
+})
+
+describe('getEntryDecade', () => {
+    it('groups by decade and returns null without year', () => {
+        expect(getEntryDecade({ media: { year: 1989 } } as never)).toBe(1980)
+        expect(getEntryDecade({ media: { year: 2018 } } as never)).toBe(2010)
+        expect(getEntryDecade({ media: { year: 0 } } as never)).toBeNull()
+        expect(getEntryDecade({ media: null })).toBeNull()
+    })
+})
+
+describe('parseMoviesPrefs', () => {
+    it('keeps valid values and drops the rest', () => {
+        expect(parseMoviesPrefs(JSON.stringify({ sort: 'year_desc', estado: 'watched', decada: 1990 }))).toEqual({ sort: 'year_desc', estado: 'watched', decada: 1990 })
+        expect(parseMoviesPrefs(JSON.stringify({ sort: 'nope', estado: 'all', decada: 'x' }))).toEqual({})
+    })
+
+    it('survives empty or corrupt storage', () => {
+        expect(parseMoviesPrefs(null)).toEqual({})
+        expect(parseMoviesPrefs('{rota')).toEqual({})
+    })
+})
+
+describe('gridHeading', () => {
+    it('names the era or the whole library', () => {
+        expect(gridHeading(null)).toBe('Todas las películas')
+        expect(gridHeading('Dragon Ball Z')).toBe('Películas de Dragon Ball Z')
     })
 })

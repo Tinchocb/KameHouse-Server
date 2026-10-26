@@ -49,14 +49,26 @@ type episodeFile struct {
 	// AudioIdx es el track de audio a huellar (índice relativo, `-map 0:a:N`).
 	// -1 = dejar que ffmpeg elija.
 	AudioIdx int
+	// Input es lo que ffmpeg/ffprobe abren (en Drive, la URL interna de loopback). Path
+	// sigue siendo la identidad del episodio: claves de caché y logs.
+	Input string
+}
+
+// inputPath devuelve la entrada de ffmpeg/ffprobe del episodio; sin resolver cae a Path.
+func (ep episodeFile) inputPath() string {
+	if ep.Input != "" {
+		return ep.Input
+	}
+	return ep.Path
 }
 
 // japaneseLangTags son las etiquetas de idioma con las que un track japonés
 // puede venir marcado en un contenedor.
 var japaneseLangTags = map[string]bool{"jpn": true, "ja": true, "jp": true, "japanese": true}
 
-// preferredAudioIndex devuelve el track de audio que conviene huellar: el
-// japonés si el archivo tiene uno, o -1 para dejar elegir a ffmpeg.
+// japaneseAudioIndex devuelve el indice (relativo a los streams de audio) del primer
+// track japones de un ffprobe ya hecho, o -1 si no hay ninguno. Permite reutilizar un
+// unico ffprobe para la duracion y para elegir el track.
 //
 // La referencia de AnimeThemes es SIEMPRE el audio japonés original, pero los
 // dubs suelen re-grabar la OP/ED en su idioma: el track latino de Dragon Ball Z
@@ -64,15 +76,7 @@ var japaneseLangTags = map[string]bool{"jpn": true, "ja": true, "jp": true, "jap
 // rotula un track como "Opening y Endings [Traducidos]"). Encima, la elección
 // automática de ffmpeg no es estable ni entre episodios de la misma serie, así
 // que sin esto el Método A daba resultados no deterministas.
-func preferredAudioIndex(ctx context.Context, path string) int {
-	probeCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-
-	data, err := ffprobe.ProbeURL(probeCtx, path)
-	if err != nil {
-		return -1
-	}
-
+func japaneseAudioIndex(data *ffprobe.ProbeData) int {
 	audioIdx := 0
 	for _, s := range data.Streams {
 		if s.CodecType != "audio" {
@@ -106,6 +110,28 @@ type Detector struct {
 
 	athClient  AnimeThemesClient // Método A (puede ser nil → cae a Método B)
 	fileCacher *filecache.Cacher // Método C: extracción on-demand de subs (puede ser nil)
+
+	// inputResolver traduce una ruta de la biblioteca (gdrive://…) a algo que ffmpeg puede
+	// abrir. Nil = la ruta tal cual (archivos locales).
+	inputResolver func(path string) string
+}
+
+// SetInputResolver registra cómo abrir rutas que ffmpeg/ffprobe no leen por sí solos
+// (gdrive://…). Sin esto los episodios de Drive fallan al huellar y quedan con duración
+// por defecto.
+func (d *Detector) SetInputResolver(fn func(path string) string) {
+	d.inputResolver = fn
+}
+
+// ffmpegInput devuelve la entrada que ffmpeg/ffprobe deben abrir para path.
+func (d *Detector) ffmpegInput(path string) string {
+	if d.inputResolver == nil {
+		return path
+	}
+	if in := d.inputResolver(path); in != "" {
+		return in
+	}
+	return path
 }
 
 // AnimeThemesClient es el subconjunto del cliente de AnimeThemes que el detector
@@ -140,10 +166,26 @@ func New(database *db.Database, logger *zerolog.Logger, ws events.WSEventManager
 	}
 }
 
+// tryStartScanning marca la serie como en escaneo de forma atomica (test-and-set bajo
+// scanMu). Devuelve false si ya habia un scan en curso para ese mediaID.
+func (d *Detector) tryStartScanning(mediaID int) bool {
+	d.scanMu.Lock()
+	defer d.scanMu.Unlock()
+	if d.isScanning[mediaID] {
+		return false
+	}
+	d.isScanning[mediaID] = true
+	return true
+}
+
 func (d *Detector) setScanning(mediaID int, scanning bool) {
 	d.scanMu.Lock()
 	defer d.scanMu.Unlock()
-	d.isScanning[mediaID] = scanning
+	if scanning {
+		d.isScanning[mediaID] = true
+		return
+	}
+	delete(d.isScanning, mediaID)
 }
 
 // IsScanning indica si ya hay un scan en curso para esta serie.
@@ -191,15 +233,14 @@ func (d *Detector) emit(mediaID int, status, message string, percent int) {
 // fuentes protegidas (manual/animethemes); las filas aniskip solo ceden ante el
 // Método A. Emite eventos SKIP_SCAN_STATUS.
 func (d *Detector) ScanSeries(ctx context.Context, mediaID int) error {
-	if d.IsScanning(mediaID) {
+	if !d.tryStartScanning(mediaID) {
 		return errors.New("a skip scan is already in progress for this series")
 	}
-	d.setScanning(mediaID, true)
 	defer d.setScanning(mediaID, false)
 
 	d.emit(mediaID, "initializing", "Iniciando escaneo de marcas de skip...", -1)
 
-	fpcalcBin, err := EnsureFpcalcBinary(d.cacheDir, d.logger)
+	fpcalcBin, err := EnsureFpcalcBinary(ctx, d.cacheDir, d.logger)
 	if err != nil {
 		d.logger.Error().Err(err).Msg("skipdetect: no se pudo asegurar el binario fpcalc")
 		d.emit(mediaID, "error", "Error al descargar fpcalc: "+err.Error(), -1)
@@ -313,30 +354,39 @@ func (d *Detector) loadEpisodes(ctx context.Context, mediaID int) ([]episodeFile
 		if epNum <= 0 {
 			continue
 		}
+		// ffprobe y ffmpeg leen input, no lf.Path: en Drive la ruta gdrive:// no se puede abrir.
+		input := d.ffmpegInput(lf.Path)
 		var duration float64
 		if lf.TechnicalInfo != nil {
 			duration = lf.TechnicalInfo.Duration.Seconds()
 		}
-		if duration == 0 {
+		hasAudioInfo := lf.TechnicalInfo != nil && len(lf.TechnicalInfo.AudioStreams) > 0
+		// Un unico ffprobe resuelve duracion y track de audio: antes eran dos por archivo
+		// (en Drive, cada uno abre la URL de loopback y lee cabeceras por la red).
+		var probed *ffprobe.ProbeData
+		if duration == 0 || !hasAudioInfo {
 			probeCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-			if data, perr := ffprobe.ProbeURL(probeCtx, lf.Path); perr == nil {
-				duration = data.Format.DurationSeconds
+			if data, perr := ffprobe.ProbeURL(probeCtx, input); perr == nil {
+				probed = data
 			}
 			cancel()
+		}
+		if duration == 0 && probed != nil {
+			duration = probed.Format.DurationSeconds
 		}
 		if duration == 0 {
 			duration = 1440.0 // default 24 min si el probe falla
 		}
 		audioIdx := -1
-		if lf.TechnicalInfo != nil && len(lf.TechnicalInfo.AudioStreams) > 0 {
+		if hasAudioInfo {
 			for aIdx, as := range lf.TechnicalInfo.AudioStreams {
 				if as != nil && japaneseLangTags[strings.ToLower(strings.TrimSpace(as.Language))] {
 					audioIdx = aIdx
 					break
 				}
 			}
-		} else {
-			audioIdx = preferredAudioIndex(ctx, lf.Path)
+		} else if probed != nil {
+			audioIdx = japaneseAudioIndex(probed)
 		}
 
 		episodes = append(episodes, episodeFile{
@@ -344,6 +394,7 @@ func (d *Detector) loadEpisodes(ctx context.Context, mediaID int) ([]episodeFile
 			EpisodeNumber: epNum,
 			Duration:      duration,
 			AudioIdx:      audioIdx,
+			Input:         input,
 		})
 	}
 

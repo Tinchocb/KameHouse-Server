@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"kamehouse/internal/api/jikan"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
@@ -13,7 +13,6 @@ import (
 	"kamehouse/internal/util/ffmpegutil"
 	"kamehouse/internal/util/result"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -30,75 +29,7 @@ var (
 	skipTimesCacheTTL = 5 * time.Minute
 )
 
-var (
-	jikanHTTPClient = &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			MaxIdleConns:        10,
-			MaxIdleConnsPerHost: 2,
-			IdleConnTimeout:     30 * time.Second,
-		},
-	}
-	jikanSingleFlight singleflight.Group
-)
-
-// HandleGetMediastreamSettings returns the mediastream settings.
-//
-//	@summary get mediastream settings.
-//	@desc This returns the mediastream settings.
-//	@returns models.MediastreamSettings
-//	@route /api/v1/mediastream/settings [GET]
-func (h *Handler) HandleGetMediastreamSettings(c echo.Context) error {
-	mediastreamSettings, found := h.App.Database.GetMediastreamSettings()
-	if !found {
-		// Create default settings if none exist
-		defaultSettings := &models.MediastreamSettings{
-			BaseModel: models.BaseModel{
-				ID: 1,
-			},
-			TranscodeEnabled: false,
-			TranscodeHwAccel: "auto",
-			TranscodePreset:  "fast",
-			TranscodeThreads: 0,
-			DirectPlayOnly:   false,
-			FfmpegPath:       "",
-			FfprobePath:      "",
-		}
-		saved, err := h.App.Database.UpsertMediastreamSettings(defaultSettings)
-		if err != nil {
-			return h.RespondWithError(c, err)
-		}
-		return h.RespondWithData(c, saved)
-	}
-
-	return h.RespondWithData(c, mediastreamSettings)
-}
-
-// HandleSaveMediastreamSettings saves the mediastream settings.
-//
-//	@summary save mediastream settings.
-//	@desc This saves the mediastream settings.
-//	@returns models.MediastreamSettings
-//	@route /api/v1/mediastream/settings [PATCH]
-func (h *Handler) HandleSaveMediastreamSettings(c echo.Context) error {
-	type body struct {
-		Settings models.MediastreamSettings `json:"settings"`
-	}
-
-	var b body
-	if err := c.Bind(&b); err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	settings, err := h.App.Database.UpsertMediastreamSettings(&b.Settings)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	h.App.InitOrRefreshMediastreamSettings()
-
-	return h.RespondWithData(c, settings)
-}
+var jikanSingleFlight singleflight.Group
 
 // HandleRequestMediastreamMediaContainer requests a media stream container.
 //
@@ -163,35 +94,47 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	case mediastream.StreamTypeDirect:
 		mediaContainer, err = h.App.MediastreamRepository.RequestDirectPlay(b.Path, b.ClientID, b.ClientCapabilities)
 	case mediastream.StreamTypeTranscode:
-		mediaContainer, err = h.App.MediastreamRepository.RequestTranscodeStream(b.Path, b.ClientID, b.Force, b.ClientCapabilities)
+		if h.App.MediastreamRepository.DirectPlayOnly() {
+			// Solo directo: el pedido de transcode se sirve directo; el encoder nunca arranca.
+			mediaContainer, err = h.App.MediastreamRepository.RequestDirectPlay(b.Path, b.ClientID, b.ClientCapabilities)
+		} else {
+			mediaContainer, err = h.App.MediastreamRepository.RequestTranscodeStream(b.Path, b.ClientID, b.Force, b.ClientCapabilities)
+		}
 	case mediastream.StreamTypeOptimized:
-		mediaContainer, err = h.App.MediastreamRepository.RequestOptimizedStream(b.Path, b.ClientID)
+		if h.App.MediastreamRepository.DirectPlayOnly() {
+			// Solo original: optimized (HLS pre-transcodificado) tampoco se sirve; se queda en directo.
+			mediaContainer, err = h.App.MediastreamRepository.RequestDirectPlay(b.Path, b.ClientID, b.ClientCapabilities)
+		} else {
+			mediaContainer, err = h.App.MediastreamRepository.RequestOptimizedStream(b.Path, b.ClientID)
+		}
 	default:
 		err = fmt.Errorf("stream type %s not implemented", b.StreamType)
 	}
 	if err != nil {
+		// Errores tipados del transcoder: el cliente los distingue por código, no por el texto
+		if errors.Is(err, mediastream.ErrTranscodeDisabled) || errors.Is(err, mediastream.ErrDirectOnly) {
+			return h.RespondWithCodeError(c, http.StatusConflict, err)
+		}
 		return h.RespondWithError(c, err)
 	}
 
+	// Copia con los subtítulos externos (archivos .srt/.ass junto al video) sumados.
+	mediaContainer = h.withExternalSubtitles(mediaContainer, b.Path)
 	h.signStreamURL(mediaContainer)
 	return h.RespondWithData(c, mediaContainer)
 }
 
 func (h *Handler) signStreamURL(mediaContainer *mediastream.MediaContainer) {
 	if mediaContainer != nil && h.App.Config != nil && h.App.Config.Server.Password != "" {
-		// Generate short-lived token (5 minutes) for HLS/DirectPlay to avoid long-lived tokens in URLs/logs
+		// Generate short-lived token (5 minutes) for HLS/DirectPlay thread-safely
 		hmacAuth := h.App.GetServerPasswordHMACAuth()
-		// Temporarily reduce TTL for token (5 minutes)
-		originalTTL := hmacAuth.TTL()
-		hmacAuth.SetTTL(5 * time.Minute)
-		if token, tokenErr := hmacAuth.GenerateToken("*"); tokenErr == nil {
+		if token, tokenErr := hmacAuth.GenerateTokenWithTTL("*", 5*time.Minute); tokenErr == nil {
 			sep := "?"
 			if strings.Contains(mediaContainer.StreamURL, "?") {
 				sep = "&"
 			}
 			mediaContainer.StreamURL += sep + "token=" + token
 		}
-		hmacAuth.SetTTL(originalTTL)
 	}
 }
 
@@ -225,13 +168,8 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("remote URLs are not allowed for local playback"))
 	}
 	if strings.HasPrefix(b.Path, "gdrive://") {
-		// Drive: the keyframe index is read over HTTP Range, the slowest cold
-		// start of all, so warming is worth it; a full preload is not.
-		if b.WarmOnly {
-			if err := h.App.MediastreamRepository.WarmTranscodeSession(b.Path); err != nil {
-				return h.RespondWithError(c, err)
-			}
-		}
+		// El calentamiento de sesión sólo sirve a rutas locales (WarmTranscodeSession no
+		// abre gdrive://): aquí no hay nada que calentar, y no arrancar el encoder por ello.
 		return h.RespondWithData(c, true)
 	}
 	// Prevent path traversal: ensure the file is within configured library directories
@@ -269,7 +207,10 @@ func (h *Handler) HandlePreloadMediastreamMediaContainer(c echo.Context) error {
 	case mediastream.StreamTypeDirect:
 		err = h.App.MediastreamRepository.RequestPreloadDirectPlay(b.Path)
 	case mediastream.StreamTypeOptimized:
-		err = h.App.MediastreamRepository.RequestPreloadOptimizedStream(b.Path)
+		// Solo original: el preload optimized podría encolar una pre-transcodificación.
+		if !h.App.MediastreamRepository.DirectPlayOnly() {
+			err = h.App.MediastreamRepository.RequestPreloadOptimizedStream(b.Path)
+		}
 	default:
 		err = fmt.Errorf("stream type %s not implemented", b.StreamType)
 	}
@@ -346,6 +287,14 @@ func (h *Handler) HandleMediastreamTranscode(c echo.Context) error {
 //	@route /api/v1/mediastream/shutdown-transcode [POST]
 func (h *Handler) HandleMediastreamShutdownTranscodeStream(c echo.Context) error {
 	client := h.getClientID(c)
+	// El reproductor manda su clientId en el body; sin leerlo se soltaba la cookie del navegador
+	// y el contenedor del reproductor quedaba bindeado hasta que expirara.
+	var body struct {
+		ClientID string `json:"clientId"`
+	}
+	if err := c.Bind(&body); err == nil && body.ClientID != "" {
+		client = body.ClientID
+	}
 	h.App.MediastreamRepository.ShutdownTranscodeStream(client)
 	return h.RespondWithData(c, true)
 }
@@ -622,7 +571,10 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 	// No propagar "heuristic" que ensucia los demás episodios.
 	if b.ApplyToSeason && b.Source != "heuristic" && b.Confidence > 0 {
 		var episodes []models.LibraryEpisode
-		if err := h.App.Database.Gorm().Where("library_media_id = ?", mediaID).Find(&episodes).Error; err == nil {
+		if err := h.App.Database.Gorm().WithContext(c.Request().Context()).
+			Select("episode_number").
+			Where("library_media_id = ?", mediaID).
+			Find(&episodes).Error; err == nil {
 			var skipTimes []models.EpisodeSkipTime
 			for _, ep := range episodes {
 				if ep.EpisodeNumber == b.EpisodeNumber {
@@ -827,26 +779,16 @@ func (h *Handler) HandleResolveMAL(c echo.Context) error {
 
 	if searchTitle != "" {
 		res, sfErr, _ := jikanSingleFlight.Do(searchTitle, func() (interface{}, error) {
-			reqUrl := fmt.Sprintf("https://api.jikan.moe/v4/anime?q=%s&limit=1", url.QueryEscape(searchTitle))
 			// No el ctx del request: singleflight comparte esta llamada con todos
 			// los que esperan y cancelar al primero los cancelaría a todos.
-			// jikanHTTPClient ya acota la duración con su Timeout.
-			req, err := http.NewRequestWithContext(h.App.ShutdownCtx(), http.MethodGet, reqUrl, nil)
+			// Va por el cliente compartido: con Jikan caído corta de inmediato en vez de
+			// esperar el timeout en cada ficha.
+			search, err := jikan.Shared(h.App.Logger).SearchAnime(h.App.ShutdownCtx(), searchTitle)
 			if err != nil {
 				return 0, err
 			}
-			resp, err := jikanHTTPClient.Do(req)
-			if err != nil {
-				return 0, err
-			}
-			defer resp.Body.Close()
-			var jikanResp struct {
-				Data []struct {
-					MalId int `json:"mal_id"`
-				} `json:"data"`
-			}
-			if err := json.NewDecoder(resp.Body).Decode(&jikanResp); err == nil && len(jikanResp.Data) > 0 {
-				return jikanResp.Data[0].MalId, nil
+			if len(search.Data) > 0 && search.Data[0].MalID > 0 {
+				return search.Data[0].MalID, nil
 			}
 			return 0, errors.New("no mal_id found")
 		})
