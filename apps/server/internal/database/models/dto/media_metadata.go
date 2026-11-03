@@ -3,21 +3,8 @@ package dto
 // CharacterRole defines the role of a character within a saga.
 type CharacterRole string
 
-const (
-	RoleProtagonist CharacterRole = "Protagonist"
-	RoleAntagonist  CharacterRole = "Antagonist"
-	RoleSupporting  CharacterRole = "Supporting"
-	RoleBackground  CharacterRole = "Background"
-)
-
 // EpisodeType defines the classification of an episode.
 type EpisodeType string
-
-const (
-	EpisodeTypeCanon  EpisodeType = "Canon"
-	EpisodeTypeFiller EpisodeType = "Filler"
-	EpisodeTypeHyped  EpisodeType = "Hyped" // Premium/Climax episodes
-)
 
 // CharacterDTO represents a key character within a specific saga.
 type CharacterDTO struct {

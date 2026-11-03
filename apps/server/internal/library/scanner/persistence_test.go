@@ -45,7 +45,7 @@ func TestPersistMatchedMedia_FastScanKeepsExistingMetadata(t *testing.T) {
 		Description:  "Una descripción de TMDB.",
 		Year:         1990,
 	}
-	if err := db.UpsertLibraryMediaBatch(database, []*models.LibraryMedia{enriched}, 10); err != nil {
+	if err := db.UpsertLibraryMediaBatchContext(context.Background(), database, []*models.LibraryMedia{enriched}, 10); err != nil {
 		t.Fatalf("Failed to seed enriched media: %v", err)
 	}
 
@@ -65,7 +65,10 @@ func TestPersistMatchedMedia_FastScanKeepsExistingMetadata(t *testing.T) {
 		{Path: "D:/Media/Peliculas/Dragon Ball Z Los Dos Guerreros del Futuro (1993)/f.mkv", MediaID: 1039324},
 	}
 
-	idMap := scn.persistMatchedMedia(allMatchedIds, movieIds, normalizedMedia, localFiles)
+	idMap, err := scn.persistMatchedMedia(context.Background(), allMatchedIds, movieIds, normalizedMedia, localFiles)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var got models.LibraryMedia
 	if err := database.Gorm().Where("tmdb_id = ? AND type = ?", 39100, "MOVIE").First(&got).Error; err != nil {
@@ -115,7 +118,10 @@ func TestPersistMatchedMedia_NewMediaWithoutMetadataIsStillPersisted(t *testing.
 		{Path: "D:/Media/Peliculas/Dragon Ball Z El Hombre Mas Fuerte del Mundo (1990)/f.mkv", MediaID: 1039100},
 	}
 
-	idMap := scn.persistMatchedMedia(allMatchedIds, movieIds, nil, localFiles)
+	idMap, err := scn.persistMatchedMedia(context.Background(), allMatchedIds, movieIds, nil, localFiles)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var got models.LibraryMedia
 	if err := database.Gorm().Where("tmdb_id = ? AND type = ?", 39100, "MOVIE").First(&got).Error; err != nil {

@@ -139,7 +139,7 @@ func UpsertLocalFileRelationalBatch(d *Database, files []*dto.LocalFile) error {
 	if err != nil {
 		return err
 	}
-	InvalidateLocalFilesCache()
+	InvalidateLocalFilesCache(d)
 	return nil
 }
 
@@ -221,7 +221,7 @@ func SyncLocalFilesRelational(d *Database, files []*dto.LocalFile) error {
 	if err != nil {
 		return err
 	}
-	InvalidateLocalFilesCache()
+	InvalidateLocalFilesCache(d)
 	return nil
 }
 
@@ -284,7 +284,7 @@ func SyncPartialLocalFilesRelational(d *Database, files []*dto.LocalFile, target
 	if lastErr != nil {
 		return lastErr
 	}
-	InvalidateLocalFilesCache()
+	InvalidateLocalFilesCache(d)
 	return nil
 }
 

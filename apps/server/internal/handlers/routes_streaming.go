@@ -31,4 +31,5 @@ func (h *Handler) RegisterStreamingRoutes(v1 *echo.Group) {
 
 	// Video Thumbnail
 	v1.GET("/video-thumbnail", h.HandleGetVideoThumbnail)
+	v1.GET("/video-storyboard", h.HandleGetStoryboard)
 }

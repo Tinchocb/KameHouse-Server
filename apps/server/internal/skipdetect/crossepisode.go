@@ -3,7 +3,7 @@ package skipdetect
 import (
 	"context"
 	"fmt"
-	"runtime"
+
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -59,13 +59,7 @@ func (d *Detector) crossEpisodeScan(ctx context.Context, fpcalcBin string, media
 	total := len(toFingerprintSlice)
 	var doneCount atomic.Int32
 
-	numWorkers := runtime.NumCPU()
-	if numWorkers > 4 {
-		numWorkers = 4
-	}
-	if numWorkers < 2 {
-		numWorkers = 2
-	}
+	numWorkers := 1 // Global resource coordinator also serializes concurrent scans.
 	if len(toFingerprintSlice) < numWorkers {
 		numWorkers = len(toFingerprintSlice)
 	}

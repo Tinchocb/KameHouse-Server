@@ -50,6 +50,7 @@ transcodeDir = "$KAMEHOUSE_DATA_DIR/cache/transcode"
 
 [cache.thumbnails]
 memoryMaxItems = 1000     # Máximo de miniaturas en RAM (LRU en memoria)
+memoryMaxBytesMB = 0      # 0 = automático según RAM (32–256 MB); positivo = límite manual
 diskMaxSizeMB = 5120      # Límite de almacenamiento en disco en MB (5 GB)
 diskTTLHours = 720        # Tiempo de vida de miniaturas sin acceder (30 días)
 cleanupInterval = "12h"   # Frecuencia del ciclo de limpieza de disco

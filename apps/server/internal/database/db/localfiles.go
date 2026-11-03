@@ -5,7 +5,6 @@ import (
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
-	"sync"
 	"sync/atomic"
 
 	"github.com/goccy/go-json"
@@ -13,21 +12,39 @@ import (
 	"gorm.io/gorm"
 )
 
-// localFilesCache es la ultima lista cargada (nil = sin cache). Se lee sin lock.
-var localFilesCache atomic.Pointer[[]*dto.LocalFile]
+// Each database generation owns its snapshot and in-flight load. Readers that
+// start after an invalidation cannot join a load from before the write.
+type localFilesGeneration struct {
+	snapshot atomic.Pointer[[]*dto.LocalFile]
+	flight   singleflight.Group
+}
 
-// localFilesMu ordena a quien publica la cache frente a quien la invalida.
-var localFilesMu sync.Mutex
+func (d *Database) localFilesGeneration() *localFilesGeneration {
+	if generation := d.localFilesCache.Load(); generation != nil {
+		return generation
+	}
+	generation := new(localFilesGeneration)
+	if d.localFilesCache.CompareAndSwap(nil, generation) {
+		return generation
+	}
+	return d.localFilesCache.Load()
+}
 
-// localFilesGen sube en cada invalidacion (bajo localFilesMu). Una carga que empezo antes de una
-// escritura no debe publicar su resultado: podria ser anterior a ella y quedaria rancio.
-var localFilesGen uint64
-var localFilesSingleFlight singleflight.Group
+func cloneLocalFiles(files []*dto.LocalFile) []*dto.LocalFile {
+	if files == nil {
+		return nil
+	}
+	copy := make([]*dto.LocalFile, len(files))
+	for i, file := range files {
+		copy[i] = file.Clone()
+	}
+	return copy
+}
 
-// CachedLocalFiles devuelve la lista en memoria, si la hay, sin tocar la base ni tomar locks.
-func CachedLocalFiles() ([]*dto.LocalFile, bool) {
-	if p := localFilesCache.Load(); p != nil {
-		return *p, true
+// CachedLocalFiles returns an owned copy without querying the database.
+func CachedLocalFiles(d *Database) ([]*dto.LocalFile, bool) {
+	if p := d.localFilesGeneration().snapshot.Load(); p != nil {
+		return cloneLocalFiles(*p), true
 	}
 	return nil, false
 }
@@ -35,32 +52,24 @@ func CachedLocalFiles() ([]*dto.LocalFile, bool) {
 // GetLocalFiles will return the latest local files.
 // The second return value (ID) is now legacy and returns 0 as we use relational storage.
 func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
-	if cached, ok := CachedLocalFiles(); ok {
-		return cached, 0, nil
+	generation := d.localFilesGeneration()
+	if cached := generation.snapshot.Load(); cached != nil {
+		return cloneLocalFiles(*cached), 0, nil
 	}
 
-	val, err, _ := localFilesSingleFlight.Do("get_local_files", func() (interface{}, error) {
+	val, err, _ := generation.flight.Do("get_local_files", func() (interface{}, error) {
 		// Re-check cache inside singleflight to avoid racing
-		if cached, ok := CachedLocalFiles(); ok {
-			return cached, nil
+		if cached := generation.snapshot.Load(); cached != nil {
+			return *cached, nil
 		}
-
-		localFilesMu.Lock()
-		gen := localFilesGen
-		localFilesMu.Unlock()
 
 		lfs, err := GetAllLocalFilesRelational(d)
 		if err != nil {
 			return nil, err
 		}
 
-		// Si una escritura invalido la cache mientras se leia la base, se devuelve lo leido
-		// pero no se publica.
-		localFilesMu.Lock()
-		if localFilesGen == gen {
-			localFilesCache.Store(&lfs)
-		}
-		localFilesMu.Unlock()
+		// An obsolete load can only publish into its own, detached generation.
+		generation.snapshot.Store(&lfs)
 
 		return lfs, nil
 	})
@@ -75,24 +84,21 @@ func GetLocalFiles(d *Database) ([]*dto.LocalFile, uint, error) {
 	}
 
 	d.Logger.Debug().Int("count", len(lfs)).Msg("db: Local files retrieved from relational storage")
-	return lfs, 0, nil
+	return cloneLocalFiles(lfs), 0, nil
 }
 
 // InvalidateLocalFilesCache clears the in-memory local files cache.
-func InvalidateLocalFilesCache() {
-	localFilesMu.Lock()
-	localFilesGen++
-	localFilesCache.Store(nil)
-	localFilesMu.Unlock()
+func InvalidateLocalFilesCache(d *Database) {
+	d.localFilesCache.Store(new(localFilesGeneration))
 }
 
 // GetLocalFilesByMediaID will return the local files for the given media ID.
 func GetLocalFilesByMediaID(d *Database, mediaID int) ([]*dto.LocalFile, error) {
-	if cached, ok := CachedLocalFiles(); ok && cached != nil {
+	if cached := d.localFilesGeneration().snapshot.Load(); cached != nil {
 		var matched []*dto.LocalFile
-		for _, f := range cached {
+		for _, f := range *cached {
 			if f != nil && f.MediaID == mediaID {
-				matched = append(matched, f)
+				matched = append(matched, f.Clone())
 			}
 		}
 		d.Logger.Debug().Int("mediaID", mediaID).Int("count", len(matched)).Msg("db: Local files retrieved from in-memory cache by media ID")
@@ -108,7 +114,7 @@ func GetLocalFilesByMediaID(d *Database, mediaID int) ([]*dto.LocalFile, error) 
 }
 
 // SaveLocalFiles will save the local files in the database.
-func SaveLocalFiles(d *Database, _ uint, lfs []*dto.LocalFile) ([]*dto.LocalFile, error) {
+func SaveLocalFiles(d *Database, lfs []*dto.LocalFile) ([]*dto.LocalFile, error) {
 	err := UpsertLocalFileRelationalBatch(d, lfs)
 	if err != nil {
 		return nil, err

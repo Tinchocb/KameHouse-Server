@@ -369,7 +369,7 @@ func IndexDriveFiles(ctx context.Context, db *gorm.DB, driveFiles []DriveFile, h
 		}
 		if df.Width > 0 && df.Height > 0 {
 			tech.VideoStream = &dto.VideoStreamInfo{
-				Codec:  "h264",
+				// Drive reports dimensions, not the source codec.
 				Width:  df.Width,
 				Height: df.Height,
 			}
@@ -420,14 +420,27 @@ func IndexDriveFiles(ctx context.Context, db *gorm.DB, driveFiles []DriveFile, h
 		hooks.OnSaving(len(localFiles))
 	}
 
+	// Keep verified probe results when rescanning the same file. Evaluate this
+	// against the current row during the upsert so a probe completing while the
+	// scan is running is not overwritten by incomplete Drive API metadata.
+	updates := clause.AssignmentColumns([]string{
+		"name", "file_hash", "file_size", "file_mod_time", "media_id",
+		"library_media_id", "drive_file_id", "metadata", "parsed_data", "updated_at",
+	})
+	updates = append(updates, clause.Assignment{
+		Column: clause.Column{Name: "technical_info"},
+		Value: gorm.Expr(`CASE WHEN
+			local_file.file_hash = excluded.file_hash AND
+			local_file.file_size = excluded.file_size AND
+			local_file.file_mod_time = excluded.file_mod_time AND
+			json_extract(CASE WHEN json_valid(local_file.technical_info)
+				THEN local_file.technical_info ELSE '{}' END, '$.probeVerified') = 1
+			THEN local_file.technical_info ELSE excluded.technical_info END`),
+	})
 	// Batch upsert LocalFiles
 	if err := db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "path"}},
-		DoUpdates: clause.AssignmentColumns([]string{
-			"name", "file_hash", "file_size", "file_mod_time", "media_id",
-			"library_media_id", "drive_file_id", "metadata", "technical_info",
-			"parsed_data", "updated_at",
-		}),
+		Columns:   []clause.Column{{Name: "path"}},
+		DoUpdates: updates,
 	}).CreateInBatches(localFiles, 50).Error; err != nil {
 		return 0, fmt.Errorf("failed to upsert local_file records for Drive files: %w", err)
 	}

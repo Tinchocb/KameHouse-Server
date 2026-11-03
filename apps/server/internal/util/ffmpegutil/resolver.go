@@ -63,7 +63,7 @@ func isPathSafeBinary(cacheDir, customPath, binaryName string) bool {
 // 4. Default fallback: "ffmpeg".
 func ResolveFFmpegPath(cacheDir, customPath string) string {
 	if isPathSafeBinary(cacheDir, customPath, "ffmpeg") {
-		return customPath
+		return resolveToolExecutable(customPath)
 	}
 
 	if cacheDir != "" {
@@ -73,12 +73,12 @@ func ResolveFFmpegPath(cacheDir, customPath string) string {
 		}
 		cached := filepath.Join(cacheDir, "bin", "ffmpeg"+ext)
 		if fi, err := os.Stat(cached); err == nil && !fi.IsDir() {
-			return cached
+			return resolveToolExecutable(cached)
 		}
 	}
 
 	if p, err := exec.LookPath("ffmpeg"); err == nil {
-		return p
+		return resolveToolExecutable(p)
 	}
 
 	return installTarget(cacheDir, "ffmpeg")
@@ -92,7 +92,7 @@ func ResolveFFmpegPath(cacheDir, customPath string) string {
 // 4. Default fallback: "ffprobe".
 func ResolveFFprobePath(cacheDir, customPath string) string {
 	if isPathSafeBinary(cacheDir, customPath, "ffprobe") {
-		return customPath
+		return resolveToolExecutable(customPath)
 	}
 
 	if cacheDir != "" {
@@ -102,12 +102,12 @@ func ResolveFFprobePath(cacheDir, customPath string) string {
 		}
 		cached := filepath.Join(cacheDir, "bin", "ffprobe"+ext)
 		if fi, err := os.Stat(cached); err == nil && !fi.IsDir() {
-			return cached
+			return resolveToolExecutable(cached)
 		}
 	}
 
 	if p, err := exec.LookPath("ffprobe"); err == nil {
-		return p
+		return resolveToolExecutable(p)
 	}
 
 	return installTarget(cacheDir, "ffprobe")

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -20,15 +21,6 @@ import (
 	"kamehouse/internal/core"
 	util "kamehouse/internal/util/proxies"
 )
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
 
 // Límites por IP del socket (e.IPExtractor = ExtractIPDirect: no se puede
 // falsificar con X-Forwarded-For). No por la cookie KameHouse-Client-Id: quien
@@ -108,6 +100,7 @@ func isGzipSkippedPath(path string) bool {
 		strings.HasPrefix(path, "/api/v1/mediastream/att/") ||
 		strings.HasPrefix(path, "/api/v1/drive/play") ||
 		strings.HasPrefix(path, "/api/v1/video-thumbnail") ||
+		strings.HasPrefix(path, "/api/v1/video-storyboard") ||
 		strings.HasPrefix(path, "/api/v1/image-proxy") ||
 		strings.HasPrefix(path, "/api/v1/events") ||
 		strings.HasPrefix(path, "/api/v1/ws")
@@ -120,14 +113,10 @@ type Handler struct {
 func InitRoutes(app *core.App, e *echo.Echo) {
 	allowedOrigins := app.Config.Server.CorsOrigins
 
-	// CORS — fail-fast if wildcard " *" is present with AllowCredentials
+	// CORS — fail-fast if wildcard "*" is present with AllowCredentials
 	// (Echo + credentials + "*" = session hijack via reflected origin).
-	if contains(allowedOrigins, "*") {
-		for _, o := range allowedOrigins {
-			if o == "*" {
-				app.Logger.Fatal().Msg("CORS: wildcard origin with credentials detected — rejecting to prevent session hijack. Remove '*' from CorsOrigins or disable credentials.")
-			}
-		}
+	if slices.Contains(allowedOrigins, "*") {
+		app.Logger.Fatal().Msg("CORS: wildcard origin with credentials detected — rejecting to prevent session hijack. Remove '*' from CorsOrigins or disable credentials.")
 	}
 
 	// CORS — incluye cabeceras byte-range requeridas por el reproductor web de video
@@ -324,10 +313,6 @@ func (h *Handler) RegisterAdminRoutes(v1 *echo.Group) {
 	admin := v1.Group("/admin")
 	admin.GET("/transcode-stats", h.HandleGetTranscodeStats)
 	admin.GET("/library-stats", h.HandleGetLibraryStats)
-}
-
-func (h *Handler) JSON(c echo.Context, code int, i interface{}) error {
-	return c.JSON(code, i)
 }
 
 func (h *Handler) RespondWithData(c echo.Context, data interface{}) error {

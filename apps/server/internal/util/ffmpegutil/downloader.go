@@ -214,7 +214,7 @@ func downloadAndExtractSpec(ctx context.Context, spec binaryDownloadSpec, binDir
 		}
 
 		logger.Info().Str("url", url).Str("name", spec.Name).Msg("ffmpegutil: Descargando paquete")
-		err := downloadAndExtractURL(ctx, url, spec.IsZip, spec.SHA256, binDir, onProgress)
+		err := downloadAndExtractURL(logger.WithContext(ctx), url, spec.IsZip, spec.SHA256, binDir, onProgress)
 		if err == nil {
 			return nil
 		}
@@ -262,11 +262,8 @@ func downloadAndExtractURL(ctx context.Context, url string, isZip bool, wantSHA2
 		// Create a client with per-attempt timeout
 		client := &http.Client{Timeout: baseTimeout}
 
-		var logger *zerolog.Logger
 		if attempt > 1 {
-			l := zerolog.DefaultContextLogger.With().Int("attempt", attempt).Logger()
-			logger = &l
-			logger.Info().Str("url", url).Msg("ffmpegutil: Reintentando descarga...")
+			zerolog.Ctx(ctx).Info().Int("attempt", attempt).Str("url", url).Msg("ffmpegutil: Reintentando descarga...")
 		}
 
 		resp, err := client.Do(req)

@@ -3,7 +3,7 @@ package skipdetect
 import (
 	"context"
 	"path/filepath"
-	"runtime"
+
 	"strconv"
 	"strings"
 	"sync"
@@ -151,13 +151,7 @@ func (d *Detector) animeThemesScan(ctx context.Context, fpcalcBin string, malID 
 	}
 	close(epChan)
 
-	numWorkers := runtime.NumCPU()
-	if numWorkers > 4 {
-		numWorkers = 4
-	}
-	if numWorkers < 2 {
-		numWorkers = 2
-	}
+	numWorkers := 1 // Global resource coordinator also serializes concurrent scans.
 	if len(epChan) < numWorkers {
 		numWorkers = len(epChan)
 	}

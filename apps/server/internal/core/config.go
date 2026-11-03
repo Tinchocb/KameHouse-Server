@@ -187,9 +187,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("cache.dir", "$KAMEHOUSE_DATA_DIR/cache")
 	v.SetDefault("cache.transcodeDir", "$KAMEHOUSE_DATA_DIR/cache/transcode")
 	v.SetDefault("cache.thumbnails.memoryMaxItems", 1000)
-	v.SetDefault("cache.thumbnails.memoryMaxBytesMB", 256) // 256MB
-	v.SetDefault("cache.thumbnails.diskMaxSizeMB", 5120)   // 5GB
-	v.SetDefault("cache.thumbnails.diskTTLHours", 720)     // 30 days
+	v.SetDefault("cache.thumbnails.memoryMaxBytesMB", 0) // 0 = automatic RAM budget; positive values are manual.
+	v.SetDefault("cache.thumbnails.diskMaxSizeMB", 5120) // 5GB
+	v.SetDefault("cache.thumbnails.diskTTLHours", 720)   // 30 days
 	v.SetDefault("cache.thumbnails.cleanupInterval", "12h")
 	v.SetDefault("logs.dir", "$KAMEHOUSE_DATA_DIR/logs")
 	v.SetDefault("metadata.provider", "jikan")

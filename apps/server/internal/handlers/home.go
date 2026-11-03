@@ -41,16 +41,16 @@ func (h *Handler) HandleGetContinueWatching(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	if h.App.Database == nil {
-		return h.JSON(c, 500, NewErrorResponse(errors.New("database not initialized")))
+		return h.RespondWithError(c, errors.New("database not initialized"))
 	}
 
 	empty := make([]dto.ContinueWatchingItem, 0)
 	cm := h.App.ContinuityManager
 	if cm == nil {
-		return h.JSON(c, 200, NewDataResponse(empty))
+		return h.RespondWithData(c, empty)
 	}
 	if st := cm.GetSettings(); st == nil || !st.WatchContinuityEnabled {
-		return h.JSON(c, 200, NewDataResponse(empty))
+		return h.RespondWithData(c, empty)
 	}
 
 	history := continueWatchingHistory(cm.GetWatchHistory(), currentAccountID(c))
@@ -58,14 +58,14 @@ func (h *Handler) HandleGetContinueWatching(c echo.Context) error {
 	svc := anime.NewIntelligenceService(h.App.Database, nil, h.App.Logger)
 	resp, err := svc.ContinueWatchingFromHistory(ctx, history)
 	if err != nil {
-		return h.JSON(c, 500, NewErrorResponse(err))
+		return h.RespondWithError(c, err)
 	}
 
 	if resp == nil {
 		resp = empty
 	}
 
-	return h.JSON(c, 200, NewDataResponse(resp))
+	return h.RespondWithData(c, resp)
 }
 
 // continueWatchingMaxItems replica el LIMIT de la consulta histórica en DB.

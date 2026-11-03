@@ -4,6 +4,7 @@ import (
 	"context"
 	"kamehouse/internal/util"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -17,8 +18,10 @@ type Job struct {
 }
 
 type Scheduler struct {
-	logger *zerolog.Logger
-	jobs   []Job
+	logger    *zerolog.Logger
+	jobs      []Job
+	startOnce sync.Once
+	workers   sync.WaitGroup
 }
 
 func NewScheduler(logger *zerolog.Logger) *Scheduler {
@@ -33,11 +36,20 @@ func (s *Scheduler) Add(job Job) {
 }
 
 func (s *Scheduler) Start(ctx context.Context) {
+	s.startOnce.Do(func() { s.start(ctx) })
+}
+
+// Wait joins jobs already started, including their current maintenance operation.
+func (s *Scheduler) Wait() { s.workers.Wait() }
+
+func (s *Scheduler) start(ctx context.Context) {
 	s.logger.Info().Int("jobs", len(s.jobs)).Msg("maintenance: Starting scheduler")
 
 	for _, job := range s.jobs {
 		j := job // capture
+		s.workers.Add(1)
 		go func(j Job) {
+			defer s.workers.Done()
 			// Random jitter up to 10% of interval
 			var jitter time.Duration
 			if n := int64(j.Interval) / 10; n > 0 {
@@ -71,6 +83,9 @@ func (s *Scheduler) Start(ctx context.Context) {
 }
 
 func (s *Scheduler) runJob(ctx context.Context, job Job) {
+	if ctx.Err() != nil {
+		return
+	}
 	defer util.RecoverInModule("maintenance/" + job.Name)
 
 	start := time.Now()

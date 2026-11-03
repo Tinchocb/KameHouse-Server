@@ -68,6 +68,12 @@ func run(ctx context.Context) error {
 	}
 
 	app := core.NewKameHouse(configOpts)
+	// Every exit after initialization (including bind/TLS/Serve failures) owns cleanup.
+	defer func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		defer cancel()
+		app.Cleanup(cleanupCtx)
+	}()
 
 	e := core.NewEchoApp(app, &WebFS)
 
@@ -125,6 +131,11 @@ func run(ctx context.Context) error {
 		WriteTimeout:      0,                 // 0 = no limit (required for long HLS/segmented responses); mitigated by ReadHeaderTimeout + IdleTimeout. When behind a reverse proxy (nginx/Caddy), set proxy_write_timeout there to bound it.
 		IdleTimeout:       120 * time.Second, // keep-alive max lifetime
 	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		shutdownHTTPServer(shutdownCtx, srv, app.Logger)
+	}()
 
 	// Start server concurrently
 	errCh := make(chan error, 1)
@@ -153,36 +164,21 @@ func run(ctx context.Context) error {
 		return err
 	case <-ctx.Done():
 		app.Logger.Info().Msg("initiating graceful shutdown")
-
-		httpShutdownCtx, cancelHttp := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancelHttp()
-
-		// 1. Stop accepting new HTTP requests and drain active ones
-		if err := srv.Shutdown(httpShutdownCtx); err != nil {
-			app.Logger.Error().Err(err).Msg("server shutdown error")
-		}
-
-		// 2. Flush pending writes, stop background workers & close DB with dedicated timeout
-		cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), 45*time.Second)
-		defer cancelCleanup()
-		app.Cleanup(cleanupCtx)
 		return nil
 	case <-app.WSEventManager.ShutdownSignal:
 		app.Logger.Info().Msg("desktop sidecar: no WebSocket connections, initiating graceful shutdown")
-
-		httpShutdownCtx, cancelHttp := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancelHttp()
-
-		if err := srv.Shutdown(httpShutdownCtx); err != nil {
-			app.Logger.Error().Err(err).Msg("server shutdown error")
-		}
-
-		cleanupCtx, cancelCleanup := context.WithTimeout(context.Background(), 45*time.Second)
-		defer cancelCleanup()
-		app.Cleanup(cleanupCtx)
 		return nil
 	}
 
+}
+
+func shutdownHTTPServer(ctx context.Context, srv *http.Server, logger *zerolog.Logger) {
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error().Err(err).Msg("server shutdown error; closing remaining HTTP connections")
+		if closeErr := srv.Close(); closeErr != nil {
+			logger.Error().Err(closeErr).Msg("server close error")
+		}
+	}
 }
 
 func resolveBindableAddress(host string, port int, isDesktopSidecar bool, logger *zerolog.Logger) (net.Listener, string, int, error) {

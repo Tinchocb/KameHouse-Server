@@ -16,7 +16,13 @@ import (
 )
 
 // persistMatchedMedia saves LibraryMedia records to the database and maps their IDs back to LocalFiles.
-func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds map[int]bool, normalizedMedia []*dto.NormalizedMedia, localFiles []*dto.LocalFile) map[int]uint {
+func (scn *Scanner) persistMatchedMedia(ctx context.Context, allMatchedIds map[int]struct{}, movieIds map[int]bool, normalizedMedia []*dto.NormalizedMedia, localFiles []*dto.LocalFile) (map[int]uint, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if scn.Database == nil {
+		return nil, fmt.Errorf("scanner: database is required for media persistence")
+	}
 	libraryMediaIdMap := make(map[int]uint)
 	mediaBatch := make([]*models.LibraryMedia, 0, len(allMatchedIds))
 	tagger := metadata_provider.NewIntelligenceTagger()
@@ -52,7 +58,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			}
 			chunk := allTmdbIds[i:end]
 			var persisted []*models.LibraryMedia
-			scn.Database.Gorm().Select("tmdb_id", "type").Where("tmdb_id IN ?", chunk).Find(&persisted)
+			if err := scn.Database.Gorm().WithContext(ctx).Select("tmdb_id", "type").Where("tmdb_id IN ?", chunk).Find(&persisted).Error; err != nil {
+				return nil, fmt.Errorf("read existing library media: %w", err)
+			}
 			for _, m := range persisted {
 				alreadyPersisted[fmt.Sprintf("%d_%s", m.TmdbID, m.Type)] = true
 			}
@@ -60,6 +68,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 	}
 
 	for id := range allMatchedIds {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		realTmdbId := id
 		isMovie := movieIds[id] || id >= 1_000_000
 		mediaType := "SHOW"
@@ -78,21 +89,24 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 		// On-demand fetch if missing from normalizedMap
 		nm, hasNM := normalizedMap[id]
 		if !hasNM && scn.TMDBClient != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			if isMovie {
-				if mRes, err := scn.TMDBClient.GetMovieDetails(ctx, strconv.Itoa(realTmdbId)); err == nil && mRes != nil {
+				if mRes, err := scn.TMDBClient.GetMovieDetails(fetchCtx, strconv.Itoa(realTmdbId)); err == nil && mRes != nil {
 					nm = librarymetadata.TmdbMovieDetailsToNormalizedMedia(mRes, "")
 					normalizedMap[id] = nm
 					hasNM = true
 				}
 			} else {
-				if tRes, err := scn.TMDBClient.GetTVDetails(ctx, strconv.Itoa(realTmdbId)); err == nil && tRes != nil {
+				if tRes, err := scn.TMDBClient.GetTVDetails(fetchCtx, strconv.Itoa(realTmdbId)); err == nil && tRes != nil {
 					nm = librarymetadata.TmdbTVDetailsToNormalizedMedia(tRes, "")
 					normalizedMap[id] = nm
 					hasNM = true
 				}
 			}
 			cancel()
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 		}
 
 		newMedia := &models.LibraryMedia{
@@ -249,19 +263,17 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 		mediaBatch = append(mediaBatch, newMedia)
 	}
 
-	upsertOk := true
 	if len(mediaBatch) > 0 {
 		scn.Logger.Debug().Int("batchSize", len(mediaBatch)).Int("skipped", len(allMatchedIds)-len(mediaBatch)).Msg("scanner: Persisting matched media batch")
-		err := db.UpsertLibraryMediaBatch(scn.Database, mediaBatch, 10)
+		err := db.UpsertLibraryMediaBatchContext(ctx, scn.Database, mediaBatch, 10)
 		if err != nil {
-			scn.Logger.Error().Err(err).Msg("scanner: Failed to bulk upsert LibraryMedia batch, skipping ID mapping")
-			upsertOk = false
+			return nil, fmt.Errorf("persist library media batch: %w", err)
 		}
 	}
 
 	// Map over every id in the scan, not just the batch: records left untouched
 	// above still need their association with local files.
-	if upsertOk && scn.Database != nil && len(allTmdbIds) > 0 {
+	if len(allTmdbIds) > 0 {
 		var insertedMedia []*models.LibraryMedia
 		for i := 0; i < len(allTmdbIds); i += 500 {
 			end := i + 500
@@ -270,7 +282,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 			}
 			chunk := allTmdbIds[i:end]
 			var chunkMedia []*models.LibraryMedia
-			scn.Database.Gorm().Select("id", "tmdb_id", "type").Where("tmdb_id IN ?", chunk).Find(&chunkMedia)
+			if err := scn.Database.Gorm().WithContext(ctx).Select("id", "tmdb_id", "type").Where("tmdb_id IN ?", chunk).Find(&chunkMedia).Error; err != nil {
+				return nil, fmt.Errorf("read persisted library media identifiers: %w", err)
+			}
 			insertedMedia = append(insertedMedia, chunkMedia...)
 		}
 
@@ -286,6 +300,9 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	missingAssocCount := 0
 	for _, lf := range localFiles {
 		if lf.MediaID != 0 {
@@ -307,5 +324,5 @@ func (scn *Scanner) persistMatchedMedia(allMatchedIds map[int]struct{}, movieIds
 		scn.Logger.Debug().Msg("scanner: All matched local files successfully associated with LibraryMedia records")
 	}
 
-	return libraryMediaIdMap
+	return libraryMediaIdMap, nil
 }

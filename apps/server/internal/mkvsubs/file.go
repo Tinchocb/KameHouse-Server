@@ -13,8 +13,6 @@ import (
 
 // Tipos de pista de Matroska.
 const (
-	TrackVideo    = 1
-	TrackAudio    = 2
 	TrackSubtitle = 17
 )
 
@@ -439,9 +437,6 @@ func (f *File) readCues(ctx context.Context, body, size int64) error {
 	sort.SliceStable(f.cues, func(i, j int) bool { return f.cues[i].timeMs < f.cues[j].timeMs })
 	return nil
 }
-
-// Tracks son todas las pistas, en el orden del archivo.
-func (f *File) Tracks() []*Track { return f.tracks }
 
 // SubtitleTracks son las pistas de subtítulos en el orden del archivo: la N-ésima es
 // la que ffmpeg/ffprobe llaman `0:s:N`.

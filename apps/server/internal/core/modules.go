@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,7 +74,7 @@ func (a *App) initModulesOnce() {
 	// ejecuta `ffmpeg -version` y `ffprobe -version` (hasta 3 s cada uno, con el lock del gestor
 	// tomado): si corriera antes de escuchar, retrasaría la navegación a la interfaz del sidecar.
 	// Va después de crear el repositorio porque, al terminar la descarga, lo reinicializa.
-	go func() {
+	a.startBackground(func() {
 		defer util.HandlePanicInModuleThen("core/ffmpegAutoDownload", func() {})
 		status := a.FFmpegManager.GetStatus(customFfmpeg, customFfprobe)
 		if status.FFmpegAvailable && status.FFprobeAvailable {
@@ -93,7 +92,7 @@ func (a *App) initModulesOnce() {
 		if mSettings, ok := a.Database.GetMediastreamSettings(); ok {
 			a.MediastreamRepository.InitializeModules(mSettings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)
 		}
-	}()
+	})
 
 	if a.ContinuityManager != nil && a.ContinuityManager.TelemetryManager != nil {
 		a.AddCleanupFunction(func() {
@@ -121,7 +120,7 @@ func (a *App) initModulesOnce() {
 	// | Transcode Cleanup   |
 	// +---------------------+
 	// Clean up old transcode directories periodically
-	go func() {
+	a.startBackground(func() {
 		defer util.HandlePanicInModuleThen("core/transcodeCleanup", func() {})
 		ticker := time.NewTicker(10 * time.Minute)
 		defer ticker.Stop()
@@ -133,7 +132,7 @@ func (a *App) initModulesOnce() {
 				return
 			}
 		}
-	}()
+	})
 
 	// +---------------------+
 	// |    Auto Scanner     |
@@ -147,13 +146,13 @@ func (a *App) initModulesOnce() {
 		MetadataProvider: a.Metadata.Provider,
 		Platform:         a.Metadata.Platform,
 		OnRefreshCollection: func() {
-			go func() {
+			a.startBackground(func() {
 				defer util.HandlePanicInModuleThen("core/refreshAfterAutoScan", func() {})
 				a.Logger.Info().Msg("app: Refreshing anime collection after auto-scan")
 				_, _ = a.GetAnimeCollection(true)
 				anime.InvalidateCuratedHomeCache()
-				_, _ = a.Metadata.Platform.RefreshAnimeCollection(context.Background())
-			}()
+				_, _ = a.Metadata.Platform.RefreshAnimeCollection(a.ShutdownCtx())
+			})
 		},
 		EventDispatcher: a.WSEventManager.Dispatcher(),
 		BackgroundQueue: a.BackgroundQueue,
@@ -295,14 +294,14 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 	changed := a.MediastreamRepository.InitializeModules(settings, a.Config.Cache.Dir, a.Config.Cache.TranscodeDir)
 
 	if changed {
-		go func() {
+		a.startBackground(func() {
 			defer util.HandlePanicInModuleThen("core/trimMediastreamCache", func() {})
 			if settings.TranscodeEnabled {
 				_ = a.FileCacher.TrimMediastreamVideoFiles()
 			} else {
 				_ = a.FileCacher.ClearMediastreamVideoFiles()
 			}
-		}()
+		})
 	}
 
 	a.SecondarySettings.Mediastream = settings
@@ -322,20 +321,20 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 }
 
 func (a *App) performActionsOnce() {
-	go func() {
+	a.startBackground(func() {
 		defer util.HandlePanicInModuleThen("core/performActionsOnce", func() {})
 		if a.Settings == nil {
 			return
 		}
 
 		if a.Settings.GetLibrary().RefreshLibraryOnStart {
-			go func() {
+			a.startBackground(func() {
 				defer util.HandlePanicInModuleThen("core/refreshLibraryOnStart", func() {})
 				a.Logger.Debug().Msg("app: Refreshing library")
 				a.AutoScanner.TriggerScan(nil)
-			}()
+			})
 		}
-	}()
+	})
 }
 
 // cleanupTranscodeDirs removes leftover transcode directories older than 1 hour

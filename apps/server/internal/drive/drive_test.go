@@ -261,6 +261,9 @@ func TestGetAuthURL(t *testing.T) {
 }
 
 func TestDriveFileIsVideo(t *testing.T) {
+	withoutExtension := DriveFile{Name: "(1995-03-04) Dragon Ball Z - La Fusión de Goku y Vegeta", MimeType: "video/matroska"}
+	assert.True(t, withoutExtension.IsVideo())
+
 	f1 := DriveFile{Name: "ep1.mkv", MimeType: "video/x-matroska"}
 	assert.True(t, f1.IsVideo())
 

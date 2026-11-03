@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"kamehouse/internal/events"
+	"kamehouse/internal/util/resourcebudget"
 )
 
 // validPlaybackBeat es fail-soft para telemetría fire-and-forget (heartbeat 5s):
@@ -68,6 +69,7 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 				if !validPlaybackBeat(heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration) {
 					continue
 				}
+				resourcebudget.Shared.NotePlayback()
 
 				if h.App.ContinuityManager == nil || h.App.ContinuityManager.TelemetryManager == nil {
 					continue

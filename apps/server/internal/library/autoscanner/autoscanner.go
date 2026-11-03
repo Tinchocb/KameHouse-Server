@@ -47,6 +47,9 @@ type (
 		// (e.g. on SIGTERM), in-progress scans will respect the cancellation
 		// rather than running to completion.
 		shutdownCtx context.Context
+		cancel      context.CancelFunc
+		closed      bool
+		workers     sync.WaitGroup
 	}
 	NewAutoScannerOptions struct {
 		Database            *db.Database
@@ -75,6 +78,7 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 	if shutdownCtx == nil {
 		shutdownCtx = context.Background()
 	}
+	shutdownCtx, cancel := context.WithCancel(shutdownCtx)
 
 	return &AutoScanner{
 		fileActionCh:        make(chan struct{}, 1),
@@ -92,6 +96,7 @@ func New(opts *NewAutoScannerOptions) *AutoScanner {
 		eventDispatcher:     opts.EventDispatcher,
 		backgroundQueue:     opts.BackgroundQueue,
 		shutdownCtx:         shutdownCtx,
+		cancel:              cancel,
 	}
 }
 
@@ -107,6 +112,9 @@ func (as *AutoScanner) Notify(path string) {
 
 	as.mu.Lock()
 	defer as.mu.Unlock()
+	if as.closed || as.shutdownCtx.Err() != nil {
+		return
+	}
 
 	// Add path to pending (only if it's a directory, or a valid media file)
 	if path != "" {
@@ -144,7 +152,9 @@ func (as *AutoScanner) Notify(path string) {
 	}
 
 	as.waiting = true
+	as.workers.Add(1)
 	go func() {
+		defer as.workers.Done()
 		timer := time.NewTimer(as.waitTime)
 		defer timer.Stop()
 
@@ -178,14 +188,18 @@ func (as *AutoScanner) Notify(path string) {
 }
 
 func (as *AutoScanner) TriggerScan(targets []string) {
-	if as == nil || !as.enabled {
+	if as == nil {
 		return
 	}
-
+	as.mu.Lock()
 	// Un solo paso atómico: Load + Store dejaba entrar dos escaneos a la vez.
-	if !as.scanning.CompareAndSwap(false, true) {
+	if as.closed || !as.enabled || as.shutdownCtx.Err() != nil || !as.scanning.CompareAndSwap(false, true) {
+		as.mu.Unlock()
 		return
 	}
+	as.workers.Add(1)
+	as.mu.Unlock()
+	defer as.workers.Done()
 	defer as.scanning.Store(false)
 
 	as.logger.Info().Msg("autoscanner: Triggering library scan")
@@ -196,7 +210,10 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		as.logger.Error().Err(err).Msg("autoscanner: Failed to get library settings")
 		return
 	}
+	as.mu.Lock()
 	as.settings = settings.Library
+	scanSettings := as.settings
+	as.mu.Unlock()
 
 	mSettings, ok := as.db.GetMediastreamSettings()
 	ffprobePath := "ffprobe"
@@ -204,12 +221,12 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 		ffprobePath = mSettings.FfprobePath
 	}
 
-	if as.settings.UnifiedScan {
+	if scanSettings.UnifiedScan {
 		as.logger.Info().Msg("autoscanner: Unified scan active, overriding targets to full library walk")
 		targets = nil
 	}
 
-	libraryPaths := as.settings.GetAllPaths()
+	libraryPaths := scanSettings.GetAllPaths()
 	var libraryPath string
 	var additionalPaths []string
 	if len(libraryPaths) > 0 {
@@ -223,22 +240,22 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 	scn := scanner.NewScanner(&scanner.ScannerOptions{
 		DirPath:             libraryPath,
 		OtherDirPaths:       additionalPaths,
-		SeriesPaths:         as.settings.SeriesPaths,
-		MoviePaths:          as.settings.MoviePaths,
+		SeriesPaths:         scanSettings.SeriesPaths,
+		MoviePaths:          scanSettings.MoviePaths,
 		Logger:              as.logger,
 		PlatformRef:         as.platform,
 		Database:            as.db,
 		MetadataProviderRef: as.metadataProvider,
-		UseTMDB:             as.settings.ScannerProvider == "tmdb",
+		UseTMDB:             scanSettings.ScannerProvider == "tmdb",
 		EventDispatcher:     as.eventDispatcher,
-		MatchingThreshold:   as.settings.ScannerMatchingThreshold,
-		StrictStructure:     as.settings.ScannerStrictStructure,
+		MatchingThreshold:   scanSettings.ScannerMatchingThreshold,
+		StrictStructure:     scanSettings.ScannerStrictStructure,
 		ScanSummaryLogger:   summary.NewScanSummaryLogger(),
 		WithShelving:        true,
 		TargetPaths:         targets,
 		FFprobePath:         ffprobePath,
 		BackgroundQueue:     as.backgroundQueue,
-		UnifiedScan:         as.settings.UnifiedScan,
+		UnifiedScan:         scanSettings.UnifiedScan,
 	})
 
 	allLfs, err := scn.Scan(as.shutdownCtx)
@@ -299,7 +316,20 @@ func (as *AutoScanner) TriggerScan(targets []string) {
 }
 
 func (as *AutoScanner) SetEnabled(enabled bool) {
+	as.mu.Lock()
+	defer as.mu.Unlock()
 	as.enabled = enabled
+}
+
+// Stop rejects new scans, cancels pending work and joins scans already admitted.
+func (as *AutoScanner) Stop() {
+	as.mu.Lock()
+	as.closed = true
+	if as.cancel != nil {
+		as.cancel()
+	}
+	as.mu.Unlock()
+	as.workers.Wait()
 }
 
 func (as *AutoScanner) SetSettings(settings models.LibrarySettings) {

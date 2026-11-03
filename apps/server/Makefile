@@ -62,12 +62,6 @@ build-server:
 	CGO_ENABLED=1 $(GO) build -o $(BINARY) -trimpath -ldflags="$(LDFLAGS)"
 	@echo "✅ Server built: $(BINARY)"
 
-## build-server-nosystray: Build without system tray (for desktop app / Linux)
-build-server-nosystray:
-	@echo "🔨 Building server (no systray)..."
-	$(GO) build -o $(BINARY) -trimpath -ldflags="-s -w" -tags=nosystray
-	@echo "✅ Server built: $(BINARY)"
-
 ## build-web: Build the web frontend and copy to web/ directory
 build-web:
 	@echo "🌐 Building web frontend..."

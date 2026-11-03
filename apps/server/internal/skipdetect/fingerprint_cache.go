@@ -132,18 +132,26 @@ func FingerprintRangeCached(ctx context.Context, cacheDir, fpcalcBin, ffmpegPath
 		}
 	}
 
-	fp, dur, err := FingerprintRange(ctx, fpcalcBin, ffmpegPath, inputPath, startSec, lengthSec, audioIdx)
-	if err != nil {
-		return nil, 0, err
-	}
+	return runFingerprint(ctx, func(work context.Context) ([]int, float64, error) {
+		if cached, ok := GetCachedFingerprint(cacheDir, key); ok {
+			return cached.Fingerprint, cached.Duration, nil
+		}
+		fp, dur, err := FingerprintRange(work, fpcalcBin, ffmpegPath, inputPath, startSec, lengthSec, audioIdx)
+		if err != nil {
+			return nil, 0, err
+		}
 
-	if cacheDir != "" && key != "" && len(fp) > 0 {
-		_ = PutCachedFingerprint(cacheDir, key, &CachedFingerprint{
-			Duration:    dur,
-			Fingerprint: fp,
-		})
-	}
-	return fp, dur, nil
+		if err := work.Err(); err != nil {
+			return nil, 0, err
+		}
+		if cacheDir != "" && key != "" && len(fp) > 0 {
+			_ = PutCachedFingerprint(cacheDir, key, &CachedFingerprint{
+				Duration:    dur,
+				Fingerprint: fp,
+			})
+		}
+		return fp, dur, nil
+	})
 }
 
 // FingerprintFileCached huella un archivo con fpcalc directo, consultando caché si cacheDir != "".
@@ -158,16 +166,24 @@ func FingerprintFileCached(ctx context.Context, cacheDir, fpcalcBin, path string
 		}
 	}
 
-	fp, dur, err := FingerprintFile(ctx, fpcalcBin, path, lengthSec)
-	if err != nil {
-		return nil, 0, err
-	}
+	return runFingerprint(ctx, func(work context.Context) ([]int, float64, error) {
+		if cached, ok := GetCachedFingerprint(cacheDir, key); ok {
+			return cached.Fingerprint, cached.Duration, nil
+		}
+		fp, dur, err := FingerprintFile(work, fpcalcBin, path, lengthSec)
+		if err != nil {
+			return nil, 0, err
+		}
 
-	if cacheDir != "" && key != "" && len(fp) > 0 {
-		_ = PutCachedFingerprint(cacheDir, key, &CachedFingerprint{
-			Duration:    dur,
-			Fingerprint: fp,
-		})
-	}
-	return fp, dur, nil
+		if err := work.Err(); err != nil {
+			return nil, 0, err
+		}
+		if cacheDir != "" && key != "" && len(fp) > 0 {
+			_ = PutCachedFingerprint(cacheDir, key, &CachedFingerprint{
+				Duration:    dur,
+				Fingerprint: fp,
+			})
+		}
+		return fp, dur, nil
+	})
 }

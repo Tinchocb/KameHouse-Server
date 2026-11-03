@@ -25,6 +25,7 @@ import (
 
 	"kamehouse/internal/mediastream/cassette"
 	"kamehouse/internal/mediastream/videofile"
+	"kamehouse/internal/util/resourcebudget"
 
 	"github.com/rs/zerolog"
 )
@@ -51,6 +52,10 @@ type PreTranscodeJob struct {
 	Error    string     `json:"error,omitempty"`
 	QueuedAt time.Time  `json:"queuedAt"`
 	EndedAt  *time.Time `json:"endedAt,omitempty"`
+
+	cancel    context.CancelFunc
+	done      chan struct{}
+	cancelled bool
 }
 
 // Options configures a Manager. All fields are required except Concurrency.
@@ -80,8 +85,9 @@ type Manager struct {
 
 	queue chan *PreTranscodeJob
 
-	cancelMu sync.Mutex
-	cancels  map[string]context.CancelFunc // running jobs, by hash
+	deleteMu sync.Mutex
+	deleting map[string]bool
+	workers  sync.WaitGroup
 
 	startOnce sync.Once
 	stopCh    chan struct{}
@@ -92,12 +98,12 @@ func New(opts Options) *Manager {
 		opts.Concurrency = 1
 	}
 	return &Manager{
-		opts:    opts,
-		logger:  opts.Logger,
-		jobs:    make(map[string]*PreTranscodeJob),
-		queue:   make(chan *PreTranscodeJob, 256),
-		cancels: make(map[string]context.CancelFunc),
-		stopCh:  make(chan struct{}),
+		opts:     opts,
+		logger:   opts.Logger,
+		jobs:     make(map[string]*PreTranscodeJob),
+		queue:    make(chan *PreTranscodeJob, 256),
+		deleting: make(map[string]bool),
+		stopCh:   make(chan struct{}),
 	}
 }
 
@@ -108,28 +114,46 @@ func (m *Manager) QueueLength() int {
 
 // Start launches the workers. Safe to call more than once.
 func (m *Manager) Start() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.stopped() {
+		return
+	}
 	m.startOnce.Do(func() {
 		for i := 0; i < m.opts.Concurrency; i++ {
-			go m.worker()
+			m.workers.Add(1)
+			go func() { defer m.workers.Done(); m.worker() }()
 		}
 		m.logger.Info().Int("workers", m.opts.Concurrency).Str("outputDir", m.opts.OutputDir).Msg("pretranscode: Started")
 	})
 }
 
-// Stop signals the workers to exit and kills any ffmpeg still running.
+// Stop cancels jobs and waits for process/file cleanup before a replacement can start.
 func (m *Manager) Stop() {
-	select {
-	case <-m.stopCh:
-		return // already stopped
-	default:
+	m.mu.Lock()
+	if !m.stopped() {
 		close(m.stopCh)
 	}
-
-	m.cancelMu.Lock()
-	for _, cancel := range m.cancels {
+	var cancels []context.CancelFunc
+	var done []chan struct{}
+	for _, job := range m.jobs {
+		if job.cancel != nil {
+			cancels = append(cancels, job.cancel)
+			done = append(done, job.done)
+		}
+		if job.Status == StatusQueued || job.Status == StatusRunning {
+			job.cancelled = true
+			job.Status, job.Error = StatusFailed, "cancelled"
+		}
+	}
+	m.mu.Unlock()
+	for _, cancel := range cancels {
 		cancel()
 	}
-	m.cancelMu.Unlock()
+	for _, finished := range done {
+		<-finished
+	}
+	m.workers.Wait()
 }
 
 func (m *Manager) stopped() bool {
@@ -183,11 +207,24 @@ func (m *Manager) Enqueue(filePath string) (*PreTranscodeJob, error) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.stopped() {
+		return nil, errors.New("pre-transcode manager is stopped")
+	}
+	if m.deleting[hash] {
+		return nil, errors.New("pre-transcode output is being deleted")
+	}
 
 	if existing, ok := m.jobs[hash]; ok {
+		if existing.done != nil && existing.Status == StatusFailed {
+			select {
+			case <-existing.done:
+			default:
+				return nil, errors.New("previous pre-transcode is still stopping")
+			}
+		}
 		switch existing.Status {
 		case StatusQueued, StatusRunning, StatusCompleted:
-			return existing, nil
+			return jobSnapshot(existing), nil
 		}
 		// A failed job is retried below.
 	}
@@ -199,7 +236,7 @@ func (m *Manager) Enqueue(filePath string) (*PreTranscodeJob, error) {
 		if probeErr != nil || m.Ready(hash, len(streams.Audio)) {
 			job := &PreTranscodeJob{Hash: hash, FilePath: filePath, Status: StatusCompleted, Progress: 100, QueuedAt: time.Now()}
 			m.jobs[hash] = job
-			return job, nil
+			return jobSnapshot(job), nil
 		}
 		_ = os.RemoveAll(m.OutputDirFor(hash))
 	}
@@ -215,29 +252,35 @@ func (m *Manager) Enqueue(filePath string) (*PreTranscodeJob, error) {
 	}
 
 	m.logger.Debug().Str("filepath", filePath).Str("hash", hash).Msg("pretranscode: Job queued")
-	return job, nil
+	return jobSnapshot(job), nil
 }
 
 // Cancel stops a queued or running job and discards its partial output.
 func (m *Manager) Cancel(hash string) bool {
-	m.cancelMu.Lock()
-	cancel, running := m.cancels[hash]
-	m.cancelMu.Unlock()
-
-	if running {
-		cancel()
-		return true
-	}
-
-	// Not running: if it is still queued, mark it failed so the worker skips it.
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	if job, ok := m.jobs[hash]; ok && job.Status == StatusQueued {
-		job.Status = StatusFailed
-		job.Error = "cancelled"
-		return true
+	job := m.jobs[hash]
+	if job == nil || (job.Status != StatusQueued && job.Status != StatusRunning) {
+		m.mu.Unlock()
+		return false
 	}
-	return false
+	job.cancelled = true
+	job.Status, job.Error = StatusFailed, "cancelled"
+	cancel := job.cancel
+	m.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	return true
+}
+
+func jobSnapshot(job *PreTranscodeJob) *PreTranscodeJob {
+	copy := *job
+	copy.cancel, copy.done = nil, nil
+	if job.EndedAt != nil {
+		endedAt := *job.EndedAt
+		copy.EndedAt = &endedAt
+	}
+	return &copy
 }
 
 // Jobs returns a snapshot of every tracked job.
@@ -247,21 +290,62 @@ func (m *Manager) Jobs() []*PreTranscodeJob {
 
 	out := make([]*PreTranscodeJob, 0, len(m.jobs))
 	for _, j := range m.jobs {
-		clone := *j
-		out = append(out, &clone)
+		out = append(out, jobSnapshot(j))
 	}
 	return out
 }
 
 // Delete removes a file's pre-transcoded output and forgets its job.
 func (m *Manager) Delete(hash string) error {
+	if !ValidHash(hash) {
+		return errors.New("invalid pre-transcode hash")
+	}
+	m.deleteMu.Lock()
+	defer m.deleteMu.Unlock()
+	// Root confines recursive removal even if entries are replaced with symlinks.
+	root, err := os.OpenRoot(m.opts.OutputDir)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if root != nil {
+		defer root.Close()
+	}
+	m.mu.Lock()
+	m.deleting[hash] = true
+	m.mu.Unlock()
+	defer func() { m.mu.Lock(); delete(m.deleting, hash); m.mu.Unlock() }()
 	m.Cancel(hash)
+	m.mu.RLock()
+	var done chan struct{}
+	if job := m.jobs[hash]; job != nil {
+		done = job.done
+	}
+	m.mu.RUnlock()
+	if done != nil {
+		<-done
+	}
 
 	m.mu.Lock()
 	delete(m.jobs, hash)
 	m.mu.Unlock()
 
-	return os.RemoveAll(m.OutputDirFor(hash))
+	if root == nil {
+		return nil
+	}
+	return root.RemoveAll(hash)
+}
+
+// ValidHash accepts only the SHA-1 identifiers produced by videofile.GetHashFromPath.
+func ValidHash(hash string) bool {
+	if len(hash) != 40 {
+		return false
+	}
+	for _, ch := range hash {
+		if !(ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'f' || ch >= 'A' && ch <= 'F') {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *Manager) worker() {
@@ -287,29 +371,51 @@ func (m *Manager) worker() {
 }
 
 func (m *Manager) run(job *PreTranscodeJob) {
-	ctx, cancel := context.WithCancel(context.Background())
+	m.runWith(job, m.transcode)
+}
 
-	m.cancelMu.Lock()
-	m.cancels[job.Hash] = cancel
-	// Stop() closes stopCh before walking cancels under cancelMu: if it already
-	// walked them, it missed this job, so cancel it here.
-	if m.stopped() {
-		cancel()
+func (m *Manager) runWith(job *PreTranscodeJob, encode func(context.Context, *PreTranscodeJob) error) {
+	// Claim the exact queued job and register cancellation in one transition.
+	m.mu.Lock()
+	if m.stopped() || m.deleting[job.Hash] || m.jobs[job.Hash] != job || job.Status != StatusQueued || job.done != nil {
+		m.mu.Unlock()
+		return
 	}
-	m.cancelMu.Unlock()
+	ctx, cancel := context.WithCancel(context.Background())
+	job.cancel, job.done = cancel, make(chan struct{})
+	m.mu.Unlock()
 
 	defer func() {
 		cancel()
-		m.cancelMu.Lock()
-		delete(m.cancels, job.Hash)
-		m.cancelMu.Unlock()
+		m.mu.Lock()
+		job.cancel = nil
+		close(job.done)
+		m.mu.Unlock()
 	}()
 
-	m.setStatus(job.Hash, StatusRunning, 0, "")
-	m.logger.Info().Str("filepath", job.FilePath).Msg("pretranscode: Started")
+	var err error
+	for {
+		m.setStatus(job.Hash, StatusQueued, 0)
+		workCtx, release, acquireErr := resourcebudget.Shared.Background(ctx)
+		if acquireErr != nil {
+			err = acquireErr
+			break
+		}
+		m.setStatus(job.Hash, StatusRunning, 0)
+		m.logger.Info().Str("filepath", job.FilePath).Msg("pretranscode: Started")
+		err = encode(workCtx, job)
+		interrupted := errors.Is(context.Cause(workCtx), resourcebudget.ErrPlaybackPriority)
+		release() // transcode has waited for FFmpeg and removed its temporary files.
+		if err != nil && interrupted && ctx.Err() == nil {
+			m.logger.Info().Str("filepath", job.FilePath).Msg("pretranscode: Yielding to playback; will retry when idle")
+			continue
+		}
+		break
+	}
 
-	err := m.transcode(ctx, job)
-
+	if ctx.Err() != nil {
+		err = ctx.Err()
+	}
 	now := time.Now()
 	if err != nil {
 		// A cancel is a user action, not a failure to report loudly.
@@ -327,8 +433,11 @@ func (m *Manager) run(job *PreTranscodeJob) {
 		return
 	}
 
+	if m.finish(job.Hash, StatusCompleted, "", &now) {
+		_ = os.RemoveAll(m.OutputDirFor(job.Hash))
+		return
+	}
 	m.logger.Info().Str("filepath", job.FilePath).Msg("pretranscode: Completed")
-	m.finish(job.Hash, StatusCompleted, "", &now)
 }
 
 func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
@@ -365,6 +474,7 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 	args := buildFfmpegArgs(hw, job.FilePath, tmpDir, len(src.Audio))
 
 	cmd := exec.CommandContext(ctx, m.opts.FfmpegPath, args...)
+	cmd.WaitDelay = 2 * time.Second
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("could not open ffmpeg stdout: %w", err)
@@ -383,7 +493,7 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 	progressDone := make(chan struct{})
 	go func() {
 		defer close(progressDone)
-		m.trackProgress(stdout, job.Hash, totalDuration)
+		m.trackProgressContext(ctx, stdout, job.Hash, totalDuration)
 	}()
 	// cmd.Wait closes stdout, so all reads must finish first (os/exec docs).
 	// trackProgress returns on EOF, i.e. once ffmpeg exits or is killed by ctx.
@@ -411,7 +521,7 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 		return fmt.Errorf("could not publish output dir: %w", err)
 	}
 
-	m.setStatus(job.Hash, StatusRunning, 100, "")
+	m.setStatus(job.Hash, StatusRunning, 100)
 	return nil
 }
 
@@ -421,6 +531,8 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 // switch tracks on the pre-transcode too.
 func buildFfmpegArgs(hw cassette.HwAccelProfile, inputPath string, outDir string, audioTracks int) []string {
 	args := []string{"-y", "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-nostats"}
+	threads := strconv.Itoa(resourcebudget.Current().BackgroundThreads)
+	args = append(args, "-threads", threads, "-filter_threads", threads)
 	args = append(args, hw.DecodeFlags...)
 	args = append(args, "-i", inputPath)
 
@@ -428,6 +540,9 @@ func buildFfmpegArgs(hw cassette.HwAccelProfile, inputPath string, outDir string
 	// small fraction of the job, and the job is background work.
 	args = append(args, "-map", "0:v:0", "-map", "0:a?")
 	args = append(args, hw.EncodeFlags...)
+	if hw.Name != "custom" {
+		args = append(args, "-threads", threads)
+	}
 
 	if hw.ForcedIDR {
 		// Segment boundaries must land on IDR frames or players stall at the cut.
@@ -487,12 +602,14 @@ func probeStreams(ctx context.Context, ffprobePath, filePath string) (sourceStre
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	out, err := exec.CommandContext(ctx, ffprobePath,
+	cmd := exec.CommandContext(ctx, ffprobePath,
 		"-v", "error",
 		"-print_format", "json",
 		"-show_streams",
 		filePath,
-	).Output()
+	)
+	cmd.WaitDelay = 2 * time.Second
+	out, err := cmd.Output()
 	if err != nil {
 		return sourceStreams{}, err
 	}
@@ -680,6 +797,7 @@ func probeDurationWithFfprobe(ctx context.Context, ffprobePath string, filePath 
 		"-of", "default=noprint_wrappers=1:nokey=1",
 		filePath,
 	)
+	cmd.WaitDelay = 2 * time.Second
 	out, err := cmd.Output()
 	if err != nil {
 		return 0, err
@@ -690,6 +808,13 @@ func probeDurationWithFfprobe(ctx context.Context, ffprobePath string, filePath 
 		return 0, fmt.Errorf("unparseable duration %q: %w", strings.TrimSpace(string(out)), err)
 	}
 	return d, nil
+}
+
+func (m *Manager) trackProgressContext(ctx context.Context, stdout io.ReadCloser, hash string, totalDuration float64) {
+	// A child inheriting stdout must not keep cancellation waiting for EOF forever.
+	stop := context.AfterFunc(ctx, func() { _ = stdout.Close() })
+	defer stop()
+	m.trackProgress(stdout, hash, totalDuration)
 }
 
 func (m *Manager) trackProgress(stdout io.Reader, hash string, totalDuration float64) {
@@ -711,33 +836,36 @@ func (m *Manager) trackProgress(stdout io.Reader, hash string, totalDuration flo
 		if pct > 100 {
 			pct = 100
 		}
-		m.setStatus(hash, StatusRunning, pct, "")
+		m.setStatus(hash, StatusRunning, pct)
 	}
 	// If the scanner stopped early (e.g. an over-long line) keep draining so
 	// ffmpeg never blocks writing to a full pipe; returns at EOF.
 	_, _ = io.Copy(io.Discard, stdout)
 }
 
-func (m *Manager) setStatus(hash string, status JobStatus, progress float64, errMsg string) {
+func (m *Manager) setStatus(hash string, status JobStatus, progress float64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	job, ok := m.jobs[hash]
-	if !ok {
+	if !ok || job.cancelled {
 		return
 	}
 	job.Status = status
 	job.Progress = progress
-	job.Error = errMsg
+	job.Error = ""
 }
 
-func (m *Manager) finish(hash string, status JobStatus, errMsg string, endedAt *time.Time) {
+func (m *Manager) finish(hash string, status JobStatus, errMsg string, endedAt *time.Time) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	job, ok := m.jobs[hash]
 	if !ok {
-		return
+		return false
+	}
+	if job.cancelled {
+		status, errMsg = StatusFailed, "cancelled"
 	}
 	job.Status = status
 	job.Error = errMsg
@@ -745,6 +873,7 @@ func (m *Manager) finish(hash string, status JobStatus, errMsg string, endedAt *
 	if status == StatusCompleted {
 		job.Progress = 100
 	}
+	return job.cancelled
 }
 
 // lastLine trims ffmpeg's stderr to its final line — the one that names the

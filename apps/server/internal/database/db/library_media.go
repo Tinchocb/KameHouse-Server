@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"kamehouse/internal/database/models"
@@ -89,14 +90,13 @@ func InsertLibraryMedia(d *Database, media *models.LibraryMedia) (*models.Librar
 	return media, nil
 }
 
-// UpsertLibraryMediaBatch inserts or updates a slice of LibraryMedia atomically in a single transaction.
-// All affected TMDB IDs are evicted from the in-memory cache after the write.
-func UpsertLibraryMediaBatch(d *Database, media []*models.LibraryMedia, batchSize int) error {
+// UpsertLibraryMediaBatchContext preserves the caller's cancellation through all batches.
+func UpsertLibraryMediaBatchContext(ctx context.Context, d *Database, media []*models.LibraryMedia, batchSize int) error {
 	if len(media) == 0 {
 		return nil
 	}
 
-	err := d.Gorm().Transaction(func(tx *gorm.DB) error {
+	err := d.Gorm().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		return tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "tmdb_id"}, {Name: "type"}}, // Unique composite constraint
 			UpdateAll: true,

@@ -141,5 +141,6 @@ func (a *App) startMaintenanceScheduler() {
 		},
 	})
 
+	a.maintenanceScheduler = scheduler
 	scheduler.Start(a.shutdownCtx)
 }

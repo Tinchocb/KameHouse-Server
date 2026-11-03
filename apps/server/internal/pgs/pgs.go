@@ -26,7 +26,6 @@ const (
 	CompStateNormal           = 0x00 // Normal: New display
 	CompStateAcquisitionPoint = 0x40 // Acquisition Point: New epoch start
 	CompStateEpochStart       = 0x80 // Epoch Start: Palette update
-	CompStateEpochContinue    = 0xC0 // Epoch Continue: Update existing
 )
 
 // PgsDecoder decodes PGS packets into images

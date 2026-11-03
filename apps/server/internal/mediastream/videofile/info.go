@@ -355,10 +355,10 @@ func FfprobeGetInfoContext(ctx context.Context, ffprobePath, path, hash string) 
 			x := fmt.Sprintf("/%d.%s", i, extension)
 			link = &x
 		}
-		lang, _ := language.Parse(stream.Tags.Language)
+		lang, _ := language.Parse(streamTag(stream, "language"))
 		return Subtitle{
 			Index:        i,
-			Title:        nullIfZero(stream.Tags.Title),
+			Title:        nullIfZero(streamTag(stream, "title")),
 			Language:     nullIfZero(lang.String()),
 			Codec:        stream.CodecName,
 			Extension:    lo.ToPtr(extension),
@@ -470,6 +470,22 @@ func nullIfZero[T comparable](v T) *T {
 		return &v
 	}
 	return nil
+}
+
+// streamTag devuelve el tag del stream con ese nombre sin distinguir mayúsculas. ffprobe
+// deja cada clave como está en el MKV: un nombre de pista guardado como tag "TITLE" no
+// aparece en stream.Tags.Title, que solo busca "title".
+func streamTag(stream *ffprobe.Stream, name string) string {
+	if v, err := stream.TagList.GetString(name); err == nil && v != "" {
+		return v
+	}
+	for key, value := range stream.TagList {
+		v, ok := value.(string)
+		if ok && v != "" && strings.EqualFold(key, name) {
+			return v
+		}
+	}
+	return ""
 }
 
 func streamToMap[T any](streams []*ffprobe.Stream, kind ffprobe.StreamType, mapper func(*ffprobe.Stream, uint32) T) []T {

@@ -4,11 +4,9 @@ type MediaFormat string
 
 const (
 	MediaFormatTV      MediaFormat = "TV"
-	MediaFormatTVShort MediaFormat = "TV_SHORT"
 	MediaFormatMovie   MediaFormat = "MOVIE"
 	MediaFormatSpecial MediaFormat = "SPECIAL"
 	MediaFormatOVA     MediaFormat = "OVA"
-	MediaFormatONA     MediaFormat = "ONA"
 	MediaFormatMusic   MediaFormat = "MUSIC"
 )
 
@@ -23,10 +21,3 @@ const (
 )
 
 type MediaSeason string
-
-const (
-	MediaSeasonWinter MediaSeason = "WINTER"
-	MediaSeasonSpring MediaSeason = "SPRING"
-	MediaSeasonSummer MediaSeason = "SUMMER"
-	MediaSeasonFall   MediaSeason = "FALL"
-)

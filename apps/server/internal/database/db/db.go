@@ -26,6 +26,7 @@ type Database struct {
 	CurrMediaFillers        mo.Option[map[int]*MediaFillerItem]
 	cleanupManager          *CleanupManager
 	libraryMediaCache       atomic.Pointer[sync.Map] // Generation scoped to this database.
+	localFilesCache         atomic.Pointer[localFilesGeneration]
 	slowTraceLogger         *SlowTraceLogger
 	sqlitePath              string
 	cancelWal               context.CancelFunc
@@ -248,7 +249,7 @@ func (db *Database) ResetLocalFilesMediaIds() error {
 		return err
 	}
 
-	InvalidateLocalFilesCache()
+	InvalidateLocalFilesCache(db)
 	db.Logger.Info().Msg("db: All local file media associations and ghost associations have been reset")
 	return nil
 }

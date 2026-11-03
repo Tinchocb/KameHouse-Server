@@ -27,6 +27,7 @@ import (
 	"kamehouse/internal/library/autoscanner"
 	"kamehouse/internal/library/fillermanager"
 	"kamehouse/internal/library/scanner"
+	"kamehouse/internal/maintenance"
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/notifier"
 	"kamehouse/internal/platforms/platform"
@@ -37,6 +38,7 @@ import (
 	"kamehouse/internal/util/crashlog"
 	"kamehouse/internal/util/ffmpegutil"
 	"kamehouse/internal/util/filecache"
+	"kamehouse/internal/util/resourcebudget"
 )
 
 type (
@@ -116,7 +118,13 @@ type (
 		shutdownCtx    context.Context
 		shutdownCancel context.CancelFunc
 
-		configWatcher *ConfigWatcher
+		configWatcher        *ConfigWatcher
+		maintenanceScheduler *maintenance.Scheduler
+		cleanupOnce          sync.Once
+		cleanupDone          chan struct{}
+		backgroundMu         sync.Mutex
+		backgroundClosed     bool
+		backgroundWorkers    sync.WaitGroup
 	}
 
 	App = KameHouse
@@ -427,9 +435,12 @@ func initThumbnailCache(cfg *Config, logger *zerolog.Logger) *cache.ThumbnailCac
 	}
 	maxBytesMB := cfg.Cache.Thumbnails.MemoryMaxBytesMB
 	if maxBytesMB <= 0 {
-		maxBytesMB = 256
+		maxBytesMB = resourcebudget.Current().ThumbnailMB
 	}
 	maxBytes := maxBytesMB * 1024 * 1024
+	logger.Info().Int64("memoryMB", maxBytesMB).
+		Bool("automatic", cfg.Cache.Thumbnails.MemoryMaxBytesMB <= 0).
+		Msg("app: Thumbnail memory budget")
 	thumbnailCache, err := cache.NewThumbnailCache(maxItems, maxBytes)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("app: Failed to initialize thumbnail cache")
@@ -441,52 +452,81 @@ func (a *KameHouse) AddCleanupFunction(f func()) {
 	a.Cleanups = append(a.Cleanups, f)
 }
 
-func (a *KameHouse) Cleanup(ctx context.Context) {
-	a.shutdownCancel()
-	a.stopLibraryWatcher()
+// startBackground registers ownership before spawning so shutdown can join every task.
+func (a *KameHouse) startBackground(f func()) {
+	a.backgroundMu.Lock()
+	defer a.backgroundMu.Unlock()
+	if a.backgroundClosed || a.ShutdownCtx().Err() != nil {
+		return
+	}
+	a.backgroundWorkers.Add(1)
+	go func() { defer a.backgroundWorkers.Done(); f() }()
+}
 
-	// Stop config watcher
+func (a *KameHouse) Cleanup(ctx context.Context) {
+	a.cleanupOnce.Do(func() {
+		a.cleanupDone = make(chan struct{})
+		go a.cleanup()
+	})
+	select {
+	case <-a.cleanupDone:
+		a.Logger.Info().Msg("app: Graceful shutdown completed cleanly")
+	case <-ctx.Done():
+		a.Logger.Warn().Msg("app: Shutdown deadline reached; cleanup is still running")
+	}
+}
+
+func (a *KameHouse) cleanup() {
+	defer util.HandlePanicInModuleThen("core/app/Cleanup", func() {})
+	defer close(a.cleanupDone)
+	if a.shutdownCancel != nil {
+		a.shutdownCancel()
+	}
+	a.backgroundMu.Lock()
+	a.backgroundClosed = true
+	a.backgroundMu.Unlock()
+	a.stopLibraryWatcher()
 	if a.configWatcher != nil {
 		a.configWatcher.Stop()
 		a.Logger.Info().Msg("app: Config watcher stopped")
 	}
+	if a.maintenanceScheduler != nil {
+		a.maintenanceScheduler.Wait()
+	}
+	if a.AutoScanner != nil {
+		a.AutoScanner.Stop()
+	}
+	a.backgroundWorkers.Wait()
 
-	done := make(chan struct{})
-	go func() {
-		defer util.HandlePanicInModuleThen("core/app/Cleanup", func() {})
-		defer close(done)
-
-		a.Logger.Info().Msg("app: Running cleanup functions...")
-		for _, f := range a.Cleanups {
+	a.Logger.Info().Msg("app: Running cleanup functions...")
+	for _, f := range a.Cleanups {
+		func() {
+			defer util.HandlePanicInModuleThen("core/app/CleanupFunction", func() {})
 			f()
+		}()
+	}
+
+	if a.FileCacher != nil {
+		a.Logger.Info().Msg("app: Closing file cacher...")
+		if err := a.FileCacher.Close(); err != nil {
+			a.Logger.Warn().Err(err).Msg("app: Error closing file cacher")
 		}
+	}
 
-		if a.FileCacher != nil {
-			a.Logger.Info().Msg("app: Closing file cacher...")
-			if err := a.FileCacher.Close(); err != nil {
-				a.Logger.Warn().Err(err).Msg("app: Error closing file cacher")
-			}
-		}
+	if a.Database == nil {
+		return
+	}
+	a.Logger.Info().Msg("app: Flushing buffered writer...")
+	a.Database.Shutdown()
 
-		a.Logger.Info().Msg("app: Flushing buffered writer...")
-		a.Database.Shutdown()
-
-		a.Logger.Info().Msg("app: Closing database connection...")
-		if err := a.Database.Close(); err != nil {
-			a.Logger.Error().Err(err).Msg("app: Failed to close database connection")
-		}
-	}()
-
-	select {
-	case <-done:
-		a.Logger.Info().Msg("app: Graceful shutdown completed cleanly")
-	case <-ctx.Done():
-		a.Logger.Warn().Msg("app: Shutdown timed out — forcing exit")
+	a.Logger.Info().Msg("app: Closing database connection...")
+	if err := a.Database.Close(); err != nil {
+		a.Logger.Error().Err(err).Msg("app: Failed to close database connection")
 	}
 }
 
 func (a *KameHouse) GetAnimeCollection(bypassCache bool) (*platform.UnifiedCollection, error) {
-	res, err := a.Metadata.Platform.GetAnimeCollection(context.Background(), bypassCache)
+	res, err := a.Metadata.Platform.GetAnimeCollection(a.ShutdownCtx(), bypassCache)
 	if err != nil {
 		return nil, err
 	}

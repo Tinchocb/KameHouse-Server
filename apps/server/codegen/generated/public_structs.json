@@ -4160,6 +4160,69 @@
         "nilable": true,
         "public": false,
         "comments": []
+      },
+      {
+        "name": "maintenanceScheduler",
+        "jsonName": "maintenanceScheduler",
+        "goType": "maintenance.Scheduler",
+        "typescriptType": "Scheduler",
+        "usedTypescriptType": "Scheduler",
+        "usedStructName": "maintenance.Scheduler",
+        "required": false,
+        "nilable": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "cleanupOnce",
+        "jsonName": "cleanupOnce",
+        "goType": "sync.Once",
+        "typescriptType": "Once",
+        "usedTypescriptType": "Once",
+        "usedStructName": "sync.Once",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "cleanupDone",
+        "jsonName": "cleanupDone",
+        "goType": "",
+        "typescriptType": "any",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "backgroundMu",
+        "jsonName": "backgroundMu",
+        "goType": "sync.Mutex",
+        "typescriptType": "Mutex",
+        "usedTypescriptType": "Mutex",
+        "usedStructName": "sync.Mutex",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "backgroundClosed",
+        "jsonName": "backgroundClosed",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "backgroundWorkers",
+        "jsonName": "backgroundWorkers",
+        "goType": "sync.WaitGroup",
+        "typescriptType": "WaitGroup",
+        "usedTypescriptType": "WaitGroup",
+        "usedStructName": "sync.WaitGroup",
+        "required": false,
+        "public": false,
+        "comments": []
       }
     ],
     "comments": [],
@@ -4767,6 +4830,37 @@
         "required": false,
         "public": false,
         "comments": []
+      },
+      {
+        "name": "lifecycle",
+        "jsonName": "lifecycle",
+        "goType": "sync.Mutex",
+        "typescriptType": "Mutex",
+        "usedTypescriptType": "Mutex",
+        "usedStructName": "sync.Mutex",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "workers",
+        "jsonName": "workers",
+        "goType": "sync.WaitGroup",
+        "typescriptType": "WaitGroup",
+        "usedTypescriptType": "WaitGroup",
+        "usedStructName": "sync.WaitGroup",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "stopped",
+        "jsonName": "stopped",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": false,
+        "comments": []
       }
     ],
     "comments": []
@@ -5118,6 +5212,15 @@
         "comments": [
           " Generation scoped to this database."
         ]
+      },
+      {
+        "name": "localFilesCache",
+        "jsonName": "localFilesCache",
+        "goType": "",
+        "typescriptType": "any",
+        "required": true,
+        "public": false,
+        "comments": []
       },
       {
         "name": "slowTraceLogger",
@@ -5780,6 +5883,16 @@
     "formattedName": "FileTechnicalInfo",
     "package": "dto",
     "fields": [
+      {
+        "name": "ProbeVerified",
+        "jsonName": "probeVerified",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": false,
+        "omitEmpty": true,
+        "public": true,
+        "comments": []
+      },
       {
         "name": "Duration",
         "jsonName": "duration",
@@ -15975,6 +16088,37 @@
         "required": false,
         "public": false,
         "comments": []
+      },
+      {
+        "name": "cancel",
+        "jsonName": "cancel",
+        "goType": "context.CancelFunc",
+        "typescriptType": "CancelFunc",
+        "usedTypescriptType": "CancelFunc",
+        "usedStructName": "context.CancelFunc",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "closed",
+        "jsonName": "closed",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "workers",
+        "jsonName": "workers",
+        "goType": "sync.WaitGroup",
+        "typescriptType": "WaitGroup",
+        "usedTypescriptType": "WaitGroup",
+        "usedStructName": "sync.WaitGroup",
+        "required": false,
+        "public": false,
+        "comments": []
       }
     ],
     "comments": []
@@ -19452,6 +19596,28 @@
         "usedStructName": "maintenance.Job",
         "required": false,
         "nilable": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "startOnce",
+        "jsonName": "startOnce",
+        "goType": "sync.Once",
+        "typescriptType": "Once",
+        "usedTypescriptType": "Once",
+        "usedStructName": "sync.Once",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "workers",
+        "jsonName": "workers",
+        "goType": "sync.WaitGroup",
+        "typescriptType": "WaitGroup",
+        "usedTypescriptType": "WaitGroup",
+        "usedStructName": "sync.WaitGroup",
+        "required": false,
         "public": false,
         "comments": []
       }
@@ -23967,6 +24133,35 @@
         "nilable": true,
         "public": true,
         "comments": []
+      },
+      {
+        "name": "cancel",
+        "jsonName": "cancel",
+        "goType": "context.CancelFunc",
+        "typescriptType": "CancelFunc",
+        "usedTypescriptType": "CancelFunc",
+        "usedStructName": "context.CancelFunc",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "done",
+        "jsonName": "done",
+        "goType": "",
+        "typescriptType": "any",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "cancelled",
+        "jsonName": "cancelled",
+        "goType": "bool",
+        "typescriptType": "boolean",
+        "required": true,
+        "public": false,
+        "comments": []
       }
     ],
     "comments": [
@@ -24121,8 +24316,8 @@
         "comments": []
       },
       {
-        "name": "cancelMu",
-        "jsonName": "cancelMu",
+        "name": "deleteMu",
+        "jsonName": "deleteMu",
         "goType": "sync.Mutex",
         "typescriptType": "Mutex",
         "usedTypescriptType": "Mutex",
@@ -24132,18 +24327,25 @@
         "comments": []
       },
       {
-        "name": "cancels",
-        "jsonName": "cancels",
-        "goType": "map[string]context.CancelFunc",
-        "typescriptType": "Record\u003cstring, CancelFunc\u003e",
-        "usedTypescriptType": "CancelFunc",
-        "usedStructName": "context.CancelFunc",
+        "name": "deleting",
+        "jsonName": "deleting",
+        "goType": "map[string]bool",
+        "typescriptType": "Record\u003cstring, boolean\u003e",
         "required": false,
         "nilable": true,
         "public": false,
-        "comments": [
-          " running jobs, by hash"
-        ]
+        "comments": []
+      },
+      {
+        "name": "workers",
+        "jsonName": "workers",
+        "goType": "sync.WaitGroup",
+        "typescriptType": "WaitGroup",
+        "usedTypescriptType": "WaitGroup",
+        "usedStructName": "sync.WaitGroup",
+        "required": false,
+        "public": false,
+        "comments": []
       },
       {
         "name": "startOnce",
@@ -29686,6 +29888,149 @@
         "usedStructName": "sync.Once",
         "required": false,
         "public": false,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/util/resourcebudget/coordinator.go",
+    "filename": "coordinator.go",
+    "name": "Coordinator",
+    "formattedName": "Coordinator",
+    "package": "resourcebudget",
+    "fields": [
+      {
+        "name": "mu",
+        "jsonName": "mu",
+        "goType": "sync.Mutex",
+        "typescriptType": "Mutex",
+        "usedTypescriptType": "Mutex",
+        "usedStructName": "sync.Mutex",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "live",
+        "jsonName": "live",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "previews",
+        "jsonName": "previews",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "background",
+        "jsonName": "background",
+        "goType": "context.CancelCauseFunc",
+        "typescriptType": "CancelCauseFunc",
+        "usedTypescriptType": "CancelCauseFunc",
+        "usedStructName": "context.CancelCauseFunc",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "changed",
+        "jsonName": "changed",
+        "goType": "",
+        "typescriptType": "any",
+        "required": true,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "idleAfter",
+        "jsonName": "idleAfter",
+        "goType": "time.Time",
+        "typescriptType": "string",
+        "usedStructName": "time.Time",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "quiet",
+        "jsonName": "quiet",
+        "goType": "time.Duration",
+        "typescriptType": "number",
+        "usedStructName": "time.Duration",
+        "required": false,
+        "public": false,
+        "comments": []
+      },
+      {
+        "name": "allowed",
+        "jsonName": "allowed",
+        "goType": "",
+        "typescriptType": "any",
+        "required": true,
+        "public": false,
+        "comments": []
+      }
+    ],
+    "comments": []
+  },
+  {
+    "filepath": "../internal/util/resourcebudget/profile.go",
+    "filename": "profile.go",
+    "name": "Profile",
+    "formattedName": "Profile",
+    "package": "resourcebudget",
+    "fields": [
+      {
+        "name": "SoftwareProcesses",
+        "jsonName": "SoftwareProcesses",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "HardwareProcesses",
+        "jsonName": "HardwareProcesses",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "Threads",
+        "jsonName": "Threads",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "BackgroundThreads",
+        "jsonName": "BackgroundThreads",
+        "goType": "int",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
+        "comments": []
+      },
+      {
+        "name": "ThumbnailMB",
+        "jsonName": "ThumbnailMB",
+        "goType": "int64",
+        "typescriptType": "number",
+        "required": true,
+        "public": true,
         "comments": []
       }
     ],

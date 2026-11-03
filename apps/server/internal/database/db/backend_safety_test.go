@@ -327,7 +327,7 @@ func TestLibraryMediaWritersInvalidateNegativeCache(t *testing.T) {
 	}{
 		{"single", func(d *Database, m *models.LibraryMedia) error { _, err := InsertLibraryMedia(d, m); return err }},
 		{"batch", func(d *Database, m *models.LibraryMedia) error {
-			return UpsertLibraryMediaBatch(d, []*models.LibraryMedia{m}, 10)
+			return UpsertLibraryMediaBatchContext(context.Background(), d, []*models.LibraryMedia{m}, 10)
 		}},
 		{"missing", func(d *Database, m *models.LibraryMedia) error {
 			return InsertLibraryMediaBatchIfMissing(d, []*models.LibraryMedia{m}, 10)

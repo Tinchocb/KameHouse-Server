@@ -329,7 +329,7 @@ func (s *IntelligenceService) ContinueWatchingFromHistory(_ context.Context, his
 
 	fileMap := make(map[int]map[int]bool)
 	// If local files are already cached in memory, use them directly without querying DB
-	if cached, ok := db.CachedLocalFiles(); ok {
+	if cached, ok := db.CachedLocalFiles(s.db); ok {
 		for _, lf := range cached {
 			if lf == nil || lf.MediaID == 0 || !mediaIDSet[lf.MediaID] || lf.Metadata == nil {
 				continue

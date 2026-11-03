@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
@@ -18,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/mediastream"
@@ -220,33 +222,18 @@ func (h *Handler) requestDriveMediaContainer(c echo.Context, drivePath string, s
 		return h.respondDriveTranscode(c, drivePath, publicURL, internalURL, fileID, fileName, clientID, force, caps)
 	}
 
-	var dbFile models.LocalFile
-	var techInfo *dto.FileTechnicalInfo
-	dbFound := false
-	if h.App != nil && h.App.Database != nil {
-		dbFound = h.App.Database.Gorm().WithContext(c.Request().Context()).
-			Select("id, technical_info").
-			Where("path = ?", drivePath).
-			First(&dbFile).Error == nil
-	}
-	if dbFound && len(dbFile.TechnicalInfo) > 0 {
-		_ = json.Unmarshal(dbFile.TechnicalInfo, &techInfo)
-	}
-
 	mediaInfo, err := repo.GetMediaInfoContext(c.Request().Context(), internalURL)
 	if err != nil {
-		// Sin ffprobe la reproducción directa sigue funcionando, solo sin pistas.
-		h.App.Logger.Warn().Err(err).Str("fileId", fileID).Msg("drive: no se pudo leer la media info, se reproduce sin pistas")
-		mediaInfo = &videofile.MediaInfo{Extension: strings.TrimPrefix(ext, ".")}
-		if techInfo != nil && techInfo.VideoStream != nil {
-			mediaInfo.Video = &videofile.Video{
-				Width:  uint32(techInfo.VideoStream.Width),
-				Height: uint32(techInfo.VideoStream.Height),
-				Codec:  techInfo.VideoStream.Codec,
-			}
+		// API metadata (including legacy assumed H.264) cannot establish codec
+		// compatibility. Only the explicit direct-only policy permits raw playback
+		// without a successful probe; automatic playback must report the failure.
+		h.App.Logger.Warn().Err(err).Str("fileId", fileID).Msg("drive: no se pudo leer la media info")
+		if !repo.DirectPlayOnly() {
+			return h.RespondWithCodeError(c, http.StatusBadGateway, errors.New("No se pudo analizar el archivo de Google Drive. Intentá reproducirlo de nuevo."))
 		}
-	} else if dbFound && (techInfo == nil || len(techInfo.AudioStreams) == 0) && len(mediaInfo.Audios) > 0 {
-		h.persistDriveAudioStreams(dbFile.ID, techInfo, mediaInfo.Audios)
+		mediaInfo = &videofile.MediaInfo{Extension: strings.TrimPrefix(ext, ".")}
+	} else {
+		h.persistDriveMediaInfo(c.Request().Context(), drivePath, mediaInfo)
 	}
 
 	// Igual que en las rutas locales: directo solo si este cliente decodifica el archivo; si no, transcode.
@@ -279,6 +266,7 @@ func (h *Handler) respondDriveTranscode(c echo.Context, drivePath, publicURL, in
 		}
 		return h.RespondWithError(c, err)
 	}
+	h.persistDriveMediaInfo(c.Request().Context(), drivePath, mc.MediaInfo)
 	out := publicDriveContainer(mc, drivePath, publicURL)
 	h.addDriveEmbeddedSubtitles(c.Request().Context(), out, mc.MediaInfo, drivePath)
 	h.addDriveExternalSubtitles(c.Request().Context(), out, drivePath, fileID, fileName)
@@ -286,15 +274,45 @@ func (h *Handler) respondDriveTranscode(c echo.Context, drivePath, publicURL, in
 	return h.RespondWithData(c, out)
 }
 
-// persistDriveAudioStreams guarda en el local_file las pistas de audio detectadas,
-// para que el resto de la app (idiomas disponibles, selector de origen) las conozca
-// sin volver a sondear Drive.
-func (h *Handler) persistDriveAudioStreams(localFileID uint, techInfo *dto.FileTechnicalInfo, audios []videofile.Audio) {
-	if techInfo == nil {
-		techInfo = &dto.FileTechnicalInfo{}
+func (h *Handler) persistDriveMediaInfo(ctx context.Context, drivePath string, info *videofile.MediaInfo) {
+	if h.App == nil || h.App.Database == nil {
+		return
 	}
-	streams := make([]*dto.AudioStreamInfo, 0, len(audios))
-	for _, a := range audios {
+	var file models.LocalFile
+	if err := h.App.Database.Gorm().WithContext(ctx).Select("id, technical_info").
+		Where("path = ?", drivePath).First(&file).Error; err != nil {
+		return
+	}
+	var previous *dto.FileTechnicalInfo
+	_ = json.Unmarshal(file.TechnicalInfo, &previous)
+	h.persistDriveTechnicalInfo(file.ID, previous, info)
+}
+
+// persistDriveTechnicalInfo replaces assumed codecs with real probe results.
+// Work on a copy: callers may retain the previous technical-info snapshot.
+func (h *Handler) persistDriveTechnicalInfo(localFileID uint, previous *dto.FileTechnicalInfo, info *videofile.MediaInfo) {
+	if info == nil || info.Video == nil || info.Video.Codec == "" {
+		return
+	}
+	techInfo := dto.FileTechnicalInfo{}
+	if previous != nil {
+		techInfo = *previous
+	}
+	techInfo.ProbeVerified = true
+	techInfo.VideoStream = &dto.VideoStreamInfo{
+		Codec: info.Video.Codec, Width: int(info.Video.Width), Height: int(info.Video.Height),
+	}
+	if info.Size > 0 {
+		techInfo.Size = int64(info.Size)
+	}
+	if info.Duration > 0 {
+		techInfo.Duration = time.Duration(float64(info.Duration) * float64(time.Second))
+	}
+	if info.Container != nil {
+		techInfo.Format = *info.Container
+	}
+	streams := make([]*dto.AudioStreamInfo, 0, len(info.Audios))
+	for _, a := range info.Audios {
 		s := &dto.AudioStreamInfo{Codec: a.Codec}
 		if a.Language != nil {
 			s.Language = *a.Language
@@ -305,13 +323,19 @@ func (h *Handler) persistDriveAudioStreams(localFileID uint, techInfo *dto.FileT
 		streams = append(streams, s)
 	}
 	techInfo.AudioStreams = streams
-	raw, err := json.Marshal(techInfo)
+	raw, err := json.Marshal(&techInfo)
 	if err != nil {
+		return
+	}
+	old, _ := json.Marshal(previous)
+	if bytes.Equal(raw, old) {
 		return
 	}
 	if err := h.App.Database.Gorm().Model(&models.LocalFile{}).
 		Where("id = ?", localFileID).
 		Update("technical_info", raw).Error; err != nil {
-		h.App.Logger.Warn().Err(err).Uint("localFileId", localFileID).Msg("drive: no se pudieron guardar las pistas de audio")
+		h.App.Logger.Warn().Err(err).Uint("localFileId", localFileID).Msg("drive: no se pudieron guardar los datos técnicos")
+		return
 	}
+	db.InvalidateLocalFilesCache(h.App.Database)
 }

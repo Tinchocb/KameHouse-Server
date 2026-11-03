@@ -11,6 +11,7 @@ import (
 	"kamehouse/internal/mediastream"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/ffmpegutil"
+	"kamehouse/internal/util/resourcebudget"
 	"kamehouse/internal/util/result"
 	"net/http"
 	"os"
@@ -63,6 +64,7 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	}
 
 	if strings.HasPrefix(b.Path, "gdrive://") {
+		resourcebudget.Shared.NotePlayback()
 		return h.requestDriveMediaContainer(c, b.Path, b.StreamType, b.ClientID, b.Force, b.ClientCapabilities)
 	}
 
@@ -88,6 +90,7 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 	}
 
 	var mediaContainer *mediastream.MediaContainer
+	resourcebudget.Shared.NotePlayback()
 	var err error
 
 	switch b.StreamType {

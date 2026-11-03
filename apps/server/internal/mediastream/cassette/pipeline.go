@@ -8,11 +8,11 @@ import (
 	"io"
 	"kamehouse/internal/notifier"
 	"kamehouse/internal/util"
+	"kamehouse/internal/util/resourcebudget"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -248,6 +248,9 @@ func (p *Pipeline) GetIndex(token string) (string, error) {
 // GetSegment blocks until the requested segment is ready and returns the path
 // to the .ts file on disk
 func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if seg < 0 || seg >= int32(p.segments.Len()) {
 		return "", fmt.Errorf("%w: index %d (len=%d)", ErrSegmentOutOfRange, seg, p.segments.Len())
 	}
@@ -278,6 +281,9 @@ func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
 	aborts := 0
 
 	for attempt := 0; attempt < 3; {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 		p.headsMu.Lock()
 		select {
 		case <-p.killCh:
@@ -317,6 +323,7 @@ func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
 
 		// Wait for the segment, allowing the client's request ctx to
 		// abort the wait early if they disconnect
+		waitStart := time.Now()
 		waitCtx, waitCancel := context.WithTimeout(ctx, 30*time.Second)
 		err := p.segments.WaitFor(waitCtx, seg, killCh)
 		waitCancel()
@@ -327,10 +334,9 @@ func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
 		}
 
 		if ctx.Err() != nil {
-			// Client disconnected — kill all active heads to immediately free
-			// governor slots instead of letting them idle until the tracker
-			// cleans up (which can take up to 60s).
-			p.killAllHeads()
+			// Producers belong to the shared pipeline, not to this HTTP request.
+			// A canceled fragment must not abort other readers or a newer seek.
+			// Session shutdown, seeks and the idle tracker own producer cleanup.
 			return "", fmt.Errorf("cassette: %s segment %d not ready: %w", p.label, seg, err)
 		}
 
@@ -346,7 +352,10 @@ func (p *Pipeline) GetSegment(ctx context.Context, seg int32) (string, error) {
 		}
 
 		attempt++
-		p.logger.Warn().Int("attempt", attempt).Int32("seg", seg).Err(err).
+		p.logger.Warn().Int("attempt", attempt).Int32("seg", seg).
+			Str("session", p.session.hash).Str("pipeline", p.label).
+			Str("kind", p.kind.String()).Dur("wait_ms", time.Since(waitStart)).
+			Interface("heads", p.headDiagnostics()).Err(err).
 			Msg("cassette: segment wait timed out, retrying...")
 
 		if attempt >= 3 {
@@ -471,6 +480,33 @@ func (p *Pipeline) killStaleHeads(seg int32) {
 }
 
 // encoder head management
+
+type headDiagnostic struct {
+	Encoder int    `json:"encoder"`
+	PID     int    `json:"pid"`
+	Segment int32  `json:"segment"`
+	End     int32  `json:"end_exclusive"`
+	Gen     uint64 `json:"generation"`
+	Dying   bool   `json:"dying"`
+}
+
+// Copy under the lock; logging never reads mutable heads or includes source URLs.
+func (p *Pipeline) headDiagnostics() []headDiagnostic {
+	p.headsMu.RLock()
+	defer p.headsMu.RUnlock()
+	result := make([]headDiagnostic, 0, len(p.heads))
+	for id, h := range p.heads {
+		if h.segment < 0 {
+			continue
+		}
+		d := headDiagnostic{Encoder: id, Segment: h.segment, End: h.end, Gen: h.gen, Dying: h.dying}
+		if h.cmd != nil && h.cmd.Process != nil {
+			d.PID = h.cmd.Process.Pid
+		}
+		result = append(result, d)
+	}
+	return result
+}
 
 // isScheduled reports if any head covers seg
 func (p *Pipeline) isScheduled(seg int32) bool {
@@ -721,9 +757,10 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 		return err
 	}
 
-	threads := max(1, runtime.NumCPU()/2)
+	threads := resourcebudget.Current().Threads
 	args := []string{"-nostats", "-hide_banner", "-loglevel", "warning",
 		"-threads", strconv.Itoa(threads),
+		"-filter_threads", strconv.Itoa(threads),
 		// Limit input analysis so FFmpeg starts writing the first segment faster.
 		// Default values (5 000 000 µs / 5 MB) force reading deep into large MKV
 		// files before the muxer is ready. 10 MB is enough to detect all streams.
@@ -776,6 +813,9 @@ func (p *Pipeline) runHead(ctx context.Context, start int32, speculative bool) e
 	// keyframe times.
 	segStr := toSegmentStr(segmentTimes)
 	args = append(args, p.buildArgs(segStr, &headProfile)...)
+	if headProfile.Name != "custom" {
+		args = append(args, "-threads", strconv.Itoa(threads))
+	}
 
 	// The segment muxer's -segment_times, in contrast, are interpreted RELATIVE to
 	// the -ss seek point when input seeking is combined with -copyts (observed on

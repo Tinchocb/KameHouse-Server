@@ -19,7 +19,7 @@ type DriveFile struct {
 // IsVideo returns true if the drive file is a supported video format.
 func (f *DriveFile) IsVideo() bool {
 	switch f.MimeType {
-	case "video/x-matroska", "video/mp4", "video/webm", "video/quicktime", "video/avi":
+	case "video/x-matroska", "video/matroska", "video/mp4", "video/webm", "video/quicktime", "video/avi":
 		return true
 	}
 	// Fallback based on extension

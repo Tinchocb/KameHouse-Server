@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"kamehouse/internal/continuity"
+	"kamehouse/internal/util/resourcebudget"
 	"net/http"
 	"strconv"
 
@@ -33,6 +34,7 @@ func (h *Handler) HandleUpdateContinuityWatchHistoryItem(c echo.Context) error {
 	}
 
 	// Zero-Latency Telemetry Dispatch
+	resourcebudget.Shared.NotePlayback()
 	if h.App.ContinuityManager != nil && h.App.ContinuityManager.TelemetryManager != nil {
 		h.App.ContinuityManager.TelemetryManager.UpdateProgress(currentAccountID(c), b.Options.MediaID, b.Options.EpisodeNumber, b.Options.CurrentTime, b.Options.Duration)
 	}

@@ -46,6 +46,8 @@ type (
 
 	// FileTechnicalInfo holds FFprobe technical specifications of a video file.
 	FileTechnicalInfo struct {
+		// ProbeVerified distinguishes real Drive FFprobe results from API metadata.
+		ProbeVerified      bool                 `json:"probeVerified,omitempty"`
 		Duration           time.Duration        `json:"duration,omitempty"`
 		Size               int64                `json:"size,omitempty"`
 		Bitrate            int64                `json:"bitrate,omitempty"`

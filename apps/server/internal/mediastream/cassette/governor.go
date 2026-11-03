@@ -2,7 +2,7 @@ package cassette
 
 import (
 	"context"
-	"runtime"
+	"kamehouse/internal/util/resourcebudget"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -53,13 +53,15 @@ func nvencCapFromEnv() int {
 // NewGovernor creates a governor with max concurrency
 func NewGovernor(maxConcurrency int, hwAccelEnabled bool, logger *zerolog.Logger) *Governor {
 	if maxConcurrency <= 0 {
-		numCPU := runtime.NumCPU()
+		profile := resourcebudget.Current()
 		if hwAccelEnabled {
-			// En hardware acelerado, permitir hasta 2x cores pero con un piso sensato y techo razonable
-			maxConcurrency = min(max(numCPU, 2), 6)
+			maxConcurrency = profile.HardwareProcesses
 		} else {
-			// En codificación por software puro, no saturar todos los núcleos para que Echo y SQLite respondan
-			maxConcurrency = max(numCPU-1, 1)
+			maxConcurrency = profile.SoftwareProcesses
+		}
+		if logger != nil {
+			logger.Info().Int("processes", maxConcurrency).Int("threadsPerCodec", profile.Threads).
+				Msg("cassette: Automatic CPU/RAM budget")
 		}
 	}
 
@@ -116,14 +118,24 @@ func (g *Governor) TryAcquireNVENC(reserve int) (func(), bool) {
 // Acquire blocks until a slot is available
 func (g *Governor) Acquire(ctx context.Context) (release func(), err error) {
 	start := time.Now()
+	liveRelease, err := resourcebudget.Shared.Live(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	select {
 	case g.sem <- struct{}{}:
 	case <-ctx.Done():
+		liveRelease()
 		return nil, ctx.Err()
 	}
+	if err := ctx.Err(); err != nil {
+		<-g.sem
+		liveRelease()
+		return nil, err
+	}
 
-	return g.granted(time.Since(start)), nil
+	return g.granted(time.Since(start), liveRelease), nil
 }
 
 // TryAcquire takes a slot only if one is free right now. Speculative work uses it so it never
@@ -131,14 +143,19 @@ func (g *Governor) Acquire(ctx context.Context) (release func(), err error) {
 func (g *Governor) TryAcquire() (release func(), ok bool) {
 	select {
 	case g.sem <- struct{}{}:
-		return g.granted(0), true
+		liveRelease, ok := resourcebudget.Shared.TryLive()
+		if !ok {
+			<-g.sem
+			return nil, false
+		}
+		return g.granted(0, liveRelease), true
 	default:
 		return nil, false
 	}
 }
 
 // granted records a slot that was just taken and returns its (idempotent) release function.
-func (g *Governor) granted(waited time.Duration) func() {
+func (g *Governor) granted(waited time.Duration, liveRelease func()) func() {
 	n := g.active.Add(1)
 
 	g.mu.Lock()
@@ -165,6 +182,7 @@ func (g *Governor) granted(waited time.Duration) func() {
 			g.stats.ActiveProcesses = remaining
 			g.mu.Unlock()
 			<-g.sem
+			liveRelease()
 		})
 	}
 }

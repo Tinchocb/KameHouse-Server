@@ -21,6 +21,9 @@ type ConfigWatcher struct {
 	watcher    *fsnotify.Watcher
 	callbacks  []func(*Config)
 	mu         sync.RWMutex
+	lifecycle  sync.Mutex
+	workers    sync.WaitGroup
+	stopped    bool
 }
 
 func NewConfigWatcher(v *viper.Viper, configPath string, logger *zerolog.Logger) *ConfigWatcher {
@@ -33,11 +36,20 @@ func NewConfigWatcher(v *viper.Viper, configPath string, logger *zerolog.Logger)
 }
 
 func (cw *ConfigWatcher) Start(ctx context.Context) error {
+	cw.lifecycle.Lock()
+	defer cw.lifecycle.Unlock()
+	if cw.stopped {
+		return fmt.Errorf("config watcher is stopped")
+	}
+	if cw.watcher != nil {
+		return fmt.Errorf("config watcher is already started")
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	cw.cancel = cancel
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
+		cancel()
 		return fmt.Errorf("failed to create fsnotify watcher: %w", err)
 	}
 	cw.watcher = watcher
@@ -45,10 +57,14 @@ func (cw *ConfigWatcher) Start(ctx context.Context) error {
 	configDir := filepath.Dir(cw.configPath)
 	if err := watcher.Add(configDir); err != nil {
 		watcher.Close()
+		cw.watcher = nil
+		cancel()
 		return fmt.Errorf("failed to watch config directory: %w", err)
 	}
 
+	cw.workers.Add(1)
 	go func() {
+		defer cw.workers.Done()
 		defer func() {
 			if r := recover(); r != nil {
 				cw.logger.Error().Interface("panic", r).Msg("config watcher panic")
@@ -91,12 +107,16 @@ func (cw *ConfigWatcher) Start(ctx context.Context) error {
 }
 
 func (cw *ConfigWatcher) Stop() {
+	cw.lifecycle.Lock()
+	cw.stopped = true
 	if cw.cancel != nil {
 		cw.cancel()
 	}
 	if cw.watcher != nil {
 		cw.watcher.Close()
 	}
+	cw.lifecycle.Unlock()
+	cw.workers.Wait()
 }
 
 func (cw *ConfigWatcher) OnChange(callback func(*Config)) {

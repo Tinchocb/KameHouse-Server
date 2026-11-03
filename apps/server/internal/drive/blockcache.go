@@ -208,6 +208,16 @@ func (c *BlockCache) inflightCount() int {
 // Content-Range; only "bytes=S-E" and "bytes=S-" are cached, anything else goes
 // straight to upstream.
 func (c *BlockCache) Fetcher(fileID string, upstream RangeFetcher) RangeFetcher {
+	return c.fetcher(fileID, upstream, false)
+}
+
+// FetcherWithoutReadAhead reuses cached blocks without speculative downloads.
+// Sparse thumbnail seeks need only the blocks actually read by the decoder.
+func (c *BlockCache) FetcherWithoutReadAhead(fileID string, upstream RangeFetcher) RangeFetcher {
+	return c.fetcher(fileID, upstream, true)
+}
+
+func (c *BlockCache) fetcher(fileID string, upstream RangeFetcher, noReadAhead bool) RangeFetcher {
 	up := retryingFetch(upstream)
 	return func(ctx context.Context, rangeHeader string) (*http.Response, error) {
 		start, end, hasRange, simple := parseByteRange(rangeHeader)
@@ -254,7 +264,7 @@ func (c *BlockCache) Fetcher(fileID string, upstream RangeFetcher) RangeFetcher 
 			StatusCode:    http.StatusPartialContent,
 			Header:        h,
 			ContentLength: end - start + 1,
-			Body:          &blockReader{c: c, ctx: ctx, fileID: fileID, up: up, pos: start, end: end, size: meta.Size, curIdx: -1},
+			Body:          &blockReader{c: c, ctx: ctx, fileID: fileID, up: up, pos: start, end: end, size: meta.Size, curIdx: -1, noReadAhead: noReadAhead},
 		}, nil
 	}
 }
@@ -608,13 +618,14 @@ func (c *BlockCache) prefetch(fileID string, idx, size int64, up RangeFetcher) {
 // blockReader streams [pos, end] of a file, block by block, from disk or from
 // the in-flight download.
 type blockReader struct {
-	c      *BlockCache
-	ctx    context.Context
-	fileID string
-	up     RangeFetcher
-	pos    int64
-	end    int64
-	size   int64
+	noReadAhead bool
+	c           *BlockCache
+	ctx         context.Context
+	fileID      string
+	up          RangeFetcher
+	pos         int64
+	end         int64
+	size        int64
 
 	curIdx int64
 	file   *os.File
@@ -641,6 +652,9 @@ func (r *blockReader) Read(p []byte) (int, error) {
 		ahead := int64(1)
 		if sequential {
 			ahead = readAhead
+		}
+		if r.noReadAhead {
+			ahead = 0
 		}
 		for i := int64(1); i <= ahead; i++ {
 			r.c.prefetch(r.fileID, idx+i, r.size, r.up)

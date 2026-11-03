@@ -127,6 +127,25 @@ func TestBlockCacheSirveDesdeDiscoLaSegundaVez(t *testing.T) {
 	}
 }
 
+func TestBlockCachePreviewDoesNotReadAhead(t *testing.T) {
+	f := &cacheUpstream{data: testData(10_000)}
+	c := newTestCache(t, 1000, 1<<30)
+	fetch := c.FetcherWithoutReadAhead("fileA", f.fetch)
+	for _, end := range []int64{1599, 2200, 2200} {
+		if got := readCached(t, fetch, 1500, end); !bytes.Equal(got, f.data[1500:end+1]) {
+			t.Fatal("incorrect preview bytes")
+		}
+		waitIdle(t, c)
+		want := int32(1)
+		if end == 2200 {
+			want = 2
+		}
+		if got := f.requests.Load(); got != want {
+			t.Fatalf("downloaded %d blocks, want only %d demanded blocks", got, want)
+		}
+	}
+}
+
 func TestBlockCacheComparteDescargasConcurrentes(t *testing.T) {
 	f := &cacheUpstream{data: testData(4000)}
 	c := newTestCache(t, 4000, 1<<30)

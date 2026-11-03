@@ -289,6 +289,7 @@ func FingerprintFile(ctx context.Context, fpcalcBin, path string, lengthSec int)
 	args := []string{"-raw", "-json", "-length", strconv.Itoa(length), path}
 
 	cmd := util.NewCmdCtxLowPriority(ctx, fpcalcBin, args...)
+	cmd.WaitDelay = 2 * time.Second
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -318,7 +319,7 @@ func FingerprintRange(ctx context.Context, fpcalcBin, ffmpegPath, path string, s
 		startSec = 0
 	}
 
-	ffmpegArgs := []string{"-ss", fmt.Sprintf("%f", startSec)}
+	ffmpegArgs := []string{"-threads", "1", "-ss", fmt.Sprintf("%f", startSec)}
 	if lengthSec > 0 {
 		ffmpegArgs = append(ffmpegArgs, "-t", fmt.Sprintf("%f", lengthSec))
 	}
@@ -341,8 +342,14 @@ func FingerprintRange(ctx context.Context, fpcalcBin, ffmpegPath, path string, s
 
 	ffmpegCmd := util.NewCmdCtxLowPriority(ctx, ffmpegPath, ffmpegArgs...)
 	fpcalcCmd := util.NewCmdCtxLowPriority(ctx, fpcalcBin, fpcalcArgs...)
+	ffmpegCmd.WaitDelay = 2 * time.Second
+	fpcalcCmd.WaitDelay = 2 * time.Second
 
 	pr, pw := io.Pipe()
+	stopClose := context.AfterFunc(ctx, func() { pr.CloseWithError(ctx.Err()); pw.CloseWithError(ctx.Err()) })
+	defer stopClose()
+	defer pr.Close()
+	defer pw.Close()
 	ffmpegCmd.Stdout = pw
 	fpcalcCmd.Stdin = pr
 
@@ -366,10 +373,10 @@ func FingerprintRange(ctx context.Context, fpcalcBin, ffmpegPath, path string, s
 	// La goroutine espera a ffmpeg y cierra el write-end del pipe cuando termina,
 	// para que fpcalc vea EOF. errCh garantiza que nunca se filtra: siempre sale
 	// antes de que esta función retorne.
-	errCh := make(chan struct{}, 1)
+	errCh := make(chan error, 1)
 	go func() {
 		defer close(errCh)
-		_ = ffmpegCmd.Wait()
+		errCh <- ffmpegCmd.Wait()
 		pw.Close()
 	}()
 
@@ -380,7 +387,12 @@ func FingerprintRange(ctx context.Context, fpcalcBin, ffmpegPath, path string, s
 		return nil, 0, fmt.Errorf("fpcalc execution failed: %w", err)
 	}
 	pr.Close()
-	<-errCh
+	if err := <-errCh; err != nil {
+		return nil, 0, fmt.Errorf("ffmpeg execution failed: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, 0, err
+	}
 
 	var res fingerprintResult
 	if err := json.Unmarshal(fpcalcOut.Bytes(), &res); err != nil {

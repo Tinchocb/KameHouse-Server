@@ -1527,12 +1527,11 @@
     }
   },
   {
-    "name": "persistDriveAudioStreams",
-    "trimmedName": "persistDriveAudioStreams",
+    "name": "persistDriveTechnicalInfo",
+    "trimmedName": "persistDriveTechnicalInfo",
     "comments": [
-      "persistDriveAudioStreams guarda en el local_file las pistas de audio detectadas,",
-      "para que el resto de la app (idiomas disponibles, selector de origen) las conozca",
-      "sin volver a sondear Drive.",
+      "persistDriveTechnicalInfo replaces assumed codecs with real probe results.",
+      "Work on a copy: callers may retain the previous technical-info snapshot.",
       ""
     ],
     "filepath": "internal/handlers/drive_mediastream.go",
@@ -4829,6 +4828,32 @@
       "returns": "status message",
       "returnGoType": "status message",
       "returnTypescriptType": "status message"
+    }
+  },
+  {
+    "name": "HandleGetStoryboard",
+    "trimmedName": "GetStoryboard",
+    "comments": [
+      "HandleGetStoryboard serves a temporal index or a persistent contact sheet.",
+      "",
+      "@summary Get timeline storyboard",
+      "@route /api/v1/video-storyboard [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/storyboard.go",
+    "filename": "storyboard.go",
+    "api": {
+      "summary": "Get timeline storyboard",
+      "descriptions": [],
+      "endpoint": "/api/v1/video-storyboard",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
     }
   },
   {

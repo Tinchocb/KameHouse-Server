@@ -221,7 +221,7 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	}
 
 	// 4. Update LocalFiles
-	lfs, lfsID, err := db.GetLocalFiles(h.App.Database)
+	lfs, _, err := db.GetLocalFiles(h.App.Database)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
@@ -238,7 +238,7 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 		}
 	}
 
-	_, err = db.SaveLocalFiles(h.App.Database, lfsID, lfs)
+	_, err = db.SaveLocalFiles(h.App.Database, lfs)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}

@@ -302,7 +302,11 @@ func (h *Handler) HandleDrivePlay(c echo.Context) error {
 	// (reanudar, volver atrás, el transcoder y los Cues leen del disco).
 	if cache := h.driveBlockCache(); cache != nil {
 		h.validateDriveCache(cache, fileID)
-		fetch = cache.Fetcher(fileID, fetch)
+		if c.QueryParam("preview") == "1" {
+			fetch = cache.FetcherWithoutReadAhead(fileID, fetch)
+		} else {
+			fetch = cache.Fetcher(fileID, fetch)
+		}
 	}
 	cr, err := drive.OpenChunkedRange(ctx, fetch, start, end, drive.MediaChunkSize)
 	if errors.Is(err, drive.ErrRangeNotSatisfiable) {
@@ -485,7 +489,7 @@ func (h *Handler) HandleDriveScan(c echo.Context) error {
 		// Rows may have been written even on a partial failure: always drop the
 		// server-side caches *before* notifying clients, or their refetch would
 		// race the invalidation and get the stale collection back.
-		db.InvalidateLocalFilesCache()
+		db.InvalidateLocalFilesCache(h.App.Database)
 		ClearLibraryCollectionCache()
 		anime.InvalidateCuratedHomeCache()
 		h.prewarmShelfImages(0) // series nuevas: sus fondos al disco local

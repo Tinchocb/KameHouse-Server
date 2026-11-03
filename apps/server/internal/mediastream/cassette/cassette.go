@@ -24,7 +24,7 @@ type NewCassetteOptions struct {
 	FfmpegPath            string
 	FfprobePath           string
 	HwAccelCustomSettings string
-	// MaxConcurrency limits simultaneous ffmpeg processes. 0 = NumCPU
+	// MaxConcurrency limits simultaneous ffmpeg processes. 0 = automatic CPU/RAM budget.
 	MaxConcurrency int
 }
 

@@ -203,7 +203,6 @@ const (
 	eTrackNumber   = 0xD7
 	eTrackUID      = 0x73C5
 	eTrackType     = 0x83
-	eFlagLacing    = 0x9C
 	eCodecID       = 0x86
 	eCodecPrivate  = 0x63A2
 	eLanguage      = 0x22B59C
@@ -235,7 +234,6 @@ const (
 	eBlockGroup    = 0xA0
 	eBlock         = 0xA1
 	eBlockDuration = 0x9B
-	eRefBlock      = 0xFB
 	eCues          = 0x1C53BB6B
 	eCuePoint      = 0xBB
 	eCueTime       = 0xB3
@@ -244,7 +242,6 @@ const (
 	eCueClusterPos = 0xF1
 	eVoid          = 0xEC
 	eCRC32         = 0xBF
-	eTags          = 0x1254C367
 )
 
 // ─── Armado ─────────────────────────────────────────────────────────────────────────────

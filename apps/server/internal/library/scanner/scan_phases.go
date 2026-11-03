@@ -373,7 +373,10 @@ func (scn *Scanner) hydrateAndPersist(
 	if scn.Database != nil {
 
 		// Persist LibraryMedia records and map IDs back to local files
-		libraryMediaIdMap := scn.persistMatchedMedia(allMatchedIds, movieIds, mc.NormalizedMedia, localFiles)
+		libraryMediaIdMap, err := scn.persistMatchedMedia(ctx, allMatchedIds, movieIds, mc.NormalizedMedia, localFiles)
+		if err != nil {
+			return nil, err
+		}
 
 		scn.Logger.Info().
 			Int("totalMatched", len(allMatchedIds)).

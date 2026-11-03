@@ -99,8 +99,8 @@ func (h *Handler) HandleGetPreTranscodeJobs(c echo.Context) error {
 //	@route /api/v1/mediastream/pretranscode/:hash [DELETE]
 func (h *Handler) HandleCancelPreTranscode(c echo.Context) error {
 	hash := c.Param("hash")
-	if hash == "" {
-		return h.RespondWithError(c, errors.New("hash is required"))
+	if !pretranscode.ValidHash(hash) {
+		return h.RespondWithCodeError(c, 400, errors.New("invalid pre-transcode hash"))
 	}
 
 	m, err := h.preTranscoder()
