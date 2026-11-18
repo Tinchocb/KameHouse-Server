@@ -1,6 +1,6 @@
 import React from "react"
 import { flushSync } from "react-dom"
-import { m, AnimatePresence, useIsPresent, type Transition } from "framer-motion"
+import { m, AnimatePresence, useIsPresent, type HTMLMotionProps } from "framer-motion"
 import { useNavigate } from "@tanstack/react-router"
 import { IconMediaQueue, IconUiClose, IconMediaPlay, IconNavigationChevronUp, IconNavigationChevronDown, IconUiTrash, IconMediaSkipPrevious, IconMediaShuffle, IconMediaRepeat } from "@/components/ui/icons";
 import { useQueueStore, useUIStore } from "@/lib/store"
@@ -17,6 +17,13 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 // fragmento entero). Mientras salen (useIsPresent en false) dejan pasar los clics a la
 // página en lugar de tragárselos, como el velo de Mi Lista del reproductor.
 
+const QueueRow = React.forwardRef<HTMLDivElement, HTMLMotionProps<"div">>((props, ref) => {
+    const isPresent = useIsPresent()
+    return <m.div {...props} ref={ref} inert={!isPresent} aria-hidden={!isPresent || undefined}
+        style={{ ...props.style, pointerEvents: isPresent ? "auto" : "none" }} />
+})
+QueueRow.displayName = "GlobalQueueRow"
+
 function QueueBackdrop({ onClose }: { onClose: () => void }) {
     const isPresent = useIsPresent()
     return (
@@ -26,35 +33,36 @@ function QueueBackdrop({ onClose }: { onClose: () => void }) {
             exit={{ opacity: 0 }}
             onClick={onClose}
             className={cn(
-                "fixed inset-0 z-overlay bg-black/45 backdrop-blur-overlay-sm",
+                "fixed inset-0 z-overlay bg-black/60",
                 isPresent ? "pointer-events-auto" : "pointer-events-none"
             )}
         />
     )
 }
 
-const QueuePanel = React.forwardRef<HTMLDivElement, { transition: Transition; children: React.ReactNode }>(
-    ({ transition, children }, ref) => {
+const QueuePanel = React.forwardRef<HTMLDivElement, { children: React.ReactNode }>(
+    ({ children }, ref) => {
         const isPresent = useIsPresent()
+        const reduceMotion = useReducedMotion()
         return (
             <m.div
                 ref={ref}
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={transition}
+                initial={reduceMotion ? { opacity: 0 } : { x: "100%" }}
+                animate={reduceMotion ? { opacity: 1 } : { x: 0 }}
+                exit={reduceMotion
+                    ? { opacity: 0, transition: { duration: 0.15 } }
+                    : { x: "100%", transition: { duration: 0.35, ease: [0.32, 0.72, 0, 1] } }}
+                transition={{ duration: reduceMotion ? 0.15 : 0.4, ease: [0.32, 0.72, 0, 1] }}
+                inert={!isPresent}
+                aria-hidden={!isPresent || undefined}
                 role="dialog"
                 aria-modal="true"
                 aria-label="Mi Lista"
+                data-liquid-surface="panel"
                 className={cn(
-                    "fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-modal flex flex-col select-none scroll-mt-28 [background:var(--glass-frosted-bg)] backdrop-blur-overlay-md border-l border-white/15 shadow-elevation-4",
+                    "global-queue-panel fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-modal flex flex-col select-none scroll-mt-28 [background:var(--glass-frosted-bg)] backdrop-blur-overlay-md border-l border-[var(--neutral-separator)] shadow-elevation-4",
                     isPresent ? "pointer-events-auto" : "pointer-events-none"
                 )}
-                style={{
-                    // 24 px (estándar de sidebars, DESIGN-GUIDE §2). En plano, `backdrop-filter: none !important` de blur.css gana.
-                    backdropFilter: "blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted))",
-                    WebkitBackdropFilter: "blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted))",
-                }}
             >
                 {children}
             </m.div>
@@ -79,11 +87,11 @@ export function salidaDeFila(saliendo: boolean, reducirMovimiento: boolean) {
 }
 
 // Cascada de entrada de una fila. Solo escalona la primera vez que la fila aparece en esta apertura del panel
-// (hasta la fila 8, ~0,42 s). La lista virtualizada desmonta las filas que salen del scroll y las vuelve a montar
+// (primeras ocho filas, demora máxima 240 ms). La lista virtualizada desmonta las filas que salen del scroll y las vuelve a montar
 // al volver: una fila que ya estuvo entra visible, sin animar ni esperar. `mostradas` guarda las claves ya mostradas.
 export function entradaFilaCola(mostradas: ReadonlySet<string>, clave: string, idx: number) {
     if (mostradas.has(clave)) return { animar: false, retraso: 0 }
-    return { animar: true, retraso: idx < 8 ? idx * 0.06 : 0 }
+    return { animar: true, retraso: idx < 8 ? Math.min(idx, 6) * 0.04 : 0 }
 }
 
 export const GlobalQueueSidebar = () => {
@@ -190,7 +198,13 @@ export const GlobalQueueSidebar = () => {
         }
     }, [])
 
+    const pendingFocusIndexRef = React.useRef<number | null>(null)
     const quitarFila = (idx: number, clave: string) => {
+        if (playlistQueue.length <= 1) {
+            focusEmptyCtaRef.current = true
+        } else {
+            pendingFocusIndexRef.current = Math.min(idx, playlistQueue.length - 2)
+        }
         flushSync(() => setFilasSaliendo(new Set([clave])))
         removeFromQueue(idx)
         if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current)
@@ -212,6 +226,18 @@ export const GlobalQueueSidebar = () => {
         if (active && active !== document.body) return
         emptyCtaRef.current?.focus({ preventScroll: true })
     }
+
+    React.useEffect(() => {
+        if (pendingFocusIndexRef.current !== null && playlistQueue.length > 0) {
+            const targetIdx = pendingFocusIndexRef.current
+            pendingFocusIndexRef.current = null
+            if (!document.activeElement || document.activeElement === document.body) {
+                const row = scrollRef.current?.querySelector(`[data-queue-row-index="${targetIdx}"]`)
+                const btn = row?.querySelector("button") as HTMLElement | null
+                ;(btn || (row as HTMLElement | null))?.focus({ preventScroll: true })
+            }
+        }
+    }, [playlistQueue])
 
     // Cerrar con Escape
     React.useEffect(() => {
@@ -235,7 +261,7 @@ export const GlobalQueueSidebar = () => {
                     <QueueBackdrop onClose={() => setGlobalQueueOpen(false)} />
 
                     {/* Panel lateral — shell estructurado con desenfoque cinematográfico */}
-                    <QueuePanel ref={panelRef} transition={entranceSpring}>
+                    <QueuePanel ref={panelRef}>
                         {/* Header — patrón .sectionbar-header (Home + Ajustes) */}
                         <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-[var(--neutral-separator)] shrink-0">
                             <div className="sectionbar-header flex-1 min-w-0">
@@ -249,7 +275,7 @@ export const GlobalQueueSidebar = () => {
                                                 Mi Lista
                                             </h3>
                                             <span className="sectionbar-header-badge">
-                                                <span className="text-2xs font-semibold tabular-nums px-2 py-0.5 rounded-full bg-[var(--neutral-elev-2)] text-on-surface-variant shrink-0 inline-flex items-center justify-center">
+                                                <span className="text-xs font-semibold tabular-nums px-2 py-0.5 rounded-full bg-[var(--neutral-elev-2)] text-on-surface-variant shrink-0 inline-flex items-center justify-center">
                                                     <ElasticCounter value={playlistQueue.length} />
                                                 </span>
                                             </span>
@@ -286,7 +312,7 @@ export const GlobalQueueSidebar = () => {
                                         const entrada = entradaFilaCola(filasMostradasRef.current, String(virtualRow.key), idx)
 
                                         return (
-                                            <m.div
+                                            <QueueRow
                                                 key={virtualRow.key}
                                                 ref={virtualizer.measureElement}
                                                 data-index={idx}
@@ -297,7 +323,7 @@ export const GlobalQueueSidebar = () => {
                                                 // Solo se vuelve a medir cuando cambia la cola; sin esto framer mide cada fila en cada render.
                                                 layoutDependency={playlistQueue}
                                                 // Escalonado solo en la primera aparición de las primeras filas: al remontarse no esperan.
-                                                transition={{ ...tabContentSpring, delay: entrada.retraso, layout: tabContentSpring }}
+                                                transition={{ ...tabContentSpring, delay: prefersReducedMotion ? 0 : entrada.retraso, layout: tabContentSpring }}
                                                 className={cn(
                                                     "absolute left-0 top-0 w-full text-left flex gap-3 p-3 rounded-2xl border transition-[background-color,border-color,color] duration-fast ease-out-strong group items-center",
                                                     "border-[var(--neutral-separator)] bg-[var(--neutral-elev-2)]",
@@ -321,7 +347,7 @@ export const GlobalQueueSidebar = () => {
                                                     }}
                                                     aria-label={`Reproducir ${item.title}`}
                                                     aria-current={isCurrent ? "true" : undefined}
-                                                    className="flex-1 flex gap-3 cursor-pointer min-w-0 items-center text-left rounded-xl min-h-[44px] active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                                                    className="flex-1 flex gap-3 cursor-pointer min-w-0 items-center text-left rounded-xl min-h-[44px] motion-safe:active:scale-[0.97] transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                                                 >
                                                     {/* Thumbnail — aspect-video reservado (anti layout-shift en colapsables) */}
                                                     <div className="relative w-20 sm:w-28 aspect-video bg-surface-container border border-[var(--neutral-separator)] rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
@@ -329,11 +355,11 @@ export const GlobalQueueSidebar = () => {
                                                             <DeferredImage
                                                                 src={item.thumbnail}
                                                                 alt={item.title}
-                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-slow"
+                                                                className="w-full h-full object-cover motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-slow"
                                                                 showSkeleton={false}
                                                             />
                                                         ) : (
-                                                            <span className="text-2xs font-semibold text-on-surface-variant">Sin imagen</span>
+                                                            <span className="text-xs font-semibold text-on-surface-variant">Sin imagen</span>
                                                         )}
 
                                                         {/* Play overlay */}
@@ -341,7 +367,7 @@ export const GlobalQueueSidebar = () => {
                                                             "absolute inset-0 flex items-center justify-center transition-[opacity,background-color] duration-fast ease-out-strong",
                                                             isCurrent
                                                                 ? "opacity-100 bg-brand-accent/10"
-                                                                : "opacity-0 group-hover:opacity-100 bg-black/60"
+                                                                : "opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 bg-black/60"
                                                         )}>
                                                             {isCurrent ? (
                                                                 <div className="flex gap-1 items-end h-4" aria-hidden="true">
@@ -359,7 +385,7 @@ export const GlobalQueueSidebar = () => {
                                                     <span className="flex-1 min-w-0 flex flex-col justify-center">
                                                         {item.subtitle && (
                                                             <span className={cn(
-                                                                "text-2xs sm:text-xs font-semibold mb-0.5 truncate",
+                                                                "text-xs font-semibold mb-0.5 truncate",
                                                                 isCurrent ? "text-brand-accent-readable" : "text-on-surface-variant"
                                                             )}>
                                                                 {item.subtitle}
@@ -367,7 +393,7 @@ export const GlobalQueueSidebar = () => {
                                                         )}
                                                         <span title={item.title} className={cn(
                                                             "text-xs sm:text-sm font-bold line-clamp-2 leading-tight transition-colors block",
-                                                            isCurrent ? "text-on-surface" : "text-label-2 group-hover:text-on-surface"
+                                                            isCurrent ? "text-on-surface" : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
                                                         )}>
                                                             {item.title}
                                                         </span>
@@ -413,7 +439,7 @@ export const GlobalQueueSidebar = () => {
                                                     title="Quitar de Mi Lista"
                                                     icon={<IconUiTrash className="w-4 h-4" />}
                                                 />
-                                            </m.div>
+                                            </QueueRow>
                                         )
                                     })}
                                 </AnimatePresence>
@@ -431,7 +457,7 @@ export const GlobalQueueSidebar = () => {
                                         <IconMediaQueue className="w-8 h-8" />
                                     </div>
                                     <div className="space-y-2">
-                                        <p className="font-display text-lg text-on-surface font-semibold">
+                                        <p className="font-display text-lg text-on-surface font-semibold text-balance">
                                             Mi Lista está vacía
                                         </p>
                                         <p className="text-sm text-on-surface-variant max-w-[30ch] leading-relaxed mx-auto">

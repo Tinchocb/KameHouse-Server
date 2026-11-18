@@ -1,6 +1,8 @@
 package util
 
 import (
+	"container/list"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -8,6 +10,7 @@ import (
 	"io"
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/cache"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -22,6 +25,11 @@ import (
 // once a day so a busy grid doesn't turn every read into a metadata write.
 const imageProxyTouchMinAge = 24 * time.Hour
 
+const (
+	imageProxyMaxMemEntries = 128
+	imageProxyMaxMemBytes   = 256 << 10 // 256 KB: mantiene pósters en RAM sin retener backdrops pesados.
+)
+
 var (
 	// Shared so upstream connections (TLS, keep-alive) are reused across images.
 	// El dialer rechaza IPs internas en cada conexión (redirects, DNS rebinding).
@@ -32,9 +40,80 @@ var (
 	imageProxyFlights singleflight.Group
 )
 
+func init() {
+	tr := imageProxyClient.GetTransport()
+	tr.MaxIdleConns = 64
+	tr.MaxIdleConnsPerHost = 16
+	tr.IdleConnTimeout = 90 * time.Second
+}
+
+type cachedMemImage struct {
+	key         string
+	data        []byte
+	contentType string
+}
+
 type ImageProxy struct {
 	CacheDir  string
 	mkdirOnce sync.Once
+	memMu     sync.Mutex
+	memItems  map[string]*list.Element
+	memOrder  *list.List // front = más reciente
+}
+
+func (ip *ImageProxy) getMemCache(key string) ([]byte, string, bool) {
+	ip.memMu.Lock()
+	defer ip.memMu.Unlock()
+	if ip.memItems == nil || ip.memOrder == nil {
+		return nil, "", false
+	}
+	el, ok := ip.memItems[key]
+	if !ok {
+		return nil, "", false
+	}
+	ip.memOrder.MoveToFront(el)
+	entry := el.Value.(*cachedMemImage)
+	return entry.data, entry.contentType, true
+}
+
+func (ip *ImageProxy) putMemCache(key string, data []byte, contentType string) {
+	if len(data) == 0 || len(data) > imageProxyMaxMemBytes {
+		return
+	}
+	ip.memMu.Lock()
+	defer ip.memMu.Unlock()
+	if ip.memItems == nil {
+		ip.memItems = make(map[string]*list.Element, imageProxyMaxMemEntries)
+		ip.memOrder = list.New()
+	}
+	if el, ok := ip.memItems[key]; ok {
+		ip.memOrder.MoveToFront(el)
+		entry := el.Value.(*cachedMemImage)
+		entry.data = data
+		entry.contentType = contentType
+		return
+	}
+	for len(ip.memItems) >= imageProxyMaxMemEntries {
+		tail := ip.memOrder.Back()
+		if tail == nil {
+			break
+		}
+		evicted := ip.memOrder.Remove(tail).(*cachedMemImage)
+		delete(ip.memItems, evicted.key)
+	}
+	entry := &cachedMemImage{key: key, data: data, contentType: contentType}
+	ip.memItems[key] = ip.memOrder.PushFront(entry)
+}
+
+// PurgeMemoryCache limpia la caché caliente en RAM (p. ej. al vaciar imágenes desde Ajustes).
+func (ip *ImageProxy) PurgeMemoryCache() {
+	if ip == nil {
+		return
+	}
+	ip.memMu.Lock()
+	ip.memItems = nil
+	ip.memOrder = nil
+	ip.memMu.Unlock()
 }
 
 type proxiedImage struct {
@@ -73,28 +152,26 @@ func readCachedImage(cachePath string) ([]byte, string, bool) {
 	return data, contentType, true
 }
 
-// validateCachedImage inspecciona solo la cabecera (primeros 512 bytes) del archivo
-// en disco para determinar el tipo de imagen ráster segura y tocar el LRU sin
-// cargar todo el archivo en el heap. Si el archivo está corrupto o no es imagen,
-// se borra y se devuelve false.
-func validateCachedImage(cachePath string) (string, bool) {
+// serveCachedDisk valida y sirve un archivo ya cacheado en un solo open/stat,
+// poblando la caché caliente en RAM cuando el tamaño entra en el presupuesto.
+func (ip *ImageProxy) serveCachedDisk(c echo.Context, cachePath string) (handled bool, err error) {
 	f, err := os.Open(cachePath)
 	if err != nil {
-		return "", false
+		return false, nil
 	}
 	defer f.Close()
 
 	info, err := f.Stat()
 	if err != nil || info.Size() == 0 {
-		return "", false
+		return false, nil
 	}
 
-	buf := make([]byte, 512)
-	n, err := f.Read(buf)
-	if err != nil && err != io.EOF {
-		return "", false
+	var hdr [512]byte
+	n, readErr := io.ReadFull(f, hdr[:])
+	if readErr != nil && readErr != io.EOF && readErr != io.ErrUnexpectedEOF {
+		return false, nil
 	}
-	header := buf[:n]
+	header := hdr[:n]
 
 	contentType := util.SafeImageContentType("", header)
 	if contentType == "" {
@@ -103,11 +180,29 @@ func validateCachedImage(cachePath string) (string, bool) {
 	if contentType == "" {
 		_ = f.Close()
 		_ = os.Remove(cachePath)
-		return "", false
+		return false, nil
 	}
 
 	cache.TouchDiskCacheIfOlder(cachePath, info, imageProxyTouchMinAge)
-	return contentType, true
+	ip.setHeaders(c, contentType)
+
+	if size := info.Size(); size <= imageProxyMaxMemBytes {
+		data := make([]byte, size)
+		copy(data, header)
+		if int64(n) < size {
+			if _, err := io.ReadFull(f, data[n:]); err != nil {
+				return false, nil
+			}
+		}
+		ip.putMemCache(cachePath, data, contentType)
+		return true, c.Blob(http.StatusOK, contentType, data)
+	}
+
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return false, err
+	}
+	http.ServeContent(c.Response(), c.Request(), filepath.Base(cachePath), info.ModTime(), f)
+	return true, nil
 }
 
 func (ip *ImageProxy) ensureDir() string {
@@ -218,12 +313,14 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 		return c.String(echo.ErrBadRequest.Code, "No URL provided")
 	}
 
-	// Fast path: check local disk cache first. If already downloaded, serve immediately
-	// without any network or DNS lookup overhead and with zero heap copy.
+	// Fast path: primero memoria RAM (0 syscalls de disco) y luego caché en disco en un solo open.
 	cachePath := ip.getCachePath(url)
-	if contentType, ok := validateCachedImage(cachePath); ok {
+	if data, contentType, ok := ip.getMemCache(cachePath); ok {
 		ip.setHeaders(c, contentType)
-		return c.File(cachePath)
+		return c.Blob(http.StatusOK, contentType, data)
+	}
+	if handled, err := ip.serveCachedDisk(c, cachePath); handled || err != nil {
+		return err
 	}
 
 	if !util.IsValidProxyURL(url) {
@@ -237,25 +334,32 @@ func (ip *ImageProxy) ProxyImage(c echo.Context) (err error) {
 		headers = util.FilterProxyRequestHeaders(headers)
 	}
 
-	// GetImage persiste la imagen en cachePath antes de volver: se sirve desde disco
-	// (c.File, sin retener el buffer de hasta 25 MB en el heap durante la transferencia).
-	_, contentType, err := ip.GetImage(url, headers)
+	// GetImage persiste la imagen en cachePath antes de volver; las portadas pequeñas
+	// se sirven directo desde el buffer (evitando otro open/stat) y las pesadas por disco.
+	body, contentType, err := ip.GetImage(url, headers)
 	if err != nil {
 		return c.String(echo.ErrInternalServerError.Code, "Error fetching image")
 	}
 
 	ip.setHeaders(c, contentType)
-	return c.File(ip.getCachePath(url))
+	if len(body) > 0 && len(body) <= imageProxyMaxMemBytes {
+		ip.putMemCache(cachePath, body, contentType)
+		return c.Blob(http.StatusOK, contentType, body)
+	}
+	return c.File(cachePath)
 }
 
 // prewarmURLValid es la validación SSRF de Prewarm (reemplazable en tests,
 // donde el origen falso vive en 127.0.0.1).
 var prewarmURLValid = util.IsValidProxyURL
 
-// Prewarm baja al disco las URLs que todavía no están cacheadas, con
-// concurrencia limitada. No devuelve error: las que fallan se piden de nuevo
-// cuando la interfaz las necesite. Devuelve cuántas se descargaron.
-func (ip *ImageProxy) Prewarm(urls []string, concurrency int) int {
+// PrewarmContext stops admission on cancellation and joins downloads already
+// admitted. Shared GetImage fetches retain their existing upstream timeout so
+// cancelling a background consumer cannot abort a foreground reader.
+func (ip *ImageProxy) PrewarmContext(ctx context.Context, urls []string, concurrency int) int {
+	if ctx.Err() != nil {
+		return 0
+	}
 	if concurrency <= 0 {
 		concurrency = 3
 	}
@@ -264,7 +368,11 @@ func (ip *ImageProxy) Prewarm(urls []string, concurrency int) int {
 	var wg sync.WaitGroup
 	fetched := 0
 	seen := make(map[string]struct{}, len(urls))
+feed:
 	for _, u := range urls {
+		if ctx.Err() != nil {
+			break
+		}
 		if u == "" || !prewarmURLValid(u) {
 			continue
 		}
@@ -275,8 +383,16 @@ func (ip *ImageProxy) Prewarm(urls []string, concurrency int) int {
 		if info, err := os.Stat(ip.getCachePath(u)); err == nil && info.Size() > 0 {
 			continue
 		}
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			break feed
+		}
+		if ctx.Err() != nil {
+			<-sem
+			break
+		}
 		wg.Add(1)
-		sem <- struct{}{}
 		go func(u string) {
 			defer wg.Done()
 			defer func() { <-sem }()

@@ -40,10 +40,14 @@ describe("moviePosterUrls", () => {
         const urls = moviePosterUrls([
             entry({ format: "MOVIE", posterImage: "https://image.tmdb.org/t/p/original/m.jpg" }),
             entry({ format: "MOVIE", posterImage: "https://image.tmdb.org/t/p/original/m.jpg" }),
+            entry({ format: "OVA", posterImage: "https://image.tmdb.org/t/p/original/ova.jpg" }),
+            entry({ format: "SPECIAL", posterImage: "https://image.tmdb.org/t/p/original/sp.jpg" }),
             entry({ format: "TV", posterImage: "https://image.tmdb.org/t/p/original/s.jpg" }),
             entry({ format: "MOVIE" }),
         ])
-        expect(urls).toHaveLength(1)
-        expect(urls[0]).toContain("m.jpg")
+        expect(urls).toHaveLength(3)
+        expect(urls.some((u) => u.includes("m.jpg"))).toBe(true)
+        expect(urls.some((u) => u.includes("ova.jpg"))).toBe(true)
+        expect(urls.some((u) => u.includes("sp.jpg"))).toBe(true)
     })
 })

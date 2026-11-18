@@ -3,27 +3,12 @@ import type { VolumeData } from "../types"
 import { ERA_KEYS } from "./eraBar"
 import {
     AIR_YEARS_BY_ERA,
-    TIMELINE_ORDERS,
     compareRelease,
     eraKeysForOrder,
-    parseTimelineOrder,
 } from "./releaseOrder"
 
 type Vol = Parameters<typeof compareRelease>[0]
 const vol = (p: Partial<Vol>): Vol => p as Vol
-
-describe("órdenes de la línea de tiempo", () => {
-    it("hay dos órdenes: la cronológica y la de estreno", () => {
-        expect(TIMELINE_ORDERS).toEqual(["chronological", "release"])
-    })
-
-    it("un valor desconocido o ausente cae en la cronológica", () => {
-        expect(parseTimelineOrder("release")).toBe("release")
-        expect(parseTimelineOrder("lo que sea")).toBe("chronological")
-        expect(parseTimelineOrder(null)).toBe("chronological")
-        expect(parseTimelineOrder(undefined)).toBe("chronological")
-    })
-})
 
 describe("compareRelease (orden de estreno)", () => {
     it("ordena por serie según la fecha de emisión", () => {

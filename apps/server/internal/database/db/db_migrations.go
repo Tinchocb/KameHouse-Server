@@ -57,7 +57,9 @@ func (db *Database) runDataMigrationsInternal() error {
 	purgeStaleSkipTimes(db, db.Logger)
 	purgeEdlessAnimeThemesSkipTimes(db, db.Logger)
 	defaultAutoDetectSkipTimes(db, db.Logger)
-	migratePlaybackAndPerformanceDefaults(db, db.Logger)
+	if err := migratePlaybackAndPerformanceDefaults(db, db.Logger); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -88,6 +90,10 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 		logger.Warn().Err(err).Msg("db: notice while cleaning duplicate library_media entries")
 	}
 
+	// Asistente de primer arranque (setup_pending): se decide sobre la base tal como estaba
+	// antes de añadir la columna, por eso se mira antes de AutoMigrate.
+	settingsColumnAdded := db.Migrator().HasTable(&models.Settings{}) && !db.Migrator().HasColumn(&models.Settings{}, "setup_pending")
+
 	if err := db.WithContext(ctx).AutoMigrate(
 		&models.LocalFile{},
 		&models.Settings{},
@@ -114,6 +120,18 @@ func migrateSchema(ctx context.Context, db *gorm.DB, logger *zerolog.Logger) err
 		&models.ChronologySpanOverride{},
 	); err != nil {
 		return err
+	}
+
+	// Filas que ya existían: si la migración añade setup_pending, solo las vacías (sin
+	// biblioteca ni Drive; el fallo previo las creaba al arrancar) vuelven a pedir el
+	// asistente. Se decide una única vez, justo al crear la columna.
+	if settingsColumnAdded {
+		if err := db.Exec(`UPDATE settings SET setup_pending = 1
+			WHERE (library_series_paths IS NULL OR library_series_paths = '')
+			  AND (library_movie_paths IS NULL OR library_movie_paths = '')
+			  AND (gdrive_enabled IS NULL OR gdrive_enabled = 0)`).Error; err != nil {
+			return fmt.Errorf("marcar asistente pendiente en ajustes existentes: %w", err)
+		}
 	}
 
 	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_library_episodes_media_absolute ON library_episodes (library_media_id, absolute_number)").Error; err != nil {
@@ -341,10 +359,13 @@ func defaultAutoDetectSkipTimes(d *Database, logger *zerolog.Logger) {
 // migratePlaybackAndPerformanceDefaults aplica defaults a las columnas nuevas
 // (preferencias de reproducción y perfil de rendimiento, antes solo-localStorage).
 // Se ejecuta una sola vez con gate en metadata_cache para no pisar cambios del usuario.
-func migratePlaybackAndPerformanceDefaults(d *Database, logger *zerolog.Logger) {
+func migratePlaybackAndPerformanceDefaults(d *Database, logger *zerolog.Logger) error {
 	const migrationKey = "playback_performance_defaults_v1"
-	if migrationDone(d, logger, migrationKey) {
-		return
+	var done bool
+	if ok, err := GetMetadataCache(d, "migrations", migrationKey, &done); err != nil {
+		return fmt.Errorf("read playback/performance migration gate: %w", err)
+	} else if ok && done {
+		return nil
 	}
 	stmts := []string{
 		"UPDATE settings SET library_preferred_audio_profile = 'latino' WHERE library_preferred_audio_profile = '' OR library_preferred_audio_profile IS NULL",
@@ -352,16 +373,23 @@ func migratePlaybackAndPerformanceDefaults(d *Database, logger *zerolog.Logger) 
 		"UPDATE mediastream_settings SET performance_profile = 'auto' WHERE performance_profile = '' OR performance_profile IS NULL",
 		"UPDATE mediastream_settings SET auto_governor_enabled = 1 WHERE auto_governor_enabled = 0",
 	}
-	for _, s := range stmts {
-		if result := d.gormdb.Exec(s); result.Error != nil {
-			logger.Warn().Err(result.Error).Str("stmt", s).Msg("db: notice en migración playback/performance (tabla o columna aún no existe)")
-		} else if result.RowsAffected > 0 {
-			logger.Info().Int64("rows", result.RowsAffected).Str("stmt", s).Msg("db: defaults playback/performance aplicados (one-shot)")
+	if err := d.gormdb.Transaction(func(tx *gorm.DB) error {
+		for _, stmt := range stmts {
+			if err := tx.Exec(stmt).Error; err != nil {
+				return fmt.Errorf("apply playback/performance defaults: %w", err)
+			}
 		}
+		return UpsertMetadataCache(&Database{gormdb: tx}, "migrations", migrationKey, true, 0)
+	}); err != nil {
+		return fmt.Errorf("playback/performance migration: %w", err)
 	}
-	if err := UpsertMetadataCache(d, "migrations", migrationKey, true, 0); err != nil {
-		logger.Error().Err(err).Msg("db: no se pudo marcar playback_performance_defaults como completado")
-	}
+	// A concurrent startup reader may already have cached pre-migration values.
+	d.currSettings.Store(nil)
+	d.currMediastreamSettings.Store(nil)
+	d.effSettings.Store(nil)
+	d.currLibraryPaths.Store(nil)
+	logger.Debug().Msg("db: playback/performance defaults migration committed")
+	return nil
 }
 
 // migrateSkipTimesSemantics normaliza los valores relativos de edOffset a absolutos

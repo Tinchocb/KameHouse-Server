@@ -23,7 +23,7 @@ describe("Acciones de póster", () => {
         render(<LazyMotion features={domAnimation}>
             <SpotlightMovieCard movie={movie} colors={ERA_COLOR_MAP.db} onNavigate={navigate} onHover={() => {}} />
         </LazyMotion>)
-        fireEvent.click(screen.getByRole("button", { name: "Reproducir Película" }))
+        fireEvent.click(screen.getByRole("button", { name: "Ver Película" }))
         expect(navigate).toHaveBeenCalledExactlyOnceWith(movie)
     })
 })

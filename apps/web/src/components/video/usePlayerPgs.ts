@@ -2,23 +2,29 @@
 import { useEffect, useRef } from "react"
 import type { VideoCorePgsRenderer, PgsEvent } from "./player-pgs-renderer"
 import { SubtitleTrack } from "@/components/ui/track-types"
+import type { AspectRatioMode } from "./video-aspect"
 
 interface UsePlayerPgsProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
     subtitleTracks: SubtitleTrack[]
     activeSubtitleIndex: number | null
+    aspectRatio?: AspectRatioMode
     setIsPgsLoading: (loading: boolean) => void
-    setIsPgsActive: (active: boolean) => void
 }
 
 export function usePlayerPgs({
     videoRef,
     subtitleTracks,
     activeSubtitleIndex,
+    aspectRatio = "contain",
     setIsPgsLoading,
-    setIsPgsActive,
 }: UsePlayerPgsProps) {
     const pgsRendererRef = useRef<VideoCorePgsRenderer | null>(null)
+    const aspectRatioRef = useRef<AspectRatioMode>(aspectRatio)
+    useEffect(() => {
+        aspectRatioRef.current = aspectRatio
+        pgsRendererRef.current?.setAspectRatio(aspectRatio)
+    }, [aspectRatio])
 
     const activeTrack = activeSubtitleIndex !== null && subtitleTracks 
         ? subtitleTracks.find(t => t.index === activeSubtitleIndex) ?? null 
@@ -46,7 +52,6 @@ export function usePlayerPgs({
                 pgsRendererRef.current = null
                 Promise.resolve().then(() => {
                     setIsPgsLoading(false)
-                    setIsPgsActive(false)
                 })
             }
             return
@@ -62,7 +67,6 @@ export function usePlayerPgs({
                 pgsRendererRef.current = null
                 Promise.resolve().then(() => {
                     setIsPgsLoading(false)
-                    setIsPgsActive(false)
                 })
             }
             return
@@ -81,6 +85,7 @@ export function usePlayerPgs({
                     const { VideoCorePgsRenderer } = await import("./player-pgs-renderer")
                     pgsRendererRef.current = new VideoCorePgsRenderer({
                         videoElement: video,
+                        aspectRatio: aspectRatioRef.current,
                         debug: process.env.NODE_ENV === "development",
                     })
                 }
@@ -98,14 +103,12 @@ export function usePlayerPgs({
                     pgsRendererRef.current.addEvents(events)
                 }
 
-                setIsPgsActive(true)
                 setIsPgsLoading(false)
             } catch (err) {
                 if (err instanceof DOMException && err.name === "AbortError") return
                 console.error("Failed to load PGS events:", err)
                 if (!isCancelled) {
                     setIsPgsLoading(false)
-                    setIsPgsActive(false)
                 }
             }
         }
@@ -122,8 +125,7 @@ export function usePlayerPgs({
                 pgsRendererRef.current.destroy()
                 pgsRendererRef.current = null
                 setIsPgsLoading(false)
-                setIsPgsActive(false)
             }
         }
-    }, [activeSubtitleIndex, trackUrl, trackCodec, videoRef, setIsPgsLoading, setIsPgsActive])
+    }, [activeSubtitleIndex, trackUrl, trackCodec, videoRef, setIsPgsLoading])
 }

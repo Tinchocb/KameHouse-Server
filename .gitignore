@@ -135,6 +135,7 @@ comandos.md
 
 # Local reference/scratch directories
 referencia/
+screenshots*/
 
 # Scraping one-off scripts y sus volcados (Dragon Ball wiki/Jikan/Fandom)
 apps/server/*.py

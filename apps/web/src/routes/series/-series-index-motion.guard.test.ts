@@ -3,7 +3,7 @@ import { join } from "node:path"
 import { describe, it, expect } from "vitest"
 
 // Los glows del listado (aura y resplandor del estante) solo se animan con tier "full". Mirar solo el
-// rendimiento dejaba animarlos en modo TV, donde el tier ya es "subtle".
+// rendimiento debe respetar el tier "subtle".
 describe("series index · compuerta de los glows", () => {
     const source = readFileSync(join(__dirname, "index.lazy.tsx"), "utf8")
 

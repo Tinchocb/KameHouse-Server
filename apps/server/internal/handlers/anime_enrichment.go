@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"kamehouse/internal/api/jikan"
+	"kamehouse/internal/api/metadata_provider"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
@@ -23,20 +24,19 @@ import (
 )
 
 func getActiveProvider(settings *models.Settings, dbInstance *db.Database, logger *zerolog.Logger) librarymetadata.Provider {
-	var useTMDB bool
 	var tmdbToken string
 	var tmdbLanguage string
 	if settings != nil {
-		useTMDB = settings.Library.ScannerProvider == "tmdb" || settings.Library.ScannerProvider == ""
 		tmdbToken = settings.Library.TmdbApiKey
 		tmdbLanguage = settings.Library.TmdbLanguage
 	}
-	if tmdbToken == "" {
-		tmdbToken, _ = tmdb.ResolveTokenFromEnv()
-	}
-	tmdbToken = tmdb.SanitizeToken(tmdbToken)
+	envToken, _ := tmdb.ResolveTokenFromEnv()
+	tmdbToken, _ = tmdb.ResolveToken(tmdbToken, envToken)
 
-	if useTMDB && tmdbToken != "" {
+	// Episode enrichment uses the available TMDB credentials independently of
+	// legacy scanner choices such as "anilist". The scanner setting must not
+	// silently discard a configured source of episode summaries and stills.
+	if tmdbToken != "" {
 		if tmdbLanguage == "" || tmdbLanguage == "en" || tmdbLanguage == "es" {
 			tmdbLanguage = "es-MX"
 		}
@@ -45,6 +45,16 @@ func getActiveProvider(settings *models.Settings, dbInstance *db.Database, logge
 
 	// Fallback to Jikan provider when TMDB token is not present
 	return librarymetadata.NewJikanProvider(dbInstance, logger)
+}
+
+func episodeEnrichmentSeasonCount(maxEpisode, firstSeasonEpisodes, knownSeasons int) int {
+	if knownSeasons > 0 {
+		return knownSeasons
+	}
+	if firstSeasonEpisodes > 0 && maxEpisode > firstSeasonEpisodes {
+		return min(15, maxEpisode/firstSeasonEpisodes+1)
+	}
+	return 1
 }
 
 // enrichEpisodesWithTMDB fetches episode-level metadata from TMDB or Jikan and fills in
@@ -86,6 +96,9 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		Msg("enrichEpisodesWithTMDB: starting enrichment")
 
 	provider := getActiveProvider(settings, h.App.Database, h.App.Logger)
+	if client := h.App.Metadata.GetTMDBClient(); client != nil && client.HasApiKey() {
+		provider = librarymetadata.NewTMDBProviderWithClient(client, h.App.Database)
+	}
 	if provider == nil {
 		return
 	}
@@ -195,25 +208,38 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		return
 	}
 
-	numSeasonsNeeded := 1
-	if len(s1.Episodes) > 0 && maxEp > len(s1.Episodes) {
-		numSeasonsNeeded = (maxEp / len(s1.Episodes)) + 1
-		if numSeasonsNeeded > 15 {
-			numSeasonsNeeded = 15
-		}
+	knownSeasons := 0
+	// Season lengths vary (DBZ has 39 episodes in season 1 but 9 seasons).
+	// Dividing by season 1's length omits later episodes. Use the actual count
+	// when available; retain the estimate only if the details request fails.
+	if details, detailsErr := tmdbProvider.GetTVDetails(ctx, tmdbID); detailsErr == nil && details != nil && details.NumberOfSeasons > 0 {
+		knownSeasons = details.NumberOfSeasons
+	}
+	numSeasonsNeeded := episodeEnrichmentSeasonCount(maxEp, len(s1.Episodes), knownSeasons)
+	// TMDB's Kai ordering has 158 episodes; the indexed international edition
+	// has 167. Their final episode titles match at 158/167, so the Buu arc
+	// cannot be joined by absolute number. The first four seasons end at 97.
+	if tmdbID == 61709 && maxEp == 167 {
+		numSeasonsNeeded = min(numSeasonsNeeded, 4)
 	}
 
 	epMap := make(map[int]tmdb.TVEpisode)
 	offset := 0
 
-	addSeason := func(season tmdb.TVSeasonDetails) {
-		for _, te := range season.Episodes {
-			absNum := offset + te.EpisodeNumber
-			epMap[absNum] = te
+	addSeason := func(season tmdb.TVSeasonDetails) bool {
+		end, err := tmdb.SeasonEnd(offset, season)
+		if err != nil {
+			return false
 		}
-		offset += len(season.Episodes)
+		for _, te := range season.Episodes {
+			epMap[offset+te.EpisodeNumber] = te
+		}
+		offset = end
+		return true
 	}
-	addSeason(s1)
+	if !addSeason(s1) {
+		return
+	}
 
 	if numSeasonsNeeded > 1 {
 		type seasonResult struct {
@@ -242,12 +268,20 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 			return results[i].num < results[j].num
 		})
 		for _, r := range results {
-			if r.err == nil {
-				addSeason(r.season)
+			if r.err != nil || !addSeason(r.season) {
+				break
 			}
 		}
 	}
 
+	applyEpisodeMap(entry, epMap)
+	h.App.Logger.Debug().
+		Int("tmdbID", tmdbID).
+		Int("mapped", len(epMap)).
+		Msg("enrichEpisodesWithTMDB: complete")
+}
+
+func applyEpisodeMap(entry *anime.Entry, epMap map[int]tmdb.TVEpisode) {
 	const imgBase = "https://image.tmdb.org/t/p/w500"
 
 	for i := range entry.Episodes {
@@ -295,10 +329,6 @@ func (h *Handler) enrichEpisodesWithTMDB(ctx context.Context, entry *anime.Entry
 		}
 	}
 
-	h.App.Logger.Debug().
-		Int("tmdbID", tmdbID).
-		Int("mapped", len(epMap)).
-		Msg("enrichEpisodesWithTMDB: complete")
 }
 
 // isBrokenImageURL returns true if the given URL is clearly an invalid / placeholder path that
@@ -560,49 +590,129 @@ const (
 // scheduleAnimeEnrichment completa la ficha en segundo plano y la guarda en caché cuando termina.
 // Usa su propia copia de la ficha: la respuesta que ya salió no comparte memoria con este trabajo.
 // Si Jikan todavía no respondió, espera sus datos (hasta metadataWaitBudget) antes de completarla.
-func (h *Handler) scheduleAnimeEnrichment(mID int) {
-	if _, busy := enrichmentInFlight.LoadOrStore(mID, struct{}{}); busy {
+func (h *Handler) scheduleAnimeEnrichment(mID int, generation uint64) {
+	if !animeEntryGenerationCurrent(generation) {
 		return
 	}
-	go func() {
-		defer enrichmentInFlight.Delete(mID)
+	key := fmt.Sprintf("%d:%d", generation, mID)
+	if _, busy := enrichmentInFlight.LoadOrStore(key, struct{}{}); busy {
+		return
+	}
+	if !h.App.StartBackground(func() {
+		defer enrichmentInFlight.Delete(key)
+		defer func() {
+			animeEntryCacheMu.Lock()
+			defer animeEntryCacheMu.Unlock()
+			if generation != animeEntryGeneration {
+				return
+			}
+			if saved, ok := animeEntryCache.Get(mID); ok && saved != nil && saved.EpisodeEnrichmentPending {
+				finished := *saved
+				finished.EpisodeEnrichmentPending = false
+				animeEntryCache.SetT(mID, &finished, animeEntryCacheTTL)
+			}
+		}()
 		defer func() {
 			if r := recover(); r != nil {
 				h.App.Logger.Error().Interface("panic", r).Int("mediaId", mID).Msg("anime: panic enriqueciendo la ficha")
 			}
 		}()
 
+		shutdownCtx := h.App.ShutdownCtx()
+		if shutdownCtx.Err() != nil || !animeEntryGenerationCurrent(generation) {
+			return
+		}
 		lfs, err := db.GetLocalFilesByMediaID(h.App.Database, mID)
 		if err != nil {
 			return
 		}
 		lfs = h.visibleLocalFiles(lfs)
 
-		deadline := time.Now().Add(metadataWaitBudget)
-		var entry *anime.Entry
-		for {
-			e, err := h.getAnimeEntry(context.Background(), lfs, mID)
-			if err != nil {
-				return
-			}
-			entry = e
-			if !entry.MetadataPending || time.Now().After(deadline) {
-				break
-			}
-			time.Sleep(metadataPollInterval)
-		}
-		if entry.MetadataPending {
+		entry, err := resolvePendingAnimeEntry(shutdownCtx,
+			func(ctx context.Context) (*anime.Entry, error) {
+				if !animeEntryGenerationCurrent(generation) {
+					return nil, context.Canceled
+				}
+				e, err := h.getAnimeEntry(ctx, lfs, mID)
+				if err == nil && e != nil && e.Media != nil && e.Media.TmdbID > 0 {
+					if client := h.App.Metadata.GetTMDBClient(); client != nil && client.HasApiKey() {
+						e.MetadataPending = false
+					}
+				}
+				return e, err
+			},
+			func() bool {
+				if !animeEntryGenerationCurrent(generation) {
+					return false
+				}
+				_, err := h.App.Metadata.Provider.GetAnimeMetadata(mID)
+				return metadata_provider.IsMetadataPending(err)
+			}, metadataWaitBudget, metadataPollInterval)
+		if err != nil || entry == nil || !animeEntryGenerationCurrent(generation) {
 			return // Jikan no llegó: la próxima visita vuelve a intentarlo.
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), enrichmentTimeBudget)
+		ctx, cancel := context.WithTimeout(shutdownCtx, enrichmentTimeBudget)
 		defer cancel()
 		settings, _ := h.App.Database.GetSettings()
 		h.enrichEpisodesWithTMDB(ctx, entry, settings)
 		h.enrichMediaWithTMDB(ctx, entry, settings)
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			enrichmentCooldown.Store(mID, time.Now().Add(enrichmentCooldownFor))
+		if shutdownCtx.Err() != nil {
+			return
 		}
-		animeEntryCache.SetT(mID, entry, animeEntryCacheTTL)
-	}()
+		animeEntryCacheMu.Lock()
+		if generation == animeEntryGeneration {
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				enrichmentCooldown.Store(mID, time.Now().Add(enrichmentCooldownFor))
+			}
+			animeEntryCache.SetT(mID, entry, animeEntryCacheTTL)
+		}
+		animeEntryCacheMu.Unlock()
+	}) {
+		enrichmentInFlight.Delete(key)
+	}
+}
+
+// Poll the shared metadata result, not the whole entry. Rebuilding a pending
+// entry repeats SQLite reads, filler hydration and every episode constructor.
+func resolvePendingAnimeEntry(ctx context.Context, build func(context.Context) (*anime.Entry, error), metadataPending func() bool, budget, interval time.Duration) (*anime.Entry, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	deadline := time.Now().Add(budget)
+	entry, err := build(ctx)
+	if err != nil || entry == nil || !entry.MetadataPending {
+		return entry, err
+	}
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+	for {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return entry, nil
+		}
+		// The next wait is bounded even if the polling interval exceeds the budget.
+		timer.Reset(min(interval, remaining))
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if !time.Now().Before(deadline) {
+			return entry, nil
+		}
+		if metadataPending() {
+			continue
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		entry, err = build(ctx)
+		if err != nil || entry == nil || !entry.MetadataPending {
+			return entry, err
+		}
+	}
 }

@@ -14,8 +14,7 @@ import { cn, defineStyleAnatomy } from "../core/styling"
  *      → `primary` (pastilla `--selected-bg/fg`), sobre imagen o sobre superficie.
  *  DESTRUCTIVA → `destructive`.
  *  Con "Reducir transparencia" (`data-flat`) `glass` pasa a sólido `--neutral-elev-2` con borde y sin
- *  `backdrop-filter`; el resto no cambia. Los nombres antiguos (`primary-glass`, `gray-outline`…) son
- *  alias: no usarlos en código nuevo.
+ *  `backdrop-filter`; el resto no cambia.
  * -----------------------------------------------------------------------------------------------*/
 
 /** Receta común del vidrio: elev-1 al 60 %, canto superior especular, un solo blur y sólido con `data-flat`. */
@@ -51,31 +50,6 @@ export const ButtonAnatomy = defineStyleAnatomy({
                 "destructive": "bg-destructive text-destructive-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:bg-destructive/90 active:bg-destructive shadow-none",
                 /* Solo chrome flotante (un único blur por superficie flotante) */
                 "glass": GLASS + " [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[color-mix(in_srgb,var(--neutral-elev-2)_70%,transparent)] active:bg-[var(--neutral-elev-2)]",
-
-                /* ─── Alias deprecados: apuntan a los 6 de arriba ───────────────── */
-                "outlined": "border border-[var(--neutral-separator)] bg-transparent text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
-                "text": "bg-transparent text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
-                "link": "bg-transparent text-brand-accent underline-offset-4 hover:underline shadow-none",
-                "primary-glass": GLASS + " [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[color-mix(in_srgb,var(--neutral-elev-2)_70%,transparent)]",
-                "gray-glass": GLASS + " [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[color-mix(in_srgb,var(--neutral-elev-2)_70%,transparent)]",
-                "brand-primary": "bg-brand-accent text-on-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95 shadow-none",
-                "primary-glow": "bg-brand-accent text-on-primary [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95 shadow-none",
-                "brand-destructive": "bg-destructive text-destructive-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:bg-destructive/90 shadow-none",
-                "alert": "bg-destructive text-destructive-foreground [@media(hover:hover)_and_(pointer:fine)]:hover:bg-destructive/90 shadow-none",
-                "brand-secondary": "bg-brand-secondary text-on-secondary hover:bg-brand-secondary/90 active:bg-brand-secondary shadow-brand-secondary",
-                "brand-success": "bg-brand-success text-black hover:bg-brand-success/90 active:bg-brand-success shadow-brand-success",
-                "brand-magic": "bg-brand-magic text-white hover:bg-brand-magic/90 active:bg-brand-magic shadow-brand-magic",
-                "gray": "bg-[var(--neutral-elev-1)] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] shadow-none",
-                "gray-outline": "text-label-2 border border-[var(--neutral-separator)] bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
-                "gray-subtle": "text-on-surface-variant border border-transparent bg-[var(--neutral-elev-1)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] shadow-none",
-                "gray-basic": "shadow-none text-on-surface-variant border-transparent bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)]",
-                "gray-link": "text-label-2 border-transparent bg-transparent hover:underline shadow-none",
-                "white": "bg-[var(--selected-bg)] text-[var(--selected-fg)] [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95 shadow-none",
-                "white-outline": "text-on-surface border border-[var(--neutral-separator)] bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
-                "primary-basic": "shadow-none text-on-surface border-transparent bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)]",
-                "primary-outline": "text-on-surface border border-[var(--neutral-separator)] bg-transparent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)] shadow-none",
-                "alert-outline": "text-status-error border border-status-error bg-transparent hover:bg-status-error/10 shadow-none",
-                "alert-subtle": "bg-status-error/10 text-status-error border border-status-error/30 hover:bg-status-error/20 shadow-none",
             },
             /* Sentence case con .type-label. Táctil 44 px; con puntero fino se compacta. */
             size: {
@@ -83,10 +57,7 @@ export const ButtonAnatomy = defineStyleAnatomy({
                 sm: "type-label h-11 px-3.5 rounded-pill [@media(hover:hover)_and_(pointer:fine)]:h-9",
                 md: "type-label text-sm h-11 px-4 rounded-pill [@media(hover:hover)_and_(pointer:fine)]:h-9",
                 lg: "type-label text-sm h-12 px-6 rounded-pill",
-                xl: "type-label text-base h-14 px-8 rounded-pill",
                 icon: "h-11 w-11 rounded-full p-0 [@media(hover:hover)_and_(pointer:fine)]:h-9 [@media(hover:hover)_and_(pointer:fine)]:w-9",
-                "icon-sm": "h-11 w-11 rounded-full p-0 [@media(hover:hover)_and_(pointer:fine)]:h-8 [@media(hover:hover)_and_(pointer:fine)]:w-8",
-                "icon-lg": "h-12 w-12 rounded-full p-0",
             },
         },
         defaultVariants: {
@@ -114,8 +85,6 @@ export type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "s
         rightIcon?: React.ReactNode
         iconSpacing?: React.CSSProperties["marginInline"]
         hideTextOnSmallScreen?: boolean
-        iconClass?: string
-        disableSpring?: boolean
     }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => {
@@ -129,10 +98,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
         rightIcon,
         iconSpacing = "0.5rem",
         loading,
-        iconClass,
         disabled,
         hideTextOnSmallScreen,
-        disableSpring = false,
         ...rest
     } = props
 
@@ -150,37 +117,39 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
                 // rebote (solo transform en :active; sin agrandado en hover).
                 // Una sola transición con color, brillo (`filter`: los hover brightness-* de los intents) y transform,
                 // porque twMerge descarta `transition-colors` si le sigue otra clase `transition-*`.
-                !isDisabled && !disableSpring && "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong active:scale-95",
+                !isDisabled && "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong motion-safe:active:scale-[0.97]",
+                loading && !leftIcon && "relative",
                 className,
             )}
             disabled={isDisabled}
             aria-disabled={disabled}
             aria-busy={loading || undefined}
+            data-intent={intent ?? "primary"}
+            data-liquid-surface={intent === "glass" ? "control" : undefined}
+            data-size={size ?? "md"}
             {...rest}
             ref={ref}
         >
-            {loading && !leftIcon ? (
-                <>
+            {loading && !leftIcon && (
                     <svg
                         width="15"
                         height="15"
                         fill="currentColor"
-                        className="animate-spin"
+                        className="absolute inset-0 m-auto animate-spin pointer-events-none"
+                        aria-hidden="true"
                         viewBox="0 0 1792 1792"
                         xmlns="http://www.w3.org/2000/svg"
-                        style={{ marginInlineEnd: !hideTextOnSmallScreen ? iconSpacing : 0 }}
                     >
                         <path
                             d={SPINNER_PATH}
                         >
                         </path>
                     </svg>
-                    {children}
-                </>
-            ) : <>
+            )}
+            <>
                 {leftIcon &&
                     <span
-                        className={cn(ButtonAnatomy.icon(), iconClass, loading && "relative")}
+                        className={cn(ButtonAnatomy.icon(), loading && "relative")}
                         style={{ marginInlineEnd: !hideTextOnSmallScreen ? iconSpacing : 0 }}
                     >
                         {loading ? (
@@ -207,18 +176,19 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
                             rightIcon && "pr-[0.5rem]",
                         ),
                         "md:inline-block",
+                        loading && !leftIcon && "opacity-0",
                     )}
                 >
                     {children}
                 </span>
                 {rightIcon &&
                     <span
-                        className={cn(ButtonAnatomy.icon(), iconClass)}
+                        className={cn(ButtonAnatomy.icon(), loading && !leftIcon && "opacity-0")}
                         style={{ marginInlineStart: !hideTextOnSmallScreen ? iconSpacing : 0 }}
                     >
                         {rightIcon}
                     </span>}
-            </>}
+            </>
         </button>
     )
 })

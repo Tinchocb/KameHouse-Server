@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"kamehouse/internal/util/result"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,20 +22,37 @@ const subtitleListTTL = 2 * time.Minute
 const maxSubtitleListPages = 5
 
 type subtitleListEntry struct {
-	at    time.Time
-	files []DriveFile
+	files     []DriveFile
+	expiresAt time.Time
 }
 
-var (
-	subtitleListMu    sync.Mutex
-	subtitleListCache = map[string]subtitleListEntry{}
-)
+type subtitleListingCache struct {
+	once           sync.Once
+	files, folders *result.BoundedCache[string, subtitleListEntry]
+	mu             sync.Mutex
+	loading        map[string]*subtitleFolderLoad
+}
 
-// ListSubtitleFiles devuelve los archivos .srt/.ass/.ssa/.vtt que están en la misma
-// carpeta que el archivo `fileID` (no recorre subcarpetas).
-func (c *Client) ListSubtitleFiles(ctx context.Context, fileID string) ([]DriveFile, error) {
+type subtitleFolderLoad struct {
+	done     chan struct{}
+	entry    subtitleListEntry
+	err      error
+	canceled bool
+}
+
+func (c *Client) subtitleCache() *subtitleListingCache {
+	cache := &c.subtitleLists
+	cache.once.Do(func() {
+		cache.files = result.NewBoundedCache[string, subtitleListEntry](256)
+		cache.folders = result.NewBoundedCache[string, subtitleListEntry](256)
+		cache.loading = make(map[string]*subtitleFolderLoad)
+	})
+	return cache
+}
+
+func (c *Client) subtitleParent(ctx context.Context, fileID string) (string, error) {
 	if !safeFileID(fileID) {
-		return nil, fmt.Errorf("invalid drive file id %q", fileID)
+		return "", fmt.Errorf("invalid drive file id %q", fileID)
 	}
 
 	var meta struct {
@@ -45,16 +64,19 @@ func (c *Client) ListSubtitleFiles(ctx context.Context, fileID string) ([]DriveF
 	q.Set("supportsAllDrives", "true")
 	u.RawQuery = q.Encode()
 	if err := c.getJSON(ctx, u.String(), &meta); err != nil {
-		return nil, err
+		return "", err
 	}
 	if len(meta.Parents) == 0 {
-		return nil, nil
+		return "", nil
 	}
 	parent := meta.Parents[0]
 	if !safeFileID(parent) {
-		return nil, fmt.Errorf("invalid drive parent id %q", parent)
+		return "", fmt.Errorf("invalid drive parent id %q", parent)
 	}
+	return parent, nil
+}
 
+func (c *Client) listFolderSubtitles(ctx context.Context, parent string) ([]DriveFile, error) {
 	var out []DriveFile
 	pageToken := ""
 	for page := 0; page < maxSubtitleListPages; page++ {
@@ -96,29 +118,86 @@ func (c *Client) ListSubtitleFiles(ctx context.Context, fileID string) ([]DriveF
 // SiblingSubtitleFiles lista los subtítulos de la carpeta del archivo, con una caché
 // corta en memoria (los errores no se cachean).
 func (s *Service) SiblingSubtitleFiles(ctx context.Context, fileID string) ([]DriveFile, error) {
-	subtitleListMu.Lock()
-	if e, ok := subtitleListCache[fileID]; ok && time.Since(e.at) < subtitleListTTL {
-		subtitleListMu.Unlock()
-		return e.files, nil
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-	subtitleListMu.Unlock()
-
 	client, err := s.GetClient()
 	if err != nil {
 		return nil, err
 	}
-	files, err := client.ListSubtitleFiles(ctx, fileID)
+	cache := client.subtitleCache()
+	if e, ok := cache.files.Get(fileID); ok && time.Now().Before(e.expiresAt) {
+		return slices.Clone(e.files), nil
+	}
+	parent, err := client.subtitleParent(ctx, fileID)
 	if err != nil {
 		return nil, err
 	}
-
-	subtitleListMu.Lock()
-	if len(subtitleListCache) > 256 {
-		subtitleListCache = map[string]subtitleListEntry{}
+	if parent == "" {
+		cache.files.SetT(fileID, subtitleListEntry{expiresAt: time.Now().Add(subtitleListTTL)}, subtitleListTTL)
+		return nil, nil
 	}
-	subtitleListCache[fileID] = subtitleListEntry{at: time.Now(), files: files}
-	subtitleListMu.Unlock()
-	return files, nil
+	entry, err := client.cachedFolderSubtitles(ctx, parent)
+	if err != nil {
+		return nil, err
+	}
+	// File hits share the folder's original expiry; visiting a new episode must
+	// not extend the lifetime of an older folder listing by another full TTL.
+	cache.files.SetT(fileID, entry, time.Until(entry.expiresAt))
+	return slices.Clone(entry.files), nil
+}
+
+// The caller owning a cold load performs the HTTP request synchronously. Other
+// callers can leave independently; if the owner cancels, a live waiter retries
+// with its own context instead of inheriting the owner's cancellation.
+func (c *Client) cachedFolderSubtitles(ctx context.Context, parent string) (subtitleListEntry, error) {
+	cache := c.subtitleCache()
+	for {
+		if err := ctx.Err(); err != nil {
+			return subtitleListEntry{}, err
+		}
+		cache.mu.Lock()
+		if entry, ok := cache.folders.Get(parent); ok && time.Now().Before(entry.expiresAt) {
+			cache.mu.Unlock()
+			return entry, nil
+		}
+		if pending := cache.loading[parent]; pending != nil {
+			cache.mu.Unlock()
+			select {
+			case <-ctx.Done():
+				return subtitleListEntry{}, ctx.Err()
+			case <-pending.done:
+			}
+			if err := ctx.Err(); err != nil {
+				return subtitleListEntry{}, err
+			}
+			if pending.canceled {
+				continue
+			}
+			return pending.entry, pending.err
+		}
+		pending := &subtitleFolderLoad{done: make(chan struct{})}
+		cache.loading[parent] = pending
+		cache.mu.Unlock()
+
+		files, err := c.listFolderSubtitles(ctx, parent)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			err = ctxErr
+			pending.canceled = true
+		}
+		pending.err = err
+		if err == nil {
+			pending.entry = subtitleListEntry{files: files, expiresAt: time.Now().Add(subtitleListTTL)}
+		}
+		cache.mu.Lock()
+		if err == nil {
+			cache.folders.SetT(parent, pending.entry, subtitleListTTL)
+		}
+		delete(cache.loading, parent)
+		close(pending.done)
+		cache.mu.Unlock()
+		return pending.entry, pending.err
+	}
 }
 
 // ReadSmallFile descarga un archivo chico (subtítulos) entero. Lee como mucho

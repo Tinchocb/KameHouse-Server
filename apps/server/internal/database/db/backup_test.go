@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,14 +19,14 @@ func TestBackupCreaArchivoVerificadoYRota(t *testing.T) {
 		}
 	}
 
-	res, err := db.Backup(dir, 2)
+	res, err := db.BackupContext(context.Background(), dir, 2)
 	if err != nil {
-		t.Fatalf("Backup: %v", err)
+		t.Fatalf("BackupContext: %v", err)
 	}
 	if res.SizeBytes == 0 {
 		t.Fatal("el backup está vacío")
 	}
-	if err := verifyBackupIntegrity(res.Path); err != nil {
+	if err := verifyBackupIntegrityContext(context.Background(), res.Path); err != nil {
 		t.Fatalf("el backup recién creado no pasa la verificación: %v", err)
 	}
 	entries, _ := os.ReadDir(dir)
@@ -39,14 +40,14 @@ func TestVerifyBackupIntegrityRechazaArchivoCorrupto(t *testing.T) {
 	if err := os.WriteFile(path, []byte("esto no es una base SQLite, solo basura de relleno para ocupar espacio"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyBackupIntegrity(path); err == nil {
+	if err := verifyBackupIntegrityContext(context.Background(), path); err == nil {
 		t.Fatal("un archivo corrupto no debería pasar la verificación")
 	}
 }
 
 func TestVerifyBackupIntegrityNoCreaArchivoInexistente(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "no-existe.db")
-	if err := verifyBackupIntegrity(path); err == nil {
+	if err := verifyBackupIntegrityContext(context.Background(), path); err == nil {
 		t.Fatal("un backup inexistente no debería pasar la verificación")
 	}
 	if _, err := os.Stat(path); err == nil {

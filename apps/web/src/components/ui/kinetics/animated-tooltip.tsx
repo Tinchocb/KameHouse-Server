@@ -7,16 +7,12 @@ interface AnimatedTooltipProps {
     content: React.ReactNode
     children: React.ReactNode
     side?: "top" | "bottom" | "left" | "right"
-    delayMs?: number
-    className?: string
 }
 
 export function AnimatedTooltip({
     content,
     children,
     side = "top",
-    delayMs = 120,
-    className,
 }: AnimatedTooltipProps) {
     const [isVisible, setIsVisible] = React.useState(false)
     const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -33,7 +29,7 @@ export function AnimatedTooltip({
         timerRef.current = setTimeout(() => {
             timerRef.current = null
             setIsVisible(true)
-        }, delayMs)
+        }, 120)
     }
 
     const hide = React.useCallback(() => {
@@ -148,8 +144,7 @@ export function AnimatedTooltip({
                             "sectionbar",
                             "text-on-surface text-xs font-medium",
                             "whitespace-nowrap select-none",
-                            positionClass,
-                            className
+                            positionClass
                         )}
                     >
                         {content}

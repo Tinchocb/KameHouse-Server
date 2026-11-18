@@ -1,8 +1,8 @@
 import { getServerBaseUrl } from "@/api/client/server-url"
+import { getAuthorizationHeaders, setServerSession } from "@/api/client/auth"
 import { isFeatureDisabledError, translateServerError } from "@/api/client/error-messages"
 import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from "@tanstack/react-query"
 import { useEffect } from "react"
-import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 const baseUrlCache = new Map<string, string>()
@@ -11,7 +11,9 @@ export class ApiError extends Error {
     constructor(
         public readonly message: string,
         public readonly status: number,
-        public readonly data?: unknown
+        public readonly data?: unknown,
+        /** Milisegundos que pide esperar el servidor (cabecera Retry-After), si la envió. */
+        public readonly retryAfterMs?: number
     ) {
         super(message);
         this.name = "ApiError";
@@ -21,6 +23,18 @@ export class ApiError extends Error {
 /** 502/503/504: backend arrancando o gateway caído. Transitorio, vale reintentar. */
 export function isTransientStatus(status: number): boolean {
     return status === 502 || status === 503 || status === 504
+}
+
+const MAX_RETRY_AFTER_MS = 10_000
+
+/** Retry-After en segundos o como fecha HTTP, acotado a 10 s. Undefined si no hay cabecera válida. */
+export function parseRetryAfterMs(value: string | null): number | undefined {
+    if (!value) return undefined
+    const seconds = Number(value)
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, MAX_RETRY_AFTER_MS)
+    const at = Date.parse(value)
+    if (Number.isNaN(at)) return undefined
+    return Math.min(Math.max(at - Date.now(), 0), MAX_RETRY_AFTER_MS)
 }
 
 /** true si el error indica que el backend todavía no está disponible. */
@@ -41,6 +55,7 @@ type ApiQuery<D> = {
     signal?: AbortSignal
     /** Deja que la petición sobreviva al cierre de la pestaña (pagehide). */
     keepalive?: boolean
+    cache?: RequestCache
 }
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -53,6 +68,7 @@ export async function buildApiQuery<T, D = void>(
         params,
         signal,
         keepalive,
+        cache,
     }: ApiQuery<D>): Promise<T | undefined> {
 
     const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
@@ -87,6 +103,7 @@ export async function buildApiQuery<T, D = void>(
 
     const headers: Record<string, string> = {
         "Accept": "application/json",
+        ...getAuthorizationHeaders(),
     }
 
     if (data !== undefined) {
@@ -106,6 +123,7 @@ export async function buildApiQuery<T, D = void>(
                 body: data !== undefined ? JSON.stringify(data) : undefined,
                 signal,
                 keepalive,
+                cache,
             });
 
             if (res.status === 204) {
@@ -113,6 +131,7 @@ export async function buildApiQuery<T, D = void>(
             }
 
             if (!res.ok) {
+                if (res.status === 401) setServerSession(null)
                 let errorData: unknown;
                 const text = await res.text();
                 try {
@@ -121,10 +140,13 @@ export async function buildApiQuery<T, D = void>(
                     errorData = text;
                 }
 
-                // If 502, 503, 504, 429 -> retry silenciosamente solo si es idempotente
-                if (isIdempotent && (res.status === 429 || isTransientStatus(res.status)) && attempt < maxRetries) {
+                // 429 se reintenta con backoff. 502/503/504 solo si el servidor indica cuándo volver (Retry-After):
+                // un 503 sin cabecera es permanente (p. ej. TMDB sin clave) y reintentarlo generaba tormentas.
+                const retryAfterMs = parseRetryAfterMs(res.headers.get("Retry-After"))
+                const retryable = res.status === 429 || (isTransientStatus(res.status) && retryAfterMs !== undefined)
+                if (isIdempotent && retryable && attempt < maxRetries) {
                     attempt++
-                    const delay = 300 * attempt
+                    const delay = retryAfterMs ?? 300 * attempt
                     await sleep(delay)
                     continue
                 }
@@ -132,7 +154,7 @@ export async function buildApiQuery<T, D = void>(
                 const errorMessage = typeof errorData === "object" && errorData !== null && "error" in errorData && typeof (errorData as Record<string, unknown>).error === "string"
                     ? (errorData as Record<string, unknown>).error as string
                     : `HTTP Error ${res.status}`;
-                throw new ApiError(errorMessage, res.status, errorData);
+                throw new ApiError(errorMessage, res.status, errorData, retryAfterMs);
             }
 
             const text = await res.text()
@@ -176,7 +198,6 @@ export async function buildApiQuery<T, D = void>(
 type ServerMutationProps<R, V = void, C = unknown> = Omit<UseMutationOptions<R | undefined, ApiError, V, C>, "mutationFn"> & {
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
-    throwOnError?: boolean
 }
 
 export function useServerMutation<R = void, V = void, C = unknown>(
@@ -185,8 +206,6 @@ export function useServerMutation<R = void, V = void, C = unknown>(
         method,
         ...options
     }: ServerMutationProps<R, V, C>) {
-
-    const navigate = useNavigate()
 
     return useMutation<R | undefined, ApiError, V, C>({
         ...options,
@@ -199,7 +218,7 @@ export function useServerMutation<R = void, V = void, C = unknown>(
                 (typeof error.data === "object" && error.data !== null && (error.data as Record<string, unknown>).error === "UNAUTHENTICATED")
             if (isUnauth) {
                 toast.error("Sesión no autorizada o expirada", { id: "mutation-err-unauth" })
-                navigate({ to: "/settings", search: { tab: "system" }, replace: true }).catch(() => {})
+                setServerSession(null)
             } else if (!options.onError) {
                 const errorMsg = _handleApiError(error.data)
                 if (errorMsg === FEATURE_DISABLED_MESSAGE) {
@@ -221,12 +240,12 @@ export function useServerMutation<R = void, V = void, C = unknown>(
 }
 
 type ServerQueryProps<R, V, TData = R | undefined> = Omit<UseQueryOptions<R | undefined, ApiError, TData>, "queryFn"> & {
+    cache?: RequestCache
     endpoint: string
     method: "POST" | "GET" | "PATCH" | "DELETE" | "PUT"
     params?: V
     data?: V
     muteError?: boolean
-    throwOnError?: boolean
 }
 
 export function useServerQuery<R, V = void, TData = R | undefined>(
@@ -236,10 +255,9 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
         params,
         data,
         muteError,
+        cache,
         ...options
     }: ServerQueryProps<R, V, TData>) {
-
-    const navigate = useNavigate()
 
     const props = useQuery<R | undefined, ApiError, TData>({
         queryFn: async ({ signal }) => {
@@ -249,6 +267,7 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
                 params: params,
                 data: data,
                 signal,
+                cache,
             })
         },
         ...options,
@@ -262,19 +281,18 @@ export function useServerQuery<R, V = void, TData = R | undefined>(
 
             if (isUnauth) {
                 toast.error("Sesión no autorizada o expirada", { id: "query-err-unauth" })
-                // Redirect to settings so user can reconfigure if needed
-                navigate({ to: "/settings", search: { tab: "system" }, replace: true }).catch(() => {})
+                setServerSession(null)
                 return
             }
             const errorMsg = _handleApiError(props.error.data || props.error.message)
             if (errorMsg === FEATURE_DISABLED_MESSAGE) {
                 return
             }
-            if (!!errorMsg) {
+            if (errorMsg) {
                 toast.error(errorMsg, { id: `query-err-${props.error.message}` })
             }
         }
-    }, [props.error, props.isError, muteError, navigate])
+    }, [props.error, props.isError, muteError])
 
     return props
 }

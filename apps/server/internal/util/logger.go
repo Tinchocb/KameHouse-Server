@@ -18,14 +18,9 @@ import (
 )
 
 const (
-	colorBlack = iota + 30
-	colorRed
-	colorGreen
-	colorYellow
-	colorBlue
-	colorMagenta
-	colorCyan
-	colorWhite
+	colorRed    = 31
+	colorYellow = 33
+	colorCyan   = 36
 
 	colorBold     = 1
 	colorDarkGray = 90

@@ -1,10 +1,10 @@
+import { PresenceSurface } from "@/components/ui/kinetics/presence-surface"
 import * as React from "react"
-import { m, AnimatePresence, type Variants } from "framer-motion"
-import { cn } from "@/components/ui/core/styling"
+import { AnimatePresence, type Variants } from "framer-motion"
 import { IconNavigationLayers, IconNavigationFilm } from "@/components/ui/icons";
 import { SectionBar } from "@/components/ui/sectionbar/sectionbar"
 import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control"
-import { ElasticCounter, useMotionTier } from "@/components/ui/kinetics"
+import { useMotionTier } from "@/components/ui/kinetics"
 import type { SagaDefinition } from "@/lib/config/dragonball_sagas"
 import type { ERA_COLOR_MAP, EraId } from "@/lib/config/eras"
 import { SpotlightSagaCard } from "./spotlight-saga-card"
@@ -18,7 +18,7 @@ type LowerHubTab = "sagas" | "movies"
  * Grid del hub (tier full). El contenedor solo desliza en la dirección del
  * cambio (custom: -1/1 al cambiar era o pestaña, 0 en la primera aparición);
  * la cascada la ponen las cards con gridItemVariants, que ya traen su propio
- * delay acotado a min(i, 12) · 40ms, por eso no hace falta staggerChildren.
+ * delay acotado a min(i, 6) · 40ms (240 ms), por eso no hace falta staggerChildren.
  */
 const hubGridVariants: Variants = {
     hidden: (dir: number = 0) => ({ opacity: 0, x: dir * 16 }),
@@ -92,7 +92,7 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
             value: "sagas",
             id: `${hubId}-sagas`,
             panelId,
-            label: "Sagas y arcos",
+            label: "Sagas",
             icon: <IconNavigationLayers size={14} />,
             count: activeEraSagas.length,
         },
@@ -123,22 +123,40 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
         setSlideDir(tab === "movies" ? 1 : -1)
         setActiveTab(tab)
     }
-    // Precomputar miniaturas dinámicas para evitar filtrar cientos de episodios
-    // en cada render individual dentro del bucle de activeEraSagas.map
-    const sagaThumbnails = React.useMemo(() => {
-        if (!activeEraSagas || activeEraSagas.length === 0) return {} as Record<string, string | null>
+    // Precomputar miniaturas dinámicas y progreso visto por saga en una sola pasada
+    const { sagaThumbnails, sagaProgressMap } = React.useMemo(() => {
+        if (!activeEraSagas || activeEraSagas.length === 0) {
+            return {
+                sagaThumbnails: {} as Record<string, string | null>,
+                sagaProgressMap: {} as Record<string, number>,
+            }
+        }
         const fallbackUrl = activeSeries?.backdropUrl || activeSeries?.image
         const episodes = activeAnimeEntry?.episodes
-        const map: Record<string, string | null> = {}
+        const thumbs: Record<string, string | null> = {}
+        const progress: Record<string, number> = {}
         for (const saga of activeEraSagas) {
-            map[saga.id] = resolveSagaDynamicThumbnail({
+            thumbs[saga.id] = resolveSagaDynamicThumbnail({
                 saga,
                 episodes,
                 serverBase,
                 fallbackUrl,
             })
+            if (episodes && episodes.length > 0) {
+                const total = Math.max(1, saga.endEp - saga.startEp + 1)
+                let watched = 0
+                for (const ep of episodes) {
+                    const num = ep.absoluteEpisodeNumber || ep.episodeNumber
+                    if (num >= saga.startEp && num <= saga.endEp && ep.watched) {
+                        watched++
+                    }
+                }
+                if (watched > 0) {
+                    progress[saga.id] = Math.min(100, Math.round((watched / total) * 100))
+                }
+            }
         }
-        return map
+        return { sagaThumbnails: thumbs, sagaProgressMap: progress }
     }, [activeEraSagas, activeAnimeEntry?.episodes, serverBase, activeSeries?.backdropUrl, activeSeries?.image])
 
     // Sin sagas ni películas de la era no se muestra nada.
@@ -168,39 +186,24 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
             } as React.CSSProperties}
         >
             <SectionBar
-                variant="minimal"
-                label={activeTab === "sagas" ? "Sagas y arcos" : "Películas de la era"}
-                icon={activeTab === "sagas" ? IconNavigationLayers : IconNavigationFilm}
-                className="p-0 md:p-0"
-                badge={
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-[var(--neutral-elev-1)] text-on-surface-variant border border-[var(--neutral-separator)]">
-                        <ElasticCounter
-                            value={activeTab === "sagas" ? activeEraSagas.length : activeEraMovies.length}
-                            className="font-bold"
-                        />{" "}
-                        {activeTab === "sagas"
-                            ? (activeEraSagas.length === 1 ? "arco" : "arcos")
-                            : (activeEraMovies.length === 1 ? "película" : "películas")}
-                    </span>
-                }
-            >
-                {/* Switch Sagas / Películas (segmented control canónico) si ambos están disponibles */}
-                {showSwitch && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 pb-1 pt-1">
-                        <SegmentedControl<LowerHubTab>
-                            aria-label="Contenido de la era"
-                            layoutId="spotlight-lower-hub-indicator"
-                            semantics="tablist"
-                            tone="neutral"
-                            surface="glass"
-                            value={activeTab}
-                            onChange={selectTab}
-                            onOptionHover={onHoverSound}
-                            options={hubOptions}
-                        />
-                    </div>
+                variant="content"
+                label={showSwitch ? "Explorar Dragon Ball" : hasSagas ? "Sagas" : "Películas"}
+                icon={hasSagas ? IconNavigationLayers : IconNavigationFilm}
+                className="[&>.sectionbar-header]:flex-wrap max-sm:[&>.sectionbar-header]:flex-col max-sm:[&>.sectionbar-header]:items-start"
+                action={showSwitch && (
+                    <SegmentedControl<LowerHubTab>
+                        aria-label="Contenido de la era"
+                        layoutId="spotlight-lower-hub-indicator"
+                        semantics="tablist"
+                        tone="neutral"
+                        surface="inset"
+                        value={activeTab}
+                        onChange={selectTab}
+                        onOptionHover={onHoverSound}
+                        options={hubOptions}
+                    />
                 )}
-
+            >
                 {/* popLayout: el grid saliente sale del flujo y el entrante ocupa su
                     lugar en el mismo frame (sin hueco ni salto de altura entre eras).
                     El wrapper relative es el ancla del saliente y deja los márgenes
@@ -214,54 +217,86 @@ export const SpotlightLowerHub = React.memo(function SpotlightLowerHub({
                 >
                     <AnimatePresence mode="popLayout" custom={slideDir}>
                         {activeTab === "sagas" && hasSagas && (
-                            <m.div
+                            <PresenceSurface
                                 key={`sagas-${activeEraId}`}
                                 {...gridMotion}
-                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-1 pb-4 w-full"
+                                className="w-full pt-1"
                             >
-                                {activeEraSagas.map((saga, idx) => (
-                                    <SpotlightSagaCard
-                                        key={saga.id}
-                                        saga={saga}
-                                        index={idx}
-                                        thumbnailUrl={sagaThumbnails[saga.id] ?? null}
-                                        seriesId={activeEraSeriesId}
-                                        colors={colors}
-                                        onNavigateSaga={onNavigateSaga}
-                                        onHover={onHoverSound}
-                                    />
-                                ))}
-                            </m.div>
+                                {activeEraSagas.length === 4 || activeEraSagas.length === 7 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5 sm:gap-5 w-full">
+                                        {activeEraSagas.map((saga, idx) => (
+                                            <SpotlightSagaCard
+                                                key={saga.id}
+                                                saga={saga}
+                                                index={idx}
+                                                progressPercent={sagaProgressMap[saga.id]}
+                                                thumbnailUrl={sagaThumbnails[saga.id] ?? null}
+                                                seriesId={activeEraSeriesId}
+                                                colors={colors}
+                                                onNavigateSaga={onNavigateSaga}
+                                                onHover={onHoverSound}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : activeEraSagas.length === 5 ? (
+                                    /* Super: 5 sagas en rejilla equilibrada */
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4.5 sm:gap-5 w-full">
+                                        {activeEraSagas.map((saga, idx) => (
+                                            <SpotlightSagaCard
+                                                key={saga.id}
+                                                saga={saga}
+                                                index={idx}
+                                                progressPercent={sagaProgressMap[saga.id]}
+                                                thumbnailUrl={sagaThumbnails[saga.id] ?? null}
+                                                seriesId={activeEraSeriesId}
+                                                colors={colors}
+                                                onNavigateSaga={onNavigateSaga}
+                                                onHover={onHoverSound}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4.5 sm:gap-5 w-full">
+                                        {activeEraSagas.map((saga, idx) => (
+                                            <SpotlightSagaCard
+                                                key={saga.id}
+                                                saga={saga}
+                                                index={idx}
+                                                progressPercent={sagaProgressMap[saga.id]}
+                                                thumbnailUrl={sagaThumbnails[saga.id] ?? null}
+                                                seriesId={activeEraSeriesId}
+                                                colors={colors}
+                                                onNavigateSaga={onNavigateSaga}
+                                                onHover={onHoverSound}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </PresenceSurface>
                         )}
 
                         {activeTab === "movies" && hasMovies && (
-                            <m.div
+                            <PresenceSurface
                                 key={`movies-${activeEraId}`}
                                 {...gridMotion}
-                                className={cn(
-                                    "pt-1 pb-4 w-full",
-                                    activeEraMovies.length <= 6
-                                        ? "flex flex-col sm:flex-row gap-3.5 h-auto sm:h-[320px] md:h-[350px]"
-                                        : "flex gap-3.5 overflow-x-auto no-scrollbar snap-x h-auto sm:h-[320px] md:h-[350px]"
-                                )}
+                                className="w-full pt-1"
                             >
-                                {activeEraMovies.map((movie, idx) => (
-                                    <SpotlightMovieCard
-                                        key={movie.id}
-                                        movie={movie}
-                                        index={idx + 1}
-                                        colors={colors}
-                                        onNavigate={onNavigateMovie}
-                                        onHover={onHoverSound}
-                                        className={cn(
-                                            "push-slot",
-                                            activeEraMovies.length <= 6
-                                                ? "flex-1 sm:[@media(hover:hover)_and_(pointer:fine)]:hover:flex-[2.15] transition-[flex,transform] duration-300 ease-smooth-out h-full"
-                                                : "w-[160px] md:w-[180px] shrink-0 [@media(hover:hover)_and_(pointer:fine)]:hover:w-[310px] md:[@media(hover:hover)_and_(pointer:fine)]:hover:w-[340px] transition-[width,transform] duration-300 ease-smooth-out snap-start h-full"
-                                        )}
-                                    />
-                                ))}
-                            </m.div>
+                                {/* Formato unificado de Películas para todas las series: Grilla con Ficha Lateral Amplia (3 columnas en laptop, 4 en pantallas amplias) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4.5 sm:gap-5 w-full">
+                                    {activeEraMovies.map((movie, idx) => (
+                                        <SpotlightMovieCard
+                                            key={movie.id}
+                                            movie={movie}
+                                            index={idx + 1}
+                                            colors={colors}
+                                            isWideDrawer={true}
+                                            priority={idx < 4}
+                                            onNavigate={onNavigateMovie}
+                                            onHover={onHoverSound}
+                                        />
+                                    ))}
+                                </div>
+                            </PresenceSurface>
                         )}
                     </AnimatePresence>
                 </div>

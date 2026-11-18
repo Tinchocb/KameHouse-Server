@@ -2,28 +2,20 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, it, expect } from "vitest"
 
-// Los chips de estado de Películas son un SegmentedControl (radiogroup con pill y roving tabindex),
-// no botones con aria-pressed armados a mano.
-describe("movies-filter-bar · filtro de estado", () => {
+// En la cabecera de Películas solo se conserva el selector de ordenamiento (ChoiceMenu con Popover).
+describe("movies-filter-bar · menú de orden", () => {
     const source = readFileSync(join(__dirname, "movies-filter-bar.tsx"), "utf8")
 
-    it("usa SegmentedControl y no botones con aria-pressed", () => {
-        expect(source).toMatch(/import \{ SegmentedControl/)
-        expect(source).toMatch(/<SegmentedControl<MovieStatus>/)
-        expect(source).not.toMatch(/aria-pressed=\{active\}/)
-        expect(source).not.toMatch(/role="group" aria-label="Filtrar por estado"/)
+    it("usa ChoiceMenu con Popover y no incluye buscador ni tabs de estado", () => {
+        expect(source).toMatch(/import \{ Popover \}/)
+        expect(source).toMatch(/SORT_OPTIONS/)
+        expect(source).not.toMatch(/SegmentedControl/)
+        expect(source).not.toMatch(/<input/)
     })
 
-    it("conserva el nombre del grupo, el id del indicador y el estilo de texto", () => {
-        expect(source).toMatch(/aria-label="Filtrar por estado"/)
-        expect(source).toMatch(/layoutId="movies-status-indicator"/)
-        expect(source).toMatch(/labelStyle="sentence"/)
-        expect(source).toMatch(/surface="glass"/)
-    })
-
-    it("cada opción lleva su conteo y su nombre accesible con el número", () => {
-        expect(source).toMatch(/count: statusCounts\[opt\.value\]/)
-        expect(source).toMatch(/ariaLabel: `\$\{opt\.label\}: \$\{statusCounts\[opt\.value\]\}`/)
+    it("mantiene accesibilidad con teclado y roles de menú", () => {
+        expect(source).toMatch(/aria-label=\{label\}/)
+        expect(source).toMatch(/aria-pressed=\{current === opt\.value\}/)
     })
 })
 

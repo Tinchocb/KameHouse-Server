@@ -14,6 +14,8 @@ export type TextInputProps = Omit<React.ComponentPropsWithRef<"input">, "size"> 
     InputStyling &
     BasicFieldOptions & {
     onValueChange?: (value: string) => void
+    /** Presentación del campo. La línea inferior se define en el tema Minimalista. */
+    appearance?: "default" | "line"
 }
 
 export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((props, ref) => {
@@ -31,6 +33,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
         onValueChange,
         onChange,
         type,
+        appearance = "default",
         ...rest
     }, {
         inputContainerProps,
@@ -66,7 +69,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
             type="button"
             onClick={togglePasswordVisibility}
             aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
-            className="cursor-pointer text-label-2 hover:text-on-surface active:scale-90 transition-[color,transform] duration-fast ease-out-strong p-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-accent flex items-center justify-center"
+            className="cursor-pointer text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface motion-safe:active:scale-[0.97] transition-[color,transform] duration-fast ease-out-strong p-1 rounded-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-accent flex items-center justify-center"
         >
             <IconSwap swapKey={showPassword ? "hide" : "show"}>
                 {showPassword ? <IconUiEyeOff className="w-4 h-4" /> : <IconUiEye className="w-4 h-4" />}
@@ -106,10 +109,19 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>((pro
                     readOnly={basicFieldProps.readonly}
                     data-disabled={basicFieldProps.disabled}
                     data-readonly={basicFieldProps.readonly}
+                    data-field-appearance={appearance}
+                    data-field-left-icon={!!leftIcon && !leftAddon || undefined}
+                    data-field-right-icon={!!rightIcon && !rightAddon || undefined}
+                    aria-invalid={basicFieldProps.error ? true : undefined}
                     aria-readonly={basicFieldProps.readonly}
                     required={basicFieldProps.required}
                     onChange={handleOnChange}
                     {...rest}
+                    aria-describedby={[
+                        rest["aria-describedby"],
+                        basicFieldProps.help && `${basicFieldProps.id}-help`,
+                        basicFieldProps.error && `${basicFieldProps.id}-error`,
+                    ].filter(Boolean).join(" ") || undefined}
                     ref={ref}
                 />
 

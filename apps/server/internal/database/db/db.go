@@ -31,7 +31,11 @@ type Database struct {
 	sqlitePath              string
 	cancelWal               context.CancelFunc
 	currSettings            atomic.Pointer[models.Settings]
+	themeCache              atomic.Pointer[models.Theme]
+	themeCopyCache          atomic.Pointer[models.Theme]
 	currMediastreamSettings atomic.Pointer[models.MediastreamSettings]
+	mediastreamSettingsMu   sync.Mutex
+	backupMu                sync.Mutex // backup publication and rotation belong to one operation
 	currLibraryPaths        atomic.Pointer[[]string]
 	currMediaSourcePrefs    atomic.Pointer[map[int]string]
 	// settingsOverride aplica overrides de entorno a una copia de los ajustes
@@ -195,7 +199,14 @@ func (db *Database) Shutdown() {
 }
 
 func (db *Database) Checkpoint() {
-	if err := db.gormdb.Exec("PRAGMA wal_checkpoint(PASSIVE);").Error; err != nil {
+	db.CheckpointContext(context.Background())
+}
+
+func (db *Database) CheckpointContext(ctx context.Context) {
+	if ctx.Err() != nil {
+		return
+	}
+	if err := db.gormdb.WithContext(ctx).Exec("PRAGMA wal_checkpoint(PASSIVE);").Error; err != nil && ctx.Err() == nil {
 		db.Logger.Error().Err(err).Msg("db: Failed to execute WAL checkpoint")
 	}
 }
@@ -223,33 +234,11 @@ func (db *Database) Close() error {
 
 // RunDatabaseCleanup ejecuta todas las operaciones de limpieza de la base de datos.
 func (db *Database) RunDatabaseCleanup() {
-	db.cleanupManager.RunAllCleanupOperations()
+	db.RunDatabaseCleanupContext(context.Background())
 }
 
-// ResetLocalFilesMediaIds resetea todos los media IDs y library media IDs en la base de datos
-// de archivos locales. Fuerza al escáner a re-coincidir todos los archivos en el próximo escaneo.
-// Bulk UPDATE instead of per-row Save() to avoid O(N) writes and WAL lock contention.
-func (db *Database) ResetLocalFilesMediaIds() error {
-	err := db.gormdb.Transaction(func(tx *gorm.DB) error {
-		// Single bulk UPDATE sets both FKs to 0
-		if err := tx.Model(&models.LocalFile{}).Updates(map[string]interface{}{
-			"media_id":         0,
-			"library_media_id": 0,
-		}).Error; err != nil {
-			return err
-		}
-		// Clear ghost associations in same transaction
-		if err := tx.Exec("DELETE FROM ghost_associated_media").Error; err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		db.Logger.Error().Err(err).Msg("db: Failed to reset local file media associations")
-		return err
-	}
-
-	InvalidateLocalFilesCache(db)
-	db.Logger.Info().Msg("db: All local file media associations and ghost associations have been reset")
-	return nil
+func (db *Database) RunDatabaseCleanupContext(ctx context.Context) {
+	db.cleanupManager.RunAllCleanupOperations(ctx)
+	// Cleanup may delete metadata even if a later operation is cancelled.
+	db.invalidateLibraryMediaCache()
 }

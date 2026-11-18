@@ -129,9 +129,9 @@ func (h *Handler) HandleRequestMediastreamMediaContainer(c echo.Context) error {
 
 func (h *Handler) signStreamURL(mediaContainer *mediastream.MediaContainer) {
 	if mediaContainer != nil && h.App.Config != nil && h.App.Config.Server.Password != "" {
-		// Generate short-lived token (5 minutes) for HLS/DirectPlay thread-safely
+		// A native player cannot renew headers while following HLS child URLs.
 		hmacAuth := h.App.GetServerPasswordHMACAuth()
-		if token, tokenErr := hmacAuth.GenerateTokenWithTTL("*", 5*time.Minute); tokenErr == nil {
+		if token, tokenErr := hmacAuth.GenerateTokenWithTTL("*", playbackSessionTTL); tokenErr == nil {
 			sep := "?"
 			if strings.Contains(mediaContainer.StreamURL, "?") {
 				sep = "&"
@@ -341,9 +341,10 @@ func (h *Handler) HandleGetEpisodeSkipTimes(c echo.Context) error {
 
 	// Resolve mediaId if malId is provided instead
 	if mediaId == 0 && malId > 0 {
-		var lm models.LibraryMedia
-		if err := h.App.Database.Gorm().Where("myanimelist_id = ?", malId).First(&lm).Error; err == nil {
-			mediaId = int(lm.ID)
+		var err error
+		mediaId, err = db.ResolvePublicMediaIDByMAL(h.App.Database, malId)
+		if err != nil {
+			return h.RespondWithError(c, err)
 		}
 	}
 
@@ -516,13 +517,14 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 	// Resolve mediaId if malId is provided instead
 	mediaID := b.MediaID
 	if mediaID == 0 && b.MalID > 0 {
-		var lm models.LibraryMedia
-		if err := h.App.Database.Gorm().Where("myanimelist_id = ?", b.MalID).First(&lm).Error; err == nil {
-			mediaID = int(lm.ID)
+		var err error
+		mediaID, err = db.ResolvePublicMediaIDByMAL(h.App.Database, b.MalID)
+		if err != nil {
+			return h.RespondWithError(c, err)
 		}
 	}
 
-	if mediaID == 0 || b.EpisodeNumber == 0 {
+	if mediaID <= 0 || b.EpisodeNumber <= 0 {
 		return h.RespondWithError(c, fmt.Errorf("invalid mediaId/malId or episodeNumber"))
 	}
 
@@ -573,19 +575,17 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 	// D4/D7: Solo propagar si la confianza es alta o la fuente es 100% segura.
 	// No propagar "heuristic" que ensucia los demás episodios.
 	if b.ApplyToSeason && b.Source != "heuristic" && b.Confidence > 0 {
-		var episodes []models.LibraryEpisode
-		if err := h.App.Database.Gorm().WithContext(c.Request().Context()).
-			Select("episode_number").
-			Where("library_media_id = ?", mediaID).
-			Find(&episodes).Error; err == nil {
+		episodes, err := h.skipTimeSeasonEpisodes(c.Request().Context(), mediaID, b.EpisodeNumber)
+		if err == nil {
 			var skipTimes []models.EpisodeSkipTime
 			for _, ep := range episodes {
-				if ep.EpisodeNumber == b.EpisodeNumber {
+				number := skipTimeEpisodeNumber(ep)
+				if number == b.EpisodeNumber {
 					continue // skip the current one
 				}
 				skipTimes = append(skipTimes, models.EpisodeSkipTime{
 					MediaID:       mediaID,
-					EpisodeNumber: ep.EpisodeNumber,
+					EpisodeNumber: number,
 					OpStart:       b.OpStart,
 					OpEnd:         b.OpEnd,
 					// D3: No copiar Ed absoluto, su posición real varía según duración.
@@ -605,6 +605,7 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 				} else {
 					episodesUpdated = len(skipTimes)
 					appliedToSeason = true
+					invalidateSkipTimesCache(mediaID)
 				}
 			} else {
 				appliedToSeason = true
@@ -626,13 +627,56 @@ func (h *Handler) HandleSaveEpisodeSkipTimes(c echo.Context) error {
 	return h.RespondWithData(c, resp)
 }
 
+func skipTimeEpisodeNumber(ep models.LibraryEpisode) int {
+	if ep.AbsoluteNumber > 0 {
+		return ep.AbsoluteNumber
+	}
+	return ep.EpisodeNumber
+}
+
+func (h *Handler) skipTimeSeasonEpisodes(ctx context.Context, mediaID, episodeNumber int) ([]models.LibraryEpisode, error) {
+	media, err := db.ResolveLibraryMediaByPublicID(h.App.Database, mediaID)
+	if err != nil {
+		return nil, err
+	}
+	if media == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+	var episodes []models.LibraryEpisode
+	if err := h.App.Database.Gorm().WithContext(ctx).
+		Select("episode_number", "absolute_number", "season_number").
+		Where("library_media_id = ?", media.ID).Find(&episodes).Error; err != nil {
+		return nil, err
+	}
+	season, found := 0, false
+	for _, ep := range episodes {
+		if skipTimeEpisodeNumber(ep) == episodeNumber {
+			if found {
+				return nil, errors.New("ambiguous episode number for season propagation")
+			}
+			season, found = ep.SeasonNumber, true
+		}
+	}
+	if !found {
+		return nil, gorm.ErrRecordNotFound
+	}
+	result := make([]models.LibraryEpisode, 0, len(episodes))
+	for _, ep := range episodes {
+		if ep.SeasonNumber == season && skipTimeEpisodeNumber(ep) > 0 {
+			result = append(result, ep)
+		}
+	}
+	return result, nil
+}
+
 // autoDetectSkipTimesEnabled indica si el scan oportunista de skip times está
 // habilitado en la configuración de la biblioteca (default true).
 func (h *Handler) autoDetectSkipTimesEnabled() bool {
-	if h.App.Settings == nil {
+	settings := h.App.SettingsSnapshot()
+	if settings == nil {
 		return false
 	}
-	return h.App.Settings.GetLibrary().AutoDetectSkipTimes
+	return settings.GetLibrary().AutoDetectSkipTimes
 }
 
 // transcodeActive indica si hay una reproducción en curso servida por el

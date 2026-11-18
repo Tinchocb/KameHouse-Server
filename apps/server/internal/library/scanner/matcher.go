@@ -24,12 +24,13 @@ var reYear = regexp.MustCompile(`\b((?:19|20)\d{2})\b`)
 // Instead of binary matching, it uses Bayesian Probabilities to evaluate file paths,
 // contextual folders, and metadata to establish confidence in an identity match.
 type Matcher struct { // Keep struct name 'Matcher' for backwards compatibility
-	LocalFiles      []*dto.LocalFile
-	MediaContainer  *MediaContainer
-	Logger          *zerolog.Logger
-	Database        *db.Database
-	Threshold       float64
-	StrictStructure bool
+	LocalFiles              []*dto.LocalFile
+	MediaContainer          *MediaContainer
+	Logger                  *zerolog.Logger
+	Database                *db.Database
+	Threshold               float64
+	StrictStructure         bool
+	IgnoreGhostAssociations bool
 }
 
 // MatchLocalFilesWithMedia orchestrates the Thinking Workers that will probabilistically evaluate all files.
@@ -120,7 +121,7 @@ func (m *Matcher) BayesianResolve(lf *dto.LocalFile) {
 		m.Logger.Debug().Msgf("AgentMatcher: Sub-optimal confidence (%.2f) on '%s'. Initiating Heuristic Healing.", bestConfidence, lf.Name)
 
 		// Self-Healing Step 1: Check Ghost Associations first (Has the user or probability engine seen this anomaly before?)
-		if m.Database != nil {
+		if m.Database != nil && !m.IgnoreGhostAssociations {
 			if association, err := m.Database.GetGhostAssociationByPath(lf.Path); err == nil && association != nil {
 				if association.UserResolved || association.GhostMatchCount > 3 {
 					// The system learned this override! Forcibly map it.

@@ -13,12 +13,7 @@ import {
     queuePendingContinuity,
 } from "./continuity-pending"
 import { confirmLocalProgress, getLocalProgress, mergeWithLocalProgress } from "./continuity-local"
-
-export const continuityQueryKeys = {
-    all: ["continuity"] as const,
-    history: () => [API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistory.key] as const,
-    item: (id?: number | string | null) => [API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.key, Number(id)] as const,
-}
+import { continuityQueryKeys } from "@/lib/query-keys"
 
 interface UpdateContinuityOptions {
     /**

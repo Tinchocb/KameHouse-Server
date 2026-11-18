@@ -71,7 +71,7 @@ func (bq *BackgroundQueue) Enqueue(lf *dto.LocalFile) {
 
 	bq.activeJobs[lf.Path] = struct{}{}
 	select {
-	case bq.jobChan <- lf:
+	case bq.jobChan <- lf.Clone():
 	default:
 		// Queue full, drop active job lock
 		delete(bq.activeJobs, lf.Path)
@@ -102,34 +102,30 @@ func (bq *BackgroundQueue) worker() {
 }
 
 func (bq *BackgroundQueue) processFile(prober *FileProber, lf *dto.LocalFile) {
-	changed := false
-
-	// File hash calculation removed (OpenSubtitles removed)
-
-	// 2. Perform probe if needed
-	if shouldFallbackToFFprobe(lf) && bq.ffprobePath != "" {
-		// Use a local slice of 1 file to reuse the prober logic
-		prober.ProbeFiles(bq.ctx, []*dto.LocalFile{lf})
-		changed = true
+	if bq.ctx.Err() != nil || !shouldFallbackToFFprobe(lf) || bq.ffprobePath == "" {
+		return
+	}
+	prober.ProbeFiles(bq.ctx, []*dto.LocalFile{lf})
+	if bq.ctx.Err() != nil || lf.TechnicalInfo == nil {
+		return
+	}
+	updated, err := db.UpdateLocalFileProbe(bq.ctx, bq.database, lf)
+	if err != nil {
+		bq.logger.Error().Err(err).Str("path", lf.Path).Msg("scanner: failed to save background technical specs to DB")
+		return
+	}
+	if !updated {
+		return
 	}
 
-	if changed {
-		// 3. Save to database
-		err := db.UpsertLocalFileRelationalBatch(bq.database, []*dto.LocalFile{lf})
-		if err != nil {
-			bq.logger.Error().Err(err).Str("path", lf.Path).Msg("scanner: failed to save background technical specs to DB")
-			return
-		}
-
-		// 4. Notify frontend
-		if bq.wsEventManager != nil {
-			bq.wsEventManager.SendEvent("file-technical-specs-ready", map[string]any{
-				"path":          lf.Path,
-				"fileHash":      lf.FileHash,
-				"technicalInfo": lf.TechnicalInfo,
-			})
-			// Invalidate client queries to refresh metadata views
-			bq.wsEventManager.SendEvent(events.InvalidateQueries, nil)
-		}
+	// 4. Notify frontend
+	if bq.wsEventManager != nil {
+		bq.wsEventManager.SendEvent("file-technical-specs-ready", map[string]any{
+			"path":          lf.Path,
+			"fileHash":      lf.FileHash,
+			"technicalInfo": lf.TechnicalInfo,
+		})
+		// Invalidate client queries to refresh metadata views
+		bq.wsEventManager.SendEvent(events.InvalidateQueries, nil)
 	}
 }

@@ -49,18 +49,8 @@ async fn probe_server_ready(client: &reqwest::Client, port: u16) -> bool {
     )
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum ServerStatus {
-    Stopped = 0,
-    Starting = 1,
-    Running = 2,
-    Crashed = 3,
-}
-
 pub struct SidecarManager {
     process: Arc<Mutex<Option<Child>>>,
-    status: Arc<std::sync::atomic::AtomicU8>, // 0=Stopped, 1=Starting, 2=Running, 3=Crashed
     dynamic_port: Arc<AtomicU16>,
     is_shutdown: Arc<AtomicBool>,
     startup_resolved: Arc<AtomicBool>,
@@ -71,7 +61,6 @@ impl SidecarManager {
     pub fn new() -> Self {
         Self {
             process: Arc::new(Mutex::new(None)),
-            status: Arc::new(std::sync::atomic::AtomicU8::new(0)),
             dynamic_port: Arc::new(AtomicU16::new(0)),
             is_shutdown: Arc::new(AtomicBool::new(false)),
             startup_resolved: Arc::new(AtomicBool::new(false)),
@@ -280,7 +269,6 @@ impl SidecarManager {
         // Check for -no-binary flag
         if std::env::args().any(|arg| arg == "-no-binary") {
             info!("[Sidecar] Skipping server launch due to -no-binary flag");
-            self.set_status(ServerStatus::Running);
             self.startup_resolved.store(true, Ordering::SeqCst);
             window_manager.finalize_startup(app_handle, "no-binary-flag");
             return Ok(());
@@ -305,7 +293,6 @@ impl SidecarManager {
                 if wait_start.elapsed() > max_wait {
                     let err = format!("Timed out waiting for server binary at {:?}", binary_path);
                     error!("[Sidecar] {}", err);
-                    self.set_status(ServerStatus::Crashed);
                     let _ = window_manager.show_crash_screen(app_handle, &err);
                     return Err(err.into());
                 }
@@ -315,7 +302,6 @@ impl SidecarManager {
         } else if !binary_path.exists() {
             let err = format!("Server binary not found at {:?}", binary_path);
             error!("[Sidecar] {}", err);
-            self.set_status(ServerStatus::Crashed);
             let _ = window_manager.show_crash_screen(app_handle, &err);
             return Err(err.into());
         }
@@ -402,7 +388,6 @@ impl SidecarManager {
                     if spawn_start.elapsed() > max_spawn_retry || self.is_shutdown.load(Ordering::SeqCst) {
                         let err = format!("Failed to spawn server process: {}", e);
                         error!("[Sidecar] {}", err);
-                        self.set_status(ServerStatus::Crashed);
                         let _ = window_manager.show_crash_screen(app_handle, &err);
                         return Err(err.into());
                     }
@@ -414,14 +399,10 @@ impl SidecarManager {
 
         let mut child = child_opt.unwrap();
 
-        // Set status to starting
-        self.set_status(ServerStatus::Starting);
-
         // Take stdout and stderr
         let stdout = child.stdout.take();
         let stderr = child.stderr.take();
         let dynamic_port = self.dynamic_port.clone();
-        let status = self.status.clone();
         let startup_resolved = self.startup_resolved.clone();
         let window_manager_clone = window_manager.clone();
         let app_handle_clone = app_handle.clone();
@@ -429,7 +410,6 @@ impl SidecarManager {
         // Handle stdout
         if let Some(stdout) = stdout {
             let dynamic_port = dynamic_port.clone();
-            let status = status.clone();
             let startup_resolved = startup_resolved.clone();
             let window_manager = window_manager_clone.clone();
             let app_handle = app_handle_clone.clone();
@@ -455,13 +435,10 @@ impl SidecarManager {
                     }
 
                     // Check if frontend connected
-                    if status.load(Ordering::SeqCst) != 2 && line.contains("Client connected") {
+                    if !startup_resolved.load(Ordering::SeqCst) && line.contains("Client connected") {
                         info!("[Sidecar] Frontend connected, finalizing startup");
-                        if !startup_resolved.load(Ordering::SeqCst) {
-                            startup_resolved.store(true, Ordering::SeqCst);
-                            status.store(2, Ordering::SeqCst); // Running
-                            window_manager.finalize_startup(&app_handle, "websocket client connection");
-                        }
+                        startup_resolved.store(true, Ordering::SeqCst);
+                        window_manager.finalize_startup(&app_handle, "websocket client connection");
                     }
                 }
             });
@@ -485,7 +462,6 @@ impl SidecarManager {
 
         // Start polling for server readiness
         let process_arc = self.process.clone();
-        let status = self.status.clone();
         let dynamic_port = self.dynamic_port.clone();
         let startup_resolved = self.startup_resolved.clone();
         let is_shutdown = self.is_shutdown.clone();
@@ -516,7 +492,6 @@ impl SidecarManager {
                 if process_exited {
                     drop(process_lock);
                     if !startup_resolved.load(Ordering::SeqCst) {
-                        status.store(3, Ordering::SeqCst); // Crashed
                         error!("[Sidecar] Server process exited prematurely");
                         let _ = window_manager.show_crash_screen(&app_handle, "Server process exited before starting");
                     }
@@ -536,14 +511,12 @@ impl SidecarManager {
                 if probe_server_ready(&client, port).await && !startup_resolved.load(Ordering::SeqCst) {
                     info!("[Sidecar] Server ready via HTTP probe");
                     startup_resolved.store(true, Ordering::SeqCst);
-                    status.store(2, Ordering::SeqCst); // Running
                     window_manager.finalize_startup(&app_handle, "HTTP status probe");
                     break;
                 }
 
                 if start_time.elapsed() >= MAX_DURATION {
                     if !startup_resolved.load(Ordering::SeqCst) {
-                        status.store(3, Ordering::SeqCst); // Crashed
                         error!("[Sidecar] Server startup timeout");
                         let _ = window_manager.show_crash_screen(&app_handle, "Server startup timeout");
                     }
@@ -599,16 +572,6 @@ impl SidecarManager {
         info!("[Sidecar] Shutting down sidecar manager");
         self.is_shutdown.store(true, Ordering::SeqCst);
         self.kill().await;
-    }
-
-    fn set_status(&self, status: ServerStatus) {
-        self.status.store(status as u8, Ordering::SeqCst);
-    }
-}
-
-impl Default for SidecarManager {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

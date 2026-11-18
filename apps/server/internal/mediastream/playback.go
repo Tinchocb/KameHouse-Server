@@ -180,7 +180,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 
 	// Zero Latency Next: Pre-transcode and cache the first N segments (video and audio) of the next episode in the background.
 	if _, hasTranscoder := p.repository.getTranscoder(); ret.StreamType == StreamTypeTranscode && hasTranscoder {
-		go func() {
+		p.repository.startWork(func(parentCtx context.Context) {
 			defer func() {
 				if r := recover(); r != nil {
 					p.logger.Warn().Interface("panic", r).Msg("mediastream: panic in zero-latency pre-transcode goroutine")
@@ -193,7 +193,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 			if !ok || tc == nil {
 				return
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+			ctx, cancel := context.WithTimeout(parentCtx, 25*time.Second)
 			defer cancel()
 			// One tracker client per preloaded file: with a shared id two overlapping preloads
 			// kept moving the same client between paths, and ClientTracker killed the session of
@@ -226,7 +226,7 @@ func (p *PlaybackManager) PreloadPlayback(filepath string, streamType StreamType
 				}
 			}
 			p.logger.Info().Str("filepath", ret.Filepath).Int("segments", preloadSegments).Msg("mediastream: Finished proactive pre-transcoding of segments")
-		}()
+		})
 	}
 
 	p.logger.Info().Str("filepath", filepath).Msg("mediastream: Ready to play media")
@@ -258,6 +258,7 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 	// Fast path: cache hit (lock-free read). Only reuse if the stream type matches and a
 	// live-transcode container has not been outdated by a finished pre-transcode.
 	if mc, ok := p.mediaContainers.Get(cacheKey); ok && mc.StreamType == streamType && !p.preTranscodeFinished(mc) {
+		p.startAttachmentExtraction(filePath, hash, mc.MediaInfo, priority)
 		p.logger.Debug().Str("hash", hash).Bool("cached", true).Msg("mediastream: Media container cache HIT")
 		return mc, nil
 	}
@@ -270,6 +271,7 @@ func (p *PlaybackManager) newMediaContainer(filePath string, streamType StreamTy
 	v, err, _ := p.containerGroup.Do(key, func() (interface{}, error) {
 		// Re-check the cache: a concurrent build may have completed while we queued.
 		if mc, ok := p.mediaContainers.Get(cacheKey); ok && mc.StreamType == streamType && !p.preTranscodeFinished(mc) {
+			p.startAttachmentExtraction(filePath, hash, mc.MediaInfo, priority)
 			p.logger.Debug().Str("hash", hash).Bool("cached", true).Msg("mediastream: Media container cache HIT (deduped)")
 			return mc, nil
 		}
@@ -315,7 +317,7 @@ func (p *PlaybackManager) buildMediaContainer(filePath string, hash string, stre
 	if s, ok := p.repository.GetSettings().Get(); ok && s != nil && s.FfprobePath != "" {
 		ffprobePath = s.FfprobePath
 	}
-	ret.MediaInfo, err = p.repository.mediaInfoExtractor.GetInfo(ffprobePath, filePath)
+	ret.MediaInfo, err = p.repository.mediaInfoExtractor.GetInfoContext(p.repository.workContext(), ffprobePath, filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -443,7 +445,7 @@ func (p *PlaybackManager) startAttachmentExtraction(filePath string, hash string
 		return
 	}
 
-	go func() {
+	if !p.repository.startWork(func(ctx context.Context) {
 		defer close(job.done)
 
 		if !priority {
@@ -451,6 +453,9 @@ func (p *PlaybackManager) startAttachmentExtraction(filePath string, hash string
 			case attachmentSemaphore <- struct{}{}:
 				defer func() { <-attachmentSemaphore }()
 			case <-job.promote:
+			case <-ctx.Done():
+				p.extractionJobs.Delete(hash)
+				return
 			}
 		}
 
@@ -465,16 +470,18 @@ func (p *PlaybackManager) startAttachmentExtraction(filePath string, hash string
 			return
 		}
 
-		// Background on purpose: the extracted fonts/subs are shared by every
-		// client of this file, so no single request may cancel the job.
-		if err := videofile.ExtractAttachment(context.Background(), settings.FfmpegPath, filePath, hash, mediaInfo, cacheDir, p.logger); err != nil {
+		// Owned by the repository, independent of individual HTTP requests.
+		if err := videofile.ExtractAttachment(ctx, settings.FfmpegPath, filePath, hash, mediaInfo, cacheDir, p.logger); err != nil {
 			p.logger.Error().Err(err).Str("filepath", filePath).Msg("mediastream: Attachment extraction failed")
 			// Allow a later request to retry by dropping the (about-to-close) job entry.
 			p.extractionJobs.Delete(hash)
 		} else {
 			p.logger.Debug().Str("filepath", filePath).Msg("mediastream: Attachment extraction completed")
 		}
-	}()
+	}) {
+		p.extractionJobs.Delete(hash)
+		close(job.done)
+	}
 }
 
 // WaitForExtraction blocks until the attachment/subtitle extraction for the given hash

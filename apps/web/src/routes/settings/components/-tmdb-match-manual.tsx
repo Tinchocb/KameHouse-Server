@@ -14,7 +14,6 @@ import { InputAnatomy } from "@/components/ui/input/input-parts"
 import { IconUiLink, IconNavigationSearch, IconUiSpinner, IconUiClose } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { toast } from "sonner"
-export { MATCH_PRESELECT_KEY } from "@/lib/match-preselect"
 import { MATCH_PRESELECT_KEY } from "@/lib/match-preselect"
 
 function posterUrl(path?: string) {
@@ -78,7 +77,7 @@ export function TmdbMatchManual() {
             return
         }
         const mediaType = r.media_type === "movie" ? "movie" : "tv"
-        assign({ paths: [selectedPath], tmdbId: r.id, mediaType })
+        assign({ paths: [selectedPath], tmdbId: r.id, externalId: r.id, provider: r.provider ?? (r.is_jikan ? "jikan" : "tmdb"), mediaType })
     }
 
     const handleResolve = (r: TMDBSearchResult) => {
@@ -86,7 +85,7 @@ export function TmdbMatchManual() {
             toast.error("Primero elige un archivo sin vincular")
             return
         }
-        resolve({ path: selectedPath, targetMediaId: r.id })
+        resolve({ path: selectedPath, targetMediaId: r.id + (r.media_type === "movie" && !r.is_jikan && r.provider !== "jikan" ? 1_000_000 : 0) })
     }
 
     return (
@@ -97,7 +96,7 @@ export function TmdbMatchManual() {
             description="Busca en TMDB y asigna títulos a archivos sin vincular."
             icon={IconUiLink}
             badge={
-                <span className="text-3xs px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent-readable border border-brand-accent/25">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-brand-accent/10 text-brand-accent-readable border border-brand-accent/25">
                     {files.length === 1 ? "1 pendiente" : `${files.length} pendientes`}
                 </span>
             }
@@ -125,14 +124,14 @@ export function TmdbMatchManual() {
                                     type="button"
                                     onClick={() => setSelectedPath(f.path)}
                                     className={cn(
-                                        "w-full text-left p-3 rounded-xl border transition-[background-color,border-color,box-shadow,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer text-xs",
+                                        "w-full text-left p-3 rounded-xl border border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] outline-none focus-visible:ring-2 focus-visible:ring-brand-accent transition-[background-color,border-color,box-shadow,transform] duration-fast ease-out-strong motion-safe:active:scale-[0.97] cursor-pointer text-xs",
                                         selectedPath === f.path
                                             ? "border-brand-accent bg-brand-accent/10 text-label-1"
                                             : "border-[var(--neutral-separator)] bg-[var(--neutral-elev-2)] text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)]"
                                     )}
                                 >
                                     <p className="font-bold truncate">{f.originalTitle || f.path}</p>
-                                    <p className="text-3xs font-mono text-label-2 truncate mt-0.5">{f.path}</p>
+                                    <p className="text-xs font-mono text-label-2 truncate mt-0.5">{f.path}</p>
                                 </button>
                             ))}
                         </div>
@@ -193,15 +192,15 @@ export function TmdbMatchManual() {
                             {results.map((r) => {
                                 const img = posterUrl(r.poster_path)
                                 return (
-                                    <div key={`${r.media_type}-${r.id}`} className="p-3 rounded-xl border border-[var(--neutral-separator)] bg-[var(--neutral-elev-2)] flex gap-3">
+                                    <div key={`${r.media_type}-${r.id}`} className="p-3 rounded-xl border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] bg-[var(--neutral-elev-2)] flex gap-3">
                                         {img ? (
-                                            <img src={img} alt="" className="w-11 h-16 rounded-lg object-cover shrink-0" loading="lazy" />
+                                            <img src={img} alt="" width={44} height={64} className="w-11 h-16 rounded-lg object-cover shrink-0" loading="lazy" decoding="async" />
                                         ) : (
                                             <div className="w-11 h-16 rounded-lg bg-[var(--neutral-elev-3)] shrink-0" />
                                         )}
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs font-bold text-label-1 truncate">{r.title || r.name || `#${r.id}`}</p>
-                                            <p className="text-3xs text-label-2 mt-0.5">
+                                            <p className="text-xs text-label-2 mt-0.5">
                                                 {r.media_type === "movie" ? "Película" : "Serie"} · {r.vote_average ?? "—"}
                                                 {r.is_jikan ? " · Jikan" : ""}
                                             </p>

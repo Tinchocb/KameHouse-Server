@@ -71,8 +71,6 @@ const (
 	IDPrevFilename     = 0x3C83AB   // The filename of the previous segment
 	IDNextUID          = 0x3EB923   // The UID of the next segment
 	IDNextFilename     = 0x3E83BB   // The filename of the next segment
-	IDSegmentFamily    = 0x4444     // A family of segments this segment belongs to
-	IDChapterTranslate = 0x6924     // Contains information for translating chapter numbers
 	IDTimestampScale   = 0x2AD7B1   // The scale factor for all timestamps in the segment
 	IDDuration         = 0x4489     // The duration of the segment in timestamp units
 	IDDateUTC          = 0x4461     // The date and time the segment was created in UTC
@@ -91,23 +89,15 @@ const (
 	IDLanguageIETF          = 0x22B59D   // The IETF language code of the track
 	IDCodecID               = 0x86       // The ID of the codec used for this track
 	IDCodecPriv             = 0x63A2     // Private data specific to the codec
-	IDCodecName             = 0x258688   // The name of the codec used for this track
 	IDVideo                 = 0xE0       // Video settings specific to this track
 	IDAudio                 = 0xE1       // Audio settings specific to this track
 	IDDefaultDuration       = 0x23E383   // The default duration of frames in this track
 	IDContentEncodings      = 0x6D80     // A list of content encodings for this track
 	IDContentEncoding       = 0x6240     // A single content encoding for this track
-	IDContentEncodingOrder  = 0x5031     //
-	IDContentEncodingScope  = 0x5032     //
 	IDContentEncodingType   = 0x5033     //
 	IDContentCompression    = 0x5034     //
 	IDContentCompAlgo       = 0x4254     //
 	IDContentCompSettings   = 0x4255     //
-	IDContentEncryption     = 0x5035     //
-	IDContentEncAlgo        = 0x47E1     //
-	IDContentEncKeyID       = 0x47E2     //
-	IDContentEncAESSettings = 0x47E7     //
-	IDAESSettingsCipherMode = 0x47E8     //
 
 	// Video elements
 	IDFlagInterlaced = 0x9A   // Flag indicating whether the video is interlaced
@@ -124,10 +114,6 @@ const (
 
 	// Cluster elements
 	IDCluster     = 0x1F43B675 // A cluster contains blocks of data for a specific timestamp
-	IDTimestamp   = 0xE7       // The timestamp of the cluster
-	IDSimpleBlock = 0xA3       // A block containing raw data without additional metadata
-	IDBlockGroup  = 0xA0       // A group of blocks with additional metadata
-	IDBlock       = 0xA1       // A block containing raw data
 
 	// Cues elements
 	IDCues             = 0x1C53BB6B // A top-level element containing all cue points
@@ -143,22 +129,12 @@ const (
 	// Chapters elements
 	IDChapters                 = 0x1043A770 // A top-level element containing all chapter entries
 	IDEditionEntry             = 0x45B9
-	IDEditionUID               = 0x45BC
-	IDEditionFlagHidden        = 0x45BD
-	IDEditionFlagDefault       = 0x45DB
-	IDEditionFlagOrdered       = 0x45DD
 	IDChapterAtom              = 0xB6
 	IDChapterUID               = 0x73C4
-	IDChapterStringUID         = 0x5654
 	IDChapterTimeStart         = 0x91
 	IDChapterTimeEnd           = 0x92
 	IDChapterHidden            = 0x98
 	IDChapterEnabled           = 0x4598
-	IDChapterSegmentUID        = 0x6E67
-	IDChapterSegmentEditionUID = 0x6EBC
-	IDChapterPhysicalEquiv     = 0x63C3
-	IDChapterTrack             = 0x8F
-	IDChapterTrackUID          = 0x89
 	IDChapterDisplay           = 0x80
 	IDChapterString            = 0x85
 	IDChapterLanguage          = 0x437C
@@ -168,7 +144,6 @@ const (
 	IDTags             = 0x1254C367 // A top-level element containing all tags
 	IDTag              = 0x7373     // A single tag
 	IDTargets          = 0x63C0     // Specifies which other elements the metadata represented by the Tag applies to
-	IDTargetType       = 0x63CA     // An informational string that can be used to display the logical level of the target
 	IDTargetTypeValue  = 0x68CA     // A number to indicate the logical level of the target
 	IDTagTrackUID      = 0x63C5     // A unique ID to identify the Track(s) the tags belong to
 	IDTagEditionUID    = 0x63C9     // A unique ID to identify the EditionEntry(s) the tags belong to
@@ -179,7 +154,6 @@ const (
 	IDTagString        = 0x4487     // The value of the Tag
 	IDTagLanguage      = 0x447A     // Specifies the language of the tag specified
 	IDTagDefault       = 0x4484     // Indication to know if this is the default/original language to use for the given tag
-	IDTagBinary        = 0x4485     // The values of the Tag if it is binary
 
 	// Attachments elements
 	IDAttachments     = 0x1941A469 // A top-level element containing all attached files
@@ -428,7 +402,16 @@ func (er *EBMLReader) ReadElement() (*EBMLElement, error) {
 		return nil, fmt.Errorf("failed to read element size: %w", err)
 	}
 
-	// Check for unknown size marker or excessively large elements (> 64MB)
+	data, err := er.readMetadata(size)
+	if err != nil {
+		return nil, err
+	}
+	return &EBMLElement{ID: uint32(id), Size: size, Data: data}, nil
+}
+
+// readMetadata bounds every metadata allocation, including top-level sections
+// parsed via ReadElementHeader. Segment and Cluster payloads are not read here.
+func (er *EBMLReader) readMetadata(size uint64) ([]byte, error) {
 	if size == (1<<(7*8))-1 {
 		return nil, fmt.Errorf("unknown size elements not supported")
 	}
@@ -437,21 +420,14 @@ func (er *EBMLReader) ReadElement() (*EBMLElement, error) {
 		return nil, fmt.Errorf("ebml element size %d exceeds safety limit of %d bytes", size, maxElementSize)
 	}
 
-	// Read element data
 	data := make([]byte, size)
 	if size > 0 {
-		n, errReadFull := io.ReadFull(er.getReader(), data)
+		_, errReadFull := io.ReadFull(er, data)
 		if errReadFull != nil {
 			return nil, fmt.Errorf("failed to read element data: %w", errReadFull)
 		}
-		er.pos += int64(n)
 	}
-
-	return &EBMLElement{
-		ID:   uint32(id),
-		Size: size,
-		Data: data,
-	}, nil
+	return data, nil
 }
 
 // Seek moves the reader to the specified position in the stream.

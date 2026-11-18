@@ -71,7 +71,7 @@ const spineThemes: Record<string, SpineTheme> = {
         eraYears: "1989–1996",
         auraColor: "color-mix(in srgb, var(--spotlight-dbz-vivid) 60%, transparent)",
         colors: ["var(--spotlight-dbz-vivid-2)", "var(--spotlight-dbz-vivid)", "var(--era-dbz-hex)"],
-        rawImg: "/icons/series-icons/dbz/reposo-brazos-cruzados.png",
+        rawImg: "/icons/series-icons/dbz/reposo-frente.png",
         rawImgAtaque: "/icons/series-icons/dbz/combate-kamehameha.png",
         layout: {
             normalAlturaPct: 65,
@@ -120,11 +120,11 @@ const spineThemes: Record<string, SpineTheme> = {
         eraYears: "2009–2015",
         auraColor: "color-mix(in srgb, var(--spotlight-dbkai-vivid) 55%, transparent)",
         colors: ["var(--spotlight-dbkai-vivid-2)", "var(--spotlight-dbkai-vivid)", "var(--era-dbkai-hex)"],
-        rawImg: "/icons/series-icons/dbkai/reposo-frente.png",
+        rawImg: "/icons/series-icons/dbkai/reposo-brazos-cruzados.png",
         rawImgAtaque: "/icons/series-icons/dbkai/combate-ssj-lateral.png",
         layout: {
             normalAlturaPct: 50,
-            normalDesplazXpx: 0,
+            normalDesplazXpx: 20,
             normalDesplazYpx: 20,
             ataqueTopPct: 8,
             ataqueAnchoPct: 116,
@@ -183,11 +183,6 @@ const spineThemes: Record<string, SpineTheme> = {
         },
     }
 };
-
-/** Registro completo del arte, utilizado también para verificar los archivos. */
-export const SPINE_ART_URLS: readonly string[] = [
-    ...new Set(Object.values(spineThemes).flatMap((t) => [t.rawImg, t.rawImgAtaque]).filter(Boolean)),
-]
 
 /** Solo reposo en la precarga global; el combate se prepara por intención. */
 export const SPINE_IDLE_ART_URLS: readonly string[] = [

@@ -19,7 +19,6 @@ host = "127.0.0.1"        # Dirección IP de escucha (0.0.0.0 para acceso extern
 port = 43211              # Puerto del servidor web
 useBinaryPath = true      # Usa la ruta del ejecutable como directorio de trabajo (útil en macOS)
 password = ""             # Contraseña para proteger el servidor web (opcional)
-# dohUrl = ""             # URL para DNS over HTTPS (opcional)
 # authTokenTTL = "24h"    # Tiempo de vida del token HMAC (mínimo 5m, ej: "1h", "30m", "24h")
 
 [server.tls]
@@ -55,12 +54,12 @@ diskMaxSizeMB = 5120      # Límite de almacenamiento en disco en MB (5 GB)
 diskTTLHours = 720        # Tiempo de vida de miniaturas sin acceder (30 días)
 cleanupInterval = "12h"   # Frecuencia del ciclo de limpieza de disco
 
+[cache.drive]
+diskMaxSizeMB = 2048      # Límite en MB de la caché de bloques de Drive (0 = 2048; mínimo 64). Se aplica al reiniciar
+
 # ------------------------------------------
 # 4. Integraciones (Integrations)
 # ------------------------------------------
-[tmdb]
-apiKey = ""               # TMDB API Key personalizado (opcional, el servidor incluye uno por defecto)
-
 [metadata]
 provider = "jikan"          # Proveedor principal: "jikan" (MyAnimeList - por defecto, sin cuenta) o "tmdb"
 tmdbApiKey = ""           # Bearer token de TMDb (opcional — usado como fallback para imágenes y backdrops)

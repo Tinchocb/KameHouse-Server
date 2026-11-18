@@ -16,7 +16,7 @@ export function NotFound() {
                 to="/home"
                 className={cn(
                     ButtonAnatomy.root({ intent: "primary", size: "lg" }),
-                    "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong active:scale-95",
+                    "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong motion-safe:active:scale-[0.97]",
                 )}
             >
                 Volver al inicio

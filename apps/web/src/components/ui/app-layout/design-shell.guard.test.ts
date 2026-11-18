@@ -7,7 +7,6 @@ import { describe, it, expect } from "vitest"
 
 const leer = (ruta: string) => readFileSync(join(__dirname, ruta), "utf8")
 
-const topnav = leer("app-topnav.tsx")
 const nav = leer("floating-pill-nav.tsx")
 const random = leer("random-play-button.tsx")
 const search = leer("expandable-search.tsx")
@@ -20,7 +19,6 @@ const SOMBRA_LITERAL = /(?<![-\w])shadow-\[[^\]]*(?:rgba?\(|#[0-9a-fA-F]{3,8}\b)
 
 describe("sombras de los archivos de shell", () => {
     it.each([
-        ["app-topnav.tsx", topnav],
         ["floating-pill-nav.tsx", nav],
         ["random-play-button.tsx", random],
         ["expandable-search.tsx", search],
@@ -36,27 +34,18 @@ describe("springs de la navegación", () => {
         expect(random).not.toMatch(/type:\s*"spring"/)
     })
 
-    it("las islas superiores y el modal usan los presets island y selector", () => {
+    it("las islas superiores comparten el preset island", () => {
         expect(nav).toMatch(/useSpringPreset\("island"\)/)
-        expect(random).toMatch(/useSpringPreset\("selector"\)/)
         // Marca, centro y ajustes comparten el mismo resorte.
         expect(nav.match(/transition=\{islasSuperioresSpring\}/g)).toHaveLength(3)
     })
 
-    it("los presets island (400/30) y selector (350/26) existen en hooks.ts con sus valores", () => {
+    it("el preset island (400/30) existe en hooks.ts con sus valores", () => {
         expect(hooks).toMatch(/island:\s*\{\s*type:\s*"spring",\s*stiffness:\s*400,\s*damping:\s*30\s*\}/)
-        expect(hooks).toMatch(/selector:\s*\{\s*type:\s*"spring",\s*stiffness:\s*350,\s*damping:\s*26\s*\}/)
     })
 })
 
 describe("superficies, radios y texto de los archivos de shell", () => {
-    it("la barra móvil usa el vidrio canónico, sin blur ni saturación a mano", () => {
-        expect(topnav).toMatch(/\bglass-frosted\b/)
-        expect(topnav).toMatch(/border-\[var\(--glass-border-side\)\]/)
-        expect(topnav).not.toMatch(/backdrop-blur-overlay-md|backdrop-saturate-\[/)
-        expect(topnav).not.toMatch(/bg-surface-container-lowest\/80/)
-    })
-
     it("el riel de eras no usa radios arbitrarios ni literales fuera de la escala", () => {
         expect(rail).not.toMatch(/rounded-\[/)
         expect(rail).not.toMatch(/borderRadius:\s*(22|28)\b/)

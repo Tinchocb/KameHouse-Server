@@ -36,14 +36,6 @@ func (p *DynamicPlatform) GetPlatform() Platform {
 	return val.(platformWrapper).Platform
 }
 
-func (p *DynamicPlatform) UpdateEntryProgress(ctx context.Context, mediaID int, progress int, totalEpisodes *int) error {
-	return p.GetPlatform().UpdateEntryProgress(ctx, mediaID, progress, totalEpisodes)
-}
-
-func (p *DynamicPlatform) GetAnime(ctx context.Context, mediaID int) (interface{}, error) {
-	return p.GetPlatform().GetAnime(ctx, mediaID)
-}
-
 func (p *DynamicPlatform) GetAnimeCollection(ctx context.Context, bypassCache bool) (interface{}, error) {
 	return p.GetPlatform().GetAnimeCollection(ctx, bypassCache)
 }

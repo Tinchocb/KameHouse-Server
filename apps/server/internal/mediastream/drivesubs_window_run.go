@@ -184,7 +184,12 @@ func (s *driveWindowSession) run(r *Repository) {
 				summary(r)
 			}
 			if done {
-				s.finalize(r)
+				if err := s.finalize(r); err != nil {
+					s.mu.Lock()
+					s.complete = false
+					s.recordFailureLocked(err)
+					s.mu.Unlock()
+				}
 			}
 			return
 		}
@@ -258,7 +263,7 @@ func (s *driveWindowSession) recordFailureLocked(err error) *windowFailure {
 
 // storeClusterLocked guarda lo leído de un cluster y actualiza lo aprendido del archivo.
 func (s *driveWindowSession) storeClusterLocked(off int64, cl *mkvsubs.Cluster) {
-	wc := &wCluster{off: off, next: cl.Next, startMs: cl.StartMs, events: map[uint64][]mkvsubs.Event{}}
+	wc := &wCluster{next: cl.Next, startMs: cl.StartMs, events: map[uint64][]mkvsubs.Event{}}
 	if cl.Next >= 0 {
 		wc.span = cl.Next - off
 	} else {

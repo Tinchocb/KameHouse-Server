@@ -9,8 +9,7 @@ const sources = [
 ] as unknown as EpisodeSource[]
 
 function activeTitles() {
-    return screen.getAllByRole("button")
-        .filter(b => b.querySelector("svg"))
+    return screen.getAllByRole("button", { pressed: true })
         .map(b => b.textContent)
 }
 

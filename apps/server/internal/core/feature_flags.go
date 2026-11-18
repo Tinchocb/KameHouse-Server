@@ -46,14 +46,14 @@ func NewFeatureManager(logger *zerolog.Logger, flags KameHouseFlags) *FeatureMan
 	}
 
 	if flags.LockDown {
-		ret.DisabledFeatures = []FeatureKey{
+		ret.DisabledFeatures = append(append([]FeatureKey(nil), ret.DisabledFeatures...), []FeatureKey{
 			ViewSettings,
 			ViewLogs,
 			UpdateSettings,
 			RefreshMetadata,
 			WatchingLocalAnime,
 			Proxy,
-		}
+		}...)
 	}
 
 	for _, key := range ret.DisabledFeatures {
@@ -100,16 +100,8 @@ func (m *FeatureManager) UpdateFromSettings(library *models.LibrarySettings) {
 	// DisableLocalScanning ya no apaga features: bloqueaba /api/v1/mediastream, que
 	// también reproduce Google Drive. El escaneo lo cortan el AutoScanner, el watcher
 	// y HandleScanLocalFiles; la vista oculta los archivos locales (visibleLocalFiles).
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	delete(m.disabledFeatures, ManageLocalAnimeLibrary)
-	delete(m.disabledFeatures, WatchingLocalAnime)
-
-	// Rebuild the DisabledFeatures slice
-	m.DisabledFeatures = make([]FeatureKey, 0, len(m.disabledFeatures))
-	for key := range m.disabledFeatures {
-		m.DisabledFeatures = append(m.DisabledFeatures, key)
-	}
+	// Settings currently add no feature restrictions. In particular they must
+	// never remove restrictions explicitly supplied by CLI or lock-down.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

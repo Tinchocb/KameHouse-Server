@@ -34,12 +34,12 @@ export const Chip: React.FC<ChipProps> = ({
   children,
 }) => {
   const surface = tone === 'saga' ? sagaClass : TONE[tone];
-  const pill = `inline-flex h-6 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-2xs font-semibold leading-none tabular-nums whitespace-nowrap ${surface}`;
+  const pill = `chrono-chip inline-flex h-6 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-xs font-semibold leading-none tabular-nums whitespace-nowrap ${surface}`;
   if (!overlay) return <span className={`${pill} shrink-0 ${className}`}>{icon}<span className="truncate">{children}</span></span>;
   // El velo oscuro va en un envoltorio para que el tinte translúcido del tono no choque con él.
   return (
     <span
-      className={`inline-flex max-w-full shrink-0 rounded-full bg-black/75 shadow-[0_1px_8px_rgb(0_0_0/0.35)] ${className}`}
+      className={`chrono-chip inline-flex max-w-full shrink-0 rounded-full bg-black/75 shadow-[0_1px_8px_rgb(0_0_0/0.35)] ${className}`}
     >
       <span className={pill}>
         {icon}

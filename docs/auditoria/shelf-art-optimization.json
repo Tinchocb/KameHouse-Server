@@ -28,16 +28,16 @@
       "servedSha256": "a12e970472fe90fed38ec8cab1b538ac8b9ae5651a9e9fa1333e8a310f214a70"
     },
     {
-      "source": "/icons/series-icons/dbz/reposo-brazos-cruzados.png",
-      "optimized": "/icons/series-icons/dbz/reposo-brazos-cruzados.png",
-      "originalBytes": 977674,
-      "servedBytes": 977674,
-      "width": 859,
-      "height": 1831,
+      "source": "/icons/series-icons/dbz/reposo-frente.png",
+      "optimized": "/icons/series-icons/dbz/reposo-frente.png",
+      "originalBytes": 980878,
+      "servedBytes": 980878,
+      "width": 985,
+      "height": 1597,
       "alphaAndVisibleRgbIdentical": true,
       "hiddenRgbDifferences": 0,
-      "originalSha256": "f372815a43215dc2552e5ee8f70a204565b534ff59fc2078cbef8c9b5319a581",
-      "servedSha256": "f372815a43215dc2552e5ee8f70a204565b534ff59fc2078cbef8c9b5319a581"
+      "originalSha256": "9241805547eb1bc3b2f81130945c1e682ae148ac68f2995104961f0dec148d11",
+      "servedSha256": "9241805547eb1bc3b2f81130945c1e682ae148ac68f2995104961f0dec148d11"
     },
     {
       "source": "/icons/series-icons/dbz/combate-kamehameha.png",
@@ -76,16 +76,16 @@
       "servedSha256": "a93731d5ab716f5cf781bc064bdcad9a4f093a3cd1130a7bc1334ea39a66e1b0"
     },
     {
-      "source": "/icons/series-icons/dbkai/reposo-frente.png",
-      "optimized": "/icons/series-icons/dbkai/reposo-frente.png",
-      "originalBytes": 980878,
-      "servedBytes": 980878,
-      "width": 985,
-      "height": 1597,
+      "source": "/icons/series-icons/dbkai/reposo-brazos-cruzados.png",
+      "optimized": "/icons/series-icons/dbkai/reposo-brazos-cruzados.png",
+      "originalBytes": 977674,
+      "servedBytes": 977674,
+      "width": 859,
+      "height": 1831,
       "alphaAndVisibleRgbIdentical": true,
       "hiddenRgbDifferences": 0,
-      "originalSha256": "9241805547eb1bc3b2f81130945c1e682ae148ac68f2995104961f0dec148d11",
-      "servedSha256": "9241805547eb1bc3b2f81130945c1e682ae148ac68f2995104961f0dec148d11"
+      "originalSha256": "f372815a43215dc2552e5ee8f70a204565b534ff59fc2078cbef8c9b5319a581",
+      "servedSha256": "f372815a43215dc2552e5ee8f70a204565b534ff59fc2078cbef8c9b5319a581"
     },
     {
       "source": "/icons/series-icons/dbkai/combate-ssj-lateral.png",

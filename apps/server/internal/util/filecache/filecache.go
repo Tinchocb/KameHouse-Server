@@ -1,8 +1,11 @@
 package filecache
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
+	"kamehouse/internal/util"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -22,8 +25,11 @@ type CacheStore struct {
 	saveMu    sync.Mutex
 	data      map[string]*cacheItem
 	dirty     bool
+	discarded bool // guarded by timerMu; old handles cannot recreate a removed bucket
 	saveTimer *time.Timer
 	timerMu   sync.Mutex
+	loadOnce  sync.Once
+	loadErr   error
 }
 
 // Bucket represents a cache bucket with a name and TTL.
@@ -99,6 +105,34 @@ type cacheItem struct {
 	UpdatedAt  *time.Time  `json:"updated_at,omitempty"`
 }
 
+// Keep persisted values encoded until the caller requests their concrete type.
+// Decoding through interface{} first allocates a tree per entry and rounds int64
+// values through float64; neither is needed to open a bucket.
+func (item *cacheItem) UnmarshalJSON(data []byte) error {
+	var encoded struct {
+		Value      json.RawMessage `json:"value"`
+		Expiration *time.Time      `json:"expiration,omitempty"`
+		UpdatedAt  *time.Time      `json:"updated_at,omitempty"`
+	}
+	if err := json.Unmarshal(data, &encoded); err != nil {
+		return err
+	}
+	if len(encoded.Value) == 0 {
+		encoded.Value = json.RawMessage("null")
+	}
+	item.Value = encoded.Value
+	item.Expiration = encoded.Expiration
+	item.UpdatedAt = encoded.UpdatedAt
+	return nil
+}
+
+func cacheValueJSON(value interface{}) ([]byte, error) {
+	if raw, ok := value.(json.RawMessage); ok {
+		return raw, nil
+	}
+	return json.Marshal(value)
+}
+
 // NewCacher creates a new instance of Cacher.
 func NewCacher(dir string) (*Cacher, error) {
 	// Check if the directory exists
@@ -120,14 +154,19 @@ func NewCacher(dir string) (*Cacher, error) {
 
 // Close closes all the cache stores and flushes any pending writes.
 func (c *Cacher) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	stores := make([]*CacheStore, 0, len(c.stores))
 	for _, store := range c.stores {
+		stores = append(stores, store)
+	}
+	c.mu.RUnlock()
+	var errs []error
+	for _, store := range stores {
 		if err := store.Flush(); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // getStore returns a cache store for the given bucket name and TTL.
@@ -136,7 +175,7 @@ func (c *Cacher) getStore(name string) (*CacheStore, error) {
 	store, ok := c.stores[name]
 	c.mu.RUnlock()
 	if ok {
-		return store, nil
+		return c.loadStore(name, store)
 	}
 
 	c.mu.Lock()
@@ -144,7 +183,7 @@ func (c *Cacher) getStore(name string) (*CacheStore, error) {
 	store, ok = c.stores[name]
 	if ok {
 		c.mu.Unlock()
-		return store, nil
+		return c.loadStore(name, store)
 	}
 
 	storeDir := c.dir
@@ -158,10 +197,18 @@ func (c *Cacher) getStore(name string) (*CacheStore, error) {
 	c.stores[name] = store
 	c.mu.Unlock()
 
-	// Carga desde disco fuera del mutex global de Cacher para no bloquear otros buckets
-	if err := store.loadFromFile(); err != nil {
+	return c.loadStore(name, store)
+}
+
+func (c *Cacher) loadStore(name string, store *CacheStore) (*CacheStore, error) {
+	// Publish the handle early to avoid blocking unrelated buckets, but every
+	// reader/writer must join initialization before touching this bucket.
+	store.loadOnce.Do(func() { store.loadErr = store.loadFromFile() })
+	if err := store.loadErr; err != nil {
 		c.mu.Lock()
-		delete(c.stores, name)
+		if c.stores[name] == store {
+			delete(c.stores, name)
+		}
 		c.mu.Unlock()
 		return nil, err
 	}
@@ -180,10 +227,10 @@ func (c *Cacher) Set(bucket Bucket, key string, value interface{}) error {
 
 	// If the cache file does not exist yet on disk, write it immediately so initial state is persisted.
 	// Otherwise, debounce subsequent writes to avoid disk thrashing during playback.
-	if _, err := os.Stat(store.filePath); os.IsNotExist(err) {
-		return store.saveToFile()
-	}
 	store.scheduleSave(1 * time.Second)
+	if _, err := os.Stat(store.filePath); os.IsNotExist(err) {
+		return store.Flush()
+	}
 	return nil
 }
 
@@ -207,8 +254,8 @@ func Range[T any](c *Cacher, bucket Bucket, f func(key string, value T) bool) er
 				continue
 			}
 
-			// Slow path: loaded from disk as map[string]interface{}, hydrate in-place
-			itemVal, err := json.Marshal(item.Value)
+			// Decode persisted JSON only for entries actually visited.
+			itemVal, err := cacheValueJSON(item.Value)
 			if err != nil {
 				store.mu.Unlock()
 				return err
@@ -273,8 +320,8 @@ func (c *Cacher) Get(bucket Bucket, key string, out interface{}) (bool, error) {
 		}
 	}
 
-	// Slow path: convert via JSON (typically when loaded from disk as map[string]interface{})
-	data, err := json.Marshal(itemVal)
+	// Decode persisted JSON directly, or convert a value requested as another type.
+	data, err := cacheValueJSON(itemVal)
 	if err != nil {
 		return false, err
 	}
@@ -340,42 +387,66 @@ func (cs *CacheStore) loadFromFile() error {
 		cs.data = make(map[string]*cacheItem)
 		return nil
 	}
+	// Valid JSON can still contain a null map or null entries. Treat those as
+	// misses without losing the other usable entries in the bucket.
+	if cs.data == nil {
+		cs.data = make(map[string]*cacheItem)
+	}
+	for key, item := range cs.data {
+		if item == nil {
+			delete(cs.data, key)
+		}
+	}
 
 	return nil
 }
 
 func (cs *CacheStore) scheduleSave(delay time.Duration) {
 	cs.timerMu.Lock()
+	if cs.discarded {
+		cs.timerMu.Unlock()
+		return
+	}
 	cs.dirty = true
 	if cs.saveTimer != nil {
-		cs.saveTimer.Stop()
+		cs.saveTimer.Reset(delay)
+	} else {
+		cs.saveTimer = time.AfterFunc(delay, func() {
+			_ = cs.Flush()
+		})
 	}
-	cs.saveTimer = time.AfterFunc(delay, func() {
-		_ = cs.Flush()
-	})
 	cs.timerMu.Unlock()
 }
 
 func (cs *CacheStore) Flush() error {
+	// Join any write already in progress before testing dirty: a timer may
+	// have claimed that snapshot just before Close calls Flush.
+	cs.saveMu.Lock()
+	defer cs.saveMu.Unlock()
 	cs.timerMu.Lock()
 	if cs.saveTimer != nil {
 		cs.saveTimer.Stop()
 		cs.saveTimer = nil
 	}
-	if !cs.dirty {
+	if cs.discarded || !cs.dirty {
 		cs.timerMu.Unlock()
 		return nil
 	}
 	cs.dirty = false
 	cs.timerMu.Unlock()
 
-	return cs.saveToFile()
+	if err := cs.saveToFile(); err != nil {
+		// Preserve pending changes so a later flush can retry a transient failure.
+		cs.timerMu.Lock()
+		cs.dirty = true
+		cs.timerMu.Unlock()
+		return err
+	}
+	return nil
 }
 
 func (cs *CacheStore) saveToFile() error {
-	cs.saveMu.Lock()
-	defer cs.saveMu.Unlock()
-
+	// Caller holds saveMu until the snapshot is persisted (or marked dirty).
 	// Fast snapshot of the map under read lock; releases cs.mu immediately so readers/writers aren't blocked by disk I/O.
 	// Cada cacheItem se copia por valor: Get y Range hidratan item.Value en el lugar (con cs.mu para escritura),
 	// asi que codificar los punteros compartidos despues del RUnlock seria una carrera de datos.
@@ -417,58 +488,113 @@ func (cs *CacheStore) saveToFile() error {
 
 // RemoveAllBy removes all files in the cache directory that match the given filter.
 func (c *Cacher) RemoveAllBy(filter func(filename string) bool) error {
+	return c.RemoveAllByContext(context.Background(), filter)
+}
+
+func (c *Cacher) RemoveAllByContext(ctx context.Context, filter func(filename string) bool) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	entries, err := os.ReadDir(c.dir)
 	if err != nil {
 		return err
 	}
 
-	var toDelete []string
+	names := make(map[string]struct{})
 	for _, e := range entries {
-		if !e.IsDir() {
-			if !strings.HasSuffix(e.Name(), ".cache") {
-				continue
-			}
-			if filter(e.Name()) {
-				_ = os.Remove(filepath.Join(c.dir, e.Name()))
-				toDelete = append(toDelete, strings.TrimSuffix(e.Name(), ".cache"))
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".cache") {
+			names[strings.TrimSuffix(e.Name(), ".cache")] = struct{}{}
+		}
+	}
+	// Include stores that have not reached disk yet, but never durable buckets
+	// redirected outside the disposable cache directory.
+	c.mu.RLock()
+	for name := range c.stores {
+		if c.bucketDirs[name] == "" {
+			names[name] = struct{}{}
+		}
+	}
+	c.mu.RUnlock()
+	ordered := make([]string, 0, len(names))
+	for name := range names {
+		ordered = append(ordered, name)
+	}
+	sort.Strings(ordered)
+	for _, name := range ordered {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if filter(name + ".cache") {
+			if err := c.removeBucket(ctx, name); err != nil {
+				return err
 			}
 		}
 	}
 
-	if len(toDelete) > 0 {
+	return ctx.Err()
+}
+
+// removeBucket joins existing writers and retires their handle before publishing
+// a replacement. Waiting for disk I/O does not hold the global bucket lock.
+func (c *Cacher) removeBucket(ctx context.Context, name string) error {
+	for {
 		c.mu.Lock()
-		for _, bucketName := range toDelete {
-			delete(c.stores, bucketName)
+		store := c.stores[name]
+		if c.bucketDirs[name] != "" {
+			store = nil // only remove the legacy copy under c.dir
 		}
-		c.mu.Unlock()
+		if store != nil {
+			c.mu.Unlock()
+			if err := util.LockContext(ctx, &store.saveMu); err != nil {
+				return err
+			}
+			c.mu.Lock()
+			if c.stores[name] != store {
+				c.mu.Unlock()
+				store.saveMu.Unlock()
+				continue
+			}
+			defer store.saveMu.Unlock()
+		}
+		defer c.mu.Unlock()
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := os.Remove(filepath.Join(c.dir, name+".cache")); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		if store != nil {
+			store.timerMu.Lock()
+			store.discarded, store.dirty = true, false
+			if store.saveTimer != nil {
+				store.saveTimer.Stop()
+				store.saveTimer = nil
+			}
+			store.timerMu.Unlock()
+			delete(c.stores, name)
+		}
+		return nil
 	}
-	return nil
 }
 
 // ClearMediastreamVideoFiles clears all mediastream video file caches.
 func (c *Cacher) ClearMediastreamVideoFiles() error {
-	// IO de disco fuera del lock global: c.dir es inmutable.
+	var errs []error
 	videoFilesDir := filepath.Join(c.dir, "videofiles")
 	if files, err := os.ReadDir(videoFilesDir); err == nil {
 		for _, file := range files {
-			_ = os.RemoveAll(filepath.Join(videoFilesDir, file.Name()))
+			if err := os.RemoveAll(filepath.Join(videoFilesDir, file.Name())); err != nil {
+				errs = append(errs, err)
+			}
 		}
+	} else if !os.IsNotExist(err) {
+		errs = append(errs, err)
 	}
 
 	err := c.RemoveAllBy(func(filename string) bool {
-		return strings.HasPrefix(filename, "mediastream")
+		return strings.HasPrefix(filename, "mediastream") || strings.HasPrefix(filename, "videofiles")
 	})
-
-	// Second sweep covers "videofiles*" stores, which have no .cache file and are
-	// therefore not removed by RemoveAllBy (it only handles mediastream*.cache).
-	c.mu.Lock()
-	for name := range c.stores {
-		if strings.HasPrefix(name, "mediastream") || strings.HasPrefix(name, "videofiles") {
-			delete(c.stores, name)
-		}
-	}
-	c.mu.Unlock()
-	return err
+	return errors.Join(append(errs, err)...)
 }
 
 // TrimMediastreamVideoFiles evicts oldest videofiles dirs keeping newest 10 (LRU by ModTime).
@@ -506,6 +632,13 @@ func (c *Cacher) TrimMediastreamVideoFiles() error {
 }
 
 func (c *Cacher) GetMediastreamVideoFilesTotalSize() (int64, error) {
+	return c.GetMediastreamVideoFilesTotalSizeContext(context.Background())
+}
+
+func (c *Cacher) GetMediastreamVideoFilesTotalSizeContext(ctx context.Context) (int64, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
 	_, err := os.Stat(filepath.Join(c.dir, "videofiles"))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -516,6 +649,9 @@ func (c *Cacher) GetMediastreamVideoFilesTotalSize() (int64, error) {
 
 	var totalSize int64
 	err = filepath.Walk(filepath.Join(c.dir, "videofiles"), func(_ string, info os.FileInfo, err error) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if err != nil {
 			return err
 		}
@@ -531,11 +667,15 @@ func (c *Cacher) GetMediastreamVideoFilesTotalSize() (int64, error) {
 	return totalSize, nil
 }
 
-// GetTotalSize returns the total size of all files in the cache directory that match the given filter.
-// The size is in bytes.
-func (c *Cacher) GetTotalSize() (int64, error) {
+func (c *Cacher) GetTotalSizeContext(ctx context.Context) (int64, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
 	var totalSize int64
 	err := filepath.Walk(c.dir, func(_ string, info os.FileInfo, err error) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if err != nil {
 			return err
 		}
@@ -554,7 +694,10 @@ func (c *Cacher) GetTotalSize() (int64, error) {
 
 // PruneMediastreamVideoFilesByAge removes directories inside "videofiles" that are older than maxAge
 // and not currently in use.
-func (c *Cacher) PruneMediastreamVideoFilesByAge(maxAge time.Duration, inUse func(hash string) bool) (int64, error) {
+func (c *Cacher) PruneMediastreamVideoFilesByAge(ctx context.Context, maxAge time.Duration, inUse func(hash string) bool) (int64, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -571,6 +714,9 @@ func (c *Cacher) PruneMediastreamVideoFilesByAge(maxAge time.Duration, inUse fun
 	var freedBytes int64
 
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return freedBytes, err
+		}
 		if !entry.IsDir() {
 			continue
 		}
@@ -590,12 +736,22 @@ func (c *Cacher) PruneMediastreamVideoFilesByAge(maxAge time.Duration, inUse fun
 
 			// Calculate size before removing
 			var dirSize int64
-			_ = filepath.Walk(fullPath, func(_ string, f os.FileInfo, err error) error {
+			walkErr := filepath.Walk(fullPath, func(_ string, f os.FileInfo, err error) error {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				if err == nil && !f.IsDir() {
 					dirSize += f.Size()
 				}
 				return nil
 			})
+
+			if walkErr != nil {
+				return freedBytes, walkErr
+			}
+			if err := ctx.Err(); err != nil {
+				return freedBytes, err
+			}
 
 			if err := os.RemoveAll(fullPath); err == nil {
 				freedBytes += dirSize
@@ -603,5 +759,5 @@ func (c *Cacher) PruneMediastreamVideoFilesByAge(maxAge time.Duration, inUse fun
 		}
 	}
 
-	return freedBytes, nil
+	return freedBytes, ctx.Err()
 }

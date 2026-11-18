@@ -12,8 +12,20 @@ function setVideoTime(video: HTMLVideoElement, time: number) {
     video.currentTime = time
 }
 
+function setElementThumbPercent(el: HTMLElement, percent: number) {
+    el.style.transform = `translateX(${percent}%)`
+}
+
+function setInputValue(input: HTMLInputElement, value: string, ariaValueText: string) {
+    input.value = value
+    input.setAttribute("aria-valuetext", ariaValueText)
+}
+
 type UsePlayerSeekOptions = {
     videoRef: React.RefObject<HTMLVideoElement | null>
+    thumbRef?: React.RefObject<HTMLDivElement | null>
+    progressInputRef?: React.RefObject<HTMLInputElement | null>
+    duration?: number
     /** Avisa a usePlayerSkip de un salto manual (anula auto-skips en esa zona). */
     checkManualSkipOverrides: (time: number) => void
     triggerControlsVisibility: () => void
@@ -26,6 +38,9 @@ type UsePlayerSeekOptions = {
  */
 export function usePlayerSeek({
     videoRef,
+    thumbRef,
+    progressInputRef,
+    duration,
     checkManualSkipOverrides,
     triggerControlsVisibility,
 }: UsePlayerSeekOptions) {
@@ -46,10 +61,19 @@ export function usePlayerSeek({
         setIsSeeking(true)
         checkManualSkipOverrides(time)
 
+        const rawDur = video.duration
+        const total = Number.isFinite(rawDur) && rawDur > 0 ? rawDur : (duration && Number.isFinite(duration) && duration > 0 ? duration : 0)
+        const percent = total > 0 ? Math.max(0, Math.min(1, time / total)) : 0
+
         // Visual update of elements instantly
         if (progressBarRef.current) {
-            const percent = video.duration > 0 ? (time / video.duration) : 0
             progressBarRef.current.style.transform = `scaleX(${percent})`
+        }
+        if (thumbRef?.current) {
+            setElementThumbPercent(thumbRef.current, percent * 100)
+        }
+        if (progressInputRef?.current) {
+            setInputValue(progressInputRef.current, String(time), `${formatPlaybackTime(time)} de ${formatPlaybackTime(total)}`)
         }
         if (timeTextRef.current) {
             timeTextRef.current.innerText = formatPlaybackTime(time)
@@ -78,7 +102,7 @@ export function usePlayerSeek({
                 }
             }, SEEK_THROTTLE_MS - (now - lastSeekTimeRef.current))
         }
-    }, [videoRef, checkManualSkipOverrides])
+    }, [videoRef, thumbRef, progressInputRef, duration, checkManualSkipOverrides])
 
     const handleSeekStart = useCallback(() => {
         isSeekingRef.current = true
@@ -108,8 +132,25 @@ export function usePlayerSeek({
         lastSeekTimeRef.current = Date.now()
         pendingSeekTimeRef.current = null
 
+        const rawDur = video.duration
+        const total = Number.isFinite(rawDur) && rawDur > 0 ? rawDur : (duration && Number.isFinite(duration) && duration > 0 ? duration : 0)
+        const percent = total > 0 ? Math.max(0, Math.min(1, val / total)) : 0
+
+        if (progressBarRef.current) {
+            progressBarRef.current.style.transform = `scaleX(${percent})`
+        }
+        if (thumbRef?.current) {
+            setElementThumbPercent(thumbRef.current, percent * 100)
+        }
+        if (progressInputRef?.current) {
+            setInputValue(progressInputRef.current, String(val), `${formatPlaybackTime(val)} de ${formatPlaybackTime(total)}`)
+        }
+        if (timeTextRef.current) {
+            timeTextRef.current.innerText = formatPlaybackTime(val)
+        }
+
         triggerControlsVisibility()
-    }, [videoRef, checkManualSkipOverrides, triggerControlsVisibility])
+    }, [videoRef, thumbRef, progressInputRef, duration, checkManualSkipOverrides, triggerControlsVisibility])
 
     useEffect(() => {
         return () => {
@@ -120,12 +161,13 @@ export function usePlayerSeek({
     const skipTime = useCallback((amount: number) => {
         const video = videoRef.current
         if (!video) return
-        const dur = Number.isFinite(video.duration) ? video.duration : Infinity
+        const rawDur = video.duration
+        const dur = Number.isFinite(rawDur) && rawDur > 0 ? rawDur : (duration && Number.isFinite(duration) && duration > 0 ? duration : Infinity)
         const target = Math.max(0, Math.min(dur, video.currentTime + amount))
 
         performSeek(target)
         triggerControlsVisibility()
-    }, [videoRef, performSeek, triggerControlsVisibility])
+    }, [videoRef, duration, performSeek, triggerControlsVisibility])
 
-    return { progressBarRef, timeTextRef, isSeeking, setIsSeeking, isSeekingRef, performSeek, handleSeekStart, handleSeek, handleSeekEnd, skipTime }
+    return { progressBarRef, timeTextRef, isSeeking, setIsSeeking, isSeekingRef, handleSeekStart, handleSeek, handleSeekEnd, skipTime }
 }

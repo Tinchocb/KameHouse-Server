@@ -155,7 +155,7 @@ export const HoldConfirm = React.forwardRef<HTMLButtonElement, HoldConfirmProps>
             <m.button
                 ref={ref}
                 type="button"
-                whileTap={{ scale: 0.97 }}
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
                 transition={pressSpring}
                 disabled={disabled || isPending}
                 aria-busy={isPending || undefined}

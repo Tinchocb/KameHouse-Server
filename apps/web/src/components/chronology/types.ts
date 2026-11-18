@@ -2,8 +2,6 @@ export type SagaCategory = 'clasico' | 'saiyan-freezer' | 'cell' | 'buu' | 'supe
 
 export type EraFilter = 'all' | 'db-clasico' | 'db-z' | 'db-super' | 'db-daima' | 'db-gt';
 
-export type AspectRatioType = '3:4' | '2:3';
-
 export interface MomentPlayInfo {
   key?: string;
   title: string;
@@ -60,21 +58,14 @@ export interface ChapterMilestone {
   synopsis: string;
   sceneHighlight?: string;
   accentColor?: string;
-  bgGradient?: string;
   iconEmoji?: string;
   characterFocus?: string;
   /** Ruta local curada (prioridad 1 del híbrido). Ej: /episodes/z/159.webp */
   thumbnailUrl?: string;
-  /** Temporada TMDB para el fallback de still (prioridad 2). Si se omite se deriva del absoluto. */
-  tmdbSeason?: number;
-  /** Episodio dentro de la temporada TMDB para el fallback. */
-  tmdbEpisode?: number;
   /** Número absoluto dentro de la serie (1-based). Si se omite se parsea de `episode`. */
   absoluteEpisode?: number;
   /** Segundo de inicio del momento (segundos exactos dentro del episodio). */
   startSec?: number;
-  /** Clave estable del momento (`${span.id}:${episode}:${index}`) para correcciones y player. */
-  momentKey?: string;
 }
 
 export interface StoryBattle {
@@ -137,7 +128,6 @@ export interface VolumeData {
   officialYearNumber: number;
   saga: SagaCategory;
   sagaLabel: string;
-  isFeaturedExample?: boolean;
   coverArt: VolumeCoverArt;
   narrative: VolumeNarrative;
   detailedStory?: DetailedStoryNarrative;

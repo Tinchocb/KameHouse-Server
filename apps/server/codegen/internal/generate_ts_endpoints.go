@@ -17,8 +17,6 @@ const (
 	space                           = "    "
 )
 
-var additionalStructNamesForEndpoints = []string{}
-
 func GenerateTypescriptEndpointsFile(handlersJsonPath string, structsJsonPath string, outDir string) []string {
 	handlers := LoadHandlers(handlersJsonPath)
 	structs := LoadPublicStructs(structsJsonPath)
@@ -65,9 +63,6 @@ func GenerateTypescriptEndpointsFile(handlersJsonPath string, structsJsonPath st
 		return strings.Compare(i, j)
 	})
 
-	// Store the endpoints
-	endpointsMap := make(map[string]string)
-
 	for _, filename := range filenames {
 		routes := groupedByFile[filename]
 		if len(routes) == 0 {
@@ -107,8 +102,6 @@ func GenerateTypescriptEndpointsFile(handlersJsonPath string, structsJsonPath st
 			} else {
 				methodStr = fmt.Sprintf("\"%s\"", route.Api.Methods[0])
 			}
-
-			endpointsMap[strings.TrimPrefix(route.Name, "Handle")] = getEndpointKey(route.Name, groupName)
 
 			writeLine(f, fmt.Sprintf("\t\t\tkey: \"%s\",", getEndpointKey(route.Name, groupName)))
 
@@ -177,10 +170,6 @@ func GenerateTypescriptEndpointsFile(handlersJsonPath string, structsJsonPath st
 		}
 
 		importedTypes = append(importedTypes, goStruct.FormattedName)
-	}
-
-	for _, otherStrctName := range additionalStructNamesForEndpoints {
-		importedTypes = append(importedTypes, stringGoTypeToTypescriptType(otherStrctName))
 	}
 	//
 	slices.SortStableFunc(importedTypes, func(i, j string) int {

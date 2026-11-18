@@ -1,0 +1,846 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  components.css — Componentes de UI, Modales, Formularios y Diálogos  ║
+   ║  Modales, Buscadores, Popovers, Cronología, Toasts, Inputs            ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
+
+/* Limpieza de paneles redundantes en Minimalista: sin tarjetas de sugerencias opcionales en Inicio vacío
+   y sin caja dentro de caja en Mi Lista */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-labelledby="suggestions-title"] {
+  display: none !important;
+}
+
+/* Aviso informativo en Apariencia: sobrio, sólido y legible */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-transparency-status] {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+  color: var(--minimal-text-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .global-queue-panel .glass-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.glass-card > div[style*="radial-gradient"], div[style*="radial-gradient"].blur-3xl) {
+  display: none !important;
+}
+
+/* Estados vacíos y tarjetas estáticas inline: sin sombras ni gradientes difuminados */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.glass-card, [class*="glass-card"]):not([role="dialog"]):not([role="menu"]):not([role="alertdialog"]) {
+  box-shadow: none !important;
+  border-radius: var(--minimal-radius-lg) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .glass-card .rounded-container {
+  background: var(--minimal-surface-raised) !important;
+  border-color: var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .glass-card .animate-pulse-slow {
+  animation: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([data-sonner-toast], [data-toast]) {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-shadow-menu) !important;
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([data-sonner-toast] [data-button], [data-toast] button) {
+  background: var(--minimal-fill-4) !important;
+  color: var(--minimal-text-1) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([data-sonner-toast] [data-button], [data-toast] button):hover {
+  background: var(--minimal-fill-5) !important;
+  color: var(--minimal-text-hi) !important;
+}
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .toaster [data-button] {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+/* Tooltips accesibles */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="tooltip"] {
+  background: var(--minimal-surface-raised) !important;
+  border: 1px solid var(--minimal-line-3) !important;
+  border-radius: var(--minimal-radius-sm) !important;
+  box-shadow: var(--minimal-shadow-control) !important;
+  color: var(--minimal-text-1) !important;
+}
+
+/* Búsqueda (CommandPalette): limpieza de degradados, sombras y monocromía en orbe */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="dialog"] div[class*="bg-gradient-to-tr"] {
+  display: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([role="dialog"] .shadow-elevation-1, [role="dialog"] .shadow-elevation-2) {
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.thinking-orb, [class*="thinking-orb"], [aria-label="Buscando…"]) {
+  filter: grayscale(1) !important;
+}
+
+/* Supresión de shimmers infinitos */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.animate-shimmer, [class*="animate-shimmer"]) {
+  display: none !important;
+}
+
+/* Esqueletos estáticos */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.skeleton, [data-skeleton]) {
+  background: var(--minimal-fill-2) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.skeleton, [data-skeleton])::before {
+  display: none !important;
+}
+
+/* Despeje de fondo exterior del shelf conservando el 100% del degradado */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .vhs-shelf-stage {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Conserva el degradado original de las tarjetas de serie */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .series-shelf-backdrop {
+  background:
+    radial-gradient(ellipse at 70% 56%, color-mix(in srgb, var(--shelf-accent) 19%, transparent), transparent 72%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--shelf-accent) 8%, var(--bg-primary)), var(--bg-primary)) !important;
+}
+
+/* Estantería de Series: foco de precisión en Minimalista */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .series-shelf-card:focus-visible .series-shelf-rim {
+  box-shadow: inset 0 0 0 1.5px var(--minimal-accent) !important;
+}
+
+/* Diálogos y paneles: sólidos; la sombra crece con la distancia */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Modal__content, .character-detail-modal) {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-shadow-modal) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal :is(.border-white\/10, .border-white\/15, .border-white\/20, .border-white\/30) {
+  border-color: var(--minimal-line-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal :is(.character-scouter-hud, .character-transform-card) {
+  background: var(--minimal-surface-raised) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal .character-tech-badge {
+  background: var(--minimal-fill-2) !important;
+  border: 1px solid var(--minimal-line-3) !important;
+  color: var(--minimal-text-2) !important;
+  border-radius: var(--minimal-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal span.rounded-full {
+  border-radius: var(--minimal-radius-xs) !important;
+  background: var(--minimal-fill-3) !important;
+  border-color: var(--minimal-line-3) !important;
+  color: var(--minimal-text-1) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal div:has(> img[alt]) {
+  box-shadow: none !important;
+  border-color: var(--minimal-line-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal div:has(> .text-status-success) {
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-2) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal .text-status-success {
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal .bg-status-success {
+  background-color: var(--minimal-accent) !important;
+}
+
+/* Panel lateral de cola: anclado al lateral de la pantalla sin bordes en los marcos */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .global-queue-panel {
+  background: var(--minimal-surface) !important;
+  border: 0 !important;
+  border-left: 1px solid var(--minimal-line-2) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--minimal-shadow-modal) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .global-queue-panel .rounded-2xl {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.player-settings-surface, .glass-frosted) {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-shadow-menu) !important;
+}
+
+/* Buscador expandible y paleta de comandos */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="search"] > div.rounded-full {
+  border-radius: var(--minimal-radius-md) !important;
+  background: var(--minimal-fill-3) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(#global-search-listbox, [data-search-results="listbox"]) button.rounded-full {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(#global-search-listbox, [data-search-results="listbox"], [cmdk-root]) :is([role="option"][aria-selected="true"], [cmdk-item][aria-selected="true"], [cmdk-item][data-selected="true"]) {
+  background: var(--minimal-fill-3) !important;
+  border-color: var(--minimal-line-4) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(#global-search-listbox, [data-search-results="listbox"], [aria-label="Búsqueda rápida"]) [class*="text-brand-"] {
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-label="Búsqueda rápida"] [class*="bg-brand-"] {
+  background: var(--minimal-fill-3) !important;
+  border-color: var(--minimal-line-3) !important;
+  color: var(--minimal-text-1) !important;
+}
+
+/* Tooltips: un escalón sobre la superficie */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="tooltip"] {
+  border-radius: var(--minimal-radius-sm) !important;
+  background: var(--minimal-surface-raised) !important;
+  border: 1px solid var(--minimal-line-3) !important;
+  box-shadow: var(--minimal-shadow-float) !important;
+  max-inline-size: min(22rem, calc(100vw - 2rem));
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Campos (UI-Input y selects) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root, input.rounded-full, select.rounded-full) {
+  background: var(--minimal-surface) !important;
+  border: 0 !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+  color: var(--minimal-text-1) !important;
+  min-height: var(--minimal-hit) !important;
+  transition: var(--minimal-transition) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root, input.rounded-full):where(:not([data-field-appearance="line"], :disabled, [readonly])):hover {
+    background: var(--minimal-surface-raised) !important;
+  }
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Input__root:where(:not([data-field-appearance="line"])):is(:focus, :focus-within),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) input.rounded-full:where(:not([data-field-appearance="line"])):focus {
+  background: var(--minimal-surface-raised) !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: var(--minimal-focus-ring) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root, input)::placeholder {
+  color: var(--minimal-text-4) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root, [data-field-surface])[data-field-appearance="line"] {
+  min-height: var(--minimal-hit);
+  padding-inline: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--minimal-line-4) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Menús desplegables y popovers: misma materia y distancia de flotación. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([data-select-surface], .UI-Popover__root, [role="menu"]) {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: var(--minimal-shadow-menu) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([data-select-option], [role="menu"] button, .UI-Popover__root button) {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+@media (any-pointer: coarse), (hover: none) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-select-option] {
+    min-height: var(--minimal-hit);
+  }
+
+  /* Evita ampliar el formulario al editar en navegadores móviles. */
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root, select.rounded-full, [data-field-embedded]) {
+    font-size: var(--minimal-font-lg) !important;
+  }
+}
+
+/* Interruptores: el hook identifica la pieza visual tanto sola como dentro
+   de OsToggle. Su rol accesible no determina la materia ni la geometría. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-switch] {
+  /* El área táctil vive en ::after; el mínimo genérico de button no debe
+     convertir la pista de 36×20 / 46×26 en un botón de 44 px de alto. */
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: var(--switch-track-off);
+  transition: var(--minimal-transition) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-switch][data-checked="true"] {
+  background: var(--minimal-accent);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-switch]::after {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  min-width: var(--minimal-hit);
+  min-height: var(--minimal-hit);
+  transform: translate(-50%, -50%);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-switch-thumb] {
+  background: var(--switch-thumb-off);
+  box-shadow: none !important;
+  transition: background-color var(--minimal-duration) ease !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-switch][data-checked="true"] [data-switch-thumb] {
+  background: var(--minimal-on-accent);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-switch-thumb] > span {
+  display: none;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-switch][data-disabled="true"] {
+  opacity: var(--minimal-disabled-opacity);
+}
+
+/* La fila ya atenúa todo el control: el pulgar no se atenúa una segunda vez. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-control="toggle"][aria-disabled="true"] {
+  opacity: var(--minimal-disabled-opacity);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-control="toggle"][aria-disabled="true"] [data-switch] {
+  opacity: 1;
+}
+
+/* El anillo universal pertenece a la fila; su fondo de foco sigue visible. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-control="toggle"]:focus-visible::before {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-switch-thumb] {
+    transition: none !important;
+  }
+}
+
+/* Cronología: Pacificación completa de tarjetas, lomos, conectores y avances */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([id^="timeline-card-"], [id^="volume-card-"], .contralateral-details-card, [id^="era-"], [id^="timeline-node-"], [id^="era-group-"], [data-interlude-slot], .group\/interlude) {
+  --era: var(--minimal-accent-rgb) !important;
+  --era-text: var(--minimal-accent-rgb) !important;
+  --tick: var(--minimal-accent-rgb) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([id^="timeline-card-"], [id^="volume-card-"]) {
+  border-color: var(--minimal-line-2) !important;
+  box-shadow: var(--minimal-card-edge) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([id^="timeline-card-"], [id^="volume-card-"]) > span[aria-hidden="true"]:first-of-type {
+  background: var(--minimal-line-3) !important;
+}
+
+/* Minimalismo en Cronología: sin lomo vertical repetido, sin franja DUELO redundante,
+   sin regla densa de años, sin watermark gigante y sin contador de 70 marcas en la columna opuesta */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(
+  [id^="timeline-card-"] aside,
+  [id^="volume-card-"] aside,
+  [id^="timeline-card-"] div.rounded-lg.bg-gradient-to-r,
+  [id^="volume-card-"] div.rounded-lg.bg-gradient-to-r,
+  [id^="era-"] > div.font-kanji,
+  .font-kanji.text-7xl,
+  .font-kanji.sm\:text-9xl,
+  .chrono-era-kanji-frame,
+  [role="slider"][aria-label*="años"],
+  [role="slider"][aria-label*="Escala"],
+  [role="slider"][aria-label*="temporal"],
+  [style*="--tick"]
+) {
+  display: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .contralateral-details-card {
+  background: var(--minimal-surface) !important;
+  border-color: var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-card-edge) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .contralateral-details-card > span[aria-hidden="true"] {
+  background: var(--minimal-line-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [id^="era-"] {
+  background: var(--minimal-surface) !important;
+  border-color: var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-card-edge) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [id^="era-"] > span[aria-hidden="true"] {
+  background: var(--minimal-line-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [id^="era-"] div.w-12.font-kanji {
+  background-color: var(--minimal-fill-3) !important;
+  border-color: var(--minimal-line-3) !important;
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [id^="era-"] div[role="progressbar"] > div {
+  background-color: var(--minimal-accent) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .animate-era-complete-sweep {
+  display: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-chip {
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-3) !important;
+  color: var(--minimal-text-1) !important;
+  border-radius: var(--minimal-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chronology-progress-segment {
+  border-radius: var(--minimal-radius-xs) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chronology-progress-bar {
+  border-radius: var(--minimal-radius-xs) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chronology-compact-row {
+  background: var(--minimal-surface) !important;
+  border-color: var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-spine-node {
+  border-color: var(--minimal-line-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-spine-node[data-state="active"] {
+  background: var(--minimal-fill-4) !important;
+  border-color: var(--minimal-line-4) !important;
+  color: var(--minimal-text-hi) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-spine-node[data-state="idle"] {
+  background: var(--minimal-surface) !important;
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) div[style*="linear-gradient"][class*="w-0.5"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) div[style*="linear-gradient"][class*="h-px"] {
+  background: var(--minimal-line-2) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) span.font-display[style*="linear-gradient"] {
+  background-image: none !important;
+  color: var(--minimal-text-1) !important;
+  -webkit-text-fill-color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .group\/interlude {
+  border-radius: var(--minimal-radius-lg) !important;
+  border-color: var(--minimal-line-2) !important;
+  box-shadow: none !important;
+  background: var(--minimal-surface) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .group\/interlude > span[aria-hidden="true"]:first-of-type {
+  background: var(--minimal-line-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="slider"][aria-label*="temporal"] [data-era-band] {
+  background: var(--minimal-fill-5) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="slider"][aria-label*="temporal"] span[style*="background"] {
+  background: var(--minimal-text-2) !important;
+}
+
+/* Cronología (emblema kanji y clímax) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-era-kanji-frame {
+  background: var(--minimal-fill-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-era-kanji-badge {
+  background-color: var(--minimal-surface) !important;
+  border-color: var(--minimal-line-3) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-era-kanji-glyph {
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-climax-box {
+  background-color: var(--minimal-surface) !important;
+  border-color: var(--minimal-line-2) !important;
+}
+
+/* Nodos y ramas de la espina central de Cronología */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-spine-node {
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-spine-node[data-state="active"] {
+  background: var(--minimal-fill-4) !important;
+  border-color: var(--minimal-line-4) !important;
+  color: var(--minimal-text-hi) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-spine-node[data-state="read"] {
+  background: var(--minimal-fill-3) !important;
+  border-color: var(--minimal-line-4) !important;
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) div:has(> .chrono-spine-node) > div[style*="linear-gradient"] {
+  background: var(--minimal-line-3) !important;
+}
+
+/* Inspector de lapso (Cronología) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-nav-group {
+  border-radius: var(--minimal-radius-sm) !important;
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-nav-group .UI-Button_root {
+  border-radius: var(--minimal-radius-xs) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-scrubber-fill {
+  background-color: var(--minimal-accent) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-milestone-card {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-milestone-card[aria-pressed="true"] {
+  background-color: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-4) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-milestone-thumb {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+/* Glosario de Lore */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .lore-term-badge {
+  background-color: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-3) !important;
+  color: var(--minimal-text-2) !important;
+}
+
+/* Foco de teclado universal (también interruptores) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(button, a, input, select, textarea, [tabindex], [role="switch"]):focus-visible {
+  outline: none !important;
+  box-shadow: var(--minimal-focus-ring) !important;
+}
+
+/* Un solo foco: la línea pertenece al campo o al contenedor de OsInput.
+   El input embebido no suma otro anillo dentro del mismo control. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-field-embedded]:focus-visible {
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root, [data-field-surface])[data-field-appearance="line"]:is(:focus-visible, :has(input:focus-visible)) {
+  border-bottom-color: var(--minimal-accent) !important;
+  box-shadow: 0 1px 0 var(--minimal-accent) !important;
+  outline: none !important;
+}
+
+/* El padding de línea no debe dejar el texto debajo de un icono. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Input__root[data-field-appearance="line"][data-field-left-icon="true"] {
+  padding-left: 3rem;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Input__root[data-field-appearance="line"][data-field-right-icon="true"] {
+  padding-right: 3rem;
+}
+
+/* Error funcional: se conserva en reposo y al editar, incluso en OsInput.
+   Un borde interior evita cambiar las dimensiones de los campos sin filete. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Input__root[aria-invalid="true"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-field-surface]:has(input[aria-invalid="true"]) {
+  box-shadow: inset 0 0 0 1px var(--minimal-field-error) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Input__root[aria-invalid="true"]:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--minimal-field-error), var(--minimal-focus-ring) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root[aria-invalid="true"], [data-field-surface]:has(input[aria-invalid="true"]))[data-field-appearance="line"] {
+  border-bottom-color: var(--minimal-field-error) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root[aria-invalid="true"], [data-field-surface]:has(input[aria-invalid="true"]))[data-field-appearance="line"]:is(:focus-visible, :has(input:focus-visible)) {
+  box-shadow: 0 1px 0 var(--minimal-field-error) !important;
+}
+
+/* Solo lectura sigue siendo seleccionable. Deshabilitado se atenúa una vez. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Input__root[readonly] {
+  cursor: text;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root[readonly], [data-field-surface][data-readonly="true"])[data-field-appearance="line"] {
+  border-bottom-style: dashed !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root:disabled, [data-field-surface][data-disabled="true"]) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-field-surface][data-disabled="true"] input {
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Modal «Sorpréndeme» (RandomPlayButton)
+   ────────────────────────────────────────────────────────────────────────── */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="random-play-dialog-title"] {
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-shadow-modal) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="random-play-dialog-title"] > div.absolute.top-0 {
+  display: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="random-play-dialog-title"] .p-3\.5.rounded-2xl {
+  border-radius: var(--minimal-radius-md) !important;
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-2) !important;
+  color: var(--minimal-text-1) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="random-play-dialog-title"] button.rounded-2xl {
+  border-radius: var(--minimal-radius-md) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="random-play-dialog-title"] button.rounded-2xl:hover {
+    background: var(--minimal-fill-2) !important;
+    border-color: var(--minimal-line-4) !important;
+    box-shadow: none !important;
+  }
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="random-play-dialog-title"] button.rounded-2xl .rounded-2xl {
+  border-radius: var(--minimal-radius-sm) !important;
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-2) !important;
+  color: var(--minimal-text-1) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="random-play-dialog-title"] button.rounded-2xl span.rounded-full {
+  border-radius: var(--minimal-radius-xs) !important;
+  background: var(--minimal-fill-3) !important;
+  border-color: var(--minimal-line-2) !important;
+  color: var(--minimal-text-2) !important;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Buscador Flotante Instantáneo
+   ────────────────────────────────────────────────────────────────────────── */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .glass-frosted:has([data-search-results="listbox"]) {
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-shadow-float) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Inspector de Lapso (VolumeInspectorModal)
+   ────────────────────────────────────────────────────────────────────────── */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-inspector-modal .rounded-2xl.grid {
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-inspector-modal span[style*="--poster-accent"] {
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-inspector-modal div.rounded-xl:has(> .text-brand-accent) {
+  border-radius: var(--minimal-radius-sm) !important;
+  border-color: var(--minimal-line-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-inspector-modal div.rounded-full.bg-brand-accent\/15 {
+  border-radius: var(--minimal-radius-xs) !important;
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-2) !important;
+  color: var(--minimal-text-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .volume-inspector-modal button.w-7.h-7.rounded-lg {
+  border-radius: var(--minimal-radius-xs) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Biblioteca Vacía y Sugerencias
+   ────────────────────────────────────────────────────────────────────────── */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .blur-3xl:has(+ img[alt*="Bulma"]) {
+  display: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) span.rounded-full.bg-brand-accent\/15 {
+  border-radius: var(--minimal-radius-xs) !important;
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-2) !important;
+  color: var(--minimal-text-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) span.rounded-lg.bg-brand-accent\/15 {
+  border-radius: var(--minimal-radius-sm) !important;
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-2) !important;
+  color: var(--minimal-text-1) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Escáner en Vivo (Scan Live)
+   ────────────────────────────────────────────────────────────────────────── */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label="Estado del escáner"] {
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label="Estado del escáner"].bg-brand-accent\/\[0\.04\] {
+  background: var(--minimal-surface-raised) !important;
+  border-color: var(--minimal-line-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label="Estado del escáner"] div.bg-brand-accent\/15 {
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-2) !important;
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label="Estado del escáner"] div.bg-brand-accent {
+  background-color: var(--minimal-accent) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label="Archivos escaneados"] span.animate-ping {
+  animation: none !important;
+  background-color: var(--minimal-accent) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label="Archivos escaneados"] span.bg-brand-accent {
+  background-color: var(--minimal-accent) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label="Archivos escaneados"] div.rounded-full:has(> input[type="search"]) {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Zona de Peligro (DangerZone)
+   ────────────────────────────────────────────────────────────────────────── */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .group\/danger .rounded-full:has(> svg) {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+
+/* Los glifos emoji ignoran currentColor: el acento decorativo también es monocromo. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .chrono-impact-icon {
+  filter: grayscale(1);
+}
+
+/* Acceso al servidor: el estado previo a la biblioteca también pertenece al tema.
+   Es un panel de bloqueo, por eso puede usar la elevación reservada para modales. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) main:has(#server-access-title) {
+  background: var(--minimal-canvas) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="server-access-title"] {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-shadow-modal) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-labelledby="server-access-title"] :is(p, [role="status"]) {
+  color: var(--minimal-text-2) !important;
+}
+
+/* Los estados positivos de Ajustes no introducen un segundo acento: la jerarquía
+   queda en el texto y el filete. El error conserva su rojo funcional. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-page] :is([class*="bg-status-success"], [class*="border-status-success"]) {
+  background-color: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-3) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-page] .text-status-success {
+  color: var(--minimal-text-1) !important;
+}
+
+/* Las esferas son decorativas y solo aparecen en Por era. Si el DOM conserva una
+   transición de tema, el override evita que su halo o color se filtre a Minimalista. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .dragon-ball-meter img {
+  filter: grayscale(1) !important;
+}

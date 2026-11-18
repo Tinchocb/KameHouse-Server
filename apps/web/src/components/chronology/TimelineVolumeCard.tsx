@@ -1,10 +1,23 @@
 import React, { useState, useEffect, memo } from 'react';
-import { m, LayoutGroup } from 'framer-motion';
+import { m, LayoutGroup, AnimatePresence } from 'framer-motion';
 import type { VolumeData } from './types';
 import { Chip } from './Chip';
 import { IconButton } from '@/components/ui/button';
 import { cn } from '@/components/ui/core/styling';
-import { useSpringPreset, useReducedMotion } from '@/components/ui/kinetics/hooks';
+import { useSpringPreset, useReducedMotion, useMotionTier } from '@/components/ui/kinetics/hooks';
+import { useIsMinimalistMode } from '@/lib/theme/use-classic-mode';
+
+const SAGA_PREFIX_REGEX_CACHE = new Map<string, RegExp>();
+
+function getSagaPrefixRegex(sagaLabel: string): RegExp {
+  let re = SAGA_PREFIX_REGEX_CACHE.get(sagaLabel);
+  if (!re) {
+    const escaped = sagaLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    re = new RegExp(`^${escaped}\\s*[▪•·\\-–—]\\s*`, 'i');
+    SAGA_PREFIX_REGEX_CACHE.set(sagaLabel, re);
+  }
+  return re;
+}
 import { EpisodeThumbnailImg } from './EpisodeThumbnailImg';
 import { type MomentPlayInfo } from './types';
 import { ContralateralDetailsCard, type DetailTab } from './ContralateralDetailsCard';
@@ -30,18 +43,12 @@ import {
  * Transiciones para los elementos secundarios (overlays, textos, botones) que acompañan el morfismo FLIP
  * del contenedor, el lomo Kanzenban y la miniatura (`layoutId`).
  */
-const CONTENT_IN = { duration: 0.2, ease: [0.22, 1, 0.36, 1] } as const;
-
-/** Lo mínimo de un lapso vecino para enlazar la historia hacia atrás y hacia adelante. */
-export type VolumeNeighbor = Pick<VolumeData, 'id' | 'title' | 'sagaLabel' | 'volumeNumber'>;
+const CONTENT_IN_ERA = { duration: 0.25, ease: [0.22, 1, 0.36, 1] } as const;
+const CONTENT_IN_MINIMAL = { duration: 0.16, ease: [0.23, 1, 0.32, 1] } as const;
+const CONTENT_IN_REDUCED = { duration: 0.12 } as const;
 
 interface TimelineVolumeCardProps {
   volume: VolumeData;
-  /** Lapso anterior y siguiente en el orden global de la historia. */
-  prevVolume?: VolumeNeighbor;
-  nextVolume?: VolumeNeighbor;
-  /** Lleva la vista al lapso vecino. */
-  onJumpToVolume?: (volumeId: string) => void;
   /** Avisa a la fila cuando la tarjeta se abre o se pliega. */
   onExpandedChange?: (volumeId: string, expanded: boolean) => void;
   isRead: boolean;
@@ -54,8 +61,6 @@ interface TimelineVolumeCardProps {
   isHighlighted?: boolean;
   /** Color de la era: tiñe borde, brillo, etiquetas y avance. */
   accentHex?: string;
-  serverMomentTimes?: Record<string, number>;
-  onToggleRead?: (volumeId: string) => void;
   onInspectThumbnail?: (volume: VolumeData) => void;
   onPlayVolume?: (volume: VolumeData, episodeNum?: number, momentInfo?: MomentPlayInfo) => void;
   /** Arma en Mi Lista los episodios desde este lapso hasta el final de la era. */
@@ -77,13 +82,12 @@ interface TimelineVolumeCardProps {
   detailTab?: DetailTab;
   /** Recibe el id del lapso para que la lista pase un callback estable. */
   onTabChange?: (volumeId: string, tab: DetailTab) => void;
+  className?: string;
 }
 
 export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
   ({
     volume,
-    nextVolume: _nextVolume,
-    onJumpToVolume: _onJumpToVolume,
     onExpandedChange,
     isRead,
     progressPercent = 0,
@@ -91,8 +95,6 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
     seenEpisodes,
     isHighlighted = false,
     accentHex = ALL_ERAS_HEX,
-    serverMomentTimes: _serverMomentTimes,
-    onToggleRead: _onToggleRead,
     onInspectThumbnail,
     onPlayVolume,
     onMarathon,
@@ -105,6 +107,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
     onCollapseCard,
     detailTab: controlledDetailTab,
     onTabChange: controlledTabChange,
+    className = '',
   }) => {
     const [localShowDetails, setLocalShowDetails] = useState(false);
     const showDetails = controlledShowDetails ?? localShowDetails;
@@ -150,7 +153,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
 
     // Subtítulo deduplicado: evita repetir el nombre de la saga
     const cleanSubtitle = volume.subtitle
-      ? volume.subtitle.replace(new RegExp(`^${volume.sagaLabel}\\s*[▪•·\\-–—]\\s*`, 'i'), '').trim()
+      ? volume.subtitle.replace(getSagaPrefixRegex(volume.sagaLabel), '').trim()
       : volume.narrative.detonante.description;
 
     const handlePlayMain = () => {
@@ -183,28 +186,36 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
 
     const morphSpring = useSpringPreset('entrance');
     const reduceMotion = useReducedMotion();
+    const isMinimalist = useIsMinimalistMode();
+    const motionTier = useMotionTier();
+    const contentInTransition = reduceMotion
+      ? CONTENT_IN_REDUCED
+      : isMinimalist
+        ? CONTENT_IN_MINIMAL
+        : CONTENT_IN_ERA;
 
     return (
       <LayoutGroup id={`timeline-volume-${volume.id}`}>
         <m.article
-          layout={reduceMotion ? false : 'position'}
+          layout={reduceMotion || motionTier !== 'full' ? false : 'position'}
           id={`timeline-card-${volume.id}`}
+          data-liquid-surface="content"
           data-status={status}
           data-focused={isFocused ? 'true' : 'false'}
           tabIndex={-1}
           transition={morphSpring}
           style={{ '--era': hexToRgbChannels(accentHex), '--era-text': eraTextChannels(accentHex) } as React.CSSProperties}
           className={cn(
-            'group relative isolate flex w-full outline-none select-none text-left',
+            'group relative isolate flex w-full max-w-[660px] outline-none select-none text-left', className,
             'transition-[border-color,box-shadow,opacity,background-color] duration-medium ease-smooth-out motion-reduce:transition-none',
             !isFocused
               ? cn(
                   // Sin .sectionbar: hay una fila por lapso plegado y el vidrio se repetiría en la lista (§9).
-                  'items-stretch overflow-hidden rounded-xl border bg-surface-container-lowest cursor-pointer',
+                  'items-stretch overflow-hidden rounded-xl border bg-[var(--surface-content)] cursor-pointer',
                   hasAnyFocus
-                    ? 'opacity-60 hover:opacity-95 hover:border-[rgb(var(--era)/0.45)]'
-                    : 'opacity-90 hover:opacity-100',
-                  'hover:bg-white/[0.03] active:scale-[0.995]',
+                    ? 'opacity-80 hover:opacity-100 hover:border-[rgb(var(--era)/0.45)]'
+                    : 'opacity-100',
+                  'hover:bg-[color-mix(in_srgb,var(--surface-content)_95%,rgb(var(--era)))] motion-safe:active:scale-[0.995]',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:opacity-100',
                   isHighlighted
                     ? 'border-[rgb(var(--era)/0.7)] ring-2 ring-brand-accent !opacity-100'
@@ -239,7 +250,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
               'pointer-events-none absolute inset-x-0 top-0 z-30 transition-opacity duration-base',
               isFocused
                 ? 'h-[2px] bg-gradient-to-r from-[rgb(var(--era))] via-[rgb(var(--era)/0.75)] to-transparent opacity-100'
-                : 'h-px bg-gradient-to-r from-transparent via-[rgb(var(--era)/0.7)] to-transparent opacity-40 group-hover:opacity-100'
+                : 'h-px bg-gradient-to-r from-transparent via-[rgb(var(--era)/0.7)] to-transparent opacity-40 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100'
             )}
           />
 
@@ -248,29 +259,33 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
             aria-hidden="true"
             className={cn(
               'shrink-0 border-r border-white/10 flex flex-col items-center justify-between px-0.5 select-none z-20 bg-gradient-to-b from-[rgb(var(--era)/0.22)] via-surface-container-lowest/90 to-surface-container-lowest',
-              isFocused ? 'w-8 sm:w-9 py-3.5' : 'w-8 py-2.5'
+              isFocused ? 'w-8 py-3' : 'w-7 py-2.5'
             )}
           >
             <span className="font-mono font-black text-2xs text-[rgb(var(--era-text,var(--era)))] tracking-tighter">
               {volumeNumberShort}
             </span>
 
-            {isFocused && (
-              <m.span
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={CONTENT_IN}
-                className="my-2 [writing-mode:vertical-rl] rotate-180 font-display font-semibold text-2xs tracking-wide text-on-surface-variant"
-              >
-                {volume.sagaLabel}
-              </m.span>
-            )}
+            <AnimatePresence initial={false}>
+              {isFocused && (
+                <m.span
+                  key={`spine-label-${volume.id}`}
+                  initial={reduceMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={contentInTransition}
+                  className="my-1.5 [writing-mode:vertical-rl] rotate-180 font-display font-semibold text-3xs sm:text-2xs tracking-wide text-on-surface-variant line-clamp-1"
+                >
+                  {volume.sagaLabel}
+                </m.span>
+              )}
+            </AnimatePresence>
 
             <div
               className={cn(
                 'flex items-center justify-center font-kanji font-black transition-[background-color,border-color] duration-fast',
                 isFocused
-                  ? 'w-7 h-7 rounded-md border border-[rgb(var(--era)/0.65)] bg-[rgb(var(--era)/0.15)] text-xs text-[rgb(var(--era-text,var(--era)))] shadow-inner'
+                  ? 'w-6.5 h-6.5 rounded-md border border-[rgb(var(--era)/0.65)] bg-[rgb(var(--era)/0.15)] text-xs text-[rgb(var(--era-text,var(--era)))] shadow-inner'
                   : 'text-2xs text-white/50'
               )}
             >
@@ -285,8 +300,8 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
               <m.div
                 layoutId={reduceMotion ? undefined : `card-artwork-${volume.id}`}
                 transition={morphSpring}
-                style={{ borderRadius: 8 }}
-                className="w-24 sm:w-28 shrink-0 aspect-video rounded-lg overflow-hidden relative z-20 pointer-events-none bg-surface-container-lowest group/thumb"
+                style={{ borderRadius: 6 }}
+                className="w-20 sm:w-28 shrink-0 aspect-video rounded-md overflow-hidden relative z-20 pointer-events-none bg-surface-container-lowest group/thumb"
               >
                 <EpisodeThumbnailImg
                   volume={volume}
@@ -297,7 +312,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                     isRead ? 'saturate-[0.8] brightness-90' : ''
                   }`}
                 />
-                <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 group-focus-within/thumb:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
+                <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 group-focus-within/thumb:opacity-100 [@media(hover:none)]:opacity-100 focus-within:opacity-100 transition-opacity duration-fast ease-smooth-out">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -306,9 +321,9 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                     }}
                     aria-label={`Reproducir ${playTarget.label}`}
                     disabled={status === 'unavailable'}
-                    className="pointer-events-auto w-6 h-6 rounded-full bg-white text-black flex items-center justify-center text-xs shadow-elevation-2 hover:scale-110 active:scale-95 transition-transform disabled:opacity-50 disabled:pointer-events-none"
+                    className="episode-play-overlay pointer-events-auto w-7 h-7 rounded-full bg-white text-black flex items-center justify-center text-xs shadow-elevation-2 motion-safe:[@media(hover:hover)_and_(pointer:fine)]:hover:scale-110 motion-safe:active:scale-[0.97] transition-transform duration-fast ease-smooth-out disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                   >
-                    <IconMediaPlay className="w-3 h-3 fill-current ml-px" />
+                    <IconMediaPlay className="w-3.5 h-3.5 fill-current ml-0.5" />
                   </button>
                 </div>
               </m.div>
@@ -317,10 +332,10 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
               <m.div
                 initial={reduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={CONTENT_IN}
-                className="flex-1 min-w-0 space-y-1"
+                transition={contentInTransition}
+                className="flex-1 min-w-0 space-y-1.5"
               >
-                <div className="flex items-center justify-between gap-2 text-2xs font-mono text-label-2">
+                <div className="flex items-center justify-between gap-2 text-xs font-mono text-label-2">
                   <span className="truncate">
                     {capsFormatted}
                     {mainBattle && (
@@ -338,7 +353,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                   layoutId={reduceMotion ? undefined : `card-title-${volume.id}`}
                   layout="position"
                   transition={morphSpring}
-                  className="font-display font-bold text-xs sm:text-sm text-on-surface group-hover:text-white truncate leading-snug"
+                  className="font-display font-bold text-sm sm:text-base text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface line-clamp-2 leading-snug text-balance"
                 >
                   {volume.title}
                 </m.h3>
@@ -352,7 +367,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
               {/* Icono de desplegar */}
               <span
                 aria-hidden="true"
-                className="text-label-3 group-hover:text-[rgb(var(--era-text,var(--era)))] text-xs px-1 shrink-0 transition-colors"
+                className="text-label-3 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-[rgb(var(--era-text,var(--era)))] text-xs px-1 shrink-0 transition-colors duration-fast ease-smooth-out"
                 title="Desplegar lapso en la línea de tiempo"
               >
                 ⤢
@@ -365,12 +380,12 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                 layoutId={reduceMotion ? undefined : `card-artwork-${volume.id}`}
                 transition={morphSpring}
                 style={{ borderRadius: 0 }}
-                className={`group/thumb relative w-full aspect-video overflow-hidden bg-gradient-to-br ${volume.coverArt.auraGradient}`}
+                className={`group/thumb relative w-full aspect-video sm:aspect-[2.35/1] sm:max-h-[210px] overflow-hidden bg-gradient-to-br ${volume.coverArt.auraGradient}`}
               >
                 {/* Glifo de fondo */}
                 <span
                   aria-hidden="true"
-                  className="absolute inset-0 grid place-items-center font-kanji text-8xl font-black text-white/[0.06] select-none pointer-events-none"
+                  className="absolute inset-0 grid place-items-center font-kanji text-5xl sm:text-6xl font-black text-white/[0.05] select-none pointer-events-none"
                 >
                   {volume.coverArt.symbolGlyph}
                 </span>
@@ -381,25 +396,25 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                   milestone={firstMilestone}
                   fallbackSrc={sagaFallbacks[0]}
                   eager
-                  fetchPriority="high"
+                  fetchPriority={isHighlighted ? 'high' : 'auto'}
                   className={`w-full h-full object-cover transition-transform duration-medium ease-smooth-out group-hover/thumb:scale-105 ${
                     isRead ? 'saturate-[0.8] brightness-90' : ''
                   }`}
                 />
 
                 {/* Viñeta cinematográfica */}
-                <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-transparent to-black/15 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent pointer-events-none" />
 
                 {/* Barra superior de la portada: Episodios + Estado + Maximizar */}
                 <m.div
                   initial={reduceMotion ? false : { opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={CONTENT_IN}
-                  className="absolute top-2.5 inset-x-3 flex items-center justify-between gap-2 z-10"
+                  transition={contentInTransition}
+                  className="absolute top-2 inset-x-3 flex items-center justify-between gap-2 z-10"
                 >
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/70 border border-white/15 text-2xs font-mono">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] text-2xs font-mono">
                     <span className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--era))]" />
-                    <span className="font-semibold text-white">{capsFormatted}</span>
+                    <span className="font-semibold text-label-1">{capsFormatted}</span>
                     {fillerCount > 0 && (
                       <span className="text-status-warning font-bold">({fillerCount} Relleno)</span>
                     )}
@@ -423,7 +438,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                         onClick={() => onInspectThumbnail(volume)}
                         aria-label={`Inspeccionar arte de ${volume.title}`}
                         icon={<IconMediaMaximize className="w-3.5 h-3.5" />}
-                        className="w-7 h-7"
+                        className="w-11 h-11 [@media(pointer:fine)]:w-7 [@media(pointer:fine)]:h-7 min-h-0"
                       />
                     )}
 
@@ -435,20 +450,20 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                         aria-label={`Contraer ${volume.title} a vista compacta`}
                         title="Contraer lapso (Esc)"
                         icon={<IconUiClose className="w-3.5 h-3.5" />}
-                        className="w-7 h-7 hover:bg-white/20 active:scale-95"
+                        className="w-11 h-11 [@media(pointer:fine)]:w-7 [@media(pointer:fine)]:h-7 min-h-0 hover:bg-white/20 motion-safe:active:scale-[0.97]"
                       />
                     )}
                   </div>
                 </m.div>
 
                 {/* Base de la portada: Título + Botón Play siempre accesible */}
-                <div className="absolute bottom-2.5 inset-x-3.5 flex items-end justify-between gap-2 z-10">
+                <div className="absolute bottom-2 inset-x-3 flex items-end justify-between gap-2 z-10">
                   <div className="min-w-0 flex-1">
                     <m.h3
                       layoutId={reduceMotion ? undefined : `card-title-${volume.id}`}
                       layout="position"
                       transition={morphSpring}
-                      className="font-display font-black text-white leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)] text-base sm:text-lg line-clamp-2"
+                      className="font-display font-black text-white leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)] text-base sm:text-lg line-clamp-2 text-balance"
                     >
                       {volume.title}
                     </m.h3>
@@ -457,12 +472,12 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                   <m.button
                     initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={CONTENT_IN}
+                    transition={contentInTransition}
                     type="button"
                     onClick={handlePlayMain}
                     disabled={status === 'unavailable'}
                     aria-label={`Reproducir ${playTarget.label}`}
-                    className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-black font-display font-bold text-xs uppercase tracking-wider shadow-elevation-3 hover:scale-105 active:scale-95 transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                    className="spotlight-play-cta shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-black font-display font-bold text-xs uppercase tracking-wider shadow-elevation-3 motion-safe:[@media(hover:hover)_and_(pointer:fine)]:hover:scale-105 motion-safe:active:scale-[0.97] transition-transform duration-fast ease-smooth-out cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
                   >
                     <IconMediaPlay className="w-3.5 h-3.5 fill-current ml-px" />
                     <span className="truncate">{playTarget.label}</span>
@@ -474,11 +489,11 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
               <m.div
                 initial={reduceMotion ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={CONTENT_IN}
-                className="relative p-3.5 sm:p-4 flex flex-col gap-3"
+                transition={contentInTransition}
+                className="relative p-3 sm:p-4 flex flex-col gap-3"
               >
                 {/* Franja de Combate Estelar (Sello 4C) */}
-                <div className="px-3 py-2 rounded-xl bg-gradient-to-r from-[rgb(var(--era)/0.14)] to-transparent border border-[rgb(var(--era)/0.28)] flex flex-wrap items-center justify-between gap-2 text-2xs">
+                <div className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[rgb(var(--era)/0.14)] to-transparent border border-[rgb(var(--era)/0.28)] flex flex-wrap items-center justify-between gap-2 text-2xs">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-[rgb(var(--era-text,var(--era)))] font-mono font-black shrink-0">
                       ⚔️ DUELO
@@ -498,14 +513,14 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                 </p>
 
                 {/* Barra de Progreso + Fila de Acciones en 1 sola línea limpia */}
-                <div className="pt-2 border-t border-white/10 flex items-center gap-3">
+                <div className="pt-1.5 border-t border-[var(--neutral-separator)] flex items-center gap-2.5">
                   <m.div
                     layoutId={reduceMotion ? undefined : `card-progress-${volume.id}`}
                     layout="position"
                     transition={morphSpring}
                     className="flex-1 min-w-0"
                   >
-                    <SpanProgressBar title={volume.title} segments={segments} isRead={isRead} progressPercent={progressPercent} height={5} />
+                    <SpanProgressBar title={volume.title} segments={segments} isRead={isRead} progressPercent={progressPercent} height={3} />
                   </m.div>
 
                   {/* Botón Lore (Abre la Contralateral) */}
@@ -517,7 +532,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                     aria-expanded={showDetails}
                     title="Ver detalles del lapso"
                     className={cn(
-                      'h-8 px-2.5 rounded-lg flex items-center gap-1.5 text-2xs font-semibold transition-[background-color,border-color,color,transform] duration-fast active:scale-95',
+                      'h-7 px-2 rounded-lg flex items-center gap-1 text-xs font-semibold transition-[background-color,border-color,color,transform] duration-fast motion-safe:active:scale-[0.97]',
                       showDetails && 'bg-[rgb(var(--era)/0.25)] border-[rgb(var(--era)/0.6)] text-[rgb(var(--era-text,var(--era)))] shadow-[0_0_12px_color-mix(in_srgb,rgb(var(--era))_30%,transparent)]'
                     )}
                     icon={<IconNavigationPanelRightOpen className="w-3.5 h-3.5 text-brand-accent-readable" />}
@@ -532,7 +547,7 @@ export const TimelineVolumeCard: React.FC<TimelineVolumeCardProps> = memo(
                       disabled={marathonBusy}
                       aria-label="Añadir maratón de la era a Mi Lista"
                       title="Añadir maratón a Mi Lista"
-                      className="w-8 h-8 rounded-lg transition-[background-color,border-color,transform] duration-fast active:scale-95"
+                      className="w-7 h-7 rounded-lg transition-[background-color,border-color,transform] duration-fast motion-safe:active:scale-[0.97]"
                       icon={<IconUiListPlus className="w-3.5 h-3.5" />}
                     />
                   )}

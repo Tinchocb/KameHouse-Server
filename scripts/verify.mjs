@@ -54,6 +54,13 @@ function hasGo() {
     return spawnSync("go", ["version"], { stdio: "ignore", shell: isWindows }).status === 0
 }
 
+function requireGo() {
+    if (!hasGo()) {
+        console.error("✖ Go no está en el PATH: esta verificación requiere vet, tests y/o codegen del servidor.")
+        process.exit(1)
+    }
+}
+
 // routeTree.gen.ts lo genera rsbuild al arrancar; sin él tsc falla en un clon
 // recién hecho. Misma config (tsr.config.json) que el plugin de rsbuild.
 async function ensureRouteTree() {
@@ -73,11 +80,11 @@ async function checkWeb({ lintFiles }) {
 
 function checkGoVet() {
     if (!hasGo()) return console.warn("⚠ go no está en el PATH: se omite go vet")
-    run("server: go vet", "go", ["vet", "./internal/...", "./codegen/..."], serverDir)
+    run("server: go vet", "go", ["vet", ".", "./internal/...", "./codegen/..."], serverDir)
 }
 
 function checkCodegen() {
-    if (!hasGo()) return console.warn("⚠ go no está en el PATH: se omite el chequeo de codegen")
+    requireGo()
     run("codegen: regenerar", "go", ["run", "main.go"], path.join(serverDir, "codegen"))
     // git status (no git diff): también detecta archivos generados nuevos sin trackear.
     const drift = git(["status", "--porcelain", "--", ...GENERATED_DIRS]).trim()
@@ -105,9 +112,10 @@ async function preCommit() {
 }
 
 function prePush() {
+    requireGo()
+    run("tooling: backend", process.execPath, ["--test", path.join(rootDir, "scripts", "backend-tooling.test.mjs")], rootDir)
     node("web: vitest", binOf("vitest"), ["run"])
-    if (hasGo()) run("server: go test -short", "go", ["test", "-short", "./internal/...", "./codegen/..."], serverDir)
-    else console.warn("⚠ go no está en el PATH: se omite go test")
+    run("server: go test -short", "go", ["test", "-short", ".", "./internal/...", "./codegen/..."], serverDir)
     checkCodegen()
 }
 
@@ -123,6 +131,7 @@ switch (stage) {
         checkCodegen()
         break
     case "all":
+        requireGo()
         await checkWeb({ lintFiles: "all" })
         checkGoVet()
         prePush()

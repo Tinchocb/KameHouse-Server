@@ -48,7 +48,6 @@ import {
   ListVideo,
   Loader2,
   Maximize,
-  Menu,
   Minimize,
   Minus,
   Monitor,
@@ -96,7 +95,6 @@ export const IconNavigationFilm = Film;
 export const IconNavigationLayers = Layers;
 export const IconNavigationRocket = Rocket;
 export const IconNavigationSettings = Settings;
-export const IconNavigationMenu = Menu;
 export const IconNavigationChevronRight = ChevronRight;
 export const IconNavigationChevronLeft = ChevronLeft;
 export const IconNavigationChevronDown = ChevronDown;
@@ -164,10 +162,8 @@ export const IconStatusGhost = Ghost;
 export const IconStatusActivity = Activity;
 export const IconStatusPulse = Activity;
 export const IconStatusMonitor = Monitor;
-export const IconStatusTv = Tv;
 export const IconStatusHeadphones = Headphones;
 export const IconStatusMusic = Music;
-export const IconStatusMusicOff = VolumeX;
 export const IconStatusImage = Image;
 export const IconStatusImageOff = ImageOff;
 export const IconStatusFile = File;

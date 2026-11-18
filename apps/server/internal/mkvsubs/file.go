@@ -75,7 +75,6 @@ func (t *Track) decode(data []byte) ([]byte, error) {
 // Attachment es un archivo adjunto (típicamente una fuente).
 type Attachment struct {
 	Name string
-	MIME string
 	off  int64
 	size int64
 }
@@ -101,6 +100,10 @@ type File struct {
 	tracks       []*Track
 	attachments  []Attachment
 	cues         []cuePoint
+	// subCues: por pista, las entradas del índice que traen la posición del bloque
+	// dentro del cluster (ver cued.go).
+	subCues     map[uint64][]SubCue
+	clusterHlen clusterHeaderLen
 }
 
 // Options ajusta cómo se lee el archivo.
@@ -379,16 +382,12 @@ func (f *File) readAttachments(ctx context.Context, body, size int64) error {
 				}
 				cb := cp + int64(ch.hlen)
 				switch ch.id {
-				case idFileName, idFileMime:
+				case idFileName:
 					v, err := f.r.at(ctx, cb, int(min(ch.size, 4096)))
 					if err != nil {
 						return err
 					}
-					if ch.id == idFileName {
-						a.Name = str(v)
-					} else {
-						a.MIME = str(v)
-					}
+					a.Name = str(v)
 				case idFileData:
 					a.off, a.size = cb, ch.size
 				}
@@ -409,6 +408,7 @@ func (f *File) readCues(ctx context.Context, body, size int64) error {
 		return err
 	}
 	f.cues = f.cues[:0]
+	f.subCues = map[uint64][]SubCue{}
 	eachChild(b, func(id uint32, data []byte) {
 		if id != idCuePoint {
 			return
@@ -420,14 +420,29 @@ func (f *File) readCues(ctx context.Context, body, size int64) error {
 			case idCueTime:
 				t = int64(beUint(cd))
 			case idCueTrackPos:
-				if cpos >= 0 {
-					return
-				}
+				var track uint64
+				var pos, rel, dur int64 = -1, -1, 0
 				eachChild(cd, func(xid uint32, xd []byte) {
-					if xid == idCueClusterPos {
-						cpos = int64(beUint(xd))
+					switch xid {
+					case idCueTrack:
+						track = beUint(xd)
+					case idCueClusterPos:
+						pos = int64(beUint(xd))
+					case idCueRelativePos:
+						rel = int64(beUint(xd))
+					case idCueDuration:
+						dur = int64(beUint(xd))
 					}
 				})
+				if pos >= 0 && rel >= 0 && track > 0 {
+					f.subCues[track] = append(f.subCues[track], SubCue{
+						Track: track, TimeMs: t * f.scaleNs / 1_000_000, DurMs: dur * f.scaleNs / 1_000_000,
+						clusterOff: f.segStart + pos, rel: rel,
+					})
+				}
+				if cpos < 0 {
+					cpos = pos
+				}
 			}
 		})
 		if cpos >= 0 {
@@ -435,6 +450,9 @@ func (f *File) readCues(ctx context.Context, body, size int64) error {
 		}
 	})
 	sort.SliceStable(f.cues, func(i, j int) bool { return f.cues[i].timeMs < f.cues[j].timeMs })
+	for _, list := range f.subCues {
+		sort.SliceStable(list, func(i, j int) bool { return list[i].TimeMs < list[j].TimeMs })
+	}
 	return nil
 }
 
@@ -498,7 +516,6 @@ type Block struct {
 
 // Cluster es un cluster leído: solo trae los bloques de las pistas pedidas.
 type Cluster struct {
-	Offset  int64
 	StartMs int64
 	// Next es el offset del cluster siguiente; -1 si este era el último.
 	Next   int64
@@ -525,7 +542,7 @@ func (f *File) ReadCluster(ctx context.Context, off int64, wanted map[uint64]boo
 	if h.id != idCluster {
 		return nil, ErrNotCluster
 	}
-	cl := &Cluster{Offset: off, Next: -1}
+	cl := &Cluster{Next: -1}
 	fileSize := r.src.Size()
 	pos := off + int64(h.hlen)
 	end := int64(-1)

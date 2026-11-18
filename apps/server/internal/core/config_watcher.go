@@ -138,8 +138,9 @@ func (cw *ConfigWatcher) reload() {
 	}
 
 	// Only apply hot-reloadable fields
-	// Non-reloadable: Database, TLS, Server.Host, Server.Port, Server.UseBinaryPath, Server.Systray, Server.DoHUrl, Server.Password
-	// Hot-reloadable: CorsOrigins, AuthTokenTTL, LogLevel (via Logs.Dir), FeatureFlags (via Library), TMDB API key
+	// Non-reloadable: Database, TLS, Server.Host, Server.Port, Server.UseBinaryPath, Server.Password
+	// CorsOrigins also requires restart: HTTP CORS, write guards and WS must agree.
+	// Hot-reloadable: AuthTokenTTL, LogLevel (via Logs.Dir), FeatureFlags (via Library), TMDB API key
 
 	cw.mu.RLock()
 	callbacks := make([]func(*Config), len(cw.callbacks))

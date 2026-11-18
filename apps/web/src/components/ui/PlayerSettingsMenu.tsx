@@ -1,9 +1,10 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { m, AnimatePresence } from "framer-motion"
-import { IconMediaVolume2, IconMediaSubtitles, IconNavigationLayers, IconStatusMonitor, IconMediaForward, IconUiCheck, IconUiSettings, IconUiMoreHorizontal, IconUiSpinner, IconMediaSkipNext, IconMediaSkipPrevious } from "@/components/ui/icons";
+import { AnimatePresence } from "framer-motion"
+import { PresenceSurface } from "@/components/ui/kinetics/presence-surface"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { IconMediaVolume2, IconMediaSubtitles, IconNavigationLayers, IconStatusMonitor, IconMediaForward, IconUiCheck, IconUiSettings, IconUiMoreHorizontal, IconUiSpinner } from "@/components/ui/icons";
 import { cn } from "@/components/ui/core/styling"
-import { Vaul, VaulContent } from "@/components/vaul"
 
 import type { PlayerSettingsMenuProps } from "./track-types"
 import { SettingsLayout, MenuButton } from "./player-settings/SettingsLayout"
@@ -11,27 +12,11 @@ import { AudioSettings } from "./player-settings/AudioSettings"
 import { SubtitleSettings } from "./player-settings/SubtitleSettings"
 import { QualitySettings } from "./player-settings/QualitySettings"
 import { PlaybackSettings } from "./player-settings/PlaybackSettings"
+import { audioTrackName, subtitleTrackName } from "./player-settings/track-labels"
 import { PLAYER_ICON_BTN, PLAYER_ICON_BTN_ACTIVE } from "@/components/video/player-theme"
+import { IconMediaQueue, IconStatusMonitorPlay } from "@/components/ui/icons"
 
 type SettingsView = "main" | "audio" | "subtitles" | "quality" | "playback" | "image"
-
-const DESKTOP_QUERY = "(min-width: 768px)"
-
-/** true en escritorio (breakpoint md de Tailwind). Decide si se usa el panel flotante
- * o la hoja de Vaul: Vaul se monta en un portal a <body>, así que ocultarlo con
- * `md:hidden` no alcanza — abierto igual pone un overlay a pantalla completa y
- * `pointer-events: none` en el body, lo que bloqueaba todos los clics del panel. */
-function useIsDesktop() {
-    return React.useSyncExternalStore(
-        (onChange) => {
-            const mql = window.matchMedia(DESKTOP_QUERY)
-            mql.addEventListener("change", onChange)
-            return () => mql.removeEventListener("change", onChange)
-        },
-        () => window.matchMedia(DESKTOP_QUERY).matches,
-        () => true
-    )
-}
 
 const ASPECT_RATIO_LABELS: Record<string, string> = {
     contain: "Ajustado",
@@ -44,8 +29,10 @@ const ASPECT_RATIO_LABELS: Record<string, string> = {
 export function PlayerSettingsMenu({
     panelContainer,
     variant = "all",
-    onPrevChapter,
-    onNextChapter,
+    title,
+    onOpenQueue,
+    onOpenInMpv,
+    mpvPending = false,
     audioTracks,
     activeAudioIndex,
     onSelectAudio,
@@ -77,16 +64,30 @@ export function PlayerSettingsMenu({
     onLoopEnabledChange,
     autoDisableSubtitlesWhenDubbed = true,
     onAutoDisableSubtitlesWhenDubbedChange,
-    tvMode = false,
-    onTvModeChange,
     marathonMode = false,
     onMarathonModeChange,
     mediaId,
     mediaFormat,
 }: PlayerSettingsMenuProps) {
-    const isDesktop = useIsDesktop()
+    const reduceMotion = useReducedMotion()
+    const viewVariants = React.useMemo(() => ({
+        initial: (direction: number) => ({
+            opacity: 0,
+            x: reduceMotion ? 0 : direction * 12,
+        }),
+        animate: {
+            opacity: 1,
+            x: 0,
+        },
+        exit: (direction: number) => ({
+            opacity: 0,
+            x: reduceMotion ? 0 : direction * -12,
+        }),
+    }), [reduceMotion])
     const [internalOpen, setInternalOpen] = React.useState(false)
     const [view, setView] = React.useState<SettingsView>("main")
+    const menuId = React.useId()
+    const viewTitleId = `${menuId}-${view}-title`
 
     const isControlled = open !== undefined
     const isOpen = isControlled ? open : internalOpen
@@ -112,25 +113,25 @@ export function PlayerSettingsMenu({
     // Igual que la lista de episodios: al abrir (o cambiar de vista) el foco entra al panel,
     // así con teclado o control remoto se navega el menú sin buscarlo con Tab.
     React.useEffect(() => {
-        if (!isOpen || !isDesktop) return
+        if (!isOpen) return
         const id = window.setTimeout(() => {
             // Solo la vista actual: la que sale sigue en el DOM unos 150 ms (popLayout).
             const first = Array.from(panelRef.current?.querySelectorAll<HTMLElement>(`[data-settings-view="${view}"] button`) ?? [])
-                .find((b) => b.getAttribute("aria-label") !== "Cerrar menú")
+                .find((b) => b.getAttribute("aria-label") !== "Cerrar menú" && !b.closest('[inert], [aria-hidden="true"]'))
             first?.focus({ preventScroll: true })
         }, 30)
         return () => window.clearTimeout(id)
-    }, [isOpen, isDesktop, view])
+    }, [isOpen, view])
 
     // Al cerrar, si el foco estaba dentro del panel vuelve al botón (si no, cae a <body>).
     React.useEffect(() => {
-        if (!isOpen || !isDesktop) return
+        if (!isOpen) return
         const panel = panelRef.current
         const button = buttonRef.current
         return () => {
             if (panel?.contains(document.activeElement)) button?.focus({ preventScroll: true })
         }
-    }, [isOpen, isDesktop])
+    }, [isOpen])
 
     React.useEffect(() => {
         if (!isOpen) return
@@ -188,12 +189,17 @@ export function PlayerSettingsMenu({
         return lang.toUpperCase()
     }
 
-    const langLabel = (lang: string) => getFriendlyLanguage(lang)
-
-    const activeAudio = audioTracks.find(t => t.index === activeAudioIndex)
-    const activeSubtitle = activeSubtitleIndex !== null
-        ? subtitleTracks.find(t => t.index === activeSubtitleIndex)
-        : null
+    // Resumen de las filas "Audio" y "Subtítulos": mismo nombre que ve el usuario en la lista.
+    const activeAudioPosition = audioTracks.findIndex(t => t.index === activeAudioIndex)
+    const activeAudioLabel = activeAudioPosition >= 0
+        ? audioTrackName(audioTracks[activeAudioPosition], activeAudioPosition, getFriendlyLanguage)
+        : "Predeterminado"
+    const activeSubtitlePosition = activeSubtitleIndex !== null
+        ? subtitleTracks.findIndex(t => t.index === activeSubtitleIndex)
+        : -1
+    const activeSubtitleLabel = activeSubtitlePosition >= 0
+        ? subtitleTrackName(subtitleTracks[activeSubtitlePosition], activeSubtitlePosition, getFriendlyLanguage)
+        : "Desactivado"
 
     // Resumen de la fila "Reproducción": Maratón fuerza todos los saltos, así que
     // manda; si no, se listan los saltos activos y la velocidad.
@@ -214,13 +220,13 @@ export function PlayerSettingsMenu({
 
     const isMedia = variant === "media"
     const isMore = variant === "more"
-    const menuTitle = isMedia ? "Audio y subtítulos" : isMore ? "Más opciones" : "Configuración"
+    const menuTitle = title ?? (isMedia ? "Audio y subtítulos" : isMore ? "Más opciones" : "Configuración")
 
     const renderContent = () => (
         <>
             {/* ── AUDIO Y SUBTÍTULOS (un solo panel, sin submenús) ── */}
             {isMedia && (
-                <SettingsLayout title={menuTitle} onClose={() => setIsOpen(false)} className="md:w-[34rem]">
+                <SettingsLayout title={menuTitle} titleId={viewTitleId} onClose={() => setIsOpen(false)} className="md:w-[34rem]">
                     <div className="grid grid-cols-1 md:grid-cols-2 md:gap-1.5">
                         <section aria-label="Idioma de audio" className="flex flex-col">
                             <div className="px-3 pt-2 pb-1 text-xs font-semibold text-label-2">Audio</div>
@@ -248,7 +254,28 @@ export function PlayerSettingsMenu({
 
             {/* ── MAIN MENU ───────────────────────────────── */}
             {!isMedia && view === "main" && (
-                <SettingsLayout title={menuTitle} onClose={() => setIsOpen(false)}>
+                <SettingsLayout title={menuTitle} titleId={viewTitleId} onClose={() => setIsOpen(false)}>
+                    {(onOpenQueue || onOpenInMpv) && (
+                        <div className="mb-1.5 pb-1.5 border-b border-[var(--neutral-separator)]" role="group" aria-label="Acciones de reproducción">
+                            {onOpenQueue && (
+                                <MenuButton
+                                    icon={<IconMediaQueue className="w-4 h-4" />}
+                                    label="Mi lista"
+                                    onClick={() => { setIsOpen(false); onOpenQueue() }}
+                                    rightElement={<kbd className="text-xs font-mono text-label-2">Q</kbd>}
+                                />
+                            )}
+                            {onOpenInMpv && (
+                                <MenuButton
+                                    icon={mpvPending ? <IconUiSpinner className="w-4 h-4 animate-spin" /> : <IconStatusMonitorPlay className="w-4 h-4" />}
+                                    label={mpvPending ? "Abriendo en mpv…" : "Abrir en mpv"}
+                                    disabled={mpvPending}
+                                    onClick={() => { setIsOpen(false); onOpenInMpv() }}
+                                    rightElement={<span aria-hidden="true">↗</span>}
+                                />
+                            )}
+                        </div>
+                    )}
                     {isMore && (
                         <MenuButton
                             icon={<IconMediaForward className="w-4 h-4" />}
@@ -262,13 +289,13 @@ export function PlayerSettingsMenu({
                             <MenuButton
                                 icon={<IconMediaVolume2 className="w-4 h-4" />}
                                 label="Audio"
-                                value={activeAudio ? (activeAudio.title || langLabel(activeAudio.language)) : "Predeterminado"}
+                                value={activeAudioLabel}
                                 onClick={() => setView("audio")}
                             />
                             <MenuButton
                                 icon={<IconMediaSubtitles className="w-4 h-4" />}
                                 label="Subtítulos"
-                                value={activeSubtitle ? (activeSubtitle.title || langLabel(activeSubtitle.language)) : "Desactivado"}
+                                value={activeSubtitleLabel}
                                 onClick={() => setView("subtitles")}
                             />
                         </>
@@ -297,26 +324,6 @@ export function PlayerSettingsMenu({
                             onClick={() => setView("playback")}
                         />
                     )}
-                    {(isMore || variant === "all") && (onPrevChapter || onNextChapter) && (
-                        <div className="mt-1.5 pt-1.5 border-t border-[var(--neutral-separator)]">
-                            {onPrevChapter && (
-                                <MenuButton
-                                    icon={<IconMediaSkipPrevious className="w-4 h-4 fill-current" />}
-                                    label="Capítulo anterior"
-                                    onClick={onPrevChapter}
-                                    rightElement={<kbd className="text-2xs font-mono text-label-2">[</kbd>}
-                                />
-                            )}
-                            {onNextChapter && (
-                                <MenuButton
-                                    icon={<IconMediaSkipNext className="w-4 h-4 fill-current" />}
-                                    label="Siguiente capítulo"
-                                    onClick={onNextChapter}
-                                    rightElement={<kbd className="text-2xs font-mono text-label-2">]</kbd>}
-                                />
-                            )}
-                        </div>
-                    )}
                 </SettingsLayout>
             )}
 
@@ -324,6 +331,7 @@ export function PlayerSettingsMenu({
             {view === "audio" && (
                 <SettingsLayout
                     title="Audio"
+                    titleId={viewTitleId}
                     onBack={() => setView("main")}
                     onClose={() => setIsOpen(false)}
                 >
@@ -340,6 +348,7 @@ export function PlayerSettingsMenu({
             {view === "subtitles" && (
                 <SettingsLayout
                     title="Subtítulos"
+                    titleId={viewTitleId}
                     onBack={() => setView("main")}
                     onClose={() => setIsOpen(false)}
                 >
@@ -361,6 +370,7 @@ export function PlayerSettingsMenu({
             {view === "quality" && (
                 <SettingsLayout
                     title="Calidad y fuente"
+                    titleId={viewTitleId}
                     onBack={() => setView("main")}
                     onClose={() => setIsOpen(false)}
                 >
@@ -368,9 +378,10 @@ export function PlayerSettingsMenu({
                         <div className="flex flex-col border-b border-[var(--neutral-separator)] pb-2 mb-2">
                             <div className="px-3 pt-2 pb-1 text-xs font-semibold text-label-2">Resolución</div>
                             <button
+                                type="button"
                                 onClick={() => { onHlsLevelChange?.(-1); setIsOpen(false) }}
                                 className={cn(
-                                    "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                    "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out motion-safe:active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                     activeHlsLevel === -1 ? "bg-[var(--neutral-elev-3)] text-label-1" : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1"
                                 )}
                             >
@@ -379,10 +390,11 @@ export function PlayerSettingsMenu({
                             </button>
                             {hlsLevels.map((level) => (
                                 <button
+                                    type="button"
                                     key={level.index}
                                     onClick={() => { onHlsLevelChange?.(level.index); setIsOpen(false) }}
                                     className={cn(
-                                        "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                        "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out motion-safe:active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                         activeHlsLevel === level.index ? "bg-[var(--neutral-elev-3)] text-label-1" : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1"
                                     )}
                                 >
@@ -414,16 +426,18 @@ export function PlayerSettingsMenu({
             {view === "image" && (
                 <SettingsLayout
                     title="Imagen"
+                    titleId={viewTitleId}
                     onBack={() => setView("main")}
                     onClose={() => setIsOpen(false)}
                 >
                     <div className="px-3 pt-2 pb-1 text-xs font-semibold text-label-2">Relación de aspecto</div>
                     {(["contain", "cover", "fill", "16/9", "21/9"] as const).map((ratio) => (
                         <button
+                            type="button"
                             key={ratio}
                             onClick={() => onAspectRatioChange?.(ratio)}
                             className={cn(
-                                "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                                "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-smooth-out motion-safe:active:scale-[0.97] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                                 aspectRatio === ratio ? "bg-[var(--neutral-elev-3)] text-label-1" : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1"
                             )}
                         >
@@ -447,6 +461,7 @@ export function PlayerSettingsMenu({
             {view === "playback" && (
                 <SettingsLayout
                     title={isMore ? "Velocidad y maratón" : "Reproducción"}
+                    titleId={viewTitleId}
                     onBack={() => setView("main")}
                     onClose={() => setIsOpen(false)}
                 >
@@ -461,11 +476,8 @@ export function PlayerSettingsMenu({
                         onLoopEnabledChange={onLoopEnabledChange ?? (() => {})}
                         autoDisableSubtitlesWhenDubbed={autoDisableSubtitlesWhenDubbed}
                         onAutoDisableSubtitlesWhenDubbedChange={onAutoDisableSubtitlesWhenDubbedChange ?? (() => {})}
-                        tvMode={tvMode}
-                        onTvModeChange={onTvModeChange}
                         marathonMode={marathonMode}
                         onMarathonModeChange={onMarathonModeChange}
-                        showSeparator={false}
                         mediaFormat={mediaFormat}
                         mediaId={mediaId}
                     />
@@ -480,8 +492,8 @@ export function PlayerSettingsMenu({
                 ref={buttonRef}
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen) }}
-                aria-label={isMedia ? "Audio y subtítulos" : isMore ? "Más opciones [O]" : "Configuración [O]"}
-                title={isMedia ? "Audio y subtítulos" : isMore ? "Más opciones [O]" : "Configuración [O]"}
+                aria-label={isMedia ? menuTitle : `${menuTitle} [O]`}
+                title={isMedia ? menuTitle : `${menuTitle} [O]`}
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
                 className={cn(
@@ -492,7 +504,7 @@ export function PlayerSettingsMenu({
             >
                 {isMedia
                     ? <IconMediaSubtitles className="w-4 h-4" />
-                    : isMore
+                    : isMore || title === "Más opciones"
                         ? <IconUiMoreHorizontal className="w-4 h-4" />
                         : <IconUiSettings className={cn("w-4 h-4 transition-transform duration-base", isOpen && "rotate-45")} />}
                 {isLoadingSubtitle && (
@@ -502,8 +514,8 @@ export function PlayerSettingsMenu({
                 )}
             </button>
 
-            {/* Desktop panel — se monta en panelContainer (fuera de la cápsula de vidrio) */}
-            {isDesktop && (() => {
+            {/* Desktop settings panel — se monta en panelContainer o anclado */}
+            {(() => {
                 const panel = (
                     <div
                         ref={panelRef}
@@ -514,13 +526,15 @@ export function PlayerSettingsMenu({
                     >
                         <AnimatePresence>
                             {isOpen && (
-                                <m.div
+                                <PresenceSurface
                                     role="dialog"
-                                    aria-label={menuTitle}
-                                    initial={{ opacity: 0, y: 8 }}
+                                    aria-modal="true"
+                                    data-player-settings="true"
+                                    aria-labelledby={viewTitleId}
+                                    initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 8 }}
-                                    transition={{ duration: 0.15, ease: "easeOut" }}
+                                    exit={{ opacity: 0, y: reduceMotion ? 0 : 4, transition: { duration: 0.15, ease: "easeInOut" } }}
+                                    transition={{ duration: reduceMotion ? 0.15 : 0.25, ease: "easeInOut" }}
                                 >
                                     {/* Vistas del menú: la que sale se despega del flujo (popLayout, anclada
                                         abajo a la derecha como el panel) y la nueva llega desde el lado del
@@ -533,26 +547,26 @@ export function PlayerSettingsMenu({
                                         anchorX="right"
                                         anchorY="bottom"
                                     >
-                                        <div key={view} data-settings-view={view}>
+                                        <PresenceSurface
+                                            key={view}
+                                            data-settings-view={view}
+                                            custom={view === "main" ? -1 : 1}
+                                            variants={viewVariants}
+                                            initial="initial"
+                                            animate="animate"
+                                            exit="exit"
+                                            transition={{ duration: reduceMotion ? 0.15 : 0.2, ease: "easeOut" }}
+                                        >
                                             {renderContent()}
-                                        </div>
+                                        </PresenceSurface>
                                     </AnimatePresence>
-                                </m.div>
+                                </PresenceSurface>
                             )}
                         </AnimatePresence>
                     </div>
                 )
                 return panelContainer ? createPortal(panel, panelContainer) : panel
             })()}
-
-            {/* Mobile bottom-sheet — solo se monta en móvil (ver useIsDesktop) */}
-            {!isDesktop && (
-                <Vaul open={isOpen} onOpenChange={setIsOpen}>
-                    <VaulContent surface="solid" className="!z-player-settings p-3 focus:outline-none max-h-[85vh] overflow-y-auto">
-                        {renderContent()}
-                    </VaulContent>
-                </Vaul>
-            )}
         </div>
     )
 }

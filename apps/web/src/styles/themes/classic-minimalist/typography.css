@@ -1,0 +1,73 @@
+/* Roles de texto: contenido, descripción, metadatos y etiquetas.
+   Los tamaños de títulos/hero pertenecen a su composición, no a los controles. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(body, .font-normal) {
+  font-weight: var(--minimal-weight-medium);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .uppercase {
+  text-transform: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.tracking-wide, .tracking-wider, .tracking-widest, .tracking-cinema, .tracking-cinema-md) {
+  letter-spacing: normal !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.settings-field-label, .UI-BasicField__fieldLabel) {
+  font-size: var(--minimal-font-lg);
+  font-weight: var(--minimal-weight-semibold);
+  line-height: var(--minimal-leading-meta);
+  letter-spacing: normal;
+}
+
+/* Las ayudas informativas siempre usan texto secundario, nunca --muted
+   (que representa un fondo en el contrato shadcn). El error conserva su rojo. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.settings-field-help, .UI-BasicField__fieldHelpText) {
+  color: var(--minimal-text-2);
+  font-size: var(--minimal-font-sm);
+  font-weight: var(--minimal-weight-medium);
+  line-height: var(--minimal-leading-body);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-BasicField__fieldErrorText {
+  font-size: var(--minimal-font-sm);
+  font-weight: var(--minimal-weight-medium);
+  line-height: var(--minimal-leading-body);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root, [data-field-embedded]) {
+  font-size: var(--minimal-font-md);
+  font-weight: var(--minimal-weight-medium);
+}
+
+@media (any-pointer: coarse), (hover: none) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Input__root, [data-field-embedded]) {
+    font-size: var(--minimal-font-lg) !important;
+  }
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.type-title, .type-headline, .hero-title) {
+  text-wrap: balance;
+  text-transform: none;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.type-body, .sectionbar-header-desc, .settings-field-help) {
+  line-height: var(--minimal-leading-body);
+  text-wrap: pretty;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .sectionbar-header-desc {
+  color: var(--minimal-text-2);
+  font-size: var(--minimal-font-sm);
+  font-weight: var(--minimal-weight-medium);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.card-metadata, .media-metadata-capsule, .type-caption) {
+  font-size: var(--minimal-font-sm);
+  line-height: var(--minimal-leading-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.type-label, .type-caption) {
+  text-transform: none;
+  letter-spacing: normal;
+}

@@ -19,8 +19,22 @@ export interface Chapter {
     type?: string
 }
 
+/** Reject corrupt/stale marks before displaying, propagating or seeking them. */
+export function isValidOpeningWindow(window: { startTime: number; endTime: number }, total = Infinity): boolean {
+    return Number.isFinite(window.startTime) && Number.isFinite(window.endTime) &&
+        window.startTime >= 0 && window.endTime > window.startTime &&
+        window.endTime - window.startTime <= 300 && window.endTime <= total
+}
+
+/** Join adjacent opening/recap marks without skipping intervening story scenes. */
+export function extendOpeningSkip(end: number, next: SkipWindow | undefined, total: number): number {
+    if (!next || !isValidOpeningWindow(next, total) || !Number.isFinite(next.startTime) || !Number.isFinite(next.endTime) ||
+        next.startTime < 0 || next.endTime > total || next.endTime <= end || next.startTime > end + 1) return end
+    return next.endTime
+}
+
 export function resolveActiveOp(skipTimesOp: SkipWindow | undefined, total: number, mediaFormat?: string | null): SkipWindow | undefined {
-    if (skipTimesOp) return skipTimesOp
+    if (skipTimesOp && isValidOpeningWindow(skipTimesOp, total > 0 ? total : Infinity)) return skipTimesOp
     if (mediaFormat?.toUpperCase() === "MOVIE") return undefined
     // D8: Anime TV OPs usually last exactly 85-90s. The old 12% calculation
     // was crude. We apply this heuristic only if the video is >10 mins (600s).
@@ -90,7 +104,7 @@ export function isOutroChapter(c: Chapter): boolean {
 
 /** Finds the first chapter from the list that matches intro patterns */
 export function findIntroChapter(chapters: Chapter[]): Chapter | undefined {
-    return chapters.find(isIntroChapter)
+    return chapters.find(c => isIntroChapter(c) && isValidOpeningWindow(c))
 }
 
 /** Finds the first chapter from the list that matches outro patterns */
@@ -124,13 +138,56 @@ export function isRecapChapter(c: Chapter): boolean {
     )
 }
 
-export function resolveRecapWindow(aniskip: AniSkipWindows | undefined, chapters: Chapter[]): SkipWindow | undefined {
+/** Only explicit chapter labels identify a next-episode preview. */
+export function isPreviewChapter(c: Chapter): boolean {
+    return c.type === "preview" || /\b(preview|avance|adelanto|next episode)\b|pr[oó]ximo (cap[ií]tulo|episodio)/i.test(c.name)
+}
+
+export function findActivePreview(chapters: Chapter[], time: number, total: number): Chapter | undefined {
+    return chapters.find(c => isPreviewChapter(c) && validRecapInterval(c) &&
+        c.endTime <= total && time >= c.startTime && time < c.endTime)
+}
+
+/** Lo que el servidor encontró en los subtítulos ASS del comienzo del episodio. */
+export interface TitleCard {
+    /** Segundo en que aparece la placa del título; -1 si no se encontró. */
+    titleStart: number
+    /** Fin de la última línea de canción anterior a la placa; 0 si no se vio ninguna. */
+    songEnd: number
+}
+
+const TITLE_CARD_RECAP_MIN_S = 10
+const TITLE_CARD_RECAP_MAX_S = 180
+
+/**
+ * Resumen deducido de la placa del título: va del fin del opening a la placa. El inicio
+ * es el fin de la intro conocida o, si no hay, el fin del karaoke del opening. Un tramo
+ * de menos de 10 s (el título sigue al opening: no hay resumen) o de más de 3 min (eso ya
+ * es episodio) no se toma por resumen.
+ */
+export function recapFromTitleCard(card: TitleCard | undefined, op: SkipWindow | undefined): SkipWindow | undefined {
+    if (!card || !Number.isFinite(card.titleStart) || card.titleStart <= 0) return undefined
+    const opEnd = op && isValidOpeningWindow(op) ? op.endTime : undefined
+    const startTime = opEnd ?? (card.songEnd > 0 ? card.songEnd : undefined)
+    if (startTime === undefined) return undefined
+    const length = card.titleStart - startTime
+    if (length < TITLE_CARD_RECAP_MIN_S || length > TITLE_CARD_RECAP_MAX_S) return undefined
+    return { startTime, endTime: card.titleStart, source: "subtitle" }
+}
+
+/** Resumen: capítulo del archivo → AniSkip → placa del título en los subtítulos. */
+export function resolveRecapWindow(
+    aniskip: AniSkipWindows | undefined,
+    chapters: Chapter[],
+    titleCard?: TitleCard,
+    op?: SkipWindow,
+): SkipWindow | undefined {
     const chapter = chapters.find(c => isRecapChapter(c) && validRecapInterval(c))
     if (chapter) return { startTime: chapter.startTime, endTime: chapter.endTime, source: "chapters" }
     if (aniskip?.recap && validRecapInterval(aniskip.recap)) {
         return { ...aniskip.recap, source: "aniskip" }
     }
-    return undefined
+    return recapFromTitleCard(titleCard, op)
 }
 
 function validRecapInterval(interval: AniSkipInterval): boolean {
@@ -160,11 +217,11 @@ export function resolveOpWindow(
     // archivo: el auto-salto usa el capítulo, y si el botón apuntara a otro final la
     // intro seguiría visible después de saltarla sola.
     const heuristicOp = aniskip?.opSource === "heuristic"
-    if (aniskip?.op && !(heuristicOp && chap)) {
+    if (aniskip?.op && isValidOpeningWindow(aniskip.op) && !(heuristicOp && chap)) {
         return { startTime: aniskip.op.startTime, endTime: aniskip.op.endTime, source: aniskip.opSource ?? "aniskip" }
     }
     if (chap) return { startTime: chap.startTime, endTime: chap.endTime, source: "chapters" }
-    if (cached && typeof cached.opStart === "number" && typeof cached.opEnd === "number") {
+    if (cached && typeof cached.opStart === "number" && typeof cached.opEnd === "number" && isValidOpeningWindow({ startTime: cached.opStart, endTime: cached.opEnd })) {
         return { startTime: cached.opStart, endTime: cached.opEnd, source: "propagated" }
     }
     return undefined

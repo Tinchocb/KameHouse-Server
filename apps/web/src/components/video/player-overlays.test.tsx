@@ -6,31 +6,31 @@ import { LoadingErrorOverlay, SkipIntroOverlay, CenterPlayFlash, AutoSkipToastOv
 describe("Player Overlays", () => {
     describe("LoadingErrorOverlay", () => {
         it("renders loading state", () => {
-            const { container } = render(<LoadingErrorOverlay status="loading" errorMsg="" streamType="transcode" isBuffering={false} onClose={() => {}} />)
+            const { container } = render(<LoadingErrorOverlay status="loading" errorMsg="" isBuffering={false} onClose={() => {}} />)
             expect(container.querySelector("svg.lucide-loader-circle")).toBeInTheDocument()
         })
 
         it("renders error state with generic message", () => {
-            render(<LoadingErrorOverlay status="error" errorMsg="Stream no encontrado" streamType="transcode" isBuffering={false} onClose={() => {}} />)
+            render(<LoadingErrorOverlay status="error" errorMsg="Stream no encontrado" isBuffering={false} onClose={() => {}} />)
             expect(screen.getByText(/No se pudo reproducir/i)).toBeInTheDocument()
             expect(screen.getByText("Stream no encontrado")).toBeInTheDocument()
         })
 
         it("titula distinto cuando falta el archivo", () => {
-            render(<LoadingErrorOverlay status="error" errorMsg={STREAM_FILE_MISSING_MSG} streamType="direct" isBuffering={false} onClose={() => {}} />)
+            render(<LoadingErrorOverlay status="error" errorMsg={STREAM_FILE_MISSING_MSG} isBuffering={false} onClose={() => {}} />)
             expect(screen.getByText(/ARCHIVO NO DISPONIBLE/i)).toBeInTheDocument()
             expect(screen.queryByText(/No se pudo reproducir/i)).not.toBeInTheDocument()
         })
 
         it("ofrece ir a Ajustes cuando Drive se desconectó", () => {
-            render(<LoadingErrorOverlay status="error" errorMsg={STREAM_DRIVE_AUTH_MSG} streamType="direct" isBuffering={false} onClose={() => {}} />)
+            render(<LoadingErrorOverlay status="error" errorMsg={STREAM_DRIVE_AUTH_MSG} isBuffering={false} onClose={() => {}} />)
             expect(screen.getByText(/DRIVE DESCONECTADO/i)).toBeInTheDocument()
             expect(screen.getByText(/IR A AJUSTES/i)).toBeInTheDocument()
         })
 
         it("calls onClose when returning from error", () => {
             const spy = vi.fn()
-            render(<LoadingErrorOverlay status="error" errorMsg="x" streamType="x" isBuffering={false} onClose={spy} />)
+            render(<LoadingErrorOverlay status="error" errorMsg="x" isBuffering={false} onClose={spy} />)
             fireEvent.click(screen.getByText(/VOLVER/i))
             expect(spy).toHaveBeenCalledTimes(1)
         })
@@ -48,6 +48,24 @@ describe("Player Overlays", () => {
     })
 
     describe("SkipIntroOverlay", () => {
+        it("el outro anuncia el avance al próximo episodio cuando está disponible", () => {
+            const onSkip = vi.fn()
+            render(<SkipIntroOverlay show skipMode="outro" hasNextEpisode onSkip={onSkip} />)
+            fireEvent.click(screen.getByRole("button", { name: "Próximo episodio" }))
+            expect(onSkip).toHaveBeenCalledOnce()
+        })
+        it("el outro nombra el próximo episodio en el botón cuando tiene título", () => {
+            const onSkip = vi.fn()
+            render(<SkipIntroOverlay show skipMode="outro" hasNextEpisode nextEpisodeTitle="Episodio 2" onSkip={onSkip} />)
+            fireEvent.click(screen.getByRole("button", { name: "Próximo: Episodio 2" }))
+            expect(onSkip).toHaveBeenCalledOnce()
+        })
+        it("muestra una acción manual específica para el adelanto", () => {
+            const onSkip = vi.fn()
+            render(<SkipIntroOverlay show skipMode="preview" onSkip={onSkip} />)
+            fireEvent.click(screen.getByRole("button", { name: "Saltar adelanto" }))
+            expect(onSkip).toHaveBeenCalledOnce()
+        })
         it("muestra Saltar resumen como nombre accesible y permite activarlo", () => {
             const onSkip = vi.fn()
             render(<SkipIntroOverlay show skipMode="recap" onSkip={onSkip} />)
@@ -83,13 +101,13 @@ describe("Player Overlays", () => {
 
     describe("Cambio de stream", () => {
         it("dice cambio de fuente cuando se eligió otra fuente", () => {
-            render(<LoadingErrorOverlay status="loading" errorMsg="" streamType="transcode" isBuffering={false} isStreamSwitching streamSwitchReason="source" onClose={() => {}} />)
+            render(<LoadingErrorOverlay status="loading" errorMsg="" isBuffering={false} isStreamSwitching streamSwitchReason="source" onClose={() => {}} />)
             expect(screen.getByText("Cambiando de fuente")).toBeInTheDocument()
             expect(screen.queryByText("Cambiando pista de audio")).not.toBeInTheDocument()
         })
 
         it("no habla de pista de audio en el fallback de direct play", () => {
-            render(<LoadingErrorOverlay status="loading" errorMsg="" streamType="transcode" isBuffering={false} isStreamSwitching streamSwitchReason="fallback" onClose={() => {}} />)
+            render(<LoadingErrorOverlay status="loading" errorMsg="" isBuffering={false} isStreamSwitching streamSwitchReason="fallback" onClose={() => {}} />)
             expect(screen.getByText("Preparando el video")).toBeInTheDocument()
         })
     })
@@ -104,8 +122,6 @@ describe("Player Overlays", () => {
 
     describe("NextEpisodeOverlay", () => {
         const base = {
-            tvMode: false,
-            duration: 0,
             showCountdown: false,
             countdownSeconds: 0,
             remainingProgress: 0,

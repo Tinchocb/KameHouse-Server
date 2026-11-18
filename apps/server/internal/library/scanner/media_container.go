@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/util"
 
@@ -12,7 +11,6 @@ type (
 	MediaContainerOptions struct {
 		AllMedia   []*dto.NormalizedMedia
 		ScanLogger *ScanLogger
-		TmdbClient *tmdb.Client // Optional: TMDb client for enriching media synonyms
 	}
 
 	// MediaContainer holds all the NormalizedMedia that will be used by the Matcher.

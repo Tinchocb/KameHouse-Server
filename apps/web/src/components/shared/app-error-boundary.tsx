@@ -68,7 +68,11 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
 
     if (isBackendStarting) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center max-w-lg mx-auto my-8">
+            <div
+                role="status"
+                aria-live="polite"
+                className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center max-w-lg mx-auto my-8"
+            >
                 <div className="w-8 h-8 mb-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
                 <h2 className="type-title text-on-surface mb-2 text-balance">
                     Iniciando el servidor
@@ -81,7 +85,11 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
     }
 
     return (
-        <div className="sectionbar flex flex-col items-center justify-center min-h-[400px] p-8 text-center max-w-lg mx-auto my-8">
+        <div
+            role="alert"
+            aria-live="polite"
+            className="sectionbar flex flex-col items-center justify-center min-h-[400px] p-8 text-center max-w-lg mx-auto my-8"
+        >
             <h2 className="type-title text-on-surface mb-4 text-balance">
                 {isChunkLoadError ? "Actualización disponible" : "Algo salió mal"}
             </h2>
@@ -92,10 +100,10 @@ export function AppErrorBoundary({ error, resetErrorBoundary, reset }: AppErrorB
             </p>
             {!isChunkLoadError && (
                 <details className="mb-8 w-full text-left group/details">
-                    <summary className="cursor-pointer text-xs text-on-surface-variant select-none mb-2">
+                    <summary className="cursor-pointer text-xs text-on-surface-variant select-none mb-2 w-fit rounded-md px-1 py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-brand-accent">
                         Detalles técnicos
                     </summary>
-                    <div className="p-4 bg-white/[0.03] border border-white/5 rounded-xl overflow-hidden">
+                    <div className="p-4 bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] rounded-xl overflow-hidden">
                         <p className="text-status-error font-mono text-xs break-all">
                             {(error as Error)?.message || "Error desconocido"}
                         </p>

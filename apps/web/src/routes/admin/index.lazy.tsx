@@ -12,7 +12,6 @@ import {
     IconNavigationSearch,
     IconUiRefresh,
     IconUiLink,
-    IconUiDelete,
     IconStatusDatabase,
     IconStatusImage,
     IconArrowRight,
@@ -52,7 +51,7 @@ function AdminPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen text-on-surface font-sans antialiased"
+            className="min-h-dvh text-on-surface font-sans antialiased"
         >
             <div className="page-container pt-nav pb-8 sm:pb-10">
                 <AdminHeader />
@@ -96,8 +95,8 @@ function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTransco
     const memoryUsed = trStats?.system?.memoryUsed ? (trStats.system.memoryUsed / 1024 / 1024 / 1024).toFixed(1) : "0.0"
 
     const stats = React.useMemo(() => [
-        { label: "Títulos", count: libStats?.totalMedia, change: "Series y películas", icon: IconNavigationTv, color: "hsl(var(--brand-accent))" },
-        { label: "Archivos", count: libStats?.totalLocalFiles, change: "En la biblioteca", icon: IconNavigationFilm, color: "hsl(var(--brand-accent))" },
+        { label: "Títulos", count: libStats?.totalMedia, change: "Series y películas", icon: IconNavigationTv, color: "var(--brand-accent-hex)" },
+        { label: "Archivos", count: libStats?.totalLocalFiles, change: "En la biblioteca", icon: IconNavigationFilm, color: "var(--brand-accent-hex)" },
         { label: "CPU", value: `${cpuPercent}%`, change: "Uso del sistema", icon: IconStatusActivity, color: "var(--status-success)" },
         { label: "Memoria", value: `${memoryUsed} GB`, change: `De ${memoryTotal} GB totales`, icon: IconStatusHdd, color: "var(--brand-accent-hex)" },
         { label: "GPU (NVENC)", value: trStats?.transcoderInitialized && trStats.governor ? `${trStats.governor.activeNvenc} / ${trStats.governor.nvencCap}` : "Inactiva", change: "Sesiones de GPU activas", icon: IconNavigationTv, color: "var(--md-sys-color-on-surface-variant)" },
@@ -108,9 +107,9 @@ function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTransco
         <section aria-labelledby="stats-title" className="mb-6">
             <h2 id="stats-title" className="sr-only">Estadísticas generales</h2>
             {/* Un solo contenedor de vidrio para los 6 datos: cada tarjeta suelta sumaba un blur (Admin llegaba a 16 nodos). */}
-            <div className="surface-content rounded-2xl p-3.5 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="surface-content rounded-2xl p-3.5 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)]">
                 {stats.map((stat) => (
-                    <div key={stat.label} className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] p-4 relative overflow-hidden group [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-colors duration-base ease-smooth-out">
+                    <div key={stat.label} className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] p-4 relative overflow-hidden group [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-colors duration-base ease-smooth-out">
                         <div className="flex items-start justify-between">
                             <stat.icon size={22} className="text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface transition-colors duration-fast ease-smooth-out" style={{ color: stat.color }} />
                         </div>
@@ -121,9 +120,9 @@ function AdminStatsGrid({ trStats }: { trStats?: ReturnType<typeof useGetTransco
                                 stat.value
                             )}
                         </div>
-                        <div className="text-2xs mt-1">
+                        <div className="text-xs mt-1">
                             <span className="text-on-surface font-semibold block truncate">{stat.label}</span>
-                            <span className="text-label-2 text-3xs truncate block mt-0.5">{stat.change}</span>
+                            <span className="text-label-2 text-xs truncate block mt-0.5">{stat.change}</span>
                         </div>
                     </div>
                 ))}
@@ -136,18 +135,12 @@ function AdminSection({
     title,
     subtitle,
     icon,
-    badge,
     children,
-    collapsible = false,
-    defaultOpen = true,
 }: {
     title: string
     subtitle?: string
     icon?: React.ElementType
-    badge?: React.ReactNode
     children: React.ReactNode
-    collapsible?: boolean
-    defaultOpen?: boolean
 }) {
     return (
         <SectionBar
@@ -155,9 +148,6 @@ function AdminSection({
             label={title}
             description={subtitle}
             icon={icon}
-            badge={badge}
-            collapsible={collapsible}
-            defaultOpen={defaultOpen}
             className="mb-8"
         >
             <div className="pt-2">
@@ -171,63 +161,46 @@ function AdminActionsGrid() {
     const navigate = useNavigate()
     const { mutate: scanLibrary } = useScanLocalFiles()
 
-    const actions = [
-        { label: "Escanear biblioteca", desc: "Detecta archivos nuevos", icon: IconNavigationSearch, variant: "primary" as const, action: () => scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false }) },
-        { label: "Escaneo profundo", desc: "Ignora la caché y analiza todo de nuevo", icon: IconUiRefresh, variant: "secondary" as const, action: () => scanLibrary({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false }) },
-        { label: "Coincidencia manual", desc: "Vincula archivos sin identificar", icon: IconUiLink, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Limpiar huérfanos", desc: "Elimina entradas de la biblioteca que ya no tienen archivo", icon: IconUiDelete, variant: "destructive" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Metadatos", desc: "Elige el proveedor y el idioma de los metadatos", icon: IconStatusDatabase, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
-        { label: "Rendimiento y video", desc: "Perfil de rendimiento y motor de video", icon: IconStatusImage, variant: "outline" as const, action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
+    const actions: Array<{
+        label: string
+        desc: string
+        icon: typeof IconNavigationSearch
+        variant: "primary" | "secondary" | "outline"
+        action: () => void
+    }> = [
+        { label: "Escanear biblioteca", desc: "Detecta archivos nuevos", icon: IconNavigationSearch, variant: "primary", action: () => scanLibrary({ mode: "fast", skipLockedFiles: false, skipIgnoredFiles: false }) },
+        { label: "Escaneo profundo", desc: "Ignora la caché y analiza todo de nuevo", icon: IconUiRefresh, variant: "secondary", action: () => scanLibrary({ mode: "deep", skipLockedFiles: false, skipIgnoredFiles: false }) },
+        { label: "Coincidencia manual", desc: "Vincula archivos sin identificar", icon: IconUiLink, variant: "outline", action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Metadatos", desc: "Elige el proveedor y el idioma de los metadatos", icon: IconStatusDatabase, variant: "outline", action: () => navigate({ to: "/settings", search: { tab: "library" } }) },
+        { label: "Rendimiento y video", desc: "Perfil de rendimiento y motor de video", icon: IconStatusImage, variant: "outline", action: () => navigate({ to: "/settings", search: { tab: "performance" } }) },
     ]
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {actions.map((action, i) => {
-                if (action.variant === "destructive") {
-                    return (
-                        <div key={i} className="w-full text-left rounded-xl bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] p-5 flex flex-col justify-between">
-                            <div className="flex items-start gap-3.5">
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-status-error/15 text-status-error border border-status-error/25">
-                                    <action.icon size={20} strokeWidth={2.5} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-xs font-bold text-on-surface">{action.label}</h3>
-                                    <p className="text-2xs text-label-2 mt-0.5">{action.desc}</p>
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-[var(--neutral-separator)] flex items-center justify-end gap-2">
-                                <span className="text-2xs px-2 py-1 rounded bg-[var(--neutral-elev-3)] border border-[var(--neutral-separator)] text-on-surface-variant">
-                                    Próximamente
-                                </span>
-                            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 max-w-[1440px]">
+            {actions.map((action, i) => (
+                <button
+                    key={i}
+                    type="button"
+                    onClick={action.action}
+                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full text-left rounded-xl bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] p-5 cursor-pointer transition-[background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] motion-safe:active:scale-[0.97] group flex flex-col justify-between"
+                >
+                    <div className="flex items-start gap-3.5">
+                        <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-fast ease-smooth-out",
+                            action.variant === "primary" && "bg-brand-accent/15 text-brand-accent-readable border border-brand-accent/25",
+                            action.variant === "secondary" && "bg-brand-accent/15 text-brand-accent-readable border border-brand-accent/25",
+                            action.variant === "outline" && "bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] text-on-surface-variant",
+                        )}>
+                            <action.icon size={20} strokeWidth={2.5} />
                         </div>
-                    )
-                }
-                return (
-                    <button
-                        key={i}
-                        type="button"
-                        onClick={action.action}
-                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full text-left rounded-xl bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] p-5 cursor-pointer transition-[background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] active:scale-[0.98] group flex flex-col justify-between"
-                    >
-                        <div className="flex items-start gap-3.5">
-                            <div className={cn(
-                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-fast ease-smooth-out",
-                                action.variant === "primary" && "bg-brand-accent/15 text-brand-accent-readable border border-brand-accent/25",
-                                action.variant === "secondary" && "bg-brand-accent/15 text-brand-accent-readable border border-brand-accent/25",
-                                action.variant === "outline" && "bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] text-on-surface-variant",
-                            )}>
-                                <action.icon size={20} strokeWidth={2.5} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-xs font-bold text-on-surface">{action.label}</h3>
-                                <p className="text-2xs text-label-2 mt-0.5">{action.desc}</p>
-                            </div>
-                            <IconArrowRight size={18} className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-xs font-bold text-on-surface">{action.label}</h3>
+                            <p className="text-xs text-label-2 mt-0.5">{action.desc}</p>
                         </div>
-                    </button>
-                )
-            })}
+                        <IconArrowRight size={18} className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
+                    </div>
+                </button>
+            ))}
         </div>
     )
 }
@@ -301,11 +274,11 @@ function AdminServicesGrid() {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 max-w-[1440px]">
             {services.map((service, i) => {
                 const status = getStatusConfig(service.status)
                 return (
-                    <div key={i} className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] p-5 transition-[background-color,border-color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] flex flex-col justify-between">
+                    <div key={i} className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] p-5 transition-[background-color,border-color] duration-base ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] flex flex-col justify-between">
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3.5 min-w-0">
                                 <div className="w-10 h-10 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center shrink-0">
@@ -313,20 +286,20 @@ function AdminServicesGrid() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <h3 className="text-xs font-bold text-on-surface truncate">{service.name}</h3>
-                                    <p className="text-2xs text-label-2 mt-0.5 line-clamp-2">{service.desc}</p>
+                                    <p className="text-xs text-label-2 mt-0.5 line-clamp-2">{service.desc}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                                 <status.icon size={14} className="shrink-0" style={{ color: status.color }} />
-                                <span className="text-2xs font-bold" style={{ color: status.color }}>{status.label}</span>
+                                <span className="text-xs font-bold" style={{ color: status.color }}>{status.label}</span>
                             </div>
                         </div>
                         <div className="mt-4 pt-3.5 border-t border-[var(--neutral-separator)] flex items-center justify-between">
-                            <span className="text-2xs text-label-2">Estado: <span className="text-on-surface ml-1">{service.lastSync}</span></span>
+                            <span className="text-xs text-label-2">Estado: <span className="text-on-surface ml-1">{service.lastSync}</span></span>
                             <Link
                                 to="/settings"
                                 search={{ tab: service.tab }}
-                                className={ButtonAnatomy.root({ intent: "outline", size: "sm" })}
+                                className={cn(ButtonAnatomy.root({ intent: "outline", size: "sm" }), "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong motion-safe:active:scale-[0.97]")}
                             >
                                 Configurar
                             </Link>
@@ -354,18 +327,18 @@ function AdminSystemGrid() {
     ]
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 max-w-[1440px]">
             {items.map((item, i) => (
-                <button key={i} type="button" onClick={item.action} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full text-left rounded-xl bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] p-5 cursor-pointer transition-[background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] active:scale-[0.98] group flex flex-col justify-between">
+                <button key={i} type="button" onClick={item.action} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full text-left rounded-xl bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] p-5 cursor-pointer transition-[background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] motion-safe:active:scale-[0.97] group flex flex-col justify-between">
                     <div className="flex items-start gap-3.5">
                         <div className="w-10 h-10 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-[var(--neutral-separator)] transition-[background-color,border-color] duration-fast ease-smooth-out shrink-0">
                             <item.icon size={20} className="text-label-2" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className="text-xs font-bold text-on-surface">{item.label}</h3>
-                            <p className="text-2xs text-label-2 mt-0.5">{item.desc}</p>
+                            <p className="text-xs text-label-2 mt-0.5">{item.desc}</p>
                         </div>
-                        <IconArrowRight size={18} className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
+                        <IconArrowRight size={18} className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 transition-[transform,color] duration-fast ease-smooth-out shrink-0 mt-0.5" />
                     </div>
                 </button>
             ))}
@@ -416,20 +389,20 @@ function AdminRecentActivity() {
                     }
                 >
                     {notifications.length === 0 ? (
-                        <p className="text-2xs text-label-2">Sin actividad reciente.</p>
+                        <p className="text-xs text-label-2">Sin actividad reciente.</p>
                     ) : (
                         notifications.map((n) => {
                             const cfg = iconForType(n.type)
                             return (
-                                <div key={n.id} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] transition-[border-color] duration-fast ease-smooth-out">
+                                <div key={n.id} className="flex items-start gap-3.5 p-3.5 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-colors duration-fast ease-smooth-out">
                                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`, color: cfg.color }}>
                                         <cfg.icon size={16} strokeWidth={2.5} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs font-medium text-on-surface">{n.title}: {n.message}</p>
-                                        <p className="text-3xs text-label-2 mt-0.5">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}</p>
+                                        <p className="text-xs text-label-2 mt-0.5">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}</p>
                                     </div>
-                                    <span className="text-2xs text-label-2 shrink-0 mt-0.5">{n.type === "scanner" ? "Escáner" : n.type === "mediastream" ? "Reproducción" : "Sistema"}</span>
+                                    <span className="text-xs text-label-2 shrink-0 mt-0.5">{n.type === "scanner" ? "Escáner" : n.type === "mediastream" ? "Reproducción" : "Sistema"}</span>
                                 </div>
                             )
                         })

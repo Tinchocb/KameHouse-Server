@@ -1,0 +1,138 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  controls.css — Controles fuera de las recetas de buttons.css         ║
+   ║  Opciones en tarjeta, filas de ajuste, selectores, chips y encabezados ║
+   ╚════════════════════════════════════════════════════════════════════════╝
+
+   Las clases de forma de Tailwind se reasignan a la escala del tema, así que
+   el control hereda la forma sin tocar el componente. En este proyecto
+   rounded-xl vale 20 px y rounded-2xl, 24 px: fuera de la escala 6 · 8 · 12 · 16. */
+
+/* Radios: 20, 24 y 32 px de Tailwind → 12 y 16 px */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.rounded-2xl, .rounded-3xl, .rounded-hero, .rounded-corner-lg, .sectionbar.rounded-3xl) {
+  border-radius: var(--minimal-radius-lg) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .rounded-xl {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+/* Tarjetas y filas internas dentro de diálogos y menús: concéntrico a 12 px (md) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([role="dialog"], [role="menu"], .UI-Modal__content) .rounded-2xl:not([role="dialog"]):not(.character-detail-modal) {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+/* Píldoras que no son acciones: el selector de orden y los chips de búsqueda */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) button[role="combobox"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) select {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) button.rounded-full.px-2\.5 {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .poster-chip {
+  border-radius: var(--minimal-radius-xs) !important;
+  background: var(--minimal-fill-3) !important;
+  border-color: var(--minimal-line-3) !important;
+  color: var(--minimal-text-1) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.ep-dur-pill, .series-shelf-era, .series-shelf-progress, .series-shelf-progress span) {
+  border-radius: var(--minimal-radius-xs) !important;
+}
+
+/* Insignias de estado en secciones y paneles */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section span.rounded-full:not(.animate-music-bars):not([aria-hidden="true"]) {
+  border-radius: var(--minimal-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+/* Barras de progreso de ajuste: blanco perla sin resplandor */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(section, [role="tabpanel"]) div.rounded-full > div.bg-brand-accent {
+  background-color: var(--minimal-accent) !important;
+  box-shadow: none !important;
+}
+
+/* Piso de 12 px y dos pesos, también para las clases de Tailwind */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .text-2xs {
+  font-size: var(--minimal-font-xs) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.font-bold, .font-extrabold, .font-black) {
+  font-weight: var(--minimal-weight-semibold) !important;
+}
+
+/* Controles de texto sin clase de peso: el secundario (500) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(button, [role="button"], [role="radio"], [role="switch"], [role="combobox"], [role="tab"], [role="option"]):not([class*="font-"]) {
+  font-weight: var(--minimal-weight-medium);
+}
+
+/* Elegir tema, audio o perfil es selección persistente con relieve sutil.
+   La preview de arte permanece intacta dentro de cada opción. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-page] [role="radio"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-choice] {
+  border-color: var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-page] [role="radio"]:not([aria-checked="true"]),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-choice]:not([aria-checked="true"]) {
+  background: var(--minimal-surface) !important;
+}
+
+/* Ajustes minimalistas: sin pie técnico triplicado en tarjetas de tema, subtítulos redundantes en cabeceras,
+   halos de selección luminosos, brillos especulares ni avisos técnicos repetitivos de guardado local */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(
+  [data-settings-page] [role="radio"] > div.border-t,
+  [data-settings-page] .sectionbar-header-desc,
+  [data-settings-page] p.mt-2.text-sm.text-pretty,
+  [data-settings-page] nav p.type-caption,
+  [data-settings-page] .h-\[2px\],
+  [data-settings-page] div.flex.items-center.gap-2.px-1.pb-1,
+  [data-settings-page] [data-settings-choice-ring],
+  [data-settings-page] [data-transparency-status] > div[class*="bg-gradient-to-r"],
+  .global-queue-panel .sectionbar-header-desc
+) {
+  display: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-page] [role="radio"][aria-checked="true"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-choice][aria-checked="true"] {
+  background: var(--minimal-fill-3) !important;
+  border-color: var(--minimal-line-4) !important;
+  box-shadow: none !important;
+}
+
+/* Tarjetas interiores y de telemetría en Ajustes: radio concéntrico de 12 px (md) y fondo sobrio */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-page] :is(
+  [role="status"],
+  .sectionbar-divide,
+  .rounded-2xl,
+  .rounded-xl
+) {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+/* Cabecera full-width de Ajustes: sin radio artificial */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) header.sectionbar {
+  border-radius: 0 !important;
+}
+
+/* El foco debe prevalecer sobre la ausencia de elevación de la tarjeta. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-page] [role="radio"]:focus-visible,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-choice]:focus-visible {
+  box-shadow: var(--minimal-focus-ring) !important;
+}
+
+
+/* Una función no disponible no debe volver ilegible su explicación. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-control="toggle"][aria-disabled="true"] {
+  opacity: 1 !important;
+}
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-settings-control="toggle"][aria-disabled="true"] [data-switch] {
+  opacity: var(--minimal-disabled-opacity) !important;
+}

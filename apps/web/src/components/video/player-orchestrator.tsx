@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react"
+import { authorizeResourceUrl } from "@/api/client/auth"
 import { useRequestMediastreamMediaContainer, usePreloadMediastreamMediaContainer } from "@/api/hooks/mediastream.hooks"
 import { usePlayerCore } from "./player-core"
 import { PlayerUI } from "./player-ui"
@@ -74,6 +75,14 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             return "Google Drive limitó las descargas de este archivo (cuota excedida). Inténtalo de nuevo más tarde."
         }
         switch (streamRequestFailure.status) {
+            case 409:
+                if (serverMsg.includes("solo original")) {
+                    return "Este archivo necesita conversión, pero Solo original está activo. Selecciona Automático en Ajustes → Rendimiento → Motor de video y transcodificación."
+                }
+                if (serverMsg.includes("transcodificación está desactivada")) {
+                    return "Este archivo necesita conversión para reproducirse en tu dispositivo. Selecciona Automático en Ajustes → Rendimiento → Motor de video y transcodificación y guarda los cambios."
+                }
+                return "La configuración actual no permite preparar este episodio. Revisa la política de reproducción en Ajustes → Rendimiento."
             case 424:
                 if (serverMsg.includes("no está conectado")) {
                     return "Google Drive no está conectado. Conéctalo en Ajustes → Biblioteca → Google Drive."
@@ -130,7 +139,9 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                 return {
                     index: trackIdx,
                     language: s.language ?? "und",
-                    title: s.title || s.language || `Subtitle ${i + 1}`,
+                    // Sin nombre de pista va vacío: la UI muestra el idioma en texto o, si el MKV
+                    // tampoco trae idioma (el servidor manda "und"), "Subtítulos N" (ver track-labels).
+                    title: s.title || "",
                     codec: s.codec,
                     default: s.isDefault,
                     forced: s.isForced,
@@ -139,7 +150,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                     progressive: !!s.progressive,
                     // `path` ubica la caché de los subtítulos externos y de los de Drive
                     // (que no tienen un container activo en el servidor).
-                    url: pending ? undefined : `${endpoint}?trackIndex=${trackIdx}&clientId=${clientId}${pathParam}${s.progressive && props.initialProgressSeconds ? `&t=${Math.floor(props.initialProgressSeconds)}` : ""}`
+                    url: pending ? undefined : authorizeResourceUrl(`${endpoint}?trackIndex=${trackIdx}&clientId=${clientId}${pathParam}${s.progressive && props.initialProgressSeconds ? `&t=${Math.floor(props.initialProgressSeconds)}` : ""}`)
                 }
             }) || [],
 
@@ -149,7 +160,7 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
                 name: c.name || "",
                 type: c.type
             })) || [],
-            fontUrls: fonts?.map((font: string) => `/api/v1/mediastream/att/${encodeURIComponent(font)}?clientId=${clientId}${pathParam}`) || []
+            fontUrls: fonts?.map((font: string) => authorizeResourceUrl(`/api/v1/mediastream/att/${encodeURIComponent(font)}?clientId=${clientId}${pathParam}`)) || []
         }
     }, [data, props.streamUrl, props.initialProgressSeconds, clientId, driveSubtitlesReady, driveFonts])
 
@@ -351,7 +362,6 @@ export function VideoPlayerOrchestrator(props: OrchestratorProps) {
             core={core}
             mediaId={props.mediaId}
             episodeNumber={props.episodeNumber}
-            malId={props.malId}
             episodes={props.episodes}
             onSelectEpisode={props.onSelectEpisode}
             mediaFormat={props.mediaFormat}

@@ -1,0 +1,144 @@
+/* One material, four roles. Refraction belongs to floating surfaces only;
+   cards, rows, notices and controls never allocate their own lens or blur. */
+:root {
+  --liquid-glass-core: var(--neutral-elev-1);
+  --liquid-glass-rim: rgba(var(--on-surface-rgb), 0.36);
+  --liquid-glass-rim-top: rgba(var(--on-surface-rgb), 0.80);
+  --liquid-glass-rim-bottom: rgba(var(--on-surface-rgb), 0.28);
+  --liquid-glass-sheen: linear-gradient(132deg, rgba(var(--on-surface-rgb), 0.12), rgba(var(--on-surface-rgb), 0.025) 26%, transparent 50%, rgba(var(--on-surface-rgb), 0.04) 82%, rgba(var(--on-surface-rgb), 0.10));
+  /* Clear bevels reveal the lens; the darker centre supports labels and reading.
+     Content remains dense, and video retains its independent neutral recipe. */
+  --liquid-glass-navigation-bg: var(--liquid-glass-sheen), linear-gradient(180deg, color-mix(in srgb, var(--liquid-glass-core) 32%, transparent), color-mix(in srgb, var(--liquid-glass-core) 82%, transparent) 30%, color-mix(in srgb, var(--liquid-glass-core) 82%, transparent) 70%, color-mix(in srgb, var(--liquid-glass-core) 40%, transparent));
+  --liquid-glass-panel-bg: var(--liquid-glass-sheen), linear-gradient(180deg, transparent, color-mix(in srgb, var(--liquid-glass-core) 70%, transparent) 24px, color-mix(in srgb, var(--liquid-glass-core) 70%, transparent) calc(100% - 24px), transparent), linear-gradient(155deg, color-mix(in srgb, var(--liquid-glass-core) 42%, transparent), color-mix(in srgb, var(--liquid-glass-core) 58%, transparent) 48%, color-mix(in srgb, var(--liquid-glass-core) 46%, transparent));
+  --liquid-glass-content-bg: var(--liquid-glass-sheen), linear-gradient(165deg, color-mix(in srgb, var(--liquid-glass-core) 90%, transparent), color-mix(in srgb, var(--liquid-glass-core) 88%, transparent));
+  --liquid-glass-control-bg: var(--liquid-glass-sheen), linear-gradient(165deg, color-mix(in srgb, var(--liquid-glass-core) 76%, transparent), color-mix(in srgb, var(--liquid-glass-core) 68%, transparent));
+  --liquid-glass-video-bg: linear-gradient(color-mix(in srgb, var(--neutral-elev-1) 88%, transparent), color-mix(in srgb, var(--neutral-elev-1) 88%, transparent));
+  --liquid-glass-relief:
+    inset 0 1px 1px 0 rgba(var(--on-surface-rgb), 0.32),
+    inset 1px 0 1px var(--glass-rim-cool),
+    inset -1px 0 1px var(--glass-rim-warm),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(0, 0, 0, 0.82);
+  --liquid-glass-float-shadow:
+    inset 0 2px 1px -1px rgba(var(--on-surface-rgb), 0.72),
+    inset 2px 0 3px -1px var(--glass-rim-cool),
+    inset -2px 0 3px -1px var(--glass-rim-warm),
+    inset 0 -2px 3px -1px rgba(var(--on-surface-rgb), 0.30),
+    inset 0 0 9px rgba(var(--on-surface-rgb), 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.30),
+    0 18px 40px -16px rgba(0, 0, 0, 0.64);
+  --liquid-glass-content-shadow:
+    inset 0 1px 0 0 rgba(var(--on-surface-rgb), 0.14),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.78);
+}
+:root[data-mode="era"] {
+  --liquid-glass-core: color-mix(in srgb, var(--neutral-elev-1) 97%, var(--brand-accent-hex) 3%);
+  --liquid-glass-rim: color-mix(in srgb, var(--brand-accent-hex) 6%, rgba(var(--on-surface-rgb), 0.36));
+  --liquid-glass-rim-top: color-mix(in srgb, var(--brand-accent-hex) 4%, rgba(var(--on-surface-rgb), 0.80));
+  --liquid-glass-rim-bottom: color-mix(in srgb, var(--era-tint) 5%, rgba(var(--on-surface-rgb), 0.28));
+}
+
+/* These aliases cover existing semantic recipes and third-party toast roots.
+   No positioning, radius, dimensions, opacity or transforms are overridden. */
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) :is(
+  [data-liquid-surface], .floating-nav-island, .liquid-content, .liquid-control,
+  .surface-content, .glass-card, .glass-frosted-pill, .player-hud-capsule, .UI-Button_root[data-intent="glass"]
+) {
+  background: linear-gradient(var(--liquid-status-tint, transparent), var(--liquid-status-tint, transparent)), var(--liquid-glass-fill);
+  box-shadow: var(--liquid-glass-shadow);
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) :is(
+  [data-liquid-surface="content"], .liquid-content, .surface-content, .glass-card
+) {
+  --liquid-glass-fill: var(--liquid-glass-content-bg);
+  --liquid-glass-shadow: var(--liquid-glass-content-shadow);
+  backdrop-filter: none;
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) :where(
+  [data-liquid-surface="control"], .liquid-control, .glass-frosted-pill, .player-hud-capsule, .UI-Button_root[data-intent="glass"]
+) {
+  --liquid-glass-fill: var(--liquid-glass-control-bg);
+  --liquid-glass-shadow: var(--liquid-glass-relief);
+  backdrop-filter: none;
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) :is(
+  [data-liquid-surface="navigation"], [data-liquid-surface="panel"], [data-liquid-surface="control"],
+  .floating-nav-island, .liquid-control, .glass-frosted-pill, .player-hud-capsule, .UI-Button_root[data-intent="glass"]
+) {
+  border-color: var(--liquid-glass-border, var(--liquid-glass-rim));
+  border-top-color: var(--liquid-glass-border, var(--liquid-glass-rim-top));
+  border-bottom-color: var(--liquid-glass-border, var(--liquid-glass-rim-bottom));
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) :is(
+  .floating-nav-island, [data-liquid-surface="navigation"], [data-liquid-surface="panel"]
+) {
+  --liquid-glass-fill: var(--liquid-glass-navigation-bg);
+  --liquid-glass-shadow: var(--liquid-glass-float-shadow);
+  backdrop-filter: blur(var(--blur-overlay-sm)) saturate(var(--liquid-glass-saturation, 1.2));
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) [data-liquid-surface="panel"] {
+  --liquid-glass-fill: var(--liquid-glass-panel-bg);
+}
+/* The selected destination is an inset lens sharing the island's optics.
+   Keep this above the era's opaque indicator only while Liquid Glass is on. */
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) .floating-nav-active-indicator {
+  background: linear-gradient(160deg, rgba(var(--on-surface-rgb), 0.28), rgba(var(--on-surface-rgb), 0.10));
+  box-shadow: inset 0 1px 1px rgba(var(--on-surface-rgb), 0.55), inset 0 -1px 1px rgba(var(--on-surface-rgb), 0.16), 0 2px 7px rgba(0, 0, 0, 0.15);
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) .floating-nav-island :is(a[aria-current="page"], button[aria-pressed="true"]) {
+  color: var(--label-1);
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) :is([data-liquid-context="video"], .player-hud-capsule) {
+  --liquid-glass-fill: var(--liquid-glass-video-bg);
+  --liquid-glass-saturation: 1;
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) [data-liquid-context="video"] [data-liquid-surface="panel"] {
+  --liquid-glass-fill: var(--liquid-glass-video-bg);
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) .UI-Button_root[data-intent="glass"] {
+  backdrop-filter: none;
+}
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) [data-liquid-context="video"] .UI-Button_root[data-intent="glass"] {
+  --liquid-glass-fill: var(--liquid-glass-video-bg);
+}
+/* Native URL filters must remain the only CSS filter function. The small blur
+   and saturation run inside SVG, including the neutral video variant. */
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) [data-liquid-ready="true"] {
+  -webkit-backdrop-filter: var(--liquid-refraction-filter);
+  backdrop-filter: var(--liquid-refraction-filter);
+}
+/* DOM ancestry also governs fallback blur: nested panels share their outer
+   surface's optics, while portalled panels remain independent. An explicit
+   content/control role opts an implicit navigation island out of optics. */
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) :is(
+  .floating-nav-island:not([data-liquid-surface]), [data-liquid-surface="navigation"], [data-liquid-surface="panel"]
+) :is(
+  .floating-nav-island:not([data-liquid-surface]), [data-liquid-surface="navigation"], [data-liquid-surface="panel"]
+) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* A content surface nested in a lens inherits the optical container's depth,
+   never its blur. Status tints stay above the material rather than replacing it. */
+:root[data-liquid="true"] .liquid-content[data-type="success"] { --liquid-status-tint: var(--success-bg); }
+:root[data-liquid="true"] .liquid-content[data-type="warning"] { --liquid-status-tint: var(--warning-bg); }
+:root[data-liquid="true"] .liquid-content[data-type="error"] { --liquid-status-tint: color-mix(in srgb, var(--status-error) 10%, transparent); }
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) .liquid-content[data-type="error"] {
+  color: color-mix(in srgb, var(--status-error) 50%, var(--label-1) 50%);
+}
+:root[data-liquid="true"] .liquid-content[data-type="info"] { --liquid-status-tint: color-mix(in srgb, var(--brand-accent-hex) 10%, transparent); }
+:root[data-liquid="true"]:not([data-flat="true"]):not([data-tv="true"]) [data-liquid-status="success"] {
+  --liquid-status-tint: var(--success-bg);
+  --liquid-glass-border: var(--success-border);
+  --liquid-glass-shadow: var(--shadow-save-bar-success);
+}
+
+@media (prefers-contrast: more), (forced-colors: active) {
+  :root[data-liquid="true"] :is([data-liquid-surface], .floating-nav-island, .liquid-content, .liquid-control, .surface-content, .glass-card, .glass-frosted-pill, .player-hud-capsule, .UI-Button_root[data-intent="glass"]) {
+    backdrop-filter: none !important;
+    background: var(--surface-content);
+    box-shadow: none;
+    border-color: var(--label-1);
+  }
+}

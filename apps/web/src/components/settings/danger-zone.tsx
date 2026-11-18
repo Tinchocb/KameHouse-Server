@@ -16,11 +16,11 @@ export function DangerZone({ title, description, actions, children }: DangerZone
                 </div>
                 <div className="space-y-1">
                     <h3 className="text-base font-bold text-brand-destructive tracking-tight">{title}</h3>
-                    <p className="text-caption text-label-2 leading-relaxed font-medium">{description}</p>
+                    <p className="text-caption text-label-2 leading-relaxed font-medium max-w-prose">{description}</p>
                 </div>
             </div>
-            {actions && <div className="pl-14">{actions}</div>}
-            {children && <div className="pl-14 pt-4 space-y-3">{children}</div>}
+            {actions && <div className="sm:pl-14">{actions}</div>}
+            {children && <div className="sm:pl-14 pt-4 space-y-3">{children}</div>}
         </div>
     )
 }

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"kamehouse/internal/util/cache"
@@ -30,6 +31,8 @@ type Cache interface {
 
 // Client handles TMDb API requests with caching using the new EdgeHTTPClient.
 type Client struct {
+	publication     sync.Mutex
+	generation      uint64
 	bearerToken     string
 	language        string
 	cache           *cache.Cache[any] // TTL in-memory cache for search results
@@ -61,7 +64,7 @@ func NewClient(bearerToken string, language ...string) *Client {
 // tiles asking for the same series on a cold cache send one request instead of N.
 // The shared fetch is detached from the first caller's cancellation, since others wait on it.
 func dedupe[T any](ctx context.Context, c *Client, key string, fetch func(ctx context.Context) (T, error)) (T, error) {
-	v, err, _ := c.flights.Do(key, func() (interface{}, error) {
+	v, err, _ := c.flights.Do(fmt.Sprintf("%d:%s", c.cacheGeneration(), key), func() (interface{}, error) {
 		return fetch(context.WithoutCancel(ctx))
 	})
 	if err != nil {
@@ -84,9 +87,29 @@ func (c *Client) SetHTTPClient(client *http.Client) {
 
 // ClearCache flushes the in-memory cache of TMDB API responses.
 func (c *Client) ClearCache() {
-	if c != nil && c.cache != nil {
+	if c != nil {
+		_ = c.ClearCacheWith(nil)
+	}
+}
+
+// ClearCacheWith retires pending writes and joins admitted writes before durable
+// deletion. New fetches cannot capture a generation until deletion completes.
+func (c *Client) ClearCacheWith(clear func() error) error {
+	c.publication.Lock()
+	defer c.publication.Unlock()
+	c.generation++
+	if c.cache != nil {
 		c.cache.Clear()
 	}
+	if clear != nil {
+		return clear()
+	}
+	return nil
+}
+func (c *Client) cacheGeneration() uint64 {
+	c.publication.Lock()
+	defer c.publication.Unlock()
+	return c.generation
 }
 
 // GetCached attempts to retrieve a value from the persistent cache first, falling back to the in-memory cache.
@@ -108,8 +131,12 @@ func GetCached[T any](c *Client, key string) (T, bool) {
 	return zero, false
 }
 
-// SetCached stores a value in both the in-memory cache and the persistent cache (if available).
-func SetCached[T any](c *Client, key string, value T, ttl time.Duration) {
+func setCachedGeneration[T any](c *Client, generation uint64, key string, value T, ttl time.Duration) {
+	c.publication.Lock()
+	defer c.publication.Unlock()
+	if generation != c.generation {
+		return
+	}
 	if c.persistentCache != nil {
 		_ = c.persistentCache.Set(key, value, ttl)
 	}
@@ -169,7 +196,7 @@ func executeWithRetry[T any](ctx context.Context, c *Client, endpoint string) (*
 		resp, err := client.Do(req)
 
 		if err != nil {
-			lastErr = err
+			lastErr = httputil.RedactError(err)
 			waitTime := time.Duration(math.Pow(2, float64(attempt))) * time.Second
 			if !sleepWithContext(ctx, waitTime) {
 				return nil, ctx.Err()
@@ -231,3 +258,6 @@ func sleepWithContext(ctx context.Context, d time.Duration) bool {
 		return true
 	}
 }
+
+// Language returns the immutable language configured before publication.
+func (c *Client) Language() string { return c.language }

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"kamehouse/internal/api/jikan"
 	"kamehouse/internal/api/tmdb"
@@ -64,6 +63,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 				for _, r := range tvResults {
 					m := map[string]interface{}{
 						"id":             r.ID,
+						"provider":       "tmdb",
 						"name":           r.Name,
 						"first_air_date": r.FirstAirDate,
 						"poster_path":    r.PosterPath,
@@ -82,6 +82,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 				for _, r := range movieResults {
 					m := map[string]interface{}{
 						"id":           r.ID,
+						"provider":     "tmdb",
 						"title":        r.Title,
 						"release_date": r.ReleaseDate,
 						"poster_path":  r.PosterPath,
@@ -107,6 +108,7 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 				}
 				m := map[string]interface{}{
 					"id":          r.MalID,
+					"provider":    "jikan",
 					"name":        name,
 					"title":       name,
 					"poster_path": r.Images.Jpg.LargeImageUrl,
@@ -134,9 +136,11 @@ func (h *Handler) HandleTMDBSearch(c echo.Context) error {
 //	@route /api/v1/library/local-files/tmdb-assign [POST]
 func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	type body struct {
-		Paths     []string `json:"paths"`
-		TmdbID    int      `json:"tmdbId"`
-		MediaType string   `json:"mediaType"` // "tv" or "movie"
+		Paths      []string `json:"paths"`
+		TmdbID     int      `json:"tmdbId"` // legacy TMDB-only ID
+		ExternalID int      `json:"externalId"`
+		Provider   string   `json:"provider"`
+		MediaType  string   `json:"mediaType"` // "tv" or "movie"
 	}
 
 	var b body
@@ -147,8 +151,17 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	if len(b.Paths) == 0 {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("paths is required"))
 	}
-	if b.TmdbID <= 0 {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive tmdbId is required"))
+	if b.ExternalID == 0 {
+		b.ExternalID = b.TmdbID
+	}
+	if b.Provider == "" {
+		b.Provider = "tmdb"
+	} // legacy endpoint IDs are TMDB IDs
+	if b.Provider != "tmdb" && b.Provider != "jikan" {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("provider must be tmdb or jikan"))
+	}
+	if b.ExternalID <= 0 {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid positive externalId is required"))
 	}
 	if b.MediaType != "" && b.MediaType != "tv" && b.MediaType != "movie" {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid mediaType, expected 'tv' or 'movie'"))
@@ -157,20 +170,40 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 	// 1. Fetch full details from TMDB or Jikan
 	token := h.App.Config.Metadata.TMDBApiKey
 	lang := h.App.Config.Metadata.TMDBLanguage
+	// Match the live metadata client: keys entered in Settings take precedence
+	// over the config-file fallback.
+	if settings, err := h.App.Database.GetSettings(); err == nil && settings != nil {
+		if settings.Library.TmdbApiKey != "" {
+			token = settings.Library.TmdbApiKey
+		}
+		if settings.Library.TmdbLanguage != "" {
+			lang = settings.Library.TmdbLanguage
+		}
+	}
 	if lang == "" {
 		lang = "es-MX"
 	}
 
 	var provider librarymetadata.Provider
-	if token != "" {
+	if b.Provider == "tmdb" {
+		if token == "" {
+			return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("tmdb client not configured"))
+		}
 		provider = librarymetadata.NewTMDBProvider(token, h.App.Database, lang)
 	} else {
 		provider = librarymetadata.NewJikanProvider(h.App.Database, h.App.Logger)
 	}
 
-	lookUpID := strconv.Itoa(b.TmdbID)
-	if token != "" && b.MediaType == "movie" {
-		lookUpID = strconv.Itoa(b.TmdbID + constants.MovieIDOffset)
+	publicID := b.ExternalID
+	mediaType := "ANIME"
+	if b.Provider == "tmdb" {
+		mediaType = "SHOW"
+	}
+	lookUpID := strconv.Itoa(b.ExternalID)
+	if b.Provider == "tmdb" && b.MediaType == "movie" {
+		publicID += constants.MovieIDOffset
+		mediaType = "MOVIE"
+		lookUpID = strconv.Itoa(publicID)
 	}
 
 	nm, err := provider.GetMediaDetails(c.Request().Context(), lookUpID)
@@ -180,15 +213,15 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 
 	// 2. Map NormalizedMedia to LibraryMedia
 	libMedia := &models.LibraryMedia{
-		Type:          "ANIME",
-		TmdbID:        b.TmdbID,
+		Type:          mediaType,
+		TmdbID:        b.ExternalID,
 		Format:        string(lo.FromPtrOr(nm.Format, dto.MediaFormatTV)),
 		TotalEpisodes: lo.FromPtrOr(nm.Episodes, 0),
 		Year:          lo.FromPtrOr(nm.Year, 0),
 		Description:   lo.FromPtrOr(nm.Description, ""),
 	}
-	if token == "" {
-		libMedia.MyanimelistId = b.TmdbID
+	if b.Provider == "jikan" {
+		libMedia.MyanimelistId = b.ExternalID
 	}
 	if nm.MyanimelistId != nil && *nm.MyanimelistId > 0 {
 		libMedia.MyanimelistId = *nm.MyanimelistId
@@ -214,37 +247,13 @@ func (h *Handler) HandleTMDBAssign(c echo.Context) error {
 		libMedia.ClearArtImage = *nm.ClearArtImage
 	}
 
-	// 3. Upsert LibraryMedia
-	savedMedia, err := db.InsertLibraryMedia(h.App.Database, libMedia)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	// 4. Update LocalFiles
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	for _, path := range b.Paths {
-		lf, found := lo.Find(lfs, func(f *dto.LocalFile) bool {
-			return f.HasSamePath(path)
-		})
-		if found {
-			lf.MediaID = b.TmdbID
-			lf.LibraryMediaId = savedMedia.ID
-			lf.Locked = true // Lock it to prevent scanner from changing it
-			lf.Ignored = false
+	if err := db.AssignLibraryMediaFiles(c.Request().Context(), h.App.Database, libMedia, publicID, b.Paths); err != nil {
+		if errors.Is(err, db.ErrAssignmentPathNotFound) {
+			return h.RespondWithCodeError(c, http.StatusNotFound, err)
 		}
-	}
-
-	_, err = db.SaveLocalFiles(h.App.Database, lfs)
-	if err != nil {
 		return h.RespondWithError(c, err)
 	}
 
-	// 5. Refresh collection
-	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	ClearLibraryCollectionCache()
 
 	return h.RespondWithData(c, true)

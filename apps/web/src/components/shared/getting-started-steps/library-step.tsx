@@ -7,7 +7,7 @@ import { AnimatePresence, m } from "framer-motion"
 import React from "react"
 import { StepCard } from "./step-chrome"
 import { containerVariants, itemVariants } from "./variants"
-import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { useReducedMotion, useSpringPreset } from "@/components/ui/kinetics/hooks"
 
 // Salida de una carpeta quitada: --duration-quick con --ease-out, más corta que la entrada.
 const ROW_EXIT_TRANSITION = { duration: 0.15, ease: [0.23, 1, 0.32, 1] } as const
@@ -20,14 +20,17 @@ export function LibraryStep({
     paths,
     onAdd,
     onRemove,
+    onChooseDrive,
 }: {
     paths: string[]
+    onChooseDrive: () => void
     onAdd: (path: string) => void
     onRemove: (path: string) => void
 }) {
     const [draft, setDraft] = React.useState("")
     const [isPicking, setIsPicking] = React.useState(false)
     const rowSpring = useSpringPreset("entrance")
+    const reduceMotion = useReducedMotion()
 
     const addDraft = () => {
         const path = draft.trim()
@@ -54,18 +57,19 @@ export function LibraryStep({
         <m.div variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="space-y-5 max-w-xl mx-auto">
             <m.div variants={itemVariants} className="text-center space-y-2">
                 <h1 className="text-2xl sm:text-3xl font-display text-on-surface">
-                    ¿Dónde están tus episodios?
+                    Configura tu biblioteca
                 </h1>
                 <p className="text-on-surface-variant text-sm max-w-md mx-auto leading-relaxed">
-                    Elige la carpeta donde guardas tus series y películas. KameHouse las encuentra y las organiza por ti; lo demás ya viene configurado.
+                    Elige dónde guardas tus series y películas. Después puedes añadir otra fuente desde Ajustes.
                 </p>
             </m.div>
 
             <StepCard>
                 <m.div variants={itemVariants} className="space-y-4">
+                    <h2 className="font-semibold text-on-surface">Carpetas locales</h2>
                     {__isDesktop__ && (
                         <Button
-                            intent="primary"
+                            intent="secondary"
                             size="lg"
                             onClick={pickNative}
                             disabled={isPicking}
@@ -87,7 +91,7 @@ export function LibraryStep({
                             aria-label="Ruta de la carpeta de episodios"
                             trailingAction={
                                 <Button
-                                    intent="primary"
+                                    intent="outline"
                                     size="sm"
                                     onClick={addDraft}
                                     disabled={!draft.trim()}
@@ -110,9 +114,9 @@ export function LibraryStep({
                             <m.ul
                                 key="paths"
                                 layout
-                                initial={{ opacity: 0, y: 6 }}
+                                initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -6, transition: ROW_EXIT_TRANSITION }}
+                                exit={{ opacity: 0, y: reduceMotion ? 0 : -6, transition: ROW_EXIT_TRANSITION }}
                                 transition={rowSpring}
                                 className="relative space-y-2"
                                 aria-label="Carpetas añadidas"
@@ -122,9 +126,9 @@ export function LibraryStep({
                                         <m.li
                                             key={dir}
                                             layout
-                                            initial={{ opacity: 0, y: 6 }}
+                                            initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -6, transition: ROW_EXIT_TRANSITION }}
+                                            exit={{ opacity: 0, y: reduceMotion ? 0 : -6, transition: ROW_EXIT_TRANSITION }}
                                             transition={rowSpring}
                                             className="flex items-center gap-2 rounded-xl border border-[var(--neutral-separator)] bg-surface-container-low pl-3 pr-1 py-1"
                                         >
@@ -148,6 +152,16 @@ export function LibraryStep({
                 </m.div>
             </StepCard>
 
+            <StepCard>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="font-semibold text-on-surface">Google Drive</h2>
+                        <p className="text-sm text-on-surface-variant">Vincula tu cuenta para reproducir los archivos de tu Drive.</p>
+                    </div>
+                    <Button intent="secondary" size="md" className="shrink-0" onClick={onChooseDrive}>Configurar Drive</Button>
+                </div>
+            </StepCard>
+
             <m.div variants={itemVariants}>
                 <EngineDetection />
             </m.div>
@@ -165,15 +179,15 @@ function EngineDetection() {
             {isLoading ? (
                 <>
                     <IconUiSpinner className="w-3.5 h-3.5 animate-spin" aria-hidden />
-                    Buscando el motor de video (FFmpeg)…
+                    Buscando el motor de vídeo (FFmpeg)…
                 </>
             ) : ready ? (
                 <>
                     <IconUiCheckCircle className="w-3.5 h-3.5 text-status-success" aria-hidden />
-                    Motor de video detectado
+                    Motor de vídeo detectado
                 </>
             ) : (
-                <>Motor de video (FFmpeg) no detectado: podrás instalarlo después con un clic.</>
+                <>Motor de vídeo (FFmpeg) no detectado: podrás instalarlo después con un clic.</>
             )}
         </p>
     )

@@ -2,6 +2,12 @@ import type { Anime_LibraryCollectionEntry } from "@/api/generated/types"
 import { getLowResImage, getMediumResImage, localImage } from "@/lib/helpers/images"
 import { DAIMA_VERTICAL_POSTER, DRAGON_BALL_SERIES_INFO, getSeriesIdFromMedia } from "@/lib/helpers/series"
 
+const isMovieMedia = (media: NonNullable<Anime_LibraryCollectionEntry["media"]>): boolean => {
+    const fmt = media.format?.toUpperCase()
+    const type = media.type?.toUpperCase()
+    return fmt === "MOVIE" || fmt === "OVA" || fmt === "SPECIAL" || type === "MOVIE"
+}
+
 /**
  * URLs de las imágenes que dibuja la estantería de /series (póster y banner de
  * cada serie, en la resolución media y su versión borrosa), con las mismas
@@ -14,7 +20,7 @@ export function shelfImageUrls(entries: (Anime_LibraryCollectionEntry | null | u
     const out = new Set<string>()
     for (const entry of entries) {
         const media = entry?.media
-        if (!media || media.format === "MOVIE") continue
+        if (!media || isMovieMedia(media)) continue
         const title = media.titleSpanish || media.titleEnglish || media.titleRomaji || media.titleOriginal || ""
         const seriesId = getSeriesIdFromMedia(media, title)
         const canonical = seriesId ? DRAGON_BALL_SERIES_INFO[seriesId] : undefined
@@ -42,7 +48,7 @@ export function moviePosterUrls(entries: (Anime_LibraryCollectionEntry | null | 
     const out = new Set<string>()
     for (const entry of entries) {
         const media = entry?.media
-        if (!media || media.format !== "MOVIE" || !media.posterImage) continue
+        if (!media || !isMovieMedia(media) || !media.posterImage) continue
         const url = getMediumResImage(media.posterImage)
         if (url) out.add(localImage(url))
     }

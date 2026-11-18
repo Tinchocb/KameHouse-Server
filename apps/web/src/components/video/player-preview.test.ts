@@ -1,129 +1,73 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { PlayerPreviewManager } from "./player-preview"
-
-vi.mock("hls.js", () => ({ default: { isSupported: () => false } }))
-
+vi.mock("@/api/client/server-url", () => ({ getServerBaseUrl: () => "http://localhost:43211" }))
+const manifest = { version: "a".repeat(64), interval: 10, columns: 4, rows: 3, width: 200, height: 112 }
 const managers: PlayerPreviewManager[] = []
-const convertToBlob = vi.fn<() => Promise<Blob>>()
-const createObjectURL = vi.fn<(blob: Blob | MediaSource) => string>()
-const revokeObjectURL = vi.fn<(url: string) => void>()
-
 function setup() {
-    const createElement = document.createElement.bind(document)
-    vi.spyOn(document, "createElement").mockImplementation((...args: Parameters<typeof document.createElement>) => {
-        const element = createElement(...args)
-        if (element instanceof HTMLVideoElement) {
-            let currentTime = 0
-            Object.defineProperties(element, {
-                readyState: { configurable: true, value: 2 },
-                videoWidth: { configurable: true, value: 1280 },
-                videoHeight: { configurable: true, value: 720 },
-                duration: { configurable: true, value: 1800 },
-                currentTime: {
-                    configurable: true,
-                    get: () => currentTime,
-                    set: (value: number) => {
-                        currentTime = value
-                        void Promise.resolve().then(() => element.dispatchEvent(new Event("seeked")))
-                    },
-                },
-            })
-            element.load = vi.fn()
-            element.pause = vi.fn()
-        }
-        return element
-    })
-    const video = document.createElement("video")
-    const manager = new PlayerPreviewManager(video, "/episode.mkv", "direct")
+    const manager = new PlayerPreviewManager("gdrive://file/episode.mkv")
     managers.push(manager)
-    return { manager, video }
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:sheet")
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {})
+    return manager
 }
-
-describe("ciclo de vida de previews", () => {
-    beforeEach(() => {
-        vi.useFakeTimers()
-        convertToBlob.mockReset().mockResolvedValue(new Blob(["frame"], { type: "image/webp" }))
-        createObjectURL.mockReset().mockImplementation(() => `blob:preview-${createObjectURL.mock.calls.length}`)
-        revokeObjectURL.mockReset()
-        vi.stubGlobal("OffscreenCanvas", class {
-            width = 0
-            height = 0
-            getContext() { return { drawImage: vi.fn() } }
-            convertToBlob = convertToBlob
-        })
-        vi.spyOn(URL, "createObjectURL").mockImplementation(createObjectURL)
-        vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL)
+afterEach(() => { managers.splice(0).forEach(m => m.cleanup()); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+describe("storyboard previews", () => {
+    it("prewarm only requests the index, without starting frame extraction", async () => {
+        const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(manifest)))
+        vi.stubGlobal("fetch", fetcher)
+        setup().prewarm()
+        await vi.waitFor(() => expect(fetcher).toHaveBeenCalledOnce())
+        expect(new URL(String(fetcher.mock.calls[0][0])).searchParams.has("sheet")).toBe(false)
     })
-    afterEach(() => {
-        for (const manager of managers) manager.cleanup()
-        managers.length = 0
-        vi.clearAllTimers()
-        vi.useRealTimers()
-        vi.restoreAllMocks()
-        vi.unstubAllGlobals()
+    it("clamps the end to the last existing tile and ignores non-finite times", () => {
+        const manager = new PlayerPreviewManager("episode", () => 120)
+        managers.push(manager)
+        expect(manager.calculateSegmentIndex(120)).toBe(11)
+        expect(manager.calculateSegmentIndex(NaN)).toBe(0)
+        expect(manager.calculateSegmentIndex(-10)).toBe(0)
     })
-
-    it("no publica una URL si la captura de otro segmento termina después de cleanup", async () => {
-        const pending = Promise.withResolvers<Blob>()
-        convertToBlob.mockReturnValueOnce(pending.promise)
-        const { manager } = setup()
-        const preview = manager.retrievePreviewForSegment(3, false)
-        await vi.waitFor(() => expect(convertToBlob).toHaveBeenCalledTimes(1))
-        manager.cleanup()
-        pending.resolve(new Blob(["late frame"]))
-        await expect(preview).resolves.toBeUndefined()
-        expect(createObjectURL).not.toHaveBeenCalled()
+    it("requests only the selected frame and reuses it from cache", async () => {
+        const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(manifest)))
+            .mockImplementation(() => Promise.resolve(new Response(new Blob(["jpeg"], { type: "image/jpeg" }))))
+        vi.stubGlobal("fetch", fetcher)
+        const manager = setup()
+        const first = await manager.retrievePreviewForSegment(0)
+        const last = await manager.retrievePreviewForSegment(0)
+        expect(first).toMatchObject({ column: 0, row: 0 })
+        expect(last).toMatchObject({ column: 0, row: 0, columns: 1, rows: 1, url: first.url })
+        expect(fetcher).toHaveBeenCalledTimes(2)
+        expect(String(fetcher.mock.calls[1][0])).toContain("sheet=0")
+        expect(String(fetcher.mock.calls[1][0])).toContain("frame=0")
+        await manager.retrievePreviewForSegment(12)
+        expect(String(fetcher.mock.calls[2][0])).toContain("sheet=1")
     })
-
-    it("no publica una URL si la captura del video actual termina después de cleanup", async () => {
-        const pending = Promise.withResolvers<Blob>()
-        convertToBlob.mockReturnValueOnce(pending.promise)
-        const { manager, video } = setup()
-        video.dispatchEvent(new Event("timeupdate"))
-        await vi.advanceTimersByTimeAsync(300)
-        expect(convertToBlob).toHaveBeenCalledTimes(1)
-        manager.cleanup()
-        pending.resolve(new Blob(["late frame"]))
-        await pending.promise
-        await Promise.resolve()
-        expect(createObjectURL).not.toHaveBeenCalled()
+    it("deduplicates concurrent requests for the same sheet", async () => {
+        const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(manifest)))
+            .mockImplementation(() => Promise.resolve(new Response(new Blob(["jpeg"], { type: "image/jpeg" }))))
+        vi.stubGlobal("fetch", fetcher)
+        const manager = setup()
+        await Promise.all([manager.retrievePreviewForSegment(1), manager.retrievePreviewForSegment(1)])
+        expect(fetcher).toHaveBeenCalledTimes(2)
     })
-
-    it("resuelve los trabajos encolados sin ejecutarlos al cerrar", async () => {
-        const pending = Promise.withResolvers<Blob>()
-        convertToBlob.mockReturnValueOnce(pending.promise)
-        const { manager } = setup()
-        const active = manager.retrievePreviewForSegment(1, false)
-        await vi.waitFor(() => expect(convertToBlob).toHaveBeenCalledTimes(1))
-        const queued = manager.retrievePreviewForSegment(2, false)
+    it("aborts obsolete sheets and closes all work on cleanup", async () => {
+        const signals: AbortSignal[] = []
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(manifest)))
+            .mockImplementation((_url, options) => {
+                signals.push(options.signal)
+                return new Promise((_resolve, reject) => options.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError"))))
+            }))
+        const manager = setup()
+        const first = manager.retrievePreviewForSegment(1).catch(() => undefined)
+        await vi.waitFor(() => expect(signals).toHaveLength(1))
+        const second = manager.retrievePreviewForSegment(12).catch(() => undefined)
+        await vi.waitFor(() => expect(signals).toHaveLength(2))
+        expect(signals[0].aborted).toBe(true)
         manager.cleanup()
-        await expect(queued).resolves.toBeUndefined()
-        pending.resolve(new Blob())
-        await expect(active).resolves.toBeUndefined()
-        expect(convertToBlob).toHaveBeenCalledTimes(1)
+        expect(signals[1].aborted).toBe(true)
+        await Promise.all([first, second])
     })
-
-    it("reutiliza una captura y revoca las URLs existentes al limpiar", async () => {
-        const { manager } = setup()
-        const first = await manager.retrievePreviewForSegment(1, false)
-        expect(first).toBe("blob:preview-1")
-        await expect(manager.retrievePreviewForSegment(1, false)).resolves.toBe(first)
-        expect(convertToBlob).toHaveBeenCalledTimes(1)
-        manager.cleanup()
-        manager.cleanup()
-        expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith(first)
-        await expect(manager.retrievePreviewForSegment(2)).resolves.toBeUndefined()
-        manager._bindToVideoPlayer()
-        expect(convertToBlob).toHaveBeenCalledTimes(1)
-    })
-
-    it("revoca la captura más antigua cuando el caché supera su capacidad", async () => {
-        const { manager } = setup()
-        for (let index = 0; index < 151; index++) {
-            await manager.retrievePreviewForSegment(index, false)
-        }
-        expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:preview-1")
-        manager.cleanup()
-        expect(revokeObjectURL).toHaveBeenCalledTimes(151)
+    it("reports a failure instead of returning an empty thumbnail", async () => {
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 404 })))
+        await expect(setup().retrievePreviewForSegment(0)).rejects.toThrow("Vista previa no disponible")
     })
 })

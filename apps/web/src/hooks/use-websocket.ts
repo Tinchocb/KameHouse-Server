@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import useReactUseWebSocket from 'react-use-websocket'
+import { getWebSocketProtocols } from '@/api/client/auth'
 
 import { isWebSocketMessage, WebSocketMessage } from '@/lib/server/ws-events'
 
@@ -15,6 +16,7 @@ export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) =
     }, [onMessage])
 
     const { sendJsonMessage } = useReactUseWebSocket(url, {
+        protocols: getWebSocketProtocols(),
         share: true,
         shouldReconnect: () => true,
         retryOnError: true,

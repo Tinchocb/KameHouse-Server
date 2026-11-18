@@ -1,4 +1,3 @@
-"use no memo"
 import React from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { EpisodeBadge } from "@/components/ui/episode-badge"
@@ -8,30 +7,16 @@ import { cn } from "@/components/ui/core/styling"
 import { IconButton } from "@/components/ui/button"
 import { useHoverPreload } from "@/hooks/use-hover-preload"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
-import { useVirtualizer } from "@tanstack/react-virtual"
+import { useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 import { DeferredImage } from "@/components/shared/deferred-image"
 import { ElasticCounter, IconSwap } from "@/components/ui/kinetics"
-import { useReducedMotion } from "@/components/ui/kinetics/hooks"
 import { isImageLoaded } from "@/lib/helpers/images"
 import { toast } from "sonner"
 import { useQueueStore } from "@/lib/store"
 import { cleanEpisodeTitle } from "../-hooks/use-series-data"
 import { useSagaEpisodesReady } from "../-hooks/use-saga-episodes-ready"
+import { EpisodeVirtualList, type EpisodeVirtualRowProps } from "./episode-virtual-list"
 
-// Alto medido de cada fila (tarjeta + padding inferior) por breakpoint. Móvil ~163 px
-// (154–193 según título y descripción), tablet ~156 y escritorio ~181. Una estimación lejana
-// obligaba a corregir cada fila al montarla y el alto total del scroll quedaba mal.
-const ROW_HEIGHT_PX = { mobile: 164, tablet: 156, desktop: 181 } as const
-// Filas montadas fuera de pantalla: sus miniaturas se piden antes de asomar
-// (16 episodios por lado), dando más margen de carga al desplazarse rápido.
-const LIST_OVERSCAN = 16
-// Al entrar a la ficha casi todas las filas están bajo el pliegue. Montarlas todas junto con la
-// entrada de la página costaba un commit y un layout largos; se empieza con pocas y se amplía
-// cuando la entrada ya terminó.
-const LIST_OVERSCAN_ON_MOUNT = 4
-const LIST_OVERSCAN_DELAY_MS = 450
-// Al llevar el arco activo arriba, su primer episodio no debe quedar bajo la píldora de navegación flotante (~72 px).
-const ARC_SCROLL_PADDING_PX = 88
 // Ancho real de la miniatura por breakpoint (w-32 / sm:w-48 / md:w-56 / lg:w-60).
 const THUMBNAIL_SIZES = "(max-width: 639px) 128px, (max-width: 767px) 192px, (max-width: 1023px) 224px, 240px"
 const THUMBNAIL_TRANSITION: React.CSSProperties = {
@@ -69,10 +54,6 @@ interface PremiumEpisodeListProps {
   onPreload?: (filePath: string) => void
   /** MediaId real de la serie: la cola y la continuidad lo necesitan (el id del episodio NO es mediaId). */
   seriesMediaId?: number
-  /** Progreso de episodios vistos dentro de la saga activa */
-  sagaProgress?: { watched: number; total: number; percent: number }
-  /** Estadísticas de episodios filler dentro de la saga activa */
-  fillerStats?: { filler: number; total: number; percent: number }
   /** Elemento contenedor con scroll (para virtualización correcta) */
   scrollElement?: HTMLElement | null
   /** Callback para limpiar el sub-arco activo */
@@ -126,10 +107,15 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
   )
   const shownEpisodes = readyEpisodes ?? NO_EPISODES
 
+  const episodesById = React.useMemo(
+    () => new Map(episodes.map((e) => [e.id, e])),
+    [episodes],
+  )
+
   const { onMouseEnter, onMouseLeave } = useHoverPreload({
     delay: 300,
     onPreload: (epId) => {
-      const ep = episodes.find(e => e.id === epId)
+      const ep = episodesById.get(epId)
       if (ep?.localFilePath && onPreload) onPreload(ep.localFilePath)
     },
   })
@@ -162,7 +148,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
           <button
             type="button"
             onClick={() => navigate({ to: "/settings" })}
-            className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
+            className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 motion-safe:active:scale-[0.97] transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
           >
             Configurar biblioteca
           </button>
@@ -175,9 +161,9 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
     <div className="flex flex-col gap-4">
       {/* ── Active Sub-saga Indicator ────────────────────────────────────────── */}
       {activeSubSagaStart != null && activeSubSagaEnd != null && (
-        <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-brand-accent/[0.08] border border-brand-accent/25">
+        <div className="episode-active-subsaga-banner flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-brand-accent/[0.08] border border-brand-accent/25">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-1.5 h-1.5 rounded-full bg-brand-accent shrink-0" />
+            <div className="subsaga-dot w-1.5 h-1.5 rounded-full bg-brand-accent shrink-0" />
             <span className="text-xs font-semibold text-on-surface truncate">
               Arco activo · Eps {activeSubSagaStart}–{activeSubSagaEnd}
             </span>
@@ -186,7 +172,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
             <button
               type="button"
               onClick={onClearSubSaga}
-              className="text-3xs font-mono font-bold text-on-surface-variant hover:text-on-surface uppercase tracking-wider shrink-0 transition-[color,transform] duration-fast active:scale-95 cursor-pointer"
+              className="text-3xs font-mono font-bold text-on-surface-variant hover:text-on-surface uppercase tracking-wider shrink-0 transition-[color,transform] duration-fast motion-safe:active:scale-[0.97] cursor-pointer"
             >
               Ver todos
             </button>
@@ -216,16 +202,16 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
           spellCheck={false}
           className={cn(
             "glass-frosted-pill w-full h-11 pl-10 pr-10 text-xs font-medium text-on-surface placeholder:text-on-surface-variant/60",
-            "focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-brand-accent/40",
+            "focus:outline-none focus:border-[var(--glass-border-strong)] focus:ring-1 focus:ring-brand-accent/40",
             "transition-[border-color,box-shadow] duration-base ease-smooth-out",
-            isSearchFocused && "border-white/50 shadow-elevation-2",
+            isSearchFocused && "border-[var(--glass-border-strong)] shadow-[shadow:var(--double-bezel-shadow)]",
           )}
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => setSearchQuery("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 min-w-8 min-h-8 w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface active:scale-95 transition-[color,transform] duration-fast ease-smooth-out cursor-pointer animate-scale-in [animation-duration:var(--duration-base)] [animation-timing-function:var(--ease-out)]"
+            className="absolute right-2 top-1/2 -translate-y-1/2 min-w-8 min-h-8 w-8 h-8 flex items-center justify-center rounded-full text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface motion-safe:active:scale-[0.97] transition-[color,transform] duration-fast ease-smooth-out cursor-pointer animate-scale-in [animation-duration:var(--duration-base)] [animation-timing-function:var(--ease-out)]"
             aria-label="Limpiar búsqueda"
           >
             <IconUiClose className="w-4 h-4" />
@@ -259,7 +245,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
+              className="mt-6 px-6 py-2.5 rounded-full bg-brand-accent text-on-primary font-display text-xs uppercase tracking-widest hover:brightness-110 motion-safe:active:scale-[0.97] transition-[transform,filter] duration-base ease-smooth-out shadow-brand-primary cursor-pointer"
             >
               Limpiar búsqueda
             </button>
@@ -284,6 +270,7 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
               onMouseLeave={onMouseLeave}
               scrollElement={scrollElement}
               seriesMediaId={seriesMediaId}
+              RowComponent={MemoizedEpisodeRow}
           />
         </div>
       )}
@@ -293,23 +280,6 @@ export const PremiumEpisodeList = React.memo(function PremiumEpisodeList({
 )
 
 PremiumEpisodeList.displayName = "PremiumEpisodeList"
-
-interface EpisodeVirtualRowProps {
-    ep: PremiumEpisode
-    isHighlighted: boolean
-    virtualStart: number
-    scrollMargin: number
-    /** Índice de la fila y ref de medición del virtualizador: la altura real varía con el largo del título. */
-    rowIndex: number
-    measureRef: (node: HTMLElement | null) => void
-    priority?: boolean
-    themeHideEpisodeCardDescription?: boolean
-    themeHideDownloadedEpisodeCardFilename?: boolean
-    onPlay?: (episodeNumber: number) => void
-    onMouseEnter: (id: string) => void
-    onMouseLeave: (id: string) => void
-    seriesMediaId?: number
-}
 
 /**
  * Lo que se ve en la miniatura mientras carga o si falla: el número del episodio
@@ -325,7 +295,7 @@ function ThumbnailPlaceholder({ number, loading = false }: { number: number; loa
                     className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/[0.06] to-transparent motion-reduce:hidden"
                 />
             )}
-            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center mb-1.5 shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center mb-1.5 shadow-[shadow:var(--elevation-1)]">
                 <IconMediaPlay className="w-4 h-4 ml-0.5 text-on-surface-variant" />
             </div>
             <span className="text-2xs font-mono font-bold uppercase tracking-wider text-on-surface-variant">EP {number}</span>
@@ -342,12 +312,12 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
     measureRef,
     priority = false,
     themeHideEpisodeCardDescription,
-    themeHideDownloadedEpisodeCardFilename: _themeHideDownloadedEpisodeCardFilename,
     onPlay,
     onMouseEnter,
     onMouseLeave,
     seriesMediaId,
 }: EpisodeVirtualRowProps) {
+    const isMinimalist = useIsMinimalistMode()
     const handlePlay = React.useCallback(() => {
         onPlay?.(ep.number)
     }, [onPlay, ep.number])
@@ -425,6 +395,120 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
         >
             {/* Sin revelado por fila: la saga se muestra completa de una vez (ver useSagaEpisodesReady). */}
             <div className="h-full">
+                {isMinimalist ? (
+                    <article
+                        id={`episode-${ep.number}`}
+                        aria-labelledby={`episode-title-${ep.number}`}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                        className="ep-row-item select-none flex items-center justify-between gap-3"
+                    >
+                        <button
+                            type="button"
+                            onClick={handlePlay}
+                            aria-label={`Reproducir episodio ${ep.number}, ${displayTitle}${ep.isWatched ? ", visto" : ""}`}
+                            className="flex flex-1 min-w-0 items-center gap-3.5 sm:gap-4 text-left cursor-pointer rounded-xl transition-transform duration-fast ease-out-strong motion-safe:active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent p-1"
+                        >
+                            {/* Thumbnail 16/9 con badge de duración y barra de progreso */}
+                            <div className="ep-pic-box relative aspect-[16/9] w-32 sm:w-48 md:w-56 shrink-0 rounded-lg overflow-hidden border border-[var(--neutral-separator)] bg-surface-container-lowest group/thumb shadow-[shadow:var(--double-bezel-ring)]">
+                                <ThumbnailPlaceholder number={ep.number} loading={Boolean(currentThumbnail) && !thumbnailLoaded} />
+                                {currentThumbnail && (
+                                    <DeferredImage
+                                        src={currentThumbnail}
+                                        alt={displayTitle}
+                                        priority
+                                        loading="eager"
+                                        fetchPriority={priority ? "high" : "auto"}
+                                        decoding="async"
+                                        placeholderColor="transparent"
+                                        className="w-full h-full"
+                                        sizes={THUMBNAIL_SIZES}
+                                        imgClassName="w-full h-full object-cover transition-transform duration-300 motion-safe:group-hover/thumb:scale-105"
+                                        style={THUMBNAIL_TRANSITION}
+                                        showSkeleton={false}
+                                        timeoutMs={30000}
+                                        onLoad={handleThumbnailLoad}
+                                        onError={handleThumbnailError}
+                                        fallback={<ThumbnailPlaceholder number={ep.number} />}
+                                    />
+                                )}
+                                <span className="ep-dur-pill">
+                                    {ep.duration ? `${ep.duration}:00` : "24:00"}
+                                </span>
+                                {(ep.isWatched || (ep.progressPercent != null && ep.progressPercent > 0)) && (
+                                    <div className="ep-progress-line">
+                                        <i style={{ width: `${Math.min(100, ep.isWatched ? 100 : (ep.progressPercent || 0))}%` }} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Middle: Status + Title + Synopsis */}
+                            <div className="min-w-0 flex-1 flex flex-col justify-center">
+                                <div className="ep-status-line">
+                                    <span className="ep-num-tag text-xs font-mono font-bold">
+                                        #{ep.number < 10 ? `0${ep.number}` : ep.number}
+                                    </span>
+                                    {ep.progressPercent && ep.progressPercent > 0 && !ep.isWatched ? (
+                                        <span className="ep-status-amber text-xs">Vas por aquí</span>
+                                    ) : ep.isWatched ? (
+                                        <span className="text-status-success text-xs font-semibold flex items-center gap-1">
+                                            <IconUiCheck className="w-3 h-3" /> Visto
+                                        </span>
+                                    ) : ep.episodeType === "Filler" ? (
+                                        <span className="text-amber-400/80 text-xs font-medium">Relleno</span>
+                                    ) : (
+                                        <span className="text-xs">Disponible</span>
+                                    )}
+                                </div>
+                                <h4
+                                    id={`episode-title-${ep.number}`}
+                                    className="ep-name-h4 text-[15px] font-bold text-white transition-colors leading-snug line-clamp-1 sm:line-clamp-2 text-balance"
+                                >
+                                    {displayTitle}
+                                </h4>
+                                {!themeHideEpisodeCardDescription && ep.description && (
+                                    <p className="ep-synopsis-p text-xs sm:text-[13px] text-white/55 line-clamp-2 leading-relaxed mt-1 max-w-2xl">
+                                        {ep.description}
+                                    </p>
+                                )}
+                            </div>
+                        </button>
+
+                        {/* Right: Action Buttons */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={handlePlay}
+                                className={cn(
+                                    "ep-action-btn episode-row-redundant-play",
+                                    ep.progressPercent && ep.progressPercent > 0 && !ep.isWatched ? "solid" : ""
+                                )}
+                            >
+                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                                <span>{ep.progressPercent && ep.progressPercent > 0 && !ep.isWatched ? "Continuar" : "Ver"}</span>
+                            </button>
+                            <IconButton
+                                intent="secondary"
+                                size="sm"
+                                onClick={handleQuickQueue}
+                                aria-label={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
+                                title="Añadir a la cola"
+                                className={cn("rounded-lg", justQueued && "text-status-success")}
+                                icon={
+                                    <IconSwap subtle swapKey={justQueued ? "check" : "queue"} className="flex items-center justify-center">
+                                        {justQueued ? (
+                                            <IconUiCheck className="w-4 h-4" />
+                                        ) : (
+                                            <IconUiListPlus className="w-4 h-4" />
+                                        )}
+                                    </IconSwap>
+                                }
+                            />
+                        </div>
+                    </article>
+                ) : (
                     <article
                         id={`episode-${ep.number}`}
                         aria-labelledby={`episode-title-${ep.number}`}
@@ -432,6 +516,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                         onMouseLeave={handleMouseLeave}
                         className={cn(
                             "surface-content surface-content-row group h-full w-full flex items-stretch gap-2 p-3 sm:p-3.5 rounded-2xl select-none",
+                            isHighlighted && "episode-row-highlighted",
                             "transition-[background-color,border-color,box-shadow] duration-base ease-smooth-out",
                             isHighlighted
                                 ? "border-brand-accent/50 shadow-[shadow:var(--glass-highlight-sm),var(--elevation-3),0_0_16px_hsl(var(--brand-accent)/0.2)] ring-1 ring-brand-accent/30"
@@ -442,10 +527,10 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                             type="button"
                             onClick={handlePlay}
                             aria-label={`Reproducir episodio ${ep.number}, ${displayTitle}${ep.isWatched ? ", visto" : ""}`}
-                            className="flex flex-1 min-w-0 items-stretch gap-3.5 sm:gap-5 text-left cursor-pointer rounded-xl transition-transform duration-fast ease-out-strong active:scale-[0.985] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
+                            className="flex flex-1 min-w-0 items-stretch gap-3.5 sm:gap-5 text-left cursor-pointer rounded-xl transition-transform duration-fast ease-out-strong motion-safe:active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70"
                         >
                         {/* Thumbnail en proporción cinematográfica 16/9 */}
-                        <div className="relative aspect-[16/9] w-32 sm:w-48 md:w-56 lg:w-60 shrink-0 rounded-xl overflow-hidden border border-white/10 bg-surface-container-high shadow-elevation-2">
+                        <div className="relative aspect-[16/9] w-32 sm:w-48 md:w-56 lg:w-60 shrink-0 rounded-xl overflow-hidden border border-[var(--neutral-separator)] bg-surface-container-high shadow-[shadow:var(--double-bezel-ring)]">
                             {/* La tarjeta con el número queda debajo; la foto entra encima con un fundido. */}
                             <ThumbnailPlaceholder number={ep.number} loading={Boolean(currentThumbnail) && !thumbnailLoaded} />
                             {currentThumbnail && (
@@ -464,7 +549,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                     // La miniatura mide 128–240 px: sin esto el srcSet de TMDB
                                     // bajaba la variante de 500/780 px y cada foto tardaba el doble.
                                     sizes={THUMBNAIL_SIZES}
-                                    imgClassName="w-full h-full object-cover [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
+                                    imgClassName="w-full h-full object-cover motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
                                     // Opacidad (entrada) y transform (hover) juntas. En línea porque
                                     // las clases de duración/curva chocaban con las de DeferredImage
                                     // y ganaba la que venía después en el CSS: la foto aparecía de golpe.
@@ -486,14 +571,14 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                 aria-hidden
                                 className="absolute inset-0 z-20 hidden [@media(hover:hover)_and_(pointer:fine)]:flex items-center justify-center pointer-events-none"
                             >
-                                <span className="w-10 h-10 rounded-full bg-black/60 border border-white/25 text-white flex items-center justify-center opacity-0 scale-90 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100 transition-[opacity,transform] duration-200 ease-out-strong">
+                                <span className="w-10 h-10 rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] text-white shadow-[shadow:var(--double-bezel-control-shadow)] flex items-center justify-center opacity-0 scale-90 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-100 group-focus-visible:opacity-100 motion-safe:group-focus-visible:scale-100 transition-[opacity,transform] duration-200 ease-out-strong">
                                     <IconMediaPlay className="w-4 h-4 ml-0.5" />
                                 </span>
                             </div>
 
                             {/* Badge de "VISTO" si ya fue reproducido */}
                             {ep.isWatched && (
-                                <div className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/85 border border-status-success/30 text-3xs font-mono font-bold text-status-success flex items-center gap-1 shadow-sm">
+                                <div className="episode-badge-watched absolute top-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/85 border border-status-success/30 text-xs font-mono font-bold text-status-success flex items-center gap-1 shadow-[shadow:var(--elevation-1)]">
                                     <svg className="w-3 h-3 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
@@ -505,7 +590,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                             {ep.isWatched || (ep.progressPercent != null && ep.progressPercent > 0 && ep.progressPercent < 100) ? (
                                 <div className="absolute bottom-0 inset-x-0 h-1 bg-black/70 z-20 pointer-events-none overflow-hidden">
                                     <div
-                                        className="h-full w-full bg-brand-accent shadow-[0_0_6px_hsl(var(--brand-accent)/0.8)] origin-left transition-transform duration-fast ease-smooth-out"
+                                        className="episode-progress-bar-fill h-full w-full bg-brand-accent shadow-[0_0_6px_hsl(var(--brand-accent)/0.8)] origin-left transition-transform duration-fast ease-smooth-out"
                                         style={{ transform: `scaleX(${Math.min(100, Math.max(0, ep.isWatched ? 100 : (ep.progressPercent || 0))) / 100})` }}
                                     />
                                 </div>
@@ -515,13 +600,13 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                         {/* Episode Info */}
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                             {/* Title over Episode */}
-                            <span id={`episode-title-${ep.number}`} className="block font-display text-sm sm:text-base font-bold uppercase tracking-wide leading-snug line-clamp-1 sm:line-clamp-2 text-on-surface group-hover:text-on-surface transition-colors">
+                            <span id={`episode-title-${ep.number}`} className="block font-display text-sm sm:text-base font-bold uppercase tracking-wide leading-snug line-clamp-1 sm:line-clamp-2 text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface transition-colors text-balance">
                                 {displayTitle}
                             </span>
 
                             {/* Episode Badges Row */}
                             <div className="flex items-center gap-2 mt-1.5 mb-1 flex-wrap">
-                                <span className="px-2 py-0.5 rounded-md bg-brand-accent/15 border border-brand-accent/30 text-brand-accent-readable text-2xs font-mono font-bold tracking-wider">
+                                <span className="episode-badge-ep px-2 py-0.5 rounded-md bg-brand-accent/15 border border-brand-accent/30 text-brand-accent-readable text-xs font-mono font-bold tracking-wider">
                                     EP {ep.number}
                                 </span>
                                 <span className="text-on-surface-variant text-xs font-mono font-medium">
@@ -530,12 +615,12 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
 
                                 {/* Type Badges */}
                                 {ep.episodeType === 'Filler' && (
-                                    <span className="text-3xs font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/10 text-amber-400 border border-amber-400/30 uppercase tracking-wider">
+                                    <span className="episode-badge-filler text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-amber-400/10 text-amber-400 border border-amber-400/30 uppercase tracking-wider">
                                         Relleno
                                     </span>
                                 )}
                                 {ep.episodeType === 'Hyped' && (
-                                    <EpisodeBadge variant="premium" className="shadow-brand-secondary">
+                                    <EpisodeBadge className="shadow-brand-secondary">
                                         Destacado
                                     </EpisodeBadge>
                                 )}
@@ -559,7 +644,7 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                 title="Añadir a la cola"
                                 className={cn(justQueued && "text-status-success")}
                                 icon={
-                                    <IconSwap swapKey={justQueued ? "check" : "queue"} className="flex items-center justify-center">
+                                    <IconSwap subtle swapKey={justQueued ? "check" : "queue"} className="flex items-center justify-center">
                                         {justQueued ? (
                                             <IconUiCheck className="w-4 h-4" />
                                         ) : (
@@ -574,162 +659,13 @@ const MemoizedEpisodeRow = React.memo(function MemoizedEpisodeRow({
                                 onClick={handlePlay}
                                 aria-label="Reproducir episodio"
                                 title="Reproducir"
-                                className="shadow-brand-primary"
+                                className="episode-row-redundant-play shadow-brand-primary"
                                 icon={<IconMediaPlay className="w-4 h-4 ml-px fill-current" />}
                             />
                         </div>
                     </article>
+                )}
             </div>
         </div>
     )
 })
-
-interface EpisodeVirtualListProps {
-    filteredEpisodes: PremiumEpisode[]
-    activeSubSagaStart?: number
-    activeSubSagaEnd?: number
-    ts: ReturnType<typeof useThemeSettings>
-    onPlay?: (episodeNumber: number) => void
-    onMouseEnter: (id: string) => void
-    onMouseLeave: (id: string) => void
-    scrollElement?: Element | null
-    seriesMediaId?: number
-}
-
-function EpisodeVirtualList({
-    filteredEpisodes,
-    activeSubSagaStart,
-    activeSubSagaEnd,
-    ts,
-    onPlay,
-    onMouseEnter,
-    onMouseLeave,
-    scrollElement,
-    seriesMediaId,
-}: EpisodeVirtualListProps) {
-    const listRef = React.useRef<HTMLDivElement>(null)
-    // El salto a una sub-saga respeta movimiento reducido (C-02): antes era `smooth` fijo.
-    const reduceMotion = useReducedMotion()
-    const [overscan, setOverscan] = React.useState(LIST_OVERSCAN_ON_MOUNT)
-    React.useEffect(() => {
-        const timer = window.setTimeout(() => setOverscan(LIST_OVERSCAN), LIST_OVERSCAN_DELAY_MS)
-        return () => window.clearTimeout(timer)
-    }, [])
-    const [scrollMargin, setScrollMargin] = React.useState(() => {
-        if (typeof window === "undefined") return 0
-        return window.innerWidth < 768 ? 550 : 700
-    })
-
-    const getScrollElement = React.useCallback(() => {
-        return (
-            (scrollElement as HTMLElement | null) ??
-            listRef.current?.closest("main") ??
-            listRef.current?.parentElement ??
-            (typeof document !== "undefined" ? document.documentElement : null)
-        )
-    }, [scrollElement])
-
-    React.useLayoutEffect(() => {
-        const el = listRef.current
-        const scrollEl = (scrollElement as HTMLElement | null) ?? el?.closest("main") ?? el?.parentElement
-        if (!el || !scrollEl) return
-
-        const updateOffset = () => {
-            if (!listRef.current || !scrollEl) return
-            // Posición de la lista dentro del contenido del scroller. Con offsetTop la cadena
-            // de offsetParent se salteaba el scroller si no estaba posicionado.
-            const top = Math.round(
-                listRef.current.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop,
-            )
-            if (top > 0) {
-                setScrollMargin(prev => (Math.abs(prev - top) <= 1 ? prev : top))
-            }
-        }
-        updateOffset()
-
-        // Lo de arriba de la lista (continuar viendo, personajes) carga después y la corre.
-        const ro = new ResizeObserver(updateOffset)
-        if (scrollEl.firstElementChild) ro.observe(scrollEl.firstElementChild)
-        window.addEventListener("resize", updateOffset, { passive: true })
-        return () => {
-            ro.disconnect()
-            window.removeEventListener("resize", updateOffset)
-        }
-    }, [scrollElement])
-
-    const estimateSize = React.useCallback(() => {
-        if (typeof window !== "undefined") {
-            if (window.innerWidth < 640) return ROW_HEIGHT_PX.mobile
-            if (window.innerWidth < 768) return ROW_HEIGHT_PX.tablet
-        }
-        return ROW_HEIGHT_PX.desktop
-    }, [])
-
-    // eslint-disable-next-line react-hooks/incompatible-library -- useVirtualizer devuelve funciones no memoizables por diseño; React Compiler lo omite a proposito.
-    const virtualizer = useVirtualizer({
-        count: filteredEpisodes.length,
-        getScrollElement,
-        estimateSize,
-        // Sin leer el DOM en el ref: al montar, la fila recibe el tamaño que ya se conoce (o la
-        // estimación) y el ResizeObserver la mide con borderBoxSize después del layout. Por defecto
-        // cada fila leía offsetHeight dentro del commit (un layout forzado por fila, ~67 ms al cargar).
-        measureElement: (element, entry, instance) => {
-            if (entry) return Math.round(entry.borderBoxSize?.[0]?.blockSize ?? (element as HTMLElement).offsetHeight)
-            const cached = instance.measurementsCache[Number(element.getAttribute("data-index"))]
-            return cached ? cached.size : estimateSize()
-        },
-        initialRect: {
-            width: typeof window !== "undefined" ? window.innerWidth : 1280,
-            height: typeof window !== "undefined" ? window.innerHeight : 800,
-        },
-        // Clave por episodio: las alturas medidas siguen al episodio al filtrar o reordenar.
-        getItemKey: (index) => filteredEpisodes[index]?.id ?? index,
-        overscan,
-        scrollMargin,
-        scrollPaddingStart: ARC_SCROLL_PADDING_PX,
-        useFlushSync: false,
-    })
-
-    const prevActiveSubSagaStart = React.useRef<number | undefined>(undefined)
-    React.useEffect(() => {
-        if (activeSubSagaStart != null && activeSubSagaStart !== prevActiveSubSagaStart.current) {
-            prevActiveSubSagaStart.current = activeSubSagaStart
-            const targetIndex = filteredEpisodes.findIndex(e => e.number === activeSubSagaStart)
-            if (targetIndex >= 0) {
-                virtualizer.scrollToIndex(targetIndex, { align: "start", behavior: reduceMotion ? "auto" : "smooth" })
-            }
-        }
-    }, [activeSubSagaStart, filteredEpisodes, virtualizer, reduceMotion])
-
-    return (
-        <div ref={listRef} className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-                const ep = filteredEpisodes[virtualRow.index]
-                if (!ep) return null
-                const isHighlighted = activeSubSagaStart != null &&
-                                    activeSubSagaEnd != null &&
-                                    ep.number >= activeSubSagaStart &&
-                                    ep.number <= activeSubSagaEnd;
-
-                return (
-                    <MemoizedEpisodeRow
-                        key={ep.id}
-                        ep={ep}
-                        isHighlighted={isHighlighted}
-                        virtualStart={virtualRow.start}
-                        scrollMargin={virtualizer.options.scrollMargin || 0}
-                        rowIndex={virtualRow.index}
-                        measureRef={virtualizer.measureElement}
-                        priority={virtualRow.index < 4}
-                        themeHideEpisodeCardDescription={ts.themeHideEpisodeCardDescription}
-                        themeHideDownloadedEpisodeCardFilename={ts.themeHideDownloadedEpisodeCardFilename}
-                        onPlay={onPlay}
-                        onMouseEnter={onMouseEnter}
-                        onMouseLeave={onMouseLeave}
-                        seriesMediaId={seriesMediaId}
-                    />
-                )
-            })}
-        </div>
-    )
-}

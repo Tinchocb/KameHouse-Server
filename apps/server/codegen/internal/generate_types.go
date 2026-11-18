@@ -131,10 +131,6 @@ func GenerateTypescriptFile(docsFilePath string, publicStructsFilePath string, o
 		panic("Failed to get referenced structs")
 	}
 
-	// Keep track of written Typescript types
-	// This is to avoid name collisions
-	writtenTypes := make(map[string]*GoStruct)
-
 	// Group the structs by package
 	structsByPackage := make(map[string][]*GoStruct)
 	for _, goStruct := range referencedStructs {
@@ -169,7 +165,7 @@ func GenerateTypescriptFile(docsFilePath string, publicStructsFilePath string, o
 		// Write the shared structs first
 		for _, goStruct := range structs {
 
-			writeTypescriptType(file, goStruct, writtenTypes, goStructsMap)
+			writeTypescriptType(file, goStruct, goStructsMap)
 
 		}
 
@@ -228,7 +224,7 @@ func getReferencedStructs(goStruct *GoStruct, referencedStructs map[string]*GoSt
 	}
 }
 
-func writeTypescriptType(f *os.File, goStruct *GoStruct, writtenTypes map[string]*GoStruct, goStructsMap map[string]*GoStruct) {
+func writeTypescriptType(f *os.File, goStruct *GoStruct, goStructsMap map[string]*GoStruct) {
 	mustWriteString(f, "/**\n")
 	mustWriteString(f, fmt.Sprintf(" * - Filepath: %s\n", strings.TrimPrefix(filepath.ToSlash(goStruct.Filepath), "../")))
 	mustWriteString(f, fmt.Sprintf(" * - Filename: %s\n", goStruct.Filename))
@@ -298,9 +294,6 @@ func writeTypescriptType(f *os.File, goStruct *GoStruct, writtenTypes map[string
 			mustWriteString(f, fmt.Sprintf("export type %s = %s\n\n", goStruct.FormattedName, goStruct.AliasOf.TypescriptType))
 		}
 	}
-
-	// Add the struct to the written types
-	writtenTypes[goStruct.Package+"."+goStruct.Name] = goStruct
 }
 
 // tsFieldModifiers traduce la semántica de encoding/json a TypeScript:

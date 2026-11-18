@@ -1,51 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "KameHouse Dragon Ball Story Spans & Catch-Up Chronology",
-  "version": "2.0.0",
-  "updatedAt": "2026-10-08T18:06:26.342Z",
-  "totalSpans": 70,
-  "seriesSummary": [
-    {
-      "id": "classic",
-      "tmdbId": 12609,
-      "title": "Dragon Ball (Clásico)",
-      "totalEpisodes": 153,
-      "spansCount": 16,
-      "canon": true
-    },
-    {
-      "id": "z",
-      "tmdbId": 12971,
-      "title": "Dragon Ball Z",
-      "totalEpisodes": 291,
-      "spansCount": 28,
-      "canon": true
-    },
-    {
-      "id": "super",
-      "tmdbId": 62715,
-      "title": "Dragon Ball Super",
-      "totalEpisodes": 131,
-      "spansCount": 15,
-      "canon": true
-    },
-    {
-      "id": "daima",
-      "tmdbId": 236994,
-      "title": "Dragon Ball Daima",
-      "totalEpisodes": 20,
-      "spansCount": 4,
-      "canon": true
-    },
-    {
-      "id": "gt",
-      "tmdbId": 12697,
-      "title": "Dragon Ball GT",
-      "totalEpisodes": 64,
-      "spansCount": 7,
-      "canon": false
-    }
-  ],
   "spans": [
     {
       "id": "db-pilaf-busqueda",
@@ -104,7 +57,6 @@
           "time": "11:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 1,
       "seriesId": "classic",
@@ -171,7 +123,6 @@
           "time": "09:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 8,
       "seriesId": "classic",
@@ -230,7 +181,6 @@
           "time": "07:50"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 14,
       "seriesId": "classic",
@@ -295,7 +245,6 @@
           "time": "18:05"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 21,
       "seriesId": "classic",
@@ -349,7 +298,6 @@
           "time": "12:15"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 29,
       "seriesId": "classic",
@@ -410,7 +358,6 @@
           "time": "16:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 34,
       "seriesId": "classic",
@@ -469,7 +416,6 @@
           "time": "15:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 46,
       "seriesId": "classic",
@@ -536,7 +482,6 @@
           "time": "17:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 58,
       "seriesId": "classic",
@@ -601,7 +546,6 @@
           "time": "09:10"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 69,
       "seriesId": "classic",
@@ -660,7 +604,6 @@
           "time": "14:15"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 77,
       "seriesId": "classic",
@@ -713,7 +656,6 @@
           "time": "14:00"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 83,
       "seriesId": "classic",
@@ -778,7 +720,6 @@
           "time": "17:55"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 89,
       "seriesId": "classic",
@@ -839,7 +780,6 @@
           "time": "16:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 102,
       "seriesId": "classic",
@@ -899,7 +839,6 @@
           "time": "16:50"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 113,
       "seriesId": "classic",
@@ -952,7 +891,6 @@
           "time": "11:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 123,
       "seriesId": "classic",
@@ -1017,7 +955,6 @@
           "time": "16:45"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         149,
         150,
@@ -1086,7 +1023,6 @@
           "time": "16:45"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 1,
       "seriesId": "z",
@@ -1148,7 +1084,6 @@
           "time": "18:05"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         9,
         10,
@@ -1224,7 +1159,6 @@
           "time": "17:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 18,
       "seriesId": "z",
@@ -1283,7 +1217,6 @@
           "time": "15:40"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         39,
         40,
@@ -1353,7 +1286,6 @@
           "time": "14:50"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 45,
       "seriesId": "z",
@@ -1424,7 +1356,6 @@
           "time": "15:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 57,
       "seriesId": "z",
@@ -1492,7 +1423,6 @@
           "time": "18:15"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 75,
       "seriesId": "z",
@@ -1560,7 +1490,6 @@
           "time": "18:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 88,
       "seriesId": "z",
@@ -1628,7 +1557,6 @@
           "time": "18:00"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 96,
       "seriesId": "z",
@@ -1683,7 +1611,6 @@
           "time": "16:20"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         108,
         109,
@@ -1756,7 +1683,6 @@
           "time": "16:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 118,
       "seriesId": "z",
@@ -1819,7 +1745,6 @@
           "time": "16:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 126,
       "seriesId": "z",
@@ -1883,7 +1808,6 @@
           "time": "18:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 134,
       "seriesId": "z",
@@ -1952,7 +1876,6 @@
           "time": "16:50"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 140,
       "seriesId": "z",
@@ -2020,7 +1943,6 @@
           "time": "18:10"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 153,
       "seriesId": "z",
@@ -2082,7 +2004,6 @@
           "time": "13:40"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         170,
         171,
@@ -2148,7 +2069,6 @@
           "time": "17:35"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 177,
       "seriesId": "z",
@@ -2216,7 +2136,6 @@
           "time": "14:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 184,
       "seriesId": "z",
@@ -2270,7 +2189,6 @@
           "time": "16:40"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         195,
         196,
@@ -2338,7 +2256,6 @@
           "time": "16:25"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         202,
         203,
@@ -2406,7 +2323,6 @@
           "time": "17:15"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 210,
       "seriesId": "z",
@@ -2470,7 +2386,6 @@
           "time": "15:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 220,
       "seriesId": "z",
@@ -2533,7 +2448,6 @@
           "time": "16:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 232,
       "seriesId": "z",
@@ -2595,7 +2509,6 @@
           "time": "16:10"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 238,
       "seriesId": "z",
@@ -2657,7 +2570,6 @@
           "time": "12:50"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 254,
       "seriesId": "z",
@@ -2719,7 +2631,6 @@
           "time": "17:15"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 263,
       "seriesId": "z",
@@ -2787,7 +2698,6 @@
           "time": "17:50"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 273,
       "seriesId": "z",
@@ -2843,7 +2753,6 @@
           "time": "18:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 288,
       "seriesId": "z",
@@ -2896,7 +2805,6 @@
           "time": "16:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 1,
       "seriesId": "super",
@@ -2955,7 +2863,6 @@
           "time": "16:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 6,
       "seriesId": "super",
@@ -3010,7 +2917,6 @@
           "time": "15:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 15,
       "seriesId": "super",
@@ -3070,7 +2976,6 @@
           "time": "16:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 19,
       "seriesId": "super",
@@ -3124,7 +3029,6 @@
           "time": "16:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 28,
       "seriesId": "super",
@@ -3183,7 +3087,6 @@
           "time": "18:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 35,
       "seriesId": "super",
@@ -3236,7 +3139,6 @@
           "time": "16:15"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         42,
         43,
@@ -3302,7 +3204,6 @@
           "time": "16:45"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 47,
       "seriesId": "super",
@@ -3361,7 +3262,6 @@
           "time": "17:10"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 58,
       "seriesId": "super",
@@ -3420,7 +3320,6 @@
           "time": "15:45"
         }
       ],
-      "hasFiller": true,
       "fillerEpisodes": [
         68,
         69,
@@ -3490,7 +3389,6 @@
           "time": "16:50"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 77,
       "seriesId": "super",
@@ -3549,7 +3447,6 @@
           "time": "17:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 82,
       "seriesId": "super",
@@ -3608,7 +3505,6 @@
           "time": "18:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 97,
       "seriesId": "super",
@@ -3669,7 +3565,6 @@
           "time": "17:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 110,
       "seriesId": "super",
@@ -3728,7 +3623,6 @@
           "time": "18:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 122,
       "seriesId": "super",
@@ -3783,7 +3677,6 @@
           "time": "16:45"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 1,
       "seriesId": "daima",
@@ -3836,7 +3729,6 @@
           "time": "15:20"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 4,
       "seriesId": "daima",
@@ -3890,7 +3782,6 @@
           "time": "16:15"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 8,
       "seriesId": "daima",
@@ -3943,7 +3834,6 @@
           "time": "17:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 15,
       "seriesId": "daima",
@@ -3996,7 +3886,6 @@
           "time": "15:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 1,
       "seriesId": "gt",
@@ -4057,7 +3946,6 @@
           "time": "14:10"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 4,
       "seriesId": "gt",
@@ -4111,7 +3999,6 @@
           "time": "16:10"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 17,
       "seriesId": "gt",
@@ -4170,7 +4057,6 @@
           "time": "17:50"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 28,
       "seriesId": "gt",
@@ -4225,7 +4111,6 @@
           "time": "16:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 41,
       "seriesId": "gt",
@@ -4278,7 +4163,6 @@
           "time": "15:40"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 48,
       "seriesId": "gt",
@@ -4343,7 +4227,6 @@
           "time": "18:30"
         }
       ],
-      "hasFiller": false,
       "fillerEpisodes": [],
       "recommendedStartEpisode": 57,
       "seriesId": "gt",

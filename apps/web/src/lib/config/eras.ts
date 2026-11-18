@@ -1,4 +1,5 @@
 import { SERIES_HERO_ART } from "./hero-art"
+import type { EraThemeId } from "@/lib/theme/era.theme"
 // Definition of the 6 canonical Dragon Ball eras in chronological order
 export const ERAS = [
     { id: "db", title: "Dragon Ball", shortTitle: "DB Original", subtitle: "Dragon Ball (Original)", year: 1986, tag: "Original", kanji: "亀", tagline: "La Gran Aventura Comienza", defaultSaga: "pilaf" },
@@ -10,6 +11,23 @@ export const ERAS = [
 ] as const
 
 export type EraId = typeof ERAS[number]["id"]
+
+/**
+ * Tema de era guardado en Apariencia ("era-dbz", "era-daima"…) → EraId.
+ * No alcanza con quitar el prefijo: el tema de Daima es "era-daima" y su EraId "dbdaima".
+ * Devuelve null para Universo DB y para los temas que no son de era.
+ */
+export function eraIdFromThemeEra(themeEra: string | null | undefined): EraId | null {
+    if (!themeEra?.startsWith("era-")) return null
+    const raw = themeEra.slice("era-".length)
+    const id = raw === "daima" ? "dbdaima" : raw
+    return ERAS.find(e => e.id === id)?.id ?? null
+}
+
+/** EraId → tema de era de Apariencia (inversa de `eraIdFromThemeEra`). */
+export function themeEraFromEraId(eraId: EraId): EraThemeId {
+    return eraId === "dbdaima" ? "era-daima" : `era-${eraId}`
+}
 
 // Theme colors and glows for each era. Los colores viven en tokens --spotlight-*-vivid (colors.css)
 export const ERA_COLOR_MAP: Record<EraId, { accent: string; glow: string; glowStrong: string; textBrand: string; ambientGlow1: string; ambientGlow2: string }> = {

@@ -39,9 +39,12 @@ interface DetailHeroProps {
 }
 
 const LOCAL_SCRIM = [
-    "linear-gradient(to bottom, color-mix(in srgb, var(--bg-primary) 55%, transparent) 0px, transparent 132px)",
-    "radial-gradient(120% 85% at 0% 100%, color-mix(in srgb, var(--bg-primary) 88%, transparent) 0%, color-mix(in srgb, var(--bg-primary) 62%, transparent) 34%, transparent 66%)",
-    "linear-gradient(to top, var(--bg-primary) 0%, color-mix(in srgb, var(--bg-primary) 70%, transparent) 14%, transparent 42%)",
+    // 1. Superior suave: legibilidad del botón volver y barra de navegación
+    "linear-gradient(to bottom, color-mix(in srgb, var(--bg-primary, #08080a) 55%, transparent) 0px, transparent 132px)",
+    // 2. Radial local esquina inferior izquierda: protege título, sinopsis y acciones sin invadir el arte
+    "radial-gradient(ellipse 85% 70% at 0% 100%, color-mix(in srgb, var(--bg-primary, #08080a) 85%, transparent) 0%, color-mix(in srgb, var(--bg-primary, #08080a) 50%, transparent) 35%, transparent 68%)",
+    // 3. Inferior sutil para fundir suavemente con la base de la pantalla
+    "linear-gradient(to top, var(--bg-primary, #08080a) 0%, color-mix(in srgb, var(--bg-primary, #08080a) 65%, transparent) 14%, transparent 36%)",
 ].join(", ")
 
 function usePrefersReducedMotion(): boolean {
@@ -105,7 +108,7 @@ function ExpandableSynopsis({ text }: { text: string }) {
 
     return (
         <div className="max-w-[54ch]">
-            <p ref={ref} id={id} className={cn("type-body text-xs sm:text-sm text-on-surface/90 text-pretty leading-relaxed", !expanded && "line-clamp-3")}>
+            <p ref={ref} id={id} className={cn("hero-synopsis type-body text-xs sm:text-sm text-on-surface/90 text-pretty leading-relaxed", !expanded && "line-clamp-3")}>
                 {text}
             </p>
             {(overflows || expanded) && (
@@ -137,25 +140,25 @@ export function DetailHero({
             aria-label={title}
             className={cn(
                 "relative isolate w-full overflow-hidden flex items-end select-none",
-                "min-h-screen",
+                "min-h-dvh md:min-h-screen",
                 className
             )}
         >
-            <div className="absolute inset-0 z-hero-visual overflow-hidden">
-                <div ref={layerRef} className="absolute inset-x-0 -top-10 bottom-0 will-change-transform">
+            <div className="absolute inset-0 z-hero-visual overflow-hidden pointer-events-none">
+                <div ref={layerRef} className="absolute inset-x-0 -top-12 -bottom-12 will-change-transform">
                     {art ? (
                         onArtClick ? (
                             <button
                                 type="button"
                                 aria-label="Abrir imagen de portada a pantalla completa"
-                                className="absolute inset-0 w-full h-full cursor-pointer p-0 border-0 bg-transparent text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+                                className="absolute inset-0 w-full h-full cursor-pointer p-0 border-0 bg-transparent text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent pointer-events-auto"
                                 onClick={onArtClick}
                             >
-                                <HeroBackdrop art={art} alt="" variant="bleed" priority imgClassName="hero-image-filter" />
+                                <HeroBackdrop art={art} alt="" variant="bleed" priority scrims={false} imgClassName="hero-image-filter" />
                             </button>
                         ) : (
-                            <div className="absolute inset-0" aria-hidden="true">
-                                <HeroBackdrop art={art} alt="" variant="bleed" priority imgClassName="hero-image-filter" />
+                            <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+                                <HeroBackdrop art={art} alt="" variant="bleed" priority scrims={false} imgClassName="hero-image-filter" />
                             </div>
                         )
                     ) : (
@@ -176,9 +179,9 @@ export function DetailHero({
                 />
             )}
 
-            <div className="relative z-hero-content page-container pt-28 pb-16 md:pb-20 w-full flex flex-col md:flex-row items-start md:items-end gap-6 sm:gap-8 md:gap-10 lg:gap-14">
+            <div className="relative z-hero-content page-container pt-28 pb-16 md:pb-20 [@media(max-height:780px)]:pt-20 [@media(max-height:780px)]:pb-10 w-full flex flex-col md:flex-row items-start md:items-end gap-6 sm:gap-8 md:gap-10 lg:gap-14">
                 {posterUrl && (
-                    <div data-shared-poster={posterShareKey} className="animate-slide-up [animation-duration:var(--duration-base)] shrink-0 w-28 sm:w-32 md:w-36 lg:w-40 aspect-[2/3] rounded-2xl overflow-hidden border border-white/20 bg-surface-container shadow-hero">
+                    <div data-shared-poster={posterShareKey} className="animate-slide-up [animation-duration:var(--duration-base)] shrink-0 w-28 sm:w-32 md:w-36 lg:w-40 aspect-[2/3] rounded-2xl overflow-hidden border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] bg-surface-container shadow-hero">
                         <img
                             src={posterUrl}
                             alt={title}
@@ -189,7 +192,7 @@ export function DetailHero({
                     </div>
                 )}
 
-                <div className="flex-1 min-w-0 flex max-w-[640px] flex-col items-start gap-3 sm:gap-3.5">
+                <div className="flex-1 min-w-0 flex max-w-[640px] flex-col items-start gap-3 sm:gap-3.5 [@media(max-height:780px)]:gap-2.5">
                     {eyebrow && (
                         <div className="animate-fade-in type-label font-semibold text-on-surface/90">{eyebrow}</div>
                     )}
@@ -202,7 +205,7 @@ export function DetailHero({
                                 className="block h-auto max-h-16 sm:max-h-20 md:max-h-24 w-auto max-w-[min(380px,75vw)] object-contain object-left [filter:var(--drop-shadow-logo)]"
                             />
                         ) : (
-                            <span className="block font-display font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-[2.6rem] tracking-tight text-on-surface text-balance break-words leading-[1.08]">
+                            <span className="hero-title block font-display font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-[2.6rem] tracking-tight text-on-surface text-balance break-words leading-[1.08]">
                                 {title}
                             </span>
                         )}
@@ -212,7 +215,7 @@ export function DetailHero({
                             {metaItems.map((item, i) => (
                                 <span
                                     key={i}
-                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-white/10 backdrop-blur-md border border-white/15 text-white/90 text-xs font-semibold shadow-sm"
+                                    className="detail-meta-chip inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-black/60 border border-white/15 border-t-white/25 text-white/90 text-xs font-semibold shadow-glass-highlight-sm"
                                 >
                                     {item}
                                 </span>
@@ -220,7 +223,7 @@ export function DetailHero({
                         </div>
                     )}
                     {synopsis && <div className="animate-fade-in delay-100"><ExpandableSynopsis text={synopsis} /></div>}
-                    {actions && <div className="animate-slide-up [animation-duration:var(--duration-base)] delay-150 flex w-full flex-wrap items-center gap-3 pt-1">{actions}</div>}
+                    {actions && <div className="hero-actions animate-slide-up [animation-duration:var(--duration-base)] delay-150 flex w-full flex-wrap items-center gap-3 pt-1">{actions}</div>}
                     {footer && <div className="animate-fade-in delay-150 w-full max-w-sm">{footer}</div>}
                 </div>
             </div>

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react"
-import { m, AnimatePresence, useIsPresent, type Transition } from "framer-motion"
+import { m, AnimatePresence, useIsPresent, type Transition, type HTMLMotionProps } from "framer-motion"
 import { IconUiClose } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
-import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { useReducedMotion } from "@/components/ui/kinetics/hooks"
 import { useFocusTrap } from "@/hooks/use-focus-trap"
 import { PLAYER_GLASS, PLAYER_ICON_BTN } from "./player-theme"
 import { shouldDismissPanelDrag } from "./player-touch"
@@ -12,10 +12,8 @@ interface PlayerPanelRevealProps {
     onClose: () => void
     title: string
     titleBadge?: React.ReactNode
-    headerActions?: React.ReactNode
     children: React.ReactNode
     ariaLabel?: string
-    widthClassName?: string
 }
 
 /** Velo del panel. Sigue montado hasta que el panel termina de salir (framer desmonta
@@ -38,18 +36,26 @@ function PanelBackdrop({ onClose, transition }: { onClose: () => void; transitio
     )
 }
 
+const PanelSurface = React.forwardRef<HTMLDivElement, HTMLMotionProps<"div">>((props, ref) => {
+    const isPresent = useIsPresent()
+    const prefersReducedMotion = useReducedMotion()
+    return <m.div {...props} ref={ref} inert={!isPresent} aria-hidden={!isPresent || undefined}
+        // AnimatePresence conserva los props de salida. La superficie sigue escuchando
+        // la preferencia para neutralizar también un recorrido que ya está en curso.
+        transformTemplate={prefersReducedMotion ? () => "none" : props.transformTemplate}
+        style={{ ...props.style, pointerEvents: isPresent ? "auto" : "none" }} />
+})
+PanelSurface.displayName = "PanelSurface"
+
 export function PlayerPanelReveal({
     isOpen,
     onClose,
     title,
     titleBadge,
-    headerActions,
     children,
     ariaLabel,
-    widthClassName = "w-[calc(100%-1.5rem)] sm:w-[380px]",
 }: PlayerPanelRevealProps) {
     const prefersReducedMotion = useReducedMotion()
-    const panelSpring = useSpringPreset("tabIndicator") // 480/34
     const dialogRef = useRef<HTMLDivElement>(null)
     useFocusTrap(dialogRef, isOpen)
 
@@ -91,19 +97,23 @@ export function PlayerPanelReveal({
                     />
 
                     {/* Sliding Panel */}
-                    <m.div
+                    <PanelSurface
                         ref={dialogRef}
                         key="panel-content"
                         role="dialog"
+                        data-liquid-surface="panel"
+                        data-liquid-context="video"
                         aria-modal="true"
                         aria-label={ariaLabel || title}
                         initial={prefersReducedMotion ? { opacity: 0 } : { x: "110%" }}
                         animate={prefersReducedMotion ? { opacity: 1 } : { x: 0 }}
-                        // pointerEvents no se anima: framer lo aplica al empezar la salida, así el panel
-                        // que se desliza (~0,35 s) no se traga clics, igual que el velo.
-                        exit={prefersReducedMotion ? { opacity: 0, pointerEvents: "none" } : { x: "110%", pointerEvents: "none" }}
-                        transition={panelSpring}
-                        drag={isCoarse ? "x" : false}
+                        // PanelSurface controla la interacción por presencia, incluso al reabrir
+                        // durante la salida. La animación solo controla propiedades visuales.
+                        exit={prefersReducedMotion
+                            ? { opacity: 0, transition: { duration: 0.15 } }
+                            : { x: "110%", transition: { duration: 0.35, ease: [0.32, 0.72, 0, 1] } }}
+                        transition={{ duration: prefersReducedMotion ? 0.15 : 0.4, ease: [0.32, 0.72, 0, 1] }}
+                        drag={isCoarse && !prefersReducedMotion ? "x" : false}
                         dragDirectionLock
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={{ left: 0, right: 0.6 }}
@@ -112,9 +122,8 @@ export function PlayerPanelReveal({
                             if (shouldDismissPanelDrag(info.offset.x, info.velocity.x)) onClose()
                         }}
                         className={cn(
-                            "absolute right-3 top-3 bottom-3 z-player-sidebar rounded-2xl overflow-hidden flex flex-col pointer-events-auto select-none",
-                            PLAYER_GLASS,
-                            widthClassName
+                            "absolute right-3 top-3 bottom-3 z-player-sidebar rounded-2xl overflow-hidden flex flex-col pointer-events-auto select-none w-[calc(100%-1.5rem)] sm:w-[380px]",
+                            PLAYER_GLASS
                         )}
                     >
                         {/* Header */}
@@ -123,21 +132,19 @@ export function PlayerPanelReveal({
                                 <span>{title}</span>
                                 {titleBadge}
                             </h3>
-                            <div className="flex items-center gap-2">
-                                {headerActions}
-                                <button
-                                    onClick={onClose}
-                                    aria-label={`Cerrar ${title}`}
-                                    className={PLAYER_ICON_BTN}
-                                >
-                                    <IconUiClose className="w-4 h-4" />
-                                </button>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                aria-label={`Cerrar ${title}`}
+                                className={PLAYER_ICON_BTN}
+                            >
+                                <IconUiClose className="w-4 h-4" />
+                            </button>
                         </div>
 
                         {/* Contenido inyectado */}
                         {children}
-                    </m.div>
+                    </PanelSurface>
                 </>
             )}
         </AnimatePresence>

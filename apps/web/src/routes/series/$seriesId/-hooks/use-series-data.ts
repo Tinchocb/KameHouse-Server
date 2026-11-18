@@ -112,6 +112,8 @@ export function useSeriesData({
 
         const hasLocalFile = (ep: Anime_Episode): boolean => {
             if (ep.isDownloaded || ep.localFile?.path) return true
+            // Provider-only rows can reuse a local episode number from another season.
+            if (ep.isDownloaded === false) return false
             return !!resolveLocalFileForEpisode(ep, entry.localFiles)
         }
 
@@ -245,16 +247,6 @@ export function useSeriesData({
         return map
     }, [computedEpisodes, sagas])
 
-    const fillerStats = useMemo(() => {
-        if (sagaEpisodes.length === 0) return { filler: 0, total: 0, percent: 0 }
-        let fillerCount = 0
-        sagaEpisodes.forEach(ep => {
-            if (ep.episodeMetadata?.isFiller) fillerCount++
-        })
-        const total = sagaEpisodes.length
-        return { filler: fillerCount, total, percent: Math.round((fillerCount / total) * 100) }
-    }, [sagaEpisodes])
-
     // ── Memoized PremiumEpisode view-models ───────────────────────────────────
     // This is the core performance fix: the array was built inline in JSX as a
     // .filter().map() on every render. PremiumEpisodeList does a React Compiler
@@ -370,14 +362,6 @@ export function useSeriesData({
         heroBackdrop,
     ])
 
-    const resumeInfo = useMemo(() => {
-        if (!continueWatching) return null
-        return {
-            number: continueWatching.episodeNumber,
-            title: continueWatching.title,
-        }
-    }, [continueWatching])
-
     const episodeViewModels = useMemo<PremiumEpisode[]>(() => {
         if (!computedEpisodes) return []
 
@@ -462,12 +446,9 @@ export function useSeriesData({
         nextSeriesTarget,
         heroArt,
         heroBackdrop,
-        resumeInfo,
         continueWatching,
-        sagaEpisodes,
         sagaProgress,
         sagasProgressMap,
-        fillerStats,
         episodeViewModels,
     }
 }

@@ -10,6 +10,7 @@ import {
     computeAudioTracksKey,
     computeSubtitleTracksKey,
     effectiveAudioProfile,
+    languageFamily,
     matchPendingAudioTrack,
     matchPreferredAudioTrack,
     resolveAutoSubtitleTarget,
@@ -205,7 +206,10 @@ export function usePlayerTrackSelection({
             if (hls) hls.subtitleTrack = track.index
             setActiveSubtitleIndex(track.index)
             if (!isAuto) setSubtitlesEnabled(true)
-            if (!isAuto && track.language) {
+            // Una pista sin idioma ("und", común en MKVs de anime) no dice qué idioma prefiere
+            // el usuario: guardarlo pisaba la preferencia real (p. ej. "spa") y el siguiente
+            // episodio dejaba de elegir subtítulos por idioma. Igual que en audio.
+            if (!isAuto && languageFamily(track.language)) {
                 setPreferredSubtitleLang(track.language)
             }
         }

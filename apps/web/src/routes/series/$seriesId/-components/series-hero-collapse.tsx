@@ -49,8 +49,11 @@ export function SeriesHeroCollapse({
   const [visible, setVisible] = React.useState(false)
 
   // Sigue el estado compacto de la isla del logo para no solaparse cuando muestra "KAMEHOUSE".
+  // En resoluciones de 1024px a 1440px la píldora se ancla al logo compacto (left-[5.75rem])
+  // y restringe su ancho dinámicamente para dejar siempre >=20px de margen de seguridad
+  // respecto a la isla central de navegación (FloatingPillNav).
   const { compact } = useNavCompact()
-  const isWide = useMinWidth(1024)
+  const isWide = useMinWidth(1440)
   const showBrandText = isWide && !compact
 
   React.useEffect(() => {
@@ -58,10 +61,11 @@ export function SeriesHeroCollapse({
     if (!scroller) return
 
     let raf = 0
+    let cachedHeroHeight = heroRef.current?.offsetHeight ?? 520
+
     const update = () => {
       raf = 0
-      const heroHeight = heroRef.current?.offsetHeight ?? 520
-      const trigger = Math.max(MIN_SCROLL_TRIGGER, heroHeight * HERO_TRIGGER_RATIO)
+      const trigger = Math.max(MIN_SCROLL_TRIGGER, cachedHeroHeight * HERO_TRIGGER_RATIO)
       const s = scroller.scrollTop
 
       setVisible((prev) => {
@@ -75,9 +79,19 @@ export function SeriesHeroCollapse({
       if (!raf) raf = requestAnimationFrame(update)
     }
 
+    const heroEl = heroRef.current
+    const ro = heroEl
+      ? new ResizeObserver(() => {
+          cachedHeroHeight = heroEl.offsetHeight || 520
+          onScroll()
+        })
+      : null
+    if (heroEl && ro) ro.observe(heroEl)
+
     scroller.addEventListener("scroll", onScroll, { passive: true })
     raf = requestAnimationFrame(update)
     return () => {
+      ro?.disconnect()
       scroller.removeEventListener("scroll", onScroll)
       if (raf) cancelAnimationFrame(raf)
     }
@@ -93,26 +107,27 @@ export function SeriesHeroCollapse({
         aria-hidden={!visible}
         inert={!visible}
         className={cn(
-          "fixed z-navbar pointer-events-none",
-          "top-[calc(4.5rem+env(safe-area-inset-top,0px))] left-3 right-3 sm:left-6 sm:right-auto sm:max-w-xs",
-          "md:top-3.5 md:max-w-[calc(50vw-13rem)] lg:max-w-[300px] xl:max-w-[360px]",
-          showBrandText ? "md:left-[12.25rem]" : "md:left-[5.75rem]",
+          "fixed z-navbar pointer-events-none top-3.5",
+          showBrandText
+            ? "left-[12.25rem] max-w-[min(360px,calc(50vw-31rem))]"
+            : "left-[5.75rem] max-w-[min(360px,calc(50vw-22.5rem))] xl:max-w-[min(360px,calc(50vw-24.5rem))]",
           "transform-gpu transition-[opacity,transform,left] duration-quick ease-out-strong",
           visible
             ? "translate-y-0 scale-100 opacity-100"
             : "-translate-y-2 scale-95 opacity-0",
+          "motion-reduce:translate-y-0 motion-reduce:scale-100",
         )}
       >
         <div
           className={cn(
-            "glass-frosted-pill relative flex min-h-[36px] [@media(pointer:coarse)]:min-h-[44px] items-center gap-2.5 overflow-hidden rounded-full py-1 pl-2 pr-1.5",
+            "series-collapse-pill glass-frosted-pill relative flex min-h-[36px] [@media(pointer:coarse)]:min-h-[44px] items-center gap-2.5 overflow-hidden rounded-full py-1 pl-2 pr-1.5",
             visible ? "pointer-events-auto" : "pointer-events-none",
           )}
         >
           {episodeNumber != null && (
             <span
               aria-hidden="true"
-              className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border border-brand-accent/35 bg-brand-accent/20 px-1.5 font-mono text-2xs font-bold tabular-nums text-brand-accent"
+              className="series-collapse-ep-badge flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border border-brand-accent/35 bg-brand-accent/20 px-1.5 font-mono text-xs font-bold tabular-nums text-brand-accent"
             >
               {episodeNumber}
             </span>
@@ -120,7 +135,7 @@ export function SeriesHeroCollapse({
 
           <div className="min-w-0 flex-1 pr-1">
             <p className="truncate text-xs font-semibold leading-tight text-on-surface">{title}</p>
-            <p className="truncate text-2xs leading-tight text-on-surface-variant tabular-nums">{subtitle}</p>
+            <p className="truncate text-xs leading-tight text-on-surface-variant tabular-nums">{subtitle}</p>
           </div>
 
           {onPlay && (
@@ -143,7 +158,7 @@ export function SeriesHeroCollapse({
               className="pointer-events-none absolute inset-x-3 bottom-0 h-0.5 overflow-hidden rounded-full bg-white/15"
             >
               <div
-                className="h-full bg-brand-accent"
+                className="series-collapse-progress-fill h-full bg-brand-accent"
                 style={{ width: `${Math.min(100, resumePercent)}%` }}
               />
             </div>

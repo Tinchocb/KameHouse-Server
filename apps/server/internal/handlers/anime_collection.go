@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 var (
 	libraryCollectionCache = result.NewCache[string, *anime.LibraryCollection]()
 	collectionVersion      atomic.Uint64
+	collectionCacheMu      sync.RWMutex // pins the cache and its version through invalidation/publication
 	// libraryCollectionFlight colapsa las construcciones simultaneas con la cache vacia.
 	libraryCollectionFlight singleflight.Group
 )
@@ -28,8 +31,10 @@ var (
 const libraryCollectionBuildTimeout = 2 * time.Minute
 
 func ClearLibraryCollectionCache() {
+	collectionCacheMu.Lock()
 	libraryCollectionCache.Clear()
 	collectionVersion.Add(1)
+	collectionCacheMu.Unlock()
 	ClearAnimeEntryCache()
 }
 
@@ -43,40 +48,47 @@ func getCollectionETag() string {
 //	@desc This creates a new LibraryCollection struct and returns it.
 //	@desc This is used to get the main anime collection of the user.
 //	@desc It uses the cached platform anime collection for the GET method.
-//	@desc It refreshes the platform anime collection if the POST method is used.
-//	@route /api/v1/library/collection [GET,POST]
+//	@route /api/v1/library/collection [GET]
 //	@returns anime.LibraryCollection
 func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
+	collectionCacheMu.RLock()
+	version := collectionVersion.Load()
 	etag := getCollectionETag()
+	cached, cacheHit := libraryCollectionCache.Get("main")
+	collectionCacheMu.RUnlock()
 	c.Response().Header().Set("ETag", etag)
 	c.Response().Header().Set("Cache-Control", "no-cache")
 
 	if c.Request().Method == http.MethodGet || c.Request().Method == http.MethodHead {
 		if ifNoneMatch := c.Request().Header.Get("If-None-Match"); ifNoneMatch != "" {
-			if ifNoneMatch == etag || ifNoneMatch == "*" {
+			if etagMatches(ifNoneMatch, strings.TrimPrefix(etag, "W/")) {
 				return c.NoContent(http.StatusNotModified)
 			}
 		}
 	}
 
 	// Use cache if available
-	if ret, ok := libraryCollectionCache.Get("main"); ok {
-		return h.RespondWithData(c, ret)
+	if cacheHit {
+		return h.RespondWithData(c, cached)
 	}
 
 	// Con la cache vacia (arranque, tras un escaneo o a los 5 minutos) varias pantallas piden la
 	// coleccion a la vez: un solo vuelo lee los archivos locales y la arma para todas.
 	reqCtx := c.Request().Context()
-	flight := libraryCollectionFlight.DoChan("main", func() (interface{}, error) {
+	flight := libraryCollectionFlight.DoChan(etag, func() (interface{}, error) {
 		// Otra peticion pudo dejarla en cache mientras esta esperaba su turno.
-		if ret, ok := libraryCollectionCache.Get("main"); ok {
+		collectionCacheMu.RLock()
+		ret, ok := libraryCollectionCache.Get("main")
+		current := collectionVersion.Load() == version
+		collectionCacheMu.RUnlock()
+		if ok && current {
 			return ret, nil
 		}
 		// Desacoplado del request: lo comparten todos los que esperan, y que el primero
 		// cierre la pestana no debe cancelarles la construccion.
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(reqCtx), libraryCollectionBuildTimeout)
 		defer cancel()
-		return h.buildLibraryCollection(ctx)
+		return h.buildLibraryCollection(ctx, version)
 	})
 
 	select {
@@ -92,11 +104,9 @@ func (h *Handler) HandleGetLibraryCollection(c echo.Context) error {
 }
 
 // buildLibraryCollection arma la coleccion principal y la deja en cache.
-func (h *Handler) buildLibraryCollection(ctx context.Context) (*anime.LibraryCollection, error) {
+func (h *Handler) buildLibraryCollection(ctx context.Context, version uint64) (*anime.LibraryCollection, error) {
 	// Si algo invalida la cache mientras se arma (escaneo, cambio de ajustes), lo armado ya es
 	// viejo: se entrega a quienes lo esperan pero no se guarda.
-	version := collectionVersion.Load()
-
 	if _, err := h.App.GetAnimeCollection(false); err != nil {
 		return nil, err
 	}
@@ -143,9 +153,11 @@ func (h *Handler) buildLibraryCollection(ctx context.Context) (*anime.LibraryCol
 		}
 	}
 
+	collectionCacheMu.Lock()
 	if collectionVersion.Load() == version {
 		libraryCollectionCache.SetT("main", libraryCollection, 5*time.Minute)
 	}
+	collectionCacheMu.Unlock()
 
 	return libraryCollection, nil
 }

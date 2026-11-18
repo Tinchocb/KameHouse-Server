@@ -25,8 +25,6 @@ impl WindowBounds {
 pub struct DesktopSettings {
     pub minimize_to_tray: bool,
     pub open_in_background: bool,
-    pub open_at_launch: bool,
-    pub update_channel: String,
     pub window_bounds: Option<WindowBounds>,
     pub window_maximized: bool,
     pub disable_hardware_acceleration: bool,
@@ -40,8 +38,6 @@ impl Default for DesktopSettings {
         Self {
             minimize_to_tray: true,
             open_in_background: false,
-            open_at_launch: false,
-            update_channel: "kamehouse".to_string(),
             window_bounds: None,
             window_maximized: true,
             disable_hardware_acceleration: false,
@@ -129,8 +125,6 @@ impl SettingsManager {
                             *settings = DesktopSettings { window_bounds: valid_bounds.clone(), ..Default::default() };
                             settings.minimize_to_tray = loaded.minimize_to_tray;
                             settings.open_in_background = loaded.open_in_background;
-                            settings.open_at_launch = loaded.open_at_launch;
-                            settings.update_channel = loaded.update_channel;
                             settings.window_bounds = valid_bounds;
                             settings.window_maximized = loaded.window_maximized;
                             settings.disable_hardware_acceleration = loaded.disable_hardware_acceleration;
@@ -172,12 +166,6 @@ impl SettingsManager {
 
         *self.settings.write().unwrap() = settings.clone();
         Ok(())
-    }
-}
-
-impl Default for SettingsManager {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

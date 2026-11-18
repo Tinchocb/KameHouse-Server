@@ -6,7 +6,7 @@ const api = vi.hoisted(() => ({ request: vi.fn() }))
 vi.mock("@/api/client/requests", () => ({ buildApiQuery: api.request }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/components/shared/directory-selector", () => ({
-    DirectorySelector: ({ onSelect, ...props }: Record<string, unknown>) => <input {...props} />,
+    DirectorySelector: ({ onSelect: _onSelect, ...props }: Record<string, unknown>) => <input {...props} />,
 }))
 
 import { CacheLocationField } from "./cache-location"

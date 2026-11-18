@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -71,8 +72,6 @@ type Options struct {
 	// Concurrency caps simultaneous ffmpeg processes. <= 0 means 1: pre-transcode
 	// is background work and must not starve a live playback transcode.
 	Concurrency int
-	// Extractor probes duration for progress reporting.
-	Extractor *videofile.MediaInfoExtractor
 }
 
 // Manager owns the pre-transcode queue and its workers.
@@ -83,7 +82,8 @@ type Manager struct {
 	mu   sync.RWMutex
 	jobs map[string]*PreTranscodeJob // by hash
 
-	queue chan *PreTranscodeJob
+	queue      chan *PreTranscodeJob
+	probeSlots chan struct{}
 
 	deleteMu sync.Mutex
 	deleting map[string]bool
@@ -98,12 +98,13 @@ func New(opts Options) *Manager {
 		opts.Concurrency = 1
 	}
 	return &Manager{
-		opts:     opts,
-		logger:   opts.Logger,
-		jobs:     make(map[string]*PreTranscodeJob),
-		queue:    make(chan *PreTranscodeJob, 256),
-		deleting: make(map[string]bool),
-		stopCh:   make(chan struct{}),
+		opts:       opts,
+		logger:     opts.Logger,
+		jobs:       make(map[string]*PreTranscodeJob),
+		queue:      make(chan *PreTranscodeJob, 256),
+		probeSlots: make(chan struct{}, opts.Concurrency),
+		deleting:   make(map[string]bool),
+		stopCh:     make(chan struct{}),
 	}
 }
 
@@ -204,13 +205,17 @@ func (m *Manager) Enqueue(filePath string) (*PreTranscodeJob, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not hash %q: %w", filePath, err)
 	}
+	return m.enqueue(filePath, hash, probeStreams)
+}
 
+func (m *Manager) enqueue(filePath, hash string, probe func(context.Context, string, string) (sourceStreams, error)) (*PreTranscodeJob, error) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if m.stopped() {
+		m.mu.Unlock()
 		return nil, errors.New("pre-transcode manager is stopped")
 	}
 	if m.deleting[hash] {
+		m.mu.Unlock()
 		return nil, errors.New("pre-transcode output is being deleted")
 	}
 
@@ -219,30 +224,61 @@ func (m *Manager) Enqueue(filePath string) (*PreTranscodeJob, error) {
 			select {
 			case <-existing.done:
 			default:
+				m.mu.Unlock()
 				return nil, errors.New("previous pre-transcode is still stopping")
 			}
 		}
 		switch existing.Status {
 		case StatusQueued, StatusRunning, StatusCompleted:
-			return jobSnapshot(existing), nil
+			snapshot := jobSnapshot(existing)
+			m.mu.Unlock()
+			return snapshot, nil
 		}
 		// A failed job is retried below.
 	}
 
-	// Already on disk from a previous run: record it as done rather than redoing it.
-	// Output from before the audio renditions is rebuilt for a file with several tracks.
+	m.pruneJobsLocked()
+	// Reserve the exact job while probing without the global mutex. Cancellation,
+	// deletion and shutdown can cancel the probe and wait for its cleanup.
+	job := &PreTranscodeJob{Hash: hash, FilePath: filePath, Status: StatusQueued, QueuedAt: time.Now()}
+	ctx, cancel := context.WithCancel(context.Background())
+	job.cancel, job.done = cancel, make(chan struct{})
+	m.jobs[hash] = job
+	m.mu.Unlock()
+
+	available := false
 	if m.IsAvailable(hash) {
-		streams, probeErr := probeStreams(context.Background(), m.opts.FfprobePath, filePath)
-		if probeErr != nil || m.Ready(hash, len(streams.Audio)) {
-			job := &PreTranscodeJob{Hash: hash, FilePath: filePath, Status: StatusCompleted, Progress: 100, QueuedAt: time.Now()}
-			m.jobs[hash] = job
-			return jobSnapshot(job), nil
+		// Removing the global mutex must not turn concurrent Enqueues into an
+		// unbounded burst of ffprobe processes.
+		select {
+		case m.probeSlots <- struct{}{}:
+			streams, probeErr := probe(ctx, m.opts.FfprobePath, filePath)
+			<-m.probeSlots
+			if probeErr != nil || m.Ready(hash, len(streams.Audio)) {
+				available = true
+			} else if ctx.Err() == nil {
+				_ = os.RemoveAll(m.OutputDirFor(hash))
+			}
+		case <-ctx.Done():
 		}
-		_ = os.RemoveAll(m.OutputDirFor(hash))
 	}
 
-	job := &PreTranscodeJob{Hash: hash, FilePath: filePath, Status: StatusQueued, QueuedAt: time.Now()}
-	m.jobs[hash] = job
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	defer cancel()
+	close(job.done)
+	job.done, job.cancel = nil, nil
+	if job.cancelled || m.stopped() || m.deleting[hash] || ctx.Err() != nil {
+		job.Status, job.Error = StatusFailed, "cancelled"
+		now := time.Now()
+		job.EndedAt = &now
+		return nil, errors.New("pre-transcode enqueue cancelled")
+	}
+	if available {
+		now := time.Now()
+		job.Status, job.Progress, job.EndedAt = StatusCompleted, 100, &now
+		return jobSnapshot(job), nil
+	}
 
 	select {
 	case m.queue <- job:
@@ -265,6 +301,8 @@ func (m *Manager) Cancel(hash string) bool {
 	}
 	job.cancelled = true
 	job.Status, job.Error = StatusFailed, "cancelled"
+	now := time.Now()
+	job.EndedAt = &now
 	cancel := job.cancel
 	m.mu.Unlock()
 	if cancel != nil {
@@ -285,14 +323,48 @@ func jobSnapshot(job *PreTranscodeJob) *PreTranscodeJob {
 
 // Jobs returns a snapshot of every tracked job.
 func (m *Manager) Jobs() []*PreTranscodeJob {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.pruneJobsLocked()
 
 	out := make([]*PreTranscodeJob, 0, len(m.jobs))
 	for _, j := range m.jobs {
 		out = append(out, jobSnapshot(j))
 	}
 	return out
+}
+
+// Keep a bounded history without evicting active work or its cancellation handles.
+// Only metadata is pruned; completed media stays available on disk.
+func (m *Manager) pruneJobsLocked() {
+	const maxHistory = 256
+	var terminal []*PreTranscodeJob
+	for _, job := range m.jobs {
+		if job.Status != StatusCompleted && job.Status != StatusFailed {
+			continue
+		}
+		if job.done != nil {
+			select {
+			case <-job.done:
+			default:
+				continue
+			}
+		}
+		terminal = append(terminal, job)
+	}
+	if len(terminal) <= maxHistory {
+		return
+	}
+	ended := func(job *PreTranscodeJob) time.Time {
+		if job.EndedAt != nil {
+			return *job.EndedAt
+		}
+		return job.QueuedAt
+	}
+	slices.SortFunc(terminal, func(a, b *PreTranscodeJob) int { return ended(a).Compare(ended(b)) })
+	for _, job := range terminal[:len(terminal)-maxHistory] {
+		delete(m.jobs, job.Hash)
+	}
 }
 
 // Delete removes a file's pre-transcoded output and forgets its job.
@@ -458,12 +530,11 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	totalDuration := m.probeDuration(ctx, job.FilePath)
-
 	src, err := probeStreams(ctx, m.opts.FfprobePath, job.FilePath)
 	if err != nil {
 		return fmt.Errorf("could not probe streams: %w", err)
 	}
+	totalDuration := src.Duration
 
 	hw := cassette.BuildHwAccelProfile(cassette.HwAccelOptions{
 		Kind:           m.opts.HwAccel.Kind,
@@ -471,9 +542,26 @@ func (m *Manager) transcode(ctx context.Context, job *PreTranscodeJob) error {
 		CustomSettings: m.opts.HwAccel.CustomSettings,
 	}, m.opts.FfmpegPath, m.logger)
 
-	args := buildFfmpegArgs(hw, job.FilePath, tmpDir, len(src.Audio))
+	// HLS expands %v into subdirectories. Some Windows FFmpeg builds reject
+	// absolute drive paths during this expansion, even in writable directories.
+	// Keep output paths relative to the private staging directory.
+	inputPath := job.FilePath
+	if !strings.Contains(inputPath, "://") {
+		inputPath, err = filepath.Abs(inputPath)
+		if err != nil {
+			return fmt.Errorf("could not resolve input path: %w", err)
+		}
+	}
+	args := buildFfmpegArgs(hw, inputPath, ".", len(src.Audio))
 
 	cmd := exec.CommandContext(ctx, m.opts.FfmpegPath, args...)
+	if cmd.Err == nil && !filepath.IsAbs(cmd.Path) {
+		cmd.Path, err = filepath.Abs(cmd.Path)
+		if err != nil {
+			return fmt.Errorf("could not resolve ffmpeg path: %w", err)
+		}
+	}
+	cmd.Dir = tmpDir
 	cmd.WaitDelay = 2 * time.Second
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -560,8 +648,8 @@ func buildFfmpegArgs(hw cassette.HwAccelProfile, inputPath string, outDir string
 		// ffmpeg writes one playlist per variant (v/, a0/, ...); writeMasterPlaylist
 		// writes the master. No -master_pl_name: ffmpeg's own master is wrong here.
 		"-var_stream_map", variantStreamMap(audioTracks),
-		"-hls_segment_filename", filepath.Join(outDir, "%v", "seg%05d.ts"),
-		filepath.Join(outDir, "%v", "index.m3u8"),
+		"-hls_segment_filename", filepath.ToSlash(filepath.Join(outDir, "%v", "seg%05d.ts")),
+		filepath.ToSlash(filepath.Join(outDir, "%v", "index.m3u8")),
 	)
 
 	return args
@@ -591,6 +679,7 @@ type sourceAudio struct {
 type sourceStreams struct {
 	Width, Height int // first video stream (0:v:0)
 	Audio         []sourceAudio
+	Duration      float64
 }
 
 // probeStreams lists the video and audio streams of a file in one ffprobe run.
@@ -605,7 +694,7 @@ func probeStreams(ctx context.Context, ffprobePath, filePath string) (sourceStre
 	cmd := exec.CommandContext(ctx, ffprobePath,
 		"-v", "error",
 		"-print_format", "json",
-		"-show_streams",
+		"-show_entries", "format=duration:stream=codec_type,width,height:stream_tags=language,title:stream_disposition=default",
 		filePath,
 	)
 	cmd.WaitDelay = 2 * time.Second
@@ -615,6 +704,9 @@ func probeStreams(ctx context.Context, ffprobePath, filePath string) (sourceStre
 	}
 
 	var doc struct {
+		Format struct {
+			Duration string `json:"duration"`
+		} `json:"format"`
 		Streams []struct {
 			CodecType string `json:"codec_type"`
 			Width     int    `json:"width"`
@@ -633,6 +725,7 @@ func probeStreams(ctx context.Context, ffprobePath, filePath string) (sourceStre
 	}
 
 	var src sourceStreams
+	src.Duration, _ = strconv.ParseFloat(doc.Format.Duration, 64)
 	sawVideo := false
 	for _, s := range doc.Streams {
 		switch s.CodecType {
@@ -693,7 +786,7 @@ func masterPlaylist(src sourceStreams, bandwidth int64) string {
 		}
 	}
 	for i, a := range src.Audio {
-		fmt.Fprintf(&b, `#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="%s",`, audioRenditionName(a, i))
+		fmt.Fprintf(&b, `#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="%s",`, videofile.AudioRenditionName(a.Title, i))
 		if a.Language != "" && a.Language != "und" {
 			fmt.Fprintf(&b, `LANGUAGE="%s",`, a.Language)
 		}
@@ -716,15 +809,6 @@ func masterPlaylist(src sourceStreams, bandwidth int64) string {
 	}
 	fmt.Fprintf(&b, `,CODECS="%s"%s`+"\nv/index.m3u8\n", codecs, audioAttr)
 	return b.String()
-}
-
-// audioRenditionName is the label the player shows: the track's own title, or "Audio N".
-func audioRenditionName(a sourceAudio, i int) string {
-	name := strings.TrimSpace(a.Title)
-	if name == "" {
-		name = fmt.Sprintf("Audio %d", i+1)
-	}
-	return strings.ReplaceAll(name, `"`, "'")
 }
 
 // playlistDuration sums the EXTINF durations of a media playlist.
@@ -758,56 +842,6 @@ func playlistDuration(path string) (float64, error) {
 		return 0, errors.New("empty video playlist")
 	}
 	return total, nil
-}
-
-// probeDuration returns the file's duration in seconds, or 0 when unknown —
-// progress then stays at 0 until completion rather than reporting nonsense.
-//
-// The shared extractor is tried first because playback has usually probed the
-// file already and its result is cached, but it is not required: falling back to
-// a direct ffprobe keeps the progress bar working instead of silently pinning it
-// at 0%.
-func (m *Manager) probeDuration(ctx context.Context, filePath string) float64 {
-	if m.opts.Extractor != nil && m.opts.FfprobePath != "" {
-		if info, err := m.opts.Extractor.GetInfoContext(ctx, m.opts.FfprobePath, filePath); err == nil && info != nil && info.Duration > 0 {
-			return float64(info.Duration)
-		}
-	}
-
-	d, err := probeDurationWithFfprobe(ctx, m.opts.FfprobePath, filePath)
-	if err != nil {
-		m.logger.Debug().Err(err).Str("filepath", filePath).Msg("pretranscode: Could not probe duration, progress will stay at 0 until the job finishes")
-		return 0
-	}
-	return d
-}
-
-// probeDurationWithFfprobe asks ffprobe for the container duration directly.
-func probeDurationWithFfprobe(ctx context.Context, ffprobePath string, filePath string) (float64, error) {
-	if ffprobePath == "" {
-		ffprobePath = "ffprobe"
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, ffprobePath,
-		"-v", "error",
-		"-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1",
-		filePath,
-	)
-	cmd.WaitDelay = 2 * time.Second
-	out, err := cmd.Output()
-	if err != nil {
-		return 0, err
-	}
-
-	d, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
-	if err != nil {
-		return 0, fmt.Errorf("unparseable duration %q: %w", strings.TrimSpace(string(out)), err)
-	}
-	return d, nil
 }
 
 func (m *Manager) trackProgressContext(ctx context.Context, stdout io.ReadCloser, hash string, totalDuration float64) {

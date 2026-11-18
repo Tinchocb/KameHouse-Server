@@ -1,4 +1,5 @@
 import { m } from "framer-motion"
+import { useRef } from "react"
 import { cn } from "@/components/ui/core/styling"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 
@@ -21,26 +22,39 @@ interface RadioCardGroupProps {
 
 export function RadioCardGroup({ name, label, options, value, onChange, className }: RadioCardGroupProps) {
     const indicatorSpring = useSpringPreset("tabIndicator")
+    const groupRef = useRef<HTMLDivElement>(null)
+    const selectedIndex = options.findIndex(opt => value === opt.value || (!value && opt.value === ""))
     return (
-        <div role="radiogroup" aria-label={label ?? name} className={cn("grid grid-cols-1 gap-2", className)}>
-            {options.map((opt) => {
+        <div ref={groupRef} role="radiogroup" aria-label={label ?? name} className={cn("grid grid-cols-1 gap-2", className)}>
+            {options.map((opt, index) => {
                 const isActive = value === opt.value || (!value && opt.value === "")
                 return (
                     <div
                         key={opt.value || "default"}
                         role="radio"
+                        data-settings-choice=""
                         aria-checked={isActive}
-                        tabIndex={0}
+                        tabIndex={index === (selectedIndex < 0 ? 0 : selectedIndex) ? 0 : -1}
                         onClick={() => onChange(opt.value)}
                         onKeyDown={(e) => {
+                            const direction = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1
+                                : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0
+                            if (direction || e.key === "Home" || e.key === "End") {
+                                e.preventDefault()
+                                const next = e.key === "Home" ? 0 : e.key === "End" ? options.length - 1
+                                    : (index + direction + options.length) % options.length
+                                onChange(options[next].value)
+                                groupRef.current?.querySelectorAll<HTMLElement>('[role="radio"]')[next]?.focus()
+                                return
+                            }
                             if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault()
                                 onChange(opt.value)
                             }
                         }}
                         className={cn(
-                            "relative flex items-start gap-3.5 p-3.5 rounded-xl border transition-[background-color,border-color,color] duration-fast ease-smooth-out cursor-pointer group select-none",
-                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent active:scale-[0.995]",
+                            "relative flex items-start gap-3.5 p-3.5 rounded-xl border border-t-[var(--glass-border-top)] transition-[background-color,border-color,color,box-shadow] duration-fast ease-smooth-out cursor-pointer group select-none shadow-[shadow:var(--double-bezel-ring)]",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent motion-safe:active:scale-[0.995]",
                             isActive
                                 ? "bg-[var(--neutral-elev-3)] border-[var(--selected-bg)] text-label-1"
                                 : "bg-transparent border-[var(--neutral-separator)] text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)]"
@@ -49,6 +63,7 @@ export function RadioCardGroup({ name, label, options, value, onChange, classNam
                         {isActive && (
                             <m.div
                                 layoutId={`radio-${name}-active`}
+                                data-settings-choice-ring=""
                                 transition={indicatorSpring}
                                 className="absolute inset-0 border border-[var(--selected-bg)] rounded-xl pointer-events-none"
                             />
@@ -68,14 +83,14 @@ export function RadioCardGroup({ name, label, options, value, onChange, classNam
                         </div>
                         <div className="flex-1 -mt-0.5 relative z-10">
                             <span className={cn(
-                                "text-xs block tracking-tight transition-[color] duration-fast ease-smooth-out",
+                                "settings-field-label text-xs block tracking-tight transition-[color] duration-fast ease-smooth-out",
                                 isActive ? "font-bold text-label-1" : "font-semibold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-1"
                             )}>
                                 {opt.label}
                             </span>
                             {opt.desc && (
                                 <span className={cn(
-                                    "text-caption block mt-0.5 transition-[color] duration-fast ease-smooth-out leading-relaxed",
+                                    "settings-field-help text-caption block mt-0.5 transition-[color] duration-fast ease-smooth-out leading-relaxed",
                                     "text-label-2"
                                 )}>
                                     {opt.desc}

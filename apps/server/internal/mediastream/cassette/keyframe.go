@@ -270,8 +270,13 @@ func extractKeyframes(
 
 	scanner := bufio.NewScanner(stdout)
 	buf := make([]float64, 0, 1000)
-	batchSize := 100
+	// Three timestamps provide two complete segments. Waiting for 100 made
+	// short MP4s and slow remote inputs wait for a whole-file scan before HLS
+	// could start. Keep larger batches after startup, with periodic publication
+	// so a slow source does not starve the growing EVENT playlist.
+	batchSize := 3
 	flushed := int32(0)
+	lastPublish := time.Now()
 
 	flush := func(final bool) {
 		if len(buf) == 0 && !final {
@@ -281,6 +286,8 @@ func extractKeyframes(
 		flushed += int32(len(buf))
 		unblock()
 		buf = buf[:0]
+		lastPublish = time.Now()
+		batchSize = 100
 		// After the first 500 keyframes increase batch size to reduce
 		// listener overhead on long files
 		if flushed >= 500 {
@@ -310,7 +317,7 @@ func extractKeyframes(
 			return err
 		}
 		buf = append(buf, fpts)
-		if len(buf) >= batchSize {
+		if len(buf) >= batchSize || (flushed > 0 && len(buf) > 0 && time.Since(lastPublish) >= 250*time.Millisecond) {
 			flush(false)
 		}
 	}

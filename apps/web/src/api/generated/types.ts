@@ -31,6 +31,7 @@ export type Anime_ContentTag = "FILLER" | "EPIC" | "CANON"
  */
 export type Anime_Entry = {
     mediaId: number
+    episodeEnrichmentPending: boolean
     media: Models_LibraryMedia | null
     listData: Anime_EntryListData | null
     libraryData: Anime_EntryLibraryData | null
@@ -185,10 +186,6 @@ export type Anime_LibraryCollection = {
     ignoredLocalFiles: Array<Anime_LocalFile> | null
     unknownGroups: Array<Anime_UnknownGroup> | null
     stats: Anime_LibraryCollectionStats | null
-    /**
-     * Hydrated by the route handler
-     */
-    stream?: Anime_StreamCollection
 }
 
 /**
@@ -252,17 +249,6 @@ export type Anime_LibraryCollectionStats = {
     totalMovies: number
     totalSpecials: number
     totalSize: string
-}
-
-/**
- * - Filepath: internal/library/anime/collection.go
- * - Filename: collection.go
- * - Package: anime
- */
-export type Anime_StreamCollection = {
-    continueWatchingList: Array<Anime_Episode> | null
-    anime: Array<Models_LibraryMedia> | null
-    listData: Record<number, Anime_EntryListData> | null
 }
 
 /**
@@ -464,7 +450,7 @@ export type CharacterDTO = {
  * @description
  *  CharacterRole defines the role of a character within a saga.
  */
-export type CharacterRole = "Protagonist" | "Antagonist" | "Supporting" | "Background"
+export type CharacterRole = string
 
 /**
  * - Filepath: internal/database/models/dto/media_metadata.go
@@ -473,7 +459,7 @@ export type CharacterRole = "Protagonist" | "Antagonist" | "Supporting" | "Backg
  * @description
  *  EpisodeType defines the classification of an episode.
  */
-export type EpisodeType = "Canon" | "Filler" | "Hyped"
+export type EpisodeType = string
 
 /**
  * - Filepath: internal/database/models/dto/localfile.go
@@ -545,6 +531,7 @@ export type ExternalSubtitle = {
  * - Package: dto
  */
 export type FileTechnicalInfo = {
+    probeVerified?: boolean
     duration?: number
     size?: number
     bitrate?: number
@@ -824,6 +811,7 @@ export type CacheStatsResponse = {
     videofiles: CacheStatsResponse_Videofiles
     keyframes: CacheStatsResponse_Keyframes
     fingerprints: CacheStatsResponse_Fingerprints
+    storyboards: CacheStatsResponse_Storyboards
     images: CacheStatsResponse_Images
     driveBlocks: CacheStatsResponse_DriveBlocks
     totalDiskSizeBytes: number
@@ -875,6 +863,18 @@ export type CacheStatsResponse_Images = {
  *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
  */
 export type CacheStatsResponse_Keyframes = {
+    diskSizeBytes: number
+    diskItemCount: number
+}
+
+/**
+ * - Filepath: internal/handlers/cache_handlers.go
+ * - Filename: cache_handlers.go
+ * - Package: handlers
+ * @description
+ *  CacheStatsResponse contains runtime memory and disk metrics for all caches.
+ */
+export type CacheStatsResponse_Storyboards = {
     diskSizeBytes: number
     diskItemCount: number
 }
@@ -1117,6 +1117,7 @@ export type Status = {
      * "", "missing" or "placeholder"
      */
     tmdbDegradedReason: string
+    setupRequired: boolean
 }
 
 /**
@@ -1207,7 +1208,7 @@ export type SemanticEntity = {
  * @description
  *  SemanticEntityType categorizes a matched lore entity.
  */
-export type SemanticEntityType = "CHARACTER" | "TRANSFORMATION" | "SAGA" | "MOVIE" | "TECHNIQUE"
+export type SemanticEntityType = "CHARACTER" | "TRANSFORMATION" | "SAGA"
 
 /**
  * - Filepath: internal/intelligence/semantic_search.go
@@ -1340,6 +1341,10 @@ export type Models_GhostAssociatedMedia = {
  * - Filepath: internal/database/models/models.go
  * - Filename: models.go
  * - Package: models
+ * @description
+ *  GoogleDriveSettings: DisableAutoSync apaga el escaneo automático de Drive (al arrancar,
+ *  al cambiar de carpeta y cada ScanIntervalMinutes). Va en negativo para que las filas
+ *  existentes, sin la columna, queden con la sincronización encendida.
  */
 export type Models_GoogleDriveSettings = {
     enabled: boolean
@@ -1348,6 +1353,8 @@ export type Models_GoogleDriveSettings = {
     refreshToken: string
     folderId: string
     folderName: string
+    disableAutoSync: boolean
+    scanIntervalMinutes: number
 }
 
 /**
@@ -1762,12 +1769,7 @@ export type MediaCoverImage = {
  * - Filename: models.go
  * - Package: platform
  */
-export type MediaFormat = "TV" |
-    "MOVIE" |
-    "SPECIAL" |
-    "OVA" |
-    "ONA" |
-    "MUSIC"
+export type MediaFormat = "TV" | "MOVIE" | "SPECIAL" | "OVA" | "ONA"
 
 /**
  * - Filepath: internal/platforms/platform/models.go
@@ -2023,8 +2025,7 @@ export type Quality = "240p" |
     "1080p" |
     "1440p" |
     "4k" |
-    "8k" |
-    "original"
+    "8k"
 
 /**
  * - Filepath: internal/mediastream/videofile/info.go

@@ -44,7 +44,6 @@ export interface StorySpan {
   worldStateAtStart: StorySpanWorldState
   quickCatchUpKeys: string[]
   milestones: StorySpanMilestone[]
-  hasFiller: boolean
   fillerEpisodes: number[]
   recommendedStartEpisode: number
   kaiStartEpisode?: number
@@ -52,21 +51,7 @@ export interface StorySpan {
   kaiFiller?: boolean
 }
 
-interface SeriesSummary {
-  id: SeriesSpanId
-  tmdbId: number
-  title: string
-  totalEpisodes: number
-  spansCount: number
-  canon: boolean
-}
-
 interface StorySpansPayload {
-  title: string
-  version: string
-  updatedAt: string
-  totalSpans: number
-  seriesSummary: SeriesSummary[]
   spans: StorySpan[]
 }
 

@@ -45,12 +45,6 @@ export interface HeroArt {
     /** Ancho/alto real si no es 16:9 (póster de último recurso: 2/3). */
     aspect?: number
     /**
-     * Ancho real del archivo, solo si es chico (< `HERO_COMPACT_MAX_WIDTH`) y se quiere el
-     * modo compacto de `<HeroBackdrop wide="right">` (imagen más chica flotando a la derecha).
-     * El registro actual NO lo usa: el arte chico se muestra a ancho completo.
-     */
-    sourceWidth?: number
-    /**
      * `false`: en modo `right` el relleno de la izquierda no toma los colores del
      * borde izquierdo (queda la imagen en `cover` muy desenfocada). Para arte cuyo
      * borde es un destello o un fondo plano que ensuciaría la zona del texto.
@@ -73,8 +67,6 @@ export const POSTER_FOCAL: HeroFocal = { x: 50, y: 25 }
 const DEFAULT_SAFE_TOP = 10
 /** Proporción del arte de hero (siempre 16:9, ver cabecera). */
 export const HERO_ART_ASPECT = 16 / 9
-/** Por debajo de este ancho de origen el arte se muestra compacto en escritorio. */
-export const HERO_COMPACT_MAX_WIDTH = 1600
 
 const local = (id: string, art: Omit<HeroArt, "src" | "lowRes">): HeroArt => ({
     src: `/backdrops/${id}.webp`,
@@ -113,7 +105,7 @@ const SERIES_TMDB_TO_ERA: Record<number, EraId> = {
 // (bordes a resolución completa vs. a la mitad): muchos de TMDB son capturas SD
 // reescaladas que en el hero se ven blandas; se prefieren ilustraciones oficiales. Cada uno con su encuadre curado: el genérico cortaba cabezas en el
 // stage panorámico (≈2.4:1) y fundía a negro personajes que estaban a la izquierda.
-type MovieFraming = Pick<HeroArt, "focal" | "subject"> & Partial<Pick<HeroArt, "safeTop" | "tone" | "sourceWidth" | "reflect" | "cropLeft">>
+type MovieFraming = Pick<HeroArt, "focal" | "subject"> & Partial<Pick<HeroArt, "safeTop" | "tone" | "reflect" | "cropLeft">>
 
 const tmdb = (path: string, framing: MovieFraming): HeroArt => ({
     src: `https://image.tmdb.org/t/p/w1280${path}`,
@@ -122,7 +114,6 @@ const tmdb = (path: string, framing: MovieFraming): HeroArt => ({
 
 // Dragon Ball Clásico
 // Seguridad Vial: TMDB solo tiene esta captura (1326 px), no hay alternativa sin texto.
-// Sin `sourceWidth`: ya no se usa el modo compacto (caja difusa flotante); se muestra a ancho completo.
 const DB_TRAFFIC = tmdb("/xX4nWD5tZiHVTNyWscZR5s3iVH.jpg", { focal: { x: 55, y: 45 }, subject: "group", safeTop: 3, tone: "light" })
 // Bomberos: no existe en TMDB; Goku niño en el helicóptero amarillo (arte de la serie, 3840 px).
 // Antes repetía la acuarela de `db.webp`, el hero de la propia serie.

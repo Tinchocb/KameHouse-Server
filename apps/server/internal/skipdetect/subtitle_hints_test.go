@@ -93,3 +93,14 @@ func pad2(n int) string {
 	}
 	return string(rune('0'+n/10)) + string(rune('0'+n%10))
 }
+
+func TestNumberedSubtitleSongStyles(t *testing.T) {
+	for _, style := range []string{"ED2_Romaji", "OP_Kanji", "Ending_2"} {
+		if !karaokeStyleRe.MatchString(style) {
+			t.Errorf("expected song style %q", style)
+		}
+	}
+	if karaokeStyleRe.MatchString("Edited dialogue") {
+		t.Error("dialogue style matched as song")
+	}
+}

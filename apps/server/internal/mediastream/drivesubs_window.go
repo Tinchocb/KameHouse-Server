@@ -15,6 +15,7 @@ import (
 
 	"kamehouse/internal/mediastream/videofile"
 	"kamehouse/internal/mkvsubs"
+	"kamehouse/internal/util"
 
 	"github.com/labstack/echo/v4"
 )
@@ -168,7 +169,6 @@ type DriveWindowDiagTrk struct {
 }
 
 type wCluster struct {
-	off     int64
 	next    int64 // -1: último cluster
 	startMs int64
 	span    int64 // bytes del cluster en el archivo
@@ -219,7 +219,12 @@ type driveWindowSession struct {
 	longestMs    int64 // evento más largo (que no sea permanente) visto hasta ahora
 	minClusterMs int64 // duración del cluster más corto visto
 	seeded       bool  // ya se leyó el primer cluster
-	stats        windowStats
+	// titleCards: placa del título ya buscada, por segundo de inicio (drivesubs_titlecard.go).
+	titleCards map[int64]DriveTitleCard
+	// cuedRead: bloques de subtítulo ya leídos por el índice; direct: la lectura sin caché de bloques.
+	cuedRead map[mkvsubs.SubCue][]titleEvent
+	direct   mkvsubs.Source
+	stats    windowStats
 }
 
 type windowStats struct {
@@ -253,7 +258,9 @@ type openFailure struct {
 
 type driveWindowRegistry struct {
 	mu       sync.Mutex
+	closed   bool
 	factory  DriveSourceFactory
+	direct   DriveSourceFactory // lectura sin caché de bloques (drivesubs_titlecard.go)
 	sessions map[string]*driveWindowSession
 	opening  map[string]*openCall
 	failed   map[string]openFailure
@@ -261,6 +268,20 @@ type driveWindowRegistry struct {
 	heals map[string][]time.Time
 	// opens cuenta las aperturas por archivo (para el diagnóstico).
 	opens map[string]int
+}
+
+// Stop admission and cancel sessions before the repository joins owned workers.
+// Never wait for network I/O while holding the registry or session mutexes.
+func (r *Repository) shutdownDriveWindows() {
+	g := &r.driveWin
+	g.mu.Lock()
+	g.closed = true
+	for _, s := range g.sessions {
+		s.cancel()
+	}
+	g.sessions = nil
+	g.failed = nil
+	g.mu.Unlock()
 }
 
 // driveWindowSlots limita cuántas lecturas de clusters corren a la vez en todo el
@@ -284,12 +305,16 @@ func (r *Repository) SetDriveSourceFactory(f DriveSourceFactory) {
 // *DriveReadError (no se pudo leer ahora, pasajero).
 func (r *Repository) driveWindowSession(ctx context.Context, drivePath string) (*driveWindowSession, error) {
 	g := &r.driveWin
-	hash := DriveSubtitleHash(drivePath)
+	hash := r.driveSubtitleHash(drivePath)
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, newReadError(err)
 		}
 		g.mu.Lock()
+		if g.closed {
+			g.mu.Unlock()
+			return nil, newReadError(context.Canceled)
+		}
 		if s := g.sessions[hash]; s != nil {
 			g.mu.Unlock()
 			s.touch()
@@ -316,11 +341,10 @@ func (r *Repository) driveWindowSession(ctx context.Context, drivePath string) (
 			g.opening = map[string]*openCall{}
 		}
 		g.opening[hash] = call
-		g.mu.Unlock()
 
 		// The open belongs to all clients, but each caller may leave its wait.
 		// Keep its own deadline rather than inheriting the first HTTP request.
-		go func() {
+		admitted := r.startWork(func(parentCtx context.Context) {
 			var session *driveWindowSession
 			var openErr error
 			defer func() {
@@ -329,6 +353,13 @@ func (r *Repository) driveWindowSession(ctx context.Context, drivePath string) (
 				}
 				g.mu.Lock()
 				delete(g.opening, hash)
+				if g.closed {
+					if session != nil {
+						session.cancel()
+					}
+					session = nil
+					openErr = newReadError(context.Canceled)
+				}
 				if openErr == nil {
 					if g.sessions == nil {
 						g.sessions = map[string]*driveWindowSession{}
@@ -336,7 +367,7 @@ func (r *Repository) driveWindowSession(ctx context.Context, drivePath string) (
 					g.evictLocked()
 					g.sessions[hash] = session
 					delete(g.failed, hash)
-				} else if errors.Is(openErr, ErrDriveWindowReadFailed) {
+				} else if !g.closed && errors.Is(openErr, ErrDriveWindowReadFailed) {
 					if g.failed == nil {
 						g.failed = map[string]openFailure{}
 					}
@@ -346,10 +377,16 @@ func (r *Repository) driveWindowSession(ctx context.Context, drivePath string) (
 				call.s, call.err = session, openErr
 				close(call.done)
 			}()
-			octx, cancel := context.WithTimeout(context.Background(), driveWindowOpenTimeout)
+			octx, cancel := context.WithTimeout(parentCtx, driveWindowOpenTimeout)
 			defer cancel()
 			session, openErr = r.openDriveWindowSession(octx, drivePath, hash)
-		}()
+		})
+		if !admitted {
+			delete(g.opening, hash)
+			call.err = newReadError(context.Canceled)
+			close(call.done)
+		}
+		g.mu.Unlock()
 		select {
 		case <-ctx.Done():
 			return nil, newReadError(ctx.Err())
@@ -452,9 +489,17 @@ func (r *Repository) openDriveWindowSession(ctx context.Context, drivePath, hash
 	if err := writeDriveAttachments(ctx, f, videofile.GetFileAttCacheDir(cacheDir, hash)); err != nil {
 		r.logger.Warn().Err(err).Str("hash", hash).Msg("mediastream: could not extract Drive attachments")
 	}
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+	if err := ctx.Err(); err != nil {
+		return nil, newReadError(err)
+	}
+	s.ctx, s.cancel = context.WithCancel(r.workContext())
 
 	g.mu.Lock()
+	if g.closed {
+		g.mu.Unlock()
+		s.cancel()
+		return nil, newReadError(context.Canceled)
+	}
 	if g.opens == nil {
 		g.opens = map[string]int{}
 	}
@@ -554,6 +599,9 @@ func (s *driveWindowSession) touch() {
 
 // writeDriveAttachments deja las fuentes del archivo donde las sirve /att.
 func writeDriveAttachments(ctx context.Context, f *mkvsubs.File, dir string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	atts := f.Attachments()
 	if len(atts) == 0 {
 		return nil
@@ -563,6 +611,9 @@ func writeDriveAttachments(ctx context.Context, f *mkvsubs.File, dir string) err
 	}
 	var errs []error
 	for i, a := range atts {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		name := filepath.Base(filepath.Clean(a.Name))
 		if name == "" || name == "." || name == ".." || name == string(filepath.Separator) {
 			name = fmt.Sprintf("font_%d.ttf", i)
@@ -576,29 +627,14 @@ func writeDriveAttachments(ctx context.Context, f *mkvsubs.File, dir string) err
 			errs = append(errs, err)
 			continue
 		}
-		if err := writeFileAtomic(dest, data); err != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := util.WriteFileAtomic(dest, data); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	return errors.Join(errs...)
-}
-
-func writeFileAtomic(path string, data []byte) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
-	if err != nil {
-		return err
-	}
-	_, werr := tmp.Write(data)
-	cerr := tmp.Close()
-	if werr != nil || cerr != nil {
-		_ = os.Remove(tmp.Name())
-		return errors.Join(werr, cerr)
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
-		_ = os.Remove(tmp.Name())
-		return err
-	}
-	return nil
 }
 
 // supportsTrack indica si la N-ésima pista de subtítulos se puede leer por ventanas,
@@ -636,7 +672,6 @@ type DriveWindowSupportInfo struct {
 	// pasajero: no dice nada sobre si el archivo sirve.
 	ReadFailed bool
 	ErrKind    string
-	ErrStatus  int
 }
 
 // DriveWindowSupportInfo abre la sesión si hace falta y lo informa. Nunca confunde una
@@ -647,7 +682,7 @@ func (r *Repository) DriveWindowSupportInfo(ctx context.Context, drivePath strin
 	if err != nil {
 		var re *DriveReadError
 		if errors.As(err, &re) {
-			info.ReadFailed, info.ErrKind, info.ErrStatus = true, re.Kind, re.Status
+			info.ReadFailed, info.ErrKind = true, re.Kind
 			return info
 		}
 		info.FileReason = WindowUnavailableReason(err)
@@ -729,7 +764,13 @@ func (s *driveWindowSession) request(r *Repository, posSec float64, full bool) D
 			Msg("mediastream: Drive subtitle window moved (seek)")
 	}
 	if needsWork {
-		go s.run(r)
+		if !r.startWork(func(context.Context) { s.run(r) }) {
+			s.cancel()
+			s.mu.Lock()
+			s.running = false
+			s.recordFailureLocked(context.Canceled)
+			s.mu.Unlock()
+		}
 	}
 	return s.status(posMs)
 }
@@ -836,17 +877,23 @@ func (s *driveWindowSession) render(trackIndex int) (data []byte, events int, ok
 // finalize deja en disco, con el mismo formato que la extracción con ffmpeg, las pistas
 // de texto de un archivo leído entero: así sobreviven a un reinicio y se sirven como
 // cualquier pista extraída.
-func (s *driveWindowSession) finalize(r *Repository) {
+func (s *driveWindowSession) finalize(r *Repository) error {
+	if err := s.ctx.Err(); err != nil {
+		return err
+	}
 	cacheDir := r.CacheDir()
 	if cacheDir == "" {
-		return
+		return errors.New("module not initialized")
 	}
 	dir := videofile.GetFileSubsCacheDir(cacheDir, s.hash)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return
+		return err
 	}
 	allText := true
 	for i, t := range s.tracks {
+		if err := s.ctx.Err(); err != nil {
+			return err
+		}
 		if !s.wanted[t.Number] {
 			if t.Type == mkvsubs.TrackSubtitle {
 				allText = false
@@ -858,16 +905,25 @@ func (s *driveWindowSession) finalize(r *Repository) {
 		if t.Format() == mkvsubs.FormatASS {
 			ext = "ass"
 		}
-		if err := writeFileAtomic(filepath.Join(dir, strconv.Itoa(i)+"."+ext), data); err != nil {
+		if err := util.WriteFileAtomic(filepath.Join(dir, strconv.Itoa(i)+"."+ext), data); err != nil {
 			r.logger.Warn().Err(err).Str("hash", s.hash).Msg("mediastream: could not persist Drive subtitles")
-			return
+			return err
 		}
 	}
 	stamp := []byte(time.Now().UTC().Format(time.RFC3339))
-	_ = os.WriteFile(filepath.Join(cacheDir, "videofiles", s.hash, driveSubsTextDoneMarker), stamp, 0o644)
-	if allText {
-		_ = os.WriteFile(driveSubsDonePath(cacheDir, s.hash), stamp, 0o644)
+	if err := r.commitDriveSubtitleMarker(s.ctx, filepath.Join(cacheDir, "videofiles", s.hash, driveSubsTextDoneMarker), stamp); err != nil {
+		return err
 	}
+	if allText {
+		if err := videofile.CommitWindowAttachments(cacheDir, s.hash); err != nil {
+			r.logger.Warn().Err(err).Str("hash", s.hash).Msg("mediastream: could not commit Drive subtitles")
+			return err
+		}
+		if err := r.commitDriveSubtitleMarker(s.ctx, driveSubsDonePath(cacheDir, s.hash), stamp); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Cabeceras con las que el servidor le dice al reproductor qué trae la pista que sirve.
@@ -893,7 +949,7 @@ func (r *Repository) serveDriveWindowSubtitle(c echo.Context, drivePath string) 
 	if cacheDir == "" {
 		return false, nil
 	}
-	hash := DriveSubtitleHash(drivePath)
+	hash := r.driveSubtitleHash(drivePath)
 
 	// Ya completa y en disco (por ejemplo, tras un reinicio).
 	if _, statErr := os.Stat(filepath.Join(cacheDir, "videofiles", hash, driveSubsTextDoneMarker)); statErr == nil {

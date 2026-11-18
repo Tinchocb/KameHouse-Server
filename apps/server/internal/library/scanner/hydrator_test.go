@@ -210,7 +210,7 @@ func TestFileHydrator_HydrateMetadata(t *testing.T) {
 
 			var lfs []*dto.LocalFile
 			for _, path := range tt.paths {
-				lf := dto.NewLocalFile(path, "E:/Anime")
+				lf := dto.NewLocalFileS(path, []string{"E:/Anime"})
 				lfs = append(lfs, lf)
 			}
 

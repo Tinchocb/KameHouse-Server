@@ -3,15 +3,6 @@ package util
 import "github.com/mileusna/useragent"
 
 const (
-	PlatformAndroid  = "android"
-	PlatformIOS      = "ios"
-	PlatformLinux    = "linux"
-	PlatformMac      = "mac"
-	PlatformWindows  = "windows"
-	PlatformChromeOS = "chromeos"
-)
-
-const (
 	DeviceDesktop = "desktop"
 	DeviceMobile  = "mobile"
 	DeviceTablet  = "tablet"

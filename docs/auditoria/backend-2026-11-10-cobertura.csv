@@ -1,0 +1,59 @@
+package,production_files,test_files,review,external_validation
+apps/server/internal/api/anilist,1,0,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/api/animethemes,1,1,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/api/filler,1,1,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/api/jikan,1,2,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/api/metadata,1,1,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/api/metadata_provider,9,9,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/api/tmdb,6,4,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/constants,1,0,structural pass + package checks; depth documented in report,
+apps/server/internal/continuity,3,4,structural pass + package checks; depth documented in report,
+apps/server/internal/core,15,15,structural pass + package checks; depth documented in report,
+apps/server/internal/database/db,26,27,structural pass + package checks; depth documented in report,
+apps/server/internal/database/models,5,2,structural pass + package checks; depth documented in report,
+apps/server/internal/database/models/dto,9,1,structural pass + package checks; depth documented in report,
+apps/server/internal/drive,10,20,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/events,3,3,structural pass + package checks; depth documented in report,
+apps/server/internal/handlers,59,56,structural pass + package checks; depth documented in report,
+apps/server/internal/intelligence,2,2,structural pass + package checks; depth documented in report,
+apps/server/internal/library/anime,15,4,structural pass + package checks; depth documented in report,
+apps/server/internal/library/autoscanner,1,2,structural pass + package checks; depth documented in report,
+apps/server/internal/library/filesystem,1,1,structural pass + package checks; depth documented in report,
+apps/server/internal/library/fillermanager,1,0,structural pass + package checks; depth documented in report,
+apps/server/internal/library/metadata,6,3,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/library/parser,1,1,structural pass + package checks; depth documented in report,
+apps/server/internal/library/scanner,34,22,structural pass + package checks; depth documented in report,
+apps/server/internal/library/summary,1,0,structural pass + package checks; depth documented in report,
+apps/server/internal/maintenance,1,1,structural pass + package checks; depth documented in report,
+apps/server/internal/matroska,10,5,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mediastream,16,16,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mediastream/cassette,14,24,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mediastream/extsubs,3,1,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mediastream/pretranscode,1,9,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mediastream/storyboard,3,2,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mediastream/videofile,6,7,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mkvparser,4,1,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mkvsubs,3,3,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/mkvsubs/mkvtest,2,0,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/notifier,1,0,structural pass + package checks; depth documented in report,
+apps/server/internal/pgs,1,0,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/platforms/jikan_platform,1,0,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/platforms/platform,3,0,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/platforms/simulated_platform,1,0,structural pass + package checks; depth documented in report,live provider/account
+apps/server/internal/skipdetect,10,10,structural pass + package checks; depth documented in report,personal media / physical client
+apps/server/internal/user,1,0,structural pass + package checks; depth documented in report,
+apps/server/internal/util,18,9,structural pass + package checks; depth documented in report,
+apps/server/internal/util/cache,3,3,structural pass + package checks; depth documented in report,
+apps/server/internal/util/comparison,1,1,structural pass + package checks; depth documented in report,
+apps/server/internal/util/crashlog,1,0,structural pass + package checks; depth documented in report,
+apps/server/internal/util/ffmpegutil,6,6,structural pass + package checks; depth documented in report,
+apps/server/internal/util/filecache,1,9,structural pass + package checks; depth documented in report,
+apps/server/internal/util/http,2,1,structural pass + package checks; depth documented in report,
+apps/server/internal/util/httpclient,1,0,structural pass + package checks; depth documented in report,
+apps/server/internal/util/httprange,1,2,structural pass + package checks; depth documented in report,
+apps/server/internal/util/limiter,1,0,structural pass + package checks; depth documented in report,
+apps/server/internal/util/parallel,1,3,structural pass + package checks; depth documented in report,
+apps/server/internal/util/proxies,1,3,structural pass + package checks; depth documented in report,
+apps/server/internal/util/resourcebudget,2,4,structural pass + package checks; depth documented in report,
+apps/server/internal/util/result,3,0,structural pass + package checks; depth documented in report,
+apps/server/internal/util/strsim,1,1,structural pass + package checks; depth documented in report,

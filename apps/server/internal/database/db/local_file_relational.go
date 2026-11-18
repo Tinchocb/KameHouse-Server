@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/goccy/go-json"
@@ -21,6 +22,15 @@ var localFileUpsertColumns = []string{
 	"embedded_metadata", "metadata", "technical_info", "tags", "updated_at",
 }
 
+// DTO reads do not expose row timestamps or model-only tags. Avoid decoding
+// those columns for every file on a cold library load; retain row identity and
+// every field consumed by LocalFileModelToDto, including all JSON payloads.
+var localFileDTOColumns = []string{
+	"id", "path", "name", "file_hash", "file_size", "file_mod_time",
+	"locked", "ignored", "library_media_id", "media_id", "drive_file_id",
+	"parsed_data", "parsed_folder_data", "embedded_metadata", "metadata", "technical_info",
+}
+
 // escapeLikePattern escapes SQLite LIKE wildcards so a library path containing
 // `%`, `_` or `\` matches literally instead of acting as a wildcard.
 func escapeLikePattern(s string) string {
@@ -33,7 +43,7 @@ func escapeLikePattern(s string) string {
 // GetAllLocalFilesRelational retrieves all local files from the relational table.
 // Accepts optional page/perPage for pagination; if both 0, returns all (legacy compat).
 func GetAllLocalFilesRelational(d *Database) ([]*dto.LocalFile, error) {
-	query := d.gormdb.Order("id asc")
+	query := d.gormdb.Select(localFileDTOColumns).Order("id asc")
 
 	var dbFiles []*models.LocalFile
 	err := query.Find(&dbFiles).Error
@@ -75,17 +85,23 @@ func GetAllLocalFilesRelational(d *Database) ([]*dto.LocalFile, error) {
 //
 // Devuelve ErrRecordNotFound si la media no está en la librería local.
 func GetLibraryMediaByExternalMediaID(d *Database, mediaID int) (*models.LibraryMedia, error) {
-	var libraryMediaID uint
+	var libraryMediaIDs []uint
 	if err := d.gormdb.Model(&models.LocalFile{}).
-		Select("library_media_id").
+		Distinct("library_media_id").
 		Where("media_id = ? AND library_media_id > 0", mediaID).
-		Limit(1).
-		Pluck("library_media_id", &libraryMediaID).Error; err != nil {
+		Limit(2).
+		Pluck("library_media_id", &libraryMediaIDs).Error; err != nil {
 		return nil, err
+	}
+	if len(libraryMediaIDs) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if len(libraryMediaIDs) > 1 {
+		return nil, &AmbiguousMediaIDError{MediaID: mediaID}
 	}
 
 	var lm models.LibraryMedia
-	if err := d.gormdb.Where("id = ?", libraryMediaID).First(&lm).Error; err != nil {
+	if err := d.gormdb.Where("id = ?", libraryMediaIDs[0]).First(&lm).Error; err != nil {
 		return nil, err
 	}
 	return &lm, nil
@@ -93,7 +109,7 @@ func GetLibraryMediaByExternalMediaID(d *Database, mediaID int) (*models.Library
 
 func GetLocalFilesByMediaIDRelational(d *Database, mediaID int) ([]*dto.LocalFile, error) {
 	var dbFiles []*models.LocalFile
-	err := d.gormdb.Where("media_id = ?", mediaID).Find(&dbFiles).Error
+	err := d.gormdb.Select(localFileDTOColumns).Where("media_id = ?", mediaID).Find(&dbFiles).Error
 	if err != nil {
 		return nil, err
 	}
@@ -113,6 +129,40 @@ func GetLocalFilesByMediaIDRelational(d *Database, mediaID int) ([]*dto.LocalFil
 		res[i] = conv
 	}
 	return res, nil
+}
+
+// UpdateLocalFileProbe publishes only probe-owned data for the same source
+// revision. A delayed probe must not undo a manual match, recreate a deleted
+// file, or attach old stream information to a replacement at the same path.
+func UpdateLocalFileProbe(ctx context.Context, d *Database, file *dto.LocalFile) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	if file == nil || file.TechnicalInfo == nil {
+		return false, nil
+	}
+	technical, err := json.Marshal(file.TechnicalInfo)
+	if err != nil {
+		return false, err
+	}
+	updates := map[string]interface{}{"technical_info": technical}
+	if file.EmbeddedMetadata != nil {
+		embedded, err := json.Marshal(file.EmbeddedMetadata)
+		if err != nil {
+			return false, err
+		}
+		updates["embedded_metadata"] = embedded
+	}
+	res := d.gormdb.WithContext(ctx).Model(&models.LocalFile{}).
+		Where("path = ? AND file_size = ? AND file_mod_time = ?", file.Path, file.FileSize, file.FileModTime).
+		Updates(updates)
+	if res.Error != nil {
+		return false, res.Error
+	}
+	if res.RowsAffected > 0 {
+		InvalidateLocalFilesCache(d)
+	}
+	return res.RowsAffected > 0, nil
 }
 
 // UpsertLocalFileRelationalBatch inserts or updates a slice of LocalFiles in the relational table.

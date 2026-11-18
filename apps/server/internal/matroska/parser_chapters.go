@@ -21,8 +21,7 @@ import (
 // Returns:
 //   - error: An error if the Chapters element could not be parsed.
 func (mp *MatroskaParser) parseChapters(size uint64) error {
-	data := make([]byte, size)
-	_, err := io.ReadFull(mp.reader, data)
+	data, err := mp.reader.readMetadata(size)
 	if err != nil {
 		return err
 	}

@@ -1,9 +1,10 @@
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SeriesCard, type SeriesItem } from './-SeriesCard';
+import { SeriesCard } from './-SeriesCard';
+import type { SeriesItem } from './-series-model';
 
 vi.mock('@/hooks/use-prefetch-anime-entry', () => ({ usePrefetchAnimeEntry: () => () => {} }));
-vi.mock('@/lib/theme/use-classic-mode', () => ({ useIsClassicMode: () => false }));
+vi.mock('@/lib/theme/use-classic-mode', () => ({ useIsClassicMode: () => false, useIsMinimalistMode: () => false }));
 const saving = vi.hoisted(() => ({ enabled: false }));
 vi.mock('@/lib/network-preferences', () => ({ isDataSavingEnabled: () => saving.enabled }));
 
@@ -29,7 +30,7 @@ describe('SeriesCard: combate por intención', () => {
     });
 
     it.each(['focus', 'mouseEnter', 'click'] as const)('prepara combate con %s', (event) => {
-        vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+        vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() } as unknown as MediaQueryList);
         const { container, getByRole } = render(<SeriesCard {...props} />);
         fireEvent[event](getByRole('option'));
         expect(attack(container)?.getAttribute('loading')).toBe('eager');
@@ -56,7 +57,7 @@ describe('SeriesCard: combate por intención', () => {
 
     it('con ahorro de datos espera la selección, incluso tras hover o foco', () => {
         saving.enabled = true;
-        vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+        vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() } as unknown as MediaQueryList);
         const { container, getByRole, rerender } = render(<SeriesCard {...props} />);
         fireEvent.mouseEnter(getByRole('option'));
         fireEvent.focus(getByRole('option'));

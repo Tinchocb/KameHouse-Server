@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { ENTER_STAGGER_TOTAL_MS, collectEnterBlocks, staggerBlocksOf, staggerEnter } from "./enter-stagger"
+import { collectEnterBlocks, staggerBlocksOf, staggerEnter } from "./enter-stagger"
 import { NAV_DIM_OPACITY, entryStartOpacity } from "./navigation-transition"
 
 const VIEWPORT = 900
@@ -77,10 +77,6 @@ describe("collectEnterBlocks", () => {
     it("limita la cantidad de bloques escalonados", () => {
         const many = Array.from({ length: 7 }, () => block({ h: 100 }))
         expect(collectEnterBlocks(rootWith(...many), VIEWPORT)).toHaveLength(3)
-    })
-
-    it("la entrada escalonada cierra dentro del tope de 250 ms de la navegación", () => {
-        expect(ENTER_STAGGER_TOTAL_MS).toBeLessThanOrEqual(250)
     })
 })
 

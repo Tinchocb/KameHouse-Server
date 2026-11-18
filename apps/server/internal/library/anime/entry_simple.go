@@ -7,7 +7,6 @@ import (
 	"github.com/sourcegraph/conc/pool"
 	"kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/constants"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/platforms/platform"
@@ -56,38 +55,9 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	entry.IntelligenceSvc = opts.IntelligenceSvc
 
 	// Get local DB media
-	var fetchedMedia *models.LibraryMedia
-
-	// Try direct lookup by potential PK
-	fetchedMedia, _ = db.GetLibraryMediaByID(opts.Database, uint(opts.MediaID))
-
-	// If not found, try looking it up by TMDB ID
-	if fetchedMedia == nil {
-		if opts.MediaID >= constants.MovieIDOffset {
-			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID-constants.MovieIDOffset, "MOVIE")
-			if err == nil && m != nil {
-				fetchedMedia = m
-			}
-		} else {
-			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID, "SHOW")
-			if err == nil && m != nil {
-				fetchedMedia = m
-			}
-		}
-	}
-
-	// If direct lookup or TMDB lookup failed,
-	// find the LibraryMediaId from local files
-	if fetchedMedia == nil {
-		for _, lf := range opts.LocalFiles {
-			if lf.MediaID == opts.MediaID && lf.LibraryMediaId > 0 {
-				m, err := db.GetLibraryMediaByID(opts.Database, lf.LibraryMediaId)
-				if err == nil && m != nil {
-					fetchedMedia = m
-					break
-				}
-			}
-		}
+	fetchedMedia, err := db.ResolveLibraryMediaByPublicID(opts.Database, opts.MediaID)
+	if err != nil {
+		return nil, err
 	}
 
 	if fetchedMedia == nil {
@@ -144,7 +114,7 @@ func NewSimpleEntry(ctx context.Context, opts *NewSimpleAnimeEntryOptions) (*Sim
 	// even in the simple (no-AniDB) path.
 	var fetchedAnimeMetadata *metadata.AnimeMetadata
 	if opts.MetadataProviderRef != nil && !opts.SkipAnimeMetadata {
-		if am, err := opts.MetadataProviderRef.GetAnimeMetadata(int(fetchedMedia.ID)); err == nil && am != nil {
+		if am, err := opts.MetadataProviderRef.GetAnimeMetadata(opts.MediaID); err == nil && am != nil {
 			fetchedAnimeMetadata = am
 		}
 	}

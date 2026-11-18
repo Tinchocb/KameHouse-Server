@@ -53,7 +53,7 @@ export function usePlayerBackendSync({
     })
 
     const sendHeartbeat = useCallback((curr: number, dur: number) => {
-        if (!mediaId || !episodeNumber) return
+        if (!mediaId || episodeNumber == null || episodeNumber < 0) return
         const progress = dur > 0 ? curr / dur : 0
         sendJsonMessage({
             type: "native-player",

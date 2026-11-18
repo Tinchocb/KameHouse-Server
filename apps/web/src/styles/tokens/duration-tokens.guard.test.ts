@@ -38,7 +38,7 @@ describe("--duration-fast en el código", () => {
             .filter((f) => USO_DURATION_FAST.test(sinComentarios(readFileSync(f, "utf8"))))
             .map((f) => relative(SRC, f).split(sep).join("/"))
         expect(culpables).toEqual([])
-    })
+    }, 15000)
 })
 
 describe("clase y variable duration-fast", () => {

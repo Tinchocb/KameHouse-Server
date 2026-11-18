@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import type React from "react"
 
-/** Pausa al ocultarse la página o suspenderse la app (en especial Smart TVs Tizen). */
+/** Pausa al ocultarse la página o suspenderse la app. */
 export function usePlayerVisibilityPause({ videoRef, setIsPlaying }: {
     videoRef: React.RefObject<HTMLVideoElement | null>
     setIsPlaying: (playing: boolean) => void
@@ -18,11 +18,9 @@ export function usePlayerVisibilityPause({ videoRef, setIsPlaying }: {
         }
         document.addEventListener("visibilitychange", handleVisibilityChange)
         document.addEventListener("webkitvisibilitychange", handleVisibilityChange)
-        document.addEventListener("tizenvisibilitywrapper", handleVisibilityChange)
         return () => {
             document.removeEventListener("visibilitychange", handleVisibilityChange)
             document.removeEventListener("webkitvisibilitychange", handleVisibilityChange)
-            document.removeEventListener("tizenvisibilitywrapper", handleVisibilityChange)
         }
     }, [setIsPlaying, videoRef])
 }

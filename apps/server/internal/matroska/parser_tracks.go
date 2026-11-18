@@ -29,8 +29,7 @@ import (
 // Returns:
 //   - error: An error if the Tracks element could not be read or parsed.
 func (mp *MatroskaParser) parseTracks(size uint64) error {
-	data := make([]byte, size)
-	_, err := io.ReadFull(mp.reader, data)
+	data, err := mp.reader.readMetadata(size)
 	if err != nil {
 		return err
 	}

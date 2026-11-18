@@ -2,6 +2,9 @@ import * as React from "react"
 import { Models_Theme } from "@/api/generated/types"
 import { useGetSettings } from "@/api/hooks/settings.hooks"
 import { useAppStore } from "@/lib/store"
+import { normalizeThemePreference, type ThemeMode } from "./themes-registry"
+
+export type { ThemeMode }
 
 
 const enum ThemeLibraryScreenBannerType {
@@ -32,30 +35,22 @@ const enum ThemeMediaPageInfoBoxSize {
 
 type ThemeSettings = Omit<Models_Theme, "id" | "createdAt" | "updatedAt">
 
-export type ThemeMode = "classic" | "era"
-
 /**
- * Resolves the effective UI mode. `themeMode` is the explicit source of truth;
- * for legacy settings saved before the field existed ("" / unknown), derive it:
- * era users keep their palette, old "Modo Avanzado" (blur) users keep effects,
- * everyone else lands on the premium Classic mode.
+ * Resolves the effective UI mode. `themeMode` is the explicit source of truth.
+ * Only two themes exist: Minimalista ("classic-minimalist") and Por era ("era").
+ * For backward compatibility: legacy "classic" (Neutro) and "advanced" are converted
+ * to "era" with Universo DB, preserving transparency and visual effects.
  */
 export function resolveThemeMode(t: Pick<ThemeSettings, "themeMode" | "themeEra" | "themeEnableBlurringEffects">): ThemeMode {
-    if (t.themeMode === "classic" || t.themeMode === "era") return t.themeMode
-    // "advanced" es un valor legacy que ya no forma parte del union ThemeMode
-    if ((t.themeMode as string) === "advanced") return "era"
-    if (t.themeEra?.startsWith("era-")) return "era"
-    // Solo derivar a "era" por blur si el usuario NO eligió modo explícitamente
-    if (!t.themeMode && t.themeEnableBlurringEffects) return "era"
-    return "classic"
+    return normalizeThemePreference(t).themeMode
 }
 
 const THEME_DEFAULT_VALUES: ThemeSettings = {
     enableColorSettings: false,
     backgroundColor: "#050506",
     accentColor: "#C8102E",
-    themeEra: "classic",
-    themeMode: "",
+    themeEra: "era-universe",
+    themeMode: "era",
     themeEnableLiquidGlass: false,
     themeSmallerEpisodeCarouselSize: false,
     themeExpandSidebarOnHover: false,
@@ -137,16 +132,14 @@ export function useThemeSettings(): ThemeSettingsHook {
     }, [serverTheme, themeVisual])
 
     return React.useMemo(() => {
-        // Sin servidor (primer arranque offline): Classic explícito, como promete
-        // el comentario de resolveThemeMode. No toca la derivación legacy cuando
-        // sí hay servidor (themeMode:"" + blur heredado sigue dando era).
+        // Sin preferencias disponibles, el primer arranque offline usa Por era.
         if (!theme) {
             return {
                 ...THEME_DEFAULT_VALUES,
-                themeEra: "classic",
-                themeMode: "classic" as const,
-                effectiveMode: "classic" as ThemeMode,
-                hasEraTheme: false,
+                themeEra: "era-universe",
+                themeMode: "era" as const,
+                effectiveMode: "era" as ThemeMode,
+                hasEraTheme: true,
                 hasCustomBackground: false,
                 hasCustomAccentColor: false,
             }
@@ -173,26 +166,25 @@ export function useThemeSettings(): ThemeSettingsHook {
         const rawBackgroundColor = theme?.backgroundColor ?? ""
         const rawAccentColor = theme?.accentColor ?? ""
 
-        const effectiveMode = resolveThemeMode(merged)
+        const normalized = normalizeThemePreference({ ...merged, themeMode: theme.themeMode ?? "" })
+        const effectiveMode = normalized.themeMode
         
-        let effectiveEra = merged.themeEra
-        if (effectiveMode === "era") {
-            if (!effectiveEra || !effectiveEra.startsWith("era-")) {
-                effectiveEra = "era-universe"
-            }
-        } else if (effectiveMode === "classic") {
-            if (!effectiveEra || (!effectiveEra.startsWith("classic") && effectiveEra !== "classic")) {
-                effectiveEra = "classic"
-            }
-        }
+        const effectiveEra = normalized.themeEra
 
+        // Por era respeta la preferencia guardada de Liquid Glass.
+        // Minimalista es plano por diseño (sin transparencias ni Liquid Glass).
+        const effectiveLiquidGlass =
+            effectiveMode === "era"
+                ? (theme?.themeEnableLiquidGlass !== false)
+                : false
+
+        // El toggle de blur de merged manda en ambos modos; los tokens de
+        // cada tema modulan la intensidad.
         return {
             ...merged,
+            themeMode: effectiveMode,
             themeEra: effectiveEra,
-            // El toggle del usuario manda en ambos modos. En Clásico la
-            // intensidad la modulan los tokens de [data-mode="classic"] (sutil);
-            // en Por Era es el glass completo con tintes de saga.
-            themeEnableBlurringEffects: merged.themeEnableBlurringEffects,
+            themeEnableLiquidGlass: effectiveLiquidGlass,
             effectiveMode,
             hasEraTheme: effectiveEra !== "",
             hasCustomBackground: rawBackgroundColor !== "",

@@ -15,6 +15,12 @@ const exeExt = process.platform === "win32" ? ".exe" : "";
 const outputName = `kamehouse${exeExt}`;
 const serverExe = path.join(serverDir, outputName);
 
+// Reject before cleaning, compiling or staging any files.
+if (process.argv.includes("--cross")) {
+  console.error("Cross-compilation is not implemented. Run this script on the target platform without --cross.");
+  process.exit(1);
+}
+
 console.log(isDev ? "⚡ Compiling Go server (dev mode)..." : "🔨 Compiling Go server...");
 
 if (isClean) {
@@ -78,18 +84,13 @@ if (isDev) {
 
 console.log("📦 Copying sidecar binaries for Tauri desktop...");
 
-// Build cross-platform only when explicitly asked; otherwise build for current host
-const shouldCross = process.argv.includes("--cross");
-const targets = shouldCross ? getCrossTargets() : [getHostTarget()];
+const targets = [getHostTarget()];
 
 let copied = 0;
 for (const target of targets) {
   const destName = `kamehouse-server-${target}${exeExt}`;
   const destPath = path.join(binariesDir, destName);
   try {
-    if (shouldCross) {
-      console.warn(`Cross-compile for ${target} not implemented; copying host binary as fallback.`);
-    }
     fs.copyFileSync(serverExe, destPath);
     copied++;
   } catch (e) {
@@ -110,14 +111,5 @@ function getHostTarget() {
     case "darwin": return process.arch === "arm64" ? "aarch64-apple-darwin" : "x86_64-apple-darwin";
     case "linux": return process.arch === "arm64" ? "aarch64-unknown-linux-gnu" : "x86_64-unknown-linux-gnu";
     default: return "x86_64-pc-windows-msvc";
-  }
-}
-
-function getCrossTargets() {
-  switch (process.platform) {
-    case "win32": return ["x86_64-pc-windows-msvc"];
-    case "darwin": return ["x86_64-apple-darwin", "aarch64-apple-darwin"];
-    case "linux": return ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"];
-    default: return ["x86_64-pc-windows-msvc"];
   }
 }

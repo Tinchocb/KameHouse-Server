@@ -1,3 +1,4 @@
+import { persistLibraryPatch } from "@/lib/server/persist-settings"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
@@ -50,7 +51,8 @@ function startMarathonPlayback(firstItemId: string | number, firstEpisode: numbe
     const index = queue.findIndex((i) => i.id === firstItemId && i.episodeNumber === firstEpisode)
     if (index < 0) return
     useQueueStore.getState().setCurrentQueueIndex(index)
-    usePlayerStore.getState().setTvMode(true)
+    usePlayerStore.getState().setMarathonMode(true)
+    persistLibraryPatch({ marathonMode: true })
 }
 
 /**

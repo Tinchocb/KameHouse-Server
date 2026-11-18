@@ -2,8 +2,8 @@
 import { useEffect, useRef } from "react"
 import type JASSUB from "jassub"
 import { SubtitleTrack } from "@/components/ui/track-types"
+import type { AspectRatioMode } from "./video-aspect"
 import { convertToAss, scaleAssStyles } from "./subtitle-convert"
-import { __isTV__ } from "@/types/constants"
 import { useSubtitleLoadStore } from "./subtitle-load-store"
 import { SubtitleFetchError, describeSubtitleError } from "./subtitle-messages"
 
@@ -13,6 +13,7 @@ interface UsePlayerJassubProps {
     activeSubtitleIndex: number | null
     subtitleTracks: SubtitleTrack[]
     subtitleSizePref: number
+    aspectRatio?: AspectRatioMode
     fontUrls?: string[]
     /**
      * Sube cuando el servidor tiene subtítulos nuevos de una pista progresiva (Drive por
@@ -20,7 +21,26 @@ interface UsePlayerJassubProps {
      */
     refreshKey?: number
     setIsJassubLoading: (loading: boolean) => void
-    setIsJassubActive: (active: boolean) => void
+}
+
+async function resizeJassubForAspect(
+    jassub: JASSUB,
+    video: HTMLVideoElement | null,
+    aspectRatio: AspectRatioMode,
+) {
+    if (aspectRatio === "contain") {
+        await jassub.resize(true)
+        return
+    }
+    const stage = video?.parentElement
+    const width = stage?.clientWidth || video?.clientWidth || 0
+    const height = stage?.clientHeight || video?.clientHeight || 0
+    if (width > 0 && height > 0) {
+        const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1
+        await jassub.resize(true, Math.round(width * dpr), Math.round(height * dpr))
+    } else {
+        await jassub.resize(true)
+    }
 }
 
 function setRefValue<T>(ref: React.MutableRefObject<T>, value: T) {
@@ -33,10 +53,10 @@ export function usePlayerJassub({
     activeSubtitleIndex,
     subtitleTracks,
     subtitleSizePref,
+    aspectRatio = "contain",
     fontUrls,
     refreshKey = 0,
     setIsJassubLoading,
-    setIsJassubActive,
 }: UsePlayerJassubProps) {
     const cachedAssContentRef = useRef<{ url: string; content: string } | null>(null)
     // Última clave de recarga pedida y la que ya recoge la pista cargada: si el servidor
@@ -55,6 +75,15 @@ export function usePlayerJassub({
     useEffect(() => {
         setRefValue(subtitleSizeRef, subtitleSizePref)
     }, [subtitleSizePref])
+    const fontUrlsKey = fontUrls?.join("|") ?? ""
+    const fontUrlsRef = useRef(fontUrls)
+    useEffect(() => {
+        setRefValue(fontUrlsRef, fontUrls)
+    }, [fontUrlsKey, fontUrls])
+    const aspectRatioRef = useRef<AspectRatioMode>(aspectRatio)
+    useEffect(() => {
+        setRefValue(aspectRatioRef, aspectRatio)
+    }, [aspectRatio])
     const activeTrack = activeSubtitleIndex !== null && subtitleTracks 
         ? subtitleTracks.find(t => t.index === activeSubtitleIndex) ?? null 
         : null
@@ -71,7 +100,6 @@ export function usePlayerJassub({
                 setRefValue(currentJassubRef, null)
                 Promise.resolve().then(() => {
                     setIsJassubLoading(false)
-                    setIsJassubActive(false)
                 })
             }
             return
@@ -86,13 +114,12 @@ export function usePlayerJassub({
         const codec = trackCodec?.toLowerCase() ?? ""
         const isSupported = codec === "ass" || codec === "ssa" || codec === "subrip" || codec === "vtt"
 
-        if (!isSupported || __isTV__) {
+        if (!isSupported) {
             if (currentJassubRef.current) {
                 currentJassubRef.current.destroy()
                 setRefValue(currentJassubRef, null)
                 Promise.resolve().then(() => {
                     setIsJassubLoading(false)
-                    setIsJassubActive(false)
                 })
             }
             return
@@ -163,7 +190,6 @@ export function usePlayerJassub({
                 if (currentJassubRef.current) {
                     currentJassubRef.current.destroy()
                     setRefValue(currentJassubRef, null)
-                    setIsJassubActive(false)
                 }
 
                 // Let JASSUB create and manage its OWN canvas (inserted after the video
@@ -179,7 +205,7 @@ export function usePlayerJassub({
                     workerUrl: "/jassub/jassub-worker.js",
                     wasmUrl: "/jassub/jassub-worker.wasm",
                     modernWasmUrl: "/jassub/jassub-worker-modern.wasm",
-                    fonts: fontUrls ?? [],
+                    fonts: fontUrlsRef.current ?? [],
                 })
 
                 if (isCancelled) {
@@ -188,9 +214,13 @@ export function usePlayerJassub({
                 }
 
                 setRefValue(currentJassubRef, jassub)
-                setIsJassubActive(true)
                 setIsJassubLoading(false)
                 reportLoad("idle")
+                await jassub.ready
+                if (isCancelled || currentJassubRef.current !== jassub) return
+                if (aspectRatioRef.current !== "contain") {
+                    await resizeJassubForAspect(jassub, video, aspectRatioRef.current)
+                }
                 if (trackProgressive && latestRefreshKeyRef.current !== appliedRefreshKeyRef.current) {
                     refreshProgressiveRef.current?.()
                 }
@@ -198,7 +228,6 @@ export function usePlayerJassub({
                 console.error("jassub: Failed to initialize:", err)
                 if (!isCancelled) {
                     setIsJassubLoading(false)
-                    setIsJassubActive(false)
                     reportLoad("error", describeSubtitleError(err))
                 }
             }
@@ -216,10 +245,9 @@ export function usePlayerJassub({
                 currentJassubRef.current.destroy()
                 setRefValue(currentJassubRef, null)
                 setIsJassubLoading(false)
-                setIsJassubActive(false)
             }
         }
-    }, [activeSubtitleIndex, trackUrl, trackCodec, trackProgressive, fontUrls, videoRef, jassubRef, setIsJassubLoading, setIsJassubActive])
+    }, [activeSubtitleIndex, trackUrl, trackCodec, trackProgressive, fontUrlsKey, videoRef, jassubRef, setIsJassubLoading])
 
     // Subtítulos nuevos de una pista progresiva: se pide de nuevo y se reemplaza la pista
     // del renderer (sin recrearlo: no hay parpadeo ni se pierde el tamaño).
@@ -251,7 +279,7 @@ export function usePlayerJassub({
                     await jassub.ready
                     if (c.signal.aborted || jassubRef.current !== jassub) return
                     await jassub.renderer.setTrack(scaleAssStyles(ass, subtitleSizeRef.current / 100))
-                    await jassub.resize(true)
+                    await resizeJassubForAspect(jassub, videoRef.current, aspectRatioRef.current)
                 } catch (err) {
                     if (!c.signal.aborted) console.warn("jassub: no se pudo actualizar la pista progresiva:", err)
                 }
@@ -262,32 +290,91 @@ export function usePlayerJassub({
             ctrl?.abort()
             refreshProgressiveRef.current = null
         }
-    }, [trackUrl, trackCodec, trackProgressive, jassubRef])
+    }, [trackUrl, trackCodec, trackProgressive, jassubRef, videoRef])
 
     useEffect(() => {
         if (appliedRefreshKeyRef.current === refreshKey) return
         refreshProgressiveRef.current?.()
     }, [refreshKey])
 
-    // Tamaño de subtítulos en caliente: reescala los estilos del documento ASS y
-    // reemplaza la pista en el renderer existente (resize(true) fuerza el repintado
-    // aunque el video esté en pausa).
-    // Solo depende del tamaño: una instancia nueva ya nace con el tamaño vigente.
+    // Tamaño de subtítulos en caliente: coalesce con 80ms para no re-escalar ni repintar el worker
+    // en cada paso intermedio mientras el usuario arrastra el deslizador.
     useEffect(() => {
         const jassub = jassubRef.current
         const cached = cachedAssContentRef.current
         if (!jassub || !cached) return
-        const content = scaleAssStyles(cached.content, subtitleSizePref / 100)
-        jassub.ready
-            .then(async () => {
-                if (jassubRef.current !== jassub) return
-                await jassub.renderer.setTrack(content)
-                await jassub.resize(true)
+        let cancelled = false
+        const timer = window.setTimeout(() => {
+            if (cancelled || jassubRef.current !== jassub) return
+            const content = scaleAssStyles(cached.content, subtitleSizePref / 100)
+            jassub.ready
+                .then(async () => {
+                    if (cancelled || jassubRef.current !== jassub) return
+                    await jassub.renderer.setTrack(content)
+                    await resizeJassubForAspect(jassub, videoRef.current, aspectRatioRef.current)
+                })
+                .catch((err: unknown) => console.warn("jassub: no se pudo aplicar el tamaño de subtítulos:", err))
+        }, 80)
+        return () => {
+            cancelled = true
+            window.clearTimeout(timer)
+        }
+    }, [subtitleSizePref, videoRef, jassubRef])
+
+    // Sincronizar la resolución del lienzo JASSUB con el cuadro visible del stage al cambiar
+    // la relación de aspecto o redimensionar el reproductor (sin dejar subtítulos recortados).
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+        let cancelled = false
+        let rafId = 0
+        let timerId = 0
+
+        const sync = () => {
+            const jassub = jassubRef.current
+            if (!jassub || cancelled) return
+            void jassub.ready
+                .then(async () => {
+                    if (cancelled || jassubRef.current !== jassub) return
+                    await resizeJassubForAspect(jassub, video, aspectRatioRef.current)
+                })
+                .catch(() => {})
+        }
+
+        const scheduleSync = () => {
+            if (rafId) cancelAnimationFrame(rafId)
+            if (timerId) window.clearTimeout(timerId)
+            rafId = requestAnimationFrame(() => {
+                rafId = 0
+                // Ejecutar después del ResizeObserver interno de JASSUB para no ser pisado.
+                timerId = window.setTimeout(sync, 24)
             })
-            .catch((err: unknown) => console.warn("jassub: no se pudo aplicar el tamaño de subtítulos:", err))
-    }, [subtitleSizePref, jassubRef])
-    // Note: JASSUB owns canvas sizing via its internal ResizeObserver. Because the
-    // canvas control is transferred to the offscreen worker (useOffscreen + app-supplied
-    // canvas), writing canvas.width/height on the main thread throws InvalidStateError
-    // and fights the library — so we deliberately do not resize the canvas manually here.
+        }
+
+        scheduleSync()
+
+        const stage = video.parentElement
+        if (typeof ResizeObserver === "undefined") {
+            return () => {
+                cancelled = true
+                if (rafId) cancelAnimationFrame(rafId)
+                if (timerId) window.clearTimeout(timerId)
+            }
+        }
+
+        const observer = new ResizeObserver(() => {
+            if (aspectRatioRef.current !== "contain") {
+                scheduleSync()
+            }
+        })
+        if (stage) observer.observe(stage)
+        observer.observe(video)
+
+        return () => {
+            cancelled = true
+            observer.disconnect()
+            if (rafId) cancelAnimationFrame(rafId)
+            if (timerId) window.clearTimeout(timerId)
+        }
+    }, [aspectRatio, activeSubtitleIndex, trackUrl, videoRef, jassubRef])
 }

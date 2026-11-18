@@ -1,5 +1,5 @@
 import { memo, useCallback, useState, type CSSProperties } from 'react';
-import { useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { IconArrowRight, IconUiCheckCircle2 } from '@/components/ui/icons';
 import { cn } from '@/components/ui/core/styling';
 import { ButtonAnatomy } from '@/components/ui/button';
@@ -9,12 +9,10 @@ import { usePrefetchAnimeEntry } from '@/hooks/use-prefetch-anime-entry';
 import { DRAGON_BALL_SERIES_INFO, getSeriesEraAccent } from '@/lib/helpers/series';
 import { DRAGON_BALL_SAGAS } from '@/lib/config/dragonball_sagas';
 import { usePerformanceStore, selectEffectiveTier } from '@/lib/hardware/performance-store';
-import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
+import { useIsMinimalistMode } from '@/lib/theme/use-classic-mode';
 import { isDataSavingEnabled } from '@/lib/network-preferences';
 import type { SeriesItem } from './-series-model';
 import './-series-shelf.css';
-
-export type { SeriesItem } from './-series-model';
 
 const VHS_ERA_TOKENS = [
     'var(--era-db-hex)', 'var(--era-dbz-hex)', 'var(--era-dbgt-hex)',
@@ -28,7 +26,7 @@ export const SPINE_EXPANDED_BASIS = 480;
 export const SPINE_COLLAPSED_BASIS = 160;
 export const SPINE_EXPANDED_GROW = 3;
 export const SPINE_SHELF_GAP = 8;
-export const SPINE_SHELF_PADDING = 8;
+export const SPINE_SHELF_PADDING = 0;
 
 // Ancho visible / alto del PNG: ignora los márgenes transparentes de cada pose.
 // Permite mostrar el cuerpo completo sin modificar los archivos originales.
@@ -94,7 +92,7 @@ export const SeriesCard = memo(function SeriesCard({
     const handlePrefetch = usePrefetchAnimeEntry(item.id);
     const effectiveTier = usePerformanceStore(selectEffectiveTier);
     const reduceMotion = useReducedMotion();
-    const isClassic = useIsClassicMode();
+    const isMinimalist = useIsMinimalistMode();
     const spineCfg = getSpineConfig(item.seriesId || '', item.id, item.title);
     const canonicalInfo = item.seriesId ? DRAGON_BALL_SERIES_INFO[item.seriesId] : undefined;
     const characterSrc = spineCfg.rawImg;
@@ -117,7 +115,7 @@ export const SeriesCard = memo(function SeriesCard({
     const nextEp = Math.min(item.eps || 1, watchedCount + 1);
     const saga = progress > 0 && !isComplete ? getSagaForEpisode(item.id, nextEp) : null;
     const eraAccent = spineCfg.accent || getSeriesEraAccent(item.seriesId, getVhsColor(item.id));
-    const chromeAccent = isClassic ? 'var(--label-1)' : eraAccent;
+    const chromeAccent = isMinimalist ? 'var(--label-1)' : eraAccent;
 
     const handleActivate = useCallback(() => {
         setRequestedAttackSrc(attackSrc);
@@ -160,6 +158,7 @@ export const SeriesCard = memo(function SeriesCard({
     return (
         <div
             id={`series-card-${item.id}`}
+            data-liquid-surface="content"
             role="option"
             tabIndex={isSelected || isTabStop ? 0 : -1}
             aria-selected={isSelected}
@@ -174,8 +173,8 @@ export const SeriesCard = memo(function SeriesCard({
             data-still={reduceMotion || effectiveTier === 'low_power' ? 'true' : undefined}
             style={{
                 flex: isSelected
-                    ? `${SPINE_EXPANDED_GROW} 0 ${SPINE_EXPANDED_BASIS}px`
-                    : `1 0 ${SPINE_COLLAPSED_BASIS}px`,
+                    ? `${SPINE_EXPANDED_GROW} 0 var(--spine-exp-basis, ${SPINE_EXPANDED_BASIS}px)`
+                    : `1 0 var(--spine-col-basis, ${SPINE_COLLAPSED_BASIS}px)`,
                 animationDelay: `${entryDelayMs}ms`,
                 '--shelf-accent': chromeAccent,
                 '--shelf-progress': progress / 100,
@@ -251,7 +250,7 @@ export const SeriesCard = memo(function SeriesCard({
                 <div className="absolute inset-x-0 top-0 p-4 space-y-2">
                     <p className="text-xs font-medium tabular-nums text-label-2">{item.year}</p>
                     <span className="series-shelf-era block h-1 w-7 rounded-full" />
-                    <h2 className="font-display text-lg font-bold leading-tight text-label-1 line-clamp-2 text-balance">
+                    <h2 className="font-display text-lg xl:text-xl font-bold leading-tight text-label-1 line-clamp-2 text-balance">
                         {item.title}
                     </h2>
                 </div>
@@ -284,7 +283,7 @@ export const SeriesCard = memo(function SeriesCard({
                             {saga}
                         </p>
                     )}
-                    <div className="mt-8 space-y-2">
+                    <div className="mt-6 sm:mt-8 space-y-2">
                         <div className="flex items-center justify-between gap-2 text-xs font-medium tabular-nums text-label-2">
                             <span>{progressLabel}</span>
                             {progress > 0 && <span>{Math.round(progress)}%</span>}
@@ -297,10 +296,15 @@ export const SeriesCard = memo(function SeriesCard({
                         )}
                     </div>
                     {/* La option es el único control enfocable. Esta acción abre la ficha. */}
-                    <span aria-hidden className={cn(
-                        ButtonAnatomy.root({ intent: 'primary', size: 'lg' }),
-                        'mt-6 w-full gap-3',
-                    )}>
+                    <span
+                        aria-hidden
+                        data-intent="primary"
+                        data-size="lg"
+                        className={cn(
+                            ButtonAnatomy.root({ intent: 'primary', size: 'lg' }),
+                            'mt-4 sm:mt-6 w-full gap-2 sm:gap-3',
+                        )}
+                    >
                         Abrir serie
                         <IconArrowRight className="size-4 shrink-0" />
                     </span>

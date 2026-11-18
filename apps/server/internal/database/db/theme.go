@@ -2,19 +2,13 @@ package db
 
 import (
 	"kamehouse/internal/database/models"
-	"sync/atomic"
 
 	"github.com/goccy/go-json"
 )
 
-var (
-	themeCache     atomic.Pointer[models.Theme]
-	themeCopyCache atomic.Pointer[models.Theme]
-)
-
 func (db *Database) GetTheme() (*models.Theme, error) {
 
-	if cached := themeCache.Load(); cached != nil {
+	if cached := db.themeCache.Load(); cached != nil {
 		return cached, nil
 	}
 
@@ -25,7 +19,7 @@ func (db *Database) GetTheme() (*models.Theme, error) {
 		return nil, err
 	}
 
-	themeCache.Store(&theme)
+	db.themeCache.Store(&theme)
 
 	return &theme, nil
 }
@@ -34,7 +28,7 @@ func (db *Database) GetTheme() (*models.Theme, error) {
 // The copy will have the HomeItems removed.
 func (db *Database) GetThemeCopy() (*models.Theme, error) {
 
-	if cached := themeCopyCache.Load(); cached != nil {
+	if cached := db.themeCopyCache.Load(); cached != nil {
 		return cached, nil
 	}
 
@@ -54,7 +48,7 @@ func (db *Database) GetThemeCopy() (*models.Theme, error) {
 		return nil, err
 	}
 
-	themeCopyCache.Store(&themeCopy)
+	db.themeCopyCache.Store(&themeCopy)
 
 	return &themeCopy, nil
 }
@@ -75,8 +69,8 @@ func (db *Database) UpsertTheme(settings *models.Theme) (*models.Theme, error) {
 
 	db.Logger.Debug().Msg("db: Theme saved")
 
-	themeCache.Store(settings)
-	themeCopyCache.Store(nil)
+	db.themeCache.Store(settings)
+	db.themeCopyCache.Store(nil)
 
 	return settings, nil
 

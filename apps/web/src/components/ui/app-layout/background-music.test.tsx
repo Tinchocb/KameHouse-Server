@@ -39,14 +39,14 @@ afterEach(() => {
 
 describe("música contextual", () => {
     it("usa el instrumental de la tarjeta y repite una playlist de una pista", () => {
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         expect(audio.src).toContain("/opening-instrumentals/db.m4a")
         expect(audio.loop).toBe(true)
         expect(audio.play).toHaveBeenCalledOnce()
     })
 
     it("mantiene la pista al entrar a episodios de la misma serie", () => {
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         vi.mocked(audio.load).mockClear()
         act(() => useUIStore.setState({ activeSeriesContext: "12609" }))
         act(() => vi.advanceTimersByTime(650))
@@ -55,7 +55,7 @@ describe("música contextual", () => {
     })
 
     it("cambia a la nueva serie después de asentarse la selección", () => {
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         act(() => useUIStore.setState({ activeSeriesContext: "dragon_ball_z" }))
         expect(audio.src).toContain("/opening-instrumentals/db.m4a")
         act(() => vi.advanceTimersByTime(650))
@@ -63,7 +63,7 @@ describe("música contextual", () => {
     })
 
     it("cancela el fundido pendiente si comienza un episodio", () => {
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         vi.spyOn(audio, "paused", "get").mockReturnValue(false)
         act(() => useUIStore.setState({ activeSeriesContext: "dragon_ball_z" }))
         act(() => vi.advanceTimersByTime(650))
@@ -77,7 +77,7 @@ describe("música contextual", () => {
     })
 
     it("cruza las pistas sin perder potencia y libera la anterior al terminar", async () => {
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         vi.spyOn(audio, "paused", "get").mockReturnValue(false)
         act(() => useUIStore.setState({ activeSeriesContext: "dragon_ball_z" }))
         await act(async () => { vi.advanceTimersByTime(650) })
@@ -96,7 +96,7 @@ describe("música contextual", () => {
     })
 
     it("interrumpe ambas pistas si empieza un video durante el cruce", async () => {
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         vi.spyOn(audio, "paused", "get").mockReturnValue(false)
         act(() => useUIStore.setState({ activeSeriesContext: "dragon_ball_z" }))
         await act(async () => { vi.advanceTimersByTime(650) })
@@ -111,7 +111,7 @@ describe("música contextual", () => {
     })
 
     it("conserva la canción anterior mientras la siguiente carga", async () => {
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         vi.spyOn(audio, "paused", "get").mockReturnValue(false)
         vi.mocked(Audio).mockImplementationOnce(function () {
             const incoming = createAudio()
@@ -128,7 +128,7 @@ describe("música contextual", () => {
 
     it("conserva la pista anterior si la nueva no puede reproducirse", async () => {
         vi.spyOn(console, "warn").mockImplementation(() => {})
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         vi.spyOn(audio, "paused", "get").mockReturnValue(false)
         vi.mocked(Audio).mockImplementationOnce(function () {
             const incoming = createAudio()
@@ -145,7 +145,7 @@ describe("música contextual", () => {
     })
 
     it.each([{ isVideoActive: true }, { eraOpeningPlaying: true }, { bgMusicEnabled: false }])("pausa por %j y retoma sin volver a cargar", state => {
-        render(<BackgroundMusicPlayer headless />)
+        render(<BackgroundMusicPlayer />)
         vi.mocked(audio.load).mockClear()
         vi.mocked(audio.play).mockClear()
         act(() => useUIStore.setState(state))

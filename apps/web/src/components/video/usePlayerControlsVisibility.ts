@@ -5,7 +5,7 @@ export const CONTROLS_HIDE_DELAY_MS = 3000
 
 export function hasFocusedPlayerControls() {
     return document.activeElement?.closest(
-        ".player-top-bar, .player-bottom-bar, .player-center-controls"
+        ".player-top-bar, .player-bottom-bar"
     ) != null
 }
 

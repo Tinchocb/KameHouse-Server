@@ -28,7 +28,6 @@ type Notifier struct {
 	database *db.Database
 	ws       events.WSEventManagerInterface
 	logger   *zerolog.Logger
-	appName  string
 }
 
 var global = &Notifier{}
@@ -43,7 +42,6 @@ func (n *Notifier) Init(database *db.Database, ws events.WSEventManagerInterface
 	n.database = database
 	n.ws = ws
 	n.logger = logger
-	n.appName = "KameHouse"
 }
 
 // Notify persists a notification, pushes it to connected clients and shows an

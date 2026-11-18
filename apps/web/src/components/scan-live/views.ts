@@ -6,7 +6,7 @@ import { useScannerStore } from "@/lib/stores/scanner-store"
 import { useDriveStatus } from "@/lib/drive-status"
 import type { DriveScanProgress } from "@/lib/server/ws-events"
 
-export type ScanFeedIcon = "episode" | "movie" | "file" | "pruned" | "done"
+export type ScanFeedIcon = "episode" | "movie" | "file"
 
 /** Modelo común que pinta ScanLivePanel, sea cual sea el origen del escaneo. */
 export interface ScanLiveView {

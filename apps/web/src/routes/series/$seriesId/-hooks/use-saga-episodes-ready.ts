@@ -2,9 +2,12 @@ import React from "react"
 import type { PremiumEpisode } from "@/api/types/series.types"
 import { getDeferredImageSrcSet } from "@/components/shared/deferred-image"
 import { isImageLoaded, localImage, markImageLoaded } from "@/lib/helpers/images"
+import { queueIdlePreload } from "@/lib/idle-preload-queue"
 
 // Episodios que se esperan antes de mostrar la saga: los que entran en pantalla al cambiarla.
 const READY_BATCH = 8
+// Ventana acotada de precarga en idle tras revelar (el resto se pide bajo demanda al scrollear).
+const IDLE_PRELOAD_WINDOW = 12
 // Tope de espera: si el servidor tarda en generar miniaturas en frío, la lista no se queda colgada.
 const MAX_WAIT_MS = 1500
 const PRELOAD_TIMEOUT_MS = 30000
@@ -104,8 +107,19 @@ export function useSagaEpisodesReady(
     React.useEffect(() => {
         if (readyKey === sagaKey || instantReady) return
         let cancelled = false
+        const cancelIdleTasks: Array<() => void> = []
         const preloadRest = () => {
-            for (const ep of episodes.slice(READY_BATCH)) void preloadEpisode(ep, sizes, "low")
+            if (cancelled) return
+            const upcoming = episodes.slice(READY_BATCH, READY_BATCH + IDLE_PRELOAD_WINDOW)
+            for (const ep of upcoming) {
+                if (!ep.thumbnailUrl) continue
+                const cancel = queueIdlePreload(
+                    `saga-ep:${sagaKey}:${ep.id}`,
+                    () => preloadEpisode(ep, sizes, "low"),
+                    2,
+                )
+                cancelIdleTasks.push(cancel)
+            }
         }
         const reveal = () => {
             if (!cancelled) setReadyKey(sagaKey)
@@ -119,6 +133,7 @@ export function useSagaEpisodesReady(
         return () => {
             cancelled = true
             window.clearTimeout(timer)
+            for (const stop of cancelIdleTasks) stop()
         }
     }, [sagaKey, episodes, readyKey, instantReady, sizes])
 

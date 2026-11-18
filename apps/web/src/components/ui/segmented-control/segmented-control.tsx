@@ -49,7 +49,7 @@ export interface SegmentedControlProps<T extends string> {
  * Segmented control canónico (DESIGN-GUIDE §5.3): pill deslizante con
  * layoutId + spring tabIndicator (480/34), touch 44px, flechas/Home/End con
  * roving tabindex y fallback sin animación para prefers-reduced-motion.
- * En equipos de gama baja (perfil eco o throttle automático) o en modo TV la pill no anima ni
+ * En equipos de gama baja (perfil eco o throttle automático) la pill no anima ni
  * lleva el brillo pesado, igual que el resto de los efectos del sistema.
  */
 /**
@@ -78,7 +78,7 @@ export function SegmentedControl<T extends string>({
     onOptionHover,
     className,
 }: SegmentedControlProps<T>) {
-    // Tier "full": hardware capaz, sin modo TV y con movimiento permitido. Con cualquier otro tier la pill no anima.
+    // Tier "full": hardware capaz y con movimiento permitido. Con cualquier otro tier la pill no anima.
     const allowFx = useMotionTier() === "full"
     const buttonRefs = React.useRef<Array<HTMLButtonElement | null>>([])
     const isTabs = semantics === "tablist"
@@ -121,7 +121,7 @@ export function SegmentedControl<T extends string>({
             role={semantics}
             aria-label={ariaLabel}
             className={cn(
-                "flex items-center gap-1 p-1 rounded-full",
+                "UI-SegmentedControl_root liquid-control flex items-center gap-1 p-1 rounded-full",
                 surface === "glass"
                     ? "glass-frosted-pill"
                     : "bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)]",
@@ -134,9 +134,9 @@ export function SegmentedControl<T extends string>({
                 const accessibleLabel = option.ariaLabel ?? (iconOnly && typeof option.label === "string" ? option.label : undefined)
                 return (
                     <button
+                        type="button"
                         key={option.value}
                         ref={el => { buttonRefs.current[i] = el }}
-                        type="button"
                         role={isTabs ? "tab" : "radio"}
                         id={isTabs ? option.id : undefined}
                         aria-controls={isTabs ? option.panelId : undefined}
@@ -154,14 +154,14 @@ export function SegmentedControl<T extends string>({
                         }}
                         onMouseEnter={onOptionHover ? () => onOptionHover(option.value) : undefined}
                         className={cn(
-                            "relative min-h-11 rounded-full",
+                            "UI-SegmentedControl_option relative min-h-11 rounded-full",
                             iconOnly ? "min-w-11 px-3" : "px-4",
                             labelStyle === "caps" ? "text-xs font-mono font-bold uppercase tracking-wider" : "type-label font-semibold",
                             "flex items-center justify-center gap-2 select-none cursor-pointer",
                             // background-color: el hover de las opciones no elegidas se funde en vez de saltar.
-                            "transition-[color,background-color,transform] duration-quick ease-out-strong active:scale-95",
+                            "transition-[color,background-color,transform] duration-quick ease-out-strong active:scale-[0.97] motion-reduce:active:scale-100",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
-                            "disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100",
+                            "disabled:opacity-40 disabled:cursor-not-allowed motion-safe:disabled:active:scale-100",
                             fullWidth && "flex-1",
                             selected
                                 ? "text-[var(--selected-fg)] font-black"
@@ -173,7 +173,7 @@ export function SegmentedControl<T extends string>({
                             active={selected}
                             disableAnimation={!allowFx}
                             className={cn(
-                                "shadow-elevation-1",
+                                "UI-SegmentedControl_indicator shadow-elevation-1",
                                 tone === "accent" ? "bg-brand-accent text-on-primary font-black" : "bg-[var(--selected-bg)]"
                             )}
                         />

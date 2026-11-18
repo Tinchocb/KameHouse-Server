@@ -40,6 +40,11 @@ type Settings struct {
 	Notifications NotificationSettings `json:"notifications" gorm:"embedded;embeddedPrefix:notifications_"`
 	Platform      PlatformSettings     `json:"platform" gorm:"embedded;embeddedPrefix:platform_"`
 	GoogleDrive   GoogleDriveSettings  `json:"googleDrive" gorm:"embedded;embeddedPrefix:gdrive_"`
+	// SetupPending: el asistente de primer arranque aún no se ha completado. La fila
+	// que crea GetStoredSettings nace en true y HandleGettingStarted la baja a false.
+	// Las filas que ya existían migran con DEFAULT false, así que no piden el asistente.
+	// json:"-": el cliente no puede cambiarlo; /status lo expone como setupRequired.
+	SetupPending bool `json:"-" gorm:"column:setup_pending;default:false"`
 	// Separate tables
 	Mediastream *MediastreamSettings `json:"mediastream" gorm:"-"`
 	Theme       *Theme               `json:"theme" gorm:"-"`
@@ -95,64 +100,50 @@ func (s *LibrarySettings) GetAllPaths() []string {
 type LibraryPaths []string
 
 func (o *LibraryPaths) Scan(src interface{}) error {
-	if src == nil {
-		*o = []string{}
-		return nil
+	values, err := scanCommaSeparated(src)
+	if err == nil {
+		*o = values
 	}
-
-	str, ok := src.(string)
-	if !ok {
-		b, ok := src.([]byte)
-		if !ok {
-			return errors.New("src value cannot cast to string")
-		}
-		str = string(b)
-	}
-
-	if str == "" {
-		*o = []string{}
-		return nil
-	}
-
-	*o = strings.Split(str, ",")
-	return nil
+	return err
 }
 
-func (o LibraryPaths) Value() (driver.Value, error) {
-	if len(o) == 0 {
-		return nil, nil
-	}
-	return strings.Join(o, ","), nil
-}
+func (o LibraryPaths) Value() (driver.Value, error) { return joinCommaSeparated(o) }
 
 type StringSlice []string
 
 func (o *StringSlice) Scan(src interface{}) error {
+	values, err := scanCommaSeparated(src)
+	if err == nil {
+		*o = values
+	}
+	return err
+}
+
+func (o StringSlice) Value() (driver.Value, error) { return joinCommaSeparated(o) }
+
+func scanCommaSeparated(src interface{}) ([]string, error) {
 	if src == nil {
-		*o = []string{}
-		return nil
+		return []string{}, nil
 	}
 	str, ok := src.(string)
 	if !ok {
 		b, ok := src.([]byte)
 		if !ok {
-			return errors.New("src value cannot cast to string")
+			return nil, errors.New("src value cannot cast to string")
 		}
 		str = string(b)
 	}
 	if str == "" {
-		*o = []string{}
-		return nil
+		return []string{}, nil
 	}
-	*o = strings.Split(str, ",")
-	return nil
+	return strings.Split(str, ","), nil
 }
 
-func (o StringSlice) Value() (driver.Value, error) {
-	if len(o) == 0 {
+func joinCommaSeparated(values []string) (driver.Value, error) {
+	if len(values) == 0 {
 		return nil, nil
 	}
-	return strings.Join(o, ","), nil
+	return strings.Join(values, ","), nil
 }
 
 type BgMusicTrack struct {
@@ -357,13 +348,18 @@ type EpisodeSkipTime struct {
 	Confidence float64 `gorm:"column:confidence;default:0" json:"confidence"`
 }
 
+// GoogleDriveSettings: DisableAutoSync apaga el escaneo automático de Drive (al arrancar,
+// al cambiar de carpeta y cada ScanIntervalMinutes). Va en negativo para que las filas
+// existentes, sin la columna, queden con la sincronización encendida.
 type GoogleDriveSettings struct {
-	Enabled      bool   `gorm:"column:enabled;default:false" json:"enabled"`
-	ClientID     string `gorm:"column:client_id" json:"clientId"`
-	ClientSecret string `gorm:"column:client_secret" json:"clientSecret"`
-	RefreshToken string `gorm:"column:refresh_token" json:"refreshToken"`
-	FolderID     string `gorm:"column:folder_id" json:"folderId"`
-	FolderName   string `gorm:"column:folder_name" json:"folderName"`
+	Enabled             bool   `gorm:"column:enabled;default:false" json:"enabled"`
+	ClientID            string `gorm:"column:client_id" json:"clientId"`
+	ClientSecret        string `gorm:"column:client_secret" json:"clientSecret"`
+	RefreshToken        string `gorm:"column:refresh_token" json:"refreshToken"`
+	FolderID            string `gorm:"column:folder_id" json:"folderId"`
+	FolderName          string `gorm:"column:folder_name" json:"folderName"`
+	DisableAutoSync     bool   `gorm:"column:disable_auto_sync" json:"disableAutoSync"`
+	ScanIntervalMinutes int    `gorm:"column:scan_interval_minutes" json:"scanIntervalMinutes"`
 }
 
 type ChronologyMomentTime struct {

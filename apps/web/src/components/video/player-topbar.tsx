@@ -24,10 +24,26 @@ interface PlayerTopBarProps {
     mpvPending?: boolean
     momentKey?: string
     momentTitle?: string
-    currentTime?: number
+    mediaElementRef?: React.RefObject<HTMLVideoElement | null>
 }
 
-export function PlayerTopBar({
+function MomentTimeLabel({ mediaElementRef }: { mediaElementRef?: React.RefObject<HTMLVideoElement | null> }) {
+    const [seconds, setSeconds] = React.useState(0)
+
+    React.useEffect(() => {
+        const tick = () => {
+            const next = Math.floor(mediaElementRef?.current?.currentTime ?? 0)
+            setSeconds((prev) => (prev === next ? prev : next))
+        }
+        tick()
+        const id = window.setInterval(tick, 500)
+        return () => window.clearInterval(id)
+    }, [mediaElementRef])
+
+    return <>Fijar aquí ({formatSecondsToTime(seconds)})</>
+}
+
+export const PlayerTopBar = React.memo(function PlayerTopBar({
     title,
     episodeLabel,
     episodeNumber,
@@ -37,17 +53,16 @@ export function PlayerTopBar({
     mpvPending,
     momentKey,
     momentTitle,
-    currentTime,
+    mediaElementRef,
 }: PlayerTopBarProps) {
     const entranceSpring = useSpringPreset("entrance")
     const reduceMotion = useReducedMotion()
     const saveMomentMutation = useSaveChronologyMomentTime()
-    const formattedCurrentTime = formatSecondsToTime(currentTime || 0)
 
     const handleFixMoment = React.useCallback((e: React.MouseEvent) => {
         e.stopPropagation()
         if (!momentKey) return
-        const roundedSec = Math.round(currentTime || 0)
+        const roundedSec = Math.round(mediaElementRef?.current?.currentTime || 0)
         saveMomentMutation.mutate(
             { momentKey, seconds: roundedSec },
             {
@@ -59,7 +74,7 @@ export function PlayerTopBar({
                 },
             }
         )
-    }, [momentKey, currentTime, saveMomentMutation])
+    }, [momentKey, mediaElementRef, saveMomentMutation])
 
     const handleResetMoment = React.useCallback((e: React.MouseEvent) => {
         e.stopPropagation()
@@ -103,7 +118,7 @@ export function PlayerTopBar({
             initial={{ opacity: 0, y: reduceMotion ? 0 : -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={reduceMotion ? { duration: 0.15 } : entranceSpring}
-            className="absolute inset-x-0 top-0 flex items-start justify-between gap-4 px-3 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-8 pointer-events-none z-player-ui bg-gradient-to-b from-black/65 via-black/25 to-transparent"
+            className="absolute inset-x-0 top-0 flex items-start justify-between gap-4 px-4 sm:px-8 pt-4 pb-8 pointer-events-none z-player-ui bg-gradient-to-b from-black/65 via-black/25 to-transparent"
         >
             <div className="flex flex-col min-w-0 pl-1 pt-1 gap-1.5 pointer-events-auto select-none">
                 <span className={cn(PLAYER_EYEBROW, "tabular-nums truncate")}>
@@ -119,7 +134,7 @@ export function PlayerTopBar({
                 {momentKey && (
                     <div className="flex items-center gap-2 flex-wrap pt-0.5">
                         <span className={cn("inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-label-1 text-xs font-semibold", PLAYER_GLASS)}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse motion-reduce:animate-none" />
                             <span className="truncate max-w-[200px] sm:max-w-xs">
                                 {momentTitle ? `Momento: ${momentTitle}` : "Momento de la cronología"}
                             </span>
@@ -139,7 +154,7 @@ export function PlayerTopBar({
                             }
                             iconSpacing="0.375rem"
                         >
-                            Fijar aquí ({formattedCurrentTime})
+                            <MomentTimeLabel mediaElementRef={mediaElementRef} />
                         </Button>
                         <Button
                             intent="glass"
@@ -159,12 +174,13 @@ export function PlayerTopBar({
                 {onOpenInMpv && (
                     <AnimatedTooltip content={mpvPending ? "Abriendo en mpv…" : "Abrir en mpv"} side="bottom">
                         <button
+                            type="button"
                             tabIndex={0}
                             disabled={mpvPending}
                             aria-busy={mpvPending || undefined}
                             onClick={(e) => { e.stopPropagation(); onOpenInMpv(); }}
                             aria-label={mpvPending ? "Abriendo en mpv" : "Abrir en mpv"}
-                            className={cn(iconBtn, mpvPending && "cursor-wait")}
+                            className={cn(iconBtn, "player-mpv-btn", mpvPending && "cursor-wait")}
                         >
                             {mpvPending
                                 ? <IconUiSpinner className="w-4 h-4 animate-spin motion-reduce:animate-none" />
@@ -174,6 +190,7 @@ export function PlayerTopBar({
                 )}
                 <AnimatedTooltip content="Cerrar reproductor [Esc]" side="bottom">
                     <button
+                        type="button"
                         tabIndex={0}
                         onClick={(e) => { e.stopPropagation(); onClose(); }}
                         aria-label="Cerrar reproductor"
@@ -185,4 +202,4 @@ export function PlayerTopBar({
             </div>
         </m.div>
     )
-}
+})

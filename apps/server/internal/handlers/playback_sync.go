@@ -46,7 +46,7 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 
 	ch := dispatcher.Subscribe(events.PlaybackHeartbeatProgress)
 
-	go func() {
+	if !h.App.StartBackground(func() {
 		defer dispatcher.Unsubscribe(events.PlaybackHeartbeatProgress, ch)
 		defer func() {
 			if r := recover(); r != nil {
@@ -79,5 +79,7 @@ func (h *Handler) StartPlaybackHeartbeatSubscriber() {
 				h.App.ContinuityManager.TelemetryManager.UpdateProgress(localAccountID, heartbeat.MediaID, heartbeat.EpisodeNumber, heartbeat.CurrentTime, heartbeat.Duration)
 			}
 		}
-	}()
+	}) {
+		dispatcher.Unsubscribe(events.PlaybackHeartbeatProgress, ch)
+	}
 }

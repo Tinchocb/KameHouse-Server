@@ -4,11 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"kamehouse/internal/util"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
+	"github.com/shirou/gopsutil/v4/process"
 )
 
 type WSEventManagerInterface interface {
@@ -38,7 +42,9 @@ type (
 
 		// connsMu protects Conns and hasHadConnection.
 		// Use RLock for reads, Lock for writes.
-		connsMu sync.RWMutex
+		connsMu   sync.RWMutex
+		closed    bool
+		closeOnce sync.Once
 
 		dispatcher Dispatcher
 	}
@@ -50,7 +56,6 @@ type (
 	}
 
 	WSEventEnvelope struct {
-		EventID   string `json:"event_id,omitempty"`
 		Type      string `json:"type"`
 		Payload   any    `json:"payload"`
 		Timestamp int64  `json:"timestamp"`
@@ -103,10 +108,24 @@ func (m *WSEventManager) Dispatcher() Dispatcher {
 	return m.dispatcher
 }
 
-// ExitIfNoConnsAsDesktopSidecar monitors the websocket connection as a desktop sidecar.
-// It checks for a connection every 5 seconds. If a connection is lost, it starts a countdown and waits for 15 seconds.
-// If a connection is not established within 15 seconds, it will exit the app.
+// ExitIfNoConnsAsDesktopSidecar watches the desktop host process when available.
+// Legacy launchers fall back to shutting down after 60 seconds without WebSockets.
 func (m *WSEventManager) ExitIfNoConnsAsDesktopSidecar() {
+	// A renderer can disconnect during HMR, login, suspend or navigation while
+	// its desktop host still owns the server. Watch that host instead of the UI.
+	parentPID := int32(os.Getppid())
+	if raw := os.Getenv("KAMEHOUSE_DESKTOP_PARENT_PID"); raw != "" {
+		if pid, err := strconv.ParseInt(raw, 10, 32); err == nil && pid > 0 {
+			parentPID = int32(pid)
+		}
+	}
+	if parent, err := process.NewProcess(parentPID); err == nil {
+		if name, err := parent.Name(); err == nil && strings.TrimSuffix(strings.ToLower(name), ".exe") == "kamehouse-desktop" {
+			m.Logger.Info().Int32("pid", parentPID).Msg("desktop sidecar: Monitoring desktop host")
+			go m.monitorDesktopHost(parent.IsRunning, 5*time.Second)
+			return
+		}
+	}
 	go func() {
 		defer util.HandlePanicInModuleThen("events/ExitIfNoConnsAsDesktopSidecar", func() {})
 
@@ -119,7 +138,12 @@ func (m *WSEventManager) ExitIfNoConnsAsDesktopSidecar() {
 		var connectionLostTime time.Time
 		exitTimeout := 60 * time.Second
 
-		for range ticker.C {
+		for {
+			select {
+			case <-m.shutdownCtx.Done():
+				return
+			case <-ticker.C:
+			}
 			// Check WebSocket connection status (protected read)
 			m.connsMu.RLock()
 			connsEmpty := len(m.Conns) == 0
@@ -135,7 +159,7 @@ func (m *WSEventManager) ExitIfNoConnsAsDesktopSidecar() {
 
 				// Check if connection has been lost for more than exitTimeout
 				if time.Since(connectionLostTime) > exitTimeout {
-					m.Logger.Warn().Msg("ws: No connection detected for 10 seconds. Requesting shutdown...")
+					m.Logger.Warn().Msg("ws: No connection detected for 60 seconds. Requesting shutdown...")
 					// Signal shutdown instead of os.Exit to allow graceful cleanup
 					select {
 					case m.ShutdownSignal <- struct{}{}:
@@ -151,6 +175,25 @@ func (m *WSEventManager) ExitIfNoConnsAsDesktopSidecar() {
 	}()
 }
 
+func (m *WSEventManager) monitorDesktopHost(isRunning func() (bool, error), interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-m.shutdownCtx.Done():
+			return
+		case <-ticker.C:
+			running, err := isRunning()
+			// An inspection failure is not proof that the host exited.
+			if err == nil && !running {
+				m.Logger.Info().Msg("desktop sidecar: Desktop host exited, requesting shutdown")
+				m.TriggerShutdown()
+				return
+			}
+		}
+	}
+}
+
 // TriggerShutdown signals the server to initiate graceful shutdown immediately.
 func (m *WSEventManager) TriggerShutdown() {
 	if m != nil && m.ShutdownSignal != nil {
@@ -164,6 +207,11 @@ func (m *WSEventManager) TriggerShutdown() {
 // AddConn registers a new websocket connection.
 func (m *WSEventManager) AddConn(id string, conn *websocket.Conn) {
 	m.connsMu.Lock()
+	if m.closed || (m.shutdownCtx != nil && m.shutdownCtx.Err() != nil) {
+		m.connsMu.Unlock()
+		_ = conn.Close()
+		return
+	}
 	var oldConn *WSConn
 	for i, c := range m.Conns {
 		if c.ID == id {
@@ -182,6 +230,22 @@ func (m *WSEventManager) AddConn(id string, conn *websocket.Conn) {
 	if oldConn != nil {
 		_ = oldConn.Conn.Close()
 	}
+}
+
+// Close releases hijacked WebSocket connections, which http.Server.Shutdown
+// does not close. It also rejects upgrades that finish after shutdown starts.
+// Closing the transport unblocks readers and writers without acquiring writeMu.
+func (m *WSEventManager) Close() {
+	m.closeOnce.Do(func() {
+		m.connsMu.Lock()
+		m.closed = true
+		conns := m.Conns
+		m.Conns = nil
+		m.connsMu.Unlock()
+		for _, conn := range conns {
+			_ = conn.Conn.Close()
+		}
+	})
 }
 
 // RemoveConnIfSame quita y cierra la conexion registrada bajo id solo si sigue siendo conn.
@@ -244,7 +308,6 @@ func (m *WSEventManager) SendEvent(t string, payload interface{}) {
 	m.connsMu.RUnlock()
 
 	env := wsEventPool.Get().(*WSEventEnvelope)
-	env.EventID = ""
 	env.Type = t
 	env.Payload = payload
 	env.Timestamp = time.Now().UnixMilli()
@@ -325,7 +388,6 @@ func (m *WSEventManager) SendEventTo(clientID string, t string, payload interfac
 	}
 
 	env := wsEventPool.Get().(*WSEventEnvelope)
-	env.EventID = ""
 	env.Type = t
 	env.Payload = payload
 	env.Timestamp = time.Now().UnixMilli()

@@ -29,7 +29,7 @@ func TestLocalFile_GetNormalizedPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.filePath, func(t *testing.T) {
-			lf := dto.NewLocalFile(tt.filePath, tt.libraryPath)
+			lf := dto.NewLocalFileS(tt.filePath, []string{tt.libraryPath})
 
 			if assert.NotNil(t, lf) {
 
@@ -64,7 +64,7 @@ func TestLocalFile_GetParsedTitle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.filePath, func(t *testing.T) {
-			lf := dto.NewLocalFile(tt.filePath, tt.libraryPath)
+			lf := dto.NewLocalFileS(tt.filePath, []string{tt.libraryPath})
 
 			if assert.NotNil(t, lf) {
 
@@ -99,7 +99,7 @@ func TestLocalFile_GetFolderTitle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.filePath, func(t *testing.T) {
-			lf := dto.NewLocalFile(tt.filePath, tt.libraryPath)
+			lf := dto.NewLocalFileS(tt.filePath, []string{tt.libraryPath})
 
 			if assert.NotNil(t, lf) {
 

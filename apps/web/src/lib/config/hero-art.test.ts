@@ -3,7 +3,6 @@ import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
     DEFAULT_MOVIE_FOCAL,
-    HERO_COMPACT_MAX_WIDTH,
     MOVIE_HERO_ART,
     SERIES_HERO_ART,
     getMovieHeroArt,
@@ -89,14 +88,6 @@ describe("hero-art registry audit", () => {
     it("TMDB art always pins an explicit size segment", () => {
         for (const [key, art] of all) {
             if (/tmdb\.org/.test(art.src)) expect(art.src, key).toMatch(/\/t\/p\/(original|w\d+)\//)
-        }
-    })
-
-    it("sourceWidth is only declared for genuinely small sources", () => {
-        for (const [key, art] of all) {
-            if (art.sourceWidth === undefined) continue
-            expect(art.sourceWidth, `${key} sourceWidth`).toBeLessThan(HERO_COMPACT_MAX_WIDTH)
-            expect(art.sourceWidth, `${key} sourceWidth`).toBeGreaterThanOrEqual(640)
         }
     })
 

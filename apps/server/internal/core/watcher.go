@@ -38,9 +38,10 @@ func (a *App) refreshLibraryWatcher(paths []string, enabled bool) {
 		return
 	}
 	paths = append([]string(nil), paths...)
-	go util.HandlePanicInModuleThen("core/modules/InitWatcher", func() {
+	go func() {
+		defer util.RecoverInModule("core/modules/InitWatcher")
 		a.initializeLibraryWatcher(generation, paths, a.buildLibraryWatcher)
-	})
+	}()
 }
 
 func (a *App) stopLibraryWatcher() {

@@ -7,15 +7,7 @@ function setup() {
     const setSortBy = vi.fn()
     render(
         <LazyMotion features={domAnimation}>
-            <MoviesFilterBar
-                searchQuery="" setSearchQuery={vi.fn()}
-                sortBy="year_asc" setSortBy={setSortBy}
-                status="all" setStatus={vi.fn()}
-                statusCounts={{ all: 2, pending: 1, continue: 0, watched: 1 }}
-                decade={null} setDecade={vi.fn()} decades={[1990, 2000]}
-                filteredCount={2} totalCount={2}
-                hasActiveFilters={false} onResetFilters={vi.fn()}
-            />
+            <MoviesFilterBar sortBy="year_asc" setSortBy={setSortBy} />
         </LazyMotion>,
     )
     return { trigger: screen.getByRole("button", { name: "Ordenar por: Año: más antiguos" }), setSortBy }

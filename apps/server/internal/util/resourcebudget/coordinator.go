@@ -13,14 +13,15 @@ var ErrPlaybackPriority = errors.New("background encode interrupted for playback
 var Shared = NewCoordinator(15*time.Second, BackgroundAllowed)
 
 type Coordinator struct {
-	mu         sync.Mutex
-	live       int
-	previews   int
-	background context.CancelCauseFunc
-	changed    chan struct{}
-	idleAfter  time.Time
-	quiet      time.Duration
-	allowed    func() bool
+	mu            sync.Mutex
+	live          int
+	previews      int
+	previewActive bool
+	background    context.CancelCauseFunc
+	changed       chan struct{}
+	idleAfter     time.Time
+	quiet         time.Duration
+	allowed       func() bool
 }
 
 func NewCoordinator(quiet time.Duration, allowed func() bool) *Coordinator {
@@ -155,17 +156,25 @@ func (c *Coordinator) Preview(ctx context.Context) (func(), error) {
 	c.signal()
 	c.mu.Unlock()
 	var once sync.Once
+	admitted := false
 	release := func() {
 		once.Do(func() {
 			c.mu.Lock()
 			defer c.mu.Unlock()
 			c.previews--
+			if admitted {
+				c.previewActive = false
+			}
 			c.signal()
 		})
 	}
 	for {
 		c.mu.Lock()
-		ready, changed := c.background == nil, c.changed
+		ready, changed := c.background == nil && !c.previewActive, c.changed
+		if ready {
+			c.previewActive = true
+			admitted = true
+		}
 		c.mu.Unlock()
 		if err := ctx.Err(); err != nil {
 			release()

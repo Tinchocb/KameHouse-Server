@@ -27,6 +27,31 @@ func TestEachTask(t *testing.T) {
 	}
 }
 
+func TestEachTaskLimitBoundsWorkersAndProcessesEveryIndex(t *testing.T) {
+	items := make([]int, 10000)
+	seen := make([]atomic.Int32, len(items))
+	var active, peak atomic.Int32
+	EachTaskLimit(items, 3, func(_ int, i int) {
+		n := active.Add(1)
+		for old := peak.Load(); n > old; old = peak.Load() {
+			if peak.CompareAndSwap(old, n) {
+				break
+			}
+		}
+		seen[i].Add(1)
+		active.Add(-1)
+	})
+	if peak.Load() > 3 {
+		t.Fatalf("concurrency = %d", peak.Load())
+	}
+	for i := range seen {
+		if seen[i].Load() != 1 {
+			t.Fatalf("index %d ran %d times", i, seen[i].Load())
+		}
+	}
+	EachTaskLimit([]int{}, 0, func(int, int) { t.Fatal("empty collection ran a task") })
+}
+
 func TestConc(t *testing.T) {
 
 	ids := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}

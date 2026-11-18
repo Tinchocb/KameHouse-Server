@@ -55,6 +55,9 @@ type Status struct {
 	Pid                 int                         `json:"pid"`                // OS process id of the server; used by the desktop sidecar to reap orphans
 	TMDBDegraded        bool                        `json:"tmdbDegraded"`       // True when no usable TMDB token is configured (placeholder/missing)
 	TMDBDegradedReason  string                      `json:"tmdbDegradedReason"` // "", "missing" or "placeholder"
+	// SetupRequired: el cliente debe mostrar el asistente inicial (no hay ajustes
+	// guardados o el primer arranque aún no se ha completado). Lo calcula NewStatus.
+	SetupRequired bool `json:"setupRequired"`
 }
 
 // Acotada: /status es pública y la key (User-Agent) la elige el cliente.
@@ -93,7 +96,7 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		Version:             h.App.Version,
 		VersionName:         constants.VersionName,
 		ThemeSettings:       theme,
-		MediastreamSettings: h.App.SecondarySettings.Mediastream,
+		MediastreamSettings: h.App.MediastreamSettingsSnapshot(),
 		Updating:            false,
 		IsDesktopSidecar:    h.App.IsDesktopSidecar,
 		FeatureFlags:        h.App.FeatureFlags,
@@ -122,6 +125,10 @@ func (h *Handler) NewStatus(c echo.Context) *Status {
 		status.Settings = &models.Settings{}
 		status.FeatureFlags = core.FeatureFlags{}
 	}
+
+	// Sin ajustes guardados (ID 0, también para clientes no autorizados) o con el primer
+	// arranque pendiente, hay que mostrar el asistente inicial.
+	status.SetupRequired = status.Settings.ID == 0 || status.Settings.SetupPending
 
 	return status
 }

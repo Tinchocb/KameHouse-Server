@@ -11,6 +11,7 @@ const FOCUSABLE = [
 
 function getFocusables(container: HTMLElement): HTMLElement[] {
     return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE))
+        .filter(el => !el.closest('[inert], [aria-hidden="true"]'))
         .filter(el => el.offsetParent !== null || el.getClientRects().length > 0)
 }
 

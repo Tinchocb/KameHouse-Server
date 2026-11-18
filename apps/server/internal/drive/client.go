@@ -27,10 +27,11 @@ const (
 
 // Client wraps Google Drive API calls with automatic OAuth2 token refreshing.
 type Client struct {
-	httpClient *http.Client
-	transport  *http.Transport
-	logger     *zerolog.Logger
-	apiBase    string // overridable in tests; empty means driveAPIBase
+	httpClient    *http.Client
+	transport     *http.Transport
+	logger        *zerolog.Logger
+	apiBase       string // overridable in tests; empty means driveAPIBase
+	subtitleLists subtitleListingCache
 }
 
 func (c *Client) api(path string) string {
@@ -317,7 +318,7 @@ func (c *Client) getJSON(ctx context.Context, rawURL string, out any) error {
 			return nil
 		}
 
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 		_ = resp.Body.Close()
 		if !isRetryableDriveError(resp.StatusCode, body) || attempt == maxAttempts {
 			return &APIError{Status: resp.StatusCode, Body: string(body)}
@@ -377,7 +378,7 @@ func (c *Client) GetFile(ctx context.Context, fileID string) (*DriveFile, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 		return nil, fmt.Errorf("drive api returned status %d: %s", resp.StatusCode, string(b))
 	}
 
@@ -441,7 +442,7 @@ func (c *Client) GetMediaStream(ctx context.Context, fileID string, rangeHeader 
 
 	// If Google Drive returns 403 / fileNotDownloadable, fileID may be a shortcut ID
 	if resp.StatusCode == http.StatusForbidden {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 		_ = resp.Body.Close()
 		bodyStr := string(body)
 		if strings.Contains(bodyStr, "fileNotDownloadable") || strings.Contains(bodyStr, "Only files with binary content") {
@@ -454,7 +455,7 @@ func (c *Client) GetMediaStream(ctx context.Context, fileID string, rangeHeader 
 	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 		_ = resp.Body.Close()
 		return nil, &StreamStatusError{Status: resp.StatusCode, Body: string(body)}
 	}
@@ -542,7 +543,7 @@ func (c *Client) GetUserInfo(ctx context.Context) (email string, name string, er
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 		return "", "", fmt.Errorf("failed to get user info: status %d: %s", resp.StatusCode, string(b))
 	}
 

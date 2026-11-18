@@ -18,6 +18,7 @@ export interface TMDBSearchResult {
     vote_average?: number
     media_type?: string
     is_jikan?: boolean
+    provider?: "tmdb" | "jikan"
 }
 
 function invalidateLibrary(queryClient: ReturnType<typeof useQueryClient>) {
@@ -39,7 +40,7 @@ export function useTMDBSearch() {
 
 export function useTMDBAssign() {
     const queryClient = useQueryClient()
-    return useServerMutation<boolean, TMDBAssign_Variables>({
+    return useServerMutation<boolean, TMDBAssign_Variables & { provider: "tmdb" | "jikan"; externalId: number }>({
         endpoint: API_ENDPOINTS.TMDB.TMDBAssign.endpoint,
         method: API_ENDPOINTS.TMDB.TMDBAssign.methods[0],
         mutationKey: [API_ENDPOINTS.TMDB.TMDBAssign.key],

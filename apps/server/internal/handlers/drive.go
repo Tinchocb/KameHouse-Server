@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/drive"
-	"kamehouse/internal/library/anime"
 )
 
 // HandleDriveAuthURL returns the OAuth2 consent URL for Google Drive.
@@ -32,16 +32,17 @@ func (h *Handler) HandleDriveAuthURL(c echo.Context) error {
 	}
 	redirectURI := c.QueryParam("redirectUri")
 
-	if clientID == "" || clientSecret == "" {
-		if s, err := h.App.Database.GetSettings(); err == nil && s != nil {
-			if clientID == "" {
-				clientID = s.GoogleDrive.ClientID
-			}
-			if clientSecret == "" {
-				clientSecret = s.GoogleDrive.ClientSecret
-			}
-		}
+	configured, err := h.App.Database.GetSettings()
+	if err != nil {
+		return h.RespondWithError(c, err)
 	}
+	if configured == nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "configure Google Drive credentials before connecting")
+	}
+	if (clientID != "" && clientID != configured.GoogleDrive.ClientID) || (clientSecret != "" && clientSecret != configured.GoogleDrive.ClientSecret) {
+		return echo.NewHTTPError(http.StatusBadRequest, "save Google Drive credentials in settings before connecting")
+	}
+	clientID, clientSecret = configured.GoogleDrive.ClientID, configured.GoogleDrive.ClientSecret
 
 	if redirectURI == "" {
 		proto := "http"
@@ -55,13 +56,24 @@ func (h *Handler) HandleDriveAuthURL(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("clientId and clientSecret are required to generate auth url"))
 	}
 
-	// El state es un token HMAC de vida corta: sin él, el callback lo rechaza (CSRF).
-	hmacAuth := h.App.GetServerPasswordHMACAuth()
-	hmacAuth.SetTTL(15 * time.Minute)
-	state, err := hmacAuth.GenerateToken("drive-oauth")
-	if err != nil {
-		return h.RespondWithError(c, err)
+	// An unpredictable, single-use state belongs only to this OAuth attempt.
+	// Streaming HMAC tokens are never accepted as OAuth state.
+	state := uuid.NewString()
+	h.driveOAuthMu.Lock()
+	if h.driveOAuthStates == nil {
+		h.driveOAuthStates = make(map[string]driveOAuthAttempt)
 	}
+	for key, attempt := range h.driveOAuthStates {
+		if time.Now().After(attempt.expiresAt) {
+			delete(h.driveOAuthStates, key)
+		}
+	}
+	if len(h.driveOAuthStates) >= 100 {
+		h.driveOAuthMu.Unlock()
+		return echo.NewHTTPError(http.StatusTooManyRequests, "too many pending OAuth attempts")
+	}
+	h.driveOAuthStates[state] = driveOAuthAttempt{expiresAt: time.Now().Add(15 * time.Minute), redirectURI: redirectURI, clientID: clientID, clientSecret: clientSecret}
+	h.driveOAuthMu.Unlock()
 
 	authURL := drive.GetAuthURL(clientID, clientSecret, redirectURI, state)
 	return h.RespondWithData(c, map[string]string{
@@ -77,8 +89,12 @@ func (h *Handler) HandleDriveAuthURL(c echo.Context) error {
 //	@route /api/v1/drive/callback [GET]
 func (h *Handler) HandleDriveCallback(c echo.Context) error {
 	state := c.QueryParam("state")
-	if _, err := h.App.GetServerPasswordHMACAuth().ValidateToken(state, "drive-oauth"); err != nil {
-		h.App.Logger.Warn().Err(err).Msg("drive: Invalid or expired OAuth state")
+	h.driveOAuthMu.Lock()
+	attempt, valid := h.driveOAuthStates[state]
+	delete(h.driveOAuthStates, state)
+	h.driveOAuthMu.Unlock()
+	if !valid || time.Now().After(attempt.expiresAt) {
+		h.App.Logger.Warn().Msg("drive: Invalid, reused or expired OAuth state")
 		return c.HTML(http.StatusBadRequest, "<html><body style='font-family:sans-serif;background:#121212;color:#fff;padding:2rem;'><h3>Error de seguridad</h3><p>El token de estado OAuth es inválido o ha expirado. Por favor, intenta conectar nuevamente desde Ajustes.</p></body></html>")
 	}
 
@@ -90,17 +106,14 @@ func (h *Handler) HandleDriveCallback(c echo.Context) error {
 		}
 		return c.HTML(http.StatusBadRequest, fmt.Sprintf("<html><body><h3>Error de autorización: %s</h3></body></html>", html.EscapeString(errParam)))
 	}
-	// Read saved client credentials from settings
-	var clientID, clientSecret string
-	if s, err := h.App.Database.GetSettings(); err == nil && s != nil {
-		clientID = s.GoogleDrive.ClientID
-		clientSecret = s.GoogleDrive.ClientSecret
+	clientID, clientSecret, redirectURI := attempt.clientID, attempt.clientSecret, attempt.redirectURI
+	current, err := h.App.Database.GetSettings()
+	if err != nil {
+		return h.RespondWithError(c, err)
 	}
-	proto := "http"
-	if c.IsTLS() || c.Request().Header.Get("X-Forwarded-Proto") == "https" {
-		proto = "https"
+	if current == nil || current.GoogleDrive.ClientID != clientID || current.GoogleDrive.ClientSecret != clientSecret {
+		return echo.NewHTTPError(http.StatusConflict, "Google Drive credentials changed; start the connection again")
 	}
-	redirectURI := fmt.Sprintf("%s://%s/api/v1/drive/callback", proto, c.Request().Host)
 
 	if clientID == "" || clientSecret == "" {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("code, clientId and clientSecret are required"))
@@ -122,8 +135,6 @@ func (h *Handler) HandleDriveCallback(c echo.Context) error {
 	settings := &updated
 
 	settings.GoogleDrive.Enabled = true
-	settings.GoogleDrive.ClientID = clientID
-	settings.GoogleDrive.ClientSecret = clientSecret
 	if token.RefreshToken != "" {
 		settings.GoogleDrive.RefreshToken = token.RefreshToken
 	}
@@ -133,17 +144,7 @@ func (h *Handler) HandleDriveCallback(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// Refresh Drive Service
-	if h.App.DriveService != nil {
-		_ = h.App.DriveService.UpdateConfig(
-			settings.GoogleDrive.Enabled,
-			settings.GoogleDrive.ClientID,
-			settings.GoogleDrive.ClientSecret,
-			settings.GoogleDrive.RefreshToken,
-			settings.GoogleDrive.FolderID,
-			settings.GoogleDrive.FolderName,
-		)
-	}
+	h.applyDriveConfig()
 
 	h.invalidateSettingsCache()
 	h.App.WSEventManager.SendEvent("settings", settings.Redacted())
@@ -171,10 +172,16 @@ func (h *Handler) HandleDriveCallback(c echo.Context) error {
 //	@summary returns Google Drive connection status.
 //	@route /api/v1/drive/status [GET]
 func (h *Handler) HandleDriveStatus(c echo.Context) error {
+	settings, err := h.App.Database.GetSettings()
+	if err != nil {
+		return h.RespondWithError(c, err)
+	}
+	configured := settings != nil && strings.TrimSpace(settings.GoogleDrive.ClientID) != "" && strings.TrimSpace(settings.GoogleDrive.ClientSecret) != ""
 	if h.App.DriveService == nil {
 		return h.RespondWithData(c, drive.DriveStatus{
-			Connected: false,
-			Error:     "Drive service not initialized",
+			OAuthConfigured: configured,
+			Connected:       false,
+			Error:           "Drive service not initialized",
 		})
 	}
 
@@ -183,6 +190,16 @@ func (h *Handler) HandleDriveStatus(c echo.Context) error {
 	_ = h.App.Database.Gorm().Model(&models.LocalFile{}).Where("path LIKE 'gdrive://%'").Count(&driveFilesCount).Error
 
 	status := h.App.DriveService.GetStatus(c.Request().Context(), int(driveFilesCount))
+	status.OAuthConfigured = configured
+	interval := drive.ScanInterval(0)
+	if settings != nil {
+		interval = drive.ScanInterval(settings.GoogleDrive.ScanIntervalMinutes)
+		status.AutoSync = !settings.GoogleDrive.DisableAutoSync
+	}
+	status.ScanIntervalMinutes = int(interval / time.Minute)
+	if status.AutoSync {
+		status.NextScanAt = h.App.DriveService.NextAutoScanAt(time.Now(), interval)
+	}
 	return h.RespondWithData(c, status)
 }
 
@@ -247,41 +264,27 @@ func (h *Handler) HandleDrivePlay(c echo.Context) error {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("invalid fileId"))
 	}
 
+	revision, revisionErr := h.refreshDriveRevision(c.Request().Context(), fileID)
+	if revisionErr != nil {
+		return h.RespondWithCodeError(c, http.StatusBadGateway, errors.New("could not verify the current Drive file revision"))
+	}
+	if expected := c.QueryParam("revision"); expected != "" && expected != revision {
+		return h.RespondWithCodeError(c, http.StatusConflict, errors.New("the Drive file changed; reopen playback"))
+	}
 	ctx := c.Request().Context()
 
 	if c.Request().Method == http.MethodHead {
-		var dbFile models.LocalFile
-		if err := h.App.Database.Gorm().Select("name", "file_size").Where("drive_file_id = ? OR path LIKE ?", fileID, "gdrive://"+fileID+"/%").First(&dbFile).Error; err == nil && dbFile.FileSize > 0 {
-			res := c.Response()
-			res.Header().Set("Accept-Ranges", "bytes")
-			res.Header().Set("Content-Length", strconv.FormatInt(dbFile.FileSize, 10))
-			mimeType := "video/x-matroska"
-			ext := strings.ToLower(filepath.Ext(dbFile.Name))
-			if ext == ".mp4" {
-				mimeType = "video/mp4"
-			} else if ext == ".webm" {
-				mimeType = "video/webm"
-			}
-			res.Header().Set("Content-Type", mimeType)
-			res.WriteHeader(http.StatusOK)
-			return nil
+		f, err := h.currentDriveFile(ctx, fileID)
+		if err != nil {
+			return h.RespondWithCodeError(c, http.StatusBadGateway, err)
 		}
-
-		client, err := h.App.DriveService.GetClient()
-		if err == nil {
-			if f, err := client.GetFile(ctx, fileID); err == nil && f != nil {
-				res := c.Response()
-				res.Header().Set("Accept-Ranges", "bytes")
-				if f.Size > 0 {
-					res.Header().Set("Content-Length", strconv.FormatInt(f.Size, 10))
-				}
-				if f.MimeType != "" {
-					res.Header().Set("Content-Type", f.MimeType)
-				}
-				res.WriteHeader(http.StatusOK)
-				return nil
-			}
+		res := c.Response()
+		res.Header().Set("Accept-Ranges", "bytes")
+		res.Header().Set("Content-Length", strconv.FormatInt(f.Size, 10))
+		if f.MimeType != "" {
+			res.Header().Set("Content-Type", f.MimeType)
 		}
+		return c.NoContent(http.StatusOK)
 	}
 
 	rangeHeader := c.Request().Header.Get("Range")
@@ -354,7 +357,6 @@ func (h *Handler) HandleDrivePlay(c echo.Context) error {
 var (
 	driveBlockCacheOnce sync.Once
 	driveBlockCacheInst *drive.BlockCache
-	driveCacheValidated sync.Map // fileID -> struct{}: ya comparado con Drive en este arranque
 )
 
 // driveBlockCache abre (una vez) la caché de bloques en <cache>/drive-blocks.
@@ -363,7 +365,9 @@ func (h *Handler) driveBlockCache() *drive.BlockCache {
 		if h.App.Config == nil || h.App.Config.Cache.Dir == "" {
 			return
 		}
-		c, err := drive.NewBlockCache(filepath.Join(h.App.Config.Cache.Dir, "drive-blocks"), 0, 0)
+		// DiskMaxSizeMB llega en MB; 0 deja el valor por defecto de NewBlockCache.
+		maxBytes := h.App.Config.Cache.Drive.DiskMaxSizeMB << 20
+		c, err := drive.NewBlockCache(filepath.Join(h.App.Config.Cache.Dir, "drive-blocks"), 0, maxBytes)
 		if err != nil {
 			h.App.Logger.Warn().Err(err).Msg("drive: Block cache disabled")
 			return
@@ -373,29 +377,13 @@ func (h *Handler) driveBlockCache() *drive.BlockCache {
 	return driveBlockCacheInst
 }
 
-// validateDriveCache compara, una vez por archivo y arranque, el tamaño en
-// Drive (metadata: no gasta cuota de descarga) con el cacheado, en segundo
-// plano para no demorar la reproducción.
+// validateDriveCache refreshes the immutable block namespace before a reader
+// opens cached data. Metadata lookups are deduplicated with a short TTL.
 func (h *Handler) validateDriveCache(cache *drive.BlockCache, fileID string) {
-	if _, done := driveCacheValidated.LoadOrStore(fileID, struct{}{}); done {
-		return
+	f, err := h.currentDriveFile(context.Background(), fileID)
+	if err == nil {
+		cache.ValidateRevision(fileID, f.Size, driveFileRevision(f))
 	}
-	go func() {
-		defer func() { _ = recover() }()
-		client, err := h.App.DriveService.GetClient()
-		if err != nil {
-			driveCacheValidated.Delete(fileID)
-			return
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-		f, err := client.GetFile(ctx, fileID)
-		if err != nil || f == nil {
-			driveCacheValidated.Delete(fileID)
-			return
-		}
-		cache.Validate(fileID, f.Size)
-	}()
 }
 
 // parseSingleByteRange parses "bytes=S-E" / "bytes=S-" (end -1). An empty header
@@ -462,15 +450,33 @@ func (h *Handler) forwardDriveRange(c echo.Context, fileID, rangeHeader string) 
 //	@summary scans configured Google Drive folder and indexes anime files.
 //	@route /api/v1/drive/scan [POST]
 func (h *Handler) HandleDriveScan(c echo.Context) error {
+	switch err := h.startDriveScan(false); {
+	case err == nil:
+	case errors.Is(err, errDriveNotReady):
+		return h.RespondWithCodeError(c, http.StatusBadRequest, err)
+	case errors.Is(err, errDriveScanRunning):
+		return h.RespondWithCodeError(c, http.StatusConflict, err)
+	default:
+		return echo.NewHTTPError(http.StatusServiceUnavailable, "SERVER_SHUTTING_DOWN")
+	}
+
+	return h.RespondWithData(c, map[string]interface{}{
+		"started": true,
+	})
+}
+
+// startDriveScan lanza en segundo plano un escaneo de la carpeta configurada. Lo usan el botón de
+// escanear, el selector de carpeta y la sincronización automática (automatic=true, sin avisos).
+func (h *Handler) startDriveScan(automatic bool) error {
 	if h.App.DriveService == nil || !h.App.DriveService.IsEnabled() {
-		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("google drive integration is not enabled or folder not set"))
+		return errDriveNotReady
 	}
 
 	if !h.App.DriveService.TryStartScan() {
-		return h.RespondWithCodeError(c, http.StatusConflict, errors.New("ya hay un escaneo de Google Drive en progreso"))
+		return errDriveScanRunning
 	}
 
-	go func() {
+	if !h.App.StartBackground(func() {
 		defer func() {
 			h.App.DriveService.FinishScan()
 			if r := recover(); r != nil {
@@ -478,47 +484,75 @@ func (h *Handler) HandleDriveScan(c echo.Context) error {
 			}
 		}()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		ctx, cancel := context.WithTimeout(h.App.ShutdownCtx(), 10*time.Minute)
 		defer cancel()
 
 		h.App.Logger.Info().Msg("drive: Starting Google Drive scan")
 		res, err := h.App.DriveService.RunScan(ctx, h.App.Database.Gorm(), func(p *drive.ScanProgress) {
 			h.App.WSEventManager.SendEvent("drive_scan_progress", p)
 		})
+		if ctx.Err() != nil {
+			return
+		}
 
 		// Rows may have been written even on a partial failure: always drop the
 		// server-side caches *before* notifying clients, or their refetch would
 		// race the invalidation and get the stale collection back.
 		db.InvalidateLocalFilesCache(h.App.Database)
 		ClearLibraryCollectionCache()
-		anime.InvalidateCuratedHomeCache()
 		h.prewarmShelfImages(0) // series nuevas: sus fondos al disco local
 		// Frames de Drive que faltan, en segundo plano y de a uno.
 		h.warmThumbnailsAfterScan(2 * time.Second)
 
 		if err != nil {
-			h.App.Logger.Error().Err(err).Msg("drive: Google Drive scan failed")
+			h.App.Logger.Error().Err(err).Bool("automatic", automatic).Msg("drive: Google Drive scan failed")
 			h.App.WSEventManager.SendEvent("drive_scan_completed", map[string]interface{}{
 				"count": res.Indexed,
 				"error": err.Error(),
+				"auto":  automatic,
 			})
 			return
 		}
-		h.App.Logger.Info().Int("indexed", res.Indexed).Int("pruned", res.Pruned).Msg("drive: Google Drive scan completed")
+		h.App.Logger.Info().Int("indexed", res.Indexed).Int("pruned", res.Pruned).Bool("automatic", automatic).Msg("drive: Google Drive scan completed")
 
 		h.App.WSEventManager.SendEvent("drive_scan_completed", map[string]interface{}{
 			"count":  res.Indexed,
 			"pruned": res.Pruned,
+			"auto":   automatic,
 		})
 		h.App.WSEventManager.SendEvent("library_updated", map[string]interface{}{
 			"source": "google_drive",
 			"count":  res.Indexed,
 		})
-	}()
+	}) {
+		h.App.DriveService.FinishScan()
+		return errDriveShuttingDown
+	}
 
-	return h.RespondWithData(c, map[string]interface{}{
-		"started": true,
-	})
+	return nil
+}
+
+var (
+	errDriveNotReady     = errors.New("google drive integration is not enabled or folder not set")
+	errDriveScanRunning  = errors.New("ya hay un escaneo de Google Drive en progreso")
+	errDriveShuttingDown = errors.New("SERVER_SHUTTING_DOWN")
+	errDriveNotConnected = errors.New("conecta tu cuenta de Google Drive primero")
+)
+
+// applyDriveConfig reconstruye el cliente de Drive con los ajustes efectivos. Parte de GetSettings
+// y no de los ajustes guardados: las credenciales provisionadas por entorno no están en la base.
+func (h *Handler) applyDriveConfig() {
+	if h.App.DriveService == nil {
+		return
+	}
+	eff, err := h.App.Database.GetSettings()
+	if err != nil || eff == nil {
+		return
+	}
+	gd := eff.GoogleDrive
+	if err := h.App.DriveService.UpdateConfig(gd.Enabled, gd.ClientID, gd.ClientSecret, gd.RefreshToken, gd.FolderID, gd.FolderName); err != nil {
+		h.App.Logger.Warn().Err(err).Msg("drive: no se pudo aplicar la configuración de Google Drive")
+	}
 }
 
 // driveCopyBufPool recicla los buffers de 64 KB del proxy de streaming de Drive.

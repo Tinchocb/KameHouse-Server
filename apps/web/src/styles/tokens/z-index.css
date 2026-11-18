@@ -5,15 +5,11 @@
 
 :root {
   /* ─── Capas Base ───────────────────────────────────────────────────── */
-  --z-base:         0;       /* Contenido normal */
-  --z-raised:       10;      /* Elementos ligeramente elevados */
   --z-dropdown:     100;     /* Dropdowns, selects, popovers en página */
   --z-sticky:       200;     /* Headers sticky, sidebars en flujo */
 
   /* ─── Navegación / Layout ──────────────────────────────────────────── */
   --z-navbar:       500;     /* Navbar principal */
-  --z-sidebar:      600;     /* Sidebar (sobre navbar en mobile) */
-  --z-mobile-nav:   700;     /* Bottom nav mobile / TV nav */
 
   /* ─── Overlays & Modales (Siempre sobre navegación) ───────────────── */
   --z-overlay:      1000;    /* Overlays, backdrops */
@@ -35,9 +31,6 @@
   --z-hero-scrim:    10;      /* Gradientes de contraste y viñetas */
   --z-hero-content:  20;      /* Textos, títulos, badges y sinopsis */
   --z-hero-controls: 30;      /* Dots del carrusel, botones flotantes */
-
-  /* ─── Máximo ───────────────────────────────────────────────────────── */
-  --z-max:          2147483647; /* Límite técnico (2^31-1) */
 }
 
 /* ─── Clases utilitarias (solo las usadas en tsx) ─────────────────────── */
@@ -48,7 +41,6 @@
 .z-toast        { z-index: var(--z-toast); }
 .z-tooltip      { z-index: var(--z-tooltip); }
 .z-navbar       { z-index: var(--z-navbar); }
-.z-mobile-nav   { z-index: var(--z-mobile-nav); }
 .z-player       { z-index: var(--z-player); }
 .z-player-ui    { z-index: var(--z-player-ui); }
 .z-player-overlay { z-index: var(--z-player-overlay); }

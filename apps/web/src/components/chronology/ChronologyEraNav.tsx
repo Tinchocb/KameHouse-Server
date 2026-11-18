@@ -4,20 +4,15 @@ import { EraRail, type EraRailItem } from '@/components/ui/era-rail';
 import type { EraFilter } from './types';
 import { eraTextColor } from './utils/eraColor';
 import { AIR_YEARS_BY_ERA, eraKeysForOrder, type TimelineOrder } from './data/releaseOrder';
+import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
 
 interface ChronoEraItem {
   id: EraFilter;
   title: string;
-  shortTitle: string;
   years: string;
   kanji: string;
   colors: {
     accent: string;
-    glow: string;
-    glowStrong: string;
-    textBrand: string;
-    ambientGlow1: string;
-    ambientGlow2: string;
   };
 }
 
@@ -25,22 +20,15 @@ const CHRONO_ERAS: ChronoEraItem[] = [
   {
     id: 'all',
     title: 'Todas las eras',
-    shortTitle: 'Todas',
     years: '749–790',
     kanji: '全',
     colors: {
       accent: 'rgba(255, 255, 255, 0.95)',
-      glow: 'rgba(255, 255, 255, 0.35)',
-      glowStrong: 'rgba(255, 255, 255, 0.6)',
-      textBrand: 'text-black',
-      ambientGlow1: '#ffffff',
-      ambientGlow2: '#e4e4e7',
     },
   },
   {
     id: 'db-clasico',
     title: 'Dragon Ball',
-    shortTitle: 'DB Original',
     years: '749–753',
     kanji: '亀',
     colors: ERA_COLOR_MAP.db,
@@ -48,7 +36,6 @@ const CHRONO_ERAS: ChronoEraItem[] = [
   {
     id: 'db-z',
     title: 'Dragon Ball Z',
-    shortTitle: 'Dragon Ball Z',
     years: '761–774',
     kanji: '悟',
     colors: ERA_COLOR_MAP.dbz,
@@ -56,7 +43,6 @@ const CHRONO_ERAS: ChronoEraItem[] = [
   {
     id: 'db-daima',
     title: 'Dragon Ball Daima',
-    shortTitle: 'DB Daima',
     years: '774–775',
     kanji: '魔',
     colors: ERA_COLOR_MAP.dbdaima,
@@ -64,7 +50,6 @@ const CHRONO_ERAS: ChronoEraItem[] = [
   {
     id: 'db-super',
     title: 'Dragon Ball Super',
-    shortTitle: 'DB Super',
     years: '778–780',
     kanji: '超',
     colors: ERA_COLOR_MAP.dbs,
@@ -72,7 +57,6 @@ const CHRONO_ERAS: ChronoEraItem[] = [
   {
     id: 'db-gt',
     title: 'Dragon Ball GT',
-    shortTitle: 'DB GT',
     years: '789–790',
     kanji: '星',
     colors: ERA_COLOR_MAP.dbgt,
@@ -116,6 +100,7 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
   spyEraId,
   order = 'chronological',
 }: ChronologyEraNavProps) {
+  const isClassic = useIsClassicMode();
   const eras = React.useMemo<EraRailItem<EraFilter>[]>(
     () =>
       orderedEras(order).map((era) => {
@@ -125,8 +110,8 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
           id: era.id,
           label: era.title,
           kanji: era.kanji,
-          accent: era.id === 'all' ? 'var(--label-1)' : era.colors.accent,
-          textAccent: era.id === 'all' ? undefined : eraTextColor(era.colors.accent),
+          accent: isClassic ? 'var(--label-1)' : (era.id === 'all' ? 'var(--label-1)' : era.colors.accent),
+          textAccent: isClassic ? 'var(--label-1)' : (era.id === 'all' ? undefined : eraTextColor(era.colors.accent)),
           years: order === 'release' && era.id !== 'all' ? `Emitida ${AIR_YEARS_BY_ERA[era.id]}` : `Años ${era.years}`,
           badge: progress ? `${progress.read}/${progress.count}` : undefined,
           detail: progress
@@ -139,7 +124,7 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
             : undefined,
         };
       }),
-    [eraProgress, order],
+    [eraProgress, order, isClassic],
   );
 
   return (
@@ -147,7 +132,7 @@ export const ChronologyEraNav = React.memo(function ChronologyEraNav({
       eras={eras}
       activeId={activeEraId}
       spyId={spyEraId}
-      progressStyle="track"
+      progressStyle="none"
       onSelect={onSelectEra}
       label="Eras de la línea de tiempo"
     />

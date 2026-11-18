@@ -17,6 +17,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"kamehouse/internal/util"
+
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
@@ -37,13 +39,15 @@ type BlockCache struct {
 	maxBytes     int64
 	fetchTimeout time.Duration
 
-	mu        sync.Mutex
-	inflight  map[string]*blockDownload
-	meta      map[string]blockFileMeta
-	used      int64
-	evicting  atomic.Bool
-	writeMu   sync.Mutex // serialize admission, eviction and block writes
-	freeBytes func(string) (uint64, error)
+	mu         sync.Mutex
+	inflight   map[string]*blockDownload
+	meta       map[string]blockFileMeta
+	revisions  map[string]string // file ID -> immutable cache namespace for its revision
+	used       int64
+	generation uint64 // guarded by mu; Clear retires earlier downloads
+	evicting   atomic.Bool
+	writeMu    sync.Mutex // serialize admission, eviction and block writes
+	freeBytes  func(string) (uint64, error)
 }
 
 type blockFileMeta struct {
@@ -79,6 +83,7 @@ func NewBlockCache(dir string, blockSize, maxBytes int64) (*BlockCache, error) {
 		fetchTimeout: 2 * time.Minute,
 		inflight:     make(map[string]*blockDownload),
 		meta:         make(map[string]blockFileMeta),
+		revisions:    make(map[string]string),
 		freeBytes:    availableDiskBytes,
 	}
 	c.used, _ = dirSize(dir)
@@ -112,7 +117,13 @@ func (c *BlockCache) trimForAdmission(length int64) bool {
 		c.mu.Lock()
 		used = c.used
 		c.mu.Unlock()
-		c.evictTo(max(int64(0), used-int64(required-free)))
+		shortfall := int64(required - free)
+		if shortfall > used {
+			// Aunque se vacíe toda la caché no se llega a la reserva de disco: no se
+			// borra nada, para no dejar la caché vacía sin ganar espacio.
+			return false
+		}
+		c.evictTo(used - shortfall)
 		free, err = c.freeBytes(c.dir)
 	}
 	c.mu.Lock()
@@ -121,9 +132,12 @@ func (c *BlockCache) trimForAdmission(length int64) bool {
 	return fits && err == nil && free >= required
 }
 
-func (c *BlockCache) persistBlock(path string, data []byte) {
+func (c *BlockCache) persistBlockGeneration(path string, data []byte, generation uint64) {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
+	if generation != c.currentGeneration() {
+		return
+	}
 	length := int64(len(data))
 	if !c.trimForAdmission(length) {
 		return
@@ -132,7 +146,7 @@ func (c *BlockCache) persistBlock(path string, data []byte) {
 	if info, err := os.Stat(path); err == nil {
 		previous = info.Size()
 	}
-	if writeFileAtomic(path, data) == nil {
+	if util.WriteFileAtomic(path, data) == nil {
 		c.mu.Lock()
 		c.used += length - previous
 		c.mu.Unlock()
@@ -154,10 +168,14 @@ func (c *BlockCache) Stats() (bytes int64, blocks int) {
 	return bytes, blocks
 }
 
-// Clear removes every cached block; downloads in progress are not interrupted.
+// Clear removes every cached block. Earlier readers can finish in memory, but
+// their downloads cannot repopulate the cache or be joined by new readers.
 func (c *BlockCache) Clear() (freed int64, count int) {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
+	c.mu.Lock()
+	c.generation++
+	c.mu.Unlock()
 	freed, count = c.Stats()
 	entries, _ := os.ReadDir(c.dir)
 	for _, e := range entries {
@@ -183,6 +201,29 @@ func (c *BlockCache) Validate(fileID string, size int64) {
 	}
 }
 
+// ValidateRevision isolates disk blocks and in-flight downloads of each Drive
+// revision. An old download can finish, but can never populate the new namespace.
+func (c *BlockCache) ValidateRevision(fileID string, size int64, revision string) {
+	if !safeFileID(fileID) || revision == "" {
+		c.Validate(fileID, size)
+		return
+	}
+	key := "rev_" + util.CreateMD5(fileID+"\x00"+revision)
+	c.mu.Lock()
+	c.revisions[fileID] = key
+	c.mu.Unlock()
+	c.Validate(key, size)
+}
+
+func (c *BlockCache) revisionKey(fileID string) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if key := c.revisions[fileID]; key != "" {
+		return key
+	}
+	return fileID
+}
+
 // WaitIdle espera (hasta timeout) a que no queden descargas de bloques en curso; devuelve
 // false si siguen. Sirve para cerrar con orden y para que las pruebas puedan borrar su
 // carpeta temporal sin competir con una escritura de bloque.
@@ -203,33 +244,45 @@ func (c *BlockCache) inflightCount() int {
 	return len(c.inflight)
 }
 
+func (c *BlockCache) currentGeneration() uint64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.generation
+}
+
 // Fetcher wraps upstream (one Drive request per call) so ranges of fileID are
 // served from the cache. The returned responses are always 206 with a
 // Content-Range; only "bytes=S-E" and "bytes=S-" are cached, anything else goes
 // straight to upstream.
 func (c *BlockCache) Fetcher(fileID string, upstream RangeFetcher) RangeFetcher {
-	return c.fetcher(fileID, upstream, false)
+	return func(ctx context.Context, header string) (*http.Response, error) {
+		return c.fetcher(c.revisionKey(fileID), upstream, false)(ctx, header)
+	}
 }
 
 // FetcherWithoutReadAhead reuses cached blocks without speculative downloads.
 // Sparse thumbnail seeks need only the blocks actually read by the decoder.
 func (c *BlockCache) FetcherWithoutReadAhead(fileID string, upstream RangeFetcher) RangeFetcher {
-	return c.fetcher(fileID, upstream, true)
+	return func(ctx context.Context, header string) (*http.Response, error) {
+		return c.fetcher(c.revisionKey(fileID), upstream, true)(ctx, header)
+	}
 }
 
 func (c *BlockCache) fetcher(fileID string, upstream RangeFetcher, noReadAhead bool) RangeFetcher {
 	up := retryingFetch(upstream)
 	return func(ctx context.Context, rangeHeader string) (*http.Response, error) {
+		generation := c.currentGeneration()
 		start, end, hasRange, simple := parseByteRange(rangeHeader)
 		if !simple || !hasRange || !safeFileID(fileID) {
 			return upstream(ctx, rangeHeader)
 		}
 
 		meta, known := c.fileMeta(fileID)
+		var initial *blockDownload
 		if !known || !c.hasBlock(fileID, start/c.blockSize, meta) {
 			// Aunque start pase el tamaño conocido se consulta a Drive: si el
 			// archivo creció, la respuesta trae el tamaño nuevo.
-			d := c.download(fileID, start/c.blockSize, up)
+			d := c.download(fileID, start/c.blockSize, up, generation)
 			select {
 			case <-d.ready:
 			case <-ctx.Done():
@@ -244,9 +297,10 @@ func (c *BlockCache) fetcher(fileID string, upstream RangeFetcher, noReadAhead b
 				// caller's own retry loop but keep errors.Is(ErrDownloadQuotaExceeded).
 				return nil, &exhaustedError{err: err}
 			}
-			if meta, known = c.fileMeta(fileID); !known {
-				return nil, errors.New("drive: block cache lost file size")
-			}
+			// The download owns this metadata even if Clear has retired its
+			// disk namespace while the caller was waiting for response headers.
+			meta = d.meta
+			initial = d
 		}
 
 		if start >= meta.Size {
@@ -264,7 +318,7 @@ func (c *BlockCache) fetcher(fileID string, upstream RangeFetcher, noReadAhead b
 			StatusCode:    http.StatusPartialContent,
 			Header:        h,
 			ContentLength: end - start + 1,
-			Body:          &blockReader{c: c, ctx: ctx, fileID: fileID, up: up, pos: start, end: end, size: meta.Size, curIdx: -1, noReadAhead: noReadAhead},
+			Body:          &blockReader{c: c, ctx: ctx, fileID: fileID, up: up, pos: start, end: end, size: meta.Size, curIdx: -1, noReadAhead: noReadAhead, generation: generation, initial: initial},
 		}, nil
 	}
 }
@@ -350,6 +404,7 @@ func (c *BlockCache) hasBlock(fileID string, idx int64, meta blockFileMeta) bool
 func (c *BlockCache) fileMeta(fileID string) (blockFileMeta, bool) {
 	c.mu.Lock()
 	m, ok := c.meta[fileID]
+	generation := c.generation
 	c.mu.Unlock()
 	if ok {
 		return m, true
@@ -359,6 +414,16 @@ func (c *BlockCache) fileMeta(fileID string) (blockFileMeta, bool) {
 		return blockFileMeta{}, false
 	}
 	c.mu.Lock()
+	if generation != c.generation {
+		c.mu.Unlock()
+		return blockFileMeta{}, false
+	}
+	// A concurrent upstream response may have published fresher metadata
+	// while this reader was loading the previous on-disk copy.
+	if current, ok := c.meta[fileID]; ok {
+		c.mu.Unlock()
+		return current, true
+	}
 	c.meta[fileID] = m
 	c.mu.Unlock()
 	return m, true
@@ -367,8 +432,15 @@ func (c *BlockCache) fileMeta(fileID string) (blockFileMeta, bool) {
 // setFileMeta records the size seen upstream. A different size means the file
 // changed in Drive: its cached blocks are dropped.
 func (c *BlockCache) setFileMeta(fileID string, m blockFileMeta) {
+	c.setFileMetaGeneration(fileID, m, c.currentGeneration())
+}
+
+func (c *BlockCache) setFileMetaGeneration(fileID string, m blockFileMeta, generation uint64) {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
+	if generation != c.currentGeneration() {
+		return
+	}
 	if old, ok := c.fileMeta(fileID); ok && old.Size != m.Size {
 		_ = os.RemoveAll(c.fileDir(fileID))
 		used, _ := dirSize(c.dir)
@@ -380,29 +452,11 @@ func (c *BlockCache) setFileMeta(fileID string, m blockFileMeta) {
 	}
 	_ = os.MkdirAll(c.fileDir(fileID), 0o755)
 	if raw, err := json.Marshal(m); err == nil {
-		_ = writeFileAtomic(filepath.Join(c.fileDir(fileID), "meta.json"), raw)
+		_ = util.WriteFileAtomic(filepath.Join(c.fileDir(fileID), "meta.json"), raw)
 	}
 	c.mu.Lock()
 	c.meta[fileID] = m
 	c.mu.Unlock()
-}
-
-func writeFileAtomic(path string, data []byte) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
-	if err != nil {
-		return err
-	}
-	_, werr := tmp.Write(data)
-	cerr := tmp.Close()
-	if werr != nil || cerr != nil {
-		_ = os.Remove(tmp.Name())
-		return errors.Join(werr, cerr)
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
-		_ = os.Remove(tmp.Name())
-		return err
-	}
-	return nil
 }
 
 func dirSize(dir string) (int64, error) {
@@ -471,6 +525,7 @@ type blockDownload struct {
 	err     error
 	changed chan struct{} // closed and replaced on every update
 	ready   chan struct{} // closed once the length is known or the start failed
+	meta    blockFileMeta // immutable once ready is closed
 }
 
 func (d *blockDownload) notify() {
@@ -516,8 +571,8 @@ func (d *blockDownload) readAt(ctx context.Context, p []byte, off int) (int, err
 }
 
 // download starts (or joins) the download of block idx.
-func (c *BlockCache) download(fileID string, idx int64, up RangeFetcher) *blockDownload {
-	key := fileID + "/" + strconv.FormatInt(idx, 10)
+func (c *BlockCache) download(fileID string, idx int64, up RangeFetcher, generation uint64) *blockDownload {
+	key := strconv.FormatUint(generation, 10) + "/" + fileID + "/" + strconv.FormatInt(idx, 10)
 	c.mu.Lock()
 	if d, ok := c.inflight[key]; ok {
 		c.mu.Unlock()
@@ -526,11 +581,11 @@ func (c *BlockCache) download(fileID string, idx int64, up RangeFetcher) *blockD
 	d := &blockDownload{changed: make(chan struct{}), ready: make(chan struct{})}
 	c.inflight[key] = d
 	c.mu.Unlock()
-	go c.runDownload(key, fileID, idx, d, up)
+	go c.runDownload(key, fileID, idx, d, up, generation)
 	return d
 }
 
-func (c *BlockCache) runDownload(key, fileID string, idx int64, d *blockDownload, up RangeFetcher) {
+func (c *BlockCache) runDownload(key, fileID string, idx int64, d *blockDownload, up RangeFetcher, generation uint64) {
 	fail := func(err error) {
 		d.mu.Lock()
 		d.err = err
@@ -569,7 +624,8 @@ func (c *BlockCache) runDownload(key, fileID string, idx int64, d *blockDownload
 		fail(fmt.Errorf("drive: incomplete block Content-Range %q", resp.Header.Get("Content-Range")))
 		return
 	}
-	c.setFileMeta(fileID, blockFileMeta{Size: total, ContentType: resp.Header.Get("Content-Type")})
+	d.meta = blockFileMeta{Size: total, ContentType: resp.Header.Get("Content-Type")}
+	c.setFileMetaGeneration(fileID, d.meta, generation)
 
 	length := c.blockLen(idx, total)
 	d.mu.Lock()
@@ -595,7 +651,7 @@ func (c *BlockCache) runDownload(key, fileID string, idx int64, d *blockDownload
 		}
 	}
 
-	c.persistBlock(c.blockPath(fileID, total, idx), d.buf)
+	c.persistBlockGeneration(c.blockPath(fileID, total, idx), d.buf, generation)
 	d.mu.Lock()
 	d.done = true
 	d.notify()
@@ -606,11 +662,11 @@ func (c *BlockCache) runDownload(key, fileID string, idx int64, d *blockDownload
 }
 
 // prefetch starts downloading block idx if it is neither cached nor in flight.
-func (c *BlockCache) prefetch(fileID string, idx, size int64, up RangeFetcher) {
-	if idx*c.blockSize >= size || c.hasBlock(fileID, idx, blockFileMeta{Size: size}) {
+func (c *BlockCache) prefetch(fileID string, idx, size int64, up RangeFetcher, generation uint64) {
+	if idx*c.blockSize >= size || (generation == c.currentGeneration() && c.hasBlock(fileID, idx, blockFileMeta{Size: size})) {
 		return
 	}
-	c.download(fileID, idx, up)
+	c.download(fileID, idx, up, generation)
 }
 
 // ─── Reader ──────────────────────────────────────────────────────────────────
@@ -627,10 +683,12 @@ type blockReader struct {
 	end         int64
 	size        int64
 
-	curIdx int64
-	file   *os.File
-	dl     *blockDownload
-	closed bool
+	curIdx     int64
+	file       *os.File
+	dl         *blockDownload
+	closed     bool
+	generation uint64
+	initial    *blockDownload
 }
 
 // readAhead is how many following blocks a sequential reader pulls ahead.
@@ -657,7 +715,7 @@ func (r *blockReader) Read(p []byte) (int, error) {
 			ahead = 0
 		}
 		for i := int64(1); i <= ahead; i++ {
-			r.c.prefetch(r.fileID, idx+i, r.size, r.up)
+			r.c.prefetch(r.fileID, idx+i, r.size, r.up, r.generation)
 		}
 	}
 	off := r.pos - idx*r.c.blockSize
@@ -682,18 +740,23 @@ func (r *blockReader) Read(p []byte) (int, error) {
 
 func (r *blockReader) open(idx int64) error {
 	r.release()
-	r.curIdx = idx
+	r.curIdx = -1
 	meta := blockFileMeta{Size: r.size}
-	if r.c.hasBlock(r.fileID, idx, meta) {
+	d := r.initial
+	r.initial = nil
+	if d == nil && r.generation == r.c.currentGeneration() && r.c.hasBlock(r.fileID, idx, meta) {
 		path := r.c.blockPath(r.fileID, r.size, idx)
 		if f, err := os.Open(path); err == nil {
 			r.file = f
+			r.curIdx = idx
 			now := time.Now()
 			_ = os.Chtimes(path, now, now) // recency for eviction
 			return nil
 		}
 	}
-	d := r.c.download(r.fileID, idx, r.up)
+	if d == nil {
+		d = r.c.download(r.fileID, idx, r.up, r.generation)
+	}
 	select {
 	case <-d.ready:
 	case <-r.ctx.Done():
@@ -703,6 +766,7 @@ func (r *blockReader) open(idx int64) error {
 		return err
 	}
 	r.dl = d
+	r.curIdx = idx
 	return nil
 }
 

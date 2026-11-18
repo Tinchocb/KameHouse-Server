@@ -39,35 +39,42 @@ export function useSectionSpy(sectionDomIds: readonly string[]): string | undefi
     const ids = key ? key.split('|') : [];
     if (typeof window === 'undefined' || ids.length === 0) return;
     let raf = 0;
-    let atBottom = false;
-    let atTop = false;
+    let cachedScroller: HTMLElement | null = null;
+    let cachedElements: (HTMLElement | null)[] | null = null;
+
+    const getScroller = () => {
+      if (cachedScroller && cachedScroller.isConnected) return cachedScroller;
+      cachedScroller = document.getElementById('main-content');
+      return cachedScroller;
+    };
+
+    const getElements = () => {
+      if (cachedElements && cachedElements.every((el) => el === null || el.isConnected)) {
+        return cachedElements;
+      }
+      cachedElements = ids.map((id) => document.getElementById(id));
+      return cachedElements;
+    };
 
     const update = () => {
       raf = 0;
-      let containerAtTop = atTop;
-      let containerAtBottom = atBottom;
-      const scroller = document.getElementById('main-content');
-      if (scroller) {
-        if (scroller.scrollTop <= 8) containerAtTop = true;
-        if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4) containerAtBottom = true;
-      }
-      const tops = ids.map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? null);
+      const scroller = getScroller();
+      const containerAtTop = scroller ? scroller.scrollTop <= 8 : false;
+      const containerAtBottom = scroller
+        ? scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4
+        : false;
+      const els = getElements();
+      const tops = els.map((el) => el?.getBoundingClientRect().top ?? null);
       const best = pickActiveSection(ids, tops, window.innerHeight * LINE_RATIO, containerAtBottom, containerAtTop);
       setActiveId((prev) => (prev === best ? prev : best));
     };
 
-    const onScroll = (event: Event) => {
-      const target = event.target;
-      const first = document.getElementById(ids[0]);
-      if (target instanceof HTMLElement && target.scrollHeight > target.clientHeight && first && target.contains(first)) {
-        atTop = target.scrollTop <= 8;
-        atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 4;
-      }
+    const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
     };
 
     window.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', onScroll, { passive: true });
     update();
     return () => {
       window.removeEventListener('scroll', onScroll, { capture: true });
@@ -76,5 +83,6 @@ export function useSectionSpy(sectionDomIds: readonly string[]): string | undefi
     };
   }, [key]);
 
-  return activeId;
+  // Sin secciones no hay activo: no devolver el de una lista anterior (la paleta de la Cronología lo usa).
+  return key ? activeId : undefined;
 }

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"kamehouse/internal/constants"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
@@ -15,23 +14,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// resolveLibraryMediaForSagas finds the LibraryMedia for a route media ID
-// using the same resolution order as anime.NewSimpleEntry: try the ID as a
-// primary key first, then fall back to a TMDB ID lookup (with the +1,000,000
-// offset used for movie IDs in this app's normalized ID space).
+// resolveLibraryMediaForSagas uses the public identity carried by API routes.
 func (h *Handler) resolveLibraryMediaForSagas(mID int) (*models.LibraryMedia, error) {
-	media, err := db.GetLibraryMediaByID(h.App.Database, uint(mID))
-	if err != nil {
-		return nil, err
-	}
-	if media != nil {
-		return media, nil
-	}
-
-	if mID >= constants.MovieIDOffset {
-		return db.GetLibraryMediaByTmdbIdAndType(h.App.Database, mID-constants.MovieIDOffset, "MOVIE")
-	}
-	return db.GetLibraryMediaByTmdbIdAndType(h.App.Database, mID, "SHOW")
+	return db.ResolveLibraryMediaByPublicID(h.App.Database, mID)
 }
 
 // HandleGetSeriesSagas returns fully enriched sagas for a given media entry.

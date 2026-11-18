@@ -2,6 +2,7 @@ package db
 
 import (
 	"errors"
+	"sync"
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
@@ -15,8 +16,10 @@ import (
 // Each database generation owns its snapshot and in-flight load. Readers that
 // start after an invalidation cannot join a load from before the write.
 type localFilesGeneration struct {
-	snapshot atomic.Pointer[[]*dto.LocalFile]
-	flight   singleflight.Group
+	snapshot  atomic.Pointer[[]*dto.LocalFile]
+	flight    singleflight.Group
+	indexOnce sync.Once
+	byMedia   map[int][]*dto.LocalFile
 }
 
 func (d *Database) localFilesGeneration() *localFilesGeneration {
@@ -94,13 +97,19 @@ func InvalidateLocalFilesCache(d *Database) {
 
 // GetLocalFilesByMediaID will return the local files for the given media ID.
 func GetLocalFilesByMediaID(d *Database, mediaID int) ([]*dto.LocalFile, error) {
-	if cached := d.localFilesGeneration().snapshot.Load(); cached != nil {
-		var matched []*dto.LocalFile
-		for _, f := range *cached {
-			if f != nil && f.MediaID == mediaID {
-				matched = append(matched, f.Clone())
+	generation := d.localFilesGeneration()
+	if cached := generation.snapshot.Load(); cached != nil {
+		// Build once per immutable snapshot. Detail/playback lookups should scale
+		// with the requested series, rather than the entire library.
+		generation.indexOnce.Do(func() {
+			generation.byMedia = make(map[int][]*dto.LocalFile)
+			for _, f := range *cached {
+				if f != nil {
+					generation.byMedia[f.MediaID] = append(generation.byMedia[f.MediaID], f)
+				}
 			}
-		}
+		})
+		matched := cloneLocalFiles(generation.byMedia[mediaID])
 		d.Logger.Debug().Int("mediaID", mediaID).Int("count", len(matched)).Msg("db: Local files retrieved from in-memory cache by media ID")
 		return matched, nil
 	}
@@ -110,16 +119,6 @@ func GetLocalFilesByMediaID(d *Database, mediaID int) ([]*dto.LocalFile, error) 
 		return nil, err
 	}
 	d.Logger.Debug().Int("mediaID", mediaID).Int("count", len(lfs)).Msg("db: Local files retrieved from relational storage by media ID")
-	return lfs, nil
-}
-
-// SaveLocalFiles will save the local files in the database.
-func SaveLocalFiles(d *Database, lfs []*dto.LocalFile) ([]*dto.LocalFile, error) {
-	err := UpsertLocalFileRelationalBatch(d, lfs)
-	if err != nil {
-		return nil, err
-	}
-	d.Logger.Debug().Int("count", len(lfs)).Msg("db: Local files saved to relational storage")
 	return lfs, nil
 }
 

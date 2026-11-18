@@ -18,3 +18,9 @@ export const queryKeys = {
             [`series-sagas-${String(seriesId)}`] as const,
     },
 } as const
+
+export const continuityQueryKeys = {
+    all: ["continuity"] as const,
+    history: () => [API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistory.key] as const,
+    item: (id?: number | string | null) => [API_ENDPOINTS.CONTINUITY.GetContinuityWatchHistoryItem.key, Number(id)] as const,
+}

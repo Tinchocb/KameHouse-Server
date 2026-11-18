@@ -103,7 +103,11 @@ func parseContentRangeTotal(v string) (int64, error) {
 	if slash == -1 || slash == len(v)-1 || v[slash+1:] == "*" {
 		return 0, fmt.Errorf("httprange: Content-Range sin tamaño total: %q", v)
 	}
-	return strconv.ParseInt(v[slash+1:], 10, 64)
+	total, err := strconv.ParseInt(v[slash+1:], 10, 64)
+	if err != nil || total <= 0 {
+		return 0, fmt.Errorf("httprange: tamaño total inválido: %q", v)
+	}
+	return total, nil
 }
 
 func (r *Reader) Read(p []byte) (int, error) {
@@ -206,6 +210,12 @@ func (r *Reader) fetch(start, end int64) (buf []byte, retry bool, err error) {
 
 	switch resp.StatusCode {
 	case http.StatusPartialContent:
+		// Never cache bytes from another offset or a resource whose size changed
+		// since Open: that would silently corrupt container metadata.
+		expected := fmt.Sprintf("bytes %d-%d/%d", start, end, r.size)
+		if resp.Header.Get("Content-Range") != expected {
+			return nil, false, fmt.Errorf("httprange: Content-Range inesperado: %q (esperado %q)", resp.Header.Get("Content-Range"), expected)
+		}
 	case http.StatusOK:
 		// El servidor ignoró el Range: solo sirve si pedíamos desde el inicio, y
 		// aun así se lee únicamente el bloque para no bajar el archivo completo.
@@ -219,14 +229,11 @@ func (r *Reader) fetch(start, end int64) (buf []byte, retry bool, err error) {
 
 	want := end - start + 1
 	buf = make([]byte, want)
-	n, err := io.ReadFull(resp.Body, buf)
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
+	_, err = io.ReadFull(resp.Body, buf)
+	if err != nil {
 		return nil, r.ctx.Err() == nil, err
 	}
-	if n == 0 {
-		return nil, true, io.ErrUnexpectedEOF
-	}
-	return buf[:n], false, nil
+	return buf, false, nil
 }
 
 // Close libera los bloques en memoria. Las conexiones las administra el client.

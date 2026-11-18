@@ -8,9 +8,6 @@
   --blur-overlay-xs:  8px;     /* Mínimo: chips y cápsulas pequeñas */
   --blur-overlay-sm:  16px;    /* Sutíl: toasts, tooltips, dropdowns */
   --blur-overlay-md:  24px;    /* Estándar: modales, sidebars, command palette */
-  --blur-overlay-lg:  32px;    /* Fuerte: full-screen overlays, player inmersivo */
-  --blur-overlay-xl:  48px;    /* AGRESIVO: scrims, backgrounds inmersivos, cinematic */
-  --blur-overlay-2xl: 64px;    /* MÁXIMO: hero backgrounds, cinematic overlays */
 
   /* ─── Saturación para backdrop-filter (mejora legibilidad en glass) ──────── */
   --glass-saturate:        1.2;   /* estándar */
@@ -25,22 +22,10 @@
 
   /* ─── Filter blur (para elementos decorativos, NO backdrop-filter) ─── */
   --filter-blur-hero:    12px;   /* blur en backdrop de héroe */
-  --filter-blur-hero-bg: 32px;   /* blur en bg de héroe */
-  --filter-blur-orb:     28px;   /* blur optimizado en ambient orbs */
-
-  /* ─── Filter blur para DynamicBackdrop (imagen de fondo decorativa) ─── */
-  --filter-blur-ambient-sm: 14px;   /* sutil */
-  --filter-blur-ambient-md: 22px;   /* medio: detalle por defecto */
-  --filter-blur-ambient-lg: 28px;   /* fuerte: listing */
-  --filter-blur-ambient-xl: 36px;   /* máximo: home hero */
 
   /* ─── Filter blur estándar (mapeados a Tailwind blur-*) ─────────────── */
-  --filter-blur-sm:      4px;
   --filter-blur-default: 8px;
   --filter-blur-md:      12px;
-  --filter-blur-lg:      16px;
-  --filter-blur-xl:      24px;
-  --filter-blur-2xl:     40px;
   --filter-blur-3xl:     64px;
 
   /* ─── Hero Image Filters (Tratamiento cinematográfico unificado) ─────── */
@@ -62,8 +47,8 @@
   position: relative;
   isolation: isolate;
   background: var(--glass-frosted-bg);
-  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted)) brightness(1.05) contrast(1.06);
-  backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted)) brightness(1.05) contrast(1.06);
+  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted));
+  backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted));
   border: 1px solid var(--glass-frosted-border);
   border-top-color: var(--glass-frosted-border-top);
   border-bottom-color: var(--glass-frosted-border-bottom);
@@ -77,29 +62,14 @@
   position: relative;
   isolation: isolate;
   background: var(--glass-frosted-bg);
-  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted)) brightness(1.05) contrast(1.06);
-  backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted)) brightness(1.05) contrast(1.06);
+  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted));
+  backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate-frosted));
   border: 1px solid var(--glass-frosted-border);
   border-top-color: var(--glass-frosted-border-top);
   border-bottom-color: var(--glass-frosted-border-bottom);
   box-shadow: var(--glass-frosted-shadow);
   border-radius: 9999px;
   transform: translateZ(0);
-}
-
-/* Micro-textura superficial de dispersión lumínica (vidrio esmerilado real) */
-.glass-frosted::before,
-.glass-frosted-pill::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-  background-size: 8px 8px;
-  opacity: 0.35;
-  mix-blend-mode: overlay;
 }
 
 /* ─── Liquid Glass — vidrio en capas con refracción especular ────────────
@@ -156,28 +126,14 @@
      Con prefijo -webkit para compatibilidad 100% con Safari/WebKit. ────── */
 .glass-card {
   background: var(--glass-card-bg);
-  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate)) contrast(var(--glass-contrast-subtle));
-  backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate)) contrast(var(--glass-contrast-subtle));
-  border-top: 1px solid var(--glass-border-top, rgba(255, 255, 255, 0.25));
-  border-left: 1px solid var(--glass-border-side, rgba(255, 255, 255, 0.10));
-  border-right: 1px solid var(--glass-border-side, rgba(255, 255, 255, 0.10));
-  border-bottom: 1px solid var(--glass-border-bottom, rgba(255, 255, 255, 0.05));
-  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), 0 16px 36px -8px rgba(0, 0, 0, 0.70);
+  -webkit-backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--blur-overlay-md)) saturate(var(--glass-saturate));
+  border-top: 1px solid var(--glass-border-top, rgba(255, 255, 255, 0.14));
+  border-left: 1px solid var(--glass-border-side, rgba(255, 255, 255, 0.08));
+  border-right: 1px solid var(--glass-border-side, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--glass-border-bottom, rgba(255, 255, 255, 0.06));
+  box-shadow: var(--double-bezel-shadow);
   border-radius: var(--radius-3xl);
-  transform: translateZ(0);
-}
-
-/* ─── Hero Glass Platter (Opción D — visionOS Spatial Glass) ────────────── */
-.hero-glass-platter {
-  position: relative;
-  isolation: isolate;
-  background: linear-gradient(155deg, rgba(28, 32, 44, 0.56) 0%, rgba(12, 15, 22, 0.68) 100%);
-  -webkit-backdrop-filter: blur(var(--blur-overlay-lg)) saturate(205%) contrast(var(--glass-contrast));
-  backdrop-filter: blur(var(--blur-overlay-lg)) saturate(205%) contrast(var(--glass-contrast));
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-top-color: rgba(255, 255, 255, 0.34);
-  border-bottom-color: rgba(255, 255, 255, 0.12);
-  box-shadow: var(--shadow-hero-platter);
   transform: translateZ(0);
 }
 
@@ -189,13 +145,10 @@
    gana. Si este override viviera en colors.css, el :root de este archivo
    lo pisaría silenciosamente.
    ════════════════════════════════════════════════════════════════════════════ */
-[data-flat="true"] {
+:root[data-flat="true"] {
   --blur-overlay-xs:  0px;
   --blur-overlay-sm:  0px;
   --blur-overlay-md:  0px;
-  --blur-overlay-lg:  0px;
-  --blur-overlay-xl:  0px;
-  --blur-overlay-2xl: 0px;
 
   /* ─── Saturate a 1 (evita cambios de color residuales) ─── */
   --glass-saturate:          1;
@@ -214,8 +167,8 @@
    Primitivas --flat-*: la escala de elevación del modo plano. Se definen en
    :root (no solo bajo [data-flat]) para que la vista previa de Ajustes pueda
    mostrar el plano aunque la app esté en vidrio.
-     Neutro  → grises sólidos (HIG) sobre negro puro, sin tinte.
-     Por era → la misma escala con un 5–10 % del acento de la era, sin vidrio.
+     Neutro  → grises sólidos (HIG) sobre negro puro, sin tinte (:root).
+     Por era → la misma escala con un 5–10 % del acento de la era (styles/themes/era.css).
    Escalón 1 = tarjetas, barras e islas · 2 = menús, popovers y hojas ·
    3 = hover, seleccionado y pistas. Se distinguen por luminancia (≈ +16 en
    cada paso), no por bordes duros. Los grises son SOLO del plano: con vidrio
@@ -236,16 +189,6 @@
     0 20px 40px -18px rgba(0, 0, 0, 0.75);
 }
 
-:root[data-mode="era"] {
-  --flat-0: var(--bg-primary);
-  --flat-1: color-mix(in srgb, var(--brand-accent-hex) 5%, var(--bg-secondary));
-  --flat-2: color-mix(in srgb, var(--brand-accent-hex) 7%, var(--bg-tertiary));
-  --flat-3: color-mix(in srgb, var(--brand-accent-hex) 10%, var(--bg-quaternary));
-  --flat-separator: color-mix(in srgb, var(--brand-accent-hex) 20%, rgba(255, 255, 255, 0.08));
-  --flat-edge: color-mix(in srgb, var(--brand-accent-hex) 16%, rgba(255, 255, 255, 0.05));
-  --flat-edge-top: color-mix(in srgb, var(--brand-accent-hex) 22%, rgba(255, 255, 255, 0.08));
-}
-
 /* Plano activo: los alias de vidrio apuntan a la escala plana. Con
    :root[data-flat] (0,2,0) y cargando después de colors.css / shadows.css
    ganan a [data-mode] y a los bloques [data-flat] genéricos. */
@@ -253,8 +196,6 @@
   --glass-bg:             var(--flat-1);
   --glass-bg-strong:      var(--flat-2);
   --glass-bg-hover:       var(--flat-3);
-  --glass-hover:          var(--flat-3);
-  --glass-strong:         var(--flat-2);
   --glass-panel-bg:       var(--flat-1);
   --glass-panel-bg-strong: var(--flat-2);
   --glass-card-bg:        var(--flat-1);
@@ -275,7 +216,6 @@
 
   --glass-frosted-shadow: var(--flat-shadow);
   --shadow-glass-liquid:  var(--flat-shadow);
-  --shadow-glass:         var(--flat-shadow);
 
   --sectionbar-bg:               var(--flat-1);
   --sectionbar-bg-strong:        var(--flat-2);
@@ -289,7 +229,6 @@
 
   --md-sys-color-surface-container:         var(--flat-1);
   --md-sys-color-surface-container-high:    var(--flat-2);
-  --md-sys-color-surface-container-highest: var(--flat-3);
 }
 
 /* Cero backdrop-filter con el plano activo. Selector universal en vez de una
@@ -308,8 +247,7 @@
 
 /* Las clases de vidrio fijan sombra y relieve propios; en plano usan la
    sombra suave de la escala (sin resplandor ni brillo especular). */
-[data-flat="true"] .glass-card,
-[data-flat="true"] .hero-glass-platter {
+[data-flat="true"] .glass-card {
   background: var(--flat-1);
   border-color: var(--flat-edge);
   border-top-color: var(--flat-edge-top);
@@ -326,31 +264,6 @@
 [data-flat="true"] .glass-frosted-pill::before {
   display: none !important;
   content: none;
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
-   Overrides por modo de interfaz — viven acá (no en colors.css) por la misma
-   razón de orden de imports que el bloque flat de arriba.
-   ════════════════════════════════════════════════════════════════════════════ */
-
-/* Clásico (Neutro): una sola intensidad de vidrio — la "sutil" que ya existe
-   en :root — para todas las variantes (estándar, cinematográfico, esmerilado).
-   Sin una tercera escala propia: el esmerilado ya no usa un 125% suelto. */
-[data-mode="classic"] {
-  --glass-saturate-cinematic: var(--glass-saturate-subtle);
-  --glass-contrast:           var(--glass-contrast-subtle);
-
-  /* Saturación que devuelve el color de pósters y banners al pasar por el
-     vidrio (con 1.1 se apagaban sobre el fondo negro de Neutro). */
-  --glass-saturate:           1.35;
-  --glass-saturate-frosted:   1.5;
-
-  /* Esmerilado grafito de la escala --neutral-elev-*, sin base azulada; el
-     canto superior especular se mantiene. */
-  --glass-frosted-bg: linear-gradient(165deg,
-    rgba(255, 255, 255, 0.07) 0%,
-    color-mix(in srgb, var(--neutral-elev-1) 72%, transparent) 40%,
-    color-mix(in srgb, var(--neutral-elev-1) 88%, transparent) 100%);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -376,8 +289,10 @@
    Filas repetidas (`surface-content-row`) conservan la superficie sólida base.
    Solo propiedad estándar: el build elimina el `-webkit-` duplicado. */
 :root:not([data-flat="true"]) .surface-content:not(.rounded-full):not(.surface-content-row) {
-  background-color: color-mix(in srgb, var(--surface-content) 72%, transparent);
+  background-color: color-mix(in srgb, var(--surface-content) 82%, transparent);
   backdrop-filter: blur(var(--blur-overlay-sm)) saturate(var(--glass-saturate));
+  border-top-color: var(--glass-frosted-border-top);
+  box-shadow: var(--double-bezel-shadow);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -398,9 +313,9 @@
   }
 }
 
-/* Increase Contrast: bordes 1px al 40% sobre lo anterior */
+/* Increase Contrast: bordes 1px al 40% sobre lo anterior (especificidad 0,3,0) */
 @media (prefers-contrast: more) {
-  :root:root {
+  :root:root:root {
     --glass-border-top: rgba(255, 255, 255, 0.40);
     --glass-border-bottom: rgba(255, 255, 255, 0.40);
     --glass-border-side: rgba(255, 255, 255, 0.40);

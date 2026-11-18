@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
 import { getLargeResImage } from "@/lib/helpers/images"
+import { useMediaQuery } from "./use-media-query"
 
 /**
  * Sincroniza una imagen de backdrop con el DynamicBackdrop global del IntelligenceStore.
@@ -33,15 +34,15 @@ export function useHeroBackdrop(imageSrc: string | null | undefined, options?: {
     }, [deferredSrc, setBackdropUrl, optimizeResolution])
 }
 
-/** scrollTop del ancestro con scroll vertical (o de la ventana si no hay). */
-function getScrollTop(el: HTMLElement): number {
+/** Resolve the page owner once; avoid incidental overflow on clipped artwork. */
+function getScrollTarget(el: HTMLElement): HTMLElement | Window {
+    const page = el.closest<HTMLElement>('[data-scroll-container="true"]')
+    if (page) return page
     for (let node = el.parentElement; node; node = node.parentElement) {
         const { overflowY } = getComputedStyle(node)
-        if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) {
-            return node.scrollTop
-        }
+        if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) return node
     }
-    return window.scrollY
+    return window
 }
 
 /**
@@ -55,44 +56,52 @@ function getScrollTop(el: HTMLElement): number {
  */
 export function useHeroParallax<T extends HTMLElement = HTMLDivElement>(
     speed: number = 0.15,
-    options?: { disabled?: boolean; maxOffset?: number }
+    options?: { disabled?: boolean; maxOffset?: number; scrollContainerRef?: React.RefObject<HTMLElement | null> }
 ) {
     const ref = React.useRef<T>(null)
     const disabled = options?.disabled ?? false
     const maxOffset = options?.maxOffset ?? Infinity
+    const scrollContainerRef = options?.scrollContainerRef
 
+    const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
     React.useEffect(() => {
-        if (disabled) return
-        if (typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            return
-        }
-        let rafId: number | null = null
-
-        const handleScroll = () => {
-            if (rafId) return
-            rafId = requestAnimationFrame(() => {
-                rafId = null
-                const el = ref.current
-                if (!el) return
-                // Sin trabajo inútil fuera de pantalla: evita invalidar el layer
-                // del hero mientras el usuario lee las sagas/películas de abajo.
+        const el = ref.current
+        if (disabled || reducedMotion || !el) return
+        const target = scrollContainerRef?.current ?? getScrollTarget(el)
+        let rafId = 0
+        let visible = true
+        let previousOffset: number | null = null
+        const update = () => {
+            rafId = 0
+            if (!visible) return
+            if (!intersection) {
                 const rect = el.getBoundingClientRect()
                 if (rect.bottom < 0 || rect.top > window.innerHeight) return
-                // No se usa e.target: con el throttle por frame el primer evento
-                // puede venir de otro contenedor (swimlanes, drag) con scrollTop 0.
-                // Se lee siempre el ancestro que mueve al hero, incluido 0, para que
-                // al volver arriba la capa regrese exacta a su lugar.
-                const offset = Math.min(Math.max(0, getScrollTop(el)) * speed, maxOffset)
+            }
+            const top = target instanceof HTMLElement ? target.scrollTop : window.scrollY
+            const offset = Math.min(Math.max(0, top) * speed, maxOffset)
+            if (offset !== previousOffset) {
                 el.style.transform = `translate3d(0, ${offset}px, 0)`
-            })
+                previousOffset = offset
+            }
         }
-
-        window.addEventListener("scroll", handleScroll, { capture: true, passive: true })
+        const schedule = () => { if (visible && !rafId) rafId = requestAnimationFrame(update) }
+        const intersection = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(entries => {
+            visible = entries.some(entry => entry.isIntersecting)
+            if (visible) schedule()
+            else if (rafId) { cancelAnimationFrame(rafId); rafId = 0 }
+        })
+        intersection?.observe(el)
+        // Listen only to the owner: nested carousels cannot trigger geometry work.
+        target.addEventListener("scroll", schedule, { passive: true })
+        schedule()
         return () => {
-            window.removeEventListener("scroll", handleScroll, { capture: true })
+            target.removeEventListener("scroll", schedule)
+            intersection?.disconnect()
             if (rafId) cancelAnimationFrame(rafId)
+            el.style.transform = ""
         }
-    }, [speed, disabled, maxOffset])
+    }, [speed, disabled, maxOffset, reducedMotion, scrollContainerRef])
 
     return ref
 }

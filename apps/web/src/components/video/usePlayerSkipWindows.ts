@@ -3,8 +3,9 @@ import { useEffect, useMemo } from "react"
 import { useShallow } from "zustand/react/shallow"
 import { useAniSkipTimes } from "@/api/hooks/aniskip.hooks"
 import { useSkipTimesStore } from "@/lib/store"
-import { resolveEdWindow, resolveOpWindow, resolveRecapWindow } from "./skip-windows"
+import { isValidOpeningWindow, resolveEdWindow, resolveOpWindow, resolveRecapWindow } from "./skip-windows"
 import type { Chapter, SkipWindow } from "./skip-windows"
+import { useDriveTitleCard } from "./useDriveTitleCard"
 
 interface UsePlayerSkipWindowsProps {
     malId?: number | null
@@ -12,14 +13,19 @@ interface UsePlayerSkipWindowsProps {
     episodeNumber?: number
     duration: number
     chapters: Chapter[]
+    /** Ruta gdrive:// del episodio: habilita buscar el resumen por la placa del título. */
+    drivePath?: string
 }
 
 /**
  * Ventanas de intro y outro del episodio (AniSkip → capítulos del archivo →
  * caché de la serie) y aprendizaje: lo resuelto se guarda en la caché para que
  * los demás episodios de la serie lo usen aunque AniSkip no los conozca.
+ *
+ * El resumen sale de un capítulo, de AniSkip o, en archivos de Drive, de la placa del
+ * título que marcan los subtítulos ASS (el tramo entre el fin del opening y la placa).
  */
-export function usePlayerSkipWindows({ malId, mediaId, episodeNumber, duration, chapters }: UsePlayerSkipWindowsProps) {
+export function usePlayerSkipWindows({ malId, mediaId, episodeNumber, duration, chapters, drivePath }: UsePlayerSkipWindowsProps) {
     const { seriesSkipTimes, saveSeriesSkipTimes } = useSkipTimesStore(
         useShallow(state => ({
             seriesSkipTimes: state.seriesSkipTimes,
@@ -27,7 +33,7 @@ export function usePlayerSkipWindows({ malId, mediaId, episodeNumber, duration, 
         }))
     )
 
-    const { data: skipTimes } = useAniSkipTimes({
+    const { data: skipTimes, isLoading: skipTimesLoading } = useAniSkipTimes({
         malId: malId ?? null,
         episodeNumber: episodeNumber ?? null,
         episodeDuration: duration > 0 ? duration : undefined,
@@ -71,6 +77,16 @@ export function usePlayerSkipWindows({ malId, mediaId, episodeNumber, duration, 
         }
     }, [storeKey, duration, skipTimesOp, skipTimesEd, seriesSkipTimes, saveSeriesSkipTimes])
 
-    const skipTimesRecap = useMemo(() => resolveRecapWindow(skipTimes, chapters), [skipTimes, chapters])
+    // Se espera a AniSkip para preguntar una sola vez, ya con el fin del opening: así el
+    // servidor lee de Drive solo el tramo del resumen y no desde el comienzo.
+    const titleCard = useDriveTitleCard({
+        path: drivePath,
+        from: skipTimesOp && isValidOpeningWindow(skipTimesOp) ? skipTimesOp.endTime : 0,
+        enabled: !skipTimesLoading,
+    })
+    const skipTimesRecap = useMemo(
+        () => resolveRecapWindow(skipTimes, chapters, titleCard, skipTimesOp),
+        [skipTimes, chapters, titleCard, skipTimesOp],
+    )
     return { skipTimesOp, skipTimesEd, skipTimesRecap }
 }

@@ -19,10 +19,29 @@ const EXCLUDED_KEY_PATTERNS = [
     "pretranscode",
     "notifications",
     "google-drive-status",
+    // Estado vivo del backend: evita falsos "listo" en frío desde IndexedDB al arrancar el sidecar.
+    "status-get-status",
+    // Logs del servidor, selector de carpetas y búsquedas semánticas: efímeros, y se guardaban 24 h (DT-07).
+    "status-get-log-content",
+    "status-get-latest-log-content",
+    "status-get-log-filenames",
+    "directory-selector",
+    "intelligence-semantic-search",
     // Models_Settings trae tmdbApiKey y el clientSecret/refreshToken de Drive:
     // no se dejan en claro en IndexedDB.
     "settings",
 ]
+
+function isExcludedKey(queryKey: readonly unknown[]): boolean {
+    const firstKey = queryKey[0]
+    if (typeof firstKey === "string") {
+        const lower = firstKey.toLowerCase()
+        if (EXCLUDED_KEY_PATTERNS.some((pattern) => lower.includes(pattern))) {
+            return true
+        }
+    }
+    return false
+}
 
 /**
  * Determina si una query individual califica para ser persistida en IndexedDB.
@@ -33,15 +52,7 @@ function shouldDehydrateQuery(query: Query): boolean {
         return false
     }
 
-    const firstKey = query.queryKey[0]
-    if (typeof firstKey === "string") {
-        const lower = firstKey.toLowerCase()
-        if (EXCLUDED_KEY_PATTERNS.some((pattern) => lower.includes(pattern))) {
-            return false
-        }
-    }
-
-    return true
+    return !isExcludedKey(query.queryKey)
 }
 
 /** Espera mínima entre escrituras de la caché completa en IndexedDB. */
@@ -118,7 +129,12 @@ export function createIDBPersister(idbKey: string = IDB_KEY, throttleMs: number 
         },
         restoreClient: async () => {
             try {
-                return await get<PersistedClient>(idbKey)
+                const client = await get<PersistedClient>(idbKey)
+                if (!client?.clientState?.queries) return client
+                client.clientState.queries = client.clientState.queries.filter(
+                    (q) => !isExcludedKey(q.queryKey),
+                )
+                return client
             } catch (err) {
                 console.warn("[QueryPersist] Error restaurando caché de IndexedDB:", err)
                 return undefined
@@ -134,6 +150,23 @@ export function createIDBPersister(idbKey: string = IDB_KEY, throttleMs: number 
             }
         },
     }
+}
+
+/** Se resuelve cuando la caché persistida ya está en memoria (o a los 2 s, si IndexedDB no responde). */
+let markCacheRestored: () => void = () => {}
+const cacheRestored = new Promise<void>((resolve) => {
+    markCacheRestored = resolve
+    setTimeout(resolve, 2000)
+})
+
+/** Espera a que la caché de IndexedDB esté restaurada antes de decidir si hace falta pedir a red. */
+export function whenCacheRestored(): Promise<void> {
+    return cacheRestored
+}
+
+/** Lo llama PersistQueryClientProvider al terminar de restaurar la caché. */
+export function onCacheRestored(): void {
+    markCacheRestored()
 }
 
 const idbPersister = createIDBPersister()

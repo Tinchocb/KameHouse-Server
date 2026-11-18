@@ -11,6 +11,7 @@ export const fetchAnimeEntry = async (id: string | number) => {
     return buildApiQuery<Anime_Entry>({
         endpoint: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.endpoint.replace("{id}", String(id)),
         method: API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.methods[0],
+        cache: "no-store",
     })
 }
 
@@ -30,16 +31,26 @@ export function useGetAnimeEntry(id: Nullish<string | number>) {
         queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(id)],
         enabled: !!id,
         staleTime: 30000, // 30 seconds
+        // A cold response precedes background episode enrichment. Poll briefly
+        // while summaries/stills are missing, then stop even if the provider
+        // cannot supply them. Bypass the legacy ETag that ignores enrichment.
+        cache: "no-store",
+        refetchInterval: (query) => {
+            const episodes = query.state.data?.episodes
+            if (query.state.dataUpdateCount >= 20 || !episodes?.length) return false
+            if (query.state.data?.episodeEnrichmentPending !== undefined) return query.state.data.episodeEnrichmentPending ? 2000 : false
+            return episodes.some(ep => !ep.episodeMetadata?.image || !(ep.episodeMetadata?.overview || ep.episodeMetadata?.summary)) ? 2000 : false
+        },
     })
 }
 
-export function useUpdateAnimeEntryProgress(id: Nullish<string | number>, episodeNumber: number, showToast: boolean = true) {
+export function useUpdateAnimeEntryProgress(id: Nullish<string | number>, showToast: boolean = true) {
     const queryClient = useQueryClient()
 
     return useServerMutation<boolean, UpdateAnimeEntryProgress_Variables, { previousEntry?: Anime_Entry }>({
         endpoint: API_ENDPOINTS.ANIME_ENTRIES.UpdateAnimeEntryProgress.endpoint,
         method: API_ENDPOINTS.ANIME_ENTRIES.UpdateAnimeEntryProgress.methods[0],
-        mutationKey: [API_ENDPOINTS.ANIME_ENTRIES.UpdateAnimeEntryProgress.key, id, episodeNumber],
+        mutationKey: [API_ENDPOINTS.ANIME_ENTRIES.UpdateAnimeEntryProgress.key, id],
         onMutate: async (variables) => {
             if (!id) return { previousEntry: undefined }
 

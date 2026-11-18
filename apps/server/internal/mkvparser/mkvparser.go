@@ -20,7 +20,6 @@ var fontExtensions = map[string]struct{}{".ttf": {}, ".ttc": {}, ".woff": {}, ".
 type MetadataParser struct {
 	reader       io.ReadSeeker
 	logger       *zerolog.Logger
-	realLogger   *zerolog.Logger
 	parseErr     error
 	parseOnce    sync.Once
 	metadataOnce sync.Once
@@ -37,7 +36,6 @@ func NewMetadataParser(reader io.ReadSeeker, logger *zerolog.Logger) *MetadataPa
 	return &MetadataParser{
 		reader:            reader,
 		logger:            logger,
-		realLogger:        logger,
 		extractedMetadata: nil,
 	}
 }
@@ -182,21 +180,6 @@ func (mp *MetadataParser) GetMetadata(ctx context.Context) *Metadata {
 				}
 			}
 
-			// Store compression info
-			if trackInfo.CompEnabled {
-				track.contentEncodings = &ContentEncodings{
-					ContentEncoding: []ContentEncoding{
-						{
-							ContentCompression: &ContentCompression{
-								ContentCompAlgo: uint64(trackInfo.CompMethod),
-							},
-						},
-					},
-				}
-			}
-
-			track.defaultDuration = trackInfo.DefaultDuration
-
 			result.Tracks = append(result.Tracks, track)
 
 			switch track.Type {
@@ -245,15 +228,6 @@ func (mp *MetadataParser) GetMetadata(ctx context.Context) *Metadata {
 				Data:        attachment.Data,
 			}
 
-			//// Extract attachment data from file
-			//data, err := mp.extractAttachmentData(attachment.Position, attachment.Length)
-			//if err != nil {
-			//	mp.logger.Error().Err(err).Str("filename", attachment.Name).Msg("mkvparser: Failed to extract attachment data")
-			//} else {
-			//	attachmentInfo.Data = data
-			//	attachmentInfo.Size = len(data)
-			//}
-
 			// Determine attachment type
 			fileExt := strings.ToLower(filepath.Ext(attachment.Name))
 			if _, ok := fontExtensions[fileExt]; ok {
@@ -281,40 +255,6 @@ func (mp *MetadataParser) GetMetadata(ctx context.Context) *Metadata {
 
 	return mp.extractedMetadata
 }
-
-// extractAttachmentData reads attachment data from the file at the given position
-//func (mp *MetadataParser) extractAttachmentData(position uint64, length uint64) ([]byte, error) {
-//	// Seek to attachment position
-//	_, err := mp.reader.Seek(int64(position), io.SeekStart)
-//	if err != nil {
-//		return nil, fmt.Errorf("failed to seek to attachment: %w", err)
-//	}
-//
-//	// Read attachment data
-//	data := make([]byte, length)
-//	n, err := io.ReadFull(mp.reader, data)
-//	if err != nil {
-//		return nil, fmt.Errorf("failed to read attachment data: %w", err)
-//	}
-//
-//	if n != int(length) {
-//		return nil, fmt.Errorf("attachment data size mismatch: expected %d, got %d", length, n)
-//	}
-//
-//	// Try to decompress if it's zlib compressed
-//	if len(data) > 2 && data[0] == 0x78 { // zlib magic number
-//		zlibReader, err := zlib.NewReader(bytes.NewReader(data))
-//		if err == nil {
-//			decompressed, err := io.ReadAll(zlibReader)
-//			_ = zlibReader.Close()
-//			if err == nil {
-//				return decompressed, nil
-//			}
-//		}
-//	}
-//
-//	return data, nil
-//}
 
 // generateMimeCodec generates RFC 6381 codec string
 func (mp *MetadataParser) generateMimeCodec(metadata *Metadata) string {

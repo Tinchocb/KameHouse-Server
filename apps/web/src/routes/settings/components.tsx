@@ -3,10 +3,10 @@ import { m, AnimatePresence } from "framer-motion"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { cn } from "@/components/ui/core/styling"
 import { Button, IconButton } from "@/components/ui/button"
-import { IconNavigationChevronDown, IconUiEyeOff, IconUiEye, IconUiDelete, IconUiPlus, IconUiCheck, IconUiAlertTriangle } from "@/components/ui/icons";
+import { IconNavigationChevronDown, IconUiDelete, IconUiPlus, IconUiCheck, IconUiAlertTriangle } from "@/components/ui/icons";
 import { DirectorySelector } from "@/components/shared/directory-selector"
 import { useDirectorySelector } from "@/api/hooks/directory_selector.hooks"
-import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { useReducedMotion, useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { type Control, type FieldValues, useFormState } from "react-hook-form"
 import { get } from "react-hook-form"
 
@@ -16,15 +16,16 @@ import { get } from "react-hook-form"
 
 export function DirtyPill({ show }: { show?: boolean }) {
     const popSpring = useSpringPreset("press")
+    const reduceMotion = useReducedMotion()
     return (
         <AnimatePresence initial={false}>
             {show && (
                 <m.span
-                    initial={{ opacity: 0, scale: 0.6 }}
+                    initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.6 }}
+                    exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.98, transition: { duration: 0.15, ease: "easeOut" } }}
                     transition={popSpring}
-                    className="text-2xs font-bold px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25 shrink-0"
+                    className="text-xs font-bold px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning border border-status-warning/25 shrink-0"
                 >
                     Requiere guardar
                 </m.span>
@@ -46,11 +47,8 @@ import { SpringSwitch } from "@/components/ui/switch/spring-switch"
 interface ToggleProps {
   checked?: boolean
   onCheckedChange?: (checked: boolean) => void
-  onChange?: (checked: boolean) => void
   className?: string
-  variant?: 'default'
   disabled?: boolean
-  size?: 'sm' | 'md'
   ariaHidden?: boolean
   isPressingExternal?: boolean
 }
@@ -58,23 +56,17 @@ interface ToggleProps {
 function Toggle({ 
   checked = false, 
   onCheckedChange, 
-  onChange,
   className,
-  variant = 'default',
   disabled = false,
-  size = 'md',
   ariaHidden,
   isPressingExternal,
 }: ToggleProps) {
   return (
     <SpringSwitch
       checked={checked}
-      onChange={onChange}
       onCheckedChange={onCheckedChange}
       className={className}
-      variant={variant}
       disabled={disabled}
-      size={size}
       ariaHidden={ariaHidden}
       isPressingExternal={isPressingExternal}
     />
@@ -91,7 +83,6 @@ interface OsToggleProps {
     disabled?: boolean
     icon?: React.ElementType
     className?: string
-    variant?: 'default'
     /** Muestra pill "Requiere Guardar". Solo para controles Solo-RHF. */
     dirty?: boolean
 }
@@ -104,7 +95,6 @@ export const OsToggle = React.memo(function OsToggle({
     disabled = false,
     icon: Icon,
     className,
-    variant = 'default',
     dirty = false,
 }: OsToggleProps) {
     const [isRowPressing, setIsRowPressing] = React.useState(false)
@@ -122,6 +112,7 @@ export const OsToggle = React.memo(function OsToggle({
     return (
         <div
             role="switch"
+            data-settings-control="toggle"
             aria-checked={checked}
             aria-disabled={disabled || undefined}
             aria-labelledby={labelId}
@@ -137,6 +128,8 @@ export const OsToggle = React.memo(function OsToggle({
             onPointerDown={() => !disabled && setIsRowPressing(true)}
             onPointerUp={() => setIsRowPressing(false)}
             onPointerLeave={() => setIsRowPressing(false)}
+            onPointerCancel={() => setIsRowPressing(false)}
+            onBlur={() => setIsRowPressing(false)}
             className={cn(
                 // El resaltado vive en un ::before inset y redondeado: el divisor de la fila
                 // (border-top de .sectionbar-divide) queda recto y la banda no toca los bordes.
@@ -157,12 +150,12 @@ export const OsToggle = React.memo(function OsToggle({
                     </div>
                 )}
                 <div className="space-y-0.5 min-w-0 flex-1 py-0.5">
-                    <p className="text-xs font-bold text-on-surface tracking-tight leading-snug [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-1 transition-colors duration-fast ease-smooth-out flex items-center gap-2 flex-wrap">
+                    <p className="settings-field-label text-xs font-bold text-on-surface tracking-tight leading-snug [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-1 transition-colors duration-fast ease-smooth-out flex items-center gap-2 flex-wrap">
                         <span id={labelId}>{label}</span>
                         <DirtyPill show={dirty} />
                     </p>
                     {description && (
-                        <p id={descriptionId} className="text-2xs text-label-2 leading-normal font-medium line-clamp-2">
+                        <p id={descriptionId} className="settings-field-help text-xs text-label-2 leading-relaxed font-medium text-pretty">
                             {description}
                         </p>
                     )}
@@ -173,7 +166,6 @@ export const OsToggle = React.memo(function OsToggle({
                 checked={checked}
                 onCheckedChange={onChange}
                 disabled={disabled}
-                variant={variant}
                 ariaHidden={true}
                 isPressingExternal={isRowPressing}
                 className="pointer-events-none shrink-0"
@@ -199,9 +191,7 @@ interface OsSelectProps {
     description?: string
     options: OsSelectOption[]
     value?: string
-    defaultValue?: string
     onChange?: (value: string) => void
-    onValueChange?: (value: string) => void
     icon?: React.ElementType
     placeholder?: string
     disabled?: boolean
@@ -216,9 +206,7 @@ export const OsSelect = React.memo(function OsSelect({
     description,
     options,
     value,
-    defaultValue,
     onChange,
-    onValueChange,
     icon: Icon,
     placeholder = "Seleccionar…",
     disabled = false,
@@ -227,14 +215,11 @@ export const OsSelect = React.memo(function OsSelect({
     dirty = false,
 }: OsSelectProps) {
     const [open, setOpen] = React.useState(false)
-    const selected = options.find((o) => o.value === (value ?? defaultValue))
+    const descriptionId = React.useId()
+    const selected = options.find((o) => o.value === value)
     const chevronSpring = useSpringPreset("tabIndicator")
     const dotSpring = useSpringPreset("press")
-
-    const handleChange = (v: string) => {
-        onValueChange?.(v)
-        onChange?.(v)
-    }
+    const reduceMotion = useReducedMotion()
 
     return (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3">
@@ -245,26 +230,26 @@ export const OsSelect = React.memo(function OsSelect({
                     </div>
                 )}
                 <div className="space-y-0.5 min-w-0 flex-1 py-0.5">
-                    <p className="text-xs font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2 flex-wrap">{label}<DirtyPill show={dirty} /></p>
-                    {description && <p className="text-2xs text-label-2 leading-normal font-medium line-clamp-2">{description}</p>}
+                    <p className="settings-field-label text-xs font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2 flex-wrap">{label}<DirtyPill show={dirty} /></p>
+                    {description && <p id={descriptionId} className="settings-field-help text-xs text-label-2 leading-relaxed font-medium text-pretty">{description}</p>}
                 </div>
             </div>
 
             <SelectPrimitive.Root
                 value={value}
-                defaultValue={defaultValue}
-                onValueChange={handleChange}
+                onValueChange={onChange}
                 onOpenChange={setOpen}
                 disabled={disabled}
                 name={name}
             >
                 <SelectPrimitive.Trigger
                     aria-label={label}
+                    aria-describedby={description ? descriptionId : undefined}
                     className={cn(
                         "group relative flex items-center justify-between gap-3 shrink-0 w-full sm:w-auto sm:min-w-[264px] sm:max-w-[320px] min-h-[44px]",
                         "rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)]",
                         "pl-4 pr-1.5 py-1.5 text-left outline-none select-none cursor-pointer",
-                        "transition-[border-color,background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] active:scale-95",
+                        "transition-[border-color,background-color,transform] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] motion-safe:active:scale-[0.97]",
                         "focus-visible:ring-2 focus-visible:ring-brand-accent",
                         "data-[state=open]:bg-[var(--neutral-elev-3)]",
                         "data-[disabled]:opacity-40 data-[disabled]:cursor-not-allowed",
@@ -273,7 +258,7 @@ export const OsSelect = React.memo(function OsSelect({
                 >
                     <span className="flex items-center gap-2 min-w-0 flex-1">
                         <m.span
-                            animate={{ scale: open ? 1.35 : 1 }}
+                            animate={{ scale: reduceMotion ? 1 : (open ? 1.35 : 1) }}
                             transition={dotSpring}
                             className={cn(
                                 "w-1.5 h-1.5 rounded-full shrink-0",
@@ -292,7 +277,7 @@ export const OsSelect = React.memo(function OsSelect({
                         transition={chevronSpring}
                         className={cn(
                             "w-6 h-6 rounded-full bg-[var(--neutral-elev-3)] flex items-center justify-center text-on-surface-variant shrink-0",
-                            "transition-[background-color,color,border-color] duration-fast ease-smooth-out group-hover:text-label-1 group-data-[state=open]:bg-[var(--selected-bg)] group-data-[state=open]:text-[var(--selected-fg)] group-data-[state=open]:border-[var(--selected-bg)]"
+                            "transition-[background-color,color,border-color] duration-fast ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-1 group-data-[state=open]:bg-[var(--selected-bg)] group-data-[state=open]:text-[var(--selected-fg)] group-data-[state=open]:border-[var(--selected-bg)]"
                         )}
                     >
                         <IconNavigationChevronDown className="w-3.5 h-3.5" />
@@ -301,6 +286,7 @@ export const OsSelect = React.memo(function OsSelect({
 
                 <SelectPrimitive.Portal>
                     <SelectPrimitive.Content
+                        data-select-surface=""
                         position="popper"
                         sideOffset={8}
                         align="end"
@@ -319,16 +305,17 @@ export const OsSelect = React.memo(function OsSelect({
                     >
                         <SelectPrimitive.Viewport className="p-0 max-h-[280px] overflow-y-auto no-scrollbar">
                             {options.map((opt, idx) => {
-                                const isActive = opt.value === (value ?? defaultValue)
+                                const isActive = opt.value === value
                                 return (
                                     <SelectPrimitive.Item
+                                        data-select-option=""
                                         key={opt.value}
                                         value={opt.value}
                                         disabled={opt.disabled}
                                         style={{ animationDelay: `${Math.min(idx, 6) * 40}ms` }}
                                         className={cn(
-                                            "relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 outline-none cursor-pointer select-none min-h-[38px]",
-                                            "transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95",
+                                            "relative flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 outline-none cursor-pointer select-none min-h-11",
+                                            "transition-[background-color,color,transform] duration-fast ease-smooth-out motion-safe:active:scale-[0.97]",
                                             "data-[highlighted]:bg-[var(--neutral-elev-3)] data-[highlighted]:text-label-1",
                                             "data-[state=checked]:bg-[var(--neutral-elev-3)]",
                                             "data-[disabled]:opacity-40 data-[disabled]:pointer-events-none",
@@ -347,7 +334,7 @@ export const OsSelect = React.memo(function OsSelect({
                                         </span>
                                         <span className="flex-1 min-w-0">
                                             <span className={cn(
-                                                "block truncate text-xs leading-tight",
+                                                "block text-xs leading-snug break-words",
                                                 isActive ? "font-bold text-label-1" : "font-semibold text-label-2"
                                             )}>
                                                 {/* ItemText registra la <option> del <select> nativo que Radix
@@ -357,14 +344,14 @@ export const OsSelect = React.memo(function OsSelect({
                                                 <SelectPrimitive.ItemText>{opt.label}</SelectPrimitive.ItemText>
                                             </span>
                                             {opt.desc && (
-                                                <span className="block truncate text-2xs text-label-2 leading-tight mt-0.5">
+                                                <span className="settings-field-help block text-xs text-label-2 leading-relaxed mt-0.5">
                                                     {opt.desc}
                                                 </span>
                                             )}
                                         </span>
                                         {opt.badge && (
                                             <span className={cn(
-                                                "shrink-0 text-2xs font-bold px-2 py-0.5 rounded-full border",
+                                                "shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border",
                                                 isActive
                                                     ? "bg-[var(--selected-bg)] text-[var(--selected-fg)] border-[var(--selected-bg)]"
                                                     : "bg-[var(--neutral-elev-3)] text-label-2 border-[var(--neutral-separator)]"
@@ -388,10 +375,7 @@ export const OsSelect = React.memo(function OsSelect({
 interface OsInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label: string
     description?: string
-    isSecure?: boolean
     isMono?: boolean
-    icon?: React.ElementType
-    error?: string
     /** Muestra pill "Requiere Guardar". Solo para controles Solo-RHF. */
     dirty?: boolean
 }
@@ -400,77 +384,48 @@ const OsInput = React.forwardRef<HTMLInputElement, OsInputProps>(({
     label,
     description,
     placeholder,
-    isSecure = false,
     isMono = false,
     type = "text",
-    icon: Icon,
-    error,
     dirty = false,
     className,
     ...props
 }, ref) => {
-    const [showSecure, setShowSecure] = React.useState(false)
-    const iconSwapSpring = useSpringPreset("press")
+    const fieldId = React.useId()
+    const descriptionId = `${fieldId}-description`
 
     return (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 gap-3 min-h-[44px]">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-                {Icon && (
-                    <div className="w-7 h-7 rounded-lg bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-center text-on-surface-variant shrink-0">
-                        <Icon className="w-3.5 h-3.5" />
-                    </div>
-                )}
                 <div className="space-y-0.5 min-w-0 max-w-xl py-0.5">
-                    <p className="text-xs font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2 flex-wrap">{label}<DirtyPill show={dirty} /></p>
-                    {description && <p className="text-2xs text-label-2 leading-normal font-medium line-clamp-2">{description}</p>}
-                    {error && <p className="text-2xs text-status-error mt-0.5 animate-fade-in">{error}</p>}
+                    <p className="settings-field-label text-xs font-bold text-on-surface tracking-tight leading-snug flex items-center gap-2 flex-wrap">{label}<DirtyPill show={dirty} /></p>
+                    {description && <p id={descriptionId} className="settings-field-help text-xs text-label-2 leading-relaxed font-medium text-pretty">{description}</p>}
                 </div>
             </div>
 
-            <div className={cn(
-                "flex items-center gap-2 bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] rounded-full min-h-11 pl-4 pr-3 py-2 w-full sm:w-64 lg:w-72 transition-[border-color,background-color] duration-fast ease-smooth-out relative",
-                "has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:[outline-color:hsl(var(--focus-ring)/0.9)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)]",
-                error && "border-status-error/60 animate-error-shake",
-                className
-            )}>
+            <div
+                data-field-appearance="line"
+                data-field-surface=""
+                data-disabled={props.disabled || undefined}
+                data-readonly={props.readOnly || undefined}
+                className={cn(
+                    "flex items-center gap-2 bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] rounded-full min-h-11 pl-4 pr-3 py-2 w-full sm:w-64 lg:w-72 transition-[border-color,background-color] duration-fast ease-smooth-out relative",
+                    "has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:[outline-color:hsl(var(--focus-ring)/0.9)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)]",
+                    className
+                )}
+            >
                 <input
                     ref={ref}
                     data-field-embedded
-                    type={isSecure ? (showSecure ? "text" : "password") : type}
+                    type={type}
                     placeholder={placeholder}
-                    // La etiqueta visible es un <p> suelto: sin esto el campo no tenía nombre accesible.
                     aria-label={typeof label === "string" ? label : undefined}
                     className={cn(
                         "min-w-0 flex-1 border-0 p-0 bg-transparent text-on-surface placeholder:text-label-3 text-base md:text-xs focus:outline-none",
-                        isSecure && "pr-6",
-                        isMono && "font-mono md:text-2xs"
+                        isMono && "font-mono md:text-xs"
                     )}
                     {...props}
+                    aria-describedby={[props["aria-describedby"], description && descriptionId].filter(Boolean).join(" ") || undefined}
                 />
-
-                {isSecure && (
-                    <IconButton
-                        intent="ghost"
-                        size="xs"
-                        onClick={() => setShowSecure(!showSecure)}
-                        aria-label={showSecure ? "Ocultar contenido" : "Mostrar contenido"}
-                        className="absolute right-1.5 text-label-2 hover:text-label-1"
-                        icon={
-                            <AnimatePresence mode="wait" initial={false}>
-                                <m.span
-                                    key={showSecure ? "hide" : "show"}
-                                    initial={{ opacity: 0, scale: 0.6 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.6 }}
-                                    transition={iconSwapSpring}
-                                    className="flex"
-                                >
-                                    {showSecure ? <IconUiEyeOff className="w-3.5 h-3.5" /> : <IconUiEye className="w-3.5 h-3.5" />}
-                                </m.span>
-                            </AnimatePresence>
-                        }
-                    />
-                )}
             </div>
         </div>
     )
@@ -504,26 +459,27 @@ export function DirtyOsInput<T extends FieldValues>({ control, name, ...props }:
 function PathRow({ dir, showFullPath, onRemove }: { dir: string, showFullPath: boolean, onRemove: (path: string) => void }) {
     const { data } = useDirectorySelector(dir)
     const rowSpring = useSpringPreset("entrance")
+    const reduceMotion = useReducedMotion()
     const missing = data?.exists === false
     const displayPath = showFullPath ? dir : (dir.replace(/[\\/]+$/, "").split(/[/\\]/).filter(Boolean).pop() || dir)
 
     return (
         <m.div
             layout
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
             animate={{ opacity: 1, y: 0 }}
             // Salida más corta que la entrada: --duration-quick y --ease-out.
-            exit={{ opacity: 0, y: -8, transition: { duration: 0.15, ease: [0.23, 1, 0.32, 1] } }}
+            exit={{ opacity: 0, y: reduceMotion ? 0 : -8, transition: { duration: 0.15, ease: [0.23, 1, 0.32, 1] } }}
             transition={rowSpring}
             className={cn(
-            "flex items-center justify-between gap-2 bg-[var(--neutral-elev-2)] border rounded-xl px-3.5 py-2 group/path transition-[border-color,background-color] duration-fast ease-smooth-out",
-            missing ? "border-status-warning/30 hover:border-status-warning/50" : "border-[var(--neutral-separator)] hover:bg-[var(--neutral-elev-3)]",
+            "flex items-center justify-between gap-2 bg-[var(--neutral-elev-2)] border border-t-[var(--glass-border-top)] rounded-xl px-3.5 py-2 group/path transition-[border-color,background-color,box-shadow] duration-fast ease-smooth-out shadow-[shadow:var(--double-bezel-ring)]",
+            missing ? "border-status-warning/30 [@media(hover:hover)_and_(pointer:fine)]:hover:border-status-warning/50" : "border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)]",
         )}>
             <span className="text-xs text-on-surface-variant font-mono truncate" title={dir}>{displayPath}</span>
             <div className="flex items-center gap-1.5 shrink-0">
                 {missing && (
                     <span
-                        className="flex items-center gap-1 text-3xs font-semibold text-status-warning"
+                        className="flex items-center gap-1 text-xs font-semibold text-status-warning"
                         title="La carpeta no existe o no está accesible. Revisa que el disco esté conectado."
                     >
                         <IconUiAlertTriangle className="w-3 h-3" aria-hidden="true" />
@@ -534,7 +490,7 @@ function PathRow({ dir, showFullPath, onRemove }: { dir: string, showFullPath: b
                     intent="ghost"
                     size="md"
                     onClick={() => onRemove(dir)}
-                    className="text-label-2 hover:text-status-error hover:bg-status-error/10"
+                    className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error [@media(hover:hover)_and_(pointer:fine)]:hover:bg-status-error/10"
                     title="Quitar carpeta"
                     aria-label={`Quitar carpeta ${dir}`}
                     icon={<IconUiDelete className="w-3.5 h-3.5" />}
@@ -557,6 +513,7 @@ interface PathListProps {
 
 export function PathList({ label, directories, onAdd, onRemove, placeholder, icon: Icon, className, showFullPath = true }: PathListProps) {
     const [selectedPath, setSelectedPath] = React.useState("")
+    const reduceMotion = useReducedMotion()
 
     const handleAdd = () => {
         const path = selectedPath.trim()
@@ -578,7 +535,7 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                         {Icon && <Icon className="w-4 h-4 text-brand-accent shrink-0" />}
                         <h3 className="text-xs font-bold text-on-surface truncate">{label}</h3>
                     </div>
-                    <span key={directories.length} className="text-3xs font-mono px-2 py-0.5 rounded-full bg-[var(--neutral-elev-2)] text-label-2 border border-[var(--neutral-separator)] shrink-0 tabular-nums animate-number-pop-in">
+                    <span key={directories.length} className="text-xs font-mono px-2 py-0.5 rounded-full bg-[var(--neutral-elev-2)] text-label-2 border border-[var(--neutral-separator)] shrink-0 tabular-nums animate-number-pop-in">
                         {directories.length} {directories.length === 1 ? "carpeta" : "carpetas"}
                     </span>
                 </div>
@@ -598,13 +555,13 @@ export function PathList({ label, directories, onAdd, onRemove, placeholder, ico
                 ) : (
                     <m.div
                         key="empty"
-                        initial={{ opacity: 0, y: 6 }}
+                        initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
+                        exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
                         transition={{ type: "tween", duration: 0.15 }}
                         className="p-3 rounded-xl border border-dashed border-[var(--neutral-separator)] text-center"
                     >
-                        <p className="text-2xs text-label-2 font-medium animate-text-swap-in">
+                        <p className="text-xs text-label-2 font-medium animate-text-swap-in">
                             Sin carpetas añadidas
                         </p>
                     </m.div>

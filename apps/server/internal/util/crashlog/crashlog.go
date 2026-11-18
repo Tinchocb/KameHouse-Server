@@ -17,9 +17,6 @@ import (
 // Global variable that continuously records logs from specific programs and writes them to a file when something unexpected happens.
 
 type CrashLogger struct {
-	//logger    *zerolog.Logger
-	//logBuffer *bytes.Buffer
-	//mu        sync.Mutex
 	logDir mo.Option[string]
 }
 
@@ -35,23 +32,7 @@ var GlobalCrashLogger = NewCrashLogger()
 // NewCrashLogger creates a new CrashLogger instance.
 func NewCrashLogger() *CrashLogger {
 
-	//var logBuffer bytes.Buffer
-	//
-	//fileOutput := zerolog.ConsoleWriter{
-	//	Out:           &logBuffer,
-	//	TimeFormat:    time.DateTime,
-	//	FormatMessage: util.ZerologFormatMessageSimple,
-	//	FormatLevel:   util.ZerologFormatLevelSimple,
-	//	NoColor:       true,
-	//}
-	//
-	//multi := zerolog.MultiLevelWriter(fileOutput)
-	//logger := zerolog.New(multi).With().Timestamp().Logger()
-
 	return &CrashLogger{
-		//logger:    &logger,
-		//logBuffer: &logBuffer,
-		//mu:        sync.Mutex{},
 		logDir: mo.None[string](),
 	}
 }
@@ -77,15 +58,11 @@ func (c *CrashLogger) InitArea(area string) *CrashLoggerArea {
 	multi := zerolog.MultiLevelWriter(fileOutput)
 	logger := zerolog.New(multi).With().Timestamp().Logger()
 
-	//ctx, cancelFunc := context.WithCancel(context.Background())
-
 	return &CrashLoggerArea{
 		logger:    &logger,
 		name:      area,
 		logBuffer: &logBuffer,
 		mu:        sync.Mutex{},
-		//ctx:        ctx,
-		//cancelFunc: cancelFunc,
 	}
 }
 
@@ -110,7 +87,6 @@ func (a *CrashLoggerArea) LogInfof(format string, args ...interface{}) {
 //	defer logArea.Close()
 func (a *CrashLoggerArea) Close() {
 	a.logBuffer.Reset()
-	//a.cancelFunc()
 }
 
 func (c *CrashLogger) WriteAreaLogToFile(area *CrashLoggerArea) {

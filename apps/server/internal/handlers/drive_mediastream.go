@@ -118,6 +118,9 @@ func (h *Handler) driveInternalURL(fileID, ext string) string {
 	q.Set("fileId", fileID)
 	q.Set("ext", ext)
 	q.Set("internal", driveInternalToken())
+	if revision, err := h.refreshDriveRevision(context.Background(), fileID); err == nil {
+		q.Set("revision", revision)
+	}
 	return h.driveLoopbackBase() + drivePlayPath + "?" + q.Encode()
 }
 
@@ -209,7 +212,11 @@ func (h *Handler) requestDriveMediaContainer(c echo.Context, drivePath string, s
 	if ext == "" {
 		ext = ".mkv"
 	}
-	publicURL := drivePlayPath + "?fileId=" + url.QueryEscape(fileID)
+	revision, revisionErr := h.refreshDriveRevision(c.Request().Context(), fileID)
+	if revisionErr != nil {
+		return h.RespondWithCodeError(c, http.StatusBadGateway, errors.New("could not verify the current Drive file revision"))
+	}
+	publicURL := drivePlayPath + "?fileId=" + url.QueryEscape(fileID) + "&revision=" + revision
 	internalURL := h.driveInternalURL(fileID, ext)
 	repo := h.App.MediastreamRepository
 
@@ -244,7 +251,7 @@ func (h *Handler) requestDriveMediaContainer(c echo.Context, drivePath string, s
 
 	mc := &mediastream.MediaContainer{
 		Filepath:   drivePath,
-		Hash:       util.CreateMD5(drivePath),
+		Hash:       util.CreateMD5(drivePath + "|" + revision),
 		StreamType: mediastream.StreamTypeDirect,
 		StreamURL:  publicURL,
 		MediaInfo:  mediaInfo,

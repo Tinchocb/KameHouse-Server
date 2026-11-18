@@ -69,15 +69,27 @@ func (j *driveSubJob) set(fn func(s *DriveSubtitleStatus)) {
 	j.mu.Unlock()
 }
 
-var (
-	driveSubJobs sync.Map // hash -> *driveSubJob
-	driveSubSlot = make(chan struct{}, 1)
-	// driveSubJobsMu serializa el alta de trabajos (evita dos extracciones del mismo archivo).
-	driveSubJobsMu sync.Mutex
-)
+// Only the bandwidth budget is shared; job identity and cancellation are local.
+var driveSubSlot = make(chan struct{}, 1)
 
 // DriveSubtitleHash es la clave de caché de un archivo de Drive.
 func DriveSubtitleHash(drivePath string) string { return util.CreateMD5(drivePath) }
+
+// SetDriveRevision keeps subtitles and MKV window sessions separate when the
+// content behind an existing Drive file ID is replaced.
+func (r *Repository) SetDriveRevision(fileID, revision string) {
+	if revision != "" {
+		r.driveRevisions.Store(fileID, revision)
+	}
+}
+
+func (r *Repository) driveSubtitleHash(path string) string {
+	id := strings.SplitN(strings.TrimPrefix(path, "gdrive://"), "/", 2)[0]
+	if revision, ok := r.driveRevisions.Load(id); ok {
+		return util.CreateMD5(path + "|" + revision.(string))
+	}
+	return DriveSubtitleHash(path)
+}
 
 func driveSubsDonePath(cacheDir, hash string) string {
 	return filepath.Join(cacheDir, "videofiles", hash, driveSubsDoneMarker)
@@ -89,8 +101,8 @@ func (r *Repository) DriveSubtitlesExtracted(drivePath string) bool {
 	if cacheDir == "" {
 		return false
 	}
-	_, err := os.Stat(driveSubsDonePath(cacheDir, DriveSubtitleHash(drivePath)))
-	return err == nil
+	_, err := os.Stat(driveSubsDonePath(cacheDir, r.driveSubtitleHash(drivePath)))
+	return err == nil && videofile.AttachmentsComplete(cacheDir, r.driveSubtitleHash(drivePath))
 }
 
 // TouchDriveSubtitles marca como recién usada la caché de un archivo de Drive: la
@@ -102,13 +114,18 @@ func (r *Repository) TouchDriveSubtitles(drivePath string) {
 		return
 	}
 	now := time.Now()
-	_ = os.Chtimes(filepath.Join(cacheDir, "videofiles", DriveSubtitleHash(drivePath)), now, now)
+	_ = os.Chtimes(filepath.Join(cacheDir, "videofiles", r.driveSubtitleHash(drivePath)), now, now)
 }
 
 // DriveSubtitleStatus devuelve el estado de la extracción de un archivo de Drive.
 func (r *Repository) DriveSubtitleStatus(drivePath string) DriveSubtitleStatus {
-	if v, ok := driveSubJobs.Load(DriveSubtitleHash(drivePath)); ok {
+	if v, ok := r.driveSubJobs.Load(r.driveSubtitleHash(drivePath)); ok {
 		st := v.(*driveSubJob).snapshot()
+		if st.State == DriveSubtitlesDone && !r.DriveSubtitlesExtracted(drivePath) {
+			// The on-disk cache may have been pruned since this job finished.
+			r.driveSubJobs.CompareAndDelete(r.driveSubtitleHash(drivePath), v)
+			return DriveSubtitleStatus{State: DriveSubtitlesNone}
+		}
 		// Un estado de error viejo no debe tapar una caché que sí está completa.
 		if st.State != DriveSubtitlesFailed || !r.DriveSubtitlesExtracted(drivePath) {
 			return st
@@ -126,6 +143,9 @@ func (r *Repository) DriveSubtitleStatus(drivePath string) DriveSubtitleStatus {
 // rechazar archivos gigantes. Es idempotente: si ya está hecha o en curso, devuelve
 // el estado actual.
 func (r *Repository) StartDriveSubtitleExtraction(drivePath, inputURL string, mi *videofile.MediaInfo, sizeBytes int64) (DriveSubtitleStatus, error) {
+	if err := r.workContext().Err(); err != nil {
+		return DriveSubtitleStatus{}, err
+	}
 	if mi == nil {
 		return DriveSubtitleStatus{}, errors.New("media info not available")
 	}
@@ -137,27 +157,34 @@ func (r *Repository) StartDriveSubtitleExtraction(drivePath, inputURL string, mi
 	if !ok || settings == nil || cacheDir == "" {
 		return DriveSubtitleStatus{}, errors.New("module not initialized")
 	}
-	hash := DriveSubtitleHash(drivePath)
+	hash := r.driveSubtitleHash(drivePath)
 
-	driveSubJobsMu.Lock()
-	if v, exists := driveSubJobs.Load(hash); exists {
+	r.driveSubJobsMu.Lock()
+	defer r.driveSubJobsMu.Unlock()
+	if err := r.workContext().Err(); err != nil {
+		return DriveSubtitleStatus{}, err
+	}
+	if v, exists := r.driveSubJobs.Load(hash); exists {
 		st := v.(*driveSubJob).snapshot()
 		if st.State == DriveSubtitlesQueued || st.State == DriveSubtitlesRunning {
-			driveSubJobsMu.Unlock()
 			return st, nil
 		}
 	}
-	if _, err := os.Stat(driveSubsDonePath(cacheDir, hash)); err == nil {
-		driveSubJobsMu.Unlock()
+	if r.DriveSubtitlesExtracted(drivePath) {
 		return DriveSubtitleStatus{State: DriveSubtitlesDone, Percent: 100}, nil
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(r.workContext())
 	job := &driveSubJob{status: DriveSubtitleStatus{State: DriveSubtitlesQueued}, cancel: cancel}
-	driveSubJobs.Store(hash, job)
-	driveSubJobsMu.Unlock()
+	r.driveSubJobs.Store(hash, job)
 
 	miCopy := *mi
-	go r.runDriveSubtitleExtraction(ctx, job, settings.FfmpegPath, inputURL, hash, &miCopy, cacheDir)
+	if !r.startWork(func(context.Context) {
+		r.runDriveSubtitleExtraction(ctx, job, settings.FfmpegPath, inputURL, hash, &miCopy, cacheDir)
+	}) {
+		cancel()
+		r.driveSubJobs.Delete(hash)
+		return DriveSubtitleStatus{}, context.Canceled
+	}
 	return job.snapshot(), nil
 }
 
@@ -182,6 +209,10 @@ func (r *Repository) runDriveSubtitleExtraction(ctx context.Context, job *driveS
 		return
 	}
 	job.set(func(s *DriveSubtitleStatus) { s.State = DriveSubtitlesRunning })
+	if err := ctx.Err(); err != nil {
+		job.set(func(s *DriveSubtitleStatus) { s.State = DriveSubtitlesFailed; s.Error = "cancelled" })
+		return
+	}
 
 	duration := float64(mi.Duration)
 	err := videofile.ExtractAttachmentOpts(ctx, ffmpegPath, inputURL, hash, mi, cacheDir, r.logger, videofile.ExtractOptions{
@@ -206,8 +237,12 @@ func (r *Repository) runDriveSubtitleExtraction(ctx context.Context, job *driveS
 		job.set(func(s *DriveSubtitleStatus) { s.State = DriveSubtitlesFailed; s.Error = msg })
 		return
 	}
-	if werr := os.WriteFile(driveSubsDonePath(cacheDir, hash), []byte(time.Now().UTC().Format(time.RFC3339)), 0o644); werr != nil {
-		job.set(func(s *DriveSubtitleStatus) { s.State = DriveSubtitlesFailed; s.Error = werr.Error() })
+	if werr := r.commitDriveSubtitleMarker(ctx, driveSubsDonePath(cacheDir, hash), []byte(time.Now().UTC().Format(time.RFC3339))); werr != nil {
+		msg := werr.Error()
+		if errors.Is(werr, context.Canceled) {
+			msg = "cancelled"
+		}
+		job.set(func(s *DriveSubtitleStatus) { s.State = DriveSubtitlesFailed; s.Error = msg })
 		return
 	}
 	job.set(func(s *DriveSubtitleStatus) { s.State = DriveSubtitlesDone; s.Percent = 100 })
@@ -215,9 +250,34 @@ func (r *Repository) runDriveSubtitleExtraction(ctx context.Context, job *driveS
 
 // CancelDriveSubtitleExtraction corta una extracción en curso o en cola.
 func (r *Repository) CancelDriveSubtitleExtraction(drivePath string) {
-	if v, ok := driveSubJobs.Load(DriveSubtitleHash(drivePath)); ok {
+	if v, ok := r.driveSubJobs.Load(r.driveSubtitleHash(drivePath)); ok {
 		v.(*driveSubJob).cancel()
 	}
+}
+
+func (r *Repository) commitDriveSubtitleMarker(ctx context.Context, path string, stamp []byte) error {
+	if err := util.LockContext(ctx, &r.driveSubPublishMu); err != nil {
+		return err
+	}
+	defer r.driveSubPublishMu.Unlock()
+	previous, readErr := os.ReadFile(path)
+	if readErr != nil && !os.IsNotExist(readErr) {
+		return readErr
+	}
+	if err := util.WriteFileAtomic(path, stamp); err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		if readErr == nil {
+			return errors.Join(err, util.WriteFileAtomic(path, previous))
+		}
+		removeErr := os.Remove(path)
+		if os.IsNotExist(removeErr) {
+			removeErr = nil
+		}
+		return errors.Join(err, removeErr)
+	}
+	return nil
 }
 
 // subtitleMediaHash resuelve de qué medio hablan los endpoints /subtitles, /subs/pgs
@@ -227,7 +287,7 @@ func (r *Repository) subtitleMediaHash(c echo.Context) (string, error) {
 	if p := c.QueryParam("path"); strings.HasPrefix(p, "gdrive://") {
 		switch r.DriveSubtitleStatus(p).State {
 		case DriveSubtitlesDone:
-			return DriveSubtitleHash(p), nil
+			return r.driveSubtitleHash(p), nil
 		case DriveSubtitlesQueued, DriveSubtitlesRunning:
 			c.Response().Header().Set("Retry-After", "5")
 			return "", echo.NewHTTPError(http.StatusServiceUnavailable, "subtitle extraction in progress")
@@ -235,7 +295,7 @@ func (r *Repository) subtitleMediaHash(c echo.Context) (string, error) {
 			// Sin extracción completa, la lectura por ventanas ya dejó en la caché las
 			// fuentes embebidas (y sirve las pistas de texto por otro camino).
 			if r.ensureDriveAttachments(c.Request().Context(), p) {
-				return DriveSubtitleHash(p), nil
+				return r.driveSubtitleHash(p), nil
 			}
 			return "", echo.NewHTTPError(http.StatusNotFound, "subtitles of this drive file were not extracted")
 		}

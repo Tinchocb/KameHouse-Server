@@ -291,7 +291,7 @@ func checkTMDB(ctx context.Context, client *tmdb.Client) HealthCheckResult {
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		result.Status = "down"
-		result.Message = "request failed: " + err.Error()
+		result.Message = "request failed: " + httputil.RedactError(err).Error()
 		result.LatencyMs = time.Since(start).Milliseconds()
 		return result
 	}

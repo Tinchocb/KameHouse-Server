@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { continuityQueryKeys } from "@/api/hooks/continuity.hooks"
+import { continuityQueryKeys } from "@/lib/query-keys"
 import { queryKeys } from "@/lib/query-keys"
 
 /**

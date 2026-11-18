@@ -4,12 +4,12 @@ import { PwaRegistry } from "@/components/pwa-registry"
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClient } from "@tanstack/react-query"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
-import { queryPersistOptions } from "@/lib/query-persister"
+import { onCacheRestored, queryPersistOptions } from "@/lib/query-persister"
 import { LazyMotion, MotionConfig } from "framer-motion"
 import { loadMotionFeatures } from "@/lib/motion-features-loader"
 
-import React, { useEffect } from "react"
-import { usePlayerStore } from "@/lib/store"
+import React from "react"
+import { ServerAccessGate } from "./server-access-gate"
 
 interface ClientProvidersProps {
     children?: React.ReactNode
@@ -25,11 +25,11 @@ export const queryClient = new QueryClient({
             gcTime: 24 * 60 * 60 * 1000,       // 24 hours en memoria, persistido en IndexedDB
             // Smart retry: requests.ts ya absorbe los reintentos idempotentes (GET) a nivel transporte.
             // Para ApiError no duplicar tormenta; para fallos de red inesperados permitir 1 reintento.
-            // Excepción: 502/503/504 significa backend arrancando (sidecar) o gateway caído;
-            // es transitorio, así que se reintenta con backoff (~30s en total).
+            // Excepción: 502/503/504 con Retry-After (backend arrancando o gateway caído) se reintentan
+            // con backoff (~30s en total). Sin Retry-After el error es permanente y no se reintenta.
             retry: (failureCount, error) => {
                 if (error instanceof ApiError) {
-                    return isTransientStatus(error.status) && failureCount < 15
+                    return isTransientStatus(error.status) && error.retryAfterMs !== undefined && failureCount < 15
                 }
                 return failureCount < 1
             },
@@ -39,16 +39,6 @@ export const queryClient = new QueryClient({
 })
 
 export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) => {
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get("tvMode") === "true") {
-                usePlayerStore.getState().setTvMode(true);
-                // Remove parameter from URL history so navigation remains clean
-                window.history.replaceState({}, "", window.location.pathname);
-            }
-        }
-    }, []);
 
     return (
         <MotionConfig reducedMotion="user">
@@ -56,13 +46,13 @@ export const ClientProviders: React.FC<ClientProvidersProps> = ({ children }) =>
             <LazyMotion features={loadMotionFeatures} strict>
                 <PersistQueryClientProvider
                     client={queryClient}
-                    persistOptions={queryPersistOptions}
+                    persistOptions={queryPersistOptions} onSuccess={onCacheRestored}
                 >
-                    <WebsocketProvider>
+                    <ServerAccessGate><WebsocketProvider>
                         {children}
                         <Toaster />
                         <PwaRegistry />
-                    </WebsocketProvider>
+                    </WebsocketProvider></ServerAccessGate>
                 </PersistQueryClientProvider>
             </LazyMotion>
         </MotionConfig>

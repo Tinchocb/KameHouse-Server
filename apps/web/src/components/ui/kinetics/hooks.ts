@@ -1,7 +1,8 @@
-import { useReducedMotion } from "framer-motion"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 
 export { useReducedMotion }
-export { useMotionTier, cardMotionProps, useCardMotionProps, type MotionTier, type CardMotionProps } from "./motion-tier"
+export { useMotionTier, cardMotionProps, useCardMotionProps, type MotionTier } from "./motion-tier"
 
 type SpringPresetName =
     | "entrance"
@@ -14,7 +15,16 @@ type SpringPresetName =
     | "iconSwap"
     | "switch"
     | "island"
-    | "selector"
+
+const FEEDBACK_PRESETS = new Set<SpringPresetName>([
+    "press",
+    "cardHover",
+    "elasticCounter",
+    "iconSwap",
+    "switch",
+])
+
+const MINIMAL_EASE = [0.23, 1, 0.32, 1] as const
 
 const SPRING_PRESETS = {
     entrance: { type: "spring", stiffness: 380, damping: 30, mass: 0.8 },
@@ -31,23 +41,29 @@ const SPRING_PRESETS = {
     switch: { type: "spring", stiffness: 520, damping: 32, mass: 0.8 },
     // Islas flotantes del nav (FloatingPillNav): mismos valores que estaban escritos a mano en floating-pill-nav.tsx.
     island: { type: "spring", stiffness: 400, damping: 30 },
-    // Modal aleatorio "Sorpréndeme" (RandomPlayButton): mismos valores que estaban escritos a mano en random-play-button.tsx.
-    selector: { type: "spring", stiffness: 350, damping: 26 },
 } as const
 
 export function useSpringPreset(preset: SpringPresetName = "entrance") {
     const prefersReduced = useReducedMotion()
+    const isMinimalist = useIsMinimalistMode()
+
+    // Perfil Minimalista: 160 ms para feedback y 180 ms para entradas/cambios, sin rebote.
+    // Con movimiento reducido, transición inmediata (duración 0).
+    if (isMinimalist) {
+        if (prefersReduced) {
+            return { type: "tween" as const, duration: 0 }
+        }
+        const isFeedback = FEEDBACK_PRESETS.has(preset)
+        return {
+            type: "tween" as const,
+            duration: isFeedback ? 0.16 : 0.18,
+            ease: MINIMAL_EASE,
+        }
+    }
+
     const spring = SPRING_PRESETS[preset] ?? SPRING_PRESETS.entrance
     if (prefersReduced && spring.type === "spring") {
         return { type: "tween" as const, duration: 0.15 }
     }
     return spring
-}
-
-export function useSpring(stiffness: number, damping: number, mass = 0.8) {
-    const prefersReduced = useReducedMotion()
-    if (prefersReduced) {
-        return { type: "tween" as const, duration: 0.15 }
-    }
-    return { type: "spring" as const, stiffness, damping, mass }
 }

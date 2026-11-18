@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"kamehouse/internal/database/models"
@@ -88,6 +89,8 @@ func (db *Database) GetStoredSettings() (*models.Settings, error) {
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			settings.ID = 1
+			// Primer arranque: el asistente inicial queda pendiente hasta que se guarde.
+			settings.SetupPending = true
 			// Defaults para columnas nuevas en fila recién creada.
 			if settings.Library.PreferredAudioProfile == "" {
 				settings.Library.PreferredAudioProfile = "latino"
@@ -123,6 +126,8 @@ func (db *Database) GetAllLibraryPathsFromSettings() ([]string, error) {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (db *Database) UpsertMediastreamSettings(settings *models.MediastreamSettings) (*models.MediastreamSettings, error) {
+	db.mediastreamSettingsMu.Lock()
+	defer db.mediastreamSettingsMu.Unlock()
 
 	// Save y no Create+OnConflict: ver UpsertSettings (autoGovernorEnabled=false
 	// con default:true volvía a true).
@@ -141,6 +146,8 @@ func (db *Database) UpsertMediastreamSettings(settings *models.MediastreamSettin
 }
 
 func (db *Database) GetMediastreamSettings() (*models.MediastreamSettings, bool) {
+	db.mediastreamSettingsMu.Lock()
+	defer db.mediastreamSettingsMu.Unlock()
 
 	if cached := db.currMediastreamSettings.Load(); cached != nil {
 		return cached, true
@@ -154,6 +161,28 @@ func (db *Database) GetMediastreamSettings() (*models.MediastreamSettings, bool)
 	}
 	db.currMediastreamSettings.Store(&settings)
 	return &settings, true
+}
+
+// SetTranscodeEnabled changes only the requested column and publishes a fresh
+// snapshot after commit. It cannot revert other streaming policies from a stale copy.
+func (db *Database) SetTranscodeEnabled(ctx context.Context, enabled bool) error {
+	db.mediastreamSettingsMu.Lock()
+	defer db.mediastreamSettingsMu.Unlock()
+	var next models.MediastreamSettings
+	err := db.gormdb.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&models.MediastreamSettings{}).Where("id = ?", 1).Update("transcode_enabled", enabled)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return tx.First(&next, 1).Error
+	})
+	if err == nil {
+		db.currMediastreamSettings.Store(&next)
+	}
+	return err
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

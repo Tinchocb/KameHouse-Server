@@ -19,10 +19,7 @@ interface PlaybackSettingsProps {
     onLoopEnabledChange?: (enabled: boolean) => void
     autoDisableSubtitlesWhenDubbed?: boolean
     onAutoDisableSubtitlesWhenDubbedChange?: (enabled: boolean) => void
-    showSeparator?: boolean
     mediaFormat?: string | null
-    tvMode?: boolean
-    onTvModeChange?: (enabled: boolean) => void
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
     mediaId?: number | null
@@ -100,7 +97,7 @@ function AutoDetectRow({ mediaId }: { mediaId: number }) {
                 disabled={status === "running"}
                 className={cn(
                     "shrink-0",
-                    status === "running" && "text-brand-accent animate-pulse",
+                    status === "running" && "text-brand-accent animate-pulse motion-reduce:animate-none",
                     status === "done" && "text-status-success",
                     status === "error" && "text-[color:color-mix(in_srgb,var(--status-error),white_35%)]",
                 )}
@@ -133,6 +130,7 @@ function ToggleRow({
 
     return (
         <button
+            type="button"
             onClick={handleToggle}
             onPointerDown={() => !disabled && setIsPressing(true)}
             onPointerUp={() => setIsPressing(false)}
@@ -142,16 +140,16 @@ function ToggleRow({
             aria-checked={enabled}
             aria-label={label}
             className={cn(
-                "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,transform] duration-fast ease-smooth-out group text-left relative overflow-hidden outline-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] focus-visible:bg-[var(--neutral-elev-3)] active:scale-95 cursor-pointer",
+                "flex items-center justify-between w-full min-h-[44px] py-2 px-3 rounded-full transition-[background-color,transform] duration-fast ease-smooth-out group text-left relative overflow-hidden outline-none [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] focus-visible:bg-[var(--neutral-elev-3)] motion-safe:active:scale-[0.97] cursor-pointer",
                 enabled ? "text-label-1" : "text-label-2",
                 disabled && "opacity-60 cursor-default pointer-events-none"
             )}
         >
             
-            <div className="flex flex-col">
+            <span className="flex flex-col">
                 <span className="text-xs font-semibold text-label-1 text-left">{label}</span>
                 {subtext && <span className="text-xs text-label-2 mt-0.5">{subtext}</span>}
-            </div>
+            </span>
             
             <SpringSwitch
                 checked={enabled}
@@ -178,19 +176,15 @@ export function PlaybackSettings({
     onLoopEnabledChange = () => {},
     autoDisableSubtitlesWhenDubbed = true,
     onAutoDisableSubtitlesWhenDubbedChange = () => {},
-    showSeparator = true,
     mediaFormat,
     marathonMode,
     onMarathonModeChange,
-    tvMode,
-    onTvModeChange,
     mediaId,
 }: PlaybackSettingsProps) {
     const isMovie = mediaFormat?.toUpperCase() === "MOVIE"
 
     return (
         <div className="py-4">
-            {showSeparator && <div className="mx-6 h-px bg-[var(--neutral-elev-3)] mb-4" />}
 
             {/* Velocidad de reproducción */}
             <div className="px-3 py-2">
@@ -222,13 +216,6 @@ export function PlaybackSettings({
                     enabled={Boolean(marathonMode)}
                     onChange={onMarathonModeChange}
                     subtext="Salta la intro y los créditos y sigue con el siguiente episodio"
-                />
-            )}
-            {onTvModeChange && (
-                <ToggleRow
-                    label="Modo TV"
-                    enabled={Boolean(tvMode)}
-                    onChange={onTvModeChange}
                 />
             )}
             {!isMovie && <ToggleRow label="Saltar intro automáticamente" enabled={marathonMode ? true : autoSkipIntro} onChange={onAutoSkipIntroChange} disabled={marathonMode} subtext={marathonMode ? "Lo controla Maratón" : undefined} />}

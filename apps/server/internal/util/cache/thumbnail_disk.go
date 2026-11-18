@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sort"
@@ -32,11 +33,6 @@ func TouchDiskCacheIfOlder(cacheFile string, info os.FileInfo, minAge time.Durat
 	TouchDiskCache(cacheFile)
 }
 
-// PruneDiskCache cleans up the thumbnail cache directory based on TTL and maximum disk size.
-// Preserved for backwards compatibility, delegates to PruneDirectory for ".jpg" files.
-func PruneDiskCache(cacheDir string, maxAge time.Duration, maxSizeBytes int64) (freedBytes int64, removedCount int, err error) {
-	return PruneDirectory(cacheDir, ".jpg", maxAge, maxSizeBytes)
-}
 
 // PruneDirectory cleans up any cache directory (thumbnails, keyframes, skipdetect fingerprints).
 //  1. Removes stale temporary files (*.tmp*) older than 1 hour.
@@ -44,6 +40,14 @@ func PruneDiskCache(cacheDir string, maxAge time.Duration, maxSizeBytes int64) (
 //  3. If the remaining total size exceeds maxSizeBytes (if maxSizeBytes > 0),
 //     evicts oldest-accessed files until the directory size reaches the low-water mark (80% of maxSizeBytes).
 func PruneDirectory(cacheDir string, ext string, maxAge time.Duration, maxSizeBytes int64) (freedBytes int64, removedCount int, err error) {
+	return PruneDirectoryContext(context.Background(), cacheDir, ext, maxAge, maxSizeBytes)
+}
+
+// PruneDirectoryContext stops between filesystem operations when canceled.
+func PruneDirectoryContext(ctx context.Context, cacheDir string, ext string, maxAge time.Duration, maxSizeBytes int64) (freedBytes int64, removedCount int, err error) {
+	if err := ctx.Err(); err != nil {
+		return 0, 0, err
+	}
 	entries, err := os.ReadDir(cacheDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -58,6 +62,9 @@ func PruneDirectory(cacheDir string, ext string, maxAge time.Duration, maxSizeBy
 
 	// Pass 1: Stale temp files & TTL expiration
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return freedBytes, removedCount, err
+		}
 		if entry.IsDir() {
 			continue
 		}
@@ -117,6 +124,9 @@ func PruneDirectory(cacheDir string, ext string, maxAge time.Duration, maxSizeBy
 		})
 
 		for _, file := range remainingFiles {
+			if err := ctx.Err(); err != nil {
+				return freedBytes, removedCount, err
+			}
 			if currentTotalSize <= targetSize {
 				break
 			}
@@ -129,5 +139,5 @@ func PruneDirectory(cacheDir string, ext string, maxAge time.Duration, maxSizeBy
 		}
 	}
 
-	return freedBytes, removedCount, nil
+	return freedBytes, removedCount, ctx.Err()
 }

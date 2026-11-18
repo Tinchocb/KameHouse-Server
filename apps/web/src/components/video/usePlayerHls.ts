@@ -3,7 +3,6 @@ import { useEffect, useRef } from "react"
 import Hls from "hls.js"
 import { AudioTrack, SubtitleTrack } from "@/components/ui/track-types"
 import { probeDriveQuotaError } from "./drive-quota"
-import { __isTV__ } from "@/types/constants"
 
 /**
  * Inicia la reproducción y clasifica el fallo de la promesa de `play()`.
@@ -31,7 +30,6 @@ interface UsePlayerHlsProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
     hlsRef: React.MutableRefObject<Hls | null>
     playableUrl: string
-    absoluteLanUrl: string
     backendTracks: { audioTracks: AudioTrack[]; subtitleTracks: SubtitleTrack[] } | null
     initialProgressSeconds?: number
     streamSwitchResumeRef?: React.MutableRefObject<number | null>
@@ -67,7 +65,6 @@ export function usePlayerHls({
     videoRef,
     hlsRef,
     playableUrl,
-    absoluteLanUrl: _absoluteLanUrl,
     backendTracks,
     initialProgressSeconds,
     streamSwitchResumeRef,
@@ -295,7 +292,7 @@ export function usePlayerHls({
             video.addEventListener("canplay", handleCanPlay)
             listenersAdded = true
             const hls = new Hls({
-                enableWorker: !__isTV__,
+                enableWorker: true,
 
                 // VOD buffer strategy (Netflix/Plex style).
                 // lowLatencyMode is intentionally omitted — it is designed for live
@@ -547,10 +544,6 @@ export function usePlayerHls({
         }
     }, [
         playableUrl,
-        // absoluteLanUrl is intentionally omitted: it is derived from playableUrl + serverIPs.
-        // Including it caused the entire HLS instance to be destroyed and recreated whenever
-        // the server IP was detected/changed, producing a spurious "loading" state after seek
-        // or episode changes.
         videoRef,
         hlsRef,
         setStatus,

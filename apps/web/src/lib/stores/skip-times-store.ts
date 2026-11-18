@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
 
-export interface SkipTimesState {
+interface SkipTimesState {
     seriesSkipTimes: Record<string, { opStart?: number; opEnd?: number; edOffset?: number; edEnd?: number }>
     saveSeriesSkipTimes: (key: string | number, opStart: number, opEnd: number, edOffset: number, edEnd?: number) => void
 }

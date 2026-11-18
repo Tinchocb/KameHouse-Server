@@ -52,13 +52,13 @@ function PreTranscodeJobsList() {
     if (!jobs || jobs.length === 0) return null
 
     return (
-        <div className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] p-5 mt-3.5">
+        <div className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)] p-5 mt-3.5">
             <h3 className="text-xs font-bold text-on-surface mb-3">
                 Conversiones pendientes ({jobs.length})
             </h3>
             <div className="space-y-2.5">
                 {jobs.map((job) => (
-                    <div key={job.hash} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)]">
+                    <div key={job.hash} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)]">
                         <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-on-surface truncate" title={job.filePath}>{job.filePath}</p>
                             <div className="flex items-center gap-2 mt-1.5">
@@ -68,12 +68,12 @@ function PreTranscodeJobsList() {
                                         style={{ transform: `scaleX(${Math.min(100, Math.max(0, job.progress)) / 100})` }}
                                     />
                                 </div>
-                                <span className="text-3xs font-mono text-label-2 shrink-0">
+                                <span className="text-xs font-mono text-label-2 shrink-0">
                                     {job.status} · {Math.round(job.progress)}%
                                 </span>
                             </div>
                             {job.error && (
-                                <p className="text-3xs text-status-error mt-1 truncate">{job.error}</p>
+                                <p className="text-xs text-status-error mt-1 truncate">{job.error}</p>
                             )}
                         </div>
                         <IconButton
@@ -104,11 +104,11 @@ export function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof u
         <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {/* Motor de transcodificación */}
-            <div className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] transition-[background-color,border-color] duration-base ease-smooth-out">
+            <div className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] transition-[background-color,border-color] duration-base ease-smooth-out">
                 <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold text-on-surface">Motor de reproducción</h3>
                     <span className={cn(
-                        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-bold border",
+                        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border",
                         stats?.transcoderInitialized
                             ? "bg-status-success/15 border-status-success/30 text-status-success"
                             : "bg-[var(--neutral-elev-3)] border-[var(--neutral-separator)] text-on-surface-variant"
@@ -132,24 +132,24 @@ export function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof u
                             display={`${governor.activeNvenc} / ${governor.nvencCap}`}
                             color="var(--status-success)"
                         />
-                        <div className="flex items-center justify-between text-2xs text-label-2 mt-auto pt-3.5 border-t border-[var(--neutral-separator)]">
+                        <div className="flex items-center justify-between text-xs text-label-2 mt-auto pt-3.5 border-t border-[var(--neutral-separator)]">
                             <span>Iniciados: <span className="font-mono text-on-surface ml-1">{governor.totalLaunched}</span></span>
                             <span>Completados: <span className="font-mono text-on-surface ml-1">{governor.totalCompleted}</span></span>
                         </div>
                     </>
                 ) : (
-                    <p className="text-2xs text-label-2 my-auto">
+                    <p className="text-xs text-label-2 my-auto">
                         El motor está en reposo. Se activa al reproducir un video que necesite conversión.
                     </p>
                 )}
-                <div className="flex items-center justify-between text-2xs text-label-2">
+                <div className="flex items-center justify-between text-xs text-label-2">
                     <span>Conversiones pendientes</span>
                     <span className="font-mono text-on-surface font-semibold">{stats?.preTranscodeQueue ?? 0}</span>
                 </div>
             </div>
 
             {/* Sistema */}
-            <div className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] transition-[background-color,border-color] duration-base ease-smooth-out">
+            <div className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] transition-[background-color,border-color] duration-base ease-smooth-out">
                 <h3 className="text-xs font-bold text-on-surface">Sistema</h3>
                 <StatBar
                     label="CPU"
@@ -167,7 +167,7 @@ export function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof u
             </div>
 
             {/* GPU (solo si nvidia-smi respondió) */}
-            <div className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] transition-[background-color,border-color] duration-base ease-smooth-out">
+            <div className="rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] p-5 flex flex-col gap-4.5 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)] transition-[background-color,border-color] duration-base ease-smooth-out">
                 <h3 className="text-xs font-bold text-on-surface">GPU · NVIDIA</h3>
                 {gpu ? (
                     <>
@@ -182,7 +182,7 @@ export function AdminTranscodePanel({ trStats }: { trStats?: ReturnType<typeof u
                         />
                     </>
                 ) : (
-                    <p className="text-2xs text-label-2 my-auto">
+                    <p className="text-xs text-label-2 my-auto">
                         No se detectó una GPU NVIDIA en el servidor.
                     </p>
                 )}

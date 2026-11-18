@@ -4,13 +4,11 @@ import * as React from "react"
 import { useDebounce } from "use-debounce"
 import { useUIStore } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
-import { IconStatusMusic, IconStatusMusicOff } from "@/components/ui/icons";
-import { cn } from "@/components/ui/core/styling"
 import { getServerBaseUrl } from "@/api/client/server-url"
+import { authorizeResourceUrl } from "@/api/client/auth"
 
 
-import { resolveSeriesSoundtrackPlaylist, SERIES_SOUNDTRACKS, getSeriesEraKey } from "@/lib/config/series_soundtracks"
-import { persistThemePatch } from "@/lib/server/persist-settings"
+import { resolveSeriesSoundtrackPlaylist, getSeriesEraKey } from "@/lib/config/series_soundtracks"
 
 // Playlist por defecto (bundleada con la app) que se usa cuando el usuario
 // todavía no ha escaneado una carpeta de música propia.
@@ -24,7 +22,7 @@ const DEFAULT_PLAYLIST = [
 function buildTrackUrl(dir: string, file: string): string {
     const base = getServerBaseUrl() || window.location.origin
     const params = new URLSearchParams({ dir, file })
-    return `${base}/api/v1/music/stream?${params.toString()}`
+    return authorizeResourceUrl(`${base}/api/v1/music/stream?${params.toString()}`)
 }
 
 // El estante escribe el contexto en cada selección: la banda sonora espera a
@@ -99,12 +97,9 @@ if (typeof window !== "undefined") {
     }
 }
 
-export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean } = {}) {
+export function BackgroundMusicPlayer() {
     const {
         bgMusicEnabled,
-        setBgMusicEnabled,
-        uiSoundsEnabled,
-        setUiSoundsEnabled,
         bgMusicVolume,
         bgMusicDir,
         bgMusicTracks,
@@ -115,9 +110,6 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
     } = useUIStore(
         useShallow((state) => ({
             bgMusicEnabled: state.bgMusicEnabled,
-            setBgMusicEnabled: state.setBgMusicEnabled,
-            uiSoundsEnabled: state.uiSoundsEnabled,
-            setUiSoundsEnabled: state.setUiSoundsEnabled,
             bgMusicVolume: state.bgMusicVolume,
             bgMusicDir: state.bgMusicDir,
             bgMusicTracks: state.bgMusicTracks,
@@ -127,15 +119,6 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
             seriesSoundtrackMode: state.seriesSoundtrackMode,
         }))
     )
-
-    // El botón de la sidebar es el interruptor MAESTRO de audio: agrupa la
-    // música de fondo y los efectos de UI, igual que el switch de audio global
-    // en Ajustes → Audio. Está "encendido" si cualquiera de los dos suena.
-    const audioMasterOn = bgMusicEnabled || uiSoundsEnabled
-
-    // Serie activa detectada
-    const activeEraKey = React.useMemo(() => getSeriesEraKey(activeSeriesContext), [activeSeriesContext])
-    const activeSeriesInfo = activeEraKey ? SERIES_SOUNDTRACKS[activeEraKey] : null
 
     // Era de la banda sonora: sale del contexto ya asentado y solo cuenta con el modo
     // soundtrack encendido. Elegir otra serie de la misma era no cambia la playlist.
@@ -331,88 +314,5 @@ export function BackgroundMusicPlayer({ headless = false }: { headless?: boolean
         }
     }, [])
 
-    const togglePlayback = () => {
-        // Interruptor maestro de audio: activa / desactiva música de fondo y efectos de UI a la vez.
-        // NOTA CRÍTICA: Llamar a audio.play() directamente dentro del click del usuario
-        // garantiza el cumplimiento estricto de las políticas de autoplay del navegador.
-        const next = !audioMasterOn
-        setBgMusicEnabled(next)
-        setUiSoundsEnabled(next)
-        persistThemePatch({ bgMusicEnabled: next, uiSoundsEnabled: next })
-
-        const audio = getGlobalBgAudio()
-        if (!next) {
-            if (audio) {
-                audio.pause()
-            }
-        } else {
-            if (audio && PLAYLIST.length > 0 && !isVideoActive && !eraOpeningPlaying && !isAnyVideoPlaying) {
-                const expectedSrc = PLAYLIST[currentTrackIndex]
-                if (expectedSrc) {
-                    const expectedAbsolute = new URL(expectedSrc, window.location.origin).href
-                    if (audio.src !== expectedAbsolute) {
-                        audio.src = expectedSrc
-                        audio.load()
-                    }
-                }
-                audio.volume = Math.pow(bgMusicVolume, 2)
-                audio.play()
-                    .catch((err) => {
-                        console.warn("Could not start background music on click:", err)
-                    })
-            }
-        }
-    }
-
-    if (headless) return null
-
-    return (
-        <div className="w-full flex justify-center">
-            <button
-                id="bg-music-toggle-btn"
-                onClick={togglePlayback}
-                title={audioMasterOn ? "Silenciar audio" : "Activar audio"}
-                aria-label={audioMasterOn ? "Silenciar audio" : "Activar audio"}
-                aria-pressed={audioMasterOn}
-                className={cn(
-                    "flex items-center h-14 rounded-xl group px-4 relative transition-[background-color,border-color,color,transform] duration-fast ease-out-strong w-full",
-                    "active:scale-95 font-bold justify-center md:w-14 w-full md:px-0",
-                    audioMasterOn
-                        ? "text-on-surface bg-white/[0.08]"
-                        : "bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/[0.12] text-on-surface-variant hover:text-on-surface"
-                )}
-            >
-                {/* Active Indicator Line */}
-                <div className={cn(
-                    "absolute left-0 w-1 h-6 bg-on-surface rounded-r-full transition-[transform,opacity] duration-base ease-smooth-out hidden md:block",
-                    audioMasterOn ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
-                )} />
-
-                <span className={cn(
-                    "shrink-0 z-10 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-out-strong relative",
-                    audioMasterOn && "text-on-surface"
-                )}>
-                    {audioMasterOn ? (
-                        <IconStatusMusic className="w-5 h-5 text-on-surface" />
-                    ) : (
-                        <IconStatusMusicOff className="w-5 h-5 relative z-10" />
-                    )}
-                </span>
-
-                <div className="flex flex-col text-left transition-colors whitespace-nowrap min-w-0 flex-1 hidden md:hidden">
-                    <span className={cn(
-                        "text-xs font-bold z-10",
-                        audioMasterOn ? "text-on-surface" : "group-hover:text-on-surface"
-                    )}>
-                        {audioMasterOn ? "Audio activado" : "Audio silenciado"}
-                    </span>
-                    {activeSeriesInfo && audioMasterOn && (
-                        <span className="text-2xs text-brand-accent-readable truncate font-medium">
-                            {activeSeriesInfo.shortName} OST
-                        </span>
-                    )}
-                </div>
-            </button>
-        </div>
-    )
+    return null
 }

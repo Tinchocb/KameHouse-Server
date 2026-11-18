@@ -22,8 +22,15 @@ type TMDBProviderImpl struct {
 	db     *db.Database
 	logger *zerolog.Logger
 
-	mu    sync.Mutex
-	cache map[int]*tmdbCachedEntry
+	mu          sync.Mutex
+	cache       map[int]*tmdbCachedEntry
+	seasonSlots chan struct{}
+	publication sync.Mutex // invalidation and durable writes, independent of warm reads
+	generation  uint64
+	closed      bool
+	workers     sync.WaitGroup
+	ctx         context.Context
+	cancel      context.CancelFunc
 }
 
 type tmdbCachedEntry struct {
@@ -35,19 +42,29 @@ const tmdbMetadataTTL = 6 * time.Hour
 
 // NewTMDBProviderImpl creates a new TMDB-backed metadata provider.
 func NewTMDBProviderImpl(client *tmdb.Client, database *db.Database, logger *zerolog.Logger) *TMDBProviderImpl {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &TMDBProviderImpl{
-		client: client,
-		db:     database,
-		logger: logger,
-		cache:  make(map[int]*tmdbCachedEntry),
+		ctx: ctx, cancel: cancel,
+		client:      client,
+		db:          database,
+		logger:      logger,
+		cache:       make(map[int]*tmdbCachedEntry),
+		seasonSlots: make(chan struct{}, 4),
 	}
 }
 
 // GetAnimeMetadata fetches full episode metadata for a media identified by its
-// internal media ID (which maps to a TMDB TV show ID stored in LibraryMedia).
+// public library ID (movies use the public movie offset).
 func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata, error) {
 	// 1. Check in-memory cache first
 	p.mu.Lock()
+	if p.closed {
+		p.mu.Unlock()
+		return nil, context.Canceled
+	}
+	p.workers.Add(1)
+	defer p.workers.Done()
+	generation := p.generation
 	if entry, ok := p.cache[id]; ok && time.Now().Before(entry.expiresAt) {
 		p.mu.Unlock()
 		if entry.data == nil {
@@ -57,40 +74,46 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	}
 	p.mu.Unlock()
 
-	// Resolve the real TMDB ID and type from the database first.
-	tmdbID := id
-	isMovie := false
+	if id <= 0 {
+		return nil, fmt.Errorf("invalid public media ID %d", id)
+	}
+	tmdbID, isMovie := id, id >= 1_000_000
+	if isMovie {
+		tmdbID -= 1_000_000
+	}
 	if p.db != nil {
-		if m, err := db.GetLibraryMediaByID(p.db, uint(id)); err == nil && m != nil {
-			if m.TmdbID > 0 {
-				tmdbID = m.TmdbID
+		m, err := db.ResolveLibraryMediaByPublicID(p.db, id)
+		if err != nil {
+			return nil, err
+		}
+		if m != nil {
+			if m.TmdbID <= 0 {
+				return nil, fmt.Errorf("media %d has no TMDB mapping", id)
 			}
-			isMovie = m.Format == "MOVIE"
+			tmdbID, isMovie = m.TmdbID, m.Type == "MOVIE"
 		}
 	}
 
 	// 2. Check Database Persistent Cache
 	if p.db != nil {
 		var cachedData apiMetadata.AnimeMetadata
-		found, err := db.GetMetadataCache(p.db, "tmdb-anime-episodes", strconv.Itoa(tmdbID), &cachedData)
+		found, err := db.GetMetadataCache(p.db, "tmdb-anime-episodes", p.metadataKey(id, tmdbID, isMovie), &cachedData)
 		if err == nil && found {
-			// Store in memory cache too for subsequent lookups in this session
-			p.mu.Lock()
-			p.cache[id] = &tmdbCachedEntry{
-				data:      &cachedData,
-				expiresAt: time.Now().Add(tmdbMetadataTTL),
-			}
-			p.mu.Unlock()
-
 			// Always re-apply enrichments to cached data to ensure local logic changes are reflected
-			p.applyEnrichments(tmdbID, &cachedData)
+			if !isMovie {
+				p.applyEnrichments(tmdbID, &cachedData)
+			}
+			p.publishMetadata(generation, id, tmdbID, &cachedData, false, isMovie)
 
 			return &cachedData, nil
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(p.ctx, 30*time.Second)
 	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	var episodes map[string]*apiMetadata.EpisodeMetadata
 	var totalEpisodes, totalSpecials int
@@ -135,9 +158,8 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 		}
 
 		absEpCounter := 0 // running counter across seasons for the flat episode key
-		for seasonNum := 0; seasonNum <= maxSeasons; seasonNum++ {
-			seasonDetails, err := p.client.GetTVSeason(ctx, tmdbID, seasonNum)
-			if err != nil || len(seasonDetails.Episodes) == 0 {
+		for seasonNum, seasonDetails := range p.loadSeasons(ctx, tmdbID, maxSeasons) {
+			if len(seasonDetails.Episodes) == 0 {
 				if seasonNum > 1 {
 					break
 				}
@@ -178,23 +200,11 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	}
 
 	// Apply Latin Spanish title overrides for Dragon Ball
-	p.applyEnrichments(tmdbID, result)
-
-	// Store in cache
-	p.mu.Lock()
-	p.cache[id] = &tmdbCachedEntry{
-		data:      result,
-		expiresAt: time.Now().Add(tmdbMetadataTTL),
+	if !isMovie {
+		p.applyEnrichments(tmdbID, result)
 	}
-	p.mu.Unlock()
 
-	// 3. Save to Database Persistent Cache
-	if p.db != nil {
-		// Misma clave que la lectura de arriba (tmdbID, no el ID interno): si no
-		// coinciden, el caché persistente nunca acierta y cada apertura de una
-		// serie vuelve a descargar todas sus temporadas de TMDB (~10 s).
-		_ = db.UpsertMetadataCache(p.db, "tmdb-anime-episodes", strconv.Itoa(tmdbID), result, 7*24*time.Hour) // 1 week TTL
-	}
+	p.publishMetadata(generation, id, tmdbID, result, true, isMovie)
 
 	if p.logger != nil {
 		p.logger.Debug().
@@ -208,21 +218,93 @@ func (p *TMDBProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata,
 	return result, nil
 }
 
+// Fetch at most four seasons concurrently across this provider. Results are
+// consumed in season order, so absolute numbering and the first missing-season
+// boundary remain identical to the sequential path. A failed season can cause
+// speculative reads only within its current batch, never of the remaining show.
+func (p *TMDBProviderImpl) loadSeasons(ctx context.Context, tmdbID, maxSeason int) []tmdb.TVSeasonDetails {
+	const width = 4
+	seasons := make([]tmdb.TVSeasonDetails, maxSeason+1)
+	for start := 0; start <= maxSeason; start += width {
+		if ctx.Err() != nil {
+			break
+		}
+		end := min(start+width, maxSeason+1)
+		var workers sync.WaitGroup
+		for season := start; season < end; season++ {
+			workers.Go(func() {
+				if ctx.Err() != nil {
+					return
+				}
+				select {
+				case p.seasonSlots <- struct{}{}:
+					defer func() { <-p.seasonSlots }()
+				case <-ctx.Done():
+					return
+				}
+				if ctx.Err() != nil {
+					return
+				}
+				details, err := p.client.GetTVSeason(ctx, tmdbID, season)
+				if err == nil {
+					seasons[season] = details
+				}
+			})
+		}
+		workers.Wait()
+		for season := start; season < end; season++ {
+			if season > 1 && len(seasons[season].Episodes) == 0 {
+				return seasons[:season+1]
+			}
+		}
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	return seasons
+}
+
 // GetAnimeMetadataWrapper returns a SimpleAnimeMetadataWrapper backed by the
 // provided AnimeMetadata. This allows episode lookup by flat episode number key.
 func (p *TMDBProviderImpl) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *apiMetadata.AnimeMetadata) AnimeMetadataWrapper {
 	return NewSimpleAnimeMetadataWrapper(animeMetadata)
 }
 
-func (p *TMDBProviderImpl) SetUseFallbackProvider(v bool) {}
-
 func (p *TMDBProviderImpl) ClearCache() {
+	p.publication.Lock()
+	defer p.publication.Unlock()
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.generation++
 	p.cache = make(map[int]*tmdbCachedEntry)
 }
 
-func (p *TMDBProviderImpl) Close() error { return nil }
+func (p *TMDBProviderImpl) publishMetadata(generation uint64, id, tmdbID int, data *apiMetadata.AnimeMetadata, persist bool, movie ...bool) {
+	p.publication.Lock()
+	defer p.publication.Unlock()
+	p.mu.Lock()
+	if p.closed || generation != p.generation {
+		p.mu.Unlock()
+		return
+	}
+	p.cache[id] = &tmdbCachedEntry{data: data, expiresAt: time.Now().Add(tmdbMetadataTTL)}
+	p.mu.Unlock()
+	if persist && p.db != nil {
+		// Use the same external TMDB key as the read path.
+		_ = db.UpsertMetadataCache(p.db, "tmdb-anime-episodes", p.metadataKey(id, tmdbID, movie...), data, 7*24*time.Hour)
+	}
+}
+
+func (p *TMDBProviderImpl) Close() error {
+	p.mu.Lock()
+	p.closed = true
+	p.mu.Unlock()
+	p.cancel()
+	// The client's shared HTTP fetch may outlive cancellation; joining Get
+	// also joins this provider's final cache writes before database teardown.
+	p.workers.Wait()
+	return nil
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -295,4 +377,17 @@ func (p *TMDBProviderImpl) applyEnrichments(tmdbID int, metadata *apiMetadata.An
 	EnrichWithFiller(tmdbID, metadata)
 	// Apply canonical series titles for Dragon Ball
 	EnrichWithSeriesTitles(tmdbID, metadata)
+}
+
+// Versioned keys exclude legacy rows that mixed public IDs, primary keys and types.
+func (p *TMDBProviderImpl) metadataKey(publicID, tmdbID int, movie ...bool) string {
+	kind := "SHOW"
+	if (len(movie) > 0 && movie[0]) || (len(movie) == 0 && publicID >= 1_000_000) {
+		kind = "MOVIE"
+	}
+	language := "es-MX"
+	if p.client != nil {
+		language = p.client.Language()
+	}
+	return fmt.Sprintf("public-v2:%s:%d:%s", kind, tmdbID, language)
 }

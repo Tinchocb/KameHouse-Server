@@ -1,6 +1,7 @@
 import { GettingStarted_Variables } from "@/api/generated/endpoint.types"
 import type { Models_Settings } from "@/api/generated/types"
 import { z } from "zod"
+import { normalizeThemePreference } from "@/lib/theme/themes-registry"
 
 
 const _gettingStartedSchema = z.object({
@@ -30,7 +31,6 @@ export const settingsSchema = z.object({
         autoSkipOutro: z.boolean().default(false),
         autoDisableSubtitlesWhenDubbed: z.boolean().default(true),
         marathonMode: z.boolean().default(false),
-        tvMode: z.boolean().default(false),
     }).passthrough().default({}),
     mediaPlayer: z.object({}).passthrough().default({}),
     googleDrive: z.object({
@@ -40,6 +40,8 @@ export const settingsSchema = z.object({
         refreshToken: z.string().default(""),
         folderId: z.string().default(""),
         folderName: z.string().default(""),
+        disableAutoSync: z.boolean().default(false),
+        scanIntervalMinutes: z.number().default(60),
     }).passthrough().default({}),
     mediastream: z.object({
         transcodeEnabled: z.boolean().default(false),
@@ -62,7 +64,7 @@ export const settingsSchema = z.object({
         accentColor: z.string().default("#C8102E"),
         themeEra: z.string().default(""),
         themeMode: z.string().default(""),
-        themeEnableLiquidGlass: z.boolean().default(false),
+        themeEnableLiquidGlass: z.boolean().default(true),
         themeLibraryScreenBannerType: z.string().default("dynamic"),
         themeLibraryScreenCustomBannerImage: z.string().default(""),
         themeLibraryScreenCustomBannerPosition: z.string().default("50% 50%"),
@@ -88,7 +90,7 @@ export const settingsSchema = z.object({
         seriesSoundtrackMode: z.boolean().default(true),
         uiSoundsEnabled: z.boolean().default(true),
         uiSoundsVolume: z.number().min(0).max(1).default(1.0),
-    }).passthrough().default({}),
+    }).passthrough().default({}).transform(normalizeThemePreference),
     notifications: z.object({
         disableNotifications: z.boolean().default(false),
         disableAutoScannerNotifications: z.boolean().default(false),
@@ -100,13 +102,13 @@ export const settingsSchema = z.object({
 
 export type SettingsFormValues = z.infer<typeof settingsSchema>
 
-export const gettingStartedSchema = _gettingStartedSchema.extend({
+const gettingStartedSchema = _gettingStartedSchema.extend({
     library: settingsSchema.shape.library,
     mediaPlayer: settingsSchema.shape.mediaPlayer,
     notifications: settingsSchema.shape.notifications.optional(),
 })
 
-export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>, existingSettings?: Models_Settings | null): GettingStarted_Variables => {
+const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>, existingSettings?: Models_Settings | null): GettingStarted_Variables => {
     const libraryData = data.library
     return {
         library: {
@@ -132,11 +134,29 @@ export const getDefaultSettings = (data: z.infer<typeof gettingStartedSchema>, e
             autoSkipOutro: libraryData.autoSkipOutro ?? existingSettings?.library?.autoSkipOutro ?? false,
             autoDisableSubtitlesWhenDubbed: libraryData.autoDisableSubtitlesWhenDubbed ?? existingSettings?.library?.autoDisableSubtitlesWhenDubbed ?? true,
             marathonMode: libraryData.marathonMode ?? existingSettings?.library?.marathonMode ?? false,
-            tvMode: libraryData.tvMode ?? existingSettings?.library?.tvMode ?? false,
         },
         mediaPlayer: existingSettings?.mediaPlayer || {},
-        enableTranscode: data.enableTranscode ?? existingSettings?.mediastream?.transcodeEnabled ?? false,
+        enableTranscode: data.enableTranscode,
     } as GettingStarted_Variables
+}
+
+/**
+ * Payload de POST /api/v1/start. Parte de los ajustes guardados y solo cambia lo que el
+ * asistente pregunta (las carpetas). Lo que no pregunta sigue siendo lo guardado: antes,
+ * los defaults de zod lo sustituían y pisaban, p. ej., el idioma de audio o los saltos.
+ * El transcoder se lee de su estado real (status.mediastreamSettings).
+ */
+export function buildGettingStartedPayload(input: {
+    current: Models_Settings | null | undefined
+    mediastream?: { transcodeEnabled?: boolean } | null
+    seriesPaths: string[]
+}): GettingStarted_Variables {
+    const data = gettingStartedSchema.parse({
+        enableTranscode: input.mediastream?.transcodeEnabled ?? false,
+        mediaPlayer: input.current?.mediaPlayer || {},
+        library: { ...input.current?.library, seriesPaths: input.seriesPaths },
+    })
+    return getDefaultSettings(data, input.current)
 }
 
 /**

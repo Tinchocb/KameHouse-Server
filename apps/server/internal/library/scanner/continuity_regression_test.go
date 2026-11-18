@@ -75,7 +75,7 @@ func TestScannerContinuityFinalizeSkipped(t *testing.T) {
 			dir := t.TempDir()
 			path := filepath.Join(dir, "Show - 01.mkv")
 			writeFile(t, path, "synthetic")
-			known := dto.NewLocalFile(path, dir)
+			known := dto.NewLocalFileS(path, []string{dir})
 			skipped := map[string]*dto.LocalFile{known.GetNormalizedPath(): known}
 			if disappears {
 				if err := os.Remove(path); err != nil {
@@ -172,7 +172,7 @@ func TestScannerContinuityFinalizeShelvesDisappearedLocked(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "Show - 01.mkv")
 	writeFile(t, path, "synthetic")
-	known := dto.NewLocalFile(path, dir)
+	known := dto.NewLocalFileS(path, []string{dir})
 	known.Locked = true
 	skipped := map[string]*dto.LocalFile{known.GetNormalizedPath(): known}
 	merged := scn.mergeSkippedFiles(nil, skipped)

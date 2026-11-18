@@ -16,9 +16,16 @@ func (m *MetadataProviders) GetTMDBClient() *tmdb.Client {
 
 func (m *MetadataProviders) publishTMDB(client *tmdb.Client, provider metadata_provider.Provider) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.Provider.SetProvider(provider)
-	m.tmdbClient = client
+	err := m.Provider.SetProvider(provider)
+	if err == nil {
+		m.tmdbClient = client
+	}
+	m.mu.Unlock()
+	if err != nil {
+		// A configuration callback racing shutdown must not leak its rejected
+		// candidate or replace the last accepted client snapshot.
+		_ = provider.Close()
+	}
 }
 
 // Caller holds moduleMu. Build both objects before publishing the client, so a

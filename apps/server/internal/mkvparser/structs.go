@@ -12,22 +12,3 @@ type AudioTrack struct {
 	Channels          uint64
 	BitDepth          uint64
 }
-
-// ContentEncodings contains information about how the track data is encoded
-type ContentEncodings struct {
-	ContentEncoding []ContentEncoding
-}
-
-// ContentEncoding describes a single encoding applied to the track data
-type ContentEncoding struct {
-	ContentEncodingOrder uint64
-	ContentEncodingScope uint64
-	ContentEncodingType  uint64
-	ContentCompression   *ContentCompression
-}
-
-// ContentCompression describes how the track data is compressed
-type ContentCompression struct {
-	ContentCompAlgo     uint64
-	ContentCompSettings []byte
-}

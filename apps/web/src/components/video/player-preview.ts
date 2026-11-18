@@ -1,546 +1,132 @@
-import Hls from "hls.js"
+import { getServerBaseUrl } from "@/api/client/server-url"
+import { authorizeResourceUrl } from "@/api/client/auth"
 
-const VIDEOCORE_PREVIEW_THUMBNAIL_SIZE = 200
-const VIDEOCORE_PREVIEW_CAPTURE_INTERVAL_SECONDS = 4
-const MAX_CONCURRENT_JOBS = 1
-const MAX_PREVIEW_CACHE_SIZE = 150
-const PREFETCH_AHEAD_COUNT = 10
+export interface PreviewFrame {
+    url: string
+    column: number
+    row: number
+    columns: number
+    rows: number
+}
+interface Manifest { version: string; interval: number; columns: number; rows: number; width: number; height: number }
 
+/** Persistent server images; never opens another video or seeks the playback stream. */
 export class PlayerPreviewManager {
-    private previewCache: Map<number, string> = new Map()
-    private inFlightPromises: Map<number, Promise<string | undefined>> = new Map()
-    private jobQueue: Job[] = []
-    private activeJobs: Set<number> = new Set()
-    private videoSyncController = new AbortController()
-    private videoElement: HTMLVideoElement
-    private lastCapturedSegment: number = -1
-    private captureThrottleTimeout: number | null = null
-    private highestCachedIndex: number = -1
-    private canvasSizeConfigured: boolean = false
-    private hlsInstance: Hls | null = null
-    private isHlsSource: boolean = false
-    private lastKnownTime: number = 0
-    private prefetchAheadCount: number = PREFETCH_AHEAD_COUNT
+    private manifest: Manifest | null = null
+    private pending: { sheet: number; controller: AbortController; promise: Promise<string> } | null = null
+    private manifestPromise: Promise<Manifest> | null = null
+    private lifetime = new AbortController()
+    private cache = new Map<number, string>()
     private disposed = false
+    private requested = false
 
-    private readonly _dummyVideoElement = document.createElement("video")
-    private readonly _offscreenCanvas = new OffscreenCanvas(0, 0)
-    private readonly _drawingContext = this._offscreenCanvas.getContext("2d", {
-        alpha: false,
-        desynchronized: true,
-    })
+    constructor(private readonly path: string, private readonly duration: () => number = () => 0) {}
 
-    constructor(
-        videoElement: HTMLVideoElement,
-        mediaSource: string,
-        streamType: string,
-    ) {
-        this.initializeDummyVideoElement()
-        this.videoElement = videoElement
-        this.prefetchAheadCount = PREFETCH_AHEAD_COUNT
-
-        // direct / transcode / optimized
-        this.isHlsSource = streamType === "transcode" || streamType === "optimized"
-        this.loadMediaSource(
-            mediaSource,
-        )
-
-        this._bindToVideoPlayer()
+    prewarm(): void {
+        if (this.requested || this.disposed) return
+        // Warm only the small index. Cold frame extraction competes with the
+        // first playback buffer, especially over Drive; wait for actual hover.
+        void this.loadManifest().catch(() => {})
     }
 
-    _bindToVideoPlayer(): void {
-        if (this.disposed) return
-        this.detachFromCurrentPlayer()
-        this.videoSyncController = new AbortController()
+    private endpoint(): URL {
+        const url = new URL("/api/v1/video-storyboard", getServerBaseUrl() || window.location.origin)
+        url.searchParams.set("path", this.path)
+        return new URL(authorizeResourceUrl(url.toString()))
+    }
 
-        // reset lastCapturedSegment to allow capture at new position
-        this.videoElement.addEventListener("seeked", () => {
-            const currentSegment = this.calculateSegmentIndex(this.videoElement.currentTime)
-            const previousSegment = this.calculateSegmentIndex(this.lastKnownTime)
+    calculateSegmentIndex(time: number): number {
+        const duration = this.duration()
+        const end = Number.isFinite(duration) && duration > 0 ? Math.max(0, duration - 0.001) : Infinity
+        return Math.floor(Math.min(end, Math.max(0, Number.isFinite(time) ? time : 0)) / (this.manifest?.interval ?? 10))
+    }
 
-            // If we seeked more than 1 segment away, reset to allow fresh captures
-            if (Math.abs(currentSegment - previousSegment) > 1) {
-                this.lastCapturedSegment = -1
+    private loadManifest(): Promise<Manifest> {
+        if (!this.manifestPromise) {
+            this.manifestPromise = fetch(this.endpoint(), { signal: this.lifetime.signal })
+                .then(async response => {
+                    if (!response.ok) throw new Error("Vista previa no disponible")
+                    const value = await response.json() as Manifest
+                    if (!/^[a-f0-9]{64}$/.test(value.version) || value.interval !== 10 || value.columns !== 4 || value.rows !== 3 || value.width !== 200 || value.height !== 112) {
+                        throw new Error("Índice de miniaturas inválido")
+                    }
+                    this.manifest = value
+                    return value
+                }).catch(error => { this.manifestPromise = null; throw error })
+        }
+        return this.manifestPromise
+    }
 
-                // Cancel any pending throttled capture since we've moved to a new position
-                if (this.captureThrottleTimeout) {
-                    clearTimeout(this.captureThrottleTimeout)
-                    this.captureThrottleTimeout = null
+    private async loadSheet(segment: number, manifest: Manifest, signal: AbortSignal): Promise<string> {
+        const url = this.endpoint()
+        url.searchParams.set("sheet", String(Math.floor(segment / (manifest.columns * manifest.rows))))
+        url.searchParams.set("frame", String(segment % (manifest.columns * manifest.rows)))
+        url.searchParams.set("v", manifest.version)
+        // A busy encoder yields to playback. Retry only the latest requested sheet.
+        for (let attempt = 0; attempt < 4; attempt++) {
+            const response = await fetch(url, { signal })
+            if (response.status === 409) {
+                this.manifest = null
+                this.manifestPromise = null
+                for (const cached of this.cache.values()) URL.revokeObjectURL(cached)
+                this.cache.clear()
+            }
+            if (response.status === 503 && attempt < 3) {
+                await new Promise<void>((resolve, reject) => {
+                    const abort = () => { clearTimeout(timer); reject(new DOMException("Aborted", "AbortError")) }
+                    const timer = setTimeout(() => { signal.removeEventListener("abort", abort); resolve() }, 750)
+                    signal.addEventListener("abort", abort, { once: true })
+                    if (signal.aborted) abort()
+                })
+                continue
+            }
+            if (!response.ok) throw new Error("Vista previa no disponible")
+            const blob = await response.blob()
+            if (signal.aborted || this.disposed) throw new DOMException("Aborted", "AbortError")
+            if (!blob.type.startsWith("image/") || blob.size > 4 * 1024 * 1024) throw new Error("Miniatura inválida")
+            const objectUrl = URL.createObjectURL(blob)
+            this.cache.set(segment, objectUrl)
+            // Only a small working set stays in memory; browser/disk cache persists.
+            if (this.cache.size > 48) {
+                const oldest = this.cache.keys().next().value
+                if (oldest !== undefined) {
+                    const cachedUrl = this.cache.get(oldest)
+                    if (cachedUrl) URL.revokeObjectURL(cachedUrl)
+                    this.cache.delete(oldest)
                 }
             }
+            return objectUrl
+        }
+        throw new Error("Vista previa no disponible")
+    }
 
-            this.lastKnownTime = this.videoElement.currentTime
-        }, { signal: this.videoSyncController.signal })
-
-        this.videoElement.addEventListener("timeupdate", () => {
-            const segmentIndex = this.calculateSegmentIndex(this.videoElement.currentTime)
-
-            // Update last known time for seek detection
-            this.lastKnownTime = this.videoElement.currentTime
-
-            if (segmentIndex !== this.lastCapturedSegment && !this.previewCache.has(segmentIndex)) {
-                this.throttledCaptureFrame(segmentIndex)
+    async retrievePreviewForSegment(segment: number): Promise<PreviewFrame> {
+        this.requested = true
+        const manifest = await this.loadManifest()
+        if (this.disposed) throw new DOMException("Aborted", "AbortError")
+        const sheet = segment // Each demand now requests one frame, not a complete sheet.
+        if (this.pending && this.pending.sheet !== sheet) this.pending.controller.abort()
+        let url = this.cache.get(sheet)
+        if (!url) {
+            if (this.pending?.sheet !== sheet || this.pending.controller.signal.aborted) {
+                this.pending?.controller.abort()
+                const controller = new AbortController()
+                const pending = { sheet, controller, promise: this.loadSheet(sheet, manifest, controller.signal) }
+                this.pending = pending
+                void pending.promise.finally(() => { if (this.pending === pending) this.pending = null }).catch(() => {})
             }
-        }, { signal: this.videoSyncController.signal })
+            if (this.pending) {
+                url = await this.pending.promise
+            }
+        }
+        return { url: url ?? "", column: 0, row: 0, columns: 1, rows: 1 }
     }
 
     cleanup(): void {
-        if (this.disposed) return
         this.disposed = true
-        this.detachFromCurrentPlayer()
-        this.resetOperationQueue()
-        this.clearPreviewCache()
-
-        if (this.captureThrottleTimeout) {
-            clearTimeout(this.captureThrottleTimeout)
-            this.captureThrottleTimeout = null
-        }
-
-        if (this.hlsInstance) {
-            this.hlsInstance.destroy()
-            this.hlsInstance = null
-        }
-
-        this._dummyVideoElement.pause()
-        this._dummyVideoElement.removeAttribute("src")
-        this._dummyVideoElement.load()
-        this._dummyVideoElement.remove()
-
-        this.lastCapturedSegment = -1
-        this.highestCachedIndex = -1
-        this.canvasSizeConfigured = false
-        this.isHlsSource = false
-        this.lastKnownTime = 0
+        this.lifetime.abort()
+        this.pending?.controller.abort()
+        for (const url of this.cache.values()) URL.revokeObjectURL(url)
+        this.cache.clear()
     }
-
-    async retrievePreviewForSegment(
-        segmentIndex: number,
-        prefetch = true,
-    ): Promise<string | undefined> {
-        if (this.disposed) return undefined
-        const cachedPreview = this.previewCache.get(segmentIndex)
-        if (cachedPreview) {
-            if (prefetch) this.prefetchUpcomingSegments(segmentIndex)
-            return cachedPreview
-        }
-
-        const inFlight = this.inFlightPromises.get(segmentIndex)
-        if (inFlight) return inFlight
-
-        const promise = this.schedulePreviewGeneration(segmentIndex)
-        if (prefetch) this.prefetchUpcomingSegments(segmentIndex)
-
-        return promise
-    }
-
-    getLastestCachedIndex(): number {
-        return this.highestCachedIndex
-    }
-
-    calculateTimeFromIndex(segmentIndex: number): number {
-        return segmentIndex * VIDEOCORE_PREVIEW_CAPTURE_INTERVAL_SECONDS
-    }
-
-    private loadMediaSource(source: string): void {
-        if (this.hlsInstance) {
-            this.hlsInstance.destroy()
-            this.hlsInstance = null
-        }
-
-        if (this.isHlsSource) {
-            if (Hls.isSupported()) {
-                this.hlsInstance = new Hls({
-                    enableWorker: false,
-                    lowLatencyMode: false,
-                    backBufferLength: 0,
-                    maxBufferLength: 5,
-                    maxMaxBufferLength: 10,
-                })
-                this.hlsInstance.loadSource(source)
-                this.hlsInstance.attachMedia(this._dummyVideoElement)
-            } else if (this._dummyVideoElement.canPlayType("application/vnd.apple.mpegurl")) {
-                this._dummyVideoElement.src = source
-                this._dummyVideoElement.load()
-            }
-        } else {
-            this._dummyVideoElement.src = source
-            this._dummyVideoElement.load()
-        }
-    }
-
-    private prefetchUpcomingSegments(currentIndex: number): void {
-        if (this.disposed || this.prefetchAheadCount <= 0) return
-
-        for (let i = 1; i <= this.prefetchAheadCount; i++) {
-            const nextIndex = currentIndex + i
-            if (
-                !this.previewCache.has(nextIndex) &&
-                !this.inFlightPromises.has(nextIndex)
-            ) {
-                this.schedulePreviewGeneration(nextIndex).catch(() => { })
-            }
-        }
-    }
-
-    private throttledCaptureFrame(segmentIndex: number): void {
-        if (this.disposed) return
-        if (this.captureThrottleTimeout) {
-            clearTimeout(this.captureThrottleTimeout)
-        }
-
-        this.captureThrottleTimeout = window.setTimeout(async () => {
-            if (!this.previewCache.has(segmentIndex) && !this.inFlightPromises.has(segmentIndex)) {
-                const promise = this.captureFrameFromCurrentVideo(segmentIndex)
-                this.inFlightPromises.set(segmentIndex, promise)
-
-                try {
-                    const result = await promise
-                    if (result) {
-                        this.lastCapturedSegment = segmentIndex
-                    }
-                }
-                finally {
-                    this.inFlightPromises.delete(segmentIndex)
-                }
-            }
-            this.captureThrottleTimeout = null
-        }, 300)
-    }
-
-    private initializeDummyVideoElement(): void {
-        this._dummyVideoElement.crossOrigin = "anonymous"
-        this._dummyVideoElement.playbackRate = 0
-        this._dummyVideoElement.muted = true
-        this._dummyVideoElement.preload = "metadata"
-    }
-
-    private detachFromCurrentPlayer(): void {
-        this.videoSyncController.abort()
-
-        if (this.captureThrottleTimeout) {
-            clearTimeout(this.captureThrottleTimeout)
-            this.captureThrottleTimeout = null
-        }
-    }
-
-    public calculateSegmentIndex(currentTime: number): number {
-        return Math.floor(currentTime / VIDEOCORE_PREVIEW_CAPTURE_INTERVAL_SECONDS)
-    }
-
-    private async captureFrameFromCurrentVideo(
-        segmentIndex: number,
-    ): Promise<string | undefined> {
-        if (this.videoElement.readyState < 2) {
-            try {
-                await this.waitForReadyState(this.videoElement, 2, 5000)
-            }
-            catch {
-                return undefined
-            }
-        }
-
-        const frameWidth = this.videoElement.videoWidth
-        const frameHeight = this.videoElement.videoHeight
-
-        if (this.disposed || !frameWidth || !frameHeight) return undefined
-
-        try {
-            if (!this._drawingContext) return undefined
-            this.configureRenderingSurface(frameWidth, frameHeight)
-            this._drawingContext.drawImage(
-                this.videoElement,
-                0,
-                0,
-                this._offscreenCanvas.width,
-                this._offscreenCanvas.height,
-            )
-
-            const imageBlob = await this._offscreenCanvas.convertToBlob({
-                type: "image/webp",
-                quality: 0.6,
-            })
-            if (this.disposed) return undefined
-            const previewUrl = URL.createObjectURL(imageBlob)
-
-            this.setCachedPreview(segmentIndex, previewUrl)
-            return previewUrl
-        }
-        catch {
-            return undefined
-        }
-    }
-
-    private waitForReadyState(
-        video: HTMLVideoElement,
-        minState: number,
-        timeout: number,
-    ): Promise<void> {
-        return new Promise((resolve, reject) => {
-            if (video.readyState >= minState) {
-                resolve()
-                return
-            }
-
-            const timeoutId = setTimeout(() => {
-                cleanup()
-                reject(new Error("Timeout waiting for ready state"))
-            }, timeout)
-
-            const onCanPlay = () => {
-                if (video.readyState >= minState) {
-                    cleanup()
-                    resolve()
-                }
-            }
-
-            const cleanup = () => {
-                clearTimeout(timeoutId)
-                video.removeEventListener("canplay", onCanPlay)
-                video.removeEventListener("canplaythrough", onCanPlay)
-            }
-
-            video.addEventListener("canplay", onCanPlay)
-            video.addEventListener("canplaythrough", onCanPlay)
-        })
-    }
-
-    private addJob(segmentIndex: number): Job {
-        const { promise, resolve } = Promise.withResolvers<string | undefined>()
-
-        const execute = async (): Promise<void> => {
-            try {
-                this.activeJobs.add(segmentIndex)
-                const targetTime = segmentIndex * VIDEOCORE_PREVIEW_CAPTURE_INTERVAL_SECONDS
-                await this.waitForVideoReady()
-                if (this.disposed) {
-                    resolve(undefined)
-                    return
-                }
-                this._dummyVideoElement.currentTime = targetTime
-                await this.waitForSeek()
-                if (this.disposed) {
-                    resolve(undefined)
-                    return
-                }
-
-                const preview = await this.captureFrameAtSegment(
-                    this._dummyVideoElement,
-                    segmentIndex,
-                    this._dummyVideoElement.videoWidth,
-                    this._dummyVideoElement.videoHeight,
-                )
-                resolve(preview)
-            }
-            catch {
-                resolve(undefined)
-            }
-            finally {
-                this.activeJobs.delete(segmentIndex)
-                this.processNextJob()
-            }
-        }
-
-        return { segmentIndex, execute, promise, cancel: () => resolve(undefined) }
-    }
-
-    private waitForVideoReady(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            if (this._dummyVideoElement.readyState >= 1) {
-                resolve()
-                return
-            }
-
-            const timeout = setTimeout(() => {
-                cleanup()
-                reject(new Error("Timeout waiting for video ready"))
-            }, 10000)
-
-            const onLoadedMetadata = () => {
-                cleanup()
-                resolve()
-            }
-
-            const onError = () => {
-                cleanup()
-                reject(new Error("Video failed to load"))
-            }
-
-            const cleanup = () => {
-                clearTimeout(timeout)
-                this._dummyVideoElement.removeEventListener("loadedmetadata", onLoadedMetadata)
-                this._dummyVideoElement.removeEventListener("error", onError)
-            }
-
-            this._dummyVideoElement.addEventListener("loadedmetadata", onLoadedMetadata, { once: true })
-            this._dummyVideoElement.addEventListener("error", onError, { once: true })
-        })
-    }
-
-    private waitForSeek(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                cleanup()
-                reject(new Error("Seek timeout"))
-            }, 5000)
-
-            const onSeeked = () => {
-                cleanup()
-                resolve()
-            }
-
-            const onError = () => {
-                cleanup()
-                reject(new Error("Seek failed"))
-            }
-
-            const cleanup = () => {
-                clearTimeout(timeout)
-                this._dummyVideoElement.removeEventListener("seeked", onSeeked)
-                this._dummyVideoElement.removeEventListener("error", onError)
-            }
-
-            this._dummyVideoElement.addEventListener("seeked", onSeeked, { once: true })
-            this._dummyVideoElement.addEventListener("error", onError, { once: true })
-        })
-    }
-
-    private processNextJob(): void {
-        if (this.disposed) return
-        while (
-            this.activeJobs.size < MAX_CONCURRENT_JOBS &&
-            this.jobQueue.length > 0
-        ) {
-            const job = this.jobQueue.shift()
-            if (job) {
-                job.execute()
-            }
-        }
-    }
-
-    private schedulePreviewGeneration(
-        segmentIndex: number,
-    ): Promise<string | undefined> {
-        if (this.disposed) return Promise.resolve(undefined)
-        const existingPromise = this.inFlightPromises.get(segmentIndex)
-        if (existingPromise) {
-            return existingPromise
-        }
-
-        const existingJob = this.jobQueue.find((j) => j.segmentIndex === segmentIndex)
-        if (existingJob) {
-            return existingJob.promise
-        }
-
-        const job = this.addJob(segmentIndex)
-        this.inFlightPromises.set(segmentIndex, job.promise)
-
-        job.promise.finally(() => {
-            this.inFlightPromises.delete(segmentIndex)
-        })
-
-        if (this.activeJobs.size < MAX_CONCURRENT_JOBS) {
-            job.execute()
-        } else {
-            this.jobQueue.push(job)
-        }
-
-        return job.promise
-    }
-
-    private async captureFrameAtSegment(
-        videoElement: HTMLVideoElement,
-        segmentIndex: number,
-        frameWidth = videoElement.videoWidth,
-        frameHeight = videoElement.videoHeight,
-    ): Promise<string | undefined> {
-        const existingPreview = this.previewCache.get(segmentIndex)
-        if (existingPreview) return existingPreview
-
-        if (!frameWidth || !frameHeight) return undefined
-
-        if (videoElement.readyState < 2) {
-            try {
-                await this.waitForReadyState(videoElement, 2, 3000)
-            }
-            catch {
-                return undefined
-            }
-        }
-
-        try {
-            if (this.disposed || !this._drawingContext) return undefined
-            this.configureRenderingSurface(frameWidth, frameHeight)
-            this._drawingContext.drawImage(
-                videoElement,
-                0,
-                0,
-                this._offscreenCanvas.width,
-                this._offscreenCanvas.height,
-            )
-
-            const imageBlob = await this._offscreenCanvas.convertToBlob({
-                type: "image/webp",
-                quality: 0.6,
-            })
-            if (this.disposed) return undefined
-            const previewUrl = URL.createObjectURL(imageBlob)
-
-            this.setCachedPreview(segmentIndex, previewUrl)
-            return previewUrl
-        }
-        catch {
-            return undefined
-        }
-    }
-
-    private setCachedPreview(segmentIndex: number, url: string): void {
-        if (this.previewCache.size >= MAX_PREVIEW_CACHE_SIZE) {
-            const oldestKey = this.previewCache.keys().next().value
-            if (oldestKey !== undefined) {
-                const oldUrl = this.previewCache.get(oldestKey)
-                if (oldUrl) URL.revokeObjectURL(oldUrl)
-                this.previewCache.delete(oldestKey)
-            }
-        }
-        this.previewCache.set(segmentIndex, url)
-        if (segmentIndex > this.highestCachedIndex) {
-            this.highestCachedIndex = segmentIndex
-        }
-    }
-
-    private configureRenderingSurface(
-        sourceWidth: number,
-        sourceHeight: number,
-    ): void {
-        const targetHeight = (sourceHeight / sourceWidth) * VIDEOCORE_PREVIEW_THUMBNAIL_SIZE
-
-        if (
-            !this.canvasSizeConfigured ||
-            this._offscreenCanvas.width !== VIDEOCORE_PREVIEW_THUMBNAIL_SIZE ||
-            this._offscreenCanvas.height !== targetHeight
-        ) {
-            this._offscreenCanvas.width = VIDEOCORE_PREVIEW_THUMBNAIL_SIZE
-            this._offscreenCanvas.height = targetHeight
-            this.canvasSizeConfigured = true
-        }
-    }
-
-    private clearPreviewCache(): void {
-        this.previewCache.forEach((previewUrl) => URL.revokeObjectURL(previewUrl))
-        this.previewCache.clear()
-        this.inFlightPromises.clear()
-    }
-
-    private resetOperationQueue(): void {
-        for (const job of this.jobQueue) job.cancel()
-        this.jobQueue = []
-        this.activeJobs.clear()
-    }
-}
-
-type Job = {
-    segmentIndex: number
-    execute: () => Promise<void>
-    promise: Promise<string | undefined>
-    cancel: () => void
 }

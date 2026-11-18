@@ -37,7 +37,7 @@ export function PrimaryPlayButton({ label, detail, onClick, onHoverIntent, reser
             onPointerEnter={onHoverIntent}
             onFocus={onHoverIntent}
             leftIcon={<IconMediaPlay className="h-5 w-5 fill-current" aria-hidden="true" />}
-            className={cn("min-w-[9rem] font-bold", className)}
+            className={cn("spotlight-play-cta min-w-[9rem] font-bold", className)}
         >
             <span className="inline-grid">
                 {reserveLabels?.map(l => (
@@ -76,7 +76,7 @@ export const RoundAction = React.forwardRef<HTMLButtonElement, RoundActionProps>
             onClick={onClick}
             icon={icon}
             // 44 px también con puntero fino: acá es una acción principal, no cromo compacto.
-            className={cn("h-11 w-11 [@media(hover:hover)_and_(pointer:fine)]:h-11 [@media(hover:hover)_and_(pointer:fine)]:w-11", pressed && "bg-[var(--neutral-elev-2)]", className)}
+            className={cn("detail-round-action h-11 w-11 [@media(hover:hover)_and_(pointer:fine)]:h-11 [@media(hover:hover)_and_(pointer:fine)]:w-11", pressed && "bg-[var(--neutral-elev-2)]", className)}
             {...rest}
         />
     )

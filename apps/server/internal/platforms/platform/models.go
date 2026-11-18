@@ -1,9 +1,5 @@
 package platform
 
-import (
-	"strings"
-)
-
 type MediaFormat string
 type MediaStatus string
 type MediaType string
@@ -25,7 +21,6 @@ const (
 	MediaFormatSpecial MediaFormat = "SPECIAL"
 	MediaFormatOva     MediaFormat = "OVA"
 	MediaFormatOna     MediaFormat = "ONA"
-	MediaFormatMusic   MediaFormat = "MUSIC"
 
 	MediaStatusFinished       MediaStatus = "FINISHED"
 	MediaStatusReleasing      MediaStatus = "RELEASING"
@@ -122,28 +117,6 @@ type UnifiedMediaRelation struct {
 	Media        *UnifiedMedia     `json:"media"`
 }
 
-func (m *UnifiedMedia) IsMovie() bool {
-	return m.Format == MediaFormatMovie
-}
-
-func (m *UnifiedMedia) GetTitleSafe() string {
-	if m.Title == nil {
-		return ""
-	}
-	if m.Title.Spanish != nil && *m.Title.Spanish != "" && !strings.EqualFold(*m.Title.Spanish, "Dragon Ball Serie") && !strings.EqualFold(*m.Title.Spanish, "Dragon Ball Series") {
-		return *m.Title.Spanish
-	}
-	if m.Title.Romaji != nil {
-		return *m.Title.Romaji
-	}
-	if m.Title.English != nil {
-		return *m.Title.English
-	}
-	if m.Title.Native != nil {
-		return *m.Title.Native
-	}
-	return ""
-}
 
 type PlatformUser struct {
 	ID          int     `json:"id"`

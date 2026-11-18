@@ -15,10 +15,9 @@ describe("player-touch", () => {
         expect(shouldDismissPanelDrag(30, 100)).toBe(false)
         expect(shouldDismissPanelDrag(-200, -900)).toBe(false)
     })
-    it("botones: 44 px base, 40 con puntero fino y 56 en TV", () => {
+    it("botones: 44 px base, 40 con puntero fino", () => {
         expect(PLAYER_ICON_BTN).toContain("w-11 h-11")
         expect(PLAYER_ICON_BTN).toContain("[@media(pointer:fine)]:w-10")
-        expect(PLAYER_ICON_BTN).toContain("[[data-tv=true]_&]:w-14")
         expect(PLAYER_ICON_BTN).not.toContain("w-9 ")
     })
 })

@@ -2,8 +2,8 @@ import React from "react"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerSeekPreview } from "./player-seek-preview"
 import type { PlayerPreviewManager } from "./player-preview"
-import type { Chapter } from "./player-bottombar"
 import { formatPlaybackTime } from "./format-playback-time"
+import { isValidOpeningWindow, type Chapter } from "./skip-windows"
 
 /** Teclas con las que el range nativo mueve la posición. Cualquier otra (Tab,
  * Espacio, F…) no es un seek: antes dejaba `isSeekingRef` trabado o provocaba
@@ -12,6 +12,7 @@ const SEEK_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "H
 
 interface SeekBarProps {
     duration: number
+    currentTime?: number
     progressBarRef: React.RefObject<HTMLDivElement | null>
     thumbRef: React.RefObject<HTMLDivElement | null>
     progressInputRef: React.RefObject<HTMLInputElement | null>
@@ -24,10 +25,12 @@ interface SeekBarProps {
     isMovie?: boolean
     previewManager?: PlayerPreviewManager | null
     className?: string
+    disabled?: boolean
 }
 
 export const SeekBar = React.memo(function SeekBar({
     duration,
+    currentTime = 0,
     progressBarRef,
     thumbRef,
     progressInputRef,
@@ -40,13 +43,38 @@ export const SeekBar = React.memo(function SeekBar({
     isMovie = false,
     previewManager,
     className,
+    disabled = false,
 }: SeekBarProps) {
+    skipTimesOp = skipTimesOp && isValidOpeningWindow(skipTimesOp, duration) ? skipTimesOp : undefined
+    skipTimesEd = skipTimesEd && Number.isFinite(skipTimesEd.startTime) && Number.isFinite(skipTimesEd.endTime) &&
+        skipTimesEd.startTime >= 0 && skipTimesEd.endTime > skipTimesEd.startTime && skipTimesEd.endTime <= duration ? skipTimesEd : undefined
     const [hoverInfo, setHoverInfo] = React.useState<{ time: number; percent: number } | null>(null)
     const rafIdRef = React.useRef<number | null>(null)
+    const hitAreaRef = React.useRef<HTMLDivElement>(null)
+    const trackRectRef = React.useRef<{ left: number; width: number } | null>(null)
+
+    const measureTrackRect = React.useCallback(() => {
+        const el = hitAreaRef.current
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        const measured = r.width > 0 ? { left: r.left, width: r.width } : null
+        trackRectRef.current = measured
+        return measured
+    }, [])
+
+    React.useEffect(() => {
+        const el = hitAreaRef.current
+        if (!el || typeof ResizeObserver === "undefined") return
+        const ro = new ResizeObserver(() => {
+            trackRectRef.current = null
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
 
     const handleMouseMove = React.useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        if (!rect.width) return
+        const rect = trackRectRef.current ?? measureTrackRect()
+        if (!rect || !rect.width) return
         const clientX = e.clientX
 
         if (rafIdRef.current) {
@@ -54,6 +82,7 @@ export const SeekBar = React.memo(function SeekBar({
         }
 
         rafIdRef.current = requestAnimationFrame(() => {
+            rafIdRef.current = null
             const x = Math.max(0, Math.min(clientX - rect.left, rect.width))
             let percent = (x / rect.width) * 100
             let time = (percent / 100) * duration
@@ -103,9 +132,13 @@ export const SeekBar = React.memo(function SeekBar({
                 }
             }
 
-            setHoverInfo({ time, percent })
+            setHoverInfo((prev) =>
+                prev && Math.round(prev.time) === Math.round(time) && Math.abs(prev.percent - percent) < 0.2
+                    ? prev
+                    : { time, percent }
+            )
         })
-    }, [duration, chapters, isMovie, skipTimesOp, skipTimesEd])
+    }, [duration, chapters, isMovie, skipTimesOp, skipTimesEd, measureTrackRect])
 
     const handleMouseLeave = React.useCallback(() => {
         if (rafIdRef.current) {
@@ -137,7 +170,7 @@ export const SeekBar = React.memo(function SeekBar({
     }, [hoverInfo, duration, skipTimesOp, skipTimesEd, isMovie, chapters])
 
     return (
-        <div className={cn("relative w-full group/seek", className)}>
+        <div className={cn("player-seek-bar relative w-full group/seek", className)} data-disabled={disabled || undefined}>
             {/* Previsualización flotante aislada en este sub-árbol */}
             <PlayerSeekPreview
                 previewManager={previewManager || null}
@@ -146,24 +179,26 @@ export const SeekBar = React.memo(function SeekBar({
                 segmentLabel={hoverSegmentLabel}
             />
 
-            {/* Hit-area de 20px alrededor de una línea fina: fácil de agarrar, liviana a la vista */}
+            {/* Hit-area accesible de 44px (min-target WCAG / DESIGN-GUIDE §12.5) alrededor de una línea fina de 4px */}
             {/* role=presentation: el hover solo alimenta la previsualización; la interacción
                 accesible (mouse, teclado, touch) la maneja el <input type="range"> de abajo */}
             <div
+                ref={hitAreaRef}
                 role="presentation"
-                className="relative flex items-center h-5 cursor-pointer w-full select-none touch-pan-y"
+                className="player-seek-hit-area relative flex items-center h-11 cursor-pointer w-full select-none touch-pan-y"
+                onMouseEnter={measureTrackRect}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
             >
                 {/* Track Background */}
-                <div className="w-full h-[2px] [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:h-[4px] group-focus-within/seek:h-[4px] transition-[height] duration-fast ease-smooth-out bg-white/15 rounded-full relative flex items-center overflow-visible">
+                <div className="player-seek-track w-full h-[4px] scale-y-50 motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:scale-y-100 group-focus-within/seek:scale-y-100 transition-transform duration-fast ease-smooth-out bg-white/15 rounded-full relative flex items-center overflow-hidden">
                     {/* Skip OP Marker */}
                     {duration > 0 && skipTimesOp && (
                         <div
                             data-marker="op"
                             className={cn(
                                 "absolute top-0 bottom-0 pointer-events-none rounded-xs",
-                                "bg-amber-400/45 border-x border-amber-300/80 shadow-[0_0_8px_rgba(251,191,36,0.4)]",
+                                "bg-amber-400/45 border-x border-amber-300/80 shadow-[0_0_8px_hsl(var(--brand-warning)/0.4)]",
                                 skipTimesOp.source === "heuristic" && "opacity-50"
                             )}
                             style={{
@@ -179,7 +214,7 @@ export const SeekBar = React.memo(function SeekBar({
                             data-marker="ed"
                             className={cn(
                                 "absolute top-0 bottom-0 pointer-events-none rounded-xs",
-                                "bg-purple-400/45 border-x border-purple-300/80 shadow-[0_0_8px_rgba(192,132,252,0.4)]",
+                                "bg-purple-400/45 border-x border-purple-300/80 shadow-[0_0_8px_hsl(var(--brand-accent)/0.4)]",
                                 skipTimesEd.source === "heuristic" && "opacity-50"
                             )}
                             style={{
@@ -207,27 +242,30 @@ export const SeekBar = React.memo(function SeekBar({
                     {/* Active Playback Bar */}
                     <div
                         ref={progressBarRef}
-                        className="w-full h-full bg-brand-accent rounded-full relative"
+                        className="player-seek-fill w-full h-full bg-brand-accent rounded-full relative"
                         style={{ transform: "scaleX(0)", transformOrigin: "left" }}
                     />
 
-                    {/* Thumb Indicator */}
-                    <div
-                        ref={thumbRef}
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.6)] pointer-events-none scale-50 opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:scale-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:opacity-100 group-focus-within/seek:scale-100 group-focus-within/seek:opacity-100 transition-[transform,opacity] duration-fast ease-out-strong"
-                        style={{ left: "0%" }}
-                    />
                 </div>
 
+                {/* Thumb Indicator: wrapper 100% desplazado por transform (0 layout), punto a la izquierda. */}
+                <div
+                    ref={thumbRef}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ transform: "translateX(0%)" }}
+                >
+                    <div className="player-seek-thumb absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-brand-accent shadow-[0_0_8px_hsl(var(--brand-accent)/0.6)] scale-50 opacity-0 motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:scale-100 [@media(hover:hover)_and_(pointer:fine)]:group-hover/seek:opacity-100 group-focus-within/seek:scale-100 group-focus-within/seek:opacity-100 transition-[transform,opacity] duration-fast ease-out-strong" />
+                </div>
                 {/* Input hit-area para accesibilidad y navegación por teclado */}
                 <input
                     ref={progressInputRef}
                     type="range"
+                    disabled={disabled}
                     min={0}
                     max={duration || 0}
                     step="any"
                     aria-label="Línea de tiempo"
-                    aria-valuetext={duration ? `${formatPlaybackTime(0)} de ${formatPlaybackTime(duration)}` : "0:00"}
+                    aria-valuetext={duration ? `${formatPlaybackTime(currentTime)} de ${formatPlaybackTime(duration)}` : "0:00"}
                     onChange={handleSeek}
                     onMouseDown={handleSeekStart}
                     onTouchStart={handleSeekStart}
@@ -243,7 +281,7 @@ export const SeekBar = React.memo(function SeekBar({
                         e.currentTarget.blur()
                     }}
                     onKeyUp={(e) => { if (SEEK_KEYS.has(e.key)) handleSeekEnd?.(e) }}
-                    className="absolute inset-0 w-full h-full cursor-pointer opacity-0 z-10 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-brand-accent"
+                    className="player-seek-input absolute inset-0 w-full h-full cursor-pointer appearance-none bg-transparent opacity-0 z-10 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-brand-accent"
                 />
             </div>
         </div>

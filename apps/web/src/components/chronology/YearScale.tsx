@@ -4,6 +4,7 @@ import { ERA_FILTER_BY_SERIES } from './data/eraBar';
 import { CHRONOLOGY_INTERLUDES } from './data/interludes';
 import { buildYearScale, nearestMark, type EraBand } from './data/yearScale';
 import { cn } from '@/components/ui/core/styling';
+import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
 
 const ERA_COLOR_VAR: Record<string, string> = {
   'db-clasico': 'var(--era-db-hex, #F2762E)',
@@ -23,7 +24,8 @@ interface YearScaleProps {
   className?: string;
 }
 
-function bandColor(band: EraBand, accentByEra: YearScaleProps['accentByEra']): string {
+function bandColor(band: EraBand, accentByEra: YearScaleProps['accentByEra'], isClassic?: boolean): string {
+  if (isClassic) return 'var(--neutral-separator)';
   if (!band.era) return 'var(--label-3)';
   return accentByEra[band.era] ?? ERA_COLOR_VAR[band.era] ?? 'var(--label-2)';
 }
@@ -35,6 +37,7 @@ function bandColor(band: EraBand, accentByEra: YearScaleProps['accentByEra']): s
  * cercano (el teclado y los lectores usan la barra de eras y las tarjetas).
  */
 export const YearScale: React.FC<YearScaleProps> = memo(({ volumes, accentByEra, onJumpToVolume, className }) => {
+  const isClassic = useIsClassicMode();
   const model = useMemo(() => buildYearScale(volumes, CHRONOLOGY_INTERLUDES), [volumes]);
   // Último lapso elegido en el eje (con puntero o teclado): se marca y es el valor del control.
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -91,8 +94,8 @@ export const YearScale: React.FC<YearScaleProps> = memo(({ volumes, accentByEra,
             key={`${band.era}-${i}`}
             aria-hidden="true"
             data-era-band={band.era ?? 'sin-era'}
-            className="absolute top-[18px] h-1.5 rounded-full opacity-80"
-            style={{ left: pct(band.x0), width: pct(band.x1 - band.x0), background: bandColor(band, accentByEra) }}
+            className="absolute top-[18px] h-1.5 rounded-full opacity-80 transition-[left,width,background-color] duration-base ease-smooth-out motion-reduce:transition-none"
+            style={{ left: pct(band.x0), width: pct(band.x1 - band.x0), background: bandColor(band, accentByEra, isClassic) }}
           />
         ))}
 
@@ -102,7 +105,7 @@ export const YearScale: React.FC<YearScaleProps> = memo(({ volumes, accentByEra,
             key={gap.fromYear}
             aria-hidden="true"
             data-year-gap={gap.years}
-            className="absolute top-0 flex h-5 items-center justify-center overflow-hidden text-2xs text-label-2 tabular-nums"
+            className="absolute top-0 flex h-5 items-center justify-center overflow-hidden text-2xs text-label-2 tabular-nums transition-[left,width] duration-base ease-smooth-out motion-reduce:transition-none"
             style={{ left: pct(gap.x0), width: pct(gap.x1 - gap.x0) }}
           >
             <span className="truncate">{gap.years} años</span>
@@ -115,10 +118,15 @@ export const YearScale: React.FC<YearScaleProps> = memo(({ volumes, accentByEra,
             key={mark.id}
             aria-hidden="true"
             className={cn(
-              'absolute top-[17px] size-2 -translate-x-1/2 rounded-full border border-[var(--neutral-elev-0)]',
+              'absolute top-[17px] size-2 -translate-x-1/2 rounded-full border border-[var(--neutral-elev-0)] transition-[left,transform,background-color] duration-base ease-smooth-out motion-reduce:transition-none',
               mark.id === pickedId && 'scale-150 ring-2 ring-[var(--label-1)]',
             )}
-            style={{ left: pct(mark.x), background: mark.era ? (accentByEra[mark.era] ?? ERA_COLOR_VAR[mark.era]) : 'var(--label-2)' }}
+            style={{
+              left: pct(mark.x),
+              background: isClassic
+                ? 'var(--label-1)'
+                : (mark.era ? (accentByEra[mark.era] ?? ERA_COLOR_VAR[mark.era]) : 'var(--label-2)'),
+            }}
           />
         ))}
 
@@ -128,7 +136,7 @@ export const YearScale: React.FC<YearScaleProps> = memo(({ volumes, accentByEra,
             key={il.id}
             aria-hidden="true"
             data-interlude-bar={il.id}
-            className="absolute top-[33px] h-px bg-[color-mix(in_srgb,var(--label-1)_28%,transparent)]"
+            className="absolute top-[33px] h-px bg-[color-mix(in_srgb,var(--label-1)_28%,transparent)] transition-[left,width] duration-base ease-smooth-out motion-reduce:transition-none"
             style={{ left: pct(il.x0), width: pct(il.x1 - il.x0) }}
           />
         ))}
@@ -138,7 +146,7 @@ export const YearScale: React.FC<YearScaleProps> = memo(({ volumes, accentByEra,
           <span
             key={tick.year}
             aria-hidden="true"
-            className="absolute top-9 -translate-x-1/2 text-2xs leading-none text-label-2 tabular-nums"
+            className="absolute top-9 -translate-x-1/2 text-2xs leading-none text-label-2 tabular-nums transition-[left] duration-base ease-smooth-out motion-reduce:transition-none"
             style={{ left: pct(tick.x) }}
           >
             {tick.year}

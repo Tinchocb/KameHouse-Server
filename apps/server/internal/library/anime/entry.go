@@ -22,19 +22,20 @@ type (
 	Entry struct {
 		MediaID int `json:"mediaId"`
 		// MetadataPending: Jikan aún no respondió; la ficha se completa en segundo plano (no se cachea sin ella).
-		MetadataPending     bool                    `json:"-"`
-		Media               *models.LibraryMedia    `json:"media"`
-		EntryListData       *EntryListData          `json:"listData"`
-		EntryLibraryData    *EntryLibraryData       `json:"libraryData"`
-		Episodes            []*Episode              `json:"episodes"`
-		NextEpisode         *Episode                `json:"nextEpisode"`
-		LocalFiles          []*LocalFile            `json:"localFiles"`
-		AnidbId             int                     `json:"anidbId"`
-		MalId               int                     `json:"malId"`
-		CurrentEpisodeCount int                     `json:"currentEpisodeCount"`
-		Seasons             []*models.LibrarySeason `json:"seasons,omitempty"`
-		Vibes               []string                `json:"vibes,omitempty"`
-		IntelligenceSvc     *IntelligenceService    `json:"-"`
+		EpisodeEnrichmentPending bool                    `json:"episodeEnrichmentPending"`
+		MetadataPending          bool                    `json:"-"`
+		Media                    *models.LibraryMedia    `json:"media"`
+		EntryListData            *EntryListData          `json:"listData"`
+		EntryLibraryData         *EntryLibraryData       `json:"libraryData"`
+		Episodes                 []*Episode              `json:"episodes"`
+		NextEpisode              *Episode                `json:"nextEpisode"`
+		LocalFiles               []*LocalFile            `json:"localFiles"`
+		AnidbId                  int                     `json:"anidbId"`
+		MalId                    int                     `json:"malId"`
+		CurrentEpisodeCount      int                     `json:"currentEpisodeCount"`
+		Seasons                  []*models.LibrarySeason `json:"seasons,omitempty"`
+		Vibes                    []string                `json:"vibes,omitempty"`
+		IntelligenceSvc          *IntelligenceService    `json:"-"`
 	}
 
 	// EntryListData holds the details of the platform entry (TMDb/MAL/etc).
@@ -98,49 +99,12 @@ func NewEntry(ctx context.Context, opts *NewEntryOptions) (*Entry, error) {
 	var fetchedMedia *models.LibraryMedia
 	var err error
 
-	// 1. Try to find the LibraryMediaId from local files first.
-	// This is the most reliable way because LocalFiles explicitly stores the primary key
-	// for TMDB associations (where the NormalizedMedia.ID is different from the DB primary key).
-	for _, lf := range opts.LocalFiles {
-		if lf.MediaID == opts.MediaID && lf.LibraryMediaId > 0 {
-			m, err := db.GetLibraryMediaByID(opts.Database, lf.LibraryMediaId)
-			if err == nil && m != nil {
-				fetchedMedia = m
-				break
-			}
-		}
-	}
-
-	// 2. If no local file provides a mapping, try to lookup by TMDB ID directly.
+	// Resolve the API identity without treating a coincident PK or another
+	// provider's media type as an alternative match.
 	if fetchedMedia == nil {
-		if opts.MediaID >= 1_000_000 {
-			// Movies from TMDB have a 1,000,000 offset applied to their MediaID to avoid collisions
-			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID-1_000_000, "MOVIE")
-			if err == nil && m != nil {
-				fetchedMedia = m
-			} else {
-				m, err = db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID-1_000_000, "SHOW")
-				if err == nil && m != nil {
-					fetchedMedia = m
-				}
-			}
-		} else {
-			m, err := db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID, "SHOW")
-			if err == nil && m != nil {
-				fetchedMedia = m
-			} else {
-				m, err = db.GetLibraryMediaByTmdbIdAndType(opts.Database, opts.MediaID, "MOVIE")
-				if err == nil && m != nil {
-					fetchedMedia = m
-				}
-			}
-		}
-
-		if fetchedMedia == nil && opts.MediaID > 0 {
-			m, err := db.GetLibraryMediaByID(opts.Database, uint(opts.MediaID))
-			if err == nil && m != nil {
-				fetchedMedia = m
-			}
+		fetchedMedia, err = db.ResolveLibraryMediaByPublicID(opts.Database, opts.MediaID)
+		if err != nil {
+			return nil, err
 		}
 	}
 

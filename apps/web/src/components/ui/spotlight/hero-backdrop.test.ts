@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { auroraBackground, darkFillBackground, fillTone, isFlatEdge, heroCompactRect, heroRightRect, isCompactArt, mutedZoneLevel, seamFadePx } from "./hero-backdrop"
+import { auroraBackground, darkFillBackground, fillTone, isFlatEdge, heroRightRect, mutedZoneLevel, seamFadePx } from "./hero-backdrop"
 
 describe("seamFadePx", () => {
     it("sujeto a la derecha: fundido largo, cortado antes de llegar al sujeto", () => {
@@ -91,22 +91,6 @@ describe("heroRightRect", () => {
     it("sin medidas todavía: nada", () => {
         expect(heroRightRect({}, null)).toBeNull()
         expect(heroRightRect({}, { width: 0, height: 0 })).toBeNull()
-    })
-})
-
-describe("heroCompactRect", () => {
-    it("arte chico en stage panorámico: 84% del alto, pegado a la derecha y algo arriba", () => {
-        expect(heroCompactRect({}, { width: 1840, height: 748 })).toEqual({ left: 687, top: 42, width: 1116, height: 628 })
-    })
-
-    it("stage angosto: no compacta (queda cover)", () => {
-        expect(heroCompactRect({}, { width: 1000, height: 700 })).toBeNull()
-    })
-
-    it("solo el arte con origen chico es compacto", () => {
-        expect(isCompactArt({ sourceWidth: 1280 })).toBe(true)
-        expect(isCompactArt({ sourceWidth: 1920 })).toBe(false)
-        expect(isCompactArt({})).toBe(false)
     })
 })
 

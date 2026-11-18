@@ -1,5 +1,5 @@
 import type { Chapter } from "./skip-windows"
-import { isIntroChapter, isOutroChapter } from "./skip-windows"
+import { isIntroChapter, isOutroChapter, isValidOpeningWindow } from "./skip-windows"
 
 // Palabras clave de segmentos intermedios auto-saltables (eyecatch, avisos,
 // recaps, avances). Misma lista que usaba processTimeUpdates.
@@ -34,18 +34,6 @@ export function findActiveChapter(chapters: Chapter[], curr: number): Chapter | 
     return chapters.find((c) => curr >= c.startTime && curr < c.endTime) ?? null
 }
 
-/** Inicio del siguiente capítulo (ventana de 0.5s para no rebotar en el actual). */
-export function getNextChapterTarget(chapters: Chapter[], curr: number): number | null {
-    const next = chapters.find((c) => c.startTime > curr + 0.5)
-    return next ? next.startTime : null
-}
-
-/** Inicio del capítulo anterior (1.5s de histéresis); 0 si no hay anterior. */
-export function getPrevChapterTarget(chapters: Chapter[], curr: number): number {
-    const prevs = chapters.filter((c) => c.startTime < curr - 1.5)
-    return prevs.length > 0 ? prevs[prevs.length - 1].startTime : 0
-}
-
 interface SkippablePrefs {
     autoSkipIntroPref: boolean
     autoSkipOutroPref: boolean
@@ -66,7 +54,7 @@ export function findSkippableChapter(
     return chapters.find((c) => {
         if (!(curr >= c.startTime && curr < c.endTime - 0.5)) return false
         if (skipped.has(getChapterSkipKey(c))) return false
-        if (isIntroChapter(c)) return prefs.autoSkipIntroPref
+        if (isIntroChapter(c)) return prefs.autoSkipIntroPref && isValidOpeningWindow(c)
         if (isOutroChapter(c)) return prefs.autoSkipOutroPref
         const n = c.name.toLowerCase()
         return (

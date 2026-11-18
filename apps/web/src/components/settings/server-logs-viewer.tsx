@@ -63,14 +63,14 @@ export function ServerLogsViewer() {
                     onChange={(e) => setSelected(e.target.value || null)}
                     aria-label="Archivo de registro"
                     disabled={isLoadingFiles || files.length === 0}
-                    className="flex-1 px-4 py-2 rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] text-base md:text-sm font-mono text-on-surface min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-[background-color] duration-fast ease-smooth-out disabled:opacity-50 cursor-pointer"
+                    className="flex-1 px-4 py-2 rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-control-shadow)] text-base md:text-sm font-mono text-on-surface min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-[background-color,border-color,box-shadow] duration-fast ease-smooth-out disabled:opacity-50 cursor-pointer"
                 >
                     <option value="" className="bg-[var(--neutral-elev-2)] text-on-surface">Registro activo</option>
                     {files.map((f) => (
                         <option key={f} value={f} className="bg-[var(--neutral-elev-2)] text-on-surface">{f}</option>
                     ))}
                 </select>
-                <div className="flex gap-2.5">
+                <div className="flex flex-wrap gap-2.5">
                     <Button
                         intent="outline"
                         onClick={() => {
@@ -117,7 +117,7 @@ export function ServerLogsViewer() {
             </div>
             <div
                 ref={boxRef}
-                className="max-h-[400px] overflow-auto p-4 rounded-xl bg-black/40 border border-[var(--neutral-separator)] text-3xs font-mono whitespace-pre-wrap break-all select-text leading-relaxed no-scrollbar"
+                className="max-h-[400px] overflow-auto p-4 rounded-xl bg-[var(--neutral-elev-0)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-inset-shadow)] text-xs font-mono whitespace-pre-wrap break-all select-text leading-relaxed no-scrollbar"
                 aria-live="polite"
             >
                 {isLoadingContent ? (

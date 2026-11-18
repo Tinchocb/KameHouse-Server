@@ -46,8 +46,7 @@ var (
 	ErrNotMatroska = errors.New("mkvsubs: not a matroska file")
 	// ErrNoTracks: no se encontró el elemento Tracks.
 	ErrNoTracks = errors.New("mkvsubs: tracks not found")
-	// ErrNoCues: el archivo no trae índice (Cues); no se puede saltar a un instante.
-	ErrNoCues = errors.New("mkvsubs: file has no cues")
+	// ErrNoCues removed: readers handle cueless files gracefully.
 	// ErrNotCluster: en el offset pedido no hay un Cluster.
 	ErrNotCluster = errors.New("mkvsubs: not a cluster")
 	// ErrMalformed: la estructura del archivo no es la esperada (un elemento con ID o
@@ -154,10 +153,12 @@ const (
 	idCueTime        uint32 = 0xB3
 	idCueTrackPos    uint32 = 0xB7
 	idCueClusterPos  uint32 = 0xF1
+	idCueRelativePos uint32 = 0xF0
+	idCueDuration    uint32 = 0xB2
+	idCueTrack       uint32 = 0xF7
 	idAttachments    uint32 = 0x1941A469
 	idAttachedFile   uint32 = 0x61A7
 	idFileName       uint32 = 0x466E
-	idFileMime       uint32 = 0x4660
 	idFileData       uint32 = 0x465C
 	idCluster        uint32 = 0x1F43B675
 	idTimecode       uint32 = 0xE7

@@ -39,7 +39,7 @@ func TestDeleteExpiredMetadataCache(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond) // ensure key1 expires
 
-	deleted, err := DeleteExpiredMetadataCache(db)
+	deleted, err := DeleteExpiredMetadataCacheContext(ctx, db)
 	if err != nil {
 		t.Fatalf("Failed to delete expired cache: %v", err)
 	}

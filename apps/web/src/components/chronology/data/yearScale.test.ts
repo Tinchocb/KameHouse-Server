@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildYearScale, nearestMark, parseYearRange, type YearScaleModel } from './yearScale';
-import { AIR_YEARS_BY_ERA, compareRelease, eraKeysForOrder, parseTimelineOrder } from './releaseOrder';
+import { AIR_YEARS_BY_ERA, compareRelease, eraKeysForOrder } from './releaseOrder';
 import { SPAN_VOLUMES } from './spansToVolumes';
 import { CHRONOLOGY_INTERLUDES } from './interludes';
 
@@ -123,25 +123,19 @@ describe('orden de estreno', () => {
     expect(eraKeysForOrder('release')).toEqual(['db-clasico', 'db-z', 'db-gt', 'db-super', 'db-daima']);
   });
 
-  it('cada era tiene años de emisión y la preferencia inválida vuelve a cronológico', () => {
+  it('cada era tiene años de emisión', () => {
     expect(Object.keys(AIR_YEARS_BY_ERA)).toHaveLength(5);
-    expect(parseTimelineOrder('release')).toBe('release');
-    expect(parseTimelineOrder('otra cosa')).toBe('chronological');
-    expect(parseTimelineOrder(null)).toBe('chronological');
   });
 });
 
 describe('preferencias de la línea de tiempo', () => {
   it('vista y orden persisten por dispositivo y toleran valores inválidos', async () => {
-    const { parseTimelineView, readTimelineOrder, readTimelineView, writePref, TIMELINE_ORDER_KEY, TIMELINE_VIEW_KEY } = await import('./timelinePrefs');
+    const { parseTimelineView, readTimelineView, writePref, TIMELINE_VIEW_KEY } = await import('./timelinePrefs');
     expect(parseTimelineView('compact')).toBe('compact');
     expect(parseTimelineView('xx')).toBe('detailed');
     expect(readTimelineView()).toBe('detailed');
     writePref(TIMELINE_VIEW_KEY, 'compact');
-    writePref(TIMELINE_ORDER_KEY, 'release');
     expect(readTimelineView()).toBe('compact');
-    expect(readTimelineOrder()).toBe('release');
     localStorage.removeItem(TIMELINE_VIEW_KEY);
-    localStorage.removeItem(TIMELINE_ORDER_KEY);
   });
 });

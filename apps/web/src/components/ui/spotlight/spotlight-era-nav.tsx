@@ -2,6 +2,7 @@ import * as React from "react"
 import { ERAS, ERA_COLOR_MAP, type EraId } from "@/lib/config/eras"
 import type { SwimlaneItem } from "@/components/ui/swimlane"
 import { EraRail, ERA_AIR_YEARS, pluralize, type EraRailItem } from "@/components/ui/era-rail"
+import { useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 
 interface SpotlightEraNavProps {
     activeEraId: EraId | "all"
@@ -21,6 +22,8 @@ const ERA_LABELS: Record<EraId, string> = {
     dbdaima: "Dragon Ball Daima",
 }
 
+
+
 /**
  * Selector de era de Inicio y Películas. Envoltorio fino de `EraRail`: solo traduce los datos
  * categorizados (series y películas por era) a los ítems del riel.
@@ -32,6 +35,7 @@ export const SpotlightEraNav = React.memo(function SpotlightEraNav({
     onHoverSound,
     showAllOption = false,
 }: SpotlightEraNavProps) {
+    const isMinimalist = useIsMinimalistMode()
     const eras = React.useMemo(() => {
         const list: EraRailItem<EraId | "all">[] = []
         const perEra = ERAS.map((era) => {
@@ -60,11 +64,11 @@ export const SpotlightEraNav = React.memo(function SpotlightEraNav({
                 years: ERA_AIR_YEARS[era.id] ?? String(era.year),
                 badge: count > 0 ? String(count) : undefined,
                 detail: count > 0 ? pluralize(count, "título", "títulos") : undefined,
-                disabled: count === 0,
+                disabled: isMinimalist ? false : count === 0,
             })
         }
         return list
-    }, [categorizedData, showAllOption])
+    }, [categorizedData, showAllOption, isMinimalist])
 
     return (
         <EraRail

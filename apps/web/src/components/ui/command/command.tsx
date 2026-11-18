@@ -12,7 +12,7 @@ import { Modal, ModalProps } from "../modal"
 const CommandAnatomy = defineStyleAnatomy({
     root: cva([
         "UI-Command__root",
-        "flex h-full w-full flex-col overflow-hidden rounded-container bg-surface-container text-on-surface border border-outline-variant/30",
+        "flex h-full w-full flex-col overflow-hidden rounded-container bg-surface-container text-on-surface border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)]",
     ]),
     inputContainer: cva([
         "UI-Command__input",
@@ -36,23 +36,11 @@ const CommandAnatomy = defineStyleAnatomy({
         "overflow-hidden p-1 text-on-surface",
         "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-sm [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-on-surface-variant",
     ]),
-    separator: cva([
-        "UI-Command__separator",
-        "-mx-1 h-px bg-outline-variant/30",
-    ]),
     item: cva([
         "UI-Command__item",
         "relative flex cursor-default select-none items-center rounded-lg px-2 py-1.5 text-base outline-none",
-        "aria-selected:bg-surface-container-high aria-selected:text-on-surface data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+        "aria-selected:bg-[var(--neutral-elev-2)] aria-selected:text-on-surface data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
         "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-    ]),
-    itemIconContainer: cva([
-        "UI-Command__itemIconContainer",
-        "mr-2 text-base shrink-0 w-4",
-    ]),
-    shortcut: cva([
-        "UI-Command__shortcut",
-        "ml-auto text-xs tracking-widest text-on-surface-variant font-mono",
     ]),
 })
 
@@ -77,47 +65,22 @@ const CommandDialogAnatomy = defineStyleAnatomy({
  * Command
  * -----------------------------------------------------------------------------------------------*/
 
-const __CommandAnatomyContext = React.createContext<ComponentAnatomy<typeof CommandAnatomy>>({})
-
-type CommandProps = React.ComponentPropsWithoutRef<typeof CommandPrimitive> & ComponentAnatomy<typeof CommandAnatomy>
+type CommandProps = React.ComponentPropsWithoutRef<typeof CommandPrimitive>
 
 const Command = React.forwardRef<HTMLDivElement, CommandProps>((props, ref) => {
     const {
         className,
-        inputContainerClass,
-        inputIconClass,
-        listClass,
-        emptyClass,
-        groupClass,
-        separatorClass,
-        itemClass,
-        itemIconContainerClass,
-        shortcutClass,
         loop = true,
         ...rest
     } = props
 
     return (
-        <__CommandAnatomyContext.Provider
-            value={{
-                inputContainerClass,
-                inputIconClass,
-                listClass,
-                emptyClass,
-                groupClass,
-                separatorClass,
-                itemClass,
-                itemIconContainerClass,
-                shortcutClass,
-            }}
-        >
-            <CommandPrimitive
-                ref={ref}
-                className={cn(CommandAnatomy.root(), className)}
-                loop={loop}
-                {...rest}
-            />
-        </__CommandAnatomyContext.Provider>
+        <CommandPrimitive
+            ref={ref}
+            className={cn(CommandAnatomy.root(), className)}
+            loop={loop}
+            {...rest}
+        />
     )
 })
 Command.displayName = CommandPrimitive.displayName
@@ -128,23 +91,17 @@ Command.displayName = CommandPrimitive.displayName
 
 type CommandInputProps =
     React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
-    & Pick<ComponentAnatomy<typeof CommandAnatomy>, "inputContainerClass" | "inputIconClass">
+    & Pick<ComponentAnatomy<typeof CommandAnatomy>, "inputContainerClass">
 
 export const CommandInput = React.forwardRef<HTMLInputElement, CommandInputProps>((props, ref) => {
     const {
         className,
         inputContainerClass,
-        inputIconClass,
         ...rest
     } = props
 
-    const {
-        inputContainerClass: _inputContainerClass,
-        inputIconClass: _inputIconClass,
-    } = React.useContext(__CommandAnatomyContext)
-
     return (
-        <div className={cn(CommandAnatomy.inputContainer(), _inputContainerClass, inputContainerClass)} {...{ "cmdk-input-wrapper": "" }}>
+        <div className={cn(CommandAnatomy.inputContainer(), inputContainerClass)} {...{ "cmdk-input-wrapper": "" }}>
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
@@ -155,7 +112,7 @@ export const CommandInput = React.forwardRef<HTMLInputElement, CommandInputProps
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className={cn(CommandAnatomy.inputIcon(), _inputIconClass, inputIconClass)}
+                className={CommandAnatomy.inputIcon()}
             >
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
@@ -184,12 +141,10 @@ type CommandListProps =
 export const CommandList = React.forwardRef<HTMLDivElement, CommandListProps>((props, ref) => {
     const { className, ...rest } = props
 
-    const { listClass } = React.useContext(__CommandAnatomyContext)
-
     return (
         <CommandPrimitive.List
             ref={ref}
-            className={cn(CommandAnatomy.list(), listClass, className)}
+            className={cn(CommandAnatomy.list(), className)}
             {...rest}
         />
     )
@@ -206,12 +161,10 @@ type CommandEmptyProps =
 export const CommandEmpty = React.forwardRef<HTMLDivElement, CommandEmptyProps>((props, ref) => {
     const { className, ...rest } = props
 
-    const { emptyClass } = React.useContext(__CommandAnatomyContext)
-
     return (
         <CommandPrimitive.Empty
             ref={ref}
-            className={cn(CommandAnatomy.empty(), emptyClass, className)}
+            className={cn(CommandAnatomy.empty(), className)}
             {...rest}
         />
     )
@@ -228,12 +181,10 @@ type CommandGroupProps =
 export const CommandGroup = React.forwardRef<HTMLDivElement, CommandGroupProps>((props, ref) => {
     const { className, ...rest } = props
 
-    const { groupClass } = React.useContext(__CommandAnatomyContext)
-
     return (
         <CommandPrimitive.Group
             ref={ref}
-            className={cn(CommandAnatomy.group(), groupClass, className)}
+            className={cn(CommandAnatomy.group(), className)}
             {...rest}
         />
     )
@@ -244,33 +195,20 @@ CommandGroup.displayName = "CommandGroup"
  * CommandItem
  * -----------------------------------------------------------------------------------------------*/
 
-type CommandItemProps =
-    React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
-    & Pick<ComponentAnatomy<typeof CommandAnatomy>, "itemIconContainerClass">
-    & { leftIcon?: React.ReactNode }
+type CommandItemProps = React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
 
 export const CommandItem = React.forwardRef<HTMLDivElement, CommandItemProps>((props, ref) => {
-    const { className, itemIconContainerClass, leftIcon, children, ...rest } = props
-
-    const {
-        itemClass,
-        itemIconContainerClass: _itemIconContainerClass,
-    } = React.useContext(__CommandAnatomyContext)
+    const { className, children, ...rest } = props
 
     // Sin scrollIntoView propio: cmdk ya desplaza la selección al navegar con teclado, y a
     // propósito no lo hace cuando la selección llega por el puntero (la lista saltaba bajo el mouse).
     return (
         <CommandPrimitive.Item
             ref={ref}
-            className={cn(CommandAnatomy.item(), itemClass, className)}
+            className={cn(CommandAnatomy.item(), className)}
             {...rest}
             data-cmdkvalue={rest.id}
         >
-            {leftIcon && (
-                <span className={cn(CommandAnatomy.itemIconContainer(), _itemIconContainerClass, itemIconContainerClass)}>
-                    {leftIcon}
-                </span>
-            )}
             {children}
         </CommandPrimitive.Item>
     )
@@ -281,12 +219,12 @@ CommandItem.displayName = "CommandItem"
  * CommandDialog
  * -----------------------------------------------------------------------------------------------*/
 
-type CommandDialogProps = ModalProps & ComponentAnatomy<typeof CommandDialogAnatomy> & {
+type CommandDialogProps = ModalProps & Pick<ComponentAnatomy<typeof CommandDialogAnatomy>, "contentClass"> & {
     commandProps: React.ComponentPropsWithoutRef<typeof CommandPrimitive>
 }
 
 export const CommandDialog = (props: CommandDialogProps) => {
-    const { children, commandClass, contentClass, commandProps, ...rest } = props
+    const { children, contentClass, commandProps, ...rest } = props
     return (
         <Modal
             srTitle="Buscar en KameHouse"
@@ -295,7 +233,7 @@ export const CommandDialog = (props: CommandDialogProps) => {
             {...rest}
             contentClass={cn(CommandDialogAnatomy.content(), contentClass)}
         >
-            <Command shouldFilter={false} className={cn(CommandDialogAnatomy.command(), commandClass)} {...commandProps}>
+            <Command shouldFilter={false} className={CommandDialogAnatomy.command()} {...commandProps}>
                 {children}
             </Command>
         </Modal>

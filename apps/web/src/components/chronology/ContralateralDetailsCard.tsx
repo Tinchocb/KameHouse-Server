@@ -23,7 +23,6 @@ interface ContralateralDetailsCardProps {
   accentHex?: string;
   activeTab?: DetailTab;
   onTabChange?: (tab: DetailTab) => void;
-  className?: string;
   layoutIdPrefix?: string;
   /**
    * Va dentro de otra tarjeta glass (acordeón móvil de TimelineVolumeCard): usa una superficie
@@ -38,7 +37,6 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
   accentHex = ALL_ERAS_HEX,
   activeTab: controlledTab,
   onTabChange,
-  className = '',
   layoutIdPrefix = 'contralateral-',
   embedded = false,
 }) => {
@@ -70,7 +68,8 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
   return (
     <article
       style={{ '--era': eraRgb, '--era-text': eraTextRgb } as React.CSSProperties}
-      className={`${surfaceClass} relative w-full p-4 sm:p-5 flex flex-col gap-3.5 overflow-hidden ${className}`}
+      data-liquid-surface="content"
+      className={`contralateral-details-card ${surfaceClass} relative w-full p-3.5 sm:p-4.5 flex flex-col gap-3 overflow-hidden`}
     >
       {/* Filete superior con brillo de la era */}
       <span
@@ -79,20 +78,20 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
       />
 
       {/* Encabezado: Ficha técnica complementaria (no duplica la tarjeta principal) */}
-      <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
+      <div className="flex items-start justify-between gap-3 border-b border-[var(--neutral-separator)] pb-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[rgb(var(--era)/0.12)] border border-[rgb(var(--era)/0.3)] text-3xs font-mono font-bold uppercase tracking-wider text-[rgb(var(--era-text,var(--era)))]">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[rgb(var(--era)/0.12)] border border-[rgb(var(--era)/0.3)] text-xs font-mono font-bold uppercase tracking-wider text-[rgb(var(--era-text,var(--era)))]">
               <span className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--era))]" />
               <span>{volume.sagaLabel}</span>
               <span className="opacity-60">·</span>
               <span>{volume.volumeNumber}</span>
             </span>
-            <span className="text-2xs font-mono tabular-nums text-label-2 font-medium">
+            <span className="text-xs font-mono tabular-nums text-label-2 font-medium">
               Ep. {capsFormatted}
             </span>
           </div>
-          <h4 className="font-display font-bold text-on-surface text-sm sm:text-base leading-snug line-clamp-1 text-balance">
+          <h4 className="font-display font-bold text-on-surface text-sm sm:text-base leading-snug line-clamp-2 text-balance">
             {volume.title}
           </h4>
         </div>
@@ -111,24 +110,24 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
       {(volume.dragonBallsStatus || volume.threatLevel || volume.narrative.lore.cosmicImpact) && (
         <div className="flex flex-wrap items-center gap-1.5 py-0.5">
           {volume.dragonBallsStatus && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-2xs">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] text-xs">
               <Sparkles className="w-3 h-3 text-status-warning shrink-0" />
               <span className="text-label-2 font-medium">Esferas:</span>
               <span className="text-on-surface font-semibold">{volume.dragonBallsStatus}</span>
             </div>
           )}
           {volume.threatLevel && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-2xs">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] text-xs">
               <AlertTriangle className="w-3 h-3 text-status-warning shrink-0" />
               <span className="text-label-2 font-medium">Amenaza:</span>
               <span className="text-on-surface font-semibold">{volume.threatLevel}</span>
             </div>
           )}
           {volume.narrative.lore.cosmicImpact && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-2xs">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] text-xs">
               <Globe className="w-3 h-3 text-brand-accent-readable shrink-0" />
               <span className="text-label-2 font-medium">Impacto:</span>
-              <span className="text-on-surface font-semibold truncate max-w-[180px]">
+              <span className="text-on-surface font-semibold truncate max-w-[280px]">
                 {volume.narrative.lore.cosmicImpact}
               </span>
             </div>
@@ -155,9 +154,9 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
         {/* 1. CONFLICTO */}
         {activeTab === 'conflicto' && (
           <div className="space-y-3">
-            <div className="surface-content surface-content-row border border-white/10 rounded-xl p-3.5 space-y-2.5">
+            <div className="surface-content surface-content-row border border-[var(--neutral-separator)] rounded-xl p-3.5 space-y-2.5">
               <div className="flex items-start gap-2">
-                <span className="text-3xs font-mono font-bold uppercase tracking-wider text-brand-accent-readable shrink-0 mt-0.5">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand-accent-readable shrink-0 mt-0.5">
                   Inicio:
                 </span>
                 <p className="text-on-surface text-xs leading-relaxed text-pretty">
@@ -166,8 +165,8 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
                   />
                 </p>
               </div>
-              <div className="flex items-start gap-2 border-t border-white/10 pt-2.5">
-                <span className="text-3xs font-mono font-bold uppercase tracking-wider text-status-error shrink-0 mt-0.5">
+              <div className="flex items-start gap-2 border-t border-[var(--neutral-separator)] pt-2.5">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-status-error shrink-0 mt-0.5">
                   Quiebre:
                 </span>
                 <p className="text-on-surface text-xs leading-relaxed text-pretty">
@@ -181,19 +180,19 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
             {/* Hitos Decisivos breves */}
             {volume.keyFacts && volume.keyFacts.length > 0 && (
               <div className="space-y-1.5">
-                <span className="text-3xs font-mono uppercase tracking-wider text-label-2 font-bold block">
+                <span className="text-xs font-mono uppercase tracking-wider text-label-2 font-bold block">
                   Hitos Clave
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {volume.keyFacts.map((fact) => (
                     <div
                       key={fact.label}
-                      className="p-2.5 rounded-lg surface-content surface-content-row border border-white/10 flex flex-col gap-0.5"
+                      className="p-2.5 rounded-lg surface-content surface-content-row border border-[var(--neutral-separator)] flex flex-col gap-0.5"
                     >
-                      <span className="text-3xs font-mono font-bold uppercase tracking-wider text-[rgb(var(--era-text,var(--era)))]">
+                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-[rgb(var(--era-text,var(--era)))]">
                         {fact.label}
                       </span>
-                      <p className="text-2xs text-on-surface leading-snug">
+                      <p className="text-xs text-on-surface leading-snug">
                         {fact.value}
                       </p>
                     </div>
@@ -204,7 +203,7 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
 
             {/* Personajes */}
             {volume.characters.length > 0 && (
-              <div className="flex items-center gap-1.5 pt-1 text-2xs text-label-2">
+              <div className="flex items-center gap-1.5 pt-1 text-xs text-label-2">
                 <Users className="w-3.5 h-3.5 text-brand-accent-readable shrink-0" />
                 <span className="font-semibold text-label-2">Personajes:</span>
                 <span className="text-on-surface truncate">{volume.characters.join(', ')}</span>
@@ -215,7 +214,7 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
 
         {/* 2. CLÍMAX */}
         {activeTab === 'climax' && (
-          <div className="bg-status-error/10 border border-status-error/25 rounded-xl p-3.5 space-y-2.5">
+          <div className="chrono-climax-box bg-status-error/10 border border-status-error/25 rounded-xl p-3.5 space-y-2.5">
             <span className="text-status-error font-display font-bold text-xs uppercase tracking-wider block">
               {volume.narrative.climax.title}
             </span>
@@ -224,16 +223,16 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
             </p>
 
             <div className="pt-2.5 border-t border-status-error/20 flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <Swords className="w-3 h-3 text-status-error shrink-0" />
-                <span className="text-status-error font-semibold text-2xs">Duelo:</span>
-                <span className="text-on-surface font-medium text-2xs">
+              <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                <Swords className="w-3.5 h-3.5 text-status-error shrink-0" />
+                <span className="text-status-error font-semibold">Duelo:</span>
+                <span className="text-on-surface font-medium">
                   <SmartLoreText text={volume.narrative.climax.decisiveBattle} />
                 </span>
               </div>
               {volume.narrative.climax.iconicMoment && (
-                <div className="flex items-center gap-1.5 flex-wrap text-2xs">
-                  <Sparkles className="w-3 h-3 text-status-warning shrink-0" />
+                <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-status-warning shrink-0" />
                   <span className="text-status-error font-semibold">Momento:</span>
                   <span className="text-on-surface">
                     <SmartLoreText text={volume.narrative.climax.iconicMoment} />
@@ -253,7 +252,7 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
             <p className="text-on-surface text-xs leading-relaxed text-pretty">
               <SmartLoreText text={volume.narrative.lore.secretSummary} />
             </p>
-            <div className="pt-2 border-t border-[rgb(var(--era)/0.2)] flex flex-col gap-1.5 text-2xs">
+            <div className="pt-2 border-t border-[rgb(var(--era)/0.2)] flex flex-col gap-1.5 text-xs">
               {volume.narrative.lore.deityInvolved && (
                 <div className="flex items-center gap-1.5 text-label-2">
                   <span className="font-semibold text-[rgb(var(--era-text,var(--era)))] shrink-0">Deidad:</span>
@@ -274,15 +273,15 @@ export const ContralateralDetailsCard: React.FC<ContralateralDetailsCardProps> =
 
         {/* 4. ENTRE EPISODIOS */}
         {activeTab === 'entrecaps' && interChapter.length > 0 && (
-          <ol className="surface-content surface-content-row border border-white/10 rounded-xl p-3.5 space-y-2.5">
+          <ol className="surface-content surface-content-row border border-[var(--neutral-separator)] rounded-xl p-3.5 space-y-2.5">
             {interChapter.map((entry, idx) => (
-              <li key={entry.title} className={idx > 0 ? 'border-t border-white/10 pt-2.5' : undefined}>
+              <li key={entry.title} className={idx > 0 ? 'border-t border-[var(--neutral-separator)] pt-2.5' : undefined}>
                 <div className="flex items-baseline justify-between gap-1.5 flex-wrap">
                   <span className="font-semibold text-xs text-brand-accent-readable">
                     {entry.title}
                   </span>
                   {entry.when && (
-                    <span className="text-2xs text-label-2 tabular-nums">{entry.when}</span>
+                    <span className="text-xs font-mono text-label-2 tabular-nums">{entry.when}</span>
                   )}
                 </div>
                 <p className="mt-1 text-on-surface text-xs leading-relaxed text-pretty">

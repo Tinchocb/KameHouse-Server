@@ -3,6 +3,7 @@
    ║  Thin import layer: loads token system + Tailwind + base reset     ║
    ╚══════════════════════════════════════════════════════════════════════╝ */
 
+/* ─── 1. Sistema de Tokens Base (:root y primitivos) ─────────────────── */
 @import "../styles/tokens/colors.css";
 @import "../styles/tokens/typography.css";
 @import "../styles/tokens/spacing.css";
@@ -12,18 +13,38 @@
 @import "../styles/tokens/animation.css";
 @import "../styles/tokens/z-index.css";
 
+/* ─── 2. Los 2 Diseños de Interfaz (Minimalista · Por Era con diseño Neutro) ──── */
+@import "../styles/themes/neutral.css";
+@import "../styles/themes/era.css";
+@import "../styles/themes/cinematic-controls.css";
+@import "../styles/themes/classic-minimalist.css";
+@import "../styles/themes/liquid-glass.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 
 /* ─── Cromo flotante ─────────────────────────────────────────────────── */
-/* Alto del cromo (islas de navegación) que el contenido debe respetar. Una sola fuente:
-   `.pt-nav`, los filtros sticky y la cabecera de Admin la usan. En móvil la barra es de flujo. */
-:root { --chrome-top: 1rem; --chrome-stick: calc(4rem + env(safe-area-inset-top, 0px)); }
-@media (min-width: 768px) { :root { --chrome-top: 4.25rem; --chrome-stick: var(--chrome-top); } }
-/* --chrome-stick: dónde se pegan los filtros al hacer scroll. En móvil la barra superior es fija
-   (4 rem) y <main> ya le reserva ese espacio, por eso --chrome-top sólo da aire de 1 rem. */
+/* Alto del cromo (islas de navegación de escritorio). Una sola fuente:
+   `.pt-nav`, los filtros sticky y la cabecera de Admin la usan. */
+:root {
+  --chrome-top: 4.25rem;
+  --chrome-stick: var(--chrome-top);
+  --chrome-bottom: 0px;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --chrome-top: 4.75rem;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --chrome-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
 
 /* ─── Selector de era (components/ui/era-rail) ───────────────────────── */
 /* Riel (≥ 1024 px) y barra (< 1024 px). `--era-rail-w` / `--era-bar-h` valen 0 salvo mientras hay un
@@ -39,6 +60,7 @@
 }
 html[data-era-rail="rail"] { --era-rail-w: calc(var(--era-rail-edge) + var(--era-rail-size)); }
 html[data-era-rail="bar"]  { --era-bar-h: 3.75rem; }
+[data-scroll-container="true"] { scrollbar-gutter: stable; }
 html[data-era-rail="rail"] [data-scroll-container="true"] { padding-inline: var(--era-rail-w); }
 html[data-era-rail="bar"]  [data-scroll-container="true"]::before { content: ""; display: block; flex: none; height: var(--era-bar-h); }
 
@@ -64,7 +86,6 @@ html[data-era-rail="bar"]  [data-scroll-container="true"]::before { content: "";
   pre,
   code,
   blockquote,
-  [data-selectable="true"],
   .select-text,
   .surface-content {
     user-select: text;
@@ -91,14 +112,14 @@ html[data-era-rail="bar"]  [data-scroll-container="true"]::before { content: "";
      :where() deja la especificidad en 0, así cualquier utilidad
      (transition-*, active:scale-*) gana sin pelear. */
   @media (prefers-reduced-motion: no-preference) {
-    :where(button, [role="button"], [role="checkbox"], [role="radio"], [role="combobox"], a[href]):where(:not(:disabled, [aria-disabled="true"], .tv-focusable, [class*="active:scale"])) {
+    :where(button, [role="button"], [role="checkbox"], [role="radio"], [role="combobox"], a[href]):where(:not(:disabled, [aria-disabled="true"], [class*="active:scale"])) {
       transition: scale var(--duration-quick) var(--ease-out);
     }
-    :where(button, [role="button"], a[href]):where(:not(:disabled, [aria-disabled="true"], .tv-focusable, [class*="active:scale"])):active {
-      scale: var(--scale-tiny);
+    :where(button, [role="button"], a[href]):where(:not(:disabled, [aria-disabled="true"], [class*="active:scale"])):active {
+      scale: var(--scale-medium);
     }
     /* Controles de formulario: un poco más marcado, son el objetivo del toque. */
-    :where([role="checkbox"], [role="radio"], [role="combobox"]):where(:not(:disabled, [aria-disabled="true"], .tv-focusable, [class*="active:scale"])):active {
+    :where([role="checkbox"], [role="radio"], [role="combobox"]):where(:not(:disabled, [aria-disabled="true"], [class*="active:scale"])):active {
       scale: var(--scale-small);
     }
   }
@@ -126,10 +147,10 @@ html[data-era-rail="bar"]  [data-scroll-container="true"]::before { content: "";
      Al estar en @layer base, las clases utilitarias de Tailwind (w-*, h-*, min-w-0) ganan por especificidad.
      Se excluyen inputs nativos pequeños (checkbox, radio, range, hidden). */
   @media (hover: none) {
-    button:not(.touch-target-auto, .touch-target-none),
-    [role="button"]:not(.touch-target-auto, .touch-target-none),
-    input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .touch-target-auto, .touch-target-none),
-    select:not(.touch-target-auto, .touch-target-none) {
+    button:not(.touch-target-auto),
+    [role="button"]:not(.touch-target-auto),
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], .touch-target-auto),
+    select:not(.touch-target-auto) {
       min-height: 44px;
       min-width: 44px;
     }
@@ -194,50 +215,19 @@ select:focus-visible,
 }
 
 /* Anillo de teclado: acento de la era, sigue el border-radius del elemento.
-   El modo TV tiene el suyo (.tv-focusable, más abajo). Se excluyen los
+   Se excluyen los
    contenedores con tabindex="-1" (modales/menús que Radix enfoca por código). */
-:root:not([data-tv="true"]) :focus-visible:not(input, textarea, select, [contenteditable="true"], [tabindex="-1"]) {
+:root :focus-visible:not(input, textarea, select, [contenteditable="true"], [tabindex="-1"]) {
   outline: 2px solid hsl(var(--focus-ring) / 0.9) !important;
   outline-offset: 2px;
 }
 
 /* Campos: anillo propio y visible para inputs fuera de cmdk y sin data-field-embedded. */
-:root:not([data-tv="true"]) input:not([type="hidden"], [cmdk-input], [data-field-embedded]):focus-visible,
-:root:not([data-tv="true"]) textarea:focus-visible,
-:root:not([data-tv="true"]) select:focus-visible {
+:root input:not([type="hidden"], [cmdk-input], [data-field-embedded]):focus-visible,
+:root textarea:focus-visible,
+:root select:focus-visible {
   outline: 2px solid hsl(var(--focus-ring) / 0.9) !important;
   outline-offset: 1px;
-}
-
-/* ─── TV Mode / Spatial Navigation ───────────────────────────────────── */
-[data-tv="true"] .tv-focusable:focus,
-[data-tv="true"] .tv-focusable:focus-visible {
-  outline: 3px solid hsl(var(--focus-ring)) !important;
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px hsl(var(--focus-ring) / 0.25) !important;
-  transform: scale(1.03);
-  transition:
-    transform var(--duration-quick) var(--ease-out),
-    box-shadow var(--duration-quick) var(--ease-out),
-    outline-color var(--duration-quick) var(--ease-out),
-    color var(--duration-quick) var(--ease-out),
-    background-color var(--duration-quick) var(--ease-out);
-}
-
-[data-tv="true"] .tv-focusable:focus-visible:active { transform: scale(0.98); }
-
-/* Red de seguridad TV: el anillo de teclado global se apaga bajo [data-tv], así que todo lo
-   enfocable que no sea .tv-focusable (cards, filtros, ajustes, campos) recibe indicador. */
-[data-tv="true"] :focus-visible:not(.tv-focusable, [tabindex="-1"]) {
-  outline: 3px solid hsl(var(--focus-ring)) !important;
-  outline-offset: 3px;
-}
-
-@media (hover: none) {
-  [data-tv="true"] .tv-focusable {
-    min-width: 44px;
-    min-height: 44px;
-  }
 }
 
 .JASSUB {
@@ -247,37 +237,11 @@ select:focus-visible,
   pointer-events: none;
 }
 
-/* ─── Degradé de página fijo — Clásico (viñeta sutil) y Por Era ───────── */
-[data-mode="classic"] body::before,
-[data-mode="era"] body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background: var(--page-gradient);
-  pointer-events: none;
-  z-index: -5;
-}
-
-/* ─── Neutro: tipografía de etiquetas en sentence case ─────────────────── */
-[data-mode="classic"] .neutro-sentence :where(*) {
-  text-transform: none;
-  letter-spacing: normal;
-}
-[data-mode="classic"] .neutro-sentence .font-mono {
-  font-family: var(--font-sans);
-}
-
-[data-theme="era-universe"] .era-universe-layer {
-  opacity: 1 !important;
-  background: conic-gradient(
-    from 180deg at 50% 50%,
-    color-mix(in srgb, var(--spotlight-db) 15%, transparent) 0deg,
-    color-mix(in srgb, var(--spotlight-dbz) 15%, transparent) 72deg,
-    color-mix(in srgb, var(--spotlight-dbgt) 15%, transparent) 144deg,
-    color-mix(in srgb, var(--spotlight-dbs) 15%, transparent) 216deg,
-    color-mix(in srgb, var(--spotlight-daima) 15%, transparent) 288deg,
-    color-mix(in srgb, var(--spotlight-db) 15%, transparent) 360deg
-  );
+[data-video-stage="true"]:not([data-aspect-ratio="contain"]) > .JASSUB {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* ─── Components ─────────────────────────────────────────────────────── */
@@ -298,16 +262,11 @@ select:focus-visible,
     color: var(--brand-accent-readable);
     border-color: hsl(var(--brand-accent) / 0.30);
   }
-  .badge-success {
-    background: hsl(var(--brand-success) / 0.15);
-    color: hsl(var(--brand-success));
-    border-color: hsl(var(--brand-success) / 0.30);
-  }
 }
 
 /* ─── Utilities ──────────────────────────────────────────────────────── */
 @layer utilities {
-  .page-container  { @apply w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10; }
+  .page-container  { @apply w-full max-w-content mx-auto px-4 sm:px-6 md:px-8 lg:px-10; }
   .text-balance    { text-wrap: balance; }
   /* Padding superior que libera la barra flotante (reemplaza `pt-4 md:pt-20` repetido en cada página).
      Las páginas con hero a pantalla completa NO lo usan: pintan bajo el cromo a propósito. */
@@ -316,67 +275,6 @@ select:focus-visible,
   /* Borde leve en letras difuminado de alto rendimiento */
   .text-edge-glow {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
-  }
-
-  /* Safe Area Insets */
-  .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
-
-  /* ─── Hero Scrims (cinematográficos — reactivos a var(--bg-primary) / var(--scrim-hero-base)) ─── */
-  .scrim-hero-left {
-    background: linear-gradient(
-      to right,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 92%, transparent) 0%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 72%, transparent) 18%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 42%, transparent) 32%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 12%, transparent) 44%,
-      transparent 56%
-    );
-  }
-  .scrim-hero-bottom {
-    background: linear-gradient(
-      to top,
-      var(--scrim-hero-base, var(--bg-primary, #000000)) 0%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 78%, transparent) 18%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 38%, transparent) 36%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 10%, transparent) 52%,
-      transparent 66%
-    );
-  }
-  /* Sombra inferior en ascenso suave atada al contenido (Spotlight, solo mobile: el texto va sobre el arte) */
-  .scrim-hero-bottom-rise {
-    background: linear-gradient(
-      to bottom,
-      transparent 0%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 30%, transparent) 35%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 75%, transparent) 70%,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 95%, transparent) 100%
-    );
-  }
-  /* Refuerzo para backdrops claros o con personajes bajo el texto */
-  .scrim-hero-boost {
-    background:
-      linear-gradient(to top, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 55%, transparent) 0%, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 25%, transparent) 30%, transparent 55%),
-      linear-gradient(to right, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 50%, transparent) 0%, color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 20%, transparent) 30%, transparent 50%);
-  }
-  /* Máscara lateral del arte de hero según su composición (HeroArt.subject). */
-  @media (min-width: 640px) {
-    .hero-art-mask-right {
-      mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 18%, rgba(0, 0, 0, 0.75) 30%, black 42%);
-      -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 18%, rgba(0, 0, 0, 0.75) 30%, black 42%);
-    }
-    /* Grupos / sujeto a la izquierda: fundido suave, la legibilidad la da el scrim */
-    .hero-art-mask-soft {
-      mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.8) 22%, black 38%);
-      -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.8) 22%, black 38%);
-    }
-  }
-
-  .scrim-hero-top {
-    background: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--scrim-hero-base, var(--bg-primary, #000000)) 45%, transparent) 0%,
-      transparent 100%
-    );
   }
 
   /* ─── SectionBar — Contenedor unificado de sección ─────────────────────── */
@@ -415,7 +313,7 @@ select:focus-visible,
   }
 
   .sectionbar-header {
-    @apply flex items-center justify-between px-1;
+    @apply flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-1;
   }
   .sectionbar-header-icon {
     @apply w-8 h-8 rounded-xl bg-brand-accent/10 border border-brand-accent/25 flex items-center justify-center text-brand-accent shrink-0;
@@ -424,39 +322,10 @@ select:focus-visible,
     @apply text-sm font-semibold text-on-surface;
   }
   .sectionbar-header-desc {
-    @apply text-2xs text-label-2 leading-normal font-medium mt-0.5;
+    @apply text-xs text-label-2 leading-relaxed font-medium mt-0.5;
   }
   .sectionbar-header-badge {
     @apply ml-2;
   }
 
-  /* ─── 3D Card Flip, Manga Halftone & Perspective ───────────────────── */
-  .perspective-1000 {
-    perspective: 1000px;
-  }
-  .preserve-3d {
-    transform-style: preserve-3d;
-  }
-  .backface-hidden {
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-  .rotate-y-180 {
-    transform: rotateY(180deg);
-  }
-
-  .bg-halftone {
-    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 0);
-    background-size: 14px 14px;
-  }
-
-  .bg-manga-speed {
-    background: repeating-linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.02),
-      rgba(255, 255, 255, 0.02) 2px,
-      transparent 2px,
-      transparent 8px
-    );
-  }
 }

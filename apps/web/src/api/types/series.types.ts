@@ -9,17 +9,14 @@ export type { CharacterDTO }
 
 interface SubSagaDTO extends BaseSubSagaDTO {
   image?: string
-  description?: string
 }
 
 export interface SagaDTO extends Omit<BaseSagaDTO, "subSagas" | "description"> {
   description?: string
-  image?: string
   subSagas?: SubSagaDTO[]
 }
 
 export interface SagaDetailSearchParams {
-  tab?: "episodes" | "movie" | "relations" | "characters" | "details"
   saga?: string
   subSaga?: string
   /**
@@ -47,7 +44,6 @@ export interface PremiumEpisode {
   fallbackThumbnailUrl?: string
   episodeType: EpisodeType
   isWatched: boolean
-  isDownloaded?: boolean
   resolution?: string
   videoCodec?: string
   audioCodec?: string
@@ -56,5 +52,4 @@ export interface PremiumEpisode {
   progressPercent?: number
   sagaId?: string
   sagaName?: string
-  tags?: string[]
 }

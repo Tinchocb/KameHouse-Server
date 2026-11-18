@@ -9,7 +9,7 @@ vi.mock("idb-keyval", () => ({
     del: (...args: unknown[]) => delMock(...(args as [])),
 }))
 
-import { createIDBPersister } from "./query-persister"
+import { createIDBPersister, queryPersistOptions } from "./query-persister"
 
 const client = (n: number) => ({ timestamp: n, buster: "b", clientState: { queries: [], mutations: [] } }) as unknown as PersistedClient
 
@@ -107,5 +107,24 @@ describe("createIDBPersister", () => {
         await vi.advanceTimersByTimeAsync(3500)
         expect(setMock).not.toHaveBeenCalledWith("k3", expect.anything())
         expect(delMock).toHaveBeenCalledWith("k3")
+    })
+})
+
+describe("claves que no se persisten (DT-07)", () => {
+    const query = (queryKey: unknown[]) =>
+        ({ queryKey, state: { status: "success", data: { ok: true } } }) as unknown as Parameters<typeof queryPersistOptions.dehydrateOptions.shouldDehydrateQuery>[0]
+
+    it.each([
+        ["logs completos", ["STATUS-get-log-content", {}]],
+        ["últimos logs", ["STATUS-get-latest-log-content"]],
+        ["nombres de logs", ["STATUS-get-log-filenames"]],
+        ["selector de carpetas", ["DIRECTORY-SELECTOR-directory-selector", "/home"]],
+        ["búsqueda semántica", ["INTELLIGENCE-semantic-search", "goku"]],
+    ])("%s no entra en la caché de IndexedDB", (_name, key) => {
+        expect(queryPersistOptions.dehydrateOptions.shouldDehydrateQuery(query(key))).toBe(false)
+    })
+
+    it("una ficha normal sí se persiste", () => {
+        expect(queryPersistOptions.dehydrateOptions.shouldDehydrateQuery(query(["ANIME-ENTRIES-get-anime-entry", 12971]))).toBe(true)
     })
 })

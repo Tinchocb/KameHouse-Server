@@ -10,15 +10,16 @@ import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
  * Anatomy
  * -----------------------------------------------------------------------------------------------*/
 
-export const ModalAnatomy = defineStyleAnatomy({
+const ModalAnatomy = defineStyleAnatomy({
     overlay: cva([
         "UI-Modal__overlay",
-        "fixed inset-0 z-overlay bg-black/65 backdrop-blur-overlay-xs transition-opacity duration-base",
+        "fixed inset-0 z-overlay bg-black/65 transition-opacity duration-base",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        // Con prefijo: animate-in (0,2,0) fija 150 ms y le gana al duration-base suelto.
+        // Con prefijo: animate-in (0,2,0) fija 150 ms y le gana a la duración suelta.
         // Misma curva que el contenido: sin ella el velo usaba el `ease` por defecto de CSS.
-        "ease-out-strong data-[state=open]:duration-base",
+        "ease-smooth-out data-[state=open]:duration-normal data-[state=closed]:duration-quick",
+        "motion-reduce:!animate-none motion-reduce:transition-none",
     ]),
     content: cva([
         "UI-Modal__content",
@@ -26,10 +27,10 @@ export const ModalAnatomy = defineStyleAnatomy({
         "shadow-[shadow:var(--glass-highlight-lg),var(--elevation-5)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-        // Entra con ease-out fuerte; al cerrar responde más rápido de lo que abrió.
-        // El duration-base de abrir necesita el prefijo para ganarle a animate-in (150 ms).
-        "ease-out-strong data-[state=open]:duration-base data-[state=closed]:duration-fast",
+        "data-[state=closed]:zoom-out-[0.98] data-[state=open]:zoom-in-[0.98]",
+        // Entrada gradual y zoom discreto; cierre breve para devolver el contexto.
+        "ease-smooth-out data-[state=open]:duration-normal data-[state=closed]:duration-quick",
+        "motion-reduce:!animate-none motion-reduce:transition-none",
     ]),
     close: cva([
         "UI-Modal__close",
@@ -45,7 +46,7 @@ export const ModalAnatomy = defineStyleAnatomy({
     ]),
     title: cva([
         "UI-Modal__title",
-        "text-xl font-semibold leading-none tracking-tight",
+        "text-xl font-semibold leading-none tracking-tight text-balance",
     ]),
     description: cva([
         "UI-Modal__description",
@@ -62,12 +63,8 @@ export type ModalProps =
     &
     Pick<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>, "onOpenAutoFocus" | "onCloseAutoFocus" | "onEscapeKeyDown" | "onPointerDownCapture" | "onInteractOutside">
     &
-    ComponentAnatomy<typeof ModalAnatomy>
+    Pick<ComponentAnatomy<typeof ModalAnatomy>, "contentClass" | "closeClass">
     & {
-        /**
-         * Interaction with outside elements will be enabled and other elements will be visible to screen readers.
-         */
-        allowOutsideInteraction?: boolean
         /**
          * The button that opens the modal
          */
@@ -90,34 +87,22 @@ export type ModalProps =
          */
         footer?: React.ReactNode
         /**
-         * Optional replacement for the default close button
-         */
-        closeButton?: React.ReactElement
-        /**
          * Whether to hide the close button
          */
         hideCloseButton?: boolean
-        portalContainer?: HTMLElement
     }
 
 export function Modal(props: ModalProps) {
 
     const {
-        allowOutsideInteraction = false,
         trigger,
         title,
         srTitle,
         footer,
         description,
         children,
-        closeButton,
-        overlayClass,
         contentClass,
         closeClass,
-        headerClass,
-        footerClass,
-        titleClass,
-        descriptionClass,
         hideCloseButton,
         // Content
         onOpenAutoFocus,
@@ -125,16 +110,15 @@ export function Modal(props: ModalProps) {
         onEscapeKeyDown,
         onPointerDownCapture,
         onInteractOutside,
-        portalContainer,
         ...rest
     } = props
 
-    return <DialogPrimitive.Root modal={!allowOutsideInteraction} {...rest}>
+    return <DialogPrimitive.Root {...rest}>
 
         {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
 
-        <DialogPrimitive.Portal container={portalContainer}>
-            <DialogPrimitive.Overlay className={cn(ModalAnatomy.overlay(), overlayClass)} />
+        <DialogPrimitive.Portal>
+            <DialogPrimitive.Overlay className={ModalAnatomy.overlay()} />
             <div
                 className={cn(
                     "fixed inset-0 z-modal overflow-y-auto grid place-items-center p-3 md:p-4 pointer-events-none",
@@ -142,6 +126,7 @@ export function Modal(props: ModalProps) {
                 )}
             >
                 <DialogPrimitive.Content
+                    data-liquid-surface="panel"
                     className={cn(ModalAnatomy.content(), "pointer-events-auto", contentClass)}
                     onOpenAutoFocus={onOpenAutoFocus}
                     onCloseAutoFocus={onCloseAutoFocus}
@@ -162,14 +147,14 @@ export function Modal(props: ModalProps) {
                     )}
 
                     {(title || description) && (
-                        <div className={cn(ModalAnatomy.header(), headerClass)}>
+                        <div className={ModalAnatomy.header()}>
                             {title && (
-                                <DialogPrimitive.Title className={cn(ModalAnatomy.title(), titleClass)}>
+                                <DialogPrimitive.Title className={ModalAnatomy.title()}>
                                     {title}
                                 </DialogPrimitive.Title>
                             )}
                             {description && (
-                                <DialogPrimitive.Description className={cn(ModalAnatomy.description(), descriptionClass)}>
+                                <DialogPrimitive.Description className={ModalAnatomy.description()}>
                                     {description}
                                 </DialogPrimitive.Description>
                             )}
@@ -178,12 +163,12 @@ export function Modal(props: ModalProps) {
 
                     {children}
 
-                    {footer && <div className={cn(ModalAnatomy.footer(), footerClass)}>
+                    {footer && <div className={ModalAnatomy.footer()}>
                         {footer}
                     </div>}
 
                     {!hideCloseButton && <DialogPrimitive.Close className={cn(ModalAnatomy.close(), closeClass)} asChild>
-                        {closeButton ? closeButton : <CloseButton aria-label="Cerrar" />}
+                        <CloseButton aria-label="Cerrar" />
                     </DialogPrimitive.Close>}
 
                 </DialogPrimitive.Content>

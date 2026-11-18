@@ -31,10 +31,10 @@ export const TimelineCardSkeleton: React.FC<{ className?: string }> = ({ classNa
         block(0.04), // portada
       ].join(','),
       backgroundSize: [
-        '55% 22px', '30% 12px', '28% 10px', '18% 10px', 'calc(100% - 40px) 5px', 'calc(100% - 200px) 38px', '128px 38px', '100% 230px',
+        '55% 20px', '30% 11px', '28% 10px', '18% 10px', 'calc(100% - 36px) 4px', 'calc(100% - 180px) 34px', '110px 34px', '100% 220px',
       ].join(','),
       backgroundPosition: [
-        '16px 175px', '16px 150px', '16px 255px', 'calc(100% - 16px) 255px', '16px 280px', '16px 305px', 'calc(100% - 16px) 305px', '0 0',
+        '14px 165px', '14px 140px', '14px 240px', 'calc(100% - 14px) 240px', '14px 265px', '14px 288px', 'calc(100% - 14px) 288px', '0 0',
       ].join(','),
     }}
   />

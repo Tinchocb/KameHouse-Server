@@ -18,6 +18,9 @@ type pathFeatureRule struct {
 }
 
 var (
+	readMethodsMap = map[string]struct{}{
+		"GET": {}, "HEAD": {},
+	}
 	updateMethodsMap = map[string]struct{}{
 		"POST": {}, "PUT": {}, "DELETE": {}, "PATCH": {},
 	}
@@ -28,6 +31,11 @@ var (
 
 var staticPathFeatureRules = []pathFeatureRule{
 	// settings
+	{"/api/v1/settings", core.ViewSettings, readMethodsMap, nil},
+	{"/api/v1/mediastream/settings", core.ViewSettings, readMethodsMap, nil},
+	{"/api/v1/report", core.ViewSettings, readMethodsMap, nil},
+	{"/api/v1/db/backup", core.ViewSettings, nil, nil},
+	{"/api/v1/db/backup", core.UpdateSettings, updateMethodsMap, nil},
 	{"/api/v1/start", core.UpdateSettings, updateMethodsMap, nil},
 	{"/api/v1/settings", core.UpdateSettings, updateMethodsMap, nil},
 	{"/api/v1/mediastream/settings", core.UpdateSettings, updateMethodsMap, nil},
@@ -41,6 +49,7 @@ var staticPathFeatureRules = []pathFeatureRule{
 	// proxy
 	{"/api/v1/image-proxy", core.Proxy, nil, nil},
 	// logs
+	{"/api/v1/report", core.ViewLogs, readMethodsMap, nil},
 	{"/api/v1/log", core.ViewLogs, nil, nil},
 	{"/api/v1/logs", core.ViewLogs, nil, nil},
 	{"/api/v1/logs", core.UpdateSettings, deleteMethodMap, nil},

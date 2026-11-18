@@ -52,7 +52,6 @@ fn main() {
             let dest_canonical = resource_dir.join("kamehouse-server.exe");
             let _ = fs::copy(windows_bin, &dest_windows);
             let _ = fs::copy(windows_bin, &dest_canonical);
-            println!("cargo:rustc-env=KAMEHOUSE_WINDOWS_BIN={}", dest_windows.display());
             break;
         }
     }

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router"
 import { ApiError } from "@/api/client/requests"
 import { Button, ButtonAnatomy } from "@/components/ui/button"
 import { IconStatusGhost } from "@/components/ui/icons"
+import { cn } from "@/components/ui/core/styling"
 import { EmptyState } from "./empty-state"
 
 interface LibraryErrorStateProps {
@@ -48,7 +49,12 @@ export function LibraryErrorState({
                         {serverFault && (
                             <Link
                                 to="/admin"
-                                className={ButtonAnatomy.root({ intent: "outline", size: "lg" })}
+                                data-intent="outline"
+                                data-size="lg"
+                                className={cn(
+                                    ButtonAnatomy.root({ intent: "outline", size: "lg" }),
+                                    "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong motion-safe:active:scale-[0.97]"
+                                )}
                             >
                                 Ver registros
                             </Link>

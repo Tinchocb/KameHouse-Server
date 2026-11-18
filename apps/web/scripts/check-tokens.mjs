@@ -22,12 +22,7 @@ const SRC = path.join(ROOT, "src")
 
 // Clases "marcador" sin estilo propio: se usan como hooks de JS/CSS o de tests.
 const MARKER_CLASSES = new Set([
-    "bg-music-toggle-btn",
     "blur-when-unavailable",
-    "content-level-detonante",
-    "content-level-climax",
-    "content-level-lore",
-    "content-level-contexto",
 ])
 // Variables que inyecta una librería en tiempo de ejecución.
 const RUNTIME_VAR_PREFIXES = ["--tw-", "--radix-"]

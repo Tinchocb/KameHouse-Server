@@ -16,7 +16,6 @@ func TestFolderStructureAndEpisodeIntegration(t *testing.T) {
 		wantSeason       int
 		wantEpisode      int
 		wantEpisodeTitle string
-		wantIsMulti      bool
 		wantTMDBID       int
 		wantIsMovie      bool
 	}{

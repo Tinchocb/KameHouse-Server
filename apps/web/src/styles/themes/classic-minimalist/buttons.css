@@ -1,0 +1,330 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  buttons.css — Botones y controles                                    ║
+   ║  Dos recetas para todas las familias: primario perla y secundario     ║
+   ║  translúcido con filete (las de «Reproducir» y «Más información»)    ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
+
+/* Foco de alta precisión (1,5 px, sin doble anillo grueso) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(
+  .UI-Button_root,
+  .spotlight-play-cta,
+  .era-opening-player,
+  .UI-SegmentedControl_option,
+  [role="radio"],
+  .spotlight-saga-card,
+  .ep-action-btn
+):focus-visible {
+  outline: none !important;
+  box-shadow: var(--minimal-focus-ring) !important;
+}
+
+/* Respuesta táctil: compresión sutil */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Button_root, .ep-action-btn, .spotlight-play-cta, .era-opening-player, .detail-round-action):active:not(:disabled) {
+  transform: var(--minimal-press) !important;
+}
+
+/* A. Receta primaria: perla plano, sin borde ni sombra */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="primary"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-play-cta,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-skip-btn,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-next-ep-btn,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .ep-action-btn.solid,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label^="Continuar viendo"] button.bg-brand-accent {
+  background: var(--minimal-primary-bg) !important;
+  color: var(--minimal-primary-fg) !important;
+  font-family: inherit !important;
+  font-weight: var(--minimal-weight-semibold) !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+  border: 0 !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transition: var(--minimal-transition) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="primary"]:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-play-cta:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-skip-btn:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-next-ep-btn:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .ep-action-btn.solid:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) section[aria-label^="Continuar viendo"] button.bg-brand-accent:hover:not(:disabled) {
+  background: var(--minimal-primary-bg-hover) !important;
+}
+}
+
+/* B. Receta secundaria: relleno translúcido, filete de 1 px y canto superior */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="secondary"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="glass"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .era-opening-player,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .detail-round-action,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .ep-action-btn:not(.solid) {
+  background: var(--minimal-secondary-bg) !important;
+  color: var(--minimal-secondary-fg) !important;
+  font-family: inherit !important;
+  font-weight: var(--minimal-weight-medium) !important;
+  letter-spacing: -0.005em !important;
+  text-transform: none !important;
+  border: 1px solid var(--minimal-secondary-border) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: var(--minimal-secondary-edge) !important;
+  filter: none !important;
+  transition: var(--minimal-transition) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="secondary"]:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="glass"]:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .era-opening-player:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .detail-round-action:hover:not(:disabled),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .ep-action-btn:not(.solid):hover:not(:disabled) {
+  background: var(--minimal-secondary-bg-hover) !important;
+  border-color: var(--minimal-secondary-border-hover) !important;
+  /* Actualiza el canto sin competir con el anillo de :focus-visible. */
+  --minimal-secondary-edge: var(--minimal-secondary-edge-hover);
+  color: var(--minimal-text-hi) !important;
+}
+}
+
+/* C. Outline: el filete de la receta secundaria sin relleno */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="outline"] {
+  background: transparent !important;
+  color: var(--minimal-text-1) !important;
+  font-weight: var(--minimal-weight-medium) !important;
+  border: 1px solid var(--minimal-secondary-border) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="outline"]:hover:not(:disabled) {
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-secondary-border-hover) !important;
+  color: var(--minimal-text-hi) !important;
+}
+}
+
+/* D. Ghost: texto atenuado, sin fondo */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(
+  .UI-Button_root[data-intent="ghost"],
+  .UI-IconButton_root[data-intent="ghost"]
+) {
+  background: transparent !important;
+  color: var(--minimal-text-3) !important;
+  border: 0 !important;
+  border-radius: var(--minimal-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(
+  .UI-Button_root[data-intent="ghost"],
+  .UI-IconButton_root[data-intent="ghost"]
+):hover:not(:disabled) {
+  background: var(--minimal-fill-2) !important;
+  color: var(--minimal-text-hi) !important;
+}
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-IconButton_root {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+/* E. Acciones destructivas: excepción funcional con rojo de error y sin sombra */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="destructive"] {
+  background: var(--status-error) !important;
+  color: var(--minimal-primary-fg) !important;
+  font-family: inherit !important;
+  font-weight: var(--minimal-weight-semibold) !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+  border: 0 !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transition: var(--minimal-transition) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="destructive"]:hover:not(:disabled) {
+    filter: brightness(0.92) !important;
+  }
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="destructive"]:active:not(:disabled) {
+  transform: var(--minimal-press) !important;
+  filter: brightness(0.85) !important;
+}
+
+/* F. Botón de confirmación mantenida (HoldConfirm) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) button:has(> [role="progressbar"]) {
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+}
+
+/* G. Tallas: 46 (hero y ficha) · 40 · 36 px; radio concéntrico en la chica */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Button_root, .ep-action-btn, .player-skip-btn, .player-next-ep-btn):where(:not(.UI-IconButton_root)) {
+  font-size: var(--minimal-font-md) !important;
+  line-height: var(--minimal-leading-control);
+  filter: none !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  border-radius: var(--minimal-radius-md) !important;
+  transition: var(--minimal-transition) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root:not(.UI-IconButton_root) {
+  height: var(--minimal-control-md) !important;
+  padding-inline: var(--minimal-control-padding-md);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root:not(.UI-IconButton_root):is([data-size="xs"], [data-size="sm"]) {
+  height: var(--minimal-control-sm) !important;
+  padding-inline: var(--minimal-control-padding-sm);
+  font-size: var(--minimal-font-sm) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root:not(.UI-IconButton_root)[data-size="lg"] {
+  height: var(--minimal-control-lg) !important;
+  padding-inline: var(--minimal-control-padding-lg);
+}
+
+/* Las tallas icon-* de Button son cuadradas y no llevan padding de texto. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root:not(.UI-IconButton_root)[data-size^="icon"] {
+  width: var(--minimal-control-md) !important;
+  padding: 0 !important;
+}
+
+/* IconButton conserva su escala de glifos y su geometría propia. No hereda
+   la talla md de Button: el atributo describe la talla real del icono. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-IconButton_root {
+  padding: 0 !important;
+  filter: none !important;
+  transition: var(--minimal-transition) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-IconButton_root:is([data-icon-size="xs"], [data-icon-size="sm"]) {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .ep-action-btn {
+  font-size: var(--minimal-font-sm) !important;
+}
+
+/* Pulsación: el contraste cambia sin sumar sombra ni depender del hover. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[data-intent="primary"]:active:not(:disabled) {
+  background: var(--minimal-primary-bg-pressed) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.spotlight-play-cta, .player-skip-btn, .player-next-ep-btn, .ep-action-btn.solid):active:not(:disabled) {
+  background: var(--minimal-primary-bg-pressed) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.era-opening-player, .detail-round-action, .ep-action-btn:not(.solid)):active:not(:disabled) {
+  background: var(--minimal-secondary-bg-pressed) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root:is(
+  [data-intent="secondary"], [data-intent="glass"], [data-intent="ghost"], [data-intent="outline"]
+):is(:active:not(:disabled), [aria-pressed="true"]) {
+  background: var(--minimal-secondary-bg-pressed) !important;
+  color: var(--minimal-text-hi) !important;
+}
+
+/* Carga mantiene contraste; deshabilitado baja prioridad y no responde al toque. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Button_root, .ep-action-btn, .player-icon-button):disabled {
+  opacity: var(--minimal-disabled-opacity) !important;
+  transform: none !important;
+  cursor: not-allowed;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root[aria-busy="true"] {
+  opacity: 1 !important;
+  cursor: progress;
+}
+
+@media (any-pointer: coarse), (hover: none) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-Button_root, .ep-action-btn, .UI-SegmentedControl_option) {
+    min-height: var(--minimal-hit) !important;
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.UI-IconButton_root, .UI-Button_root[data-size^="icon"]) {
+    min-width: var(--minimal-hit) !important;
+  }
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-Button_root:is([data-size="xs"], [data-size="sm"]),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .ep-action-btn.solid,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .ep-action-btn:not(.solid) {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .ep-action-btn {
+  height: var(--minimal-control-sm);
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--minimal-font-sm);
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+}
+
+/* G. SegmentedControl: riel transparente, opción de 8 px, selección tenue */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-SegmentedControl_root {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  max-inline-size: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-SegmentedControl_option {
+  height: var(--minimal-control-sm) !important;
+  padding: 0 14px !important;
+  border-radius: var(--minimal-radius-sm) !important;
+  border: 0 !important;
+  color: var(--minimal-text-3) !important;
+  font-size: var(--minimal-font-sm) !important;
+  font-weight: var(--minimal-weight-medium) !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  transition: var(--minimal-transition) !important;
+  flex-shrink: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-SegmentedControl_option:hover:not(:disabled) {
+  color: var(--minimal-text-hi) !important;
+  background-color: var(--minimal-fill-1) !important;
+}
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-SegmentedControl_option:active:not(:disabled) {
+  transform: var(--minimal-press) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-SegmentedControl_option:disabled {
+  background: transparent !important;
+  transform: none !important;
+  opacity: var(--minimal-disabled-opacity);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-SegmentedControl_indicator {
+  background: var(--minimal-fill-4) !important;
+  border-radius: var(--minimal-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .UI-SegmentedControl_option:is([aria-selected="true"], [aria-checked="true"]) {
+  color: var(--minimal-text-1) !important;
+  font-weight: var(--minimal-weight-semibold) !important;
+}

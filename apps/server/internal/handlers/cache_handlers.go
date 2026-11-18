@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/labstack/echo/v4"
-	"kamehouse/internal/database/db"
+	"kamehouse/internal/mediastream/storyboard"
 )
 
 var (
@@ -52,6 +52,10 @@ type CacheStatsResponse struct {
 		DiskSizeBytes int64 `json:"diskSizeBytes"`
 		DiskItemCount int   `json:"diskItemCount"`
 	} `json:"fingerprints"`
+	Storyboards struct {
+		DiskSizeBytes int64 `json:"diskSizeBytes"`
+		DiskItemCount int   `json:"diskItemCount"`
+	} `json:"storyboards"`
 	Images struct {
 		DiskSizeBytes int64 `json:"diskSizeBytes"`
 		DiskItemCount int   `json:"diskItemCount"`
@@ -95,8 +99,8 @@ func clearDirFiles(dirPath string) (int64, int) {
 		if !e.IsDir() {
 			fullPath := filepath.Join(dirPath, e.Name())
 			if info, err := e.Info(); err == nil {
-				freedBytes += info.Size()
 				if err := os.Remove(fullPath); err == nil {
+					freedBytes += info.Size()
 					freedCount++
 				}
 			}
@@ -146,12 +150,14 @@ func (h *Handler) HandleGetCacheStats(c echo.Context) error {
 	imgDir := filepath.Join(h.App.Config.Cache.Dir, "images")
 	resp.Images.DiskSizeBytes, resp.Images.DiskItemCount = calcDirStats(imgDir)
 
+	resp.Storyboards.DiskSizeBytes, resp.Storyboards.DiskItemCount = calcDirStats(filepath.Join(h.App.Config.Cache.Dir, "storyboards"))
+
 	// 7. Drive block cache
 	if cache := h.driveBlockCache(); cache != nil {
 		resp.DriveBlocks.DiskSizeBytes, resp.DriveBlocks.DiskItemCount = cache.Stats()
 	}
 
-	resp.TotalDiskSizeBytes = resp.Thumbnails.DiskSizeBytes + resp.Videofiles.DiskSizeBytes + resp.Keyframes.DiskSizeBytes + resp.Fingerprints.DiskSizeBytes + resp.Images.DiskSizeBytes + resp.DriveBlocks.DiskSizeBytes
+	resp.TotalDiskSizeBytes = resp.Thumbnails.DiskSizeBytes + resp.Videofiles.DiskSizeBytes + resp.Keyframes.DiskSizeBytes + resp.Fingerprints.DiskSizeBytes + resp.Images.DiskSizeBytes + resp.Storyboards.DiskSizeBytes + resp.DriveBlocks.DiskSizeBytes
 	resp.IsWarming = isThumbnailWarming.Load()
 	resp.WarmingProgress = WarmingProgress{
 		Total:     warmingTotal.Load(),
@@ -164,7 +170,7 @@ func (h *Handler) HandleGetCacheStats(c echo.Context) error {
 }
 
 // HandleClearSystemCache clears disk caches and memory caches according to target.
-// Supports target: "thumbnails", "videofiles", "keyframes", "fingerprints", "images", "metadata", "drive" or "all" (default).
+// Supports target: "thumbnails", "videofiles", "keyframes", "fingerprints", "images", "metadata", "storyboards", "drive" or "all" (default).
 // "all" does not clear the Drive block cache ("drive"): refilling it spends Drive's daily download quota.
 //
 //	@summary clears system and thumbnail caches
@@ -223,6 +229,9 @@ func (h *Handler) HandleClearSystemCache(c echo.Context) error {
 
 	// 4b. Image-proxy
 	if target == "all" || target == "images" {
+		if shelfImageProxy != nil {
+			shelfImageProxy.PurgeMemoryCache()
+		}
 		fb, fc := clearDirFiles(imgDir)
 		freedBytes += fb
 		freedCount += fc
@@ -238,19 +247,21 @@ func (h *Handler) HandleClearSystemCache(c echo.Context) error {
 		}
 	}
 
+	if target == "all" || target == "storyboards" {
+		fb, fc, err := storyboard.Clear(c.Request().Context(), h.App.Config.Cache.Dir)
+		if err != nil {
+			return h.RespondWithError(c, err)
+		}
+		freedBytes += fb
+		freedCount += fc
+	}
 	// 5. Metadata
 	if target == "all" || target == "metadata" {
-		if h.App.Database != nil && h.App.Database.Gorm() != nil {
-			if deleted, err := db.DeleteExpiredMetadataCache(h.App.Database); err == nil && deleted > 0 {
-				freedCount += int(deleted)
-			}
+		deleted, err := h.clearProviderMetadata(c.Request().Context())
+		if err != nil {
+			return h.RespondWithError(c, err)
 		}
-		if h.App.Metadata.Provider != nil {
-			h.App.Metadata.Provider.ClearCache()
-		}
-		if client := h.App.Metadata.GetTMDBClient(); client != nil {
-			client.ClearCache()
-		}
+		freedCount += int(deleted)
 	}
 
 	h.App.Logger.Info().

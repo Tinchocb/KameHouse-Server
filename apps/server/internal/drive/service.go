@@ -23,6 +23,7 @@ type Service struct {
 	enabled          bool
 	isScanning       bool
 	progress         *ScanProgress
+	lastRun          scanRun
 	cachedEmail      string
 	cachedName       string
 	userInfoCachedAt time.Time

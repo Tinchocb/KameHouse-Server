@@ -130,7 +130,8 @@ describe("entradaFilaCola (cascada de entrada de Mi Lista)", () => {
     it("escalona las primeras ocho filas la primera vez que aparecen", () => {
         const mostradas = new Set<string>()
         expect(entradaFilaCola(mostradas, "a", 0)).toEqual({ animar: true, retraso: 0 })
-        expect(entradaFilaCola(mostradas, "b", 3).retraso).toBeCloseTo(0.18)
+        expect(entradaFilaCola(mostradas, "b", 3).retraso).toBeCloseTo(0.12)
+        expect(entradaFilaCola(mostradas, "last", 7).retraso).toBeCloseTo(0.24)
         expect(entradaFilaCola(mostradas, "c", 8)).toEqual({ animar: true, retraso: 0 })
     })
 

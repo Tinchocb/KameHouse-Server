@@ -1,0 +1,15 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  classic-minimalist.css — Tema Clásico / Minimalista (Apple TV+)     ║
+   ║  Punto de entrada modular: arquitectura refactorizada y dividida     ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
+
+@import "./classic-minimalist/tokens.css";
+@import "./classic-minimalist/buttons.css";
+@import "./classic-minimalist/hero.css";
+@import "./classic-minimalist/navigation.css";
+@import "./classic-minimalist/media-cards.css";
+@import "./classic-minimalist/series-detail.css";
+@import "./classic-minimalist/player.css";
+@import "./classic-minimalist/components.css";
+@import "./classic-minimalist/controls.css";
+@import "./classic-minimalist/typography.css";

@@ -21,26 +21,38 @@ interface MovieShelfProps {
  */
 function MovieShelf({ title, count, children }: MovieShelfProps) {
     const scrollerRef = React.useRef<HTMLDivElement>(null)
+    const edgesRafRef = React.useRef<number>(0)
     const [edges, setEdges] = React.useState({ start: true, end: true })
     const headingId = React.useId()
 
-    const updateEdges = React.useCallback(() => {
+    const flushEdges = React.useCallback(() => {
+        edgesRafRef.current = 0
         const el = scrollerRef.current
         if (!el) return
-        setEdges({
-            start: el.scrollLeft <= 4,
-            end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4,
-        })
+        const nextStart = el.scrollLeft <= 4
+        const nextEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4
+        setEdges((prev) => (prev.start === nextStart && prev.end === nextEnd ? prev : { start: nextStart, end: nextEnd }))
     }, [])
+
+    const updateEdges = React.useCallback(() => {
+        if (edgesRafRef.current) return
+        edgesRafRef.current = requestAnimationFrame(flushEdges)
+    }, [flushEdges])
 
     React.useEffect(() => {
         const el = scrollerRef.current
         if (!el) return
-        updateEdges()
+        flushEdges()
         const observer = new ResizeObserver(updateEdges)
         observer.observe(el)
-        return () => observer.disconnect()
-    }, [updateEdges, count])
+        return () => {
+            observer.disconnect()
+            if (edgesRafRef.current) {
+                cancelAnimationFrame(edgesRafRef.current)
+                edgesRafRef.current = 0
+            }
+        }
+    }, [flushEdges, updateEdges, count])
 
     const scrollByPage = (dir: -1 | 1) => {
         const el = scrollerRef.current
@@ -103,9 +115,7 @@ function MovieShelf({ title, count, children }: MovieShelfProps) {
 interface MoviesRowsProps {
     watchHistory: Continuity_WatchHistory | undefined
     /** Ya clasificadas por estado (la página las calcula una sola vez para filtros y filas). */
-    continueMovies: MovieEntry[]
     watchedMovies: MovieEntry[]
-    recentMovies: MovieEntry[]
     handleMovieClick: (mediaId: number) => void
     handleHoverCard: (entry: MovieEntry | null) => void
 }
@@ -115,7 +125,7 @@ interface MoviesRowsProps {
  * muestran si hay algo que poner (sin datos de visionado no aparece nada) y las
  * monta la página únicamente cuando no hay filtros activos.
  */
-export function MoviesRows({ watchHistory, watchedMovies, handleMovieClick, handleHoverCard }: MoviesRowsProps) {
+export const MoviesRows = React.memo(function MoviesRows({ watchHistory, watchedMovies, handleMovieClick, handleHoverCard }: MoviesRowsProps) {
     const sections = [
         { key: "again", title: "Para ver de nuevo", items: watchedMovies },
     ].filter((s) => s.items.length > 0)
@@ -126,16 +136,18 @@ export function MoviesRows({ watchHistory, watchedMovies, handleMovieClick, hand
         <div className="space-y-8">
             {sections.map((section) => (
                 <MovieShelf key={section.key} title={section.title} count={section.items.length}>
-                    {section.items.slice(0, MAX_ROW_ITEMS).map((entry) => (
+                    {section.items.slice(0, MAX_ROW_ITEMS).map((entry, idx) => (
                         <div
                             key={entry.mediaId}
                             role="listitem"
-                            className="w-[8.75rem] sm:w-40 lg:w-44 shrink-0 snap-start sm:hover:w-64 lg:hover:w-72 transition-[width,transform] duration-300 ease-smooth-out"
+                            className="w-36 sm:w-40 lg:w-44 shrink-0 snap-start"
                         >
                             <MovieCard
                                 entry={entry}
                                 era={entry.era}
                                 eraId={entry.eraId}
+                                isWideDrawer={false}
+                                priority={idx < 5}
                                 watchHistoryItem={entry.mediaId == null ? undefined : watchHistory?.[entry.mediaId]}
                                 initial={false}
                                 onClick={handleMovieClick}
@@ -147,4 +159,4 @@ export function MoviesRows({ watchHistory, watchedMovies, handleMovieClick, hand
             ))}
         </div>
     )
-}
+})

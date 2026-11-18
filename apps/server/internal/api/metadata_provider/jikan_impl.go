@@ -12,7 +12,6 @@ import (
 	apiMetadata "kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/database/models"
 	"kamehouse/internal/platforms/platform"
 
 	"github.com/rs/zerolog"
@@ -31,6 +30,13 @@ type JikanProviderImpl struct {
 
 	mu    sync.Mutex
 	cache map[int]*jikanCachedEntry
+	// publication serializes invalidation with durable writes; warm reads use mu only.
+	publication sync.Mutex
+	generation  uint64
+	closed      bool
+	workers     sync.WaitGroup
+	ctx         context.Context
+	cancel      context.CancelFunc
 	// failedUntil recuerda IDs cuya consulta falló hace poco, para no repetir
 	// los reintentos con backoff (~10 s) en cada apertura mientras Jikan esté caído.
 	failedUntil map[int]time.Time
@@ -44,10 +50,11 @@ type JikanProviderImpl struct {
 }
 
 type jikanCall struct {
-	start time.Time
-	done  chan struct{}
-	res   *apiMetadata.AnimeMetadata
-	err   error
+	generation uint64
+	start      time.Time
+	done       chan struct{}
+	res        *apiMetadata.AnimeMetadata
+	err        error
 }
 
 // jikanInlineWait es cuánto espera una apertura a Jikan antes de seguir sin sus
@@ -83,7 +90,9 @@ const (
 )
 
 func NewJikanProviderImpl(client *jikan.Client, database *db.Database, logger *zerolog.Logger, tmdbClient *tmdb.Client) *JikanProviderImpl {
+	ctx, cancel := context.WithCancel(context.Background())
 	p := &JikanProviderImpl{
+		ctx: ctx, cancel: cancel,
 		client:      client,
 		db:          database,
 		logger:      logger,
@@ -104,6 +113,10 @@ func NewJikanProviderImpl(client *jikan.Client, database *db.Database, logger *z
 
 func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata, error) {
 	p.mu.Lock()
+	if p.closed {
+		p.mu.Unlock()
+		return nil, context.Canceled
+	}
 	if time.Now().Before(p.unavailableUntil) {
 		p.mu.Unlock()
 		return nil, fmt.Errorf("jikan_provider: servicio caído, se reintenta más tarde: %w", jikan.ErrUnavailable)
@@ -112,13 +125,20 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 		p.mu.Unlock()
 		return nil, fmt.Errorf("jikan_provider: consulta para ID %d falló recientemente, se reintenta más tarde", id)
 	}
+	// A warm hit needs neither a producer goroutine nor an inline-wait timer.
+	// Keep outage/failure checks ahead of this, preserving their existing policy.
+	if entry, ok := p.cache[id]; ok && time.Now().Before(entry.expiresAt) {
+		p.mu.Unlock()
+		return entry.data, nil
+	}
 	call, ok := p.inflight[id]
 	if !ok {
 		if p.inflight == nil {
 			p.inflight = make(map[int]*jikanCall)
 		}
-		call = &jikanCall{start: time.Now(), done: make(chan struct{})}
+		call = &jikanCall{generation: p.generation, start: time.Now(), done: make(chan struct{})}
 		p.inflight[id] = call
+		p.workers.Add(1)
 		go p.runCall(id, call)
 	}
 	p.mu.Unlock()
@@ -136,9 +156,10 @@ func (p *JikanProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 }
 
 func (p *JikanProviderImpl) runCall(id int, call *jikanCall) {
+	defer p.workers.Done()
 	fetch := p.fetchFn
 	if fetch == nil {
-		fetch = p.getAnimeMetadata
+		fetch = func(id int) (*apiMetadata.AnimeMetadata, error) { return p.getAnimeMetadata(id, call.generation) }
 	}
 	func() {
 		// Corre fuera del goroutine del request: sin este recover, un panic acá
@@ -150,10 +171,13 @@ func (p *JikanProviderImpl) runCall(id int, call *jikanCall) {
 		}()
 		call.res, call.err = fetch(id)
 	}()
+	p.publication.Lock()
 	p.mu.Lock()
-	delete(p.inflight, id)
+	if p.inflight[id] == call {
+		delete(p.inflight, id)
+	}
 	var persistUntil time.Time
-	if call.err != nil {
+	if !p.closed && call.generation == p.generation && call.err != nil {
 		p.failedUntil[id] = time.Now().Add(jikanFailureTTL)
 		if errors.Is(call.err, jikan.ErrUnavailable) {
 			p.unavailableUntil = time.Now().Add(jikanFailureTTL)
@@ -164,10 +188,11 @@ func (p *JikanProviderImpl) runCall(id int, call *jikanCall) {
 	if !persistUntil.IsZero() && p.db != nil {
 		_ = db.UpsertMetadataCache(p.db, jikanOutageProvider, jikanOutageKey, persistUntil, jikanFailureTTL)
 	}
+	p.publication.Unlock()
 	close(call.done)
 }
 
-func (p *JikanProviderImpl) getAnimeMetadata(id int) (*apiMetadata.AnimeMetadata, error) {
+func (p *JikanProviderImpl) getAnimeMetadata(id int, generation uint64) (*apiMetadata.AnimeMetadata, error) {
 	// 1. Check in-memory cache
 	p.mu.Lock()
 	if entry, ok := p.cache[id]; ok && time.Now().Before(entry.expiresAt) {
@@ -179,36 +204,21 @@ func (p *JikanProviderImpl) getAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 	// 2. Check Database Persistent Cache
 	if p.db != nil {
 		var cachedData apiMetadata.AnimeMetadata
-		found, err := db.GetMetadataCache(p.db, "jikan-anime-episodes", strconv.Itoa(id), &cachedData)
+		found, err := db.GetMetadataCache(p.db, "jikan-anime-episodes", "public-v2:"+strconv.Itoa(id), &cachedData)
 		if err == nil && found {
-			p.mu.Lock()
-			p.cache[id] = &jikanCachedEntry{
-				data:      &cachedData,
-				expiresAt: time.Now().Add(jikanMetadataTTL),
-			}
-			p.mu.Unlock()
+			p.publishMetadata(generation, id, &cachedData, false)
 			return &cachedData, nil
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(p.ctx, 30*time.Second)
 	defer cancel()
 
 	if p.db == nil {
 		return nil, fmt.Errorf("database required to map local ID to Jikan")
 	}
 
-	var media *models.LibraryMedia
-	var err error
-	if m, errGet := db.GetLibraryMediaByID(p.db, uint(id)); errGet == nil && m != nil {
-		media = m
-	} else {
-		if id >= 1_000_000 {
-			media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id-1_000_000, "MOVIE")
-		} else {
-			media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id, "SHOW")
-		}
-	}
+	media, err := db.ResolveLibraryMediaByPublicID(p.db, id)
 	if err != nil || media == nil {
 		return nil, fmt.Errorf("media not found in library for ID %d", id)
 	}
@@ -395,22 +405,7 @@ func (p *JikanProviderImpl) getAnimeMetadata(id int) (*apiMetadata.AnimeMetadata
 		}
 	}
 
-	// Store in cache
-	p.mu.Lock()
-	p.cache[id] = &jikanCachedEntry{
-		data:      result,
-		expiresAt: time.Now().Add(jikanMetadataTTL),
-	}
-	p.mu.Unlock()
-
-	// 3. Save to Database Persistent Cache
-	// Un fallo aquí no afecta la respuesta (la caché en memoria ya tiene el dato), pero sin
-	// registrarlo la caché persistente nunca se llena y cada reinicio vuelve a pagar a Jikan.
-	if p.db != nil {
-		if err := db.UpsertMetadataCache(p.db, "jikan-anime-episodes", strconv.Itoa(id), result, 7*24*time.Hour); err != nil && p.logger != nil {
-			p.logger.Warn().Err(err).Int("mediaId", id).Msg("jikan_provider: no se pudo guardar la ficha en la caché persistente")
-		}
-	}
+	p.publishMetadata(generation, id, result, true)
 
 	return result, nil
 }
@@ -419,17 +414,49 @@ func (p *JikanProviderImpl) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedM
 	return NewSimpleAnimeMetadataWrapper(animeMetadata)
 }
 
-func (p *JikanProviderImpl) SetUseFallbackProvider(v bool) {}
-
 func (p *JikanProviderImpl) ClearCache() {
+	p.publication.Lock()
+	defer p.publication.Unlock()
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.generation++
 	p.cache = make(map[int]*jikanCachedEntry)
 	p.failedUntil = make(map[int]time.Time)
 	p.unavailableUntil = time.Time{}
+	p.inflight = make(map[int]*jikanCall)
 }
 
-func (p *JikanProviderImpl) Close() error { return nil }
+func (p *JikanProviderImpl) publishMetadata(generation uint64, id int, data *apiMetadata.AnimeMetadata, persist bool) {
+	p.publication.Lock()
+	defer p.publication.Unlock()
+	p.mu.Lock()
+	if p.closed || generation != p.generation {
+		p.mu.Unlock()
+		return
+	}
+	p.cache[id] = &jikanCachedEntry{data: data, expiresAt: time.Now().Add(jikanMetadataTTL)}
+	p.mu.Unlock()
+	// No memory-cache mutex is held across SQLite I/O. ClearCache joins the
+	// publication mutex so a retired write cannot commit after it returns.
+	if persist && p.db != nil {
+		if err := db.UpsertMetadataCache(p.db, "jikan-anime-episodes", "public-v2:"+strconv.Itoa(id), data, 7*24*time.Hour); err != nil && p.logger != nil {
+			p.logger.Warn().Err(err).Int("mediaId", id).Msg("jikan_provider: no se pudo guardar la ficha en la caché persistente")
+		}
+	}
+}
+
+func (p *JikanProviderImpl) Close() error {
+	p.mu.Lock()
+	p.closed = true
+	p.mu.Unlock()
+	p.cancel()
+	p.workers.Wait()
+	// Every possible fallback initialization belonged to a joined producer.
+	if p.tmdbFallback != nil {
+		return p.tmdbFallback.Close()
+	}
+	return nil
+}
 
 // tmdbFallbackProvider devuelve la instancia TMDB compartida (creada una sola vez).
 func (p *JikanProviderImpl) tmdbFallbackProvider() *TMDBProviderImpl {

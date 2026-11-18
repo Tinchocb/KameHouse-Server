@@ -22,8 +22,7 @@ import (
 // Returns:
 //   - error: An error if the Tags element could not be parsed.
 func (mp *MatroskaParser) parseTags(size uint64) error {
-	data := make([]byte, size)
-	_, err := io.ReadFull(mp.reader, data)
+	data, err := mp.reader.readMetadata(size)
 	if err != nil {
 		return err
 	}

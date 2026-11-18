@@ -3,9 +3,11 @@ import { useShallow } from "zustand/react/shallow"
 import { useUIStore } from "@/lib/store"
 import { IconMediaPause, IconMediaPlay } from "@/components/ui/icons";
 import { IconSwap } from "@/components/ui/kinetics";
+import { Button } from "@/components/ui/button"
 import { cn } from "@/components/ui/core/styling"
 import { getEraOpening, ERA_OPENINGS_SUBDIR } from "@/lib/config/era_openings"
 import { getServerBaseUrl } from "@/api/client/server-url"
+import { authorizeResourceUrl } from "@/api/client/auth"
 
 interface EraOpeningPlayerProps {
     sagaId: string
@@ -75,7 +77,7 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
     const base = getServerBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost")
     // /api/v1/music/stream rechaza separadores en `file`; la subcarpeta va en `dir`.
     const openingsDir = `${bgMusicDir.replace(/[\\/]+$/, "")}/${ERA_OPENINGS_SUBDIR}`
-    const streamUrl = `${base}/api/v1/music/stream?dir=${encodeURIComponent(openingsDir)}&file=${encodeURIComponent(opening.file)}`
+    const streamUrl = authorizeResourceUrl(`${base}/api/v1/music/stream?dir=${encodeURIComponent(openingsDir)}&file=${encodeURIComponent(opening.file)}`)
 
     const togglePlay = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -102,35 +104,33 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
     }
 
     return (
-        <button
+        <Button
+            intent="glass"
+            size="lg"
             onClick={togglePlay}
             className={cn(
-                "inline-flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-full border shadow-sm transition-[color,background-color,border-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer group",
-                isPlaying
-                    ? "bg-brand-accent/15 border-brand-accent/30 text-brand-accent"
-                    : "bg-surface-container-high/50 border-white/5 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container",
+                "era-opening-player font-bold",
                 className
             )}
             title={`Tema de la saga: ${opening.title}`}
             aria-label={`${isPlaying ? "Pausar" : "Reproducir"} el tema de la saga: ${opening.title}`}
             aria-pressed={isPlaying}
+            leftIcon={
+                <IconSwap swapKey={isPlaying ? "pause" : "play"} className="shrink-0 flex items-center justify-center">
+                    {isPlaying ? (
+                        <IconMediaPause size={16} className="shrink-0" />
+                    ) : (
+                        <IconMediaPlay size={16} className="shrink-0 ml-0.5" />
+                    )}
+                </IconSwap>
+            }
         >
-            <IconSwap swapKey={isPlaying ? "pause" : "play"} className="shrink-0 flex items-center justify-center">
-                {isPlaying ? (
-                    <IconMediaPause size={14} className="shrink-0" />
-                ) : (
-                    <IconMediaPlay size={14} className="shrink-0 ml-0.5 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent transition-colors duration-fast ease-smooth-out" />
-                )}
-            </IconSwap>
-
-            <span className="text-xs font-bold">
-                {opening.title}
-            </span>
+            <span>{opening.title}</span>
 
             {isPlaying && (
-                <div className="flex items-end gap-[2px] h-3 ml-1">
+                <span aria-hidden="true" className="flex items-end gap-[2px] h-3 ml-1.5">
                     {BAR_HEIGHTS.map((height, i) => (
-                        <div
+                        <span
                             key={i}
                             className="w-[2px] bg-brand-accent rounded-full animate-music-bars motion-reduce:animate-none"
                             style={{
@@ -139,8 +139,8 @@ export function EraOpeningPlayer({ sagaId, className }: EraOpeningPlayerProps) {
                             }}
                         />
                     ))}
-                </div>
+                </span>
             )}
-        </button>
+        </Button>
     )
 }

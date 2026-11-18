@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useUIStore } from "@/lib/store"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import {
     INITIAL_NAV_SCROLL_STATE,
     nextNavScrollState,
@@ -83,20 +84,10 @@ export function useNavCompact() {
         scrollCompact,
         engaged: pointerInside || focusInside,
     })
-    return { compact, density, handlers }
+    return { compact, handlers }
 }
 
 /** ¿La ventana es al menos `px` de ancho? Con `defaultValue` fuera del navegador (SSR/tests). */
 export function useMinWidth(px: number, defaultValue = true): boolean {
-    const query = `(min-width: ${px}px)`
-    return React.useSyncExternalStore(
-        (notify) => {
-            if (typeof window === "undefined" || !window.matchMedia) return () => {}
-            const mql = window.matchMedia(query)
-            mql.addEventListener("change", notify)
-            return () => mql.removeEventListener("change", notify)
-        },
-        () => (typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : defaultValue),
-        () => defaultValue,
-    )
+    return useMediaQuery(`(min-width: ${px}px)`, defaultValue)
 }

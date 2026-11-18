@@ -4,8 +4,6 @@ import { ERA_KEYS, type EraKey } from './eraBar';
 /** Cómo se ordena la línea de tiempo: por la historia o por cuándo salió cada serie. */
 export type TimelineOrder = 'chronological' | 'release';
 
-export const TIMELINE_ORDERS: readonly TimelineOrder[] = ['chronological', 'release'];
-
 /**
  * Orden de estreno de las series: Dragon Ball (1986), Z (1989), GT (1996), Super (2015), Daima (2024).
  * Dentro de cada serie, el número de episodio ya es el orden de emisión.
@@ -55,8 +53,4 @@ const ERA_RELEASE_RANK: Record<EraKey, number> = {
 
 function eraRank(era: EraKey): number {
   return ERA_RELEASE_RANK[era];
-}
-
-export function parseTimelineOrder(raw: string | null | undefined): TimelineOrder {
-  return raw === 'release' ? 'release' : 'chronological';
 }

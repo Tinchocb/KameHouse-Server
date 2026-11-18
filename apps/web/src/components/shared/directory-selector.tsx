@@ -177,7 +177,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             : <IconStatusFolderOpen className="w-4 h-4" />}
                         title={__isDesktop__ ? "Explorar carpetas (ventana del sistema)" : "Explorar carpetas en el servidor"}
                         aria-label={__isDesktop__ ? "Abrir explorador del sistema" : "Abrir explorador del servidor"}
-                        className="h-9 w-9 md:h-9 md:w-9 shrink-0 text-on-surface-variant active:scale-95"
+                        className="h-9 w-9 md:h-9 md:w-9 shrink-0 text-on-surface-variant"
                         onClick={handleExplorerClick}
                         disabled={rest.disabled || isNativeOpening}
                     />
@@ -199,7 +199,6 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             size="sm"
                             intent="secondary"
                             onClick={selectorState.off}
-                            className="active:scale-95"
                         >
                             Cancelar
                         </Button>
@@ -210,7 +209,6 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             leftIcon={<IconUiCheck className="w-3.5 h-3.5" />}
                             onClick={handleUseFolder}
                             disabled={rest.disabled || !isValid}
-                            className="active:scale-95"
                         >
                             Usar esta carpeta
                         </Button>
@@ -252,12 +250,12 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                 >
                     {hasSuggestions && (
                         <>
-                            <span className="flex-none text-2xs font-semibold text-label-2">Sugerencias:</span>
+                            <span className="flex-none text-xs font-semibold text-label-2">Sugerencias:</span>
                             {suggestions.map(folder => (
                                 <button
                                     key={folder.Path}
                                     type="button"
-                                    className="py-1.5 flex items-center gap-2 text-xs px-3 rounded-full border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/25 transition-[background-color,border-color,transform] duration-fast ease-out-strong flex-none cursor-pointer active:scale-95 min-h-[32px]"
+                                    className="py-1.5 flex items-center gap-2 text-xs px-3 outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded-full border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] bg-[var(--neutral-elev-2)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:hover:border-white/25 transition-[background-color,border-color,transform] duration-fast ease-out-strong flex-none cursor-pointer motion-safe:active:scale-[0.97] min-h-[32px]"
                                     onClick={() => setInput(folder.Path)}
                                 >
                                     <IconStatusFolder className="w-3.5 h-3.5 text-on-surface-variant" />
@@ -270,7 +268,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
 
                 {/* Carga, lista y vacíos comparten h-60: el diálogo no salta entre carpetas. */}
                 {isLoading ? (
-                    <div className="h-60 rounded-2xl border border-white/10 bg-white/[0.02] flex items-center justify-center gap-2 text-xs text-label-2">
+                    <div className="h-60 rounded-2xl border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] bg-[var(--neutral-elev-1)] flex items-center justify-center gap-2 text-xs text-label-2">
                         <IconUiSpinner className="w-4 h-4 animate-spin" />
                         <span>Explorando…</span>
                     </div>
@@ -278,7 +276,7 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                     <ScrollArea
                         aria-busy={isPlaceholderData || undefined}
                         className={cn(
-                            "h-60 rounded-2xl border border-white/10 bg-white/[0.02] transition-opacity duration-quick ease-out-strong",
+                            "h-60 rounded-2xl border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] bg-[var(--neutral-elev-1)] transition-opacity duration-quick ease-out-strong",
                             isPlaceholderData && "opacity-60"
                         )}
                     >
@@ -286,37 +284,37 @@ export const DirectorySelector = React.memo(React.forwardRef<HTMLInputElement, D
                             <button
                                 key={folder.Path}
                                 type="button"
-                                className="w-full flex items-center gap-2.5 py-2 px-3 min-h-[44px] cursor-pointer hover:bg-white/[0.06] transition-[color,background-color,border-color,transform] duration-fast ease-out-strong text-left active:scale-[0.99]"
+                                className="w-full flex items-center gap-2.5 py-2 px-3 min-h-[44px] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)] transition-[color,background-color,border-color,transform] duration-fast ease-out-strong text-left motion-safe:active:scale-[0.97]"
                                 onClick={() => setInput(folder.Path)}
                                 title={folder.Path}
                             >
                                 <IconStatusFolder className="w-4 h-4 text-brand-accent shrink-0" />
                                 <span className="flex-1 min-w-0">
                                     <span className="block truncate text-xs font-semibold text-on-surface">{folder.Name}</span>
-                                    <span className="block truncate text-3xs font-mono text-label-2">{folder.Path}</span>
+                                    <span className="block truncate text-xs font-mono text-label-2">{folder.Path}</span>
                                 </span>
                                 <IconNavigationChevronRight aria-hidden="true" className="w-3.5 h-3.5 text-label-3 shrink-0" />
                             </button>
                         ))}
                     </ScrollArea>
                 ) : debouncedInput.length > 0 ? (
-                    <div className="h-60 flex items-center justify-center p-4 rounded-2xl border border-dashed border-white/10 text-center">
-                        <p className="text-2xs text-label-2 font-medium">
+                    <div className="h-60 flex items-center justify-center p-4 rounded-2xl border border-dashed border-[var(--neutral-separator)] bg-[var(--neutral-elev-1)]/40 text-center">
+                        <p className="text-xs text-label-2 font-medium">
                             {data?.exists
                                 ? "Carpeta vacía: no contiene subcarpetas."
                                 : "Sin resultados: revisa la ruta o sube un nivel."}
                         </p>
                     </div>
                 ) : (
-                    <div className="h-60 flex items-center justify-center p-4 rounded-2xl border border-dashed border-white/10 text-center">
-                        <p className="text-2xs text-label-2 font-medium">
+                    <div className="h-60 flex items-center justify-center p-4 rounded-2xl border border-dashed border-[var(--neutral-separator)] bg-[var(--neutral-elev-1)]/40 text-center">
+                        <p className="text-xs text-label-2 font-medium">
                             Escribe una ruta del servidor para empezar a explorar.
                         </p>
                     </div>
                 )}
 
                 {input.length > 0 && (
-                    <p role="status" className={cn("text-2xs truncate px-1", isChecking ? "text-label-2" : isValid ? "text-status-success" : "text-status-error")}>
+                    <p role="status" className={cn("text-xs truncate px-1", isChecking ? "text-label-2" : isValid ? "text-status-success" : "text-status-error")}>
                         {isChecking
                             ? "Comprobando la ruta…"
                             : isValid

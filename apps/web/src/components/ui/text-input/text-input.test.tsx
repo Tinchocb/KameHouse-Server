@@ -29,9 +29,16 @@ describe("TextInput readonly", () => {
     })
 
     it("un campo disabled sigue deshabilitado", () => {
-        // Sin name: BasicField no enlaza la etiqueta cuando el campo está disabled (htmlFor undefined).
         render(<TextInput label="Ruta" disabled />)
-        const input = screen.getByRole("textbox") as HTMLInputElement
+        const input = screen.getByRole("textbox", { name: "Ruta" }) as HTMLInputElement
         expect(input.disabled).toBe(true)
+    })
+
+    it("la variante de línea asocia el error y la ayuda al campo nativo", () => {
+        render(<TextInput appearance="line" label="Nombre" help="Nombre de tu lista" error="Escribí un nombre" />)
+        const input = screen.getByRole("textbox", { name: "Nombre" })
+        expect(input).toHaveAttribute("aria-invalid", "true")
+        expect(input).toHaveAccessibleDescription("Nombre de tu lista Escribí un nombre")
+        expect(input).not.toHaveAttribute("appearance")
     })
 })

@@ -29,7 +29,6 @@ describe("isNearEnd", () => {
 const BASE = {
     mediaFormat: "TV",
     marathonMode: false,
-    tvMode: false,
     hasNextEpisode: true,
     total: 1400,
     curr: 1000,
@@ -43,8 +42,8 @@ describe("shouldShowNextEpisode", () => {
         expect(shouldShowNextEpisode(BASE)).toBe(false)
     })
 
-    it("en maratón nunca muestra la tarjeta, tampoco con modo TV", () => {
-        expect(shouldShowNextEpisode({ ...BASE, curr: 1390, marathonMode: true, tvMode: true })).toBe(false)
+    it("en maratón nunca muestra la tarjeta", () => {
+        expect(shouldShowNextEpisode({ ...BASE, curr: 1390, marathonMode: true })).toBe(false)
         expect(shouldShowNextEpisode({ ...BASE, inEdWindow: true, marathonMode: true })).toBe(false)
     })
 
@@ -54,10 +53,6 @@ describe("shouldShowNextEpisode", () => {
         expect(shouldShowNextEpisode({ ...BASE, curr: 1390, hasNextEpisode: false })).toBe(false)
     })
 
-    it("en TV usa umbral de 3s", () => {
-        expect(shouldShowNextEpisode({ ...BASE, tvMode: true, curr: 1398 })).toBe(true)
-        expect(shouldShowNextEpisode({ ...BASE, tvMode: true, curr: 1390 })).toBe(false)
-    })
 })
 
 describe("shouldAutoAdvanceMarathon", () => {

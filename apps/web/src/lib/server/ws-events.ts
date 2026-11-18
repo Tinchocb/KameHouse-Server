@@ -115,7 +115,7 @@ export type WebSocketMessage =
     | { type: typeof WSEvents.REFRESHED_ANIME_COLLECTION; payload: null }
     | { type: typeof WSEvents.SKIP_SCAN_STATUS; payload: SkipScanStatusPayload }
     | { type: typeof WSEvents.DRIVE_SCAN_PROGRESS; payload: DriveScanProgress }
-    | { type: typeof WSEvents.DRIVE_SCAN_COMPLETED; payload?: { count?: number; pruned?: number; error?: string } }
+    | { type: typeof WSEvents.DRIVE_SCAN_COMPLETED; payload?: { count?: number; pruned?: number; error?: string; auto?: boolean } }
     | { type: typeof WSEvents.LIBRARY_UPDATED; payload?: { source?: string; count?: number } }
 
 const KNOWN_WS_TYPES = new Set<string>(Object.values(WSEvents))

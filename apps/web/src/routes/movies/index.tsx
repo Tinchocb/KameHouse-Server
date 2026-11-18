@@ -20,20 +20,10 @@ const MOVIE_SORTS = ["year_asc", "year_desc", "alpha_asc", "alpha_desc", "rating
 export type MoviesSearch = {
     era?: EraId
     sort?: (typeof MOVIE_SORTS)[number]
-    q?: string
-    /** Estado de visionado; ausente = todas. */
-    estado?: "pending" | "continue" | "watched"
-    /** Década de estreno (1980, 1990…); ausente = todas. */
-    decada?: number
 }
 
 function pick<T extends string>(value: unknown, allowed: readonly T[]): T | undefined {
     return typeof value === "string" && (allowed as readonly string[]).includes(value) ? (value as T) : undefined
-}
-
-function pickDecade(value: unknown): number | undefined {
-    const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN
-    return Number.isInteger(n) && n >= 1900 && n <= 2100 && n % 10 === 0 ? n : undefined
 }
 
 const ERA_IDS = ERAS.map((e) => e.id)
@@ -42,9 +32,6 @@ export const Route = createFileRoute("/movies/")({
     validateSearch: (search: Record<string, unknown>): MoviesSearch => ({
         era: pick(search.era, ERA_IDS),
         sort: pick(search.sort, MOVIE_SORTS),
-        q: typeof search.q === "string" && search.q.trim() !== "" ? search.q.slice(0, 100) : undefined,
-        estado: pick(search.estado, ["pending", "continue", "watched"] as const),
-        decada: pickDecade(search.decada),
     }),
     // prefetch (no ensureQueryData): nunca lanza; ver home/index.tsx.
     loader: ({ context }) => {

@@ -13,19 +13,7 @@
 // and serve as the central location for all data type definitions used by other files in the project.
 package matroska
 
-// Matroska compression types
-//
-// These constants define the compression algorithms that can be applied to Matroska tracks.
-const (
-	// CompZlib indicates zlib compression (RFC 1950).
-	CompZlib = 0
-	// CompBzip indicates bzip2 compression.
-	CompBzip = 1
-	// CompLZO1X indicates LZO1X compression.
-	CompLZO1X = 2
-	// CompPrepend indicates header stripping compression where data is prepended during decompression.
-	CompPrepend = 3
-)
+
 
 // Track types
 //
@@ -39,19 +27,7 @@ const (
 	TypeSubtitle = 17
 )
 
-// Tag target types
-//
-// These constants define the different types of targets that Matroska tags can be applied to.
-const (
-	// TargetTrack indicates that the tag applies to a specific track.
-	TargetTrack = 0
-	// TargetChapter indicates that the tag applies to a specific chapter.
-	TargetChapter = 1
-	// TargetAttachment indicates that the tag applies to a specific attachment.
-	TargetAttachment = 2
-	// TargetEdition indicates that the tag applies to a specific edition.
-	TargetEdition = 3
-)
+
 
 // TrackInfo contains information about a track in a Matroska file.
 //

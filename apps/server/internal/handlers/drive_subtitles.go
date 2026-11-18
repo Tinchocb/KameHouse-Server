@@ -123,6 +123,9 @@ func (h *Handler) HandleDriveSubtitlesStatus(c echo.Context) error {
 	if !ok {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid gdrive path is required"))
 	}
+	if _, err := h.refreshDriveRevision(c.Request().Context(), fileID); err != nil {
+		return h.RespondWithCodeError(c, http.StatusBadGateway, errors.New("could not verify the current Drive file revision"))
+	}
 	resp := driveSubtitlesStatusResponse{DriveSubtitleStatus: h.App.MediastreamRepository.DriveSubtitleStatus(path)}
 	if resp.State == mediastream.DriveSubtitlesDone {
 		ext := strings.ToLower(filepath.Ext(fileName))
@@ -156,6 +159,9 @@ func (h *Handler) HandleDriveSubtitlesExtract(c echo.Context) error {
 	}
 
 	repo := h.App.MediastreamRepository
+	if _, err := h.refreshDriveRevision(c.Request().Context(), fileID); err != nil {
+		return h.RespondWithCodeError(c, http.StatusBadGateway, errors.New("could not verify the current Drive file revision"))
+	}
 	if st := repo.DriveSubtitleStatus(b.Path); st.State == mediastream.DriveSubtitlesDone ||
 		st.State == mediastream.DriveSubtitlesQueued || st.State == mediastream.DriveSubtitlesRunning {
 		return h.RespondWithData(c, st)
@@ -232,17 +238,80 @@ func (h *Handler) driveSubtitleSource(ctx context.Context, drivePath string) (mk
 	if h.App.DriveService == nil || !h.App.DriveService.IsEnabled() {
 		return nil, errors.New("google drive integration is not active")
 	}
+	if _, err := h.refreshDriveRevision(ctx, fileID); err != nil {
+		return nil, err
+	}
 	var fetch drive.RangeFetcher = func(ctx context.Context, rh string) (*http.Response, error) {
 		return h.App.DriveService.StreamMedia(ctx, fileID, rh)
 	}
 	if cache := h.driveBlockCache(); cache != nil {
 		h.validateDriveCache(cache, fileID)
-		fetch = cache.Fetcher(fileID, fetch)
+		// Subtitle reads jump between headers, Cues and selected clusters. Keep
+		// the shared disk cache without downloading unrelated following blocks.
+		fetch = cache.FetcherWithoutReadAhead(fileID, fetch)
 	}
 	if size := h.driveFileSizeCtx(ctx, fileID, drivePath); size > 0 {
 		return drive.NewRangeSource(fetch, size), nil
 	}
 	return drive.ProbeRangeSource(ctx, fetch)
+}
+
+// driveSubtitleDirectSource es driveSubtitleSource sin la caché de bloques: para leer unos
+// pocos bytes sueltos (un bloque de subtítulo ubicado por el índice del archivo) no conviene
+// bajar el bloque de 16 MiB que los contiene. La revisión ya la verificó quien abrió la sesión.
+func (h *Handler) driveSubtitleDirectSource(ctx context.Context, drivePath string) (mkvsubs.Source, error) {
+	fileID, _, ok := validDrivePathParam(drivePath)
+	if !ok {
+		return nil, errors.New("invalid gdrive path")
+	}
+	if h.App.DriveService == nil || !h.App.DriveService.IsEnabled() {
+		return nil, errors.New("google drive integration is not active")
+	}
+	var fetch drive.RangeFetcher = func(ctx context.Context, rh string) (*http.Response, error) {
+		return h.App.DriveService.StreamMedia(ctx, fileID, rh)
+	}
+	if size := h.driveFileSizeCtx(ctx, fileID, drivePath); size > 0 {
+		return drive.NewRangeSource(fetch, size), nil
+	}
+	return drive.ProbeRangeSource(ctx, fetch)
+}
+
+type driveSubtitlesTitleCardBody struct {
+	Path string `json:"path"` // gdrive://<fileId>/<ruta>
+	// From: segundo desde el que se busca (el fin del opening si se conoce; si no, 0).
+	From float64 `json:"from"`
+}
+
+// HandleDriveSubtitlesTitleCard busca la placa del título del episodio en los subtítulos
+// ASS embebidos: el reproductor la usa como fin del resumen que sigue al opening. Responde
+// cuando terminó de leer ese tramo (puede tardar lo que tarde Drive).
+//
+//	@summary finds the episode title card in the embedded ASS subtitles of a Google Drive file.
+//	@route /api/v1/drive/subtitles/title-card [POST]
+func (h *Handler) HandleDriveSubtitlesTitleCard(c echo.Context) error {
+	var b driveSubtitlesTitleCardBody
+	if err := c.Bind(&b); err != nil {
+		return h.RespondWithError(c, err)
+	}
+	fileID, _, valid := validDrivePathParam(b.Path)
+	if !valid {
+		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid gdrive path is required"))
+	}
+	if h.App.DriveService == nil || !h.App.DriveService.IsEnabled() {
+		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("google drive integration is not active"))
+	}
+	if _, err := h.refreshDriveRevision(c.Request().Context(), fileID); err != nil {
+		return h.RespondWithCodeError(c, http.StatusBadGateway, errors.New("could not verify the current Drive file revision"))
+	}
+
+	card, err := h.App.MediastreamRepository.DriveTitleCard(c.Request().Context(), b.Path, b.From)
+	if errors.Is(err, mediastream.ErrDriveWindowUnavailable) {
+		return h.RespondWithCodeError(c, http.StatusNotImplemented, err)
+	}
+	if err != nil {
+		return h.RespondWithCodeError(c, http.StatusBadGateway, err)
+	}
+	return h.RespondWithData(c, card)
 }
 
 type driveSubtitlesWindowBody struct {
@@ -264,12 +333,17 @@ func (h *Handler) HandleDriveSubtitlesWindow(c echo.Context) error {
 	if err := c.Bind(&b); err != nil {
 		return h.RespondWithError(c, err)
 	}
-	if _, _, ok := validDrivePathParam(b.Path); !ok {
+	fileID, _, valid := validDrivePathParam(b.Path)
+	if !valid {
 		return h.RespondWithCodeError(c, http.StatusBadRequest, errors.New("valid gdrive path is required"))
 	}
 	if h.App.DriveService == nil || !h.App.DriveService.IsEnabled() {
 		return h.RespondWithCodeError(c, http.StatusServiceUnavailable, errors.New("google drive integration is not active"))
 	}
+	if _, err := h.refreshDriveRevision(c.Request().Context(), fileID); err != nil {
+		return h.RespondWithCodeError(c, http.StatusBadGateway, errors.New("could not verify the current Drive file revision"))
+	}
+
 	st, err := h.App.MediastreamRepository.DriveSubtitleWindow(c.Request().Context(), b.Path, b.Position, b.Full)
 	if errors.Is(err, mediastream.ErrDriveWindowUnavailable) {
 		return h.RespondWithCodeError(c, http.StatusNotImplemented, err)

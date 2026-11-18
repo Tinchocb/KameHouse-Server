@@ -17,8 +17,6 @@ export type VideoPlayerProps = {
     /** Segundo desde el que arranca (lo decide la ficha: "Continuar viendo"). */
     initialProgressSeconds?: number
     malId?: number | null
-    /** Editorial filler mark (animefillerlist). */
-    isFillerEpisode?: boolean
     /** Media format ("TV", "MOVIE", "OVA", etc.) — passed to player core to control fallback skip window */
     mediaFormat?: string | null
     episodes?: {
@@ -30,7 +28,6 @@ export type VideoPlayerProps = {
     }[]
     onSelectEpisode?: (episodeNumber: number) => void
     nextStreamUrl?: string
-    nextStreamType?: "local" | "online" | "direct" | "transcode" | "optimized"
     nextEpisodeTitle?: string
     nextEpisodeNumber?: number
     nextEpisodeImage?: string

@@ -12,7 +12,6 @@ interface DBMovieDef {
     title: string
     year: number
     type: "MOVIE" | "SPECIAL" | "OVA"
-    image?: string
 }
 
 export interface DBFranchiseSeries {

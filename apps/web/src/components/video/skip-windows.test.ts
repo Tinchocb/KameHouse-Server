@@ -4,6 +4,7 @@ import {
     findOutroChapter,
     isIntroChapter,
     isOutroChapter,
+    recapFromTitleCard,
     resolveActiveEd,
     resolveActiveOp,
     resolveEdWindow,
@@ -31,9 +32,76 @@ describe("resolveRecapWindow", () => {
             { name: "Resumen", startTime: 45, endTime: 0 },
         ])).toBeUndefined()
     })
+
+    it("un capítulo 'Resumen' gana sobre la placa del título", () => {
+        const op = { startTime: 0, endTime: 110, source: "aniskip" }
+        expect(resolveRecapWindow(undefined, [{ name: "Resumen", startTime: 0, endTime: 45 }],
+            { titleStart: 171.46, songEnd: 98.81 }, op))
+            .toEqual({ startTime: 0, endTime: 45, source: "chapters" })
+    })
+
+    it("el recap de AniSkip gana sobre la placa del título", () => {
+        const op = { startTime: 0, endTime: 110, source: "aniskip" }
+        expect(resolveRecapWindow({ recap: { startTime: 0, endTime: 60 } }, [],
+            { titleStart: 171.46, songEnd: 98.81 }, op))
+            .toEqual({ startTime: 0, endTime: 60, source: "aniskip" })
+    })
+
+    it("sin capítulos ni AniSkip usa la placa del título", () => {
+        const op = { startTime: 0, endTime: 110, source: "aniskip" }
+        expect(resolveRecapWindow(undefined, [], { titleStart: 171.46, songEnd: 98.81 }, op))
+            .toEqual({ startTime: 110, endTime: 171.46, source: "subtitle" })
+    })
+})
+
+describe("recapFromTitleCard", () => {
+    it("va del fin del opening conocido a la placa del título", () => {
+        const op = { startTime: 0, endTime: 110, source: "aniskip" }
+        expect(recapFromTitleCard({ titleStart: 171.46, songEnd: 98.81 }, op))
+            .toEqual({ startTime: 110, endTime: 171.46, source: "subtitle" })
+    })
+
+    it("sin opening conocido parte del fin del karaoke", () => {
+        expect(recapFromTitleCard({ titleStart: 171.46, songEnd: 98.81 }, undefined))
+            .toEqual({ startTime: 98.81, endTime: 171.46, source: "subtitle" })
+    })
+
+    it("sin placa o con placa no encontrada no hay resumen", () => {
+        expect(recapFromTitleCard(undefined, undefined)).toBeUndefined()
+        expect(recapFromTitleCard({ titleStart: -1, songEnd: 0 }, undefined)).toBeUndefined()
+    })
+
+    it("sin opening ni karaoke visto no hay resumen", () => {
+        expect(recapFromTitleCard({ titleStart: 171, songEnd: 0 }, undefined)).toBeUndefined()
+    })
+
+    it("un título pegado al opening (menos de 10 s) no es resumen", () => {
+        const op = { startTime: 0, endTime: 110, source: "aniskip" }
+        expect(recapFromTitleCard({ titleStart: 115, songEnd: 0 }, op)).toBeUndefined()
+    })
+
+    it("un tramo de más de 180 s no se toma por resumen", () => {
+        const op = { startTime: 0, endTime: 110, source: "aniskip" }
+        expect(recapFromTitleCard({ titleStart: 400, songEnd: 0 }, op)).toBeUndefined()
+    })
+
+    it("ignora un opening inválido (más de 300 s) y usa el fin del karaoke", () => {
+        const op = { startTime: 0, endTime: 900, source: "aniskip" }
+        expect(recapFromTitleCard({ titleStart: 171.46, songEnd: 98.81 }, op))
+            .toEqual({ startTime: 98.81, endTime: 171.46, source: "subtitle" })
+    })
 })
 
 describe("resolveActiveOp", () => {
+    it("rechaza una intro de 1200 segundos incluso si llega de caché o capítulos", () => {
+        const broken = { startTime: 90, endTime: 1390, source: "chapters" }
+        expect(resolveActiveOp(broken, 1400)?.source).toBe("heuristic")
+        expect(resolveOpWindow({ op: broken }, [{ ...broken, name: "Intro" }], { opStart: 90, opEnd: 1390 })).toBeUndefined()
+    })
+    it("recurre al capítulo válido si la marca externa está corrupta", () => {
+        expect(resolveOpWindow({ op: { startTime: 0, endTime: Infinity } }, [{ name: "OP", startTime: 10, endTime: 100 }], undefined))
+            .toEqual({ startTime: 10, endTime: 100, source: "chapters" })
+    })
     it("respeta datos explícitos", () => {
         const op = { startTime: 10, endTime: 100, source: "aniskip" }
         expect(resolveActiveOp(op, 1400, "TV")).toBe(op)

@@ -1,4 +1,5 @@
 import { cn } from "@/components/ui/core/styling"
+import { useId } from "react"
 
 interface RangeSliderProps {
     label: string
@@ -13,6 +14,7 @@ interface RangeSliderProps {
 }
 
 export function RangeSlider({ label, description, min, max, step = 1, value, onChange, formatValue, className }: RangeSliderProps) {
+    const descriptionId = useId()
     return (
         // Resaltado en un ::before inset y redondeado (igual que OsToggle): la banda no toca los
         // bordes de la tarjeta ni los divisores de la fila.
@@ -23,8 +25,8 @@ export function RangeSlider({ label, description, min, max, step = 1, value, onC
             "[@media(hover:hover)_and_(pointer:fine)]:hover:before:opacity-100"
         )}>
             <div className="space-y-1 flex-1 max-w-xl">
-                <p className="text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover/slider:text-label-1 transition-[color] duration-fast ease-smooth-out tracking-tight">{label}</p>
-                {description && <p className="text-2xs text-label-2 leading-relaxed font-medium">{description}</p>}
+                <p className="settings-field-label text-xs font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover/slider:text-label-1 transition-[color] duration-fast ease-smooth-out tracking-tight">{label}</p>
+                {description && <p id={descriptionId} className="settings-field-help text-2xs text-label-2 leading-relaxed font-medium">{description}</p>}
             </div>
             <div className={cn("flex items-center gap-3 w-full md:w-72", className)}>
                 <div className="relative flex items-center w-full min-h-[44px]">
@@ -37,6 +39,7 @@ export function RangeSlider({ label, description, min, max, step = 1, value, onC
                         value={value}
                         onChange={(e) => onChange(parseFloat(e.target.value))}
                         aria-label={label}
+                        aria-describedby={description ? descriptionId : undefined}
                         aria-valuetext={formatValue ? formatValue(value) : String(value)}
                         className="relative z-10 w-full min-h-[44px] h-11 accent-[var(--selected-bg)] bg-transparent appearance-none cursor-pointer [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-transparent [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:bg-transparent"
                     />

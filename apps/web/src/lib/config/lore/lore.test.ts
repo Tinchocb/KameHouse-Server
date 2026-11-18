@@ -16,9 +16,7 @@ describe('lore canónico', () => {
   });
 
   it('ninguna cita trae números de página o capítulo sin verificar', () => {
-    const citations = [
-      ...Object.values(LORE_GLOSSARY_TERMS).map((t) => t.sourceCitation),
-    ];
+    const citations = Object.values(LORE_GLOSSARY_TERMS).map((t) => t.sourceCitation);
     for (const citation of citations) {
       expect(citation).not.toMatch(UNVERIFIED_LOCATOR);
     }

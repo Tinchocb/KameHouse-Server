@@ -21,18 +21,15 @@ describe("floating-pill-nav", () => {
     })
 })
 
-// La barra pasa a solo íconos al bajar la página. Si el ícono queda solo, el destino
-// tiene que seguir teniendo nombre, estado y una animación que no mueva el layout.
+// La barra pasa a solo íconos al bajar la página o en ventanas angostas. Si el ícono queda solo,
+// el destino tiene que seguir teniendo nombre, estado y una animación que no mueva el layout.
 describe("barra compacta (solo íconos)", () => {
     const nav = readFileSync(join(__dirname, "floating-pill-nav.tsx"), "utf8")
-    const mobile = readFileSync(join(__dirname, "app-topnav.tsx"), "utf8")
     const label = readFileSync(join(__dirname, "nav-label.tsx"), "utf8")
 
     it("cada destino conserva aria-label y aria-current al quedar en ícono", () => {
         expect(nav).toMatch(/aria-label=\{item\.label\}/)
         expect(nav).toMatch(/aria-current=\{isPillActive \? "page" : undefined\}/)
-        expect(mobile).toMatch(/aria-label=\{item\.label\}/)
-        expect(mobile).toMatch(/aria-current=\{isActive \? "page" : undefined\}/)
     })
 
     it("muestra un tooltip al enfocar o pasar el puntero cuando no hay etiqueta", () => {
@@ -44,7 +41,7 @@ describe("barra compacta (solo íconos)", () => {
     it("la píldora se reacomoda con layout de framer-motion, sin animar ancho a mano", () => {
         expect(nav).toMatch(/<m\.nav\s+layout/)
         expect(label).toMatch(/mode="popLayout"/)
-        expect(nav + mobile + label).not.toMatch(/animate=\{\{[^}]*(width|height)/)
+        expect(nav + label).not.toMatch(/animate=\{\{[^}]*(width|height)/)
     })
 
     it("las etiquetas solo animan opacity y transform, y respetan reduced motion", () => {
@@ -55,12 +52,10 @@ describe("barra compacta (solo íconos)", () => {
 
     it("lo decide el hook compartido, que sigue la preferencia guardada", () => {
         expect(nav).toMatch(/useNavCompact\(\)/)
-        expect(mobile).toMatch(/useNavCompact\(\)/)
     })
 
     it("mantiene el objetivo táctil de 44 px con puntero grueso", () => {
         expect(nav).toMatch(/\[@media\(pointer:coarse\)\]:min-h-\[44px\]/)
-        expect(mobile).toMatch(/min-h-\[44px\]/)
     })
 
     it("la isla de la marca se compacta a solo logo con la misma señal que la barra", () => {
@@ -83,22 +78,15 @@ describe("barra compacta (solo íconos)", () => {
         // Ajustes de 32 px (44 con puntero grueso)
         expect(right.match(/h-8 w-8 \[@media\(pointer:coarse\)\]:h-11 \[@media\(pointer:coarse\)\]:w-11/g)).toHaveLength(1)
     })
-
-    it("la barra móvil no recorta las etiquetas con elipsis", () => {
-        const bottom = mobile.slice(mobile.indexOf("export const AppBottomNav"))
-        expect(bottom).not.toMatch(/truncate/)
-        expect(bottom).not.toMatch(/uppercase/)
-    })
 })
 
 // Ritmo de las islas: el micro-feedback (hover, presión, estado activo) va en 150 ms.
 describe("tiempos y formas de las islas", () => {
     const nav = readFileSync(join(__dirname, "floating-pill-nav.tsx"), "utf8")
-    const mobile = readFileSync(join(__dirname, "app-topnav.tsx"), "utf8")
     const search = readFileSync(join(__dirname, "expandable-search.tsx"), "utf8")
 
     it("no usa la variable --duration-fast: el micro-feedback va con --duration-quick (150 ms)", () => {
-        for (const source of [nav, mobile, search]) {
+        for (const source of [nav, search]) {
             expect(source).not.toMatch(/var\(--duration-fast\)/)
         }
     })
@@ -109,10 +97,10 @@ describe("tiempos y formas de las islas", () => {
     })
 
     it("el indicador compartido lleva el radio en style para que framer lo corrija al escalar", () => {
-        const indicators = (nav + mobile).match(/<MagneticIndicator[\s\S]*?\/>/g) ?? []
+        const indicators = nav.match(/<MagneticIndicator[\s\S]*?\/>/g) ?? []
         expect(indicators.length).toBeGreaterThan(0)
         for (const tag of indicators) {
-            expect(tag).toMatch(/borderRadius: 9999/)
+            expect(tag).toMatch(/style=\{\{\s*borderRadius:/)
         }
     })
 

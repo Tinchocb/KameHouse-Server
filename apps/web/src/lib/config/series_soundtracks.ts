@@ -1,5 +1,6 @@
 import type { BackgroundMusicTrack } from "@/lib/store"
 import { getServerBaseUrl } from "@/api/client/server-url"
+import { authorizeResourceUrl } from "@/api/client/auth"
 
 type SeriesEraKey = "db" | "dbz" | "dbkai" | "dbgt" | "dbs" | "dbdaima"
 
@@ -16,7 +17,7 @@ interface SeriesSoundtrackInfo {
     }[]
 }
 
-export const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
+const SERIES_SOUNDTRACKS: Record<SeriesEraKey, SeriesSoundtrackInfo> = {
     db: {
         id: "db",
         name: "Dragon Ball (Original)",
@@ -165,7 +166,7 @@ export function resolveSeriesSoundtrackPlaylist(
             const params = new URLSearchParams({ dir: bgMusicDir, file: track.file })
             results.push({
                 title: track.name || track.file.replace(/\.[^/.]+$/, ""),
-                url: `${base}/api/v1/music/stream?${params.toString()}`,
+                url: authorizeResourceUrl(`${base}/api/v1/music/stream?${params.toString()}`),
                 seriesKey: eraKey,
                 isLocal: true,
             })

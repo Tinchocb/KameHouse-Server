@@ -264,7 +264,7 @@ export function useSeriesPlayback({
         navigate({
             to: "/series/$seriesId",
             params: { seriesId: nextSeriesTarget.seriesId },
-            search: { tab: "episodes", saga: "", subSaga: "", autoplay: "1" },
+            search: { saga: "", subSaga: "", autoplay: "1" },
         })
         return true
     }, [nextSeriesTarget, navigate])
@@ -319,18 +319,13 @@ export function useSeriesPlayback({
 
     return {
         playTarget,
-        setPlayTarget,
         preloadPath,
         defaultTargetPath,
-        nextAvailable,
         nextEp,
         nextLocalFile,
         hasNextEpisode,
-        handlePlayEpisode,
-        handlePlayLocalFile,
         handlePlayDefault,
         handlePlayByNumber,
-        continueToNextSeries,
         handleNextEpisode,
         handlePlayerClose,
     }

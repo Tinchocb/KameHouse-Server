@@ -15,6 +15,7 @@ import { LibraryErrorState } from "@/components/shared/library-error-state"
 import { isNotFoundError } from "@/api/client/requests"
 import { describeMissingSources } from "@/routes/series/$seriesId/-hooks/missing-sources"
 import { PlayerFallback } from "@/components/video/player-fallback"
+import { prewarmVideoPlayer } from "@/components/video/prewarm"
 import { BentoDetailsSkeleton } from "@/components/ui/shimmer-skeleton"
 
 const VideoPlayer = React.lazy(() => import("@/components/video/player").then(m => ({ default: m.VideoPlayer })))
@@ -30,7 +31,8 @@ import { ERAS, ERA_COLOR_MAP } from "@/lib/config/eras"
 
 import { getSeriesEraTheme } from "@/lib/config/dragonball.config"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { useThemeSettings } from "@/lib/theme/theme-hooks"
+import { asEraThemeId, useScreenEra } from "@/lib/theme/screen-era"
+import { useIsClassicMode, useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 import { getMovieHeroArt, heroArtFromUrl, DEFAULT_MOVIE_FOCAL } from "@/lib/config/hero-art"
 
 export const Route = createLazyFileRoute("/movies/$movieId")({
@@ -65,7 +67,10 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     // Confirmación en el mismo botón de cola con useTransientFlag canónico
     const [justQueued, triggerJustQueued] = useTransientFlag(1400)
     const addToQueue = useQueueStore(state => state.addToQueue)
-    const ts = useThemeSettings()
+    const isClassic = useIsClassicMode()
+    const isMinimalist = useIsMinimalistMode()
+    // Universo DB toma la saga de la película en toda la app (también el reproductor, en portal).
+    useScreenEra(asEraThemeId(getSeriesEraTheme(entry?.media?.tmdbId)))
 
     const [isFavorite, setIsFavorite] = useState<boolean>(() => {
         // Sin endpoint de favoritos en el backend: persistencia local por
@@ -94,14 +99,16 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const isWatched = userWatchedOverride ?? serverWatched
 
     const watchedPendingRef = useRef(false)
-    const { mutate: updateProgress, isPending: isWatchedPending } = useUpdateAnimeEntryProgress(validNumericMovieId ?? 0, 1, false)
+    const { mutate: updateProgress, isPending: isWatchedPending } = useUpdateAnimeEntryProgress(validNumericMovieId ?? 0, false)
     const { mutate: preloadStream } = usePreloadMediastreamMediaContainer()
 
     // Warm the media container ahead of the click (page load + hover intent).
     const defaultTargetPath = entry?.localFiles?.[0]?.path || null
     const preloadedPathsRef = useRef<Set<string>>(new Set())
     useEffect(() => {
-        if (!defaultTargetPath || preloadedPathsRef.current.has(defaultTargetPath)) return
+        if (!defaultTargetPath) return
+        prewarmVideoPlayer()
+        if (preloadedPathsRef.current.has(defaultTargetPath)) return
         preloadedPathsRef.current.add(defaultTargetPath)
         preloadStream({ path: defaultTargetPath, streamType: "direct", audioStreamIndex: 0, preferredAudioLang: "" })
     }, [defaultTargetPath, preloadStream])
@@ -149,7 +156,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             return <BentoDetailsSkeleton isMovie />
         }
         return (
-            <div className="min-h-screen text-on-surface flex items-center justify-center">
+            <div className="min-h-dvh text-on-surface flex items-center justify-center">
                 <EmptyState
                     title="Película no encontrada"
                     message="No encontramos esta película. Vuelve a Películas o prueba con otra."
@@ -176,24 +183,27 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
         || media.titleRomaji
         || "Título desconocido"
     const year = media.year?.toString() || ""
-    const eraTheme = getSeriesEraTheme(media.tmdbId)
-    const isAdaptiveEra = ts.effectiveMode === "era" && (!ts.themeEra || ts.themeEra === "era-universe")
-    const localTheme = isAdaptiveEra && eraTheme ? eraTheme : undefined
     const synopsis = getMovieSynopsis(media.description, lore) || "Sin descripción disponible."
 
     const eyebrowNode = (
         <div className="flex items-center gap-2">
             <span
-                className="px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider border backdrop-blur-md"
+                className="movies-hero-era-badge px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider border"
                 style={
-                    currentEraColors
+                    isClassic
                         ? {
-                            backgroundColor: `color-mix(in srgb, ${currentEraColors.accent} 20%, rgba(0,0,0,0.45))`,
+                            backgroundColor: "var(--neutral-elev-2)",
+                            borderColor: "var(--neutral-separator)",
+                            color: "var(--label-1)",
+                        }
+                        : currentEraColors
+                        ? {
+                            backgroundColor: `color-mix(in srgb, ${currentEraColors.accent} 22%, rgba(0,0,0,0.65))`,
                             borderColor: `color-mix(in srgb, ${currentEraColors.accent} 45%, transparent)`,
                             color: currentEraColors.accent,
                         }
                         : {
-                            backgroundColor: "rgba(255,255,255,0.12)",
+                            backgroundColor: "rgba(0,0,0,0.60)",
                             borderColor: "rgba(255,255,255,0.22)",
                             color: "var(--label-1)",
                         }
@@ -201,11 +211,6 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
             >
                 {eraLabel}
             </span>
-            {year && (
-                <span className="hidden sm:inline text-xs text-white/70 font-medium [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]">
-                    · {year}
-                </span>
-            )}
         </div>
     )
     const heroArt = getMovieHeroArt({
@@ -337,23 +342,27 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
     const primaryLabel = resumeSeconds ? "Continuar" : isWatched ? "Ver de nuevo" : "Reproducir"
     const genres = Array.isArray(media.genres) ? media.genres.map(String) : media.genres ? Object.values(media.genres).map(String) : []
     return (
-        <div className="w-full min-h-screen flex flex-col relative text-on-surface" data-theme={localTheme || undefined}>
+        <div className="w-full min-h-dvh flex flex-col relative text-on-surface">
             <DetailHero
-                className="min-h-screen flex-1"
+                className="min-h-dvh flex-1"
                 art={heroArt}
                 posterUrl={null}
                 posterShareKey={`movies:${movieId}`}
                 title={title}
                 logoUrl={media.logoImage || null}
-                eyebrow={eyebrowNode}
-                meta={[
-                    year || null,
-                    formattedDuration,
-                    technicalData?.hdrLabel ?? technicalData?.resolutionTag ?? null,
-                    media.score ? `★ ${(media.score / 10).toFixed(1)} TMDB` : null,
-                    media.isNsfw ? "18+" : null,
-                    genres.length > 0 ? genres.slice(0, 2).join(" · ") : null,
-                ]}
+                eyebrow={isMinimalist ? null : eyebrowNode}
+                meta={
+                    isMinimalist
+                        ? (formattedDuration ? [formattedDuration] : [])
+                        : [
+                            year || null,
+                            formattedDuration,
+                            technicalData?.hdrLabel ?? technicalData?.resolutionTag ?? null,
+                            media.score ? `★ ${(media.score / 10).toFixed(1)} TMDB` : null,
+                            media.isNsfw ? "18+" : null,
+                            genres.length > 0 ? genres.slice(0, 2).join(" · ") : null,
+                        ]
+                }
                 synopsis={synopsis}
                 onBack={() => navigate({ to: "/movies" })}
                 backLabel="Volver a Películas"
@@ -372,7 +381,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                                 label={justQueued ? "Añadido a Mi Lista" : "Añadir a Mi Lista"}
                                 onClick={handleAddToQueue}
                                 icon={
-                                    <IconSwap swapKey={justQueued ? "queued" : "queue"}>
+                                    <IconSwap subtle swapKey={justQueued ? "queued" : "queue"}>
                                         {justQueued ? <IconUiCheck className="w-5 h-5" /> : <IconUiListPlus className="w-5 h-5" />}
                                     </IconSwap>
                                 }
@@ -385,7 +394,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                             pressed={isWatched}
                             onClick={handleToggleWatched}
                             icon={
-                                <IconSwap swapKey={isWatched ? "watched" : "unwatched"}>
+                                <IconSwap subtle swapKey={isWatched ? "watched" : "unwatched"}>
                                     {isWatched ? <IconUiCheck className="w-5 h-5" /> : <IconUiPlus className="w-5 h-5" />}
                                 </IconSwap>
                             }
@@ -395,7 +404,7 @@ function MovieDetailClient({ movieId }: { movieId: string }) {
                             pressed={isFavorite}
                             onClick={handleToggleFavorite}
                             icon={
-                                <IconSwap swapKey={isFavorite ? "fav" : "unfav"}>
+                                <IconSwap subtle swapKey={isFavorite ? "fav" : "unfav"}>
                                     <IconUiHeart className={cn("w-5 h-5", isFavorite && "fill-current text-status-error [filter:var(--drop-shadow-favorite)]")} />
                                 </IconSwap>
                             }

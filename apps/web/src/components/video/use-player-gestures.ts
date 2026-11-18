@@ -42,6 +42,8 @@ export function usePlayerGestures({
     const wasHoldingRef = useRef<boolean>(false)
     const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const lastClickTimeRef = useRef<number>(0)
+    const latestTouchRef = useRef<{ x: number; y: number } | null>(null)
+    const gestureRafRef = useRef<number>(0)
 
     const startHold = useCallback(() => {
         wasHoldingRef.current = false
@@ -134,6 +136,7 @@ export function usePlayerGestures({
             if (skipFlashTimerRef.current) clearTimeout(skipFlashTimerRef.current)
             if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current)
             if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current)
+            if (gestureRafRef.current) cancelAnimationFrame(gestureRafRef.current)
         }
     }, [])
 
@@ -177,6 +180,54 @@ export function usePlayerGestures({
         startHold()
     }, [videoRef, brightness, actions, startHold])
 
+    const applySwipeAt = useCallback((clientX: number, clientY: number) => {
+        if (!touchStartRef.current || !isSwipingRef.current || !swipeDirectionRef.current) return
+        const deltaX = clientX - touchStartRef.current.x
+        const deltaY = clientY - touchStartRef.current.y
+
+        if (swipeDirectionRef.current === "horizontal") {
+            // Seek gesture: 1px = 0.15s of video seek
+            const seekMultiplier = 0.15
+            const secondsDelta = deltaX * seekMultiplier
+            const newTime = Math.max(0, Math.min(state.duration, initialTimeRef.current + secondsDelta))
+
+            const timeDiff = newTime - initialTimeRef.current
+            const prefix = timeDiff >= 0 ? ">>" : "<<"
+            const formattedDiff = `${prefix} ${Math.abs(Math.round(timeDiff))}s`
+            const formattedNewTime = formatPlaybackTime(newTime)
+
+            setSwipeIndicator({
+                type: "seek",
+                value: `[${formattedDiff}] ${formattedNewTime}`,
+            })
+
+            const video = videoRef.current
+            if (video) {
+                video.currentTime = newTime
+            }
+        } else {
+            // Vertical swipe: volume on right side, brightness on left side
+            const verticalMultiplier = -0.005
+            const deltaValue = deltaY * verticalMultiplier
+
+            if (swipeSideRef.current === "right") {
+                const newVolume = Math.max(0, Math.min(1, initialVolumeRef.current + deltaValue))
+                actions.handleVolume(newVolume)
+                setSwipeIndicator({
+                    type: "volume",
+                    value: `VOL: ${(newVolume * 100).toFixed(0)}%`,
+                })
+            } else {
+                const newBrightness = Math.max(0.2, Math.min(1.8, initialBrightnessRef.current + deltaValue))
+                setBrightness(newBrightness)
+                setSwipeIndicator({
+                    type: "brightness",
+                    value: `BRIG: ${(newBrightness * 100).toFixed(0)}%`,
+                })
+            }
+        }
+    }, [state.duration, actions, videoRef])
+
     const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         if (!touchStartRef.current) return
         const touch = e.touches[0]
@@ -205,52 +256,23 @@ export function usePlayerGestures({
 
         if (isSwipingRef.current && swipeDirectionRef.current) {
             e.preventDefault()
-
-            if (swipeDirectionRef.current === "horizontal") {
-                // Seek gesture: 1px = 0.15s of video seek
-                const seekMultiplier = 0.15
-                const secondsDelta = deltaX * seekMultiplier
-                const newTime = Math.max(0, Math.min(state.duration, initialTimeRef.current + secondsDelta))
-
-                const timeDiff = newTime - initialTimeRef.current
-                const prefix = timeDiff >= 0 ? ">>" : "<<"
-                const formattedDiff = `${prefix} ${Math.abs(Math.round(timeDiff))}s`
-                const formattedNewTime = formatPlaybackTime(newTime)
-
-                setSwipeIndicator({
-                    type: "seek",
-                    value: `[${formattedDiff}] ${formattedNewTime}`,
+            latestTouchRef.current = { x: touch.clientX, y: touch.clientY }
+            if (!gestureRafRef.current) {
+                gestureRafRef.current = requestAnimationFrame(() => {
+                    gestureRafRef.current = 0
+                    const latest = latestTouchRef.current
+                    if (latest) applySwipeAt(latest.x, latest.y)
                 })
-
-                const video = videoRef.current
-                if (video) {
-                    video.currentTime = newTime
-                }
-            } else {
-                // Vertical swipe: volume on right side, brightness on left side
-                const verticalMultiplier = -0.005
-                const deltaValue = deltaY * verticalMultiplier
-
-                if (swipeSideRef.current === "right") {
-                    const newVolume = Math.max(0, Math.min(1, initialVolumeRef.current + deltaValue))
-                    actions.handleVolume(newVolume)
-                    setSwipeIndicator({
-                        type: "volume",
-                        value: `VOL: ${(newVolume * 100).toFixed(0)}%`,
-                    })
-                } else {
-                    const newBrightness = Math.max(0.2, Math.min(1.8, initialBrightnessRef.current + deltaValue))
-                    setBrightness(newBrightness)
-                    setSwipeIndicator({
-                        type: "brightness",
-                        value: `BRIG: ${(newBrightness * 100).toFixed(0)}%`,
-                    })
-                }
             }
         }
-    }, [state.duration, actions, videoRef])
+    }, [applySwipeAt])
 
     const handleTouchEnd = useCallback(() => {
+        if (gestureRafRef.current) {
+            cancelAnimationFrame(gestureRafRef.current)
+            gestureRafRef.current = 0
+        }
+        latestTouchRef.current = null
         touchStartRef.current = null
         setSwipeIndicator(null)
         endHold()

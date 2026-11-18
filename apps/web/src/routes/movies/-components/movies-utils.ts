@@ -34,13 +34,6 @@ export function mapCollectionSortToOption(value: string | undefined | null): Sor
 
 export type MovieStatus = "all" | "pending" | "continue" | "watched"
 
-export const MOVIE_STATUS_OPTIONS: { value: MovieStatus; label: string }[] = [
-    { value: "all", label: "Todas" },
-    { value: "pending", label: "Por ver" },
-    { value: "continue", label: "Continuar" },
-    { value: "watched", label: "Vistas" },
-]
-
 type ProgressEntry = {
     media?: Models_LibraryMedia | null
     listData?: { progress?: number } | null
@@ -71,16 +64,6 @@ export function getMovieStatus(
     return hasProgress ? "continue" : "pending"
 }
 
-/** Década de estreno ("1990") o null si la película no trae año. */
-export function getEntryDecade(entry?: { media?: Models_LibraryMedia | null } | null): number | null {
-    const year = entry?.media?.year
-    return year && year > 0 ? Math.floor(year / 10) * 10 : null
-}
-
-export function formatDecade(decade: number): string {
-    return `Años ${decade}`
-}
-
 /** "Las películas de Dragon Ball" / "Películas de Dragon Ball Z": rótulo de la grilla según la era. */
 export function gridHeading(eraTitle: string | null): string {
     return eraTitle ? `Películas de ${eraTitle}` : "Todas las películas"
@@ -93,8 +76,6 @@ const MOVIES_PREFS_KEY = "kamehouse-movies-prefs"
 
 type MoviesPrefs = {
     sort?: SortOption
-    estado?: Exclude<MovieStatus, "all">
-    decada?: number
 }
 
 const SORT_VALUES = SORT_OPTIONS.map(o => o.value) as string[]
@@ -105,8 +86,6 @@ export function parseMoviesPrefs(raw: string | null): MoviesPrefs {
         const v = JSON.parse(raw) as Record<string, unknown>
         const prefs: MoviesPrefs = {}
         if (typeof v.sort === "string" && SORT_VALUES.includes(v.sort)) prefs.sort = v.sort as SortOption
-        if (v.estado === "pending" || v.estado === "continue" || v.estado === "watched") prefs.estado = v.estado
-        if (typeof v.decada === "number" && Number.isInteger(v.decada) && v.decada >= 1900 && v.decada <= 2100) prefs.decada = v.decada
         return prefs
     } catch {
         return {}

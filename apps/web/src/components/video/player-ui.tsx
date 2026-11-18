@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from "react"
-import { m, AnimatePresence, useReducedMotion } from "framer-motion"
+import React, { useEffect, useLayoutEffect, useRef } from "react"
+import { m, AnimatePresence } from "framer-motion"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { cn } from "@/components/ui/core/styling"
 import { PlayerTopBar } from "./player-topbar"
-import { PlayerBottomBar, type PlayerSettingsPanel } from "./player-bottombar"
-import { PlayerCenterControls } from "./player-center-controls"
+import { PlayerBottomBar } from "./player-bottombar"
 import { LoadingErrorOverlay, CenterPlayFlash, SkipIntroOverlay, NextEpisodeOverlay, AutoSkipToastOverlay, PlayerHudOverlay } from "./player-overlays"
 import { PlayerShortcutsModal } from "./player-shortcuts-modal"
 import type { EpisodeSource } from "@/api/types/unified.types"
@@ -12,12 +12,12 @@ import { useAppStore, useQueueStore, type PlaylistItem } from "@/lib/store"
 import { useShallow } from "zustand/react/shallow"
 import { PlayerEpisodesSidebar } from "./player-episodes-sidebar"
 import { PlayerQueueSidebar } from "./player-queue-sidebar"
-import { __isTV__ } from "@/types/constants"
-import { useFocusNavigation } from "@/hooks/use-focus-navigation"
 import { IconMediaPlay, IconMediaVolume2, IconUiStar } from "@/components/ui/icons"
 import { PLAYER_GLASS } from "./player-theme"
 import { usePlayerGestures } from "./use-player-gestures"
 import { hasFocusedPlayerControls } from "./usePlayerControlsVisibility"
+import { computeVideoAspectLayout } from "./video-aspect"
+import { useVideoContentBounds } from "./useVideoContentBounds"
 
 
 function StatsOverlay({ show, data }: { show: boolean, data?: PlayerStats | null }) {
@@ -49,7 +49,6 @@ interface PlayerUIProps {
     core: PlayerCore
     mediaId?: number
     episodeNumber?: number
-    malId?: number | null
     episodes?: {
         title?: string
         episodeNumber: number
@@ -75,11 +74,15 @@ interface PlayerUIProps {
     momentTitle?: string
 }
 
+const EMPTY_EPISODE_SOURCES: EpisodeSource[] = []
+const EMPTY_EPISODES: NonNullable<PlayerUIProps["episodes"]> = []
+const NOOP_SOURCE_SWITCH = () => {}
+
 export function PlayerUI(props: PlayerUIProps) {
     const {
         title, episodeLabel, onClose, onNextEpisode, playableUrl,
         streamType, episodeSources, onSourceSwitch, core,
-        mediaId, episodeNumber, malId,
+        mediaId, episodeNumber,
         episodes, onSelectEpisode, mediaFormat,
         nextEpisodeTitle, nextEpisodeNumber, nextEpisodeImage,
         onOpenInMpv,
@@ -109,11 +112,23 @@ export function PlayerUI(props: PlayerUIProps) {
 
     const isEpisodesSidebarOpen = props.isEpisodesSidebarOpen !== undefined ? props.isEpisodesSidebarOpen : localEpisodesSidebarOpen
     const setIsEpisodesSidebarOpen = props.setIsEpisodesSidebarOpen || setLocalEpisodesSidebarOpen
-    const handleToggleEpisodesSidebar = props.onToggleEpisodesSidebar || (() => setIsEpisodesSidebarOpen(v => !v))
+    const handleToggleEpisodesSidebar = React.useMemo(
+        () => props.onToggleEpisodesSidebar || (() => setIsEpisodesSidebarOpen(v => !v)),
+        [props.onToggleEpisodesSidebar, setIsEpisodesSidebarOpen],
+    )
+    const handleCloseEpisodesSidebar = React.useCallback(() => {
+        setIsEpisodesSidebarOpen(false)
+    }, [setIsEpisodesSidebarOpen])
 
     const isQueueSidebarOpen = props.isQueueSidebarOpen !== undefined ? props.isQueueSidebarOpen : localQueueSidebarOpen
     const setIsQueueSidebarOpen = props.setIsQueueSidebarOpen || setLocalQueueSidebarOpen
-    const handleToggleQueueSidebar = props.onToggleQueueSidebar || (() => setIsQueueSidebarOpen(v => !v))
+    const handleToggleQueueSidebar = React.useMemo(
+        () => props.onToggleQueueSidebar || (() => setIsQueueSidebarOpen(v => !v)),
+        [props.onToggleQueueSidebar, setIsQueueSidebarOpen],
+    )
+    const handleCloseQueueSidebar = React.useCallback(() => {
+        setIsQueueSidebarOpen(false)
+    }, [setIsQueueSidebarOpen])
 
     const handleQueueSelectItem = React.useCallback((item: PlaylistItem, idx: number) => {
         useQueueStore.getState().setCurrentQueueIndex(idx)
@@ -166,20 +181,10 @@ export function PlayerUI(props: PlayerUIProps) {
 
     const controlsVisible = state.controlsVisible || isEpisodesSidebarOpen || isQueueSidebarOpen
 
-    // Dos menús agrupados ("Audio y subtítulos" y "Más") comparten isSettingsOpen del
-    // core; esto solo decide cuál se muestra. Al cerrar vuelve a "Más" (atajo O).
-    const [settingsPanel, setSettingsPanel] = useState<PlayerSettingsPanel>("more")
-    const handleOpenSettingsPanel = React.useCallback((panel: PlayerSettingsPanel) => {
-        setSettingsPanel(panel)
-        actions.setIsSettingsOpen(true)
-    }, [actions])
     const handleToggleSettings = React.useCallback((open?: boolean) => {
         const next = open !== undefined ? open : !state.isSettingsOpen
-        if (!next) setSettingsPanel("more")
         actions.setIsSettingsOpen(next)
     }, [actions, state.isSettingsOpen])
-
-    const anyPanelOpen = state.isSettingsOpen || isEpisodesSidebarOpen || isQueueSidebarOpen
 
     // Force controls visibility if sidebar is open
     useEffect(() => {
@@ -188,37 +193,69 @@ export function PlayerUI(props: PlayerUIProps) {
         }
     }, [isEpisodesSidebarOpen, isQueueSidebarOpen, actions])
 
-    // D-pad navigation for TV remote control
-    const handleEscape = React.useCallback(() => {
-        if (isEpisodesSidebarOpen) {
-            setIsEpisodesSidebarOpen(false)
-        } else if (isQueueSidebarOpen) {
-            setIsQueueSidebarOpen(false)
-        } else if (state.isSettingsOpen) {
-            actions.setIsSettingsOpen(false)
-        } else if (state.isFullscreen) {
-            actions.toggleFullscreen()
-        } else {
-            onClose()
-        }
-    }, [isEpisodesSidebarOpen, isQueueSidebarOpen, state.isSettingsOpen, state.isFullscreen, actions, onClose, setIsEpisodesSidebarOpen, setIsQueueSidebarOpen])
+    // Con el botón del outro ya ofreciendo el siguiente episodio, la tarjeta se oculta para no duplicar la acción.
+    const nextAvailable = state.hasNextEpisode && !!onNextEpisode && mediaFormat?.toUpperCase() !== "MOVIE"
+    const panelsOpen = state.isSettingsOpen || isEpisodesSidebarOpen || isQueueSidebarOpen
+    const outroNextButton = state.skipMode === "outro" && nextAvailable && !panelsOpen
+    const showNextCard = state.showNextEpisode && !outroNextButton
 
-    useFocusNavigation({
-        containerRef,
-        enabled: controlsVisible,
-        onEscape: handleEscape,
+    const [containerSize, setContainerSize] = React.useState({ width: 0, height: 0 })
+    const [videoNaturalSize, setVideoNaturalSize] = React.useState({ width: 0, height: 0 })
+
+    useLayoutEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+        const updateFromElement = () => {
+            const w = el.clientWidth
+            const h = el.clientHeight
+            setContainerSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }))
+        }
+        const rafId = requestAnimationFrame(updateFromElement)
+        if (typeof ResizeObserver === "undefined") {
+            window.addEventListener("resize", updateFromElement)
+            return () => {
+                cancelAnimationFrame(rafId)
+                window.removeEventListener("resize", updateFromElement)
+            }
+        }
+        const observer = new ResizeObserver((entries) => {
+            const entry = entries[0]
+            if (!entry) return
+            const w = Math.round(entry.contentRect.width)
+            const h = Math.round(entry.contentRect.height)
+            setContainerSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }))
+        })
+        observer.observe(el)
+        return () => {
+            cancelAnimationFrame(rafId)
+            observer.disconnect()
+        }
+    }, [containerRef])
+
+    const syncVideoNaturalSize = React.useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+        const v = e.currentTarget
+        const w = v.videoWidth
+        const h = v.videoHeight
+        if (w > 0 && h > 0) {
+            setVideoNaturalSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }))
+        }
+    }, [])
+
+    const contentBounds = useVideoContentBounds({
+        videoRef,
+        playableUrl,
+        aspectRatio: state.aspectRatio,
     })
 
-    // Auto-enter fullscreen on TV platforms
-    React.useEffect(() => {
-        if (__isTV__ && !state.isFullscreen) {
-            // Small delay to ensure player is mounted
-            const timer = setTimeout(() => {
-                actions.toggleFullscreen()
-            }, 500)
-            return () => clearTimeout(timer)
-        }
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    const hasContainerMeasure = containerSize.width > 0 && containerSize.height > 0
+    const aspectLayout = React.useMemo(() => computeVideoAspectLayout({
+        containerWidth: containerSize.width,
+        containerHeight: containerSize.height,
+        intrinsicWidth: videoNaturalSize.width,
+        intrinsicHeight: videoNaturalSize.height,
+        aspectRatio: state.aspectRatio,
+        contentBounds,
+    }), [containerSize.width, containerSize.height, videoNaturalSize.width, videoNaturalSize.height, state.aspectRatio, contentBounds])
 
     return (
         <div
@@ -243,44 +280,65 @@ export function PlayerUI(props: PlayerUIProps) {
                 viewTransitionName: "video-player"
             } as React.CSSProperties}
         >
-              <video
-                ref={videoRef}
-                onPlay={() => actions.setIsPlaying(true)}
-                onPause={() => {
-                    actions.setIsPlaying(false)
-                    actions.flushProgressSync()
-                }}
-                onDurationChange={(e) => actions.setDuration(e.currentTarget.duration)}
-                onTimeUpdate={actions.handleTimeUpdate}
-                onWaiting={() => actions.setIsBuffering(true)}
-                onPlaying={() => { actions.setIsBuffering(false); actions.setIsSeeking(false) }}
-                onSeeked={() => actions.setIsSeeking(false)}
-                onError={() => {
-                    actions.setIsBuffering(false)
-                    actions.setIsSeeking(false)
-                }}
-                onEnded={() => {
-                    actions.flushProgressSync()
-                    actions.handleTimeUpdate()
-                }}
+            <div
+                data-video-stage="true"
+                data-aspect-ratio={state.aspectRatio}
                 className={cn(
-                    "absolute inset-0 m-auto z-10",
-                    state.aspectRatio === "21/9" ? "w-full h-auto aspect-[21/9] max-h-full max-w-full" :
-                    state.aspectRatio === "16/9" ? "w-full h-auto aspect-[16/9] max-h-full max-w-full" :
-                    "w-full h-full"
+                    "relative overflow-hidden z-10 shrink-0",
+                    (state.aspectRatio === "contain" || !hasContainerMeasure) && "w-full h-full"
                 )}
-                style={{
-                    objectFit: state.aspectRatio === "cover" || state.aspectRatio === "21/9" || state.aspectRatio === "16/9"
-                        ? "cover"
-                        : state.aspectRatio === "fill"
-                        ? "fill"
-                        : "contain",
-                    filter: `brightness(${brightness})`
-                }}
-                crossOrigin="anonymous"
-                playsInline
-                preload="metadata"
-            />
+                style={state.aspectRatio !== "contain" && hasContainerMeasure ? {
+                    width: `${aspectLayout.stageWidth}px`,
+                    height: `${aspectLayout.stageHeight}px`,
+                } : undefined}
+            >
+                <video
+                    ref={videoRef}
+                    onLoadStart={() => setVideoNaturalSize({ width: 0, height: 0 })}
+                    onLoadedMetadata={syncVideoNaturalSize}
+                    onResize={syncVideoNaturalSize}
+                    onPlay={() => actions.setIsPlaying(true)}
+                    onPause={() => {
+                        actions.setIsPlaying(false)
+                        actions.flushProgressSync()
+                    }}
+                    onDurationChange={(e) => actions.setDuration(e.currentTarget.duration)}
+                    onTimeUpdate={actions.handleTimeUpdate}
+                    onWaiting={() => actions.setIsBuffering(true)}
+                    onPlaying={() => { actions.setIsBuffering(false); actions.setIsSeeking(false) }}
+                    onSeeked={() => actions.setIsSeeking(false)}
+                    onError={() => {
+                        actions.setIsBuffering(false)
+                        actions.setIsSeeking(false)
+                    }}
+                    onEnded={() => {
+                        actions.flushProgressSync()
+                        actions.handleTimeUpdate()
+                    }}
+                    className={cn(
+                        "absolute max-w-none max-h-none",
+                        (state.aspectRatio === "contain" || !hasContainerMeasure) && "inset-0 m-auto w-full h-full"
+                    )}
+                    style={state.aspectRatio !== "contain" && hasContainerMeasure ? {
+                        width: `${aspectLayout.videoWidth}px`,
+                        height: `${aspectLayout.videoHeight}px`,
+                        left: `${aspectLayout.videoLeft}px`,
+                        top: `${aspectLayout.videoTop}px`,
+                        objectFit: aspectLayout.objectFit,
+                        filter: `brightness(${brightness})`,
+                    } : {
+                        objectFit: state.aspectRatio === "cover"
+                            ? "cover"
+                            : state.aspectRatio === "fill" || state.aspectRatio === "16/9" || state.aspectRatio === "21/9"
+                            ? "fill"
+                            : "contain",
+                        filter: `brightness(${brightness})`,
+                    }}
+                    crossOrigin="anonymous"
+                    playsInline
+                    preload="metadata"
+                />
+            </div>
 
             {/* Gesture Interaction Overlay — z-player (base) para quedar DEBAJO de
                 barras (z-player-ui) y overlays (z-player-overlay). Antes en z-player-ui
@@ -314,10 +372,10 @@ export function PlayerUI(props: PlayerUIProps) {
                 {swipeIndicator && (
                     <m.div
                         key="swipe-indicator"
-                        initial={{ opacity: 0, scale: 0.92 }}
+                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.92 }}
-                        transition={{ duration: 0.12 }}
+                        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                        transition={{ duration: prefersReducedMotion ? 0.1 : 0.12 }}
                         className="absolute inset-0 z-player-overlay pointer-events-none flex items-center justify-center"
                     >
                         <div className={cn("flex items-center gap-2 h-11 px-4 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
@@ -363,11 +421,12 @@ export function PlayerUI(props: PlayerUIProps) {
                 {isHoldSpeedActive && (
                     <m.div
                         key="hold-speed"
-                        initial={{ opacity: 0, y: -8, scale: 0.9, x: "-50%" }}
-                        animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
-                        exit={{ opacity: 0, y: -6, scale: 0.95, x: "-50%" }}
+                        data-hud="hold-speed"
+                        initial={prefersReducedMotion ? { opacity: 0, x: "-50%" } : { opacity: 0, y: -8, scale: 0.9, x: "-50%" }}
+                        animate={prefersReducedMotion ? { opacity: 1, x: "-50%" } : { opacity: 1, y: 0, scale: 1, x: "-50%" }}
+                        exit={prefersReducedMotion ? { opacity: 0, x: "-50%" } : { opacity: 0, y: -6, scale: 0.95, x: "-50%" }}
                         // Centrado en `x` de Framer, no con -translate-x-1/2 (el transform inline lo pisaba).
-                        transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+                        transition={{ duration: prefersReducedMotion ? 0.1 : 0.18, ease: [0.23, 1, 0.32, 1] }}
                         className="absolute top-20 left-1/2 z-player-overlay pointer-events-none"
                     >
                         <div className={cn("h-9 px-4 flex items-center gap-1.5 rounded-full text-white text-xs font-semibold tracking-wide tabular-nums", PLAYER_GLASS)}>
@@ -380,7 +439,6 @@ export function PlayerUI(props: PlayerUIProps) {
             <LoadingErrorOverlay
                 status={state.status}
                 errorMsg={state.errorMsg}
-                streamType={streamType || "local"}
                 isBuffering={state.isBuffering}
                 isSeeking={state.isSeeking}
                 isStreamSwitching={state.isStreamSwitching}
@@ -399,14 +457,16 @@ export function PlayerUI(props: PlayerUIProps) {
 
             <SkipIntroOverlay
                 // Se oculta mientras hay otro panel abierto en esa zona (ajustes, episodios, cola)
-                // En modo TV la tarjeta de siguiente episodio lo cubre; en modo normal el botón se apila encima de ella. El atajo S sigue funcionando.
-                show={state.skipMode !== null && !(state.showNextEpisode && state.tvMode) && !state.isSettingsOpen && !isEpisodesSidebarOpen && !isQueueSidebarOpen}
+                show={state.skipMode !== null && !state.isSettingsOpen && !isEpisodesSidebarOpen && !isQueueSidebarOpen}
                 onSkip={actions.handleSkipIntro}
                 skipMode={state.skipMode ?? "intro"}
-                remainingSeconds={state.skipRemainingSeconds}
-                segmentProgress={state.segmentProgress}
+                hasNextEpisode={nextAvailable}
+                nextEpisodeTitle={nextEpisodeTitle}
+                // Con cuenta regresiva de autoplay, el botón muestra esos segundos: la tarjeta que los mostraba ya no aparece.
+                remainingSeconds={outroNextButton && state.showCountdown ? state.countdownSeconds : state.skipRemainingSeconds}
+                segmentProgress={outroNextButton && state.showCountdown ? 100 - state.remainingProgress : state.segmentProgress}
                 shortcutKey="S"
-                stackAbove={state.showNextEpisode}
+                stackAbove={showNextCard}
                 controlsVisible={controlsVisible}
             />
 
@@ -417,30 +477,15 @@ export function PlayerUI(props: PlayerUIProps) {
             />
 
             <NextEpisodeOverlay
-                show={state.showNextEpisode}
-                tvMode={state.tvMode}
-                marathonMode={state.marathonMode}
+                show={showNextCard}
                 showCountdown={state.showCountdown}
                 countdownSeconds={state.countdownSeconds}
                 nextEpisodeTitle={nextEpisodeTitle || "Siguiente Episodio"}
                 nextEpisodeNumber={nextEpisodeNumber}
                 nextEpisodeImage={nextEpisodeImage}
                 onNext={onNextEpisode || (() => { })}
-                duration={state.duration}
                 remainingProgress={state.remainingProgress}
                 controlsVisible={controlsVisible}
-            />
-
-            {/* Centro: solo visible en modo TV (D-pad). En web/escritorio los controles
-                de reproducción viven unificados en la barra inferior para dejar el fotograma 100% limpio. */}
-            <PlayerCenterControls
-                visible={Boolean(state.tvMode) && controlsVisible && !anyPanelOpen && state.status === "ready" && !state.isBuffering}
-                isPlaying={state.isPlaying}
-                onTogglePlay={actions.togglePlay}
-                onSkip={(amount) => {
-                    actions.skipTime(amount)
-                    actions.triggerControlsVisibility()
-                }}
             />
 
             <PlayerShortcutsModal
@@ -473,7 +518,7 @@ export function PlayerUI(props: PlayerUIProps) {
                     mpvPending={mpvPending}
                     momentKey={momentKey}
                     momentTitle={momentTitle}
-                    currentTime={state.currentTime}
+                    mediaElementRef={videoRef}
                 />
             </div>
 
@@ -490,9 +535,6 @@ export function PlayerUI(props: PlayerUIProps) {
                 )}
             >
                 <PlayerBottomBar
-                    title={title}
-                    episodeNumber={episodeNumber}
-                    episodeLabel={episodeLabel}
                     mediaFormat={mediaFormat}
                     duration={state.duration}
                     progressBarRef={progressBarRef}
@@ -516,19 +558,15 @@ export function PlayerUI(props: PlayerUIProps) {
                     activeSubtitleIndex={state.activeSubtitleIndex}
                     onSelectSubtitle={actions.onSelectSubtitle}
                     isJassubLoading={state.isJassubLoading || state.isPgsLoading}
-                    episodeSources={episodeSources || []}
+                    episodeSources={episodeSources || EMPTY_EPISODE_SOURCES}
                     activeStreamUrl={playableUrl}
                     currentSourceType={streamType}
-                    handleSourceSwitch={onSourceSwitch || (() => { })}
+                    handleSourceSwitch={onSourceSwitch || NOOP_SOURCE_SWITCH}
                     isFullscreen={state.isFullscreen}
                     toggleFullscreen={actions.toggleFullscreen}
                     settingsOpen={state.isSettingsOpen}
                     onToggleSettings={handleToggleSettings}
-                    settingsPanel={settingsPanel}
-                    onOpenSettingsPanel={handleOpenSettingsPanel}
                     mediaElementRef={videoRef}
-                    videoRef={videoRef}
-                    malId={malId}
                     mediaId={mediaId}
                     playbackRate={state.playbackRate}
                     onPlaybackRateChange={actions.changePlaybackRate}
@@ -540,15 +578,13 @@ export function PlayerUI(props: PlayerUIProps) {
                     activeHlsLevel={state.activeHlsLevel}
                     onHlsLevelChange={actions.setHlsLevel}
                     aspectRatio={state.aspectRatio}
-                    onAspectRatioChange={(r) => actions.setAspectRatio(r)}
+                    onAspectRatioChange={actions.setAspectRatio}
                     subtitleSize={state.subtitleSize}
                     onSubtitleSizeChange={actions.setSubtitleSize}
                     loopEnabled={state.loopEnabled}
                     onLoopEnabledChange={actions.setLoopEnabled}
                     autoDisableSubtitlesWhenDubbed={state.autoDisableSubtitlesWhenDubbed}
                     onAutoDisableSubtitlesWhenDubbedChange={actions.setAutoDisableSubtitlesWhenDubbed}
-                    tvMode={state.tvMode}
-                    onTvModeChange={actions.setTvMode}
                     marathonMode={state.marathonMode}
                     onMarathonModeChange={actions.setMarathonMode}
                     onNextEpisode={onNextEpisode}
@@ -556,8 +592,6 @@ export function PlayerUI(props: PlayerUIProps) {
                     skipTimesOp={state.skipTimesOp}
                     skipTimesEd={state.skipTimesEd}
                     chapters={state.chapters}
-                    skipToNextChapter={actions.skipToNextChapter}
-                    skipToPrevChapter={actions.skipToPrevChapter}
                     activeChapter={state.activeChapter}
                     isEpisodesSidebarOpen={isEpisodesSidebarOpen}
                     onToggleEpisodesSidebar={handleToggleEpisodesSidebar}
@@ -566,24 +600,24 @@ export function PlayerUI(props: PlayerUIProps) {
                     onToggleQueueSidebar={handleToggleQueueSidebar}
                     hasQueue={playlistQueue.length > 0}
                     previewManager={state.previewManager}
+                    onOpenInMpv={onOpenInMpv}
+                    mpvPending={mpvPending}
                 />
             </div>
 
             {/* Episodes Sidebar */}
             <PlayerEpisodesSidebar
                 isOpen={isEpisodesSidebarOpen}
-                onClose={() => setIsEpisodesSidebarOpen(false)}
-                episodes={episodes || []}
+                onClose={handleCloseEpisodesSidebar}
+                episodes={episodes || EMPTY_EPISODES}
                 currentEpisodeNumber={episodeNumber}
                 onSelectEpisode={onSelectEpisode}
-                marathonMode={state.marathonMode}
-                onMarathonModeChange={actions.setMarathonMode}
             />
 
             {/* Queue Sidebar */}
             <PlayerQueueSidebar
                 isOpen={isQueueSidebarOpen}
-                onClose={() => setIsQueueSidebarOpen(false)}
+                onClose={handleCloseQueueSidebar}
                 playlistQueue={playlistQueue}
                 currentQueueIndex={currentQueueIndex}
                 onSelectItem={handleQueueSelectItem}

@@ -1,0 +1,564 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  era.css — Tema Por Era (Diseño Neutro + Paletas Dragon Ball)        ║
+   ║  Definición centralizada: 7 paletas de saga, tinte suave y Liquid Glass║
+   ╚════════════════════════════════════════════════════════════════════════╝
+
+   Filosofía Visual (Estructura Neutro + Color por Serie + Liquid Glass):
+   - Mantiene la jerarquía, tipografía, biseles (Double-Bezel) y escala de superficies
+     de grafito (#0B0B0C → #26272B) de Neutro.
+   - Aplica la paleta de cada serie a acciones principales, selección e indicadores.
+   - Tinte ambiental suave en fondos (--page-gradient con firma por saga) y paneles,
+     con mayor presencia en héroes y reflejos especulares del vidrio.
+   - Textos y superficies de lectura predominantemente neutros (#F5F5F7, #B8B8B8, #CCCCCC).
+   - Liquid Glass dinámico adaptativo (data-liquid="true") en navegación, selectores
+     y superficies flotantes destacadas, con alternativa plana (data-flat="true").
+   - Contrato DOM en <html>: data-mode="era" + data-theme="era-*" (sin data-ui-style).
+   - Manifiesto TypeScript: apps/web/src/lib/theme/era.theme.ts
+*/
+
+/* ─── 1. Paletas Cromáticas por Saga ([data-theme="era-*"]) ────────────────── */
+
+/* Texto de la insignia por saga: tonos claros calibrados (≥ 4,5:1 sobre el acento al 20 %). */
+[data-theme="era-universe"] { --era-badge-text: var(--brand-accent-readable); }
+[data-theme="era-db"] { --era-badge-text: var(--era-db-text); }
+[data-theme="era-dbz"] { --era-badge-text: var(--era-dbz-text); }
+[data-theme="era-dbgt"] { --era-badge-text: var(--era-dbgt-text); }
+[data-theme="era-dbkai"] { --era-badge-text: var(--era-dbkai-text); }
+[data-theme="era-dbs"] { --era-badge-text: var(--era-dbs-text); }
+[data-theme="era-daima"] { --era-badge-text: var(--era-daima-text); }
+
+/* Respaldo del tinte si <html> está en modo era sin saga */
+:root {
+  --era-tint: var(--brand-accent-hex);
+}
+
+/* Común a todas las sagas en Por era */
+[data-theme^="era-"] {
+  --brand-glow: color-mix(in srgb, var(--brand-accent-hex) 25%, transparent);
+  --foreground: 0 0% 98%;
+
+  /* Texto sobre el acento y sobre el secundario: oscuro para alto contraste */
+  --primary-foreground: 240 10% 4%;
+  --md-sys-color-on-primary: #0A0A0B;
+  --on-primary-rgb: 10, 10, 11;
+  --md-sys-color-on-secondary: #0A0A0B;
+  --on-secondary-rgb: 10, 10, 11;
+
+  /* Selección en controles: tintada con el acento de la saga sobre la superficie */
+  --control-selected-bg: color-mix(in srgb, var(--brand-accent-hex) 14%, var(--neutral-elev-2));
+  --control-selected-border: color-mix(in srgb, var(--brand-accent-hex) 45%, var(--neutral-separator));
+}
+
+[data-theme="era-db"] {
+  /* Naranja gi de Goku + azul báculo; atmósfera de atardecer cálido */
+  --brand-accent: 24.6 95% 53.1%;
+  --brand-accent-hex: #F97316;
+  --brand-secondary: 214 68.2% 56.9%;
+  --brand-secondary-hex: #4687DC;
+  --brand-tertiary: 152.3 48.1% 42.4%;
+  --brand-tertiary-hex: #38A070;
+  --era-tint: #BA6826;
+}
+
+[data-theme="era-dbz"] {
+  /* Dorado Super Saiyajin + azul cobalto; atmósfera azul cobalto */
+  --brand-accent: 43.3 96.4% 56.3%;
+  --brand-accent-hex: #FBBF24;
+  --brand-secondary: 219.6 75.4% 61.8%;
+  --brand-secondary-hex: #5486E7;
+  --brand-tertiary: 0 84.2% 60.2%;
+  --brand-tertiary-hex: #EF4444;
+  --era-tint: #2589BF;
+}
+
+[data-theme="era-dbgt"] {
+  /* Carmesí Super Saiyajin 4 + violeta espacial; atmósfera vino */
+  --brand-accent: 349.7 89.2% 60.2%;
+  --brand-accent-hex: #F43F5E;
+  --brand-secondary: 257.2 68% 66.9%;
+  --brand-secondary-hex: #9271E4;
+  --brand-tertiary: 41.8 60% 55.9%;
+  --brand-tertiary-hex: #D2A94B;
+  --era-tint: #C5586A;
+}
+
+[data-theme="era-dbkai"] {
+  /* Verde esmeralda remaster (kanji 改) + naranja gi; atmósfera esmeralda */
+  --brand-accent: 160.1 84.1% 39.4%;
+  --brand-accent-hex: #10B981;
+  --brand-secondary: 25.5 79.1% 56.9%;
+  --brand-secondary-hex: #E8843A;
+  --brand-tertiary: 198.6 88.7% 48.4%;
+  --brand-tertiary-hex: #0EA5E9;
+  --era-tint: #19966E;
+}
+
+[data-theme="era-dbs"] {
+  /* Azul Super Saiyajin Blue + púrpura Beerus; atmósfera índigo astral */
+  --brand-accent: 217.2 93% 60.6%;
+  --brand-accent-hex: #3D84F8;
+  --brand-secondary: 258.4 100% 70.6%;
+  --brand-secondary-hex: #9769FF;
+  --brand-tertiary: 200.4 98% 39.4%;
+  --brand-tertiary-hex: #0284C7;
+  --era-tint: #6277D9;
+}
+
+[data-theme="era-daima"] {
+  /* Violeta del Reino Demoníaco + dorado; atmósfera magenta oscuro */
+  --brand-accent: 270.4 98.8% 67.8%;
+  --brand-accent-hex: #AE5CFE;
+  --brand-secondary: 35.4 63.2% 55.3%;
+  --brand-secondary-hex: #D59A45;
+  --brand-tertiary: 160.1 84.1% 39.4%;
+  --brand-tertiary-hex: #10B981;
+  --era-tint: #B659A2;
+}
+
+[data-theme="era-universe"] {
+  /* Universo DB (nebulosa: convergencia de sagas); atmósfera violeta cósmico */
+  --brand-accent: 261.3 61.1% 65.7%;
+  --brand-accent-hex: #9872DD;
+  --brand-secondary: 333.9 52.4% 59.6%;
+  --brand-secondary-hex: #CE6291;
+  --brand-tertiary: 174.2 51.5% 39.6%;
+  --brand-tertiary-hex: #31998F;
+  --era-tint: #896FBE;
+}
+
+/* ─── 2. Superficies, Biseles Entintados y Tinte Ambiental ([data-mode="era"]) ── */
+:root[data-mode="era"]:not([data-ui-style="classic-minimalist"]) {
+  /* Vidrio con base Black Cinema obsidian (#101014 / #18181E) y bisel superior con el ki de la saga */
+  --glass-card-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--neutral-elev-2) 94%, var(--era-tint) 6%) 0%,
+    color-mix(in srgb, color-mix(in srgb, var(--neutral-elev-1) 96%, var(--era-tint) 4%) 90%, transparent) 100%
+  );
+  --glass-panel-bg: color-mix(in srgb, color-mix(in srgb, var(--neutral-elev-1) 94%, var(--era-tint) 6%) 86%, transparent);
+  --glass-panel-bg-strong: color-mix(in srgb, color-mix(in srgb, var(--neutral-elev-2) 96%, var(--era-tint) 4%) 92%, transparent);
+  --glass-border-top: color-mix(in srgb, var(--brand-accent-hex) 22%, rgba(255, 255, 255, 0.16));
+  --glass-border-side: rgba(255, 255, 255, 0.08);
+  --glass-border-bottom: rgba(255, 255, 255, 0.06);
+  --glass-border-strong: color-mix(in srgb, var(--brand-accent-hex) 24%, rgba(255, 255, 255, 0.18));
+
+  --glass-bg: var(--glass-panel-bg);
+  --glass-bg-strong: var(--glass-panel-bg-strong);
+
+  /* Vidrio esmerilado con bisel superior de la saga */
+  --glass-frosted-border-top: color-mix(in srgb, var(--brand-accent-hex) 24%, rgba(255, 255, 255, 0.22));
+
+  /* SectionBar: base obsidian Black Cinema Double-Bezel con bisel especular entintado */
+  --sectionbar-border:            rgba(255, 255, 255, 0.08);
+  --sectionbar-border-top:        color-mix(in srgb, var(--brand-accent-hex) 24%, rgba(255, 255, 255, 0.20));
+  --sectionbar-border-bottom:     rgba(255, 255, 255, 0.06);
+  --sectionbar-bg:                var(--glass-panel-bg);
+  --sectionbar-border-strong:     rgba(255, 255, 255, 0.12);
+  --sectionbar-border-top-strong: color-mix(in srgb, var(--brand-accent-hex) 28%, rgba(255, 255, 255, 0.26));
+  --sectionbar-bg-strong:         var(--glass-panel-bg-strong);
+  --sectionbar-shadow:            var(--double-bezel-shadow);
+  --sectionbar-shadow-strong:     var(--double-bezel-shadow-strong);
+
+  /* Fondo ambiental base: resplandor cenital sutil (6%–9%) que preserva el negro de cine */
+  --page-gradient:
+    radial-gradient(85% 55% at 50% -5%, color-mix(in srgb, var(--brand-accent-hex) 8%, transparent), transparent 65%),
+    radial-gradient(70% 45% at 90% 10%, color-mix(in srgb, var(--brand-secondary-hex) 5%, transparent), transparent 60%);
+}
+
+/* Universo DB: nebulosa sutil perimetral que converge las sagas sin tapar el lienzo negro */
+[data-mode="era"][data-theme="era-universe"] {
+  --page-gradient:
+    radial-gradient(85% 55% at 50% -5%, color-mix(in srgb, var(--brand-accent-hex) 9%, transparent), transparent 65%),
+    radial-gradient(75% 45% at 90% 10%, color-mix(in srgb, var(--brand-secondary-hex) 6%, transparent), transparent 60%),
+    radial-gradient(60% 40% at 10% 15%, color-mix(in srgb, var(--brand-tertiary-hex) 5%, transparent), transparent 55%);
+}
+
+/* ─── 3. Firma por Saga: Fondo con Forma Propia (solo con vidrio) ─────────── */
+:root[data-mode="era"]:not([data-flat="true"])[data-theme="era-db"] {
+  /* Atardecer sutil: suave resplandor cálido arriba a la derecha y azul tenue */
+  --page-gradient:
+    radial-gradient(80% 55% at 50% -5%, color-mix(in srgb, var(--brand-accent-hex) 9%, transparent), transparent 65%),
+    radial-gradient(65% 45% at 85% 15%, color-mix(in srgb, var(--brand-secondary-hex) 6%, transparent), transparent 60%);
+}
+
+:root[data-mode="era"]:not([data-flat="true"])[data-theme="era-dbz"] {
+  /* Aura dorada superior con cobalto atmosférico */
+  --page-gradient:
+    radial-gradient(85% 55% at 50% -5%, color-mix(in srgb, var(--brand-accent-hex) 9%, transparent), transparent 65%),
+    radial-gradient(70% 45% at 88% 12%, color-mix(in srgb, var(--brand-secondary-hex) 6%, transparent), transparent 60%);
+}
+
+:root[data-mode="era"]:not([data-flat="true"])[data-theme="era-dbgt"] {
+  /* Carmesí SSJ4 cenital y violeta cósmico */
+  --page-gradient:
+    radial-gradient(80% 55% at 45% -5%, color-mix(in srgb, var(--brand-accent-hex) 9%, transparent), transparent 65%),
+    radial-gradient(65% 45% at 85% 15%, color-mix(in srgb, var(--brand-secondary-hex) 6%, transparent), transparent 60%);
+}
+
+:root[data-mode="era"]:not([data-flat="true"])[data-theme="era-dbkai"] {
+  /* Bruma esmeralda remaster y naranja gi */
+  --page-gradient:
+    radial-gradient(80% 55% at 40% -5%, color-mix(in srgb, var(--brand-accent-hex) 9%, transparent), transparent 65%),
+    radial-gradient(65% 45% at 85% 15%, color-mix(in srgb, var(--brand-secondary-hex) 6%, transparent), transparent 60%);
+}
+
+:root[data-mode="era"]:not([data-flat="true"])[data-theme="era-dbs"] {
+  /* Resplandor divino cenital cian y púrpura Beerus */
+  --page-gradient:
+    radial-gradient(85% 55% at 50% -5%, color-mix(in srgb, var(--brand-accent-hex) 10%, transparent), transparent 65%),
+    radial-gradient(70% 45% at 85% 15%, color-mix(in srgb, var(--brand-secondary-hex) 7%, transparent), transparent 60%);
+}
+
+:root[data-mode="era"]:not([data-flat="true"])[data-theme="era-daima"] {
+  /* Violeta místico del Reino Demoníaco y dorado tenue */
+  --page-gradient:
+    radial-gradient(80% 55% at 45% -5%, color-mix(in srgb, var(--brand-accent-hex) 9%, transparent), transparent 65%),
+    radial-gradient(65% 45% at 85% 15%, color-mix(in srgb, var(--brand-secondary-hex) 6%, transparent), transparent 60%);
+}
+
+/* ─── 4. Fondo Ambiental y Capa Universo DB ───────────────────────── */
+:root[data-mode="era"]:not([data-flat="true"]) {
+  --page-arc: none;
+}
+
+[data-mode="era"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--page-gradient);
+  pointer-events: none;
+  z-index: -5;
+}
+
+[data-theme="era-universe"] .era-universe-layer {
+  opacity: 0.04;
+}
+
+[data-mode="era"] .era-universe-layer {
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    color-mix(in srgb, var(--spotlight-db) 12%, transparent) 0deg,
+    color-mix(in srgb, var(--spotlight-dbz) 12%, transparent) 60deg,
+    color-mix(in srgb, var(--spotlight-dbgt) 12%, transparent) 120deg,
+    color-mix(in srgb, var(--spotlight-dbkai) 12%, transparent) 180deg,
+    color-mix(in srgb, var(--spotlight-dbs) 12%, transparent) 240deg,
+    color-mix(in srgb, var(--spotlight-daima) 12%, transparent) 300deg,
+    color-mix(in srgb, var(--spotlight-db) 12%, transparent) 360deg
+  );
+}
+
+/* Fundido entre paletas de Universo DB (crossfadeThemeChange) */
+@property --bg-primary { syntax: "<color>"; inherits: true; initial-value: #08080A; }
+@property --bg-secondary { syntax: "<color>"; inherits: true; initial-value: #101014; }
+@property --bg-tertiary { syntax: "<color>"; inherits: true; initial-value: #18181E; }
+@property --bg-quaternary { syntax: "<color>"; inherits: true; initial-value: #22222A; }
+@property --era-tint { syntax: "<color>"; inherits: true; initial-value: #000; }
+@property --brand-accent-hex { syntax: "<color>"; inherits: true; initial-value: #000; }
+@property --brand-secondary-hex { syntax: "<color>"; inherits: true; initial-value: #000; }
+@property --brand-tertiary-hex { syntax: "<color>"; inherits: true; initial-value: #000; }
+
+:root[data-era-fade] {
+  transition-property: --bg-primary, --bg-secondary, --bg-tertiary, --bg-quaternary, --era-tint,
+    --brand-accent-hex, --brand-secondary-hex, --brand-tertiary-hex;
+  transition-duration: var(--duration-quick);
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ─── 5. Guiños de Dragon Ball (Discretos · Foco, Hover y Marca de Agua) ──── */
+[data-theme="era-universe"] { --era-kanji: "龍"; }
+[data-theme="era-db"] { --era-kanji: "亀"; }
+[data-theme="era-dbz"] { --era-kanji: "悟"; }
+[data-theme="era-dbgt"] { --era-kanji: "星"; }
+[data-theme="era-dbkai"] { --era-kanji: "改"; }
+[data-theme="era-dbs"] { --era-kanji: "超"; }
+[data-theme="era-daima"] { --era-kanji: "魔"; }
+
+@property --ink-top {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --ink-middle {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --ink-bottom {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+/* Sello central de dos planos por era (Opción 5 — Doble Plano Arquitectónico, escala 85 %) */
+.era-kanji-watermark__stage {
+  opacity: 0;
+}
+
+.era-kanji-watermark__stage[data-active="true"] {
+  opacity: 1;
+}
+
+.era-kanji-watermark__svg {
+  width: min(63vmin, 37.3rem);
+  height: min(63vmin, 37.3rem);
+  overflow: visible;
+}
+
+.era-kanji-watermark__echo,
+.era-kanji-watermark__glyph {
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "MS Mincho", serif;
+  font-weight: 500;
+  font-size: 146px;
+}
+
+.era-kanji-watermark__echo {
+  fill: none;
+  stroke: var(--brand-secondary-hex);
+  stroke-opacity: 0.13;
+  stroke-width: 1.15;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  transition: stroke var(--duration-medium) var(--ease-smooth-out);
+}
+
+.era-kanji-watermark__glyph {
+  fill: color-mix(in srgb, #ffffff 4%, color-mix(in srgb, var(--brand-accent-hex) 5.5%, transparent));
+  stroke: none;
+  transition: fill var(--duration-medium) var(--ease-smooth-out);
+}
+
+:root[data-mode="classic"] .era-kanji-watermark,
+:root[data-flat="true"] .era-kanji-watermark {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .era-kanji-watermark__stage {
+    transition: none;
+  }
+  .era-kanji-watermark__echo,
+  .era-kanji-watermark__glyph {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .era-kanji-watermark__stage {
+    opacity: 1;
+    --ink-top: 0;
+    --ink-middle: 0;
+    --ink-bottom: 0;
+    --top-delay: 0ms;
+    --bottom-delay: var(--duration-base);
+    mask-image: linear-gradient(to bottom,
+      rgb(0 0 0 / var(--ink-top)) 15%,
+      rgb(0 0 0 / var(--ink-middle)) 50%,
+      rgb(0 0 0 / var(--ink-bottom)) 85%);
+    mask-origin: view-box;
+    mask-clip: view-box;
+    transition: --ink-top var(--duration-medium) ease-in-out var(--top-delay),
+                --ink-middle var(--duration-medium) ease-in-out var(--duration-quick),
+                --ink-bottom var(--duration-medium) ease-in-out var(--bottom-delay);
+  }
+
+  .era-kanji-watermark[data-direction="up"] .era-kanji-watermark__stage {
+    --top-delay: var(--duration-base);
+    --bottom-delay: 0ms;
+  }
+
+  .era-kanji-watermark__stage[data-active="true"] {
+    --ink-top: 1;
+    --ink-middle: 1;
+    --ink-bottom: 1;
+  }
+
+  /* Aura de ki en foco de teclado */
+  :root[data-mode="era"]:not([data-flat="true"]) article[id^="episode-"].surface-content-row:not(.episode-row-highlighted):has(:focus-visible) {
+    box-shadow: var(--glass-highlight-sm), var(--elevation-2),
+      0 0 0 1px color-mix(in srgb, var(--brand-accent-hex) 32%, transparent),
+      0 0 22px color-mix(in srgb, var(--brand-accent-hex) 24%, transparent);
+  }
+
+  :root[data-mode="era"]:not([data-flat="true"]) .arc-cinematic-card:not([data-active="true"]):focus-visible {
+    border-color: color-mix(in srgb, var(--brand-accent-hex) 34%, rgba(255, 255, 255, 0.16));
+    border-top-color: color-mix(in srgb, var(--brand-accent-hex) 42%, rgba(255, 255, 255, 0.24));
+    box-shadow: var(--double-bezel-ring), var(--elevation-1);
+  }
+}
+
+/* Ki aura en hover con puntero fino */
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+  :root[data-mode="era"]:not([data-flat="true"]) article[id^="episode-"].surface-content-row:not(.episode-row-highlighted):hover {
+    box-shadow: var(--glass-highlight-sm), var(--elevation-2),
+      0 0 0 1px color-mix(in srgb, var(--brand-accent-hex) 32%, transparent),
+      0 0 22px color-mix(in srgb, var(--brand-accent-hex) 24%, transparent);
+  }
+
+  :root[data-mode="era"]:not([data-flat="true"]) .arc-cinematic-card:not([data-active="true"]):hover {
+    background:
+      radial-gradient(50% 130% at 0% 50%, color-mix(in srgb, var(--brand-accent-hex) 8%, transparent), transparent 70%),
+      color-mix(in srgb, var(--neutral-elev-2) 86%, transparent);
+    border-color: color-mix(in srgb, var(--brand-accent-hex) 28%, rgba(255, 255, 255, 0.14));
+    border-top-color: color-mix(in srgb, var(--brand-accent-hex) 36%, rgba(255, 255, 255, 0.24));
+    box-shadow: var(--double-bezel-ring), var(--elevation-1);
+  }
+}
+
+/* ─── 6. Componentes del Catálogo en Modo Por Era (Acentos e Indicadores) ─── */
+[data-mode="era"] .series-collapse-pill {
+  border-color: color-mix(in srgb, var(--brand-accent-hex) 28%, rgba(255, 255, 255, 0.14));
+  box-shadow: var(--double-bezel-shadow), 0 0 12px color-mix(in srgb, var(--brand-accent-hex) 15%, transparent);
+}
+
+[data-mode="era"] .series-collapse-ep-badge {
+  border-color: color-mix(in srgb, var(--brand-accent-hex) 45%, transparent);
+  background: color-mix(in srgb, var(--brand-accent-hex) 18%, transparent);
+  color: var(--era-badge-text, hsl(var(--brand-accent)));
+}
+
+/* Barras de progreso en dupla: del acento al secundario de la saga */
+[data-mode="era"] .series-collapse-progress-fill {
+  background: linear-gradient(90deg, var(--brand-accent-hex), var(--brand-secondary-hex));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--brand-secondary-hex) 45%, transparent);
+}
+
+[data-mode="era"] :is(.watch-progress-fill, .episode-progress-bar-fill, .card-progress-fill) {
+  background-image: linear-gradient(90deg, var(--brand-accent-hex), var(--brand-secondary-hex));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--brand-secondary-hex) 50%, transparent);
+}
+
+[data-mode="era"] .arc-card-active-indicator {
+  background:
+    radial-gradient(58% 140% at 0% 50%, color-mix(in srgb, var(--brand-accent-hex) 12%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--neutral-elev-2) 95%, rgba(255, 255, 255, 0.04)) 0%, color-mix(in srgb, var(--neutral-elev-1) 92%, transparent) 100%);
+  border-color: color-mix(in srgb, var(--brand-accent-hex) 26%, rgba(255, 255, 255, 0.14));
+  border-top-color: color-mix(in srgb, var(--brand-accent-hex) 38%, rgba(255, 255, 255, 0.28));
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.50),
+    var(--double-bezel-ring),
+    var(--elevation-2);
+}
+
+[data-mode="era"] .arc-card-accent-bar {
+  background: hsl(var(--brand-accent));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--brand-accent-hex) 38%, transparent);
+}
+
+/* Saga activa: filete y progreso en dupla */
+[data-mode="era"] .arc-cinematic-card[data-active="true"] .arc-card-accent-bar {
+  background: linear-gradient(180deg, var(--brand-accent-hex), var(--brand-secondary-hex));
+  box-shadow:
+    0 -2px 7px color-mix(in srgb, var(--brand-accent-hex) 42%, transparent),
+    0 2px 7px color-mix(in srgb, var(--brand-secondary-hex) 34%, transparent);
+}
+
+[data-mode="era"] .arc-cinematic-card[data-active="true"] .arc-card-badge {
+  background: color-mix(in srgb, var(--brand-accent-hex) 14%, var(--neutral-elev-2));
+  border-color: color-mix(in srgb, var(--brand-accent-hex) 32%, rgba(255, 255, 255, 0.14));
+  border-top-color: color-mix(in srgb, var(--brand-accent-hex) 40%, rgba(255, 255, 255, 0.24));
+  color: var(--era-badge-text, var(--on-surface));
+  box-shadow: var(--double-bezel-ring);
+}
+
+[data-mode="era"] .arc-cinematic-card[data-active="true"] .arc-card-progress-fill {
+  background-image: linear-gradient(90deg, var(--brand-accent-hex), var(--brand-secondary-hex));
+}
+
+[data-mode="era"] .character-avatar-card:hover .character-avatar-frame {
+  border-color: color-mix(in srgb, var(--brand-accent-hex) 50%, transparent);
+  box-shadow: var(--double-bezel-ring), 0 0 24px color-mix(in srgb, var(--brand-accent-hex) 35%, transparent);
+}
+
+[data-mode="era"] .character-detail-modal {
+  border-color: color-mix(in srgb, var(--brand-accent-hex) 30%, rgba(255, 255, 255, 0.15));
+  box-shadow: var(--double-bezel-shadow-strong), 0 0 30px color-mix(in srgb, var(--brand-accent-hex) 12%, transparent);
+}
+
+/* ─── 7. Navegación, Rieles y Pantallas Clave con el Color de la Era ──────── */
+
+/* Indicador de la barra flotante: acento de la saga */
+[data-mode="era"] .floating-nav-active-indicator {
+  background-color: var(--brand-accent-hex);
+  box-shadow: var(--soft-thumb-shadow), 0 0 14px color-mix(in srgb, var(--brand-accent-hex) 45%, transparent);
+}
+
+/* EraRail (riel y barra): ítem activo con acento de su saga */
+:root[data-mode="era"] [data-era-selector] .era-row-active {
+  background-color: color-mix(in srgb, var(--era-item-accent) 16%, transparent);
+}
+
+/* Cronología: nodos de la línea central con color de su sección */
+[data-mode="era"] .chrono-spine-node[data-state="active"] {
+  background-color: rgb(var(--era));
+  box-shadow: 0 0 16px rgb(var(--era) / 0.45);
+}
+
+[data-mode="era"] .chrono-spine-node[data-state="idle"] {
+  color: rgb(var(--era-text, var(--era)));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-mode="era"] .group:hover .chrono-spine-node[data-state="idle"] {
+    border-color: rgb(var(--era) / 0.6);
+  }
+}
+
+[data-mode="era"] .chrono-era-clock,
+[data-mode="era"] .chrono-era-percent {
+  color: rgb(var(--era-text));
+}
+
+/* ─── 8. Reducir Transparencia en Por Era (data-flat="true") ───────────────── */
+:root[data-mode="era"][data-flat="true"] .floating-nav-active-indicator,
+:root[data-mode="era"][data-flat="true"] .chrono-spine-node[data-state="active"] {
+  box-shadow: none;
+}
+
+:root[data-mode="era"][data-flat="true"] [data-era-selector] .era-row-active {
+  background-color: color-mix(in srgb, var(--era-item-accent) 16%, var(--neutral-elev-3));
+}
+
+:root[data-mode="era"][data-flat="true"] .arc-card-active-indicator {
+  background: color-mix(in srgb, var(--brand-accent-hex) 14%, var(--flat-2));
+  border-color: color-mix(in srgb, var(--brand-accent-hex) 42%, var(--flat-separator));
+  border-top-color: color-mix(in srgb, var(--brand-accent-hex) 48%, rgba(255, 255, 255, 0.14));
+  box-shadow: none;
+}
+
+:root[data-mode="era"][data-flat="true"] .arc-cinematic-card .arc-card-accent-bar {
+  box-shadow: none;
+}
+
+:root[data-mode="era"][data-flat="true"] .arc-cinematic-card[data-active="true"] .arc-card-badge {
+  background: color-mix(in srgb, var(--brand-accent-hex) 16%, var(--flat-2));
+  box-shadow: none;
+}
+
+
+/* Negro es una paleta fija de Por era, con el mismo material y sin atmósfera cromática. */
+[data-theme="era-black"] {
+  --era-black-accent: #F5F5F7;
+  --brand-accent: 240 11% 96%;
+  --brand-accent-hex: var(--era-black-accent);
+  --brand-secondary: 240 5% 65%;
+  --brand-secondary-hex: #A1A1AA;
+  --brand-tertiary: 240 5% 65%;
+  --brand-tertiary-hex: #A1A1AA;
+  --era-tint: #101014;
+  --era-badge-text: var(--era-black-accent);
+}
+
+:root[data-mode="era"][data-theme="era-black"] {
+  --neutral-elev-0: #000000;
+  --bg-primary: #000000;
+  --background: 0 0% 0%;
+  --page-gradient: none;
+  --page-arc: none;
+}
+
+:root[data-mode="era"][data-theme="era-black"] .era-kanji-watermark {
+  display: none;
+}

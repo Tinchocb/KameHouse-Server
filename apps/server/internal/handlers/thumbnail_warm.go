@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"kamehouse/internal/drive"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"kamehouse/internal/database/db"
@@ -114,11 +117,13 @@ feed:
 	wg.Wait()
 }
 
+var errWarmIneligible = errors.New("Drive thumbnail source unavailable")
+
 // warmOneThumbnail deja en disco la miniatura de un archivo (local o de Drive).
 func (h *Handler) warmOneThumbnail(ctx context.Context, lf *dto.LocalFile) (bool, error) {
 	if strings.HasPrefix(lf.Path, "gdrive://") {
 		if lf.DriveFileID == "" || h.App.DriveService == nil || !h.App.DriveService.IsEnabled() {
-			return false, nil
+			return false, errWarmIneligible
 		}
 		hash := driveThumbnailHash(lf.DriveFileID, lf.FileModTime)
 		cacheFile := driveThumbnailCacheFile(h.App.Config.Cache.Dir, hash)
@@ -150,72 +155,108 @@ func (h *Handler) warmOneThumbnail(ctx context.Context, lf *dto.LocalFile) (bool
 // background=true: un solo worker, con pausa mientras haya una reproducción transcodificando.
 // Devuelve started=false si ya había uno corriendo.
 func (h *Handler) startThumbnailWarm(workers int, background bool) (started bool, total int, err error) {
+	if h.App.ShutdownCtx().Err() != nil {
+		return false, 0, context.Canceled
+	}
 	warmingMu.Lock()
 	if isThumbnailWarming.Swap(true) {
 		warmingMu.Unlock()
 		return false, 0, nil
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(h.App.ShutdownCtx())
 	warmingCancel = cancel
 	warmingMu.Unlock()
 
 	finish := func() {
-		isThumbnailWarming.Store(false)
 		warmingMu.Lock()
+		isThumbnailWarming.Store(false)
 		warmingCancel = nil
 		warmingMu.Unlock()
 		cancel()
 	}
 
-	lfs, _, err := db.GetLocalFiles(h.App.Database)
-	if err != nil {
-		finish()
-		return false, 0, fmt.Errorf("failed to retrieve local files: %w", err)
+	type startupResult struct {
+		total int
+		err   error
 	}
-
-	total = len(lfs)
-	warmingTotal.Store(int64(total))
-	warmingProcessed.Store(0)
-	warmingGenerated.Store(0)
-	warmingSkipped.Store(0)
-
-	h.App.Logger.Info().Int("totalFiles", total).Int("workers", workers).Bool("background", background).
-		Msg("cache: Starting thumbnail warm-up worker pool")
-
-	_ = os.MkdirAll(filepath.Join(h.App.Config.Cache.Dir, "thumbnails"), 0755)
-
-	hooks := thumbnailWarmHooks{
-		Generate: h.warmOneThumbnail,
-		OnDone: func(generated bool, err error) {
-			warmingProcessed.Add(1)
-			switch {
-			case err != nil:
-				warmingSkipped.Add(1)
-			case generated:
-				warmingGenerated.Add(1)
-			default:
-				warmingSkipped.Add(1)
-			}
-		},
-	}
-	if background {
-		hooks.Busy = h.transcodeActive
-		hooks.Gap = thumbnailBackgroundGap
-	}
-
-	go func() {
+	startup := make(chan startupResult, 1)
+	var signalled sync.Once
+	signal := func(total int, err error) { signalled.Do(func() { startup <- startupResult{total, err} }) }
+	if !h.App.StartBackground(func() {
 		defer finish()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				err := fmt.Errorf("thumbnail warm-up panic: %v", recovered)
+				signal(0, err)
+				h.App.Logger.Error().Err(err).Msg("cache: Thumbnail warm-up stopped")
+			}
+		}()
+		if ctx.Err() != nil {
+			signal(0, ctx.Err())
+			return
+		}
+		lfs, _, err := db.GetLocalFiles(h.App.Database)
+		if err != nil {
+			signal(0, fmt.Errorf("failed to retrieve local files: %w", err))
+			return
+		}
+		if ctx.Err() != nil {
+			signal(0, ctx.Err())
+			return
+		}
+		filesTotal := len(lfs)
+		warmingTotal.Store(int64(filesTotal))
+		warmingProcessed.Store(0)
+		warmingGenerated.Store(0)
+		warmingSkipped.Store(0)
+		h.App.Logger.Info().Int("totalFiles", filesTotal).Int("workers", workers).Bool("background", background).Msg("cache: Starting thumbnail warm-up worker pool")
+		_ = os.MkdirAll(filepath.Join(h.App.Config.Cache.Dir, "thumbnails"), 0755)
+		var existing, unavailable, failed, ineligible atomic.Int64
+		hooks := thumbnailWarmHooks{
+			Generate: h.warmOneThumbnail,
+			OnDone: func(generated bool, err error) {
+				warmingProcessed.Add(1)
+				switch {
+				case err != nil:
+					if errors.Is(err, drive.ErrNoThumbnail) {
+						unavailable.Add(1)
+					} else if errors.Is(err, errWarmIneligible) {
+						ineligible.Add(1)
+					} else {
+						failed.Add(1)
+					}
+					warmingSkipped.Add(1)
+				case generated:
+					warmingGenerated.Add(1)
+				default:
+					existing.Add(1)
+					warmingSkipped.Add(1)
+				}
+			},
+		}
+		if background {
+			hooks.Busy = h.transcodeActive
+			hooks.Gap = thumbnailBackgroundGap
+		}
+		signal(filesTotal, nil)
 		runThumbnailWarmPool(ctx, lfs, workers, hooks)
 		h.App.Logger.Info().
 			Int64("total", warmingTotal.Load()).
 			Int64("processed", warmingProcessed.Load()).
 			Int64("generated", warmingGenerated.Load()).
 			Int64("skipped", warmingSkipped.Load()).
+			Int64("existing", existing.Load()).Int64("noDrivePreview", unavailable.Load()).Int64("failed", failed.Load()).Int64("ineligible", ineligible.Load()).
 			Bool("cancelled", ctx.Err() != nil).
 			Msg("cache: Thumbnail warm-up completed")
-	}()
-
-	return true, total, nil
+	}) {
+		finish()
+		return false, 0, context.Canceled
+	}
+	result := <-startup
+	if result.err != nil {
+		return false, 0, result.err
+	}
+	return true, result.total, nil
 }
 
 // warmThumbnailsAfterScan genera en segundo plano las miniaturas que faltan después de un
@@ -227,19 +268,19 @@ func (h *Handler) warmThumbnailsAfterScan(delay time.Duration) {
 	if h.App == nil || h.App.Database == nil || h.App.Config == nil {
 		return
 	}
-	go func() {
+	h.App.StartBackground(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				h.App.Logger.Error().Interface("panic", r).Msg("cache: panic scheduling background thumbnail warm-up")
 			}
 		}()
-		if delay > 0 {
-			time.Sleep(delay)
+		if !waitBackground(h.App.ShutdownCtx(), delay) {
+			return
 		}
 		if _, _, err := h.startThumbnailWarm(thumbnailBackgroundWorkers, true); err != nil {
 			h.App.Logger.Warn().Err(err).Msg("cache: background thumbnail warm-up not started")
 		}
-	}()
+	})
 }
 
 // thumbnailWarmWorkers es la concurrencia del precalentado manual (el botón de Ajustes).

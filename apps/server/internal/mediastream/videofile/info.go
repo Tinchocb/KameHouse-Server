@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"kamehouse/internal/util/ffmpegutil"
 	"kamehouse/internal/util/filecache"
 	"mime"
 	"strconv"
@@ -19,23 +20,6 @@ import (
 )
 
 const MediaInfoBucketName = "mediastream_mediainfo"
-
-var (
-	ffprobePathMu      sync.Mutex
-	currentFfprobePath string
-)
-
-func SetGlobalFFProbePath(path string) {
-	if path == "" {
-		return
-	}
-	ffprobePathMu.Lock()
-	defer ffprobePathMu.Unlock()
-	if currentFfprobePath != path {
-		currentFfprobePath = path
-		ffprobe.SetFFProbeBinPath(path)
-	}
-}
 
 type MediaInfo struct {
 	// The sha1 of the video file
@@ -162,26 +146,55 @@ type MediaInfoExtractor struct {
 	fileCacher *filecache.Cacher
 	logger     *zerolog.Logger
 	// probes colapsa los ffprobe simultaneos del mismo archivo (clave: hash de la ruta).
-	probes singleflight.Group
+	probes    singleflight.Group
+	probe     func(context.Context, string, string, string) (*MediaInfo, error)
+	lifecycle sync.Mutex
+	closed    bool
+	workers   sync.WaitGroup
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 func NewMediaInfoExtractor(fileCacher *filecache.Cacher, logger *zerolog.Logger) *MediaInfoExtractor {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &MediaInfoExtractor{
 		fileCacher: fileCacher,
 		logger:     logger,
+		probe:      FfprobeGetInfoContext,
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 }
 
-// GetInfo returns the media information of a file.
-// If the information is not in the cache, it will be extracted and saved in the cache.
-func (e *MediaInfoExtractor) GetInfo(ffprobePath, path string) (mi *MediaInfo, err error) {
-	return e.GetInfoContext(context.Background(), ffprobePath, path)
+func (e *MediaInfoExtractor) begin() bool {
+	e.lifecycle.Lock()
+	defer e.lifecycle.Unlock()
+	if e.closed {
+		return false
+	}
+	e.workers.Add(1)
+	return true
 }
 
-// GetInfoContext es GetInfo con un contexto: si quien pidió la info se va (el
-// cliente cancela el request), el ffprobe en curso se corta en vez de seguir
-// hasta su tope de 40 s.
+// Close cancels shared probes and waits for their cache writes before cache shutdown.
+func (e *MediaInfoExtractor) Close() {
+	e.lifecycle.Lock()
+	e.closed = true
+	e.cancel()
+	e.lifecycle.Unlock()
+	e.workers.Wait()
+}
+
+// GetInfoContext cancels the caller's wait. Shared probes survive an individual
+// caller, but Close cancels and joins them before the cache is closed.
 func (e *MediaInfoExtractor) GetInfoContext(ctx context.Context, ffprobePath, path string) (mi *MediaInfo, err error) {
+	if !e.begin() {
+		return nil, context.Canceled
+	}
+	defer e.workers.Done()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	hash, err := GetHashFromPath(path)
 	if err != nil {
 		return nil, err
@@ -195,8 +208,9 @@ func (e *MediaInfoExtractor) GetInfoContext(ctx context.Context, ffprobePath, pa
 	e.logger.Trace().Msg("mediastream: Getting media information from cache [MediaInfoExtractor]")
 
 	// Look in the cache
-	if found, _ := e.fileCacher.Get(bucket, hash, &mi); found {
+	if found, _ := e.fileCacher.Get(bucket, hash, &mi); found && mi != nil {
 		e.logger.Debug().Str("hash", hash).Msg("mediastream: Media information cache HIT [MediaInfoExtractor]")
+		mi = cloneMediaInfo(mi)
 		repairLegacyHevcMime(mi)
 		return mi, nil
 	}
@@ -208,16 +222,26 @@ func (e *MediaInfoExtractor) GetInfoContext(ctx context.Context, ffprobePath, pa
 	// pretranscode, skipdetect y los endpoints de Drive: cada ffprobe de Drive lee el archivo por
 	// loopback y cada uno local ocupa CPU y disco.
 	flight := e.probes.DoChan(hash, func() (interface{}, error) {
+		if !e.begin() {
+			return nil, context.Canceled
+		}
+		defer e.workers.Done()
 		// Otro vuelo pudo dejarlo en cache entre el Get de arriba y este punto.
 		var cached *MediaInfo
 		if found, _ := e.fileCacher.Get(bucket, hash, &cached); found && cached != nil {
-			repairLegacyHevcMime(cached)
 			return cached, nil
 		}
 
 		// Desacoplado de quien lo pidio: lo comparten todos los que esperan y el tope de 40 s de
 		// FfprobeGetInfoContext lo sigue acotando. Si todos se van, el resultado igual queda en cache.
-		probed, probeErr := FfprobeGetInfoContext(context.WithoutCancel(ctx), ffprobePath, path, hash)
+		probeCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+		stop := context.AfterFunc(e.ctx, cancel)
+		defer stop()
+		defer cancel()
+		if e.ctx.Err() != nil {
+			cancel()
+		}
+		probed, probeErr := e.probe(probeCtx, ffprobePath, path, hash)
 		if probeErr != nil {
 			e.logger.Error().Err(probeErr).Str("path", path).Msg("mediastream: Failed to extract media information using FFprobe")
 			return nil, probeErr
@@ -256,7 +280,9 @@ func (e *MediaInfoExtractor) GetInfoContext(ctx context.Context, ffprobePath, pa
 		if res.Err != nil {
 			return nil, res.Err
 		}
-		return res.Val.(*MediaInfo), nil
+		mi = cloneMediaInfo(res.Val.(*MediaInfo))
+		repairLegacyHevcMime(mi)
+		return mi, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -271,14 +297,10 @@ func FfprobeGetInfo(ffprobePath, path, hash string) (*MediaInfo, error) {
 // FfprobeGetInfoContext hereda la cancelación de ctx; el tope de 40 s se mantiene.
 func FfprobeGetInfoContext(ctx context.Context, ffprobePath, path, hash string) (*MediaInfo, error) {
 
-	if ffprobePath != "" {
-		SetGlobalFFProbePath(ffprobePath)
-	}
-
 	ffprobeCtx, cancel := context.WithTimeout(ctx, 40*time.Second)
 	defer cancel()
 
-	data, err := ffprobe.ProbeURL(ffprobeCtx, path)
+	data, err := ffmpegutil.ProbeURL(ffprobeCtx, ffprobePath, path)
 	if err != nil {
 		return nil, err
 	}

@@ -22,12 +22,10 @@
   --duration-slow:      400ms;
   --duration-very-slow: 500ms;
   --duration-slower:    600ms;
-  --duration-slowest:   800ms;
 
   /* Rotación automática de carruseles de Hero (Home Spotlight / Películas) */
   --hero-rotation-duration: 5000ms;
   --dot-accent: var(--brand-accent-hex);
-  --dot-wave-delay: 0ms;
 
   /* Alias --dur para uso inline en keyframes */
   --dur: var(--duration-base);
@@ -87,12 +85,11 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* Anillo de esferas del dragón de la pantalla de carga: todas se encienden y apagan a la vez, en círculo,
-   como al invocar a Shenlong. index.html, public/splash.html y el overlay de React usan esta misma animación. */
+/* Anillo de esferas del dragón de la pantalla de carga: solo opacity + transform en el compositor. */
 @keyframes ball-charge {
-  0%, 100% { filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); }
-  35%      { filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.75)) grayscale(0) brightness(1.1); }
-  70%      { filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); }
+  0%, 100% { opacity: 0.42; transform: scale(0.94); }
+  35%      { opacity: 1; transform: scale(1.06); }
+  70%      { opacity: 0.42; transform: scale(0.94); }
 }
 
 /* Music Bars: barras de equalizer que oscilan mientras suena audio */
@@ -109,27 +106,6 @@
   to   { transform: scaleX(1); }
 }
 
-/* Apple Dynamic Island Carousel Dots: rebote elástico al activarse la cápsula,
-   ola sinusoidal en los puntos vecinos y anillo expansivo de aterrizaje. */
-@keyframes dot-impact-jelly {
-  0%   { transform: scaleX(0.68) scaleY(1.38); }
-  38%  { transform: scaleX(1.14) scaleY(0.86); }
-  70%  { transform: scaleX(0.96) scaleY(1.04); }
-  100% { transform: scaleX(1) scaleY(1); }
-}
-
-@keyframes dot-wave-hop {
-  0%   { transform: translateY(0) scale(1); }
-  40%  { transform: translateY(-4px) scale(1.18); }
-  75%  { transform: translateY(1px) scale(0.95); }
-  100% { transform: translateY(0) scale(1); }
-}
-
-@keyframes dot-shockwave-ring {
-  0%   { transform: translate(-50%, -50%) scale(0.45); opacity: 0.85; }
-  100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
-}
-
 /* ─── Clases de Animación ──────────────────────────────────────────── */
 .animate-fade-in       { animation: fade-in var(--duration-base) var(--ease-out) both; }
 .animate-slide-up      { animation: slide-up var(--duration-slow) var(--ease-smooth-out) both; }
@@ -139,24 +115,14 @@
 .animate-music-bars    { animation: music-bars 0.9s ease-in-out infinite; transform-origin: bottom; }
 .animate-ball-charge   {
   animation: ball-charge 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 0 rgba(245, 158, 11, 0)) grayscale(0.6) brightness(0.45); /* apagada en reposo */
+  opacity: 0.42; /* apagada en reposo */
+  will-change: transform, opacity;
 }
 /* scaleX: solo compositor — sin layout ni paint. transform-origin: left para expandir desde el borde izquierdo. */
 .animate-hero-progress  { animation: hero-progress var(--hero-rotation-duration, 5s) linear forwards; transform-origin: left center; will-change: transform; }
-.animate-dot-jelly      { animation: dot-impact-jelly 440ms var(--ease-smooth-out) both; }
-.animate-dot-wave       { animation: dot-wave-hop 360ms var(--ease-spring) var(--dot-wave-delay, 0ms) both; }
-.animate-dot-ring       { animation: dot-shockwave-ring 480ms var(--ease-expo-out) forwards; }
 
 
 /* ─── Transitions.dev Keyframes & Micro-interactions ────────────────── */
-
-@keyframes error-shake {
-  0%, 100% { transform: translateX(0); }
-  20%      { transform: translateX(calc(-1 * var(--distance-small))); }
-  40%      { transform: translateX(var(--distance-small)); }
-  60%      { transform: translateX(calc(-1 * var(--distance-micro))); }
-  80%      { transform: translateX(var(--distance-micro)); }
-}
 
 @keyframes success-pop {
   0%   { transform: scale(0.85); opacity: 0; }
@@ -181,7 +147,6 @@
   to   { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
-.animate-error-shake     { animation: error-shake var(--duration-medium) var(--ease-smooth-out) both; }
 .animate-success-pop     { animation: success-pop var(--duration-base) var(--ease-bounce) both; }
 .animate-success-check   { animation: success-check var(--duration-base) var(--ease-bounce) both; }
 .animate-number-pop-in   { animation: number-pop-in var(--duration-base) var(--ease-bounce) both; }
@@ -200,8 +165,6 @@
 .delay-100  { animation-delay: 100ms; }
 .delay-150  { animation-delay: 150ms; }
 .delay-200  { animation-delay: 200ms; }
-.delay-250  { animation-delay: 250ms; }
-.delay-350  { animation-delay: 350ms; }
 
 /* ─── Accesibilidad: Reducción de movimiento ──────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

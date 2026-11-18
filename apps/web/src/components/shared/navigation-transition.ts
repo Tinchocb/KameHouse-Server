@@ -6,9 +6,9 @@
  * Reglas de motion: solo `opacity` y `transform`; entrada ≤ 250 ms, salida ≤ 120 ms; sin rebotes.
  */
 
-/** Curva ease-out fuerte del sistema (--ease-out en animation.css). */
-export const NAV_EASING = "cubic-bezier(0.23, 1, 0.32, 1)"
-export const NAV_ENTER_MS = 200
+/** Curva de superficies del sistema (--ease-smooth-out en animation.css). */
+export const NAV_EASING = "cubic-bezier(0.22, 1, 0.36, 1)"
+export const NAV_ENTER_MS = 250
 /** Salida de la página vieja mientras se monta la nueva: corta, solo opacidad (≤ 120 ms). */
 export const NAV_EXIT_MS = 110
 /**

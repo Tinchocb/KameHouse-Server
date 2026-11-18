@@ -1,0 +1,574 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  neutral.css — Recetas Compartidas y Base Neutra (Linear-style Dark UI)║
+   ║  Definición centralizada: escala grafito, biseles, elevación y flat    ║
+   ╚════════════════════════════════════════════════════════════════════════╝
+
+   Filosofía Visual (Linear-style Dark UI · Double-Bezel · Base de Superficies):
+   - Provee la base arquitectónica de superficies grafito (#08080A → #101014 → #18181E → #22222A),
+     el relieve Double-Bezel Specular Border (anillo exterior 1px rgba(0,0,0,0.85) + borde interno
+     1px rgba(255,255,255,0.08)), controles precisos y tipografía balanceada.
+   - Es consumido de forma canónica por Por era (`[data-mode="era"]`) y por el modo compatible `[data-mode="classic"]`.
+   - Minimalista (`[data-ui-style="classic-minimalist"]`) queda estrictamente excluido para preservar su acabado plano.
+*/
+
+/* ─── 1. Paleta Base Clásica ([data-theme="classic"]) ─────────────────────────
+   Valores Linear-style Dark UI acromáticos para compatibilidad y temas locales clásicos. */
+[data-theme="classic"] {
+  --brand-accent: 0 0% 100%;
+  --brand-accent-hex: #FFFFFF;
+  --brand-glow: rgba(255, 255, 255, 0.16);
+
+  --brand-secondary: 240 5% 65%;
+  --brand-secondary-hex: #A1A1AA;
+
+  /* Contraste oscuro sobre el acento blanco */
+  --md-sys-color-on-primary: #09090B;
+  --on-primary-rgb: 9, 9, 11;
+  --md-sys-color-on-secondary: #09090B;
+  --on-secondary-rgb: 9, 9, 11;
+  --primary-foreground: 240 10% 4%;
+
+  /* Texto Linear-style + Contraste secundario reforzado en Gris Puro */
+  --md-sys-color-on-surface: #F5F5F7;
+  --on-surface-rgb: 245, 245, 247;
+  --md-sys-color-on-surface-variant: #B8B8B8;
+  --on-surface-variant-rgb: 184, 184, 184;
+
+  /* Escala de elevación Neutro (Linear-style Dark UI / Black Cinema):
+     #08080A (canvas) → #101014 (cápsulas) → #18181E (chips/inputs) → #22222A (hover/active) */
+  --bg-primary: var(--neutral-elev-0);
+  --bg-secondary: var(--neutral-elev-1);
+  --bg-tertiary: var(--neutral-elev-2);
+  --bg-quaternary: var(--neutral-elev-3);
+
+  --classic-hover: #22222A;
+  --classic-active: #2A2A34;
+
+  --classic-border-subtle: rgba(255, 255, 255, 0.08);
+  --classic-border-strong: rgba(255, 255, 255, 0.14);
+
+  --classic-text-primary: #F5F5F7;
+  --classic-text-secondary: #B8B8B8;
+  --classic-text-muted: #808080;
+
+  --switch-track-off: #18181E;
+  --switch-thumb-off: #A1A1AA;
+  --switch-glow-on: 0 0 12px rgba(255, 255, 255, 0.18);
+
+  --control-primary-bg: #F5F5F7;
+  --control-primary-fg: #09090B;
+
+  --control-secondary-bg: #18181E;
+  --control-secondary-hover: #22222A;
+
+  /* Dark Glassmorphism + Specular Hairline Border (1px rgba(255,255,255,0.08) + filo 0.14) */
+  --glass-bg: rgba(16, 16, 20, 0.84);
+  --glass-bg-strong: rgba(24, 24, 30, 0.90);
+  --glass-bg-hover: rgba(34, 34, 42, 0.88);
+  --glass-border-top: rgba(255, 255, 255, 0.14);
+  --glass-border-bottom: rgba(255, 255, 255, 0.06);
+  --glass-border-side: rgba(255, 255, 255, 0.08);
+  --glass-border-strong: rgba(255, 255, 255, 0.16);
+
+  --sidebar-accent-gradient: none;
+  --sidebar-bg: rgba(4, 4, 6, 0.94);
+}
+
+/* ─── 2. Acento Acromático Clásico (Solo cuando data-mode="classic") ─────────── */
+[data-mode="classic"] {
+  --brand-accent: 0 0% 100%;
+  --brand-accent-hex: #FFFFFF;
+  --brand-accent-readable: #FFFFFF;
+  --brand-primary: 0 0% 100%;
+  --brand-secondary: 240 5% 65%;
+  --brand-magic: 0 0% 100%;
+  --primary: 0 0% 100%;
+  --ring: 0 0% 100%;
+  --focus-ring: var(--double-bezel-shadow);
+  --status-success: #FFFFFF;
+  --brand-success: 0 0% 100%;
+
+  --glow-color-1: transparent;
+  --glow-color-2: transparent;
+  --glow-color-3: transparent;
+  --glow-color-4: transparent;
+  --glow-color-5: transparent;
+}
+
+/* ─── 3. Superficies, Base Grafito y Double-Bezel (Neutro y Por Era) ─────────
+   Reutilizado tanto por Por era como por Classic compatible, aislando Minimalista */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) {
+  --blur-overlay-md: 24px;
+
+  --glass-border-top: rgba(255, 255, 255, 0.14);
+  --glass-border-bottom: rgba(255, 255, 255, 0.06);
+  --glass-border-side: rgba(255, 255, 255, 0.08);
+  --glass-border: var(--glass-border-side);
+  --glass-border-strong: rgba(255, 255, 255, 0.16);
+  --glass-rim-cool: rgba(255, 255, 255, 0.06);
+  --glass-rim-warm: rgba(255, 255, 255, 0.06);
+
+  /* Cards y paneles: Dark Frosted Glass mate (82% / 88% strong) estilo Linear / Antigravity */
+  --glass-card-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--neutral-elev-2) 84%, rgba(255, 255, 255, 0.04)) 0%,
+    color-mix(in srgb, var(--neutral-elev-1) 88%, transparent) 100%
+  );
+  --glass-panel-bg: color-mix(in srgb, var(--neutral-elev-1) 84%, transparent);
+  --glass-panel-bg-strong: color-mix(in srgb, var(--neutral-elev-2) 90%, transparent);
+  --glass-liquid-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--neutral-elev-2) 86%, rgba(255, 255, 255, 0.05)) 0%,
+    color-mix(in srgb, var(--neutral-elev-1) 90%, transparent) 100%
+  );
+
+  /* Escala de elevación base (Linear-style graphite / Black Cinema):
+     canvas = #08080A (elev-0), tarjetas/cápsulas = #101014 (elev-1),
+     chips/inputs/popovers = #18181E (elev-2), hover = #22222A (elev-3) */
+  --neutral-elev-0: #08080A;
+  --neutral-elev-1: #101014;
+  --neutral-elev-2: #18181E;
+  --neutral-elev-3: #22222A;
+  --bg-primary: var(--neutral-elev-0);
+  --bg-secondary: var(--neutral-elev-1);
+  --bg-tertiary: var(--neutral-elev-2);
+  --bg-quaternary: var(--neutral-elev-3);
+  --classic-hover: var(--neutral-elev-3);
+  --classic-active: var(--neutral-elev-3);
+  --switch-track-off: var(--neutral-elev-2);
+  --control-secondary-bg: var(--neutral-elev-2);
+  --control-secondary-hover: var(--neutral-elev-3);
+
+  /* Chrome (Dark Glassmorphism): vidrio esmerilado mate oscuro (84% / 90%) */
+  --glass-bg: color-mix(in srgb, var(--neutral-elev-1) 84%, transparent);
+  --glass-bg-strong: color-mix(in srgb, var(--neutral-elev-2) 90%, transparent);
+  --glass-bg-hover: color-mix(in srgb, var(--neutral-elev-3) 88%, transparent);
+
+  /* Superficies MD3 sobre la escala de elevación Linear */
+  --md-sys-color-surface-container: color-mix(in srgb, var(--neutral-elev-1) 86%, transparent);
+  --md-sys-color-surface-container-high: color-mix(in srgb, var(--neutral-elev-2) 92%, transparent);
+
+  /* Textos nítidos predominantemente neutros */
+  --surface-content-border: var(--neutral-separator);
+  --md-sys-color-on-surface: #F5F5F7;
+  --on-surface-rgb: 245, 245, 247;
+  --md-sys-color-on-surface-variant: #B8B8B8;
+  --on-surface-variant-rgb: 184, 184, 184;
+  --label-2: #CCCCCC;
+  --classic-text-primary: #F5F5F7;
+  --classic-text-secondary: #B8B8B8;
+  --classic-text-muted: #808080;
+
+  /* shadcn sincronizado con #08080A / #101014 / #18181E / #22222A */
+  --background: 240 10% 3.5%;
+  --card: 240 6% 6.8%;
+  --popover: 240 6% 10%;
+  --secondary: 240 6% 10%;
+  --muted: 240 6% 6.8%;
+  --accent: 240 6% 14%;
+
+  /* Sidebar sobre el lienzo #08080A */
+  --sidebar-bg: rgba(4, 4, 6, 0.94);
+  --sidebar-accent-gradient: none;
+  --sidebar-active-border: rgba(255, 255, 255, 0.24);
+
+  /* SectionBar: Dark Frosted Glass + Double-Bezel Specular Border */
+  --sectionbar-border:            rgba(255, 255, 255, 0.08);
+  --sectionbar-border-top:        rgba(255, 255, 255, 0.14);
+  --sectionbar-border-bottom:     rgba(255, 255, 255, 0.06);
+  --sectionbar-bg:                color-mix(in srgb, var(--neutral-elev-1) 82%, transparent);
+  --sectionbar-border-strong:     rgba(255, 255, 255, 0.12);
+  --sectionbar-border-top-strong: rgba(255, 255, 255, 0.18);
+  --sectionbar-bg-strong:         color-mix(in srgb, var(--neutral-elev-2) 88%, transparent);
+  --sectionbar-shadow:            var(--double-bezel-shadow);
+  --sectionbar-shadow-strong:     var(--double-bezel-shadow-strong);
+
+  /* Intensidad y saturación de Dark Frosted Glass mate */
+  --glass-saturate-cinematic: 1.15;
+  --glass-contrast:           1.03;
+  --glass-saturate:           1.20;
+  --glass-saturate-frosted:   1.25;
+  --glass-frosted-border:        rgba(255, 255, 255, 0.08);
+  --glass-frosted-border-top:    rgba(255, 255, 255, 0.14);
+  --glass-frosted-border-bottom: rgba(255, 255, 255, 0.06);
+  --glass-frosted-shadow:        var(--double-bezel-shadow);
+  --glass-frosted-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--neutral-elev-2) 84%, rgba(255, 255, 255, 0.04)) 0%,
+    color-mix(in srgb, var(--neutral-elev-1) 90%, transparent) 100%
+  );
+}
+
+/* ─── 4. Adaptación al Modo Plano (Reducir Transparencia: data-flat="true") ─ */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"])[data-flat="true"] {
+  --neutral-elev-0: #000000;
+  --neutral-elev-1: var(--flat-1);
+  --neutral-elev-2: var(--flat-2);
+  --neutral-elev-3: var(--flat-3);
+  --neutral-separator: var(--flat-separator);
+  --bg-primary: #000000;
+  --sidebar-bg: #000000;
+
+  /* shadcn sin desenfoque: negro puro OLED (#000000) en background */
+  --background: 0 0% 0%;
+  --card: 240 3% 11%;
+  --popover: 240 2% 18%;
+  --secondary: 240 3% 11%;
+  --muted: 240 3% 11%;
+  --accent: 240 2% 18%;
+}
+
+/* ─── 5. Fondo Ambiental en Clásico Compatible ───────────────────────────── */
+[data-mode="classic"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--page-gradient);
+  pointer-events: none;
+  z-index: -5;
+}
+
+/* ─── 6. Double-Bezel Specular Border (Neutro y Por Era) ─────────────────── */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-flat="true"]) :is(
+  .floating-nav-island,
+  .UI-Popover__root,
+  [data-select-surface],
+  .UI-Modal__content,
+  .character-detail-modal,
+  .surface-content:not(.surface-content-row),
+  .player-hud-capsule,
+  .global-queue-panel,
+  [data-sonner-toast]
+) {
+  border-color: rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  box-shadow: var(--double-bezel-shadow);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-flat="true"]) .UI-Button_root[data-intent="secondary"] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--neutral-elev-3) 88%, rgba(255, 255, 255, 0.06)) 0%,
+    var(--neutral-elev-2) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--double-bezel-control-shadow);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-flat="true"]) .UI-Button_root[data-intent="glass"] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--neutral-elev-2) 84%, rgba(255, 255, 255, 0.06)) 0%,
+    color-mix(in srgb, var(--neutral-elev-1) 90%, transparent) 100%
+  );
+  border-color: rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--double-bezel-control-shadow);
+}
+
+/* Riel hundido (Inset Bezel): canal oscuro con borde especular inferior sutil */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-flat="true"]) :is(.UI-SegmentedControl_root, .volume-nav-group) {
+  background: color-mix(in srgb, var(--neutral-elev-0) 86%, rgba(0, 0, 0, 0.55));
+  border-color: rgba(255, 255, 255, 0.06);
+  border-bottom-color: rgba(255, 255, 255, 0.10);
+  box-shadow: var(--double-bezel-inset-shadow);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-flat="true"]) .UI-SegmentedControl_root::before {
+  display: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-flat="true"]) .UI-SegmentedControl_indicator {
+  box-shadow: var(--soft-thumb-shadow);
+}
+
+/* Indicador de la barra flotante en neutro compatible */
+:root[data-mode="classic"]:not([data-ui-style="classic-minimalist"]):not([data-flat="true"]) .floating-nav-active-indicator {
+  box-shadow: var(--soft-thumb-shadow);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .neutro-sentence :where(*) {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .neutro-sentence .font-mono {
+  font-family: var(--font-sans);
+}
+
+/* ─── 7. Componentes del Catálogo (Double-Bezel Compartido) ───────────────── */
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .series-collapse-pill {
+  background: color-mix(in srgb, var(--neutral-elev-1) 88%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--double-bezel-shadow);
+}
+
+[data-mode="classic"] .series-collapse-ep-badge {
+  background: var(--neutral-elev-2);
+  border-color: var(--neutral-separator);
+  color: var(--classic-text-primary);
+}
+
+[data-mode="classic"] .series-collapse-progress-fill {
+  background: #ffffff;
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .arc-cinematic-card:not([data-active="true"]) {
+  background: color-mix(in srgb, var(--neutral-elev-1) 72%, transparent);
+  border-color: var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.12);
+  box-shadow: var(--double-bezel-ring);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .arc-cinematic-card:not([data-active="true"]):hover {
+    background: color-mix(in srgb, var(--neutral-elev-2) 86%, transparent);
+    border-color: rgba(255, 255, 255, 0.14);
+    border-top-color: rgba(255, 255, 255, 0.22);
+    box-shadow: var(--double-bezel-ring), var(--elevation-1);
+  }
+}
+
+[data-mode="classic"] .arc-card-active-indicator {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--neutral-elev-2) 94%, rgba(255, 255, 255, 0.04)) 0%, color-mix(in srgb, var(--neutral-elev-1) 88%, transparent) 100%);
+  border-color: rgba(255, 255, 255, 0.16);
+  border-top-color: rgba(255, 255, 255, 0.28);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.50),
+    var(--double-bezel-ring),
+    var(--elevation-2);
+}
+
+[data-mode="classic"] .arc-card-accent-bar {
+  background: #ffffff !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.30) !important;
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) [data-shared-poster] {
+  box-shadow: var(--double-bezel-ring);
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .character-avatar-frame {
+  border-color: var(--neutral-separator);
+  box-shadow: var(--double-bezel-ring);
+}
+
+[data-mode="classic"] .character-avatar-card:hover .character-avatar-frame {
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: var(--double-bezel-ring), 0 8px 24px rgba(0, 0, 0, 0.65);
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .character-detail-modal {
+  background: var(--neutral-elev-1);
+  border: 1px solid var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--double-bezel-shadow-strong);
+}
+
+/* Chips y etiquetas de metadatos: Dark Frosted Glass mate + Double-Bezel */
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) :is(
+  .detail-meta-chip,
+  .media-metadata-capsule > span,
+  .media-metadata-capsule > [data-rating],
+  .spotlight-saga-chip,
+  .chrono-chip
+) {
+  background: color-mix(in srgb, var(--neutral-elev-2) 80%, transparent);
+  border-color: var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.16);
+  box-shadow: var(--double-bezel-ring);
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .spotlight-saga-chip:hover {
+  background: var(--neutral-elev-3);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+/* Modal de Personajes: Scouter Ki, Técnicas y Transformaciones */
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .character-scouter-hud {
+  background: color-mix(in srgb, var(--neutral-elev-0) 70%, transparent);
+  border-color: var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--double-bezel-inset-shadow);
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .character-tech-badge {
+  background: var(--neutral-elev-2);
+  border-color: var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--double-bezel-ring);
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .character-transform-card {
+  background: color-mix(in srgb, var(--neutral-elev-2) 60%, transparent);
+  border-color: var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--double-bezel-ring);
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .character-transform-card:hover {
+  background: var(--neutral-elev-2);
+  border-color: rgba(255, 255, 255, 0.20);
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .character-stat-row {
+  border-color: var(--neutral-separator);
+}
+
+/* Pastillas flotantes del reproductor: halo exterior oscuro para contraste sobre cualquier frame */
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) :is(.player-skip-btn, .player-next-ep-btn) {
+  box-shadow: var(--double-bezel-ring), var(--elevation-2);
+}
+
+/* SectionBar: Contenedores de icono y flecha de colapso */
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) :is(.sectionbar-icon-box, .sectionbar-toggle-btn) {
+  background: var(--neutral-elev-2);
+  border-color: var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--double-bezel-ring);
+}
+
+/* Etiquetas y kanjis sobre pósteres: Double-Bezel Specular */
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .poster-chip {
+  background: color-mix(in srgb, var(--neutral-elev-2) 88%, transparent);
+  border-color: var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.16);
+  box-shadow: var(--double-bezel-ring);
+  color: #ffffff;
+}
+
+/* Nodos del eje central de la cronología en reposo */
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .chrono-spine-node[data-state="idle"] {
+  background: var(--neutral-elev-1);
+  border-color: var(--neutral-separator);
+  box-shadow: var(--double-bezel-ring);
+}
+
+/* Barras de progreso en Neutro compatible: acromático blanco titanio */
+[data-mode="classic"] :is(.watch-progress-fill, .episode-progress-bar-fill, .card-progress-fill, .arc-card-progress-fill) {
+  background-color: var(--selected-bg, #ffffff) !important;
+  background-image: none !important;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Tarjetas de saga de Inicio en Neutro compatible */
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .spotlight-saga-card {
+  border-color: var(--neutral-separator) !important;
+  box-shadow: var(--double-bezel-ring) !important;
+}
+
+:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]) .spotlight-saga-card:hover {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: var(--double-bezel-ring), 0 12px 28px rgba(0, 0, 0, 0.65) !important;
+}
+
+/* Tinte ambiental portalizado de cronología apagado en Neutro compatible */
+[data-mode="classic"] [data-era-tint] {
+  display: none !important;
+}
+
+/* Insignias de era en héroes de Series y Películas en Neutro compatible */
+[data-mode="classic"] :is(.series-hero-era-badge, .movies-hero-era-badge, .saga-collapsed-active-pill) {
+  background-color: var(--neutral-elev-2) !important;
+  border-color: var(--neutral-separator) !important;
+  border-top-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: var(--double-bezel-ring) !important;
+  color: var(--label-1) !important;
+}
+
+/* Selector de era y relojes de cronología en Neutro compatible */
+:root[data-mode="classic"] [data-era-selector] .era-row-active {
+  background-color: var(--neutral-elev-2);
+  border: 1px solid var(--neutral-separator);
+  border-top-color: rgba(255, 255, 255, 0.16);
+  box-shadow: var(--double-bezel-ring);
+  color: var(--label-1);
+}
+
+:root[data-mode="classic"] [data-era-selector] .era-selector-indicator {
+  background: var(--selected-bg, #ffffff) !important;
+}
+
+:root[data-mode="classic"] [data-era-selector] .era-row-active .font-kanji {
+  color: var(--label-1) !important;
+}
+
+[data-mode="classic"] :is(.chrono-era-clock, .chrono-era-percent) {
+  color: var(--label-1) !important;
+}
+
+/* Cronología en Modo Neutro compatible */
+:root[data-mode="classic"] :is([id^="timeline-card-"], [id^="volume-card-"], .contralateral-details-card, [id^="era-"], [id^="timeline-node-"], [id^="era-group-"], [data-interlude-slot], .group\/interlude, .chronology-compact-row, .volume-inspector-modal) {
+  --era: 255 255 255 !important;
+  --era-text: 255 255 255 !important;
+  --poster-accent: var(--label-1) !important;
+  --poster-text: var(--label-1) !important;
+}
+
+/* Insignias de episodio en Modo Neutro compatible */
+:root[data-mode="classic"] .episode-badge-filler {
+  background: var(--neutral-elev-2) !important;
+  color: var(--label-2) !important;
+  border-color: var(--neutral-separator) !important;
+}
+:root[data-mode="classic"] .episode-badge-watched {
+  background: var(--neutral-elev-2) !important;
+  color: var(--label-1) !important;
+  border-color: var(--neutral-separator) !important;
+}
+
+/* ─── 8. Reducir Transparencia en Componentes de Catálogo (data-flat="true") ─ */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"])[data-flat="true"] .series-collapse-pill {
+  background: var(--neutral-elev-2);
+  backdrop-filter: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"])[data-flat="true"] .character-detail-modal {
+  background: var(--flat-1);
+  backdrop-filter: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"])[data-flat="true"] :is(
+  .detail-meta-chip,
+  .media-metadata-capsule > span,
+  .media-metadata-capsule > [data-rating],
+  .spotlight-saga-chip,
+  .chrono-chip,
+  .character-tech-badge,
+  .character-transform-card,
+  .character-scouter-hud,
+  .poster-chip
+) {
+  background: var(--flat-2);
+  backdrop-filter: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"])[data-flat="true"] .arc-cinematic-card:not([data-active="true"]) {
+  background: var(--flat-1);
+  box-shadow: none;
+}
+
+:root[data-mode="classic"]:not([data-ui-style="classic-minimalist"])[data-flat="true"] .arc-card-active-indicator {
+  background: var(--flat-2);
+  border-color: var(--flat-separator);
+  border-top-color: var(--flat-edge-top);
+  box-shadow: none;
+}
+
+:root[data-mode="classic"]:not([data-ui-style="classic-minimalist"])[data-flat="true"] .arc-card-accent-bar {
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"])[data-flat="true"] .arc-cinematic-card:not([data-active="true"]):hover {
+    background: var(--flat-2);
+    box-shadow: none;
+  }
+}

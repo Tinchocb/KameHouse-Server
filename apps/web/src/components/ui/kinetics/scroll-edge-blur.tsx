@@ -1,5 +1,4 @@
 import * as React from "react"
-import { cn } from "@/components/ui/core/styling"
 import { useMotionTier } from "./motion-tier"
 import { useUIStore } from "@/lib/stores/ui-store"
 
@@ -34,44 +33,45 @@ const GLASS_SURFACE: React.CSSProperties = {
     background: "linear-gradient(to bottom, rgba(10, 10, 14, 0.75) 0%, rgba(10, 10, 14, 0.35) 60%, transparent 100%)",
 }
 
-interface ScrollEdgeBlurProps {
-    /** Contenedor de scroll personalizado; por defecto busca el elemento activo en scroll. */
-    container?: HTMLElement | null
-    /** Clases CSS adicionales. */
-    className?: string
-    /** Altura de la viñeta superior en Tailwind (default: "h-20 md:h-24"). */
-    heightClass?: string
+function subscribeFlatMode(onStoreChange: () => void) {
+    if (typeof MutationObserver === "undefined" || typeof document === "undefined") {
+        return () => {}
+    }
+    const observer = new MutationObserver(onStoreChange)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-flat"] })
+    return () => observer.disconnect()
 }
+
+const getFlatSnapshot = () =>
+    typeof document !== "undefined" && document.documentElement.dataset.flat === "true"
+const getFlatServerSnapshot = () => false
 
 /**
  * Viñeta de desenfoque progresivo en el borde superior (estilo macOS / Linear).
  * - Genera una transición óptica gradual para que el contenido que sube por detrás de las barras
  *   de navegación flotantes se disuelva suavemente en lugar de cortarse de forma abrupta.
- * - Z-Index 450: se ubica por encima de todo el contenido de página (z-20, z-30, z-sticky),
- *   pero estrictamente por debajo de las islas de navegación (z-navbar: 500).
+ * - Capa z-dropdown (100): se ubica por encima del contenido de página (z-10..z-30),
+ *   pero por debajo de selectores sticky como EraRail (z-sticky: 200) y las islas (z-navbar: 500).
  * - Detección universal: escucha con captura pasiva a nivel window, detectando scroll tanto
  *   en #main-content (/home, /movies) como en contenedores internos (/series, /settings).
  * - Reactiva: permanece 100% oculta (opacity 0 + visibility hidden) cuando el usuario se encuentra al tope (scrollTop <= 8px),
  *   garantizando que afiches Hero y cabeceras brillen con nitidez absoluta.
  */
-export function ScrollEdgeBlur({
-    container,
-    className,
-    heightClass = "h-20 md:h-24",
-}: ScrollEdgeBlurProps) {
+export function ScrollEdgeBlur() {
     const tier = useMotionTier()
     const scrollBlurEnabled = useUIStore((s) => s.scrollBlurEnabled)
+    const blurDisabledInStore = useUIStore((s) => s.themeVisual?.themeEnableBlurringEffects === false)
+    const isFlatAttr = React.useSyncExternalStore(subscribeFlatMode, getFlatSnapshot, getFlatServerSnapshot)
     const [scrolled, setScrolled] = React.useState(false)
 
     React.useEffect(() => {
+        if (!scrollBlurEnabled || tier === "off") return
         let raf = 0
 
         // Chequeo inicial
         const checkInitial = () => {
-            const scroller = container ?? document.querySelector<HTMLElement>('[data-scroll-container="true"]')
-            if (scroller && scroller.scrollTop > 8) {
-                setScrolled(true)
-            }
+            const scroller = document.querySelector<HTMLElement>('[data-scroll-container="true"]')
+            setScrolled(!!scroller && scroller.scrollTop > 8)
         }
         checkInitial()
 
@@ -84,18 +84,24 @@ export function ScrollEdgeBlur({
         const onScroll = (e: Event) => {
             const target = e.target
             if (!(target instanceof HTMLElement)) return
-            if (container && target !== container) return
-            const top = target.scrollTop
-            const prev = lastTop.get(target) ?? 0
-            lastTop.set(target, top)
-            if (top === prev) return
-            // Listas internas chicas (menús, colas, popovers) no son el scroll de la página.
-            if (!container && target.clientHeight < window.innerHeight * 0.5) return
-            pending = target
+            // Fast-path sin lecturas de layout cuando un contenedor secundario horizontal está en y=0.
+            if (target.dataset.scrollContainer !== "true" && target.scrollTop === 0 && !lastTop.has(target)) return
+            if (target.dataset.scrollContainer === "true" || pending === null || pending.dataset.scrollContainer !== "true") {
+                pending = target
+            }
             if (!raf) {
                 raf = requestAnimationFrame(() => {
                     raf = 0
-                    if (pending) setScrolled(pending.scrollTop > 8)
+                    const current = pending
+                    pending = null
+                    if (!current) return
+                    const top = current.scrollTop
+                    const prev = lastTop.get(current) ?? 0
+                    lastTop.set(current, top)
+                    if (top === prev) return
+                    // Listas internas chicas (menús, colas, popovers) no son el scroll de la página.
+                    if (current.dataset.scrollContainer !== "true" && current.clientHeight < window.innerHeight * 0.5) return
+                    setScrolled(top > 8)
                 })
             }
         }
@@ -105,24 +111,20 @@ export function ScrollEdgeBlur({
             window.removeEventListener("scroll", onScroll, { capture: true })
             if (raf) cancelAnimationFrame(raf)
         }
-    }, [container])
+    }, [scrollBlurEnabled, tier])
 
     if (!scrollBlurEnabled || tier === "off") {
         return null
     }
 
-    const isFlat = typeof document !== "undefined" && document.documentElement.dataset.flat === "true"
+    const isFlat = isFlatAttr || blurDisabledInStore
     const isSubtle = tier === "subtle" || isFlat
     const fadeStyle = scrolled ? FADE_IN : FADE_OUT
 
     return (
         <div
             aria-hidden="true"
-            className={cn(
-                "pointer-events-none fixed inset-x-0 top-0 z-[450] select-none",
-                heightClass,
-                className,
-            )}
+            className="pointer-events-none fixed inset-x-0 top-0 z-dropdown select-none h-20 md:h-24"
         >
             {isSubtle ? (
                 /* Fallback de ultra-bajo consumo: degradado puro sin backdrop-filter */

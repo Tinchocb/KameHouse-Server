@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -93,16 +94,13 @@ type (
 		Cleanups    []func()
 		OnFlushLogs func()
 
-		FeatureFlags      FeatureFlags
-		FeatureManager    *FeatureManager
-		Settings          *models.Settings
-		SecondarySettings struct {
-			Mediastream *models.MediastreamSettings
-		}
+		FeatureFlags                FeatureFlags
+		FeatureManager              *FeatureManager
+		settingsSnapshot            atomic.Pointer[models.Settings]
+		mediastreamSettingsSnapshot atomic.Pointer[models.MediastreamSettings]
 
 		Version          string
 		TotalLibrarySize uint64
-		LibraryDir       string
 		IsDesktopSidecar bool
 		Flags            KameHouseFlags
 
@@ -200,14 +198,11 @@ func NewKameHouse(configOpts *ConfigOptions) *App {
 			Provider: dynamicProvider,
 			Platform: dynamicPlatform,
 		},
-		Version:           constants.Version,
-		ContinuityManager: continuityManager,
-		TelemetryManager:  continuityManager.TelemetryManager,
-		FeatureFlags:      NewFeatureFlags(cfg, logger),
-		IsDesktopSidecar:  configOpts.Flags.IsDesktopSidecar,
-		SecondarySettings: struct {
-			Mediastream *models.MediastreamSettings
-		}{Mediastream: nil},
+		Version:                           constants.Version,
+		ContinuityManager:                 continuityManager,
+		TelemetryManager:                  continuityManager.TelemetryManager,
+		FeatureFlags:                      NewFeatureFlags(cfg, logger),
+		IsDesktopSidecar:                  configOpts.Flags.IsDesktopSidecar,
 		moduleMu:                          sync.Mutex{},
 		ServerPasswordHash:                serverPasswordHash,
 		ServerPasswordSHA256:              serverPasswordSHA256,
@@ -253,11 +248,9 @@ func (a *KameHouse) handleConfigChange(newCfg *Config) {
 	a.moduleMu.Lock()
 	defer a.moduleMu.Unlock()
 
-	// Actualizar CorsOrigins
-	if len(newCfg.Server.CorsOrigins) > 0 {
-		a.Config.Server.CorsOrigins = newCfg.Server.CorsOrigins
-		a.Logger.Info().Interface("origins", newCfg.Server.CorsOrigins).Msg("config: CorsOrigins actualizados via hot-reload")
-	}
+	// CORS and the write guard are installed together at startup. Mutating only
+	// Config here would leave HTTP and WebSocket with different policies (and
+	// race readers). Origin changes take effect on the next server restart.
 
 	// Actualizar AuthTokenTTL
 	if newCfg.Server.AuthTokenTTL != "" {
@@ -286,8 +279,8 @@ func (a *KameHouse) handleConfigChange(newCfg *Config) {
 
 	// Actualizar FeatureFlags basado en Library settings (desde Settings en DB)
 	// Nota: Library settings se guardan en DB, no en config file
-	if a.FeatureManager != nil && a.Settings != nil {
-		a.FeatureManager.UpdateFromSettings(&a.Settings.Library)
+	if settings := a.SettingsSnapshot(); a.FeatureManager != nil && settings != nil {
+		a.FeatureManager.UpdateFromSettings(&settings.Library)
 		a.Logger.Info().Msg("config: FeatureFlags actualizados via hot-reload")
 	}
 
@@ -454,13 +447,20 @@ func (a *KameHouse) AddCleanupFunction(f func()) {
 
 // startBackground registers ownership before spawning so shutdown can join every task.
 func (a *KameHouse) startBackground(f func()) {
+	a.StartBackground(f)
+}
+
+// StartBackground admits app-owned work before shutdown and joins it before
+// closing shared resources. False means the caller must release reservations.
+func (a *KameHouse) StartBackground(f func()) bool {
 	a.backgroundMu.Lock()
 	defer a.backgroundMu.Unlock()
 	if a.backgroundClosed || a.ShutdownCtx().Err() != nil {
-		return
+		return false
 	}
 	a.backgroundWorkers.Add(1)
 	go func() { defer a.backgroundWorkers.Done(); f() }()
+	return true
 }
 
 func (a *KameHouse) Cleanup(ctx context.Context) {
@@ -482,6 +482,9 @@ func (a *KameHouse) cleanup() {
 	if a.shutdownCancel != nil {
 		a.shutdownCancel()
 	}
+	if a.WSEventManager != nil {
+		a.WSEventManager.Close()
+	}
 	a.backgroundMu.Lock()
 	a.backgroundClosed = true
 	a.backgroundMu.Unlock()
@@ -497,6 +500,16 @@ func (a *KameHouse) cleanup() {
 		a.AutoScanner.Stop()
 	}
 	a.backgroundWorkers.Wait()
+	// Providers own detached metadata producers as well as synchronous readers.
+	// Join them after handler tasks, before either shared cache or SQLite closes.
+	if a.Metadata.Provider != nil {
+		func() {
+			defer util.HandlePanicInModuleThen("core/app/CloseMetadataProvider", func() {})
+			if err := a.Metadata.Provider.Close(); err != nil {
+				a.Logger.Error().Err(err).Msg("app: Failed to close metadata provider")
+			}
+		}()
+	}
 
 	a.Logger.Info().Msg("app: Running cleanup functions...")
 	for _, f := range a.Cleanups {

@@ -70,9 +70,11 @@ func (s *Service) RunScan(ctx context.Context, db *gorm.DB, emit func(*ScanProgr
 				p.Phase = ScanPhaseDone
 			}
 		})
+		s.endRun(err, time.Now())
 		flush()
 	}()
 
+	s.beginRun(s.GetFolderID(), time.Now())
 	client, err := s.GetClient()
 	if err != nil {
 		return res, err

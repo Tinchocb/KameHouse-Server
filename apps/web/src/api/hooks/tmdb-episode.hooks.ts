@@ -1,5 +1,6 @@
 import { useServerQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
+import { withTmdbSize } from "@/lib/helpers/images"
 
 interface TMDBEpisodeStillResponse {
     tvId: number
@@ -38,6 +39,8 @@ export function useGetTMDBEpisodeStill(
 
 export function buildTmdbStillUrl(stillPath: string | null | undefined, size: "w185" | "w300" | "w780" | "original" = "w780"): string | undefined {
     if (!stillPath || stillPath.trim() === "") return undefined
-    const clean = stillPath.startsWith("/") ? stillPath : `/${stillPath}`
+    const trimmed = stillPath.trim()
+    if (/^https?:\/\//.test(trimmed)) return withTmdbSize(trimmed, size)
+    const clean = trimmed.startsWith("/") ? trimmed : `/${trimmed}`
     return `https://image.tmdb.org/t/p/${size}${clean}`
 }

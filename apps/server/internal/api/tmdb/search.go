@@ -10,6 +10,7 @@ import (
 // SearchTV searches for anime TV shows on TMDb.
 // It filters results to animation genre (16) and Japanese origin when possible.
 func (c *Client) SearchTV(ctx context.Context, query string) ([]SearchResult, error) {
+	generation := c.cacheGeneration()
 	// Check cache
 	if cached, ok := GetCached[[]SearchResult](c, "tv:"+query); ok {
 		return cached, nil
@@ -62,12 +63,13 @@ func (c *Client) SearchTV(ctx context.Context, query string) ([]SearchResult, er
 		results = results[:100]
 	}
 
-	SetCached(c, "tv:"+query, results, 7*24*time.Hour)
+	setCachedGeneration(c, generation, "tv:"+query, results, 7*24*time.Hour)
 	return results, nil
 }
 
 // SearchMovie searches for anime movies on TMDb.
 func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult, error) {
+	generation := c.cacheGeneration()
 	// Check cache
 	if cached, ok := GetCached[[]SearchResult](c, "movie:"+query); ok {
 		return cached, nil
@@ -121,6 +123,6 @@ func (c *Client) SearchMovie(ctx context.Context, query string) ([]SearchResult,
 		results = results[:100]
 	}
 
-	SetCached(c, "movie:"+query, results, 7*24*time.Hour)
+	setCachedGeneration(c, generation, "movie:"+query, results, 7*24*time.Hour)
 	return results, nil
 }

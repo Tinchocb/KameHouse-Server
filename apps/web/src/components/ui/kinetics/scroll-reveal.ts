@@ -52,6 +52,7 @@ export function revealConfigForTier(tier: MotionTier, variant: RevealVariant = "
 interface Tracked {
     config: RevealConfig
     key?: string
+    cleanup?: () => void
 }
 
 /**
@@ -72,6 +73,7 @@ function rememberRevealed(key: string | undefined) {
 }
 
 const tracked = new WeakMap<Element, Tracked>()
+const activeReveals = new WeakMap<Element, () => void>()
 let observer: IntersectionObserver | null = null
 
 function isInViewport(el: Element): boolean {
@@ -86,23 +88,28 @@ function hide(el: HTMLElement, config: RevealConfig) {
     if (config.y) el.style.transform = `translate3d(0, ${config.y}px, 0)`
 }
 
-function show(el: HTMLElement, config: RevealConfig, delay: number) {
-    const t = `${config.duration}ms ${REVEAL_EASING} ${delay}ms`
-    el.style.transition = `opacity ${t}, transform ${t}`
-    // Forzar el estilo oculto antes de cambiar, para que la transición arranque.
-    void el.offsetWidth
+function show(el: HTMLElement, info: Tracked, delay: number) {
+    const transition = el.style.transition
     el.style.opacity = ""
     el.style.transform = ""
     const cleanup = () => {
-        el.style.transition = ""
+        if (activeReveals.get(el) !== cleanup) return
+        clearTimeout(timer)
+        activeReveals.delete(el)
+        info.cleanup = undefined
+        if (el.style.transition === transition) el.style.transition = ""
         el.removeEventListener("transitionend", onEnd)
+        el.removeEventListener("transitioncancel", onEnd)
     }
     const onEnd = (e: TransitionEvent) => {
         if (e.target === el && e.propertyName === "opacity") cleanup()
     }
     el.addEventListener("transitionend", onEnd)
+    el.addEventListener("transitioncancel", onEnd)
+    activeReveals.set(el, cleanup)
+    info.cleanup = cleanup
     // Respaldo: si no hay transitionend (pestaña oculta, elemento desmontado).
-    window.setTimeout(cleanup, config.duration + delay + 80)
+    const timer = window.setTimeout(cleanup, info.config.duration + delay + 80)
 }
 
 /** Orden de lectura: fila (con tolerancia) y después columna. */
@@ -135,6 +142,16 @@ function handleEntries(entries: IntersectionObserverEntry[]) {
     const entering = entries
         .filter((e) => isRevealable(e) && tracked.has(e.target))
         .sort((a, b) => readingOrder(a.boundingClientRect, b.boundingClientRect))
+    // Prepare the entire batch, then commit its hidden styles once. Forcing
+    // layout inside show() used to repeat a style/layout flush for every card.
+    entering.forEach((entry, i) => {
+        const info = tracked.get(entry.target)
+        if (!info) return
+        const delay = Math.min(i * info.config.stagger, info.config.maxDelay)
+        const transition = `${info.config.duration}ms ${REVEAL_EASING} ${delay}ms`
+        ;(entry.target as HTMLElement).style.transition = `opacity ${transition}, transform ${transition}`
+    })
+    if (entering.length) void (entering[0].target as HTMLElement).offsetWidth
     entering.forEach((entry, i) => {
         const el = entry.target as HTMLElement
         const info = tracked.get(el)
@@ -142,7 +159,7 @@ function handleEntries(entries: IntersectionObserverEntry[]) {
         tracked.delete(el)
         observer?.unobserve(el)
         rememberRevealed(info.key)
-        show(el, info.config, Math.min(i * info.config.stagger, info.config.maxDelay))
+        show(el, info, Math.min(i * info.config.stagger, info.config.maxDelay))
     })
 }
 
@@ -181,10 +198,10 @@ function flushRevealQueue() {
 }
 
 /**
- * Como `observeReveal`, pero el registro se junta con el de los demás elementos que montan en
- * el mismo commit y se resuelve en un microtask (antes del pintado, sin parpadeo). Un ref
- * callback por fila de una lista leía su posición justo después de que la fila anterior se
- * ocultó: un layout forzado por fila (70 ms con ~20 episodios, medido con perfil).
+ * Registra elementos para revelarlos al entrar en pantalla, juntando en un microtask los que
+ * montan en el mismo commit (antes del pintado, sin parpadeo). Un ref callback por fila de una
+ * lista leía su posición justo después de que la fila anterior se ocultó: un layout forzado por
+ * fila (70 ms con ~20 episodios, medido con perfil).
  */
 export function observeRevealBatched(el: HTMLElement, config: RevealConfig, key?: string): () => void {
     if (!getObserver() || tracked.has(el) || (key && revealedKeys.has(key))) return () => {}
@@ -200,28 +217,25 @@ export function observeRevealBatched(el: HTMLElement, config: RevealConfig, key?
     }
 }
 
-/** Registra un elemento para revelarlo al entrar en pantalla. Devuelve la baja. */
-export function observeReveal(el: HTMLElement, config: RevealConfig, key?: string): () => void {
-    const obs = getObserver()
-    if (!obs || tracked.has(el) || (key && revealedKeys.has(key))) return () => {}
-    return registerReveal(obs, el, config, key, isInViewport(el))
-}
-
 /** Escritura del registro: separada de la lectura (`isInViewport`) para poder agrupar lecturas. */
 function registerReveal(obs: IntersectionObserver, el: HTMLElement, config: RevealConfig, key: string | undefined, inView: boolean): () => void {
+    activeReveals.get(el)?.()
     if (inView) {
         rememberRevealed(key)
         return () => {}
     }
-    tracked.set(el, { config, key })
+    const info: Tracked = { config, key }
+    tracked.set(el, info)
     hide(el, config)
     obs.observe(el)
     return () => {
-        if (!tracked.has(el)) return
-        tracked.delete(el)
-        obs.unobserve(el)
-        el.style.opacity = ""
-        el.style.transform = ""
+        if (tracked.get(el) === info) {
+            tracked.delete(el)
+            obs.unobserve(el)
+            el.style.opacity = ""
+            el.style.transform = ""
+        }
+        info.cleanup?.()
     }
 }
 
@@ -232,7 +246,7 @@ export function useScrollReveal<T extends HTMLElement>(ref: React.RefObject<T | 
         const el = ref.current
         const config = revealConfigForTier(tier)
         if (!el || !config) return
-        return observeReveal(el, config)
+        return observeRevealBatched(el, config)
     }, [ref, tier])
 }
 

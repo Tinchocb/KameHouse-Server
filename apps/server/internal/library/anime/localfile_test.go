@@ -48,7 +48,7 @@ func TestNewLocalFile(t *testing.T) {
 				}
 			}
 
-			lf := dto.NewLocalFile(tt.path, tt.libraryPath)
+			lf := dto.NewLocalFileS(tt.path, []string{tt.libraryPath})
 
 			if assert.NotNil(t, lf) {
 				assert.Equal(t, tt.expectedNbFolders, len(lf.ParsedFolderData))

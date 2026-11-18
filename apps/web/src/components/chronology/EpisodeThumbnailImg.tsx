@@ -6,14 +6,14 @@ import { isImageLoaded, localImage, markImageLoaded } from '@/lib/helpers/images
 import {
   getTmdbIdForVolume,
   getAnilistIdForVolume,
-  getLocalEpisodeThumbnail,
   parseAbsoluteEpisode,
 } from './data/episodeMapping';
 import type { VolumeData, ChapterMilestone } from './types';
+import { getSagaFallbackImages } from './data/sagaImages';
 
 interface EpisodeThumbnailImgProps {
   volume: Pick<VolumeData, 'id' | 'seriesTag' | 'tmdbId'>;
-  milestone: Pick<ChapterMilestone, 'episode' | 'title' | 'thumbnailUrl' | 'tmdbSeason' | 'tmdbEpisode' | 'absoluteEpisode' | 'startSec'>;
+  milestone: Pick<ChapterMilestone, 'episode' | 'title' | 'thumbnailUrl' | 'absoluteEpisode' | 'startSec'>;
   /** Segundo exacto para extraer frame (prioriza video-thumbnail?path=&t=). */
   startSec?: number;
   /** Fallback estático de saga (SAGA_IMAGE_MAP). Último recurso antes del gradiente. */
@@ -65,7 +65,9 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = React.mem
   const absolute = milestone.absoluteEpisode ?? parseAbsoluteEpisode(milestone.episode);
   const tvId = getTmdbIdForVolume(volume as VolumeData);
   const anilistId = getAnilistIdForVolume(volume as VolumeData);
-  const localSrc = getLocalEpisodeThumbnail(volume as VolumeData, absolute, milestone.thumbnailUrl);
+  const localSrc = localImage(milestone.thumbnailUrl?.trim() ? milestone.thumbnailUrl : undefined) || undefined;
+  const sagaSources = [...new Set([fallbackSrc, ...getSagaFallbackImages(volume.id)])]
+    .filter((src): src is string => Boolean(src));
 
   const effectiveStartSec = startSec !== undefined ? startSec : milestone.startSec;
   const hasSpecificSecond = effectiveStartSec != null && effectiveStartSec >= 0;
@@ -96,8 +98,10 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = React.mem
   // Primera fuente disponible según prioridad; con segundo específico y archivo local,
   // manda el frame exacto de ffmpeg.
   const candidates: Array<[ThumbnailStage, string | undefined]> = exactFrameFirst
-    ? [[2, libSrc], [0, localSrc], [1, tmdbSrc], [3, anilistSrc], [4, fallbackSrc]]
-    : [[0, localSrc], [1, tmdbSrc], [2, libSrc], [3, anilistSrc], [4, fallbackSrc]];
+    ? [[2, libSrc], [0, localSrc], [1, tmdbSrc], [3, anilistSrc]]
+    : [[0, localSrc], [1, tmdbSrc], [2, libSrc], [3, anilistSrc]];
+  // También el inspector necesita respaldo; probar las alternativas si falta una portada.
+  candidates.push(...sagaSources.map((src): [ThumbnailStage, string] => [4, src]));
   const chosen = candidates.find(([, src]) => usable(src));
   const effectiveStage = chosen?.[0];
   const effectiveSrc = chosen?.[1];
@@ -122,6 +126,7 @@ export const EpisodeThumbnailImg: React.FC<EpisodeThumbnailImgProps> = React.mem
         />
       )}
       <img
+        key={effectiveSrc}
         src={effectiveSrc}
         alt={milestone.title}
         loading={eager ? 'eager' : 'lazy'}

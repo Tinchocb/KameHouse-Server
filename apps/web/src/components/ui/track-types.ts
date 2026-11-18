@@ -142,9 +142,11 @@ export interface PlayerSettingsMenuProps {
     /** Qué agrupa el menú: "media" = audio y subtítulos en un solo panel; "more" =
      * velocidad, maratón, calidad e imagen; "all" (por defecto) = menú completo. */
     variant?: "all" | "media" | "more"
-    /** Navegación por capítulos dentro de "Más" (solo si hay capítulos). */
-    onPrevChapter?: () => void
-    onNextChapter?: () => void
+    /** Nombre del menú completo cuando también concentra acciones secundarias. */
+    title?: string
+    onOpenQueue?: () => void
+    onOpenInMpv?: () => void
+    mpvPending?: boolean
     audioTracks: AudioTrack[]
     activeAudioIndex: number
     onSelectAudio: (track: AudioTrack) => void
@@ -184,9 +186,6 @@ export interface PlayerSettingsMenuProps {
     autoDisableSubtitlesWhenDubbed?: boolean
     onAutoDisableSubtitlesWhenDubbedChange?: (auto: boolean) => void
 
-    tvMode?: boolean
-    onTvModeChange?: (enabled: boolean) => void
-
     marathonMode?: boolean
     onMarathonModeChange?: (enabled: boolean) => void
 
@@ -195,9 +194,5 @@ export interface PlayerSettingsMenuProps {
     className?: string
 
     mediaFormat?: string | null
-    videoRef?: React.RefObject<HTMLVideoElement | null>
-    malId?: number | null
-    duration?: number
     mediaId?: number
-    episodeNumber?: number
 }

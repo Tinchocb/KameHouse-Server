@@ -166,7 +166,7 @@ func run(ctx context.Context) error {
 		app.Logger.Info().Msg("initiating graceful shutdown")
 		return nil
 	case <-app.WSEventManager.ShutdownSignal:
-		app.Logger.Info().Msg("desktop sidecar: no WebSocket connections, initiating graceful shutdown")
+		app.Logger.Info().Msg("server: shutdown requested, initiating graceful shutdown")
 		return nil
 	}
 

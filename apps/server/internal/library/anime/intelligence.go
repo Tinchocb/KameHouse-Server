@@ -1,12 +1,8 @@
 package anime
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/util/cache"
 	"strconv"
 	"strings"
@@ -146,9 +142,8 @@ const epicScoreThreshold = 85
 
 // IntelligenceService computes and caches episode-level content intelligence.
 type IntelligenceService struct {
-	db     *db.Database
-	fm     FillerChecker // may be nil when filler data is not yet loaded
-	logger *zerolog.Logger
+	db *db.Database
+	fm FillerChecker // may be nil when filler data is not yet loaded
 
 	// scoringMedia memoriza (30 s) el LibraryMedia con el que se puntúa cada episodio.
 	scoringMedia *cache.Cache[*models.LibraryMedia]
@@ -156,11 +151,10 @@ type IntelligenceService struct {
 
 // NewIntelligenceService constructs the service.
 // fm may be nil; when nil, filler detection is skipped gracefully.
-func NewIntelligenceService(database *db.Database, fm FillerChecker, logger *zerolog.Logger) *IntelligenceService {
+func NewIntelligenceService(database *db.Database, fm FillerChecker, _ *zerolog.Logger) *IntelligenceService {
 	return &IntelligenceService{
 		db:           database,
 		fm:           fm,
-		logger:       logger,
 		scoringMedia: cache.NewCache[*models.LibraryMedia](30*time.Second, 512),
 	}
 }
@@ -289,267 +283,4 @@ func (s *IntelligenceService) DeriveSeriesVibes(media *models.LibraryMedia) []st
 	}
 
 	return vibes
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Curated swimlane types & response
-// ─────────────────────────────────────────────────────────────────────────────
-
-// CuratedSwimlane represents a single content row on the home screen.
-type CuratedSwimlane struct {
-	ID      string                    `json:"id"`
-	Title   string                    `json:"title"`
-	Type    string                    `json:"type"` // "local_library"|"epic_moments"|"trending"|"essential_cinema"
-	Entries []*LibraryCollectionEntry `json:"entries"`
-}
-
-// CuratedHomeResponse is returned by GetCuratedSwimlanes.
-type CuratedHomeResponse struct {
-	Swimlanes []*CuratedSwimlane `json:"swimlanes"`
-}
-
-// ContinueWatchingFromHistory arma los ítems de "Continuar viendo" a partir de
-// entradas de historial ya resueltas (una por media, ordenadas de más reciente
-// a más antigua). Permite que el handler use la misma fuente que
-// /continuity/history en lugar de la tabla watch_histories.
-func (s *IntelligenceService) ContinueWatchingFromHistory(_ context.Context, history []models.WatchHistory) ([]dto.ContinueWatchingItem, error) {
-	if len(history) == 0 {
-		return []dto.ContinueWatchingItem{}, nil
-	}
-
-	// Extract unique media IDs
-	mediaIDs := make([]uint, 0, len(history))
-	mediaIDSet := make(map[int]bool, len(history))
-	for _, h := range history {
-		if h.MediaID > 0 && !mediaIDSet[h.MediaID] {
-			mediaIDs = append(mediaIDs, uint(h.MediaID))
-			mediaIDSet[h.MediaID] = true
-		}
-	}
-
-	fileMap := make(map[int]map[int]bool)
-	// If local files are already cached in memory, use them directly without querying DB
-	if cached, ok := db.CachedLocalFiles(s.db); ok {
-		for _, lf := range cached {
-			if lf == nil || lf.MediaID == 0 || !mediaIDSet[lf.MediaID] || lf.Metadata == nil {
-				continue
-			}
-			if _, ok := fileMap[lf.MediaID]; !ok {
-				fileMap[lf.MediaID] = make(map[int]bool)
-			}
-			fileMap[lf.MediaID][lf.Metadata.Episode] = true
-		}
-	} else if len(mediaIDs) > 0 {
-		// Cold cache: query ONLY files belonging to the media IDs in history,
-		// selecting just media_id and metadata (avoiding full-table scan and unmarshaling
-		// heavy unused columns like technical_info, parsed_folder_data, tags, etc.)
-		type epRow struct {
-			MediaID  int             `gorm:"column:media_id"`
-			Metadata json.RawMessage `gorm:"column:metadata"`
-		}
-		var rows []epRow
-		if err := s.db.Gorm().Model(&models.LocalFile{}).
-			Select("media_id, metadata").
-			Where("media_id IN (?)", mediaIDs).
-			Find(&rows).Error; err != nil {
-			return nil, err
-		}
-		for _, r := range rows {
-			if r.MediaID == 0 || len(r.Metadata) == 0 {
-				continue
-			}
-			var meta dto.LocalFileMetadata
-			if err := json.Unmarshal(r.Metadata, &meta); err == nil {
-				if _, ok := fileMap[r.MediaID]; !ok {
-					fileMap[r.MediaID] = make(map[int]bool)
-				}
-				fileMap[r.MediaID][meta.Episode] = true
-			}
-		}
-	}
-
-	// 1. Batch-fetch all parent LibraryMedia
-	var mediaList []models.LibraryMedia
-	if err := s.db.Gorm().Where("id IN (?)", mediaIDs).Find(&mediaList).Error; err != nil {
-		return nil, err
-	}
-	mediaMap := make(map[uint]*models.LibraryMedia)
-	for i := range mediaList {
-		mediaMap[mediaList[i].ID] = &mediaList[i]
-	}
-
-	// 2. Batch-fetch only relevant candidate episodes for these media (current, next, or saga starter)
-	var conds []string
-	var condArgs []interface{}
-	for _, h := range history {
-		conds = append(conds, "(library_media_id = ? AND episode_number IN (?, ?, 1))")
-		condArgs = append(condArgs, uint(h.MediaID), h.EpisodeNumber, h.EpisodeNumber+1)
-	}
-
-	var episodeList []models.LibraryEpisode
-	epQuery := s.db.Gorm().Where("library_media_id IN (?)", mediaIDs)
-	if len(conds) > 0 {
-		epQuery = epQuery.Where(strings.Join(conds, " OR "), condArgs...)
-	}
-	if err := epQuery.Find(&episodeList).Error; err != nil {
-		return nil, err
-	}
-
-	// Map episodes by media_id -> season_id -> episode_num for high performance lookups
-	episodeMap := make(map[string]*models.LibraryEpisode)
-	for i := range episodeList {
-		key := fmt.Sprintf("%d_%d_%d", episodeList[i].LibraryMediaID, episodeList[i].SeasonNumber, episodeList[i].EpisodeNumber)
-		episodeMap[key] = &episodeList[i]
-	}
-
-	items := make([]dto.ContinueWatchingItem, 0, len(history))
-
-	for _, h := range history {
-		progress := 0.0
-		if h.Duration > 0 {
-			progress = h.CurrentTime / h.Duration
-		}
-
-		media, ok := mediaMap[uint(h.MediaID)]
-		if !ok {
-			continue
-		}
-
-		// Find current episode in memory
-		var currentEpisode *models.LibraryEpisode
-		for i := range episodeList {
-			if episodeList[i].LibraryMediaID == uint(h.MediaID) && episodeList[i].EpisodeNumber == h.EpisodeNumber {
-				currentEpisode = &episodeList[i]
-				break
-			}
-		}
-		if currentEpisode == nil {
-			continue
-		}
-
-		item := dto.ContinueWatchingItem{
-			Media:           media,
-			Episode:         currentEpisode,
-			Progress:        progress,
-			LastPlaybackPos: h.CurrentTime,
-			IsNextEpisode:   false,
-		}
-
-		if progress >= 0.9 {
-			// Find next episode in the same season: currentEpisode.EpisodeNumber + 1
-			nextKey := fmt.Sprintf("%d_%d_%d", uint(h.MediaID), currentEpisode.SeasonNumber, currentEpisode.EpisodeNumber+1)
-			nextEpisode, found := episodeMap[nextKey]
-			if !found {
-				// Try season + 1, episode 1
-				nextKey = fmt.Sprintf("%d_%d_%d", uint(h.MediaID), currentEpisode.SeasonNumber+1, 1)
-				nextEpisode, found = episodeMap[nextKey]
-			}
-
-			if found {
-				if hasFile := fileMap[int(h.MediaID)][nextEpisode.EpisodeNumber]; hasFile {
-					item.Episode = nextEpisode
-					item.Progress = 0
-					item.IsNextEpisode = true
-				}
-				// If next episode file is not available, we keep the current episode at 90%
-				// instead of continuing and omitting the series entirely (Bug #15)
-			}
-			// If next episode is not found (e.g. series completed), we keep the current episode
-			// instead of continuing and omitting the series entirely (Bug #15)
-		}
-
-		items = append(items, item)
-	}
-
-	return items, nil
-}
-
-// GetCuratedSwimlanes returns the curated home swimlanes, including DB Intelligence lanes.
-func (s *IntelligenceService) GetCuratedSwimlanes(_ context.Context) (*CuratedHomeResponse, error) {
-	resp := &CuratedHomeResponse{
-		Swimlanes: make([]*CuratedSwimlane, 0, 45),
-	}
-
-	// 1. Standard Collection Entry Points (Top priority)
-	if lane := s.buildLocalLibraryLane(); lane != nil {
-		resp.Swimlanes = append(resp.Swimlanes, lane)
-	}
-
-	if lane := s.buildEpicMomentsLane(); lane != nil {
-		resp.Swimlanes = append(resp.Swimlanes, lane)
-	}
-
-	if lane := s.buildTrendingLane(); lane != nil {
-		resp.Swimlanes = append(resp.Swimlanes, lane)
-	}
-
-	// 2. Curated Episode-level lanes by LibraryEpisode.suggested_swimlane
-	// These values exactly match the output of IntelligenceTagger.suggestSwimlane().
-	// Using LIKE '%substring%' queries so small encoding differences don't block results.
-	epNameLanes := []EpisodeLaneDef{
-		// ── Combate y Transformaciones ──────────────────────────────────────────
-		{"capitulos_imperdibles", "Capítulos Imperdibles: Las Batallas Más Épicas"},
-		{"eleva_tu_ki_ep", "¡Eleva tu Ki!: Batallas que rompieron los límites"},
-		{"transformaciones_saiyajin", "Más Allá del Límite: Transformaciones Saiyajin"},
-		{"forma_final_villano", "Cuando el Villano Alcanza su Forma Final"},
-		{"tecnicas_sacrificio", "El Último Recurso: Técnicas de Sacrificio"},
-		{"tecnicas_letales", "Técnicas Letales: Sin Vuelta Atrás"},
-		{"fusion_ha", "¡Fusión HA!: Las Uniones Más Poderosas"},
-		{"espadachines", "Espadachines y Guerreros con Armas"},
-		// ── Torneos ─────────────────────────────────────────────────────────────
-		{"torneos_artes_marciales", "¡Fuera del Ring!: Los Grandes Torneos"},
-		{"torneo_uranai_baba", "El Misterioso Torneo de Uranai Baba"},
-		{"juegos_cell", "Los Juegos de Cell: El Torneo del Terror"},
-		{"torneo_mas_alla", "Torneo del Más Allá: Combates en el Otro Mundo"},
-		{"torneo_poder", "Torneo del Poder: Supervivencia Universal"},
-		// ── Sagas y Facciones ───────────────────────────────────────────────────
-		{"imperio_freezer", "El Imperio de Freezer: El Tirano del Universo"},
-		{"patrulla_roja", "La Patrulla Roja: Androides y Cell"},
-		{"saiyajins_legendarios", "Saiyajins Legendarios: El Poder Berserker"},
-		{"los_saiyajins", "Los Saiyajins: La Raza Guerrera Más Poderosa"},
-		{"los_tsufurujin", "Los Tsufurujin: La Venganza de Baby"},
-		{"dragones_malignos", "Los Dragones Malignos: La Amenaza Final de GT"},
-		{"dioses_destruccion", "Dioses y Entidades Supremas del Universo"},
-		{"patrulla_galactica", "La Patrulla Galáctica: Policías del Cosmos"},
-		{"guerreras_poderosas", "Guerreras Indomables del Universo"},
-		{"nuevas_generaciones", "El Futuro: Las Nuevas Generaciones de Guerreros"},
-		{"los_namekuseijin", "Los Namekuseijin: Guardianes de las Esferas"},
-		// ── Sci-Fi y Aventura ───────────────────────────────────────────────────
-		{"guardianes_tiempo", "Guardianes del Tiempo: Crónicas del Futuro"},
-		{"cronicas_supervivencia", "Crónicas de Supervivencia: El Futuro en Llamas"},
-		{"cruce_universos", "Multiverso: El Cruce de Universos"},
-		{"invasion_tierra", "¡La Tierra Bajo Ataque! Invasiones Alienígenas"},
-		{"viajes_espacio", "Más Allá de las Estrellas: Aventura Espacial"},
-		{"busqueda_esferas", "Deseos Prohibidos y Dragones Sagrados"},
-		// ── Magia y Sobrenatural ────────────────────────────────────────────────
-		{"artes_oscuras_ep", "Artes Oscuras: Magia y Demonios"},
-		{"maldicion_mini", "¡Encogidos! La Maldición Mini de Daima"},
-		// ── Drama y Emociones ───────────────────────────────────────────────────
-		{"sacrificio_heroico", "Cuando los Héroes lo Dan Todo: Sacrificios"},
-		{"tension_absoluta", "Tensión Absoluta: Al Borde del Abismo"},
-		{"romance_boda", "Amor en el Universo Dragon Ball"},
-		{"gran_saiyaman", "Gran Saiyaman: El Héroe Enmascarado"},
-		{"humor_relleno", "Momentos para Reír: El Lado Cómico del Universo"},
-		// ── Entrenamiento ───────────────────────────────────────────────────────
-		{"entrenamiento_divino", "Entrenamiento Divino: El Camino de los Dioses"},
-		{"entrenamiento_extremo", "El Camino del Guerrero: Entrenamientos"},
-		// ── Películas ───────────────────────────────────────────────────────────
-		{"esencia_cinema_ep", "Esencia de Cinema: Películas Legendarias"},
-	}
-
-	if batchLanes := s.buildEpisodeSwimlanesBatch(epNameLanes); len(batchLanes) > 0 {
-		resp.Swimlanes = append(resp.Swimlanes, batchLanes...)
-	}
-
-	// 2.2 Dynamic Tag-based swimlanes (Tags with >= 50 episodes)
-	if tagLanes := s.BuildDynamicTagLanes(); len(tagLanes) > 0 {
-		resp.Swimlanes = append(resp.Swimlanes, tagLanes...)
-	}
-
-	// 3. Essential Cinema (Beautiful closing row focusing on Movies and OVAs)
-	if lane := s.buildEssentialCinemaLane(); lane != nil {
-		resp.Swimlanes = append(resp.Swimlanes, lane)
-	}
-
-	return resp, nil
 }

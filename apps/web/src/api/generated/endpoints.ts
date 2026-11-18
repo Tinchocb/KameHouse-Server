@@ -38,11 +38,10 @@ export const API_ENDPOINTS = {
          *  This creates a new LibraryCollection struct and returns it.
          *  This is used to get the main anime collection of the user.
          *  It uses the cached platform anime collection for the GET method.
-         *  It refreshes the platform anime collection if the POST method is used.
          */
         GetLibraryCollection: {
             key: "ANIME-COLLECTION-get-library-collection",
-            methods: ["GET", "POST"],
+            methods: ["GET"],
             endpoint: "/api/v1/library/collection",
         },
     },
@@ -248,6 +247,18 @@ export const API_ENDPOINTS = {
             endpoint: "/api/v1/drive/scan",
         },
     },
+    DRIVE_FOLDERS: {
+        DriveFolders: {
+            key: "DRIVE-FOLDERS-drive-folders",
+            methods: ["GET"],
+            endpoint: "/api/v1/drive/folders",
+        },
+        DriveSelectFolder: {
+            key: "DRIVE-FOLDERS-drive-select-folder",
+            methods: ["PUT"],
+            endpoint: "/api/v1/drive/folder",
+        },
+    },
     DRIVE_SUBTITLES: {
         DriveSubtitlesStatus: {
             key: "DRIVE-SUBTITLES-drive-subtitles-status",
@@ -263,6 +274,11 @@ export const API_ENDPOINTS = {
             key: "DRIVE-SUBTITLES-drive-subtitles-cancel",
             methods: ["POST"],
             endpoint: "/api/v1/drive/subtitles/cancel",
+        },
+        DriveSubtitlesTitleCard: {
+            key: "DRIVE-SUBTITLES-drive-subtitles-title-card",
+            methods: ["POST"],
+            endpoint: "/api/v1/drive/subtitles/title-card",
         },
         DriveSubtitlesWindow: {
             key: "DRIVE-SUBTITLES-drive-subtitles-window",
@@ -444,7 +460,7 @@ export const API_ENDPOINTS = {
          *  Deletes persisted TMDB/Jikan/AniList episode & media detail caches (all
          *  language variants) so the next scan re-fetches them — e.g. after changing
          *  the metadata language — and clears the in-memory metadata caches.
-         *  Migration markers and raw TMDB API responses are preserved.
+         *  Migration markers and user data are preserved.
          */
         ClearMetadataCache: {
             key: "METADATA-clear-metadata-cache",
@@ -687,6 +703,13 @@ export const API_ENDPOINTS = {
             key: "STATUS-shutdown",
             methods: ["POST"],
             endpoint: "/api/v1/shutdown",
+        },
+    },
+    STORYBOARD: {
+        GetStoryboard: {
+            key: "STORYBOARD-get-storyboard",
+            methods: ["GET"],
+            endpoint: "/api/v1/video-storyboard",
         },
     },
     SYSTEM: {

@@ -13,12 +13,9 @@ type WebsocketClientEvent struct {
 }
 
 const (
-	ServerReady = "server-ready" // The platform data has been loaded
-
-	EventScanProgress         = "scan-progress"              // Progress of the scan
-	EventScanProgressDetailed = "scan-progress-detailed"     // Optional detailed scan progress (structured payload)
-	EventScanStatus           = "scan-status"                // Status text of the scan
-	RefreshedAnimeCollection  = "refreshed-anime-collection" // The anime collection has been refreshed
+	EventScanProgress         = "scan-progress"          // Progress of the scan
+	EventScanProgressDetailed = "scan-progress-detailed" // Optional detailed scan progress (structured payload)
+	EventScanStatus           = "scan-status"            // Status text of the scan
 
 	LibraryWatcherFileAdded   = "library-watcher-file-added"   // A new file has been added to the library
 	LibraryWatcherFileRemoved = "library-watcher-file-removed" // A file has been removed from the library

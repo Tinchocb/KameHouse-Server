@@ -204,6 +204,14 @@ func (scn *Scanner) createLocalFiles(ctx context.Context, paths []string, librar
 					}
 				}
 
+				if scn.ScanMode == "deep" {
+					// Only files actually being rescanned lose their identity, and only
+					// in this working copy. Locked/ignored/offline/Drive files stay intact.
+					lf = lf.Clone()
+					lf.Metadata = &dto.LocalFileMetadata{}
+					lf.MediaID = 0
+					lf.LibraryMediaId = 0
+				}
 				results <- lf
 			}
 		}()

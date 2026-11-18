@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { m, useReducedMotion, type Variants } from "framer-motion"
+import { m, type Variants } from "framer-motion"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useNavigate } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
 import { getLargeResImage, getMediumResImage, prewarmImages } from "@/lib/helpers/images"
@@ -16,6 +17,8 @@ import type { SwimlaneItem } from "./swimlane"
 
 import { ERAS, ERA_COLOR_MAP, ERA_DEFAULTS, type EraId, getEraFromItem, isMovieItem } from "./media-spotlight-helpers"
 import { DRAGON_BALL_SAGAS } from "@/lib/config/dragonball_sagas"
+import { eraIdFromThemeEra, themeEraFromEraId } from "@/lib/config/eras"
+import { useScreenEra } from "@/lib/theme/screen-era"
 import { useGetAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { getServerBaseUrl } from "@/api/client/server-url"
 
@@ -24,6 +27,8 @@ import { HERO_AURA_CLASS } from "@/lib/config/hero-stage"
 import { SpotlightHero } from "./spotlight/spotlight-hero"
 import { HERO_ROTATION_MS } from "./spotlight/hero-carousel-dots"
 import { SpotlightLowerHub } from "./spotlight/spotlight-lower-hub"
+import { useIsClassicMode, useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
+import { useUIStore } from "@/lib/store"
 
 interface MediaSpotlightProps {
     items: SwimlaneItem[]
@@ -57,16 +62,15 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     // Lazy init con la era correcta desde el primer paint: evita montar db.webp
     // para luego cambiar a la era real (doble descarga + flash de skeleton).
     const [activeEraId, setActiveEraId] = React.useState<EraId>(() => {
-        const rawThemeEra = themeSettings.themeEra
-        const mapped = rawThemeEra && ERAS.some(e => e.id === rawThemeEra.replace("era-", ""))
-            ? (rawThemeEra.replace("era-", "") as EraId)
-            : null
+        const mapped = eraIdFromThemeEra(themeSettings.themeEra)
         if (mapped && items.some(item => getEraFromItem(item) === mapped)) return mapped
         for (const era of ERAS) {
             if (items.some(item => getEraFromItem(item) === era.id)) return era.id
         }
         return mapped ?? "db"
     })
+    // Universo DB sigue la era del hero, también en la rotación automática (decisión 30/10).
+    useScreenEra(themeEraFromEraId(activeEraId))
     const [direction, setDirection] = React.useState(1)
     // El auto-rotate se pausa mientras el usuario interactúa (hover/focus):
     // rotar el hero completo bajo el cursor es la mayor fuente de jank
@@ -77,6 +81,8 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     // Labels solo en full: en subtle/off el fundido de la ruta (home) basta.
     const isFullMotion = useMotionTier() === "full"
     const entranceBlock = isFullMotion ? heroItemVariants : undefined
+    const isClassic = useIsClassicMode()
+    const isMinimalist = useIsMinimalistMode()
 
     const colors = ERA_COLOR_MAP[activeEraId]
     const currentEraConfig = React.useMemo(() => ERAS.find(e => e.id === activeEraId), [activeEraId])
@@ -136,19 +142,14 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     }, [items])
 
     const availableEras = React.useMemo(() => {
+        if (isMinimalist) return [...ERAS]
         return ERAS.filter(era => {
             const data = categorizedData[era.id]
             return data && (data.series !== null || data.movies.length > 0)
         })
-    }, [categorizedData])
+    }, [categorizedData, isMinimalist])
 
-    const preferredEraId = React.useMemo<EraId | null>(() => {
-        if (themeSettings.themeEra) {
-            const mapped = themeSettings.themeEra.replace("era-", "") as EraId
-            if (ERAS.some(e => e.id === mapped)) return mapped
-        }
-        return null
-    }, [themeSettings.themeEra])
+    const preferredEraId = React.useMemo(() => eraIdFromThemeEra(themeSettings.themeEra), [themeSettings.themeEra])
 
     const initialEraId = React.useMemo<EraId>(() => {
         if (preferredEraId && (categorizedData[preferredEraId]?.series || categorizedData[preferredEraId]?.movies.length > 0)) {
@@ -169,12 +170,13 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         return DRAGON_BALL_SAGAS[activeEraSeriesId] || []
     }, [activeEraSeriesId])
 
-    // Condición general: las sagas solo se muestran cuando la serie esté al 100% en la biblioteca
+    // Condición general: las sagas solo se muestran cuando la serie esté al 100% en la biblioteca (en minimalista se muestran siempre para navegación rápida)
     const isSeriesComplete = Boolean(activeSeries?.isSeriesComplete)
     const activeEraSagas = React.useMemo(() => {
+        if (isMinimalist) return rawEraSagas
         if (!isSeriesComplete) return []
         return rawEraSagas
-    }, [isSeriesComplete, rawEraSagas])
+    }, [isMinimalist, isSeriesComplete, rawEraSagas])
 
     // Películas de la era activa (no dependen del 100% de la serie).
     const activeEraMovies = React.useMemo(() => {
@@ -191,6 +193,11 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     availableErasRef.current = availableEras
     const isUserInteractingRef = React.useRef(isUserInteracting)
     isUserInteractingRef.current = isUserInteracting
+    // Con un reproductor abierto (overlay de la cola o de la paleta) el hero no rota: si no, cambiaría la
+    // paleta y el acento de los controles del video cada 5 s.
+    const videoActive = useUIStore((s) => s.isVideoActive)
+    const videoActiveRef = React.useRef(videoActive)
+    videoActiveRef.current = videoActive
 
     // Update active items when switching eras (calcula dirección del slide)
     const handleEraSelect = React.useCallback((eraId: EraId) => {
@@ -211,6 +218,8 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     }, [activeEraId, handleEraSelect, playSound])
 
     const advanceEra = React.useCallback(() => {
+        // Una barra que termina justo cuando se abre el reproductor tampoco debe avanzar.
+        if (videoActiveRef.current) return
         setDirection(1)
         setActiveEraId(prevEraId => {
             const list = availableErasRef.current
@@ -243,7 +252,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
         if (availableEras.length > 1 && !reduceMotion && !isHeavyAllowed) {
             intervalId = setInterval(() => {
                 if (document.visibilityState === "hidden") return
-                if (isUserInteractingRef.current) return
+                if (isUserInteractingRef.current || videoActiveRef.current) return
                 if (document.hasFocus && !document.hasFocus()) return
                 advanceEra()
             }, HERO_ROTATION_MS)
@@ -275,8 +284,11 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     }, [activeSeries])
 
     const displayTitle = React.useMemo(() => {
+        if (isMinimalist) {
+            return currentEraConfig?.title || "Dragon Ball"
+        }
         return ERA_DEFAULTS[activeEraId]?.title || activeSeries?.title || currentEraConfig?.title || "Dragon Ball"
-    }, [activeEraId, activeSeries, currentEraConfig])
+    }, [activeEraId, activeSeries, currentEraConfig, isMinimalist])
 
     const displayDescription = React.useMemo(() => {
         const curatedEs = ERA_DEFAULTS[activeEraId]?.description
@@ -316,12 +328,13 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
     }, [activeSeries, onNavigate, activeEraId, activeEraSeriesId])
 
     const handleSagaNavigate = React.useCallback((seriesId: number, sagaId: string) => {
+        const targetId = activeSeries?.mediaId || seriesId
         navigate({
             to: "/series/$seriesId",
-            params: { seriesId: String(seriesId) },
-            search: { saga: sagaId, tab: "episodes", subSaga: "" }
+            params: { seriesId: String(targetId) },
+            search: { saga: sagaId, subSaga: "" }
         })
-    }, [navigate])
+    }, [navigate, activeSeries])
 
     return (
         <m.section
@@ -329,15 +342,19 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
             variants={isFullMotion ? spotlightEntranceVariants : undefined}
             initial={isFullMotion ? "hidden" : false}
             animate={isFullMotion ? "visible" : undefined}
-            onMouseEnter={() => setIsUserInteracting(true)}
-            onMouseLeave={() => setIsUserInteracting(false)}
+            // Movimiento real del ratón y no mouseenter: al terminar el fundido de paleta de Universo DB,
+            // Chrome recalcula el hover y dispara mouseenter con el puntero quieto sobre el hero.
+            // Un arrastre táctil tampoco pausa: sin mouse de compatibilidad nunca llegaría el mouseleave.
+            // pointerleave libera también al levantar el dedo.
+            onPointerMove={(e) => { if (e.pointerType === "mouse" && !isUserInteracting) setIsUserInteracting(true) }}
+            onPointerLeave={() => setIsUserInteracting(false)}
             onFocus={() => setIsUserInteracting(true)}
             onBlur={() => setIsUserInteracting(false)}
-            className={cn("relative pt-4 md:pt-20 pb-8 w-full max-w-content-desktop mx-auto select-none flex flex-col justify-start space-y-4 px-4 sm:px-6 md:px-8 lg:px-10", className)}
+            className={cn("home-spotlight relative pt-nav pb-8 w-full max-w-content-desktop mx-auto select-none flex flex-col justify-start space-y-4 px-4 sm:px-6 md:px-8 lg:px-10", className)}
         >
-            {/* Ambient Aura Background (mismo tamaño que Películas) */}
+            {/* Ambient Aura Background (solo en tema Por era) */}
             <div className={HERO_AURA_CLASS}>
-                {colors && (
+                {!isMinimalist && !isClassic && colors && (
                     <m.div
                         key={activeEraId + "_outer_aura"}
                         initial={{ opacity: 0 }}
@@ -353,15 +370,13 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                 {/* Sin orbe que respira: el color de la era llega solo por el tinte de arriba. */}
             </div>
 
-            {/* 1. Barra de Navegación Horizontal de Eras */}
-            <m.div variants={entranceBlock} className="relative z-10 w-full">
-                <SpotlightEraNav
-                    activeEraId={activeEraId}
-                    categorizedData={categorizedData}
-                    onSelectEra={handleEraNavSelect}
-                    onHoverSound={playHoverSound}
-                />
-            </m.div>
+            {/* 1. Selector de Eras (Sidebar lateral izquierdo) */}
+            <SpotlightEraNav
+                activeEraId={activeEraId}
+                categorizedData={categorizedData}
+                onSelectEra={handleEraNavSelect}
+                onHoverSound={playHoverSound}
+            />
 
             {/* 2. Hero Cinematográfico (Serie Principal) */}
             <m.div variants={entranceBlock} className="relative z-10 w-full">
@@ -373,8 +388,6 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                     effectiveBackdropSrc={effectiveBackdropSrc}
                     colors={colors}
                     currentEraConfig={currentEraConfig}
-                    activeSeries={activeSeries}
-                    isSeriesComplete={isSeriesComplete}
                     activeEraSagas={activeEraSagas}
                     activeEraSeriesId={activeEraSeriesId}
                     backdropRef={heroBackdropRef}
@@ -382,7 +395,7 @@ export const MediaSpotlight = React.memo(function MediaSpotlight({ items, onNavi
                     onNavigateSaga={handleSagaNavigate}
                     availableEras={availableEras}
                     onSelectEra={handleEraSelect}
-                    isPaused={isUserInteracting}
+                    isPaused={isUserInteracting || videoActive}
                     onCycleComplete={advanceEra}
                 />
             </m.div>

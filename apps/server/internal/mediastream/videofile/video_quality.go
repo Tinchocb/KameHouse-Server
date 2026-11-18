@@ -10,11 +10,10 @@ const (
 	P1080    Quality = "1080p"
 	P1440    Quality = "1440p"
 	P4k      Quality = "4k"
-	P8k      Quality = "8k"
-	Original Quality = "original"
+	P8k Quality = "8k"
 )
 
-// Qualities Purposefully removing Original from this list (since it require special treatments anyway)
+// Qualities lists all target transcode qualities.
 var Qualities = []Quality{P240, P360, P480, P720, P1080, P1440, P4k, P8k}
 
 // Height returns the pixel height for the quality level.

@@ -29,5 +29,4 @@ func TestIsGzipSkippedPath(t *testing.T) {
 
 	// General API endpoints must also not be skipped
 	assert.False(t, isGzipSkippedPath("/api/v1/library/collection"))
-	assert.False(t, isGzipSkippedPath("/api/v1/home/continue-watching"))
 }

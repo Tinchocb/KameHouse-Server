@@ -27,7 +27,7 @@ func TestUpsertThemePersistsZeroValues(t *testing.T) {
 		t.Fatalf("UpsertTheme(off): %v", err)
 	}
 
-	themeCache.Store(nil) // forzar relectura desde SQLite
+	database.themeCache.Store(nil) // forzar relectura desde SQLite
 	got, err := database.GetTheme()
 	if err != nil {
 		t.Fatal(err)

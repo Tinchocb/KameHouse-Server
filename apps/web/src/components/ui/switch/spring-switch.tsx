@@ -1,13 +1,14 @@
 import React, { useState } from "react"
-import { m, useReducedMotion } from "framer-motion"
+import { m } from "framer-motion"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { cn } from "@/components/ui/core/styling"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 
 const variantTrackColors = {
     default: {
         checked: "bg-brand-accent border-transparent",
-        // Thumb en on-primary: blanco en Por Era (track de color), negro #09090B
-        // en Clásico (track blanco) — sin esto el toggle ON en Clásico era
+        // Thumb en on-primary: casi negro (#0A0A0B) sobre el acento en Por Era y
+        // #09090B en Clásico (track blanco) — sin esto el toggle ON en Clásico era
         // gris-sobre-blanco lavado e ilegible.
         thumb: "bg-on-primary text-brand-accent shadow-elevation-2",
         dot: "bg-brand-accent opacity-90",
@@ -16,34 +17,22 @@ const variantTrackColors = {
 
 interface SpringSwitchProps {
     checked: boolean
-    onChange?: (checked: boolean) => void
     onCheckedChange?: (checked: boolean) => void
     disabled?: boolean
-    ariaLabel?: string
-    id?: string
     className?: string
     size?: "sm" | "md"
-    variant?: "default"
     ariaHidden?: boolean
-    tabIndex?: number
     isPressingExternal?: boolean
-    as?: "button" | "div" | "span"
 }
 
 export const SpringSwitch: React.FC<SpringSwitchProps> = ({
     checked,
-    onChange,
     onCheckedChange,
     disabled = false,
-    ariaLabel,
-    id,
     className,
     size = "md",
-    variant = "default",
     ariaHidden = false,
-    tabIndex,
     isPressingExternal,
-    as,
 }) => {
     const [internalPressing, setInternalPressing] = useState(false)
     const shouldReduceMotion = useReducedMotion()
@@ -51,38 +40,40 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
 
     const isPressing = isPressingExternal !== undefined ? isPressingExternal : internalPressing
     const isSm = size === "sm"
-    const variantConfig = variantTrackColors[variant] || variantTrackColors.default
+    const variantConfig = variantTrackColors.default
 
     const handleToggle = (e?: React.MouseEvent) => {
         if (e) {
             e.stopPropagation()
         }
         if (disabled) return
-        const next = !checked
-        onChange?.(next)
-        onCheckedChange?.(next)
+        onCheckedChange?.(!checked)
     }
 
     // Calculations for smooth motion
     // sm: track 36x20px (w-9 h-5), padding 2px, thumb 16x16px (w-4 h-4) -> travel distance: (36 - 4 - 16) = 16px
     // md: track 46x26px (w-[46px] h-6.5), padding 3px, thumb 20x20px (w-5 h-5) -> travel distance: (46 - 6 - 20) = 20px
     const travelDistance = isSm ? 16 : 20
-    const Component = as ?? (ariaHidden ? "div" : "button")
+    const Component = ariaHidden ? "div" : "button"
 
     return (
         <Component
             type={Component === "button" ? "button" : undefined}
+            data-switch=""
+            data-checked={checked}
+            data-disabled={disabled || undefined}
             role={ariaHidden ? "presentation" : "switch"}
-            id={id}
             aria-checked={ariaHidden ? undefined : checked}
-            aria-label={ariaHidden ? undefined : ariaLabel}
+            aria-disabled={ariaHidden ? undefined : disabled || undefined}
             aria-hidden={ariaHidden ? true : undefined}
             disabled={Component === "button" ? disabled : undefined}
-            tabIndex={ariaHidden ? -1 : (tabIndex ?? (disabled ? -1 : 0))}
+            tabIndex={ariaHidden ? -1 : (disabled ? -1 : 0)}
             onClick={handleToggle}
             onPointerDown={() => !disabled && setInternalPressing(true)}
             onPointerUp={() => setInternalPressing(false)}
             onPointerLeave={() => setInternalPressing(false)}
+            onPointerCancel={() => setInternalPressing(false)}
+            onBlur={() => setInternalPressing(false)}
             onKeyDown={(e: React.KeyboardEvent) => {
                 if (ariaHidden) return
                 if (e.key === " " || e.key === "Enter") {
@@ -106,9 +97,10 @@ export const SpringSwitch: React.FC<SpringSwitchProps> = ({
         >
             {/* Tactile thumb with physics & squash */}
             <m.span
+                data-switch-thumb=""
                 animate={{
                     x: checked ? travelDistance : 0,
-                    scaleX: isPressing ? 1.18 : 1,
+                    scaleX: shouldReduceMotion ? 1 : (isPressing ? 1.18 : 1),
                 }}
                 style={{
                     transformOrigin: checked ? "right center" : "left center",

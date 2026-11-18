@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type ComponentPropsWithoutRef } from "react"
 import { useRouterState } from "@tanstack/react-router"
 import { cn } from "@/components/ui/core/styling"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { PAGE_ENTERED_EVENT, PAGE_ENTERING_ATTR } from "./page-enter-signal"
 import { staggerBlocksOf, staggerEnter } from "./enter-stagger"
 import {
@@ -91,6 +92,7 @@ function sharedKeyFor(kind: NavKind, prevPath: string, nextPath: string): string
  * reducido y al entrar directo al reproductor (`autoplay`), donde ya hay una pantalla de carga continua.
  */
 export function PageTransition({ children, className, ...rest }: PageTransitionProps) {
+    const reduceMotion = useReducedMotion()
     const containerRef = useRef<HTMLDivElement>(null)
     const contentRef = useRef<HTMLDivElement>(null)
     const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -110,6 +112,21 @@ export function PageTransition({ children, className, ...rest }: PageTransitionP
     const ghostRef = useRef<SharedGhost | null>(null)
     /** Reintento del foco al volver de una ficha, hasta que la tarjeta esté en la lista. */
     const focusRef = useRef<(() => void) | null>(null)
+
+    useEffect(() => {
+        if (!reduceMotion) return
+        cancelEntryRef.current?.()
+        cancelEntryRef.current = null
+        exitRef.current?.cancel()
+        exitRef.current = null
+        ghostRef.current?.destroy()
+        ghostRef.current = null
+        const container = containerRef.current
+        if (container?.hasAttribute(PAGE_ENTERING_ATTR)) {
+            container.removeAttribute(PAGE_ENTERING_ATTR)
+            window.dispatchEvent(new Event(PAGE_ENTERED_EVENT))
+        }
+    }, [reduceMotion])
 
     const dropExit = () => {
         exitRef.current?.cancel()
@@ -212,10 +229,10 @@ export function PageTransition({ children, className, ...rest }: PageTransitionP
         const all = flight ? [animation, ...staggered, flight] : [animation, ...staggered]
         // Token de esta entrada: al cancelarla, sus animaciones no deben cerrar la entrada siguiente.
         const token = { live: true }
-        let remaining = all.length + (returning ? 1 : 0)
+        const entryCountdown = { remaining: all.length + (returning ? 1 : 0) }
         const done = () => {
             if (!token.live) return
-            if (--remaining > 0) return
+            if (--entryCountdown.remaining > 0) return
             container?.removeAttribute(PAGE_ENTERING_ATTR)
             window.dispatchEvent(new Event(PAGE_ENTERED_EVENT))
         }

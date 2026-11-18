@@ -79,7 +79,7 @@ func TestLocalFilesFailedSaveDoesNotChangeCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer d.Gorm().Callback().Create().Remove("snapshot:fail")
-	if _, err := SaveLocalFiles(d, files); err == nil {
+	if err := UpsertLocalFileRelationalBatch(d, files); err == nil {
 		t.Fatal("expected save failure")
 	}
 	next, _, err := GetLocalFiles(d)

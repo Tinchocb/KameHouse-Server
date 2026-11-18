@@ -1,4 +1,5 @@
 import React, { useState, memo } from 'react';
+import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
 import { Chip } from './Chip';
 import { ALL_ERAS_HEX, hexToRgbChannels, eraTextChannels } from './utils/eraColor';
 import {
@@ -21,7 +22,6 @@ interface InterludeDividerProps {
   interlude: ChronologyInterlude;
   toVolume?: VolumeData | null;
   accentHex?: string;
-  isCentered?: boolean;
 }
 
 const KIND_ICON: Record<ChronologyInterlude['kind'], React.ReactNode> = {
@@ -35,6 +35,7 @@ const KIND_ICON: Record<ChronologyInterlude['kind'], React.ReactNode> = {
 
 export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
   ({ interlude, toVolume, accentHex }) => {
+    const isClassic = useIsClassicMode();
     const [isExpanded, setIsExpanded] = useState(false);
     // El cuerpo se monta al abrirlo por primera vez y queda montado para que el cierre anime.
     const [hasOpened, setHasOpened] = useState(false);
@@ -64,7 +65,7 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
         <div
           aria-hidden="true"
           className={`lg:hidden absolute left-3 -translate-x-1/2 top-2.5 w-6 h-6 rounded-full border flex items-center justify-center z-10 shadow-elevation-1 bg-surface-container-lowest transition-colors duration-fast ${
-            isYears
+            !isClassic && isYears
               ? 'border-[rgb(var(--era)/0.6)] text-[rgb(var(--era-text))]'
               : 'border-[var(--neutral-separator)] text-label-2'
           }`}
@@ -80,8 +81,8 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
 
         {/* Centered pill on lg, full width on mobile. Sin blur: hay una por lapso y el vidrio se repetiría en la lista */}
         <div
-          className={`relative isolate w-full lg:w-auto lg:max-w-xl rounded-2xl border bg-surface-container-lowest shadow-elevation-2 transition-[border-color,background-color,box-shadow] duration-base ease-smooth-out overflow-hidden group/interlude ${
-            isYears ? 'border-[rgb(var(--era)/0.4)]' : 'border-[var(--neutral-separator)]'
+          className={`relative isolate w-full lg:w-auto lg:max-w-2xl rounded-2xl border bg-surface-container-lowest border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)] transition-[border-color,background-color,box-shadow] duration-base ease-smooth-out overflow-hidden group/interlude ${
+            !isClassic && isYears ? 'border-[rgb(var(--era)/0.4)]' : 'border-[var(--neutral-separator)]'
           }`}
           style={
             {
@@ -90,11 +91,15 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
             } as React.CSSProperties
           }
         >
-          {/* Filete superior con brillo de la era si es de años */}
-          {isYears && (
+          {/* Filete superior con brillo de la era si es de años, o blanco titanio si es classic */}
+          {(isClassic || isYears) && (
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px bg-gradient-to-r from-transparent via-[rgb(var(--era)/0.85)] to-transparent opacity-75"
+              className={`pointer-events-none absolute inset-x-0 top-0 z-20 h-px bg-gradient-to-r from-transparent to-transparent opacity-75 ${
+                isClassic
+                  ? 'via-white/70'
+                  : 'via-[rgb(var(--era)/0.85)]'
+              }`}
             />
           )}
 
@@ -107,11 +112,11 @@ export const InterludeDivider: React.FC<InterludeDividerProps> = memo(
               setHasOpened(true);
               setIsExpanded((v) => !v);
             }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-left cursor-pointer min-h-[44px] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent select-none active:scale-95 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04] transition-[transform,background-color] duration-fast ease-smooth-out"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-left cursor-pointer min-h-[44px] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent select-none motion-safe:active:scale-[0.97] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.04] transition-[transform,background-color] duration-fast ease-smooth-out"
           >
             {/* Kind & Gap Badge */}
             <Chip
-              tone={isYears ? 'era' : isContinuo ? 'quiet' : 'accent'}
+              tone={isClassic ? 'quiet' : isYears ? 'era' : isContinuo ? 'quiet' : 'accent'}
               icon={KIND_ICON[interlude.kind]}
             >
               {interlude.gap.label}

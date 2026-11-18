@@ -211,7 +211,7 @@ export function DragonBallScannerLive() {
             <div className="space-y-3">
                 <div className="flex items-baseline justify-between gap-3">
                     <h3 className="text-xs font-bold text-on-surface">Colección</h3>
-                    <p className="text-3xs text-label-2">Toca una portada para ver sagas y películas</p>
+                    <p className="text-xs text-label-2">Haz clic en una portada para ver sagas y películas</p>
                 </div>
 
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
@@ -226,20 +226,14 @@ export function DragonBallScannerLive() {
                         const percentage = Math.min(100, Math.round((count / series.totalEpisodes) * 100))
 
                         return (
-                            <m.div
+                            <m.button
+                                type="button"
                                 key={series.id}
                                 {...cardMotion}
-                                role="button"
-                                tabIndex={0}
                                 aria-label={`Ver detalle de ${series.title}`}
                                 onClick={() => openDetail(series)}
-                                onKeyDown={(e) => {
-                                    if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return
-                                    e.preventDefault()
-                                    openDetail(series)
-                                }}
                                 className={cn(
-                                    "group relative flex flex-col rounded-xl overflow-hidden cursor-pointer border transition-[border-color,box-shadow,opacity] duration-fast ease-smooth-out bg-[var(--neutral-elev-2)]",
+                                    "group relative flex flex-col text-left rounded-xl overflow-hidden cursor-pointer border border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent transition-[border-color,box-shadow,opacity] duration-fast ease-smooth-out bg-[var(--neutral-elev-2)]",
                                     (count > 0 || detectedMoviesInSeries > 0)
                                         ? "border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-accent/60 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-elevation-3"
                                         : "border-[var(--neutral-separator)] opacity-75 [@media(hover:hover)_and_(pointer:fine)]:hover:opacity-100 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[var(--neutral-separator)]"
@@ -256,7 +250,7 @@ export function DragonBallScannerLive() {
                                             }
                                         }}
                                         className={cn(
-                                            "w-full h-full object-cover transition-transform duration-slow ease-smooth-out [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105",
+                                            "w-full h-full object-cover transition-transform duration-slow ease-smooth-out motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105",
                                             count === 0 && detectedMoviesInSeries === 0 && "grayscale-[40%] opacity-80"
                                         )}
                                         loading="lazy"
@@ -272,7 +266,7 @@ export function DragonBallScannerLive() {
                                                 "absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full font-bold font-mono shadow-elevation-1",
                                                 isComplete
                                                     ? "size-5 bg-status-success text-black"
-                                                    : "px-1.5 py-0.5 text-4xs bg-black/80 text-status-warning border border-status-warning/40",
+                                                    : "px-1.5 py-0.5 text-xs bg-[var(--neutral-elev-2)] text-status-warning border border-status-warning/40 shadow-[shadow:var(--double-bezel-ring)]",
                                             )}
                                             aria-label={isComplete ? "Completa" : `${percentage}% detectado`}
                                         >
@@ -282,10 +276,10 @@ export function DragonBallScannerLive() {
 
                                     {/* Bottom Info on Poster */}
                                     <div className="absolute bottom-2 left-2 right-2 z-10">
-                                        <h3 className="text-2xs font-bold text-label-1 leading-tight line-clamp-1 group-hover:text-brand-accent-readable transition-colors">
+                                        <h3 className="text-xs font-bold text-label-1 leading-tight line-clamp-1 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent-readable transition-colors">
                                             {series.title}
                                         </h3>
-                                        <p className="text-4xs font-mono text-label-2 mt-0.5 truncate">
+                                        <p className="text-xs font-mono text-label-2 mt-0.5 truncate">
                                             {series.subtitle}
                                         </p>
                                     </div>
@@ -293,7 +287,7 @@ export function DragonBallScannerLive() {
 
                                 {/* Conteo + barra (+ películas de la serie) */}
                                 <div className="px-2.5 py-2 border-t border-[var(--neutral-separator)] space-y-1.5">
-                                    <div className="flex items-center justify-between gap-2 text-3xs font-mono">
+                                    <div className="flex items-center justify-between gap-2 text-xs font-mono">
                                         <span className={cn("font-bold tabular-nums whitespace-nowrap", count > 0 ? "text-on-surface" : "text-on-surface-variant/50")}
                                             title={series.type === "MOVIES" ? "Películas detectadas" : "Episodios detectados"}>
                                             {count}<span className="text-on-surface-variant/45 font-normal">/{series.totalEpisodes}</span>
@@ -327,7 +321,7 @@ export function DragonBallScannerLive() {
                                         />
                                     </div>
                                 </div>
-                            </m.div>
+                            </m.button>
                         )
                     })}
                 </div>
@@ -354,7 +348,7 @@ export function DragonBallScannerLive() {
                                         className="w-14 h-20 object-cover rounded-xl shadow-elevation-2 border border-[var(--neutral-separator)] shrink-0"
                                     />
                                     <div>
-                                        <span className="text-2xs font-bold text-brand-accent-readable block">
+                                        <span className="text-xs font-bold text-brand-accent-readable block">
                                             Detalle del escaneo
                                         </span>
                                         <h3 className="text-lg font-bold text-label-1 tracking-tight">
@@ -418,7 +412,7 @@ export function DragonBallScannerLive() {
                                         return (
                                             <div
                                                 key={saga.id}
-                                                className="flex items-center justify-between p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] hover:border-[var(--neutral-separator)] transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden"
+                                                className="flex items-center justify-between p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] hover:border-[var(--neutral-separator)] transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden"
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     {/* Saga Artwork Thumbnail */}
@@ -437,7 +431,7 @@ export function DragonBallScannerLive() {
                                                         <h5 className="text-xs font-bold text-label-1 truncate">
                                                             {saga.name}
                                                         </h5>
-                                                        <span className="text-2xs text-label-2">
+                                                        <span className="text-xs text-label-2">
                                                             Episodios {saga.startEp}–{saga.endEp} · {sagaFound} de {sagaTotal}
                                                         </span>
                                                     </div>
@@ -445,7 +439,7 @@ export function DragonBallScannerLive() {
 
                                                 <span
                                                     className={cn(
-                                                        "px-2.5 py-0.5 rounded-full text-3xs font-bold shrink-0",
+                                                        "px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0",
                                                         sagaCompleted
                                                             ? "bg-status-success/15 text-status-success border border-status-success/30"
                                                             : sagaFound > 0
@@ -467,7 +461,7 @@ export function DragonBallScannerLive() {
                                             <div
                                                 key={movie.id}
                                                 className={cn(
-                                                    "flex items-center justify-between p-3 rounded-xl border transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden",
+                                                    "flex items-center justify-between p-3 rounded-xl border border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] transition-[border-color,background-color] duration-fast ease-smooth-out gap-4 overflow-hidden",
                                                     isDetected
                                                         ? "bg-[var(--neutral-elev-2)] border-[var(--neutral-separator)]"
                                                         : "bg-[var(--neutral-elev-2)] border-[var(--neutral-separator)] opacity-60"
@@ -483,10 +477,10 @@ export function DragonBallScannerLive() {
                                                     </div>
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-2xs font-bold px-1.5 py-px rounded bg-[var(--neutral-elev-3)] text-on-surface-variant">
+                                                            <span className="text-xs font-bold px-1.5 py-px rounded bg-[var(--neutral-elev-3)] text-on-surface-variant">
                                                                 {movie.type}
                                                             </span>
-                                                            <span className="text-3xs font-mono text-label-2">
+                                                            <span className="text-xs font-mono text-label-2">
                                                                 {movie.year}
                                                             </span>
                                                         </div>
@@ -498,7 +492,7 @@ export function DragonBallScannerLive() {
 
                                                 <span
                                                     className={cn(
-                                                        "px-2.5 py-1 rounded-full text-3xs font-bold shrink-0 flex items-center gap-1",
+                                                        "px-2.5 py-1 rounded-full text-xs font-bold shrink-0 flex items-center gap-1",
                                                         isDetected
                                                             ? "bg-status-success/20 text-status-success border border-status-success/40"
                                                             : "bg-surface-container-lowest text-label-3 border border-[var(--neutral-separator)]"

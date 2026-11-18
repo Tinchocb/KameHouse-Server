@@ -52,28 +52,22 @@ describe("mapLibraryEntryToMediaCard", () => {
         expect(mapLibraryEntryToMediaCard(entry({}, { title: "x" }), vi.fn())).toBeNull()
     })
 
-    it("sanea subtítulo, score e imágenes con datos incompletos", () => {
+    it("sanea subtítulo e imágenes con datos incompletos", () => {
         const item = card(
             entry({ mediaId: 7 }, { format: "movie", year: null, score: Number.NaN, posterImage: null, bannerImage: " b.jpg " }),
         )
         expect(item.subtitle).toBe("MOVIE")
         expect(item.badge).toBe("MOVIE")
-        expect(item.rating).toBeUndefined()
         expect(item.image).toBe("b.jpg")
         expect(item.title).toBe("Sin título")
     })
 
-    it("normaliza score 0–100 y strings numéricos", () => {
-        expect(card(entry({ mediaId: 1 }, { score: 85 })).rating).toBe(8.5)
-        expect(card(entry({ mediaId: 1 }, { score: "7.2" })).rating).toBe(7.2)
-    })
-
     it("usa los episodios canónicos también con id con offset TMDB", () => {
         // Dragon Ball (tmdb 12609, 153 episodios) servido como 1_012_609.
-        const item = card(entry({ mediaId: 1_012_609, libraryData: { mainFileCount: 150 } }, { format: "TV" }))
-        expect(item.totalEpisodesCount).toBe(153)
-        expect(item.missingCount).toBe(3)
-        expect(item.isSeriesComplete).toBe(false)
+        const incomplete = card(entry({ mediaId: 1_012_609, libraryData: { mainFileCount: 150 } }, { format: "TV" }))
+        expect(incomplete.isSeriesComplete).toBe(false)
+        const complete = card(entry({ mediaId: 1_012_609, libraryData: { mainFileCount: 153 } }, { format: "TV" }))
+        expect(complete.isSeriesComplete).toBe(true)
     })
 
     it("onClick navega con el id resuelto", () => {

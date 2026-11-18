@@ -6,11 +6,11 @@ import { prewarmImages } from '@/lib/helpers/images';
 import { shelfImageUrls } from '@/lib/helpers/series-images';
 import { getSafeCollectionEntries } from '@/lib/helpers/collection';
 
-export type SeriesViewMode = 'shelf' | 'etapas';
+type SeriesViewMode = 'cards' | 'shelf';
 
 export const Route = createFileRoute('/series/')({
     validateSearch: (search: Record<string, unknown>): { view?: SeriesViewMode } => ({
-        view: search.view === 'etapas' || search.view === 'shelf' ? search.view : undefined,
+        view: search.view === 'shelf' || search.view === 'cards' ? (search.view as SeriesViewMode) : undefined,
     }),
     // prefetch no bloqueante: nunca congela la navegación ni lanza en el router;
     // unificado con home y movies.

@@ -97,7 +97,6 @@ InputContainer.displayName = "InputContainer"
 
 export type InputStyling = Omit<VariantProps<typeof InputAnatomy.root>,
     "isDisabled" | "hasError" | "hasLeftAddon" | "hasRightAddon" | "hasLeftIcon" | "hasRightIcon"> &
-    ComponentAnatomy<typeof InputAddonsAnatomy> &
     ComponentAnatomy<typeof InputContainerAnatomy> & {
     leftAddon?: React.ReactNode
     leftIcon?: React.ReactNode
@@ -166,7 +165,7 @@ type InputIconProps = {
 
 export const InputIcon = ({ icon, size = "md", side, props, className }: InputIconProps) => {
 
-    if (!!icon) return <span
+    if (icon) return <span
         className={cn(InputAddonsAnatomy.icon({ isRightIcon: side === "right", isLeftIcon: side === "left", size }), className)}
         {...props}
     >
@@ -193,7 +192,7 @@ type InputAddonProps = {
 
 export const InputAddon = ({ addon, leftIcon, rightIcon, size = "md", side, props, className }: InputAddonProps) => {
 
-    if (!!addon) return (
+    if (addon) return (
         <span
             className={cn(InputAddonsAnatomy.addon({
                 isRightAddon: side === "right",
@@ -225,8 +224,6 @@ export function extractInputPartProps<T extends InputStyling>(props: T) {
         rightAddon,
         rightIcon,
         inputContainerClass, // class
-        iconClass, // class
-        addonClass, // class
         ...rest
     } = props
 
@@ -247,7 +244,6 @@ export function extractInputPartProps<T extends InputStyling>(props: T) {
             rightIcon,
             size,
             side: "left",
-            className: addonClass,
         },
         rightAddonProps: {
             addon: rightAddon,
@@ -255,22 +251,19 @@ export function extractInputPartProps<T extends InputStyling>(props: T) {
             rightIcon,
             size,
             side: "right",
-            className: addonClass,
         },
         leftIconProps: {
             icon: leftIcon,
             size,
             side: "left",
-            className: iconClass,
         },
         rightIconProps: {
             icon: rightIcon,
             size,
             side: "right",
-            className: iconClass,
         },
     }] as [
-        Omit<T, "iconClass" | "addonClass" | "inputContainerClass">,
+        Omit<T, "inputContainerClass">,
         {
             inputContainerProps: InputContainerProps,
             leftAddonProps: InputAddonProps,

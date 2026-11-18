@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -193,21 +192,37 @@ func (p *Pipeline) reclaimExistingSegments() {
 		return // Not an error — dir may not exist yet.
 	}
 
-	pattern := filepath.Base(p.outPathFmt(0))
-	var found []int32
+	found := make(map[int]map[int32]bool)
 
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
-		var seg int32
-		if _, err := fmt.Sscanf(entry.Name(), pattern, &seg); err != nil {
+		// Session filenames end in -<encoderID>-<segment>.ts. Validate the
+		// reconstructed filename against this pipeline to exclude other tracks.
+		stem := strings.TrimSuffix(entry.Name(), ".ts")
+		last := strings.LastIndexByte(stem, '-')
+		if last < 0 {
+			continue
+		}
+		seg64, err := strconv.ParseInt(stem[last+1:], 10, 32)
+		prefix := stem[:last]
+		previous := strings.LastIndexByte(prefix, '-')
+		if err != nil || previous < 0 {
+			continue
+		}
+		eid, err := strconv.Atoi(prefix[previous+1:])
+		seg := int32(seg64)
+		if err != nil || eid < 0 || fmt.Sprintf(filepath.Base(p.outPathFmt(eid)), seg) != entry.Name() {
 			continue
 		}
 		if seg < 0 || seg >= int32(p.segments.Len()) {
 			continue
 		}
-		found = append(found, seg)
+		if found[eid] == nil {
+			found[eid] = make(map[int32]bool)
+		}
+		found[eid][seg] = true
 	}
 
 	// A file on disk counts as a finished segment only when the next one exists: ffmpeg opens
@@ -215,16 +230,15 @@ func (p *Pipeline) reclaimExistingSegments() {
 	// the one a killed ffmpeg was writing (or one a head launched meanwhile is writing right
 	// now, since this scan runs concurrently with the first runHead); marking it ready would
 	// serve a truncated segment.
-	slices.Sort(found)
 	reclaimed := 0
-	for i, seg := range found {
-		if i+1 == len(found) || found[i+1] != seg+1 {
-			continue
-		}
-		// File exists on disk — mark as ready with encoder ID 0.
-		if !p.segments.IsReady(seg) {
-			p.segments.MarkReady(seg, 0)
-			reclaimed++
+	for eid, segments := range found {
+		for seg := range segments {
+			// The successor must belong to the same encoder. A segment from a
+			// different encoder cannot prove this file was closed completely.
+			if segments[seg+1] && !p.segments.IsReady(seg) {
+				p.segments.MarkReady(seg, eid)
+				reclaimed++
+			}
 		}
 	}
 

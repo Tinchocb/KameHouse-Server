@@ -8,8 +8,9 @@ import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { useScannerStore, type ScanEvent, type ScannerState } from "@/lib/stores/scanner-store"
 import React, { useCallback, useEffect, useRef } from "react"
-import useWebSocket from "react-use-websocket"
-import { buildApiQuery } from "@/api/client/requests"
+import useWebSocket, { ReadyState } from "react-use-websocket"
+import { getWebSocketProtocols } from "@/api/client/auth"
+import { useGetStatus } from "@/api/hooks/settings.hooks"
 
 function safeId(): string {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -23,7 +24,7 @@ function safeId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
 }
 
-export function WebsocketProvider({ children }: { children: React.ReactNode }) {
+const WebsocketBridge = React.memo(function WebsocketBridge() {
     const queryClient = useQueryClient()
     const setEvents = useScannerStore(state => state.setEvents)
     const setScannerState = useScannerStore(state => state.setScannerState)
@@ -33,12 +34,29 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     const stateUpdateRef = useRef<Partial<ScannerState>>({})
     const flushTimeout = useRef<NodeJS.Timeout | null>(null)
     const invalidationTimeout = useRef<NodeJS.Timeout | null>(null)
+    const pendingInvalidationMediaIdRef = useRef<number | string | null | undefined>(undefined)
 
-    const debouncedInvalidateLibrary = useCallback(() => {
+    const debouncedInvalidateLibrary = useCallback((mediaId?: number | string) => {
+        if (mediaId !== undefined) {
+            if (pendingInvalidationMediaIdRef.current === undefined) {
+                pendingInvalidationMediaIdRef.current = mediaId
+            } else if (pendingInvalidationMediaIdRef.current !== mediaId) {
+                pendingInvalidationMediaIdRef.current = null
+            }
+        } else {
+            pendingInvalidationMediaIdRef.current = null
+        }
+
         if (invalidationTimeout.current) clearTimeout(invalidationTimeout.current)
         invalidationTimeout.current = setTimeout(() => {
+            const targetMediaId = pendingInvalidationMediaIdRef.current
+            pendingInvalidationMediaIdRef.current = undefined
             queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
-            queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
+            if (targetMediaId !== undefined && targetMediaId !== null) {
+                queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key, String(targetMediaId)] })
+            } else {
+                queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_ENTRIES.GetAnimeEntry.key] })
+            }
             invalidationTimeout.current = null
         }, 1200)
     }, [queryClient])
@@ -56,37 +74,13 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
         return Math.floor(exponential + jitter)
     }, [])
 
-    // No abrir el socket hasta que el backend responda a /status: evita la
-    // ráfaga de "connection refused" mientras el sidecar arranca. Se sondea en
-    // vivo (no con useGetStatus) porque esa query se restaura desde IndexedDB
-    // y daría "listo" con datos de la sesión anterior.
-    const [isBackendReady, setIsBackendReady] = React.useState(false)
-    useEffect(() => {
-        let cancelled = false
-        let timerId: ReturnType<typeof setTimeout> | null = null
+    // Reutiliza la query viva `useGetStatus` compartida con RootShell (excluida de IndexedDB),
+    // evitando una segunda petición /api/v1/status paralela durante el arranque.
+    const { data: status } = useGetStatus()
+    const isBackendReady = Boolean(status)
 
-        const probe = async () => {
-            while (!cancelled) {
-                try {
-                    await buildApiQuery({ endpoint: API_ENDPOINTS.STATUS.GetStatus.endpoint, method: "GET" })
-                    if (!cancelled) setIsBackendReady(true)
-                    return
-                } catch {
-                    if (cancelled) return
-                    await new Promise(resolve => {
-                        timerId = setTimeout(resolve, 1500)
-                    })
-                }
-            }
-        }
-        void probe()
-        return () => {
-            cancelled = true
-            if (timerId) clearTimeout(timerId)
-        }
-    }, [])
-
-    const { lastJsonMessage, sendJsonMessage } = useWebSocket(wsUrl, {
+    const { lastJsonMessage, sendJsonMessage, readyState } = useWebSocket(wsUrl, {
+        protocols: getWebSocketProtocols(),
         shouldReconnect: () => true,
         reconnectAttempts: Infinity,
         reconnectInterval,
@@ -100,11 +94,15 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
     }, isBackendReady)
 
     const flushUpdates = useCallback(() => {
-        // Flush events array
+        // Flush events array sin copiar ni recortar más allá del límite de 5000 entradas
         if (eventQueue.current.length > 0) {
             const newEvents = [...eventQueue.current]
             eventQueue.current = []
-            setEvents(prev => [...newEvents, ...prev].slice(0, 5000))
+            setEvents(prev =>
+                newEvents.length >= 5000
+                    ? newEvents.slice(0, 5000)
+                    : newEvents.concat(prev.slice(0, 5000 - newEvents.length)),
+            )
         }
         
         // Flush simple states
@@ -149,17 +147,23 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
         if (!running) setEvents([])
     }, [queueState, setEvents])
 
-    // Heartbeat loop
     useEffect(() => {
+        return () => {
+            if (flushTimeout.current) clearTimeout(flushTimeout.current)
+            if (invalidationTimeout.current) clearTimeout(invalidationTimeout.current)
+        }
+    }, [])
+
+    // Heartbeat loop activo solo mientras el socket está abierto
+    useEffect(() => {
+        if (readyState !== ReadyState.OPEN) return
         const interval = setInterval(() => {
             sendJsonMessage({ type: "ping", payload: { timestamp: Date.now() } })
         }, 25000)
         return () => {
             clearInterval(interval)
-            if (flushTimeout.current) clearTimeout(flushTimeout.current)
-            if (invalidationTimeout.current) clearTimeout(invalidationTimeout.current)
         }
-    }, [sendJsonMessage])
+    }, [readyState, sendJsonMessage])
 
     useEffect(() => {
         if (!isWebSocketMessage(lastJsonMessage)) return
@@ -293,6 +297,9 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                     queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] })
                     debouncedInvalidateLibrary()
                     const payload = msg.payload
+                    // Los escaneos automáticos son silenciosos (ocurren al arrancar y cada rato):
+                    // el estado y los errores se ven en la tarjeta de Google Drive.
+                    if (payload?.auto) break
                     if (payload?.error) {
                         if (!isToastMuted(true)) toast.error("Error al escanear Google Drive", { description: payload.error })
                     } else if (!isToastMuted(true)) {
@@ -339,7 +346,7 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 case WSEvents.INVALIDATE_QUERIES: {
-                    const payload = msg.payload as { queryKeys?: string[] } | null
+                    const payload = msg.payload as { queryKeys?: string[]; mediaId?: number | string } | null
                     const keys = payload?.queryKeys ?? []
                     if (keys.some((k) => k.toLowerCase().includes("skip"))) {
                         queryClient.invalidateQueries({
@@ -348,6 +355,10 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
                                     (k) => typeof k === "string" && k.toLowerCase().includes("aniskip")
                                 ),
                         })
+                    } else if (payload?.mediaId !== undefined) {
+                        debouncedInvalidateLibrary(payload.mediaId)
+                    } else if (keys.length > 0 && keys.every((k) => k === API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key)) {
+                        queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] })
                     } else {
                         debouncedInvalidateLibrary()
                     }
@@ -395,5 +406,14 @@ export function WebsocketProvider({ children }: { children: React.ReactNode }) {
         }
     }, [lastJsonMessage, queryClient, debouncedInvalidateLibrary, queueState, beginLocalScan])
 
-    return <>{children}</>
+    return null
+})
+
+export function WebsocketProvider({ children }: { children: React.ReactNode }) {
+    return (
+        <>
+            <WebsocketBridge />
+            {children}
+        </>
+    )
 }

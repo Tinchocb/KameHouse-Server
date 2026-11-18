@@ -41,7 +41,7 @@ const (
 )
 
 // karaokeStyleRe detecta estilos/effects de OP/ED por nombre.
-var karaokeStyleRe = regexp.MustCompile(`(?i)\b(op|ed|opening|ending|kara|karaoke|song|insert)\b`)
+var karaokeStyleRe = regexp.MustCompile(`(?i)(^|[^\pL\d])(op|ed|opening|ending|kara|karaoke|song|insert)\d*([^\pL\d]|$)`)
 
 // karaokeTagRe detecta tags de karaoke en el texto de un evento (\k, \kf, \ko, \K).
 var karaokeTagRe = regexp.MustCompile(`\\[kK][fo]?\d`)

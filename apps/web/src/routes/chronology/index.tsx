@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AppErrorBoundary } from '@/components/shared/app-error-boundary';
 import { API_ENDPOINTS } from '@/api/generated/endpoints';
-import { fetchChronologyProgress, fetchChronologyMomentTimes } from '@/api/hooks/chronology.hooks';
+import { fetchChronologyProgress } from '@/api/hooks/chronology.hooks';
 import { fetchLibraryCollection } from '@/api/hooks/anime_collection.hooks';
 import { chronologyEpisodeFilesQueryOptions } from '@/api/hooks/library-episode.hooks';
 
@@ -23,10 +23,6 @@ export const Route = createFileRoute('/chronology/')({
   // el router ya habrá disparado la precarga en background.
   loader: ({ context }) => {
     const qc = context.queryClient;
-    void qc.prefetchQuery({
-      queryKey: [API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.key],
-      queryFn: fetchChronologyMomentTimes,
-    });
     void qc.prefetchQuery({
       queryKey: [API_ENDPOINTS.CHRONOLOGY_PROGRESS.GetChronologyProgress.key],
       queryFn: fetchChronologyProgress,

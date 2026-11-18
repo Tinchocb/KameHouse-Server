@@ -43,12 +43,9 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://kamehouse.app/api/updates/stable/latest.json"
+        "https://github.com/Tinchocb/KameHouse-Server/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmtleSByZXF1aXJlZCBmb3IgdXBkYXRlciB0byB3b3JrCg==",
-      "asyncDownload": true,
-      "downloadInBackground": true,
-      "dialog": true
+      "pubkey": ""
     }
   }
 }

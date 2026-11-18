@@ -4,12 +4,12 @@ import { useEffect, useState, type RefObject } from 'react';
  * Margen por encima y por debajo de la pantalla: las filas se arman bastante antes de que llegue el scroll,
  * así un scroll rápido encuentra las tarjetas ya armadas (y sus miniaturas pedidas) en vez de esqueletos.
  */
-export const NEAR_MARGIN = '1600px 0px';
+export const NEAR_MARGIN = '900px 0px';
 /**
  * Más allá de este margen una fila ya armada se suelta (vuelve a su esqueleto del mismo alto): con la
  * lista completa recorrida no quedan montadas las 35 tarjetas con sus miniaturas.
  */
-export const FAR_MARGIN = '4000px 0px';
+export const FAR_MARGIN = '1800px 0px';
 
 type Listener = (isIntersecting: boolean) => void;
 

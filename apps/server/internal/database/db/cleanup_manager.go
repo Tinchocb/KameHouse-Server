@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"kamehouse/internal/database/models"
 	"time"
 
@@ -21,15 +22,19 @@ func NewCleanupManager(gormdb *gorm.DB, logger *zerolog.Logger) *CleanupManager 
 	}
 }
 
-func (cm *CleanupManager) RunAllCleanupOperations() {
-	cm.logger.Debug().Msg("database: Starting cleanup operations")
-
-	cm.trimScanSummaryEntries()
-	cm.trimLocalFileEntries()
-	cm.removeOrphanedAndCollidedMedia()
-	cm.purgeExpiredMetadataCache()
-
-	cm.logger.Debug().Msg("database: Cleanup operations completed")
+func (cm *CleanupManager) RunAllCleanupOperations(ctx context.Context) {
+	// Bind the context to a local manager; never mutate the shared GORM handle.
+	worker := &CleanupManager{gormdb: cm.gormdb.WithContext(ctx), logger: cm.logger}
+	for _, run := range []func(){worker.trimScanSummaryEntries, worker.trimLocalFileEntries,
+		worker.removeOrphanedAndCollidedMedia, worker.purgeExpiredMetadataCache} {
+		if ctx.Err() != nil {
+			return
+		}
+		run()
+	}
+	if ctx.Err() == nil {
+		cm.logger.Debug().Msg("database: Cleanup operations completed")
+	}
 }
 
 // trimScanSummaryEntries trims scan summary entries
@@ -37,6 +42,9 @@ func (cm *CleanupManager) trimScanSummaryEntries() {
 	var count int64
 	err := cm.gormdb.Model(&models.ScanSummary{}).Count(&count).Error
 	if err != nil {
+		if cm.gormdb.Statement.Context.Err() != nil {
+			return
+		}
 		cm.logger.Error().Err(err).Msg("database: Failed to count scan summary entries")
 		return
 	}
@@ -48,6 +56,9 @@ func (cm *CleanupManager) trimScanSummaryEntries() {
 			Limit(int(count-5)).
 			Pluck("id", &idsToDelete).Error
 		if err != nil {
+			if cm.gormdb.Statement.Context.Err() != nil {
+				return
+			}
 			cm.logger.Error().Err(err).Msg("database: Failed to get scan summary IDs to delete")
 			return
 		}
@@ -55,6 +66,9 @@ func (cm *CleanupManager) trimScanSummaryEntries() {
 		if len(idsToDelete) > 0 {
 			batchSize := 900
 			for i := 0; i < len(idsToDelete); i += batchSize {
+				if cm.gormdb.Statement.Context.Err() != nil {
+					return
+				}
 				end := i + batchSize
 				if end > len(idsToDelete) {
 					end = len(idsToDelete)
@@ -62,6 +76,9 @@ func (cm *CleanupManager) trimScanSummaryEntries() {
 				batch := idsToDelete[i:end]
 				err = cm.gormdb.Delete(&models.ScanSummary{}, batch).Error
 				if err != nil {
+					if cm.gormdb.Statement.Context.Err() != nil {
+						return
+					}
 					cm.logger.Error().Err(err).Msg("database: Failed to delete old scan summary entries")
 					return // Exit on first error
 				}
@@ -85,6 +102,9 @@ func (cm *CleanupManager) trimLocalFileEntries() {
 	// Explicitly use the legacy table name to avoid any ambiguity
 	err := cm.gormdb.Table("local_files").Count(&count).Error
 	if err != nil {
+		if cm.gormdb.Statement.Context.Err() != nil {
+			return
+		}
 		cm.logger.Error().Err(err).Msg("database: Failed to count legacy local file entries")
 		return
 	}
@@ -96,6 +116,9 @@ func (cm *CleanupManager) trimLocalFileEntries() {
 			Limit(int(count-5)).
 			Pluck("id", &idsToDelete).Error
 		if err != nil {
+			if cm.gormdb.Statement.Context.Err() != nil {
+				return
+			}
 			cm.logger.Error().Err(err).Msg("database: Failed to get legacy local file IDs to delete")
 			return
 		}
@@ -103,6 +126,9 @@ func (cm *CleanupManager) trimLocalFileEntries() {
 		if len(idsToDelete) > 0 {
 			batchSize := 900
 			for i := 0; i < len(idsToDelete); i += batchSize {
+				if cm.gormdb.Statement.Context.Err() != nil {
+					return
+				}
 				end := i + batchSize
 				if end > len(idsToDelete) {
 					end = len(idsToDelete)
@@ -110,6 +136,9 @@ func (cm *CleanupManager) trimLocalFileEntries() {
 				chunk := idsToDelete[i:end]
 				err = cm.gormdb.Delete(&models.LocalFiles{}, chunk).Error
 				if err != nil {
+					if cm.gormdb.Statement.Context.Err() != nil {
+						return
+					}
 					cm.logger.Error().Err(err).Msg("database: Failed to delete old legacy local file entries")
 					return
 				}
@@ -144,6 +173,9 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 	`).Scan(&collided).Error
 
 	if err != nil {
+		if cm.gormdb.Statement.Context.Err() != nil {
+			return
+		}
 		cm.logger.Error().Err(err).Msg("database cleanup: Failed to find collided media")
 		return
 	}
@@ -152,6 +184,9 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 	}
 
 	for _, row := range collided {
+		if cm.gormdb.Statement.Context.Err() != nil {
+			return
+		}
 		cm.logger.Warn().
 			Uint("id", row.ID).
 			Int("tmdbID", row.TmdbID).
@@ -159,6 +194,14 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 			Msg("database cleanup: Deleting collided show with no local files")
 
 		err := cm.gormdb.Transaction(func(tx *gorm.DB) error {
+			// A scan may have associated files since the discovery query.
+			var files int64
+			if err := tx.Model(&models.LocalFile{}).Where("library_media_id = ?", row.ID).Count(&files).Error; err != nil {
+				return err
+			}
+			if files != 0 {
+				return nil
+			}
 			if err := tx.Where("library_media_id = ?", row.ID).Delete(&models.LibraryEpisode{}).Error; err != nil {
 				return err
 			}
@@ -168,15 +211,9 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 			if err := tx.Where("library_media_id = ?", row.ID).Delete(&models.MediaEntryListData{}).Error; err != nil {
 				return err
 			}
-			if err := tx.Where("media_id = ?", row.ID).Delete(&models.WatchHistory{}).Error; err != nil {
-				return err
-			}
-			if err := tx.Where("media_id = ?", row.ID).Delete(&models.EpisodeSkipTime{}).Error; err != nil {
-				return err
-			}
-			if err := tx.Where("media_id = ?", row.ID).Delete(&models.MediaFiller{}).Error; err != nil {
-				return err
-			}
+			// History, skip times and filler use public/provider IDs, not this
+			// row's PK. Preserve independent state for rescans instead of guessing
+			// ownership from numeric equality and erasing another title's data.
 			if err := tx.Delete(&models.LibraryMedia{}, row.ID).Error; err != nil {
 				return err
 			}
@@ -184,6 +221,9 @@ func (cm *CleanupManager) removeOrphanedAndCollidedMedia() {
 		})
 
 		if err != nil {
+			if cm.gormdb.Statement.Context.Err() != nil {
+				return
+			}
 			cm.logger.Error().Err(err).Uint("id", row.ID).Msg("database cleanup: Failed to delete collided show")
 		}
 	}
@@ -194,6 +234,9 @@ func (cm *CleanupManager) purgeExpiredMetadataCache() {
 	zeroTime := time.Time{}
 	res := cm.gormdb.Where("expires_at < ? AND expires_at > ?", time.Now(), zeroTime).Delete(&models.MetadataCache{})
 	if res.Error != nil {
+		if cm.gormdb.Statement.Context.Err() != nil {
+			return
+		}
 		cm.logger.Error().Err(res.Error).Msg("database cleanup: Failed to delete expired metadata cache entries")
 		return
 	}

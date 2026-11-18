@@ -19,8 +19,8 @@ export const heroBackdropSlideVariants: Variants = {
         scale: 1,
         zIndex: 1,
         transition: {
-            duration: 0.35,
-            ease: [0.22, 1, 0.36, 1],
+            duration: 0.5,
+            ease: "easeInOut",
         },
     },
     exit: (direction: number = 1) => ({
@@ -29,8 +29,8 @@ export const heroBackdropSlideVariants: Variants = {
         scale: 1,
         zIndex: 0,
         transition: {
-            x: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
-            opacity: { delay: 0.35, duration: 0.05 },
+            x: { duration: 0.5, ease: "easeInOut" },
+            opacity: { delay: 0.5, duration: 0.05 },
         },
     }),
 }
@@ -40,16 +40,24 @@ export const heroBackdropSlideVariants: Variants = {
  */
 export const heroBackdropFadeVariants: Variants = {
     initial: { opacity: 0, scale: 1.01, zIndex: 1 },
-    animate: { opacity: 1, scale: 1, zIndex: 1, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
-    exit: { opacity: 0, zIndex: 0, transition: { opacity: { delay: 0.45, duration: 0.05 } } },
+    animate: { opacity: 1, scale: 1, zIndex: 1, transition: { duration: 0.5, ease: "easeInOut" } },
+    exit: { opacity: 0, zIndex: 0, transition: { opacity: { delay: 0.5, duration: 0.05 } } },
+}
+
+/** Ahorro de energía: conserva continuidad de imagen sin desplazamiento ni zoom. */
+export const heroBackdropSubtleVariants: Variants = {
+    initial: { opacity: 0, zIndex: 1 },
+    animate: { opacity: 1, zIndex: 1, transition: { duration: 0.35, ease: "easeInOut" } },
+    exit: { opacity: 0, zIndex: 0, transition: { opacity: { delay: 0.35, duration: 0.05 } } },
 }
 
 /**
  * Contenedor orquestador del contenido de los heroes (SpotlightHero, MoviesHero, SeriesHero).
  * Aplica stagger canónico de 40ms (--duration-stagger) entre los elementos hijos.
+ * El contenedor no se funde al entrar: evita multiplicar su opacidad por la de cada hijo.
  */
 export const heroContainerVariants: Variants = {
-    hidden: { opacity: 0 },
+    hidden: { opacity: 1 },
     visible: {
         opacity: 1,
         transition: {
@@ -60,7 +68,7 @@ export const heroContainerVariants: Variants = {
     exit: {
         opacity: 0,
         y: -6,
-        transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+        transition: { duration: 0.2, ease: "easeInOut" },
     },
 }
 
@@ -73,27 +81,15 @@ export const heroItemVariants: Variants = {
     visible: {
         opacity: 1,
         y: 0,
-        transition: { type: "spring", stiffness: 380, damping: 30, mass: 0.8 },
+        transition: {
+            default: { type: "spring", stiffness: 380, damping: 30, mass: 0.8 },
+            opacity: { duration: 0.35, ease: "easeInOut" },
+        },
     },
     exit: {
         opacity: 0,
         y: -4,
-        transition: { duration: 0.15, ease: "easeIn" },
-    },
-}
-
-/**
- * Elementos del hero que solo requieren desvanecimiento sin desplazamiento (tags, badges).
- */
-export const heroFadeOnlyVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: { duration: 0.25, ease: "easeOut" },
-    },
-    exit: {
-        opacity: 0,
-        transition: { duration: 0.15, ease: "easeIn" },
+        transition: { duration: 0.25, ease: "easeInOut" },
     },
 }
 
@@ -102,10 +98,10 @@ export const heroFadeOnlyVariants: Variants = {
  * Tarjeta individual dentro de un grid o swimlane.
  * Regla de oro de rendimiento:
  * 1. NUNCA blur por ítem (evita capas de composición pesadas en GPU).
- * 2. Delay con tope en min(i, 12) * 0.04 para evitar que filas lejanas demoren segundos.
+ * 2. Delay con tope en min(i, 6) * 0.04 para evitar que filas lejanas demoren segundos.
  */
 export const gridItemVariants: Variants = {
-    hidden: { opacity: 0, y: 12 },
+    hidden: { opacity: 0, y: 8 },
     visible: (i: number = 0) => ({
         opacity: 1,
         y: 0,
@@ -113,7 +109,7 @@ export const gridItemVariants: Variants = {
             type: "spring",
             stiffness: 280,
             damping: 28,
-            delay: Math.min(i, 12) * 0.04,
+            delay: Math.min(i, 6) * 0.04,
         },
     }),
     exit: {
@@ -125,9 +121,8 @@ export const gridItemVariants: Variants = {
 
 // ─── Content Swaps ────────────────────────────────────────────────────────────
 /**
- * Cruce skeleton → contenido (con AnimatePresence mode="wait"): el skeleton se
- * desvanece en 150ms (--duration-quick) y recién después entra el contenido en
- * 250ms (--duration-base). Solo opacity + transform.
+ * Fundidos de carga: salida de 150ms y entrada de 250ms, concurrentes.
+ * LoadSwap adapta el recorrido al tier y monta el contenido sin esperar la salida.
  */
 export const loadSwapVariants: Variants = {
     initial: { opacity: 0, y: 6 },
@@ -143,8 +138,8 @@ export const loadSwapVariants: Variants = {
 }
 
 /**
- * Cambio de panel entre vistas hermanas (tabs de vista): sale hacia arriba en
- * 150ms y el nuevo entra desde abajo en 200ms. Sin stagger interno: los grids
+ * Cambio de panel entre vistas hermanas (tabs de vista): sale con un fundido de
+ * 150ms y el nuevo entra desde abajo en 250ms. Sin stagger interno: los grids
  * ya tienen el suyo.
  */
 export const viewSwapVariants: Variants = {
@@ -152,11 +147,10 @@ export const viewSwapVariants: Variants = {
     animate: {
         opacity: 1,
         y: 0,
-        transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+        transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] },
     },
     exit: {
         opacity: 0,
-        y: -6,
-        transition: { duration: 0.15, ease: "easeIn" },
+        transition: { duration: 0.15, ease: "easeOut" },
     },
 }

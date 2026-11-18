@@ -4,6 +4,7 @@ import { createPortal } from "react-dom"
 import { cn } from "@/components/ui/core/styling"
 import { useMotionTier, useReducedMotion, useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { useMinWidth } from "@/components/ui/app-layout/use-nav-compact"
+import { useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 import {
     DISABLED_ERA_TEXT,
     eraAriaLabel,
@@ -17,17 +18,18 @@ import { useRailEngaged } from "./use-rail-engaged"
 /**
  * Selector de era compartido por Inicio, Películas y Cronología.
  *
- * - ≥ 1024 px: riel vertical fijo a la izquierda. Colapsado muestra solo el kanji de cada era;
+ * - Minimalista: barra horizontal tipográfica bajo la navegación, en cualquier ancho.
+ * - Otros temas, ≥ 1024 px: riel vertical fijo a la izquierda. Colapsado muestra solo el kanji de cada era;
  *   con el puntero encima o el foco de teclado dentro se expande (sin empujar el contenido)
  *   y revela nombre, años y cifra.
- * - < 1024 px: barra horizontal compacta bajo la navegación. Solo el kanji, y el activo con su nombre.
+ * - Otros temas, < 1024 px: barra horizontal compacta. Solo el kanji, y el activo con su nombre.
  *
  * Es un radiogroup (una sola opción activa): Tab entra una vez (roving tabindex) y las flechas
  * mueven y eligen. El margen que ocupa se reserva con las variables `--era-rail-w` / `--era-bar-h`
  * (globals.css), que se activan mientras el componente está montado.
  */
 
-export interface EraRailProps<Id extends string = string> {
+interface EraRailProps<Id extends string = string> {
     eras: readonly EraRailItem<Id>[]
     activeId: Id
     onSelect: (id: Id) => void
@@ -35,18 +37,26 @@ export interface EraRailProps<Id extends string = string> {
     label: string
     /** Se llama al pasar el puntero por una era elegible (sonido de la app). */
     onItemHover?: () => void
-    /** "auto" decide por el ancho de la ventana. */
+    /** "auto": barra en Minimalista; en los demás temas decide por ancho. */
     variant?: "auto" | "rail" | "bar"
+    /** Barra dentro del flujo, sin portal ni reserva de espacio en la página. */
+    inline?: boolean
     /**
      * Era que se está viendo (scroll-spy). Si se pasa, el resalte visual sigue a esta era y
      * `activeId` queda solo como la opción elegida del radiogroup (`aria-checked`).
      */
     spyId?: Id
-    /** "ring" (por defecto): anillo alrededor del kanji. "track": tramo relleno bajo el kanji, con el color de la era. */
-    progressStyle?: "ring" | "track"
+    /** "ring" (por defecto): anillo alrededor del kanji. "track": tramo relleno bajo el kanji, con el color de la era. "none": sin indicador de progreso. */
+    progressStyle?: "ring" | "track" | "none"
 }
 
 type Variant = "rail" | "bar"
+
+function useAutoVariant(): Variant {
+    const isWide = useMinWidth(1024, true)
+    const isMinimalist = useIsMinimalistMode()
+    return isMinimalist || !isWide ? "bar" : "rail"
+}
 
 /* ── Reserva de margen ──────────────────────────────────────────────── */
 
@@ -60,8 +70,9 @@ function syncLayoutAttribute() {
 }
 
 /** Marca <html> mientras haya un selector montado: el CSS reserva el margen con variables. */
-function useLayoutReservation(variant: Variant) {
+function useLayoutReservation(variant: Variant | null) {
     React.useLayoutEffect(() => {
+        if (variant === null) return
         const token = Symbol("era-rail")
         holders.set(token, variant)
         syncLayoutAttribute()
@@ -74,8 +85,7 @@ function useLayoutReservation(variant: Variant) {
 
 /** Reserva el mismo margen que un selector montado, sin pintarlo (p. ej. el esqueleto de Inicio). */
 export function useEraRailReservation() {
-    const isWide = useMinWidth(1024, true)
-    useLayoutReservation(isWide ? "rail" : "bar")
+    useLayoutReservation(useAutoVariant())
 }
 
 /* ── Piezas ─────────────────────────────────────────────────────────── */
@@ -86,12 +96,12 @@ const RING_LENGTH = 2 * Math.PI * RING_RADIUS
    el radio durante el layout cuando llega en px; con var() la cápsula se deformaría al cambiar de ancho. */
 const RAIL_GLASS_RADIUS = 28
 
-function KanjiCell({ item, active, progressStyle = "ring" }: { item: EraRailItem; active: boolean; progressStyle?: "ring" | "track" }) {
+function KanjiCell({ item, active, progressStyle = "ring" }: { item: EraRailItem; active: boolean; progressStyle?: "ring" | "track" | "none" }) {
     const fraction = eraProgressFraction(item.progress)
     return (
-        <span className="relative grid size-11 shrink-0 place-items-center" aria-hidden="true">
+        <span className="era-selector-symbol relative grid size-11 shrink-0 place-items-center" aria-hidden="true">
             {fraction !== null && progressStyle === "track" && (
-                <span className="absolute inset-x-2.5 bottom-[3px] h-[3px] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--label-1)_16%,transparent)]">
+                <span className="absolute inset-x-3 bottom-1 h-[2.5px] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--label-1)_16%,transparent)]">
                     <span
                         data-era-progress-fill=""
                         className="absolute inset-0 origin-left rounded-full"
@@ -124,7 +134,7 @@ function KanjiCell({ item, active, progressStyle = "ring" }: { item: EraRailItem
 const ROW_BASE = [
     "group relative flex items-center text-left select-none cursor-pointer",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-accent",
-    "transition-[background-color,color,opacity] duration-150 motion-reduce:transition-none",
+    "transition-[background-color,color,opacity,transform] duration-150 motion-reduce:transition-none motion-safe:active:scale-[0.97]",
 ].join(" ")
 
 /** Fondo del activo y del hover: translúcido con vidrio, sólido (--neutral-elev-*) en plano. */
@@ -137,11 +147,10 @@ const ROW_GROUP_HOVER_BG = "[@media(hover:hover)_and_(pointer:fine)]:group-hover
 
 function Rail<Id extends string>({ eras, activeId, onSelect, label, onItemHover, spyId, progressStyle }: EraRailProps<Id>) {
     const reduceMotion = useReducedMotion()
-    // Solo el tier "full" anima el riel: en modo TV (control remoto) o con hardware justo el cambio de era salta.
+    // Solo el tier "full" anima el riel: con hardware justo el cambio de era salta.
     const tier = useMotionTier()
     const animate = tier === "full"
     const { engaged, handlers } = useRailEngaged()
-    const groupId = React.useId()
     const refs = React.useRef<Array<HTMLButtonElement | null>>([])
     const scroller = React.useRef<HTMLDivElement | null>(null)
     const railSpring = useSpringPreset("railResize")
@@ -191,6 +200,7 @@ function Rail<Id extends string>({ eras, activeId, onSelect, label, onItemHover,
                     aria-hidden="true"
                     transition={transition}
                     className="glass-frosted-pill pointer-events-none absolute inset-0"
+                    data-liquid-surface="navigation"
                     style={{ borderRadius: RAIL_GLASS_RADIUS }}
                 />
                 <div
@@ -205,9 +215,9 @@ function Rail<Id extends string>({ eras, activeId, onSelect, label, onItemHover,
                         const disabled = !!item.disabled
                         return (
                             <button
+                                type="button"
                                 key={item.id}
                                 ref={(el) => { refs.current[index] = el }}
-                                type="button"
                                 role="radio"
                                 aria-checked={checked}
                                 aria-current={spyId !== undefined && item.id === spyId ? "location" : undefined}
@@ -217,6 +227,7 @@ function Rail<Id extends string>({ eras, activeId, onSelect, label, onItemHover,
                                 onClick={() => { if (!disabled) onSelect(item.id) }}
                                 onKeyDown={(e) => onKeyDown(e, index)}
                                 onPointerEnter={() => { if (!disabled) onItemHover?.() }}
+                                style={{ "--era-item-accent": item.accent } as React.CSSProperties}
                                 className={cn(
                                     ROW_BASE, "h-11 w-full rounded-full",
                                     disabled && "cursor-not-allowed opacity-45",
@@ -227,23 +238,14 @@ function Rail<Id extends string>({ eras, activeId, onSelect, label, onItemHover,
                                     layout
                                     aria-hidden="true"
                                     transition={transition}
-                                    className={cn("pointer-events-none absolute inset-0 transition-colors duration-150 motion-reduce:transition-none", active ? ROW_ACTIVE_BG : !disabled && ROW_GROUP_HOVER_BG)}
+                                    className={cn("pointer-events-none absolute inset-0 transition-colors duration-150 motion-reduce:transition-none", active ? [ROW_ACTIVE_BG, "era-row-active"] : !disabled && ROW_GROUP_HOVER_BG)}
                                     style={{ borderRadius: 9999 }}
                                 />
-                                {active && (
-                                    <m.span
-                                        layoutId={`${groupId}-indicator`}
-                                        transition={transition}
-                                        aria-hidden="true"
-                                        className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full"
-                                        style={{ background: item.accent }}
-                                    />
-                                )}
                                 <KanjiCell item={item} active={active} progressStyle={progressStyle} />
                                 <span
                                     aria-hidden="true"
                                     className={cn(
-                                        "relative flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden pr-3",
+                                        "relative flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden pr-4",
                                         "transition-[opacity,transform] duration-150 motion-reduce:transition-none",
                                         engaged ? "translate-x-0 opacity-100 delay-75" : "-translate-x-1 opacity-0",
                                     )}
@@ -273,7 +275,7 @@ function Rail<Id extends string>({ eras, activeId, onSelect, label, onItemHover,
 
 /* ── Barra (móvil y tableta) ────────────────────────────────────────── */
 
-function Bar<Id extends string>({ eras, activeId, onSelect, label, onItemHover, spyId, progressStyle }: EraRailProps<Id>) {
+function Bar<Id extends string>({ eras, activeId, onSelect, label, onItemHover, spyId, progressStyle, inline }: EraRailProps<Id>) {
     const reduceMotion = useReducedMotion()
     const refs = React.useRef<Array<HTMLButtonElement | null>>([])
     const scroller = React.useRef<HTMLDivElement | null>(null)
@@ -304,11 +306,12 @@ function Bar<Id extends string>({ eras, activeId, onSelect, label, onItemHover, 
     return (
         <div
             data-era-selector="bar"
+            data-era-inline={inline || undefined}
             role="region"
             aria-label="Selector de era"
-            className="pointer-events-none fixed inset-x-3 top-[var(--era-bar-top)] z-sticky flex justify-center"
+            className={cn("pointer-events-none flex justify-center", inline ? "relative w-full min-w-0" : "fixed inset-x-3 top-[var(--era-bar-top)] z-sticky")}
         >
-            <div className="glass-frosted-pill pointer-events-auto relative max-w-full" style={{ borderRadius: 9999 }}>
+            <div data-liquid-surface="navigation" className="glass-frosted-pill pointer-events-auto relative max-w-full" style={{ borderRadius: 9999 }}>
                 <div
                     ref={scroller}
                     role="radiogroup"
@@ -321,9 +324,9 @@ function Bar<Id extends string>({ eras, activeId, onSelect, label, onItemHover, 
                         const disabled = !!item.disabled
                         return (
                             <button
+                                type="button"
                                 key={item.id}
                                 ref={(el) => { refs.current[index] = el }}
-                                type="button"
                                 role="radio"
                                 aria-checked={checked}
                                 aria-current={spyId !== undefined && item.id === spyId ? "location" : undefined}
@@ -333,9 +336,10 @@ function Bar<Id extends string>({ eras, activeId, onSelect, label, onItemHover, 
                                 onClick={() => { if (!disabled) onSelect(item.id) }}
                                 onKeyDown={(e) => onKeyDown(e, index)}
                                 onPointerEnter={() => { if (!disabled) onItemHover?.() }}
+                                style={{ "--era-item-accent": item.accent } as React.CSSProperties}
                                 className={cn(
                                     ROW_BASE, "h-11 min-w-11 shrink-0 justify-center rounded-full",
-                                    active ? ROW_ACTIVE_BG : !disabled && ROW_HOVER_BG,
+                                    active ? [ROW_ACTIVE_BG, "era-row-active"] : !disabled && ROW_HOVER_BG,
                                     disabled && "cursor-not-allowed opacity-45",
                                 )}
                             >
@@ -344,7 +348,7 @@ function Bar<Id extends string>({ eras, activeId, onSelect, label, onItemHover, 
                                 <span
                                     aria-hidden="true"
                                     className={cn(
-                                        "min-w-0 overflow-hidden transition-[max-width,opacity] duration-base ease-smooth-out",
+                                        "era-selector-label min-w-0 overflow-hidden transition-[max-width,opacity] duration-base ease-smooth-out",
                                         active ? "max-w-[14rem] opacity-100" : "max-w-0 opacity-0",
                                     )}
                                 >
@@ -357,7 +361,7 @@ function Bar<Id extends string>({ eras, activeId, onSelect, label, onItemHover, 
                                     <span
                                         aria-hidden="true"
                                         className={cn(
-                                            "pointer-events-none absolute inset-x-5 bottom-0.5 h-[3px] rounded-full transition-opacity duration-quick ease-smooth-out motion-reduce:transition-none",
+                                        "era-selector-indicator pointer-events-none absolute inset-x-5 bottom-0.5 h-[3px] rounded-full transition-opacity duration-quick ease-smooth-out motion-reduce:transition-none",
                                             active ? "opacity-100" : "opacity-0",
                                         )}
                                         style={{ background: item.accent }}
@@ -375,10 +379,11 @@ function Bar<Id extends string>({ eras, activeId, onSelect, label, onItemHover, 
 /* ── Público ────────────────────────────────────────────────────────── */
 
 export function EraRail<Id extends string>(props: EraRailProps<Id>) {
-    const isWide = useMinWidth(1024, true)
-    const variant: Variant = props.variant === "bar" ? "bar" : props.variant === "rail" ? "rail" : isWide ? "rail" : "bar"
-    useLayoutReservation(variant)
+    const autoVariant = useAutoVariant()
+    const variant = props.inline ? "bar" : props.variant && props.variant !== "auto" ? props.variant : autoVariant
+    useLayoutReservation(props.inline ? null : variant)
 
+    if (props.inline) return <Bar {...props} />
     if (typeof document === "undefined") return null
     // Portal al <body>: `position: fixed` no debe depender de ancestros con transform (transiciones de página).
     return createPortal(variant === "rail" ? <Rail {...props} /> : <Bar {...props} />, document.body)

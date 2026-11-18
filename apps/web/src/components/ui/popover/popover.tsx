@@ -12,12 +12,13 @@ const PopoverAnatomy = defineStyleAnatomy({
         "UI-Popover__root",
         "z-popover w-72 rounded-xl border border-white/[0.08] bg-[var(--glass-bg)] backdrop-blur-overlay-md p-4 text-base shadow-elevation-4 outline-none",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-        "data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-95",
+        "data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-[0.98]",
         "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
         "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        // Crece desde el botón que lo abrió, con ease-out fuerte y cierre más rápido.
+        // Crece discretamente desde el botón; cierre más rápido que la apertura.
         // La duración de abrir lleva prefijo: sin él, animate-in (150 ms) le gana por especificidad.
-        "origin-[--radix-popover-content-transform-origin] ease-out-strong data-[state=open]:duration-base data-[state=closed]:duration-fast",
+        "origin-[--radix-popover-content-transform-origin] ease-smooth-out data-[state=open]:duration-base data-[state=closed]:duration-quick",
+        "motion-reduce:!animate-none",
     ]),
 })
 
@@ -33,20 +34,11 @@ type PopoverProps =
          * The trigger element that opens the popover
          */
         trigger: React.ReactElement,
-        /**
-         * Additional props for the trigger element
-         */
-        triggerProps?: React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Trigger>,
-        /**
-         * Portal container for custom mounting (useful for fullscreen mode)
-         */
-        portalContainer?: HTMLElement
     }
 
 export const Popover = React.forwardRef<HTMLDivElement, PopoverProps>((props, ref) => {
     const {
         trigger,
-        triggerProps,
         // Root
         defaultOpen,
         open,
@@ -56,8 +48,6 @@ export const Popover = React.forwardRef<HTMLDivElement, PopoverProps>((props, re
         className,
         align = "center",
         sideOffset = 8,
-        // Portal
-        portalContainer,
         ...contentProps
     } = props
 
@@ -68,14 +58,12 @@ export const Popover = React.forwardRef<HTMLDivElement, PopoverProps>((props, re
             onOpenChange={onOpenChange}
             modal={modal}
         >
-            <PopoverPrimitive.Trigger
-                asChild
-                {...triggerProps}
-            >
+            <PopoverPrimitive.Trigger asChild>
                 {trigger}
             </PopoverPrimitive.Trigger>
-            <PopoverPrimitive.Portal container={portalContainer}>
+            <PopoverPrimitive.Portal>
                 <PopoverPrimitive.Content
+                    data-liquid-surface="panel"
                     ref={ref}
                     align={align}
                     sideOffset={sideOffset}

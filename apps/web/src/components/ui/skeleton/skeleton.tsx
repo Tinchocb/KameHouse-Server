@@ -28,6 +28,7 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>((props, 
     return (
         <div
             ref={ref}
+            data-skeleton=""
             className={className ? cn(SKELETON_BASE_CLASS, className) : SKELETON_BASE_CLASS}
             {...rest}
         />

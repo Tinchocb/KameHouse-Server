@@ -13,6 +13,7 @@ import { buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { SecretField } from "@/components/settings/secret-field"
+import { SessionLogout } from "@/app/server-access-gate"
 const ServerLogsViewer = React.lazy(() =>
     import("@/components/settings/server-logs-viewer").then(m => ({ default: m.ServerLogsViewer }))
 )
@@ -38,21 +39,21 @@ function resetStore<T>(store: { getInitialState: () => T; setState: (state: T, r
 
 function ApiKeyCard({ name, description, connected, children }: { name: string; description: string; connected: boolean; children: React.ReactNode }) {
     return (
-        <div className="bg-[var(--neutral-elev-2)] rounded-xl p-4 space-y-3 border border-[var(--neutral-separator)]">
-            <div className="flex items-center justify-between border-b border-[var(--neutral-separator)] pb-2.5">
-                <div>
+        <div className="bg-[var(--neutral-elev-2)] rounded-2xl p-4 sm:p-5 space-y-3.5 border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)]">
+            <div className="flex items-center justify-between border-b border-[var(--neutral-separator)] pb-3">
+                <div className="space-y-0.5">
                     <h3 className="text-xs font-bold text-on-surface">{name}</h3>
-                    <p className="text-2xs text-on-surface-variant mt-0.5">{description}</p>
+                    <p className="text-xs text-on-surface-variant leading-snug">{description}</p>
                 </div>
                 {connected ? (
-                    <div className="flex items-center gap-1.5 bg-status-success/15 border border-status-success/25 px-2 py-0.5 rounded-full shrink-0 animate-fade-in">
-                        <span className="text-2xs font-bold text-status-success">Conectado</span>
+                    <div className="flex items-center gap-1.5 bg-status-success/15 border border-status-success/25 px-2.5 py-0.5 rounded-full shrink-0 animate-fade-in font-bold text-xs text-status-success">
                         <span key="on" className="w-1.5 h-1.5 rounded-full bg-status-success shadow-[0_0_6px_hsl(var(--brand-success))] animate-success-pop" />
+                        Conectado
                     </div>
                 ) : (
-                    <div className="flex items-center gap-1.5 bg-[var(--neutral-elev-3)] border border-[var(--neutral-separator)] px-2 py-0.5 rounded-full shrink-0">
-                        <span className="text-2xs text-on-surface-variant">Sin configurar</span>
+                    <div className="flex items-center gap-1.5 bg-[var(--neutral-elev-3)] border border-[var(--neutral-separator)] px-2.5 py-0.5 rounded-full shrink-0 font-medium text-xs text-on-surface-variant">
                         <span className="w-1.5 h-1.5 rounded-full bg-on-surface-variant/40" />
+                        Sin configurar
                     </div>
                 )}
             </div>
@@ -348,7 +349,8 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
     }
 
     return (
-        <div className="w-full space-y-7 animate-in fade-in duration-base pb-8">
+        <div className="w-full space-y-4 sm:space-y-5 animate-in fade-in duration-base pb-4 sm:pb-8">
+            <SessionLogout />
 
             {/* ═══════════════════════════════════════════════════════════════════
                 1. PROVEEDORES Y CLAVES DE API
@@ -357,10 +359,12 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                 variant="content"
                 id="api-providers"
                 label="Proveedores y claves de API"
-                description="Claves para obtener sinopsis, pósters en alta resolución y calificaciones."
+                description="Claves para obtener sinopsis, pósters en alta resolución y calificaciones comunitarias."
                 icon={IconUiKey}
+                collapsible
+                defaultOpen={true}
             >
-                <div className="p-5 space-y-4">
+                <div>
                     <ApiKeyCard
                         name="The Movie Database (TMDB)"
                         description="Permite descargar pósters, sinopsis y fechas de emisión automáticamente."
@@ -394,159 +398,164 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                 variant="content"
                 id="system-maintenance"
                 label="Mantenimiento y notificaciones"
-                description="Respaldos de base de datos, limpieza de caché y avisos de sistema."
+                description="Respaldos de base de datos, optimización de caché en disco y avisos de sistema."
                 icon={IconUiRotate}
+                collapsible
+                defaultOpen={true}
             >
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-4 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-between gap-3">
-                        <div className="space-y-0.5">
-                            <p className="text-xs font-bold text-on-surface">Copia de seguridad</p>
-                            <p className="text-2xs text-on-surface-variant">Guarda una copia de tu progreso y tus ajustes.</p>
-                        </div>
-                        <Button
-                            intent="primary"
-                            size="sm"
-                            className="shrink-0"
-                            onClick={handleBackup}
-                            disabled={isBackingUp || isDownloadingBackup}
-                            leftIcon={isBackingUp || isDownloadingBackup ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconStatusArchive className="w-3.5 h-3.5" />}
-                        >
-                            {isBackingUp ? "Creando…" : isDownloadingBackup ? "Descargando…" : "Crear copia"}
-                        </Button>
-                    </div>
-
-                    {/* Sin gap: el espacio sobre la barra (mt-3) va dentro de su colapso. */}
-                    <div className="p-4 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex flex-col justify-between">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="space-y-0.5 min-w-0">
-                                <p className="text-xs font-bold text-on-surface">Limpieza de caché</p>
-                                <p className="text-2xs text-on-surface-variant truncate">
-                                    {cacheStats
-                                        ? `${formatBytes(cacheStats.totalDiskSizeBytes)} en disco · ${cacheStats.thumbnails.diskItemCount} miniaturas`
-                                        : "Libera miniaturas y temporales."}
-                                </p>
+                <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)] flex items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                                <p className="text-xs font-bold text-on-surface">Copia de seguridad</p>
+                                <p className="text-xs text-on-surface-variant leading-snug">Respalda tu progreso, marcas de tiempo y ajustes.</p>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                {isWarming ? (
-                                    <Button
-                                        intent="alert-subtle"
-                                        size="sm"
-                                        onClick={handleCancelWarm}
-                                        title="Detener la generación de miniaturas"
-                                        aria-label="Detener la generación de miniaturas"
-                                        leftIcon={<IconMediaStop className="w-3.5 h-3.5" />}
-                                        hideTextOnSmallScreen
-                                    >
-                                        Detener
-                                    </Button>
-                                ) : (
+                            <Button
+                                intent="primary"
+                                size="sm"
+                                className="shrink-0"
+                                onClick={handleBackup}
+                                disabled={isBackingUp || isDownloadingBackup}
+                                leftIcon={isBackingUp || isDownloadingBackup ? <IconUiSpinner className="w-3.5 h-3.5 animate-spin" /> : <IconStatusArchive className="w-3.5 h-3.5" />}
+                            >
+                                {isBackingUp ? "Creando…" : isDownloadingBackup ? "Descargando…" : "Crear copia"}
+                            </Button>
+                        </div>
+
+                        <div className="p-4 sm:p-5 rounded-2xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)] flex flex-col justify-between">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="space-y-0.5 min-w-0">
+                                    <p className="text-xs font-bold text-on-surface">Limpieza de caché</p>
+                                    <p className="text-xs text-on-surface-variant truncate font-mono">
+                                        {cacheStats
+                                            ? `${formatBytes(cacheStats.totalDiskSizeBytes)} en disco · ${cacheStats.thumbnails.diskItemCount} miniaturas`
+                                            : "Libera miniaturas y temporales."}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    {isWarming ? (
+                                        <Button
+                                            intent="outline"
+                                            size="sm"
+                                            onClick={handleCancelWarm}
+                                            title="Detener la generación de miniaturas"
+                                            aria-label="Detener la generación de miniaturas"
+                                            leftIcon={<IconMediaStop className="w-3.5 h-3.5" />}
+                                            hideTextOnSmallScreen
+                                            className="bg-status-error/10 text-status-error border-status-error/30 hover:bg-status-error/20"
+                                        >
+                                            Detener
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            intent="outline"
+                                            size="sm"
+                                            onClick={handleWarmCache}
+                                            title="Generar por adelantado las miniaturas de toda la biblioteca"
+                                            aria-label="Generar por adelantado las miniaturas de toda la biblioteca"
+                                            leftIcon={<IconUiRotate className="w-3.5 h-3.5" />}
+                                            hideTextOnSmallScreen
+                                        >
+                                            Generar miniaturas
+                                        </Button>
+                                    )}
                                     <Button
                                         intent="outline"
                                         size="sm"
-                                        onClick={handleWarmCache}
-                                        title="Generar por adelantado las miniaturas de toda la biblioteca"
-                                        aria-label="Generar por adelantado las miniaturas de toda la biblioteca"
-                                        leftIcon={<IconUiRotate className="w-3.5 h-3.5" />}
-                                        hideTextOnSmallScreen
+                                        onClick={() => setIsClearModalOpen(true)}
+                                        leftIcon={<IconUiTrash className="w-3.5 h-3.5 text-on-surface-variant" />}
                                     >
-                                        Generar miniaturas
+                                        Gestionar
                                     </Button>
-                                )}
-                                <Button
-                                    intent="outline"
-                                    size="sm"
-                                    onClick={() => setIsClearModalOpen(true)}
-                                    leftIcon={<IconUiTrash className="w-3.5 h-3.5 text-on-surface-variant" />}
-                                >
-                                    Gestionar
-                                </Button>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Barra de progreso de pre-generación en vivo: entra y sale con el
-                            colapso de SectionBar; al terminar muestra ✓ antes de plegarse. */}
-                        <AnimatePresence initial={false}>
-                            {showWarmBlock && warmProgress && (
-                                <m.div
-                                    key="warm-progress"
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={collapseSpring}
-                                    className="overflow-hidden"
-                                >
-                                    <div className="mt-3 pt-2 border-t border-[var(--neutral-separator)] space-y-1.5">
-                                        <div className="flex items-center justify-between text-3xs font-mono text-on-surface-variant">
-                                            {warmFinished ? (
-                                                <span key="done" className="flex items-center gap-1.5 text-status-success animate-text-swap-in">
-                                                    <IconUiCheck className="w-3 h-3 animate-success-check" />
-                                                    Miniaturas listas
+                            {/* Barra de progreso de pre-generación en vivo */}
+                            <AnimatePresence initial={false}>
+                                {showWarmBlock && warmProgress && (
+                                    <m.div
+                                        key="warm-progress"
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={collapseSpring}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="mt-3 pt-2 border-t border-[var(--neutral-separator)] space-y-1.5">
+                                            <div className="flex items-center justify-between text-xs font-mono text-on-surface-variant">
+                                                {warmFinished ? (
+                                                    <span key="done" className="flex items-center gap-1.5 text-status-success animate-text-swap-in font-bold">
+                                                        <IconUiCheck className="w-3 h-3 animate-success-check" />
+                                                        Miniaturas listas
+                                                    </span>
+                                                ) : (
+                                                    <span key="run" className="flex items-center gap-1.5 text-brand-accent-readable font-medium">
+                                                        <IconUiSpinner className="w-3 h-3 animate-spin" />
+                                                        Generando miniaturas…
+                                                    </span>
+                                                )}
+                                                <span className="tabular-nums font-bold">
+                                                    {warmProgress.processed} / {warmProgress.total} ({warmPercent}%)
                                                 </span>
-                                            ) : (
-                                                <span key="run" className="flex items-center gap-1.5 text-brand-accent-readable">
-                                                    <IconUiSpinner className="w-3 h-3 animate-spin" />
-                                                    Generando miniaturas…
-                                                </span>
-                                            )}
-                                            <span className="tabular-nums">
-                                                {warmProgress.processed} / {warmProgress.total} ({warmPercent}%)
-                                            </span>
+                                            </div>
+                                            <div className="w-full bg-[var(--neutral-elev-3)] rounded-full h-1.5 overflow-hidden">
+                                                <div
+                                                    className="bg-brand-accent w-full h-full origin-left transition-transform duration-slow ease-smooth-out"
+                                                    style={{ transform: `scaleX(${warmFinished ? 1 : warmPercent / 100})` }}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="w-full bg-[var(--neutral-elev-3)] rounded-full h-1.5 overflow-hidden">
-                                            <div
-                                                className="bg-brand-accent w-full h-full origin-left transition-transform duration-slow ease-smooth-out"
-                                                style={{ transform: `scaleX(${warmFinished ? 1 : warmPercent / 100})` }}
-                                            />
-                                        </div>
-                                    </div>
-                                </m.div>
+                                    </m.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-[var(--neutral-separator)]">
+                        <Controller
+                            control={control}
+                            name="notifications.disableNotifications"
+                            render={({ field }) => (
+                                <OsToggle
+                                    label="Desactivar todas las notificaciones"
+                                    description="Silencia todos los avisos flotantes de la app."
+                                    checked={!!field.value}
+                                    onChange={(v) => applyNotificationsNow("disableNotifications", v)}
+                                />
                             )}
-                        </AnimatePresence>
+                        />
+                        <Controller
+                            control={control}
+                            name="notifications.disableAutoScannerNotifications"
+                            render={({ field }) => (
+                                <OsToggle
+                                    label="Silenciar avisos del escáner automático"
+                                    description={allNotificationsOff
+                                        ? "Ya está todo silenciado por «Desactivar todas las notificaciones»."
+                                        : "No avisa cuando el escáner añade episodios en segundo plano."}
+                                    checked={!!field.value}
+                                    disabled={allNotificationsOff}
+                                    onChange={(v) => applyNotificationsNow("disableAutoScannerNotifications", v)}
+                                />
+                            )}
+                        />
                     </div>
                 </div>
-
-                <Controller
-                    control={control}
-                    name="notifications.disableNotifications"
-                    render={({ field }) => (
-                        <OsToggle
-                            label="Desactivar todas las notificaciones"
-                            description="Silencia todos los avisos flotantes de la app."
-                            checked={!!field.value}
-                            onChange={(v) => applyNotificationsNow("disableNotifications", v)}
-                        />
-                    )}
-                />
-                <Controller
-                    control={control}
-                    name="notifications.disableAutoScannerNotifications"
-                    render={({ field }) => (
-                        <OsToggle
-                            label="Silenciar avisos del escáner automático"
-                            description={allNotificationsOff
-                                ? "Ya está todo silenciado por «Desactivar todas las notificaciones»."
-                                : "No avisa cuando el escáner añade episodios en segundo plano."}
-                            checked={!!field.value}
-                            disabled={allNotificationsOff}
-                            onChange={(v) => applyNotificationsNow("disableAutoScannerNotifications", v)}
-                        />
-                    )}
-                />
             </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                2b. REGISTROS (diagnóstico de arranque y ejecución)
+                3. REGISTROS DEL SERVIDOR
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
                 variant="content"
                 id="system-logs"
-                label="Registros"
+                label="Registros del servidor"
                 description="Lo que hace el servidor y la app. Revísalos si algo falla al arrancar o al reproducir."
                 icon={IconStatusArchive}
                 collapsible
                 defaultOpen={false}
             >
-                <div className="p-5">
+                <div className="rounded-2xl border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] bg-[var(--neutral-elev-2)] shadow-[shadow:var(--double-bezel-shadow)] overflow-hidden">
                     <React.Suspense fallback={<div className="h-48 flex items-center justify-center text-xs text-on-surface-variant">Cargando registros...</div>}>
                         <ServerLogsViewer />
                     </React.Suspense>
@@ -554,7 +563,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
             </SectionBar>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                3. ZONA DE PELIGRO (CRÍTICO - COLAPSABLE)
+                4. ZONA DE PELIGRO (CRÍTICO - COLAPSABLE)
                ═══════════════════════════════════════════════════════════════════ */}
             <SectionBar
                 variant="content"
@@ -565,7 +574,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                 collapsible
                 defaultOpen={false}
                 badge={
-                    <span className="text-3xs px-2 py-0.5 rounded bg-status-error/10 text-status-error border border-status-error/20">
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-status-error/10 text-status-error border border-status-error/20 font-bold">
                         Crítico
                     </span>
                 }
@@ -578,10 +587,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                             <div className="flex flex-col gap-4 pt-2">
                                 {/* Hold-confirm: Restablecer Ajustes */}
                                 <div className="space-y-1.5">
-                                    <p className="text-2xs font-bold text-status-error/80">
+                                    <p className="text-xs font-bold text-status-error/80">
                                         Restablecer ajustes de fábrica
                                     </p>
-                                    <p className="text-2xs text-on-surface-variant leading-relaxed mb-2">
+                                    <p className="text-xs text-on-surface-variant leading-relaxed mb-2">
                                         Mantén pulsado el botón para confirmar. Las carpetas y el contenido de tu biblioteca no se eliminan. Las claves de API (como la de TMDB) sí se restablecen.
                                     </p>
                                     <HoldConfirm
@@ -596,12 +605,12 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
 
                                 {/* Botón informativo: Reiniciar Servidor */}
                                 <div className="space-y-1.5 pt-1 border-t border-status-error/15">
-                                    <p className="text-2xs font-bold text-status-error/80">
+                                    <p className="text-xs font-bold text-status-error/80">
                                         Reiniciar el servidor
                                     </p>
                                     <Button
                                         type="button"
-                                        intent="brand-destructive"
+                                        intent="destructive"
                                         size="sm"
                                         onClick={() => setRestartModalOpen(true)}
                                         className="font-bold text-xs"
@@ -628,8 +637,8 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                         </p>
                         <ul className="list-disc pl-4 space-y-1 text-on-surface">
                             <li><strong className="text-label-1">App de escritorio (Windows):</strong> Cierra KameHouse desde la barra de tareas o la bandeja del sistema y vuelve a abrirla.</li>
-                            <li><strong className="text-label-1">Docker:</strong> Ejecuta <code className="font-mono text-2xs bg-[var(--neutral-elev-3)] px-1 py-0.5 rounded text-brand-accent-readable">docker restart kamehouse</code>.</li>
-                            <li><strong className="text-label-1">Servicio en Linux o macOS:</strong> Ejecuta <code className="font-mono text-2xs bg-[var(--neutral-elev-3)] px-1 py-0.5 rounded text-brand-accent-readable">systemctl restart kamehouse</code> o reinicia el proceso desde la terminal.</li>
+                            <li><strong className="text-label-1">Docker:</strong> Ejecuta <code className="font-mono text-xs bg-[var(--neutral-elev-3)] px-1 py-0.5 rounded text-brand-accent-readable">docker restart kamehouse</code>.</li>
+                            <li><strong className="text-label-1">Servicio en Linux o macOS:</strong> Ejecuta <code className="font-mono text-xs bg-[var(--neutral-elev-3)] px-1 py-0.5 rounded text-brand-accent-readable">systemctl restart kamehouse</code> o reinicia el proceso desde la terminal.</li>
                         </ul>
                     </div>
                 }
@@ -654,7 +663,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                 description={
                     <div className="space-y-1 text-xs text-on-surface-variant">
                         <p>Libera espacio sin tocar tus ajustes ni tu progreso.</p>
-                        <p className="font-mono text-2xs text-on-surface pt-1">
+                        <p className="font-mono text-xs text-on-surface pt-1">
                             Ocupación total en disco: <strong className="text-brand-accent-readable">{formatBytes(cacheStats?.totalDiskSizeBytes ?? 0)}</strong>
                         </p>
                     </div>
@@ -684,10 +693,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                 <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
                     <CacheLocationField />
                     {/* 1. Miniaturas */}
-                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-between gap-3">
+                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between gap-3">
                         <div className="space-y-0.5 min-w-0">
                             <p className="text-xs font-bold text-on-surface">Miniaturas de video</p>
-                            <p className="text-2xs text-on-surface-variant font-mono tabular-nums">
+                            <p className="text-xs text-on-surface-variant font-mono tabular-nums">
                                 {formatBytes(cacheStats?.thumbnails.diskSizeBytes ?? 0)} ({cacheStats?.thumbnails.diskItemCount ?? 0} archivos) · RAM: {formatBytes(cacheStats?.thumbnails.memoryBytes ?? 0)}
                             </p>
                         </div>
@@ -705,10 +714,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                     </div>
 
                     {/* 2. Video HLS */}
-                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-between gap-3">
+                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between gap-3">
                         <div className="space-y-0.5 min-w-0">
                             <p className="text-xs font-bold text-on-surface">Videos convertidos (HLS)</p>
-                            <p className="text-2xs text-on-surface-variant font-mono tabular-nums">
+                            <p className="text-xs text-on-surface-variant font-mono tabular-nums">
                                 {formatBytes(cacheStats?.videofiles.diskSizeBytes ?? 0)} en disco
                             </p>
                         </div>
@@ -726,10 +735,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                     </div>
 
                     {/* 3. Keyframes */}
-                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-between gap-3">
+                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between gap-3">
                         <div className="space-y-0.5 min-w-0">
                             <p className="text-xs font-bold text-on-surface">Índices de cuadros clave</p>
-                            <p className="text-2xs text-on-surface-variant font-mono tabular-nums">
+                            <p className="text-xs text-on-surface-variant font-mono tabular-nums">
                                 {formatBytes(cacheStats?.keyframes?.diskSizeBytes ?? 0)} ({cacheStats?.keyframes?.diskItemCount ?? 0} archivos)
                             </p>
                         </div>
@@ -747,10 +756,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                     </div>
 
                     {/* 4. Skip Detect */}
-                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-between gap-3">
+                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between gap-3">
                         <div className="space-y-0.5 min-w-0">
                             <p className="text-xs font-bold text-on-surface">Huellas de audio (para detectar intros)</p>
-                            <p className="text-2xs text-on-surface-variant font-mono tabular-nums">
+                            <p className="text-xs text-on-surface-variant font-mono tabular-nums">
                                 {formatBytes(cacheStats?.fingerprints?.diskSizeBytes ?? 0)} ({cacheStats?.fingerprints?.diskItemCount ?? 0} archivos)
                             </p>
                         </div>
@@ -768,10 +777,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                     </div>
 
                     {/* 5. Image proxy */}
-                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-between gap-3">
+                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between gap-3">
                         <div className="space-y-0.5 min-w-0">
                             <p className="text-xs font-bold text-on-surface">Imágenes descargadas (TMDB y otras)</p>
-                            <p className="text-2xs text-on-surface-variant font-mono tabular-nums">
+                            <p className="text-xs text-on-surface-variant font-mono tabular-nums">
                                 {formatBytes(cacheStats?.images?.diskSizeBytes ?? 0)} ({cacheStats?.images?.diskItemCount ?? 0} archivos)
                             </p>
                         </div>
@@ -789,13 +798,13 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                     </div>
 
                     {/* 5b. Google Drive: fuera de "Limpiar todo" (rellenarla gasta cuota de Drive) */}
-                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-between gap-3">
+                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between gap-3">
                         <div className="space-y-0.5 min-w-0">
                             <p className="text-xs font-bold text-on-surface">Google Drive (bloques descargados)</p>
-                            <p className="text-2xs text-on-surface-variant font-mono tabular-nums">
+                            <p className="text-xs text-on-surface-variant font-mono tabular-nums">
                                 {formatBytes(cacheStats?.driveBlocks?.diskSizeBytes ?? 0)} ({cacheStats?.driveBlocks?.diskItemCount ?? 0} bloques)
                             </p>
-                            <p className="text-2xs text-on-surface-variant">
+                            <p className="text-xs text-on-surface-variant">
                                 Evita volver a descargar de Drive. «Limpiar toda la caché» no la borra.
                             </p>
                         </div>
@@ -813,10 +822,10 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                     </div>
 
                     {/* 6. Metadatos */}
-                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] flex items-center justify-between gap-3">
+                    <div className="p-3 rounded-xl bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between gap-3">
                         <div className="space-y-0.5 min-w-0">
                             <p className="text-xs font-bold text-on-surface">Metadatos y consultas de TMDB</p>
-                            <p className="text-2xs text-on-surface-variant">
+                            <p className="text-xs text-on-surface-variant">
                                 Respuestas guardadas de servicios externos y registros vencidos.
                             </p>
                         </div>

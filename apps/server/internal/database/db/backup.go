@@ -1,8 +1,10 @@
 package db
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"kamehouse/internal/util"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -21,8 +23,19 @@ type BackupResult struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-// Backup creates a vacuumed copy of the database.
-func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
+// BackupContext publishes only verified, complete backups. Concurrent callers
+// serialize publication and rotation, and each operation owns a distinct file.
+func (db *Database) BackupContext(ctx context.Context, backupDir string, keep int) (*BackupResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := util.LockContext(ctx, &db.backupMu); err != nil {
+		return nil, err
+	}
+	defer db.backupMu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if db.sqlitePath == ":memory:" || db.sqlitePath == "" {
 		return nil, errors.New("cannot backup in-memory database")
 	}
@@ -31,38 +44,51 @@ func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
 		return nil, fmt.Errorf("failed to create backup dir: %w", err)
 	}
 
-	timestamp := time.Now().Format("2006-01-02_15-04-05")
-	backupFileName := fmt.Sprintf("kamehouse-backup-%s.db", timestamp)
-	backupPath := filepath.Join(backupDir, backupFileName)
+	timestamp := time.Now().Format("2006-01-02_15-04-05.000000000")
+	file, err := os.CreateTemp(backupDir, "kamehouse-backup-"+timestamp+"-*.tmp")
+	if err != nil {
+		return nil, fmt.Errorf("reserve backup file: %w", err)
+	}
+	tempPath := file.Name()
+	defer os.Remove(tempPath)
+	if err := file.Close(); err != nil {
+		return nil, err
+	}
+	backupPath := strings.TrimSuffix(tempPath, ".tmp") + ".db"
 
 	if db.slowTraceLogger != nil {
 		db.slowTraceLogger.Flush()
 	}
 
 	// Ensure all writes are flushed to DB file via truncate checkpoint
-	if err := db.gormdb.Exec("PRAGMA wal_checkpoint(TRUNCATE);").Error; err != nil {
+	if err := db.gormdb.WithContext(ctx).Exec("PRAGMA wal_checkpoint(TRUNCATE);").Error; err != nil {
 		db.Logger.Error().Err(err).Msg("db: WAL checkpoint failed before backup")
 		return nil, fmt.Errorf("pre-backup WAL checkpoint failed: %w", err)
 	}
 
 	// Escape single quotes for SQLite literal
-	escapedPath := strings.ReplaceAll(backupPath, "'", "''")
+	escapedPath := strings.ReplaceAll(tempPath, "'", "''")
 	query := fmt.Sprintf("VACUUM INTO '%s'", escapedPath)
-	if err := db.gormdb.Exec(query).Error; err != nil {
+	if err := db.gormdb.WithContext(ctx).Exec(query).Error; err != nil {
 		return nil, fmt.Errorf("VACUUM INTO failed: %w", err)
 	}
 
 	// Enforce 0600 permissions on the created backup file
-	if err := os.Chmod(backupPath, 0600); err != nil {
+	if err := os.Chmod(tempPath, 0600); err != nil {
 		db.Logger.Warn().Err(err).Str("path", backupPath).Msg("db: could not restrict backup file permissions")
 	}
 
 	// Validar el archivo recién creado (no la base en uso): un backup corrupto
 	// se descarta antes de rotar, para que no desplace a uno bueno.
-	if err := verifyBackupIntegrity(backupPath); err != nil {
+	if err := verifyBackupIntegrityContext(ctx, tempPath); err != nil {
 		db.Logger.Error().Err(err).Str("path", backupPath).Msg("db: backup failed integrity check; discarding it")
-		_ = os.Remove(backupPath)
 		return nil, fmt.Errorf("backup integrity check failed: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := os.Rename(tempPath, backupPath); err != nil {
+		return nil, fmt.Errorf("publish backup: %w", err)
 	}
 
 	info, err := os.Stat(backupPath)
@@ -87,7 +113,7 @@ func (db *Database) Backup(backupDir string, keep int) (*BackupResult, error) {
 
 // verifyBackupIntegrity abre el archivo de backup en solo lectura y corre
 // PRAGMA integrity_check sobre él.
-func verifyBackupIntegrity(path string) error {
+func verifyBackupIntegrityContext(ctx context.Context, path string) error {
 	dsn := (&url.URL{Scheme: "file", Opaque: filepath.ToSlash(path), RawQuery: "mode=ro"}).String()
 	g, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{Logger: gormlogger.Discard})
 	if err != nil {
@@ -100,7 +126,7 @@ func verifyBackupIntegrity(path string) error {
 	defer sqlDB.Close()
 
 	var result string
-	if err := g.Raw("PRAGMA integrity_check;").Row().Scan(&result); err != nil {
+	if err := g.WithContext(ctx).Raw("PRAGMA integrity_check;").Row().Scan(&result); err != nil {
 		return fmt.Errorf("integrity_check: %w", err)
 	}
 	if result != "ok" {

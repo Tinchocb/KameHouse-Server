@@ -3,15 +3,16 @@ import { useRef, useEffect } from "react"
 
 
 import { DeferredImage } from "@/components/shared/deferred-image"
-import { HeroBackdrop, heroHighResSrc, heroLowResSrc, useHeroTone } from "@/components/ui/spotlight/hero-backdrop"
+import { HeroBackdrop, heroLowResSrc, useHeroTone } from "@/components/ui/spotlight/hero-backdrop"
 import { heroArtFromUrl, heroObjectPosition, type HeroArt } from "@/lib/config/hero-art"
 import { cn } from "@/components/ui/core/styling"
 import { useMotionTier } from "@/components/ui/kinetics/hooks"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { useImagePalette } from "@/hooks/use-image-palette"
+import { useHeroParallax } from "@/hooks/use-hero"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
+import { useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 
-const MEDIA_HERO_TITLE_CLASS = "font-display font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-[2.6rem] tracking-tight text-on-surface text-edge-glow text-balance break-words max-w-3xl leading-[1.08]";
+const MEDIA_HERO_TITLE_CLASS = "hero-title font-display font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-[2.6rem] tracking-tight text-on-surface text-edge-glow text-balance break-words max-w-3xl leading-[1.08]";
 
 interface MediaHeroProps {
     /** El contenedor principal (`div`) para aplicar parallax al hacer scroll */
@@ -133,7 +134,6 @@ export function MediaHero({
     parallax = true,
 }: MediaHeroProps) {
     const heroRef = useRef<HTMLDivElement>(null)
-    const backdropRef = useRef<HTMLDivElement>(null)
     const setBackdropUrl = useIntelligenceStore(s => s.setBackdropUrl)
     // Parallax solo en tier full: "off" es movimiento reducido (un transform
     // escrito por JS no lo frena la regla global) y "subtle" es TV / bajo consumo.
@@ -150,11 +150,12 @@ export function MediaHero({
         [backdropArt, backdropUrl]
     )
     const showArt = !!art && backdropTreatment !== "hide"
-    const palette = useImagePalette(showArt ? heroHighResSrc(art) : null)
+    const backdropRef = useHeroParallax(0.35, { disabled: !parallaxEnabled || !showArt, scrollContainerRef })
     const tone = useHeroTone(showArt ? art : null)
+    const isMinimalist = useIsMinimalistMode()
     const scrim = React.useMemo(
-        () => heroScrimBackground(palette?.left ?? null, tone === "light" || art?.subject !== "right", fullHeight),
-        [palette?.left, tone, art?.subject, fullHeight]
+        () => heroScrimBackground(null, tone === "light" || art?.subject !== "right", fullHeight),
+        [tone, art?.subject, fullHeight]
     )
 
     // Sync current backdrop with global DynamicBackdrop blur background
@@ -169,47 +170,7 @@ export function MediaHero({
         }
     }, [backdropUrl, ambientOn, setBackdropUrl])
 
-    // Smooth Parallax: escucha el scroll container real (detalle de serie hace
-    // scroll en <main>, no en window) además de window como fallback.
-    useEffect(() => {
-        if (!parallaxEnabled) {
-            // Si el tier cambia a mitad de sesión, la capa vuelve a su lugar.
-            if (backdropRef.current) backdropRef.current.style.transform = ""
-            return
-        }
-        let rafId: number | null = null
-        const handleScroll = (e: Event) => {
-            if (rafId) return
-            rafId = requestAnimationFrame(() => {
-                rafId = null
-                const el = backdropRef.current
-                if (!el) return
-                // Sin trabajo inútil fuera de pantalla.
-                const rect = el.getBoundingClientRect()
-                if (rect.bottom < 0 || rect.top > window.innerHeight) return
-                const target = e.target
-                if (target === document || target === window) {
-                    el.style.transform = `translate3d(0, ${window.scrollY * 0.35}px, 0)`
-                } else if (target instanceof HTMLElement && target.contains(el)) {
-                    // Solo scrollers que contienen el hero: la captura en window también
-                    // recibe el scroll de listas internas (sagas, cola) y movía el fondo.
-                    el.style.transform = `translate3d(0, ${Math.max(0, target.scrollTop) * 0.35}px, 0)`
-                }
-            })
-        }
-        const scroller = scrollContainerRef?.current
-        if (scroller instanceof HTMLElement) {
-            scroller.addEventListener("scroll", handleScroll, { passive: true })
-        }
-        window.addEventListener("scroll", handleScroll, { capture: true, passive: true })
-        return () => {
-            if (scroller instanceof HTMLElement) {
-                scroller.removeEventListener("scroll", handleScroll)
-            }
-            window.removeEventListener("scroll", handleScroll, { capture: true })
-            if (rafId) cancelAnimationFrame(rafId)
-        }
-    }, [scrollContainerRef, parallaxEnabled])
+
 
 
 
@@ -219,7 +180,7 @@ export function MediaHero({
             className={cn(
                 "relative w-full flex flex-col justify-end overflow-hidden select-none",
                 fullHeight
-                    ? "min-h-screen lg:min-h-screen pb-16 sm:pb-20 md:pb-24 pt-20 md:pt-24 shrink-0"
+                    ? "min-h-dvh lg:min-h-dvh pb-16 sm:pb-20 md:pb-24 pt-20 md:pt-24 [@media(max-height:780px)]:pt-16 [@media(max-height:780px)]:pb-10 shrink-0"
                     : isSmallBanner
                         ? "min-h-[360px] md:min-h-[420px] pb-12 sm:pb-16 md:pb-20 pt-16 md:pt-24 shrink-0"
                         : "min-h-[70svh] lg:min-h-[80svh] pb-12 sm:pb-16 md:pb-20 pt-16 md:pt-24 shrink-0",
@@ -264,10 +225,10 @@ export function MediaHero({
                             onBackdropClick && "cursor-pointer pointer-events-auto"
                         )}
                         style={{
-                            maskImage: fullHeight
+                            maskImage: (fullHeight || isMinimalist)
                                 ? undefined
                                 : "linear-gradient(to bottom, black 74%, transparent 100%)",
-                            WebkitMaskImage: fullHeight
+                            WebkitMaskImage: (fullHeight || isMinimalist)
                                 ? undefined
                                 : "linear-gradient(to bottom, black 74%, transparent 100%)",
                         }}
@@ -276,7 +237,7 @@ export function MediaHero({
                             art={art}
                             alt=""
                             variant="bleed"
-                            scrims={true}
+                            scrims={false}
                             imgClassName={cn(
                                 // Solo opacity: transition-all animaría también el
                                 // filter y mantendría vivo el repaint del fondo,
@@ -351,19 +312,25 @@ export function MediaHero({
                                 <button
                                     type="button"
                                     onClick={onTitleClick}
-                                    className="text-left p-0 border-0 bg-transparent cursor-pointer group/title active:scale-[0.99] transition-transform duration-fast ease-out-strong"
+                                    className="text-left p-0 border-0 bg-transparent cursor-pointer group/title motion-safe:active:scale-[0.99] transition-transform duration-fast ease-out-strong"
                                 >
                                     <h1 
-                                        // Sin cn(): twMerge toma `text-hero-title` por color y lo descartaba
-                                        // ante `text-on-surface`, dejando el h1 de la ficha de serie en 16 px.
-                                        className={`${MEDIA_HERO_TITLE_CLASS} group-hover/title:text-brand-secondary transition-colors duration-slow`}
+                                        className={cn(
+                                            isMinimalist
+                                                ? "hero-title font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-tight text-white leading-[1.05] text-balance break-words max-w-3xl [text-shadow:0_2px_16px_rgba(0,0,0,0.95),0_1px_4px_rgba(0,0,0,0.9)]"
+                                                : `${MEDIA_HERO_TITLE_CLASS} group-hover/title:text-brand-secondary transition-colors duration-slow`
+                                        )}
                                     >
                                         {title}
                                     </h1>
                                 </button>
                             ) : (
                                 <h1 
-                                    className={MEDIA_HERO_TITLE_CLASS} 
+                                    className={cn(
+                                        isMinimalist
+                                            ? "hero-title font-extrabold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-tight text-white leading-[1.05] text-balance break-words max-w-3xl [text-shadow:0_2px_16px_rgba(0,0,0,0.95),0_1px_4px_rgba(0,0,0,0.9)]"
+                                            : MEDIA_HERO_TITLE_CLASS
+                                    )}
                                 >
                                     {title}
                                 </h1>
@@ -378,7 +345,12 @@ export function MediaHero({
                     )}
 
                     {synopsis && (
-                        <p className="animate-slide-up [animation-duration:var(--duration-base)] delay-100 text-on-surface/90 text-xs sm:text-sm leading-relaxed line-clamp-3 text-edge-glow font-normal pointer-events-auto text-pretty max-w-[54ch]">
+                        <p className={cn(
+                            "animate-slide-up [animation-duration:var(--duration-base)] delay-100 text-xs leading-relaxed line-clamp-3 pointer-events-auto text-pretty",
+                            isMinimalist
+                                ? "text-on-surface/90 sm:text-[14.5px] [text-shadow:0_1px_8px_rgba(0,0,0,0.95)] max-w-[48ch]"
+                                : "text-on-surface/90 sm:text-sm text-edge-glow font-normal max-w-[54ch]"
+                        )}>
                             {synopsis}
                         </p>
                     )}

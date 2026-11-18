@@ -3,6 +3,7 @@ package videofile
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"kamehouse/internal/util"
@@ -65,29 +66,101 @@ func newProgressWriter(onProgress func(float64)) *progressWriter {
 func (w *progressWriter) Write(p []byte) (int, error) { return w.pw.Write(p) }
 func (w *progressWriter) Close() error                { return w.pw.Close() }
 
+const attachmentManifest = "attachments.complete.json"
+
+type attachmentCompletion struct {
+	Signature string           `json:"signature"`
+	Files     map[string]int64 `json:"files"`
+}
+
+func attachmentSignature(info *MediaInfo) string {
+	raw, _ := json.Marshal(struct {
+		Fonts     []string
+		Subtitles []Subtitle
+	}{info.Fonts, info.Subtitles})
+	return string(raw)
+}
+
+func attachmentsComplete(root string, info *MediaInfo) bool {
+	raw, err := os.ReadFile(filepath.Join(root, attachmentManifest))
+	if err != nil {
+		return false
+	}
+	var completion attachmentCompletion
+	if json.Unmarshal(raw, &completion) != nil || completion.Signature == "" || (info != nil && completion.Signature != attachmentSignature(info)) {
+		return false
+	}
+	for name, size := range completion.Files {
+		if !filepath.IsLocal(name) {
+			return false
+		}
+		fi, err := os.Stat(filepath.Join(root, name))
+		if err != nil || !fi.Mode().IsRegular() || fi.Size() != size {
+			return false
+		}
+	}
+	return true
+}
+
+// AttachmentsComplete verifies the success manifest and all committed files.
+func AttachmentsComplete(cacheDir, hash string) bool {
+	return attachmentsComplete(filepath.Join(cacheDir, "videofiles", hash), nil)
+}
+
+// CommitWindowAttachments records files atomically written by the MKV window
+// reader after it has read every cluster. It never makes partial windows complete.
+func CommitWindowAttachments(cacheDir, hash string) error {
+	root := filepath.Join(cacheDir, "videofiles", hash)
+	completion := attachmentCompletion{Signature: "mkv-window-v1", Files: make(map[string]int64)}
+	for _, dir := range []string{"att", "subs"} {
+		entries, err := os.ReadDir(filepath.Join(root, dir))
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			fi, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			completion.Files[filepath.Join(dir, entry.Name())] = fi.Size()
+		}
+	}
+	raw, err := json.Marshal(completion)
+	if err != nil {
+		return err
+	}
+	return util.WriteFileAtomic(filepath.Join(root, attachmentManifest), raw)
+}
+
 // ExtractAttachmentOpts es ExtractAttachment con tope de tiempo y progreso configurables.
 func ExtractAttachmentOpts(ctx context.Context, ffmpegPath string, path string, hash string, mediaInfo *MediaInfo, cacheDir string, logger *zerolog.Logger, opts ExtractOptions) (err error) {
 	logger.Debug().Str("hash", hash).Msgf("videofile: Starting media attachment extraction")
 
-	attachmentPath := GetFileAttCacheDir(cacheDir, hash)
-	subsPath := GetFileSubsCacheDir(cacheDir, hash)
-	_ = os.MkdirAll(attachmentPath, 0755)
-	_ = os.MkdirAll(subsPath, 0755)
-
-	subsDir, err := os.ReadDir(subsPath)
-	if err == nil {
-		// Only count text-based subs (image-based PGS/DVB have no extracted file).
-		textSubCount := 0
-		for _, sub := range mediaInfo.Subtitles {
-			if sub.Extension != nil && *sub.Extension != "" {
-				textSubCount++
-			}
-		}
-		attDir, _ := os.ReadDir(attachmentPath)
-		if len(subsDir) == textSubCount && (len(mediaInfo.Fonts) == 0 || len(attDir) >= len(mediaInfo.Fonts)) {
-			logger.Debug().Str("hash", hash).Msgf("videofile: Attachments already extracted")
-			return nil
-		}
+	root := filepath.Join(cacheDir, "videofiles", hash)
+	if attachmentsComplete(root, mediaInfo) {
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(root, 0755); err != nil {
+		return err
+	}
+	staging, err := os.MkdirTemp(root, ".extract-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(staging)
+	attachmentPath := filepath.Join(staging, "att")
+	subsPath := filepath.Join(staging, "subs")
+	if err := os.MkdirAll(attachmentPath, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(subsPath, 0755); err != nil {
+		return err
 	}
 	for _, sub := range mediaInfo.Subtitles {
 		// Check if it's PGS
@@ -111,7 +184,7 @@ func ExtractAttachmentOpts(ctx context.Context, ffmpegPath string, path string, 
 			textSubCount++
 		}
 	}
-	if len(mediaInfo.Fonts) == 0 && textSubCount == 0 {
+	if len(mediaInfo.Fonts) == 0 && len(mediaInfo.Subtitles) == 0 {
 		logger.Debug().Str("hash", hash).Msgf("videofile: No attachments or subtitles to extract")
 		return nil
 	}
@@ -180,7 +253,7 @@ func ExtractAttachmentOpts(ctx context.Context, ffmpegPath string, path string, 
 
 	// If we are only extracting fonts (no text subtitles), we still need to provide
 	// an output format for ffmpeg to not complain
-	if textSubCount == 0 {
+	if textSubCount == 0 && len(mediaInfo.Fonts) > 0 {
 		// Solo fuentes: se mapean sólo los adjuntos (copiados tal cual) a un muxer nulo. Sin -map,
 		// ffmpeg elige video y audio por defecto y los decodifica enteros en cada reproducción.
 		// Medido con ffmpeg real: decodificaba 480 cuadros de un clip de 20 s; con esto, cero.
@@ -198,7 +271,41 @@ func ExtractAttachmentOpts(ctx context.Context, ffmpegPath string, path string, 
 	if err != nil {
 		logger.Error().Err(err).Msgf("videofile: Error starting FFmpeg")
 		crashlog.GlobalCrashLogger.WriteAreaLogToFile(crashLogger)
+		return err
 	}
-
-	return err
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	completion := attachmentCompletion{Signature: attachmentSignature(mediaInfo), Files: make(map[string]int64)}
+	for _, dir := range []string{"att", "subs"} {
+		entries, err := os.ReadDir(filepath.Join(staging, dir))
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			fi, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			completion.Files[filepath.Join(dir, entry.Name())] = fi.Size()
+		}
+	}
+	// Publish only successful output. The manifest is the commit record: a crash
+	// between directory renames leaves an uncommitted cache that is rebuilt.
+	if err := os.Remove(filepath.Join(root, attachmentManifest)); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	for _, dir := range []string{"att", "subs"} {
+		if err := os.RemoveAll(filepath.Join(root, dir)); err != nil {
+			return err
+		}
+		if err := os.Rename(filepath.Join(staging, dir), filepath.Join(root, dir)); err != nil {
+			return err
+		}
+	}
+	raw, err := json.Marshal(completion)
+	if err != nil {
+		return err
+	}
+	return util.WriteFileAtomic(filepath.Join(root, attachmentManifest), raw)
 }

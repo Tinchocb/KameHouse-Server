@@ -43,11 +43,6 @@ func NewHMACAuth(secret string, ttl time.Duration) *HMACAuth {
 	}
 }
 
-// SetTTL sets a new TTL
-func (h *HMACAuth) SetTTL(ttl time.Duration) {
-	h.ttl = ttl
-}
-
 // GenerateToken generates an HMAC-signed token for the given endpoint using default TTL
 func (h *HMACAuth) GenerateToken(endpoint string) (string, error) {
 	return h.GenerateTokenWithTTL(endpoint, h.ttl)

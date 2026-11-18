@@ -1,0 +1,192 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  media-cards.css — Tarjetas de Catálogo, Películas y Sagas            ║
+   ║  MoviePosterCard, SpotlightSagaCard, Personajes                       ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
+
+/* SpotlightSagaCard: arte 16:9 con filete y texto debajo, sin color de saga.
+   El componente fija --saga-* en línea; !important las lleva a la rampa del tema. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card {
+  --saga-accent: var(--minimal-accent) !important;
+  --saga-text: var(--minimal-text-hi) !important;
+  --saga-border: var(--minimal-line-2) !important;
+  --saga-glow: transparent !important;
+  --spotlight-title-hover: var(--minimal-text-hi) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: var(--minimal-card-edge) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card:hover {
+  border-color: var(--minimal-line-4) !important;
+  box-shadow: var(--minimal-card-edge-hover) !important;
+}
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card .card-metadata {
+  color: var(--minimal-text-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card .card-episode-range {
+  color: var(--minimal-text-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card [title^="Saga #"] {
+  color: var(--minimal-text-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card .text-amber-400 {
+  color: var(--minimal-text-2) !important;
+}
+
+/* Cajón de sub-arcos y botón de reproducción en hover */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card .saga-play-cta {
+  background: var(--minimal-accent) !important;
+  color: var(--minimal-on-accent) !important;
+  border-radius: var(--minimal-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card .saga-play-cta svg {
+  color: var(--minimal-on-accent) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-card .card-detail-drawer {
+  background: var(--minimal-surface) !important;
+  border-top: 1px solid var(--minimal-line-2) !important;
+}
+
+/* SpotlightMovieCard (Home) & MoviePosterCard (Películas): superficie monocroma, radios concéntricos
+   y datos breves visibles sin degradados extraídos del póster. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .movie-box {
+  background: var(--minimal-surface) !important;
+  border-color: var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: var(--minimal-card-edge) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card):hover .movie-box {
+    border-color: var(--minimal-line-4) !important;
+    box-shadow: var(--minimal-card-edge-hover) !important;
+  }
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .movie-poster-img {
+  filter: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .drawer-panel {
+  background: var(--minimal-surface) !important;
+  border-left-color: var(--minimal-line-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .movie-drawer-pill {
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-3) !important;
+  color: var(--minimal-text-2) !important;
+  border-radius: var(--minimal-radius-xs) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .movie-drawer-synopsis {
+  color: var(--minimal-text-3) !important;
+  -webkit-line-clamp: 2;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .movie-drawer-footer {
+  border-color: var(--minimal-line-2) !important;
+  border-top-color: var(--minimal-line-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .movie-card-cta {
+  background: var(--minimal-primary-bg) !important;
+  color: var(--minimal-primary-fg) !important;
+  border-radius: var(--minimal-radius-sm) !important;
+  box-shadow: none !important;
+  --tw-ring-color: transparent !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .movie-card-cta :is(svg, span) {
+  color: var(--minimal-primary-fg) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) :is(.text-amber-300, .text-amber-400) {
+  color: var(--minimal-text-2) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) .footer-title {
+  color: var(--minimal-text-1) !important;
+  --footer-title-active: var(--minimal-text-hi) !important;
+}
+
+/* MoviePosterCard: sin acentos de era ni oro */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .movie-poster-card {
+  --poster-title-hover: var(--minimal-text-hi) !important;
+  --poster-era-accent: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .movie-poster-card :is(.text-amber-400, .text-amber-300, .text-orange-400, .text-orange-200) {
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .movie-poster-card .text-orange-300\/90 {
+  color: var(--minimal-text-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .movie-poster-card :is(.border-orange-400\/40, .border-amber-400\/35) {
+  border-color: var(--minimal-line-4) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .movie-poster-card div[style*="linear-gradient"] {
+  background: var(--minimal-surface) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .movie-poster-card span.rounded-full {
+  border-radius: var(--minimal-radius-xs) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .movie-poster-card span[style*="boxShadow"],
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .movie-poster-card span[style*="box-shadow"] {
+  background-color: var(--minimal-text-2) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.movie-slot, .movie-poster-card) button[tabindex="-1"] {
+  border-radius: var(--minimal-radius-sm) !important;
+  border-color: var(--minimal-line-3) !important;
+  background: var(--minimal-fill-3) !important;
+}
+
+/* Carrusel de Personajes: retrato con filete, sin sombra */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-avatar-frame {
+  border-color: var(--minimal-line-3) !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-avatar-card:hover .character-avatar-frame {
+  border-color: var(--minimal-line-5) !important;
+  box-shadow: none !important;
+}
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-avatar-role {
+  color: var(--minimal-text-3) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .character-detail-modal .animate-ping {
+  display: none !important;
+}
+
+/* SeriesCard y SeriesSpineRow (Estantería y Filas en /series): sin sombras exteriores */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.series-shelf-card, [id^="series-card-"]) {
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.series-shelf-card, [id^="series-card-"]):hover {
+  box-shadow: none !important;
+}
+}

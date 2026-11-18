@@ -125,14 +125,20 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	// enmascarados: se conserva la key guardada en vez de guardar la máscara.
 	// Lo que el asistente no edita (credenciales de Drive, notificaciones…)
 	// tampoco se pisa con valores vacíos.
-	next := models.Settings{}
-	if prev, err := h.App.Database.GetStoredSettings(); err == nil && prev != nil {
-		next = *prev
+	// Un error al leer los ajustes no se ignora: guardar sobre una copia vacía
+	// borraría lo que hubiera en la base.
+	prev, err := h.App.Database.GetStoredSettings()
+	if err != nil {
+		return h.RespondWithError(c, err)
 	}
+	next := *prev
 	if models.IsMaskedSecret(b.Library.TmdbApiKey) {
 		b.Library.TmdbApiKey = next.Library.TmdbApiKey
 	}
-	next.BaseModel = models.BaseModel{ID: 1, UpdatedAt: time.Now()}
+	next.ID = 1
+	next.UpdatedAt = time.Now()
+	// El asistente queda completado: a partir de este guardado /status ya no lo pide.
+	next.SetupPending = false
 	// LastScanAt lo maneja el servidor: el asistente no lo envía y reejecutarlo lo
 	// dejaba en cero, forzando un escaneo completo del disco.
 	lastScanAt := next.Library.LastScanAt
@@ -140,21 +146,18 @@ func (h *Handler) HandleGettingStarted(c echo.Context) error {
 	next.Library.LastScanAt = lastScanAt
 	next.MediaPlayer = b.MediaPlayer
 
+	// El transcoder va antes de guardar: si falla, el asistente sigue abierto y no queda
+	// guardada una biblioteca con el primer arranque ya cerrado.
+	if b.EnableTranscode {
+		if err := h.App.Database.SetTranscodeEnabled(c.Request().Context(), true); err != nil {
+			return h.RespondWithError(c, fmt.Errorf("no se pudo habilitar el transcoder: %w", err))
+		}
+		h.App.InitOrRefreshMediastreamSettings()
+	}
+
 	settings, err := h.App.Database.UpsertSettings(&next)
 	if err != nil {
 		return h.RespondWithError(c, err)
-	}
-
-	if b.EnableTranscode {
-		go func() {
-			defer util.HandlePanicThen(func() {})
-			if prev, found := h.App.Database.GetMediastreamSettings(); found && prev != nil {
-				// Sólo la columna: una fila completa escrita desde la caché podría revertir Solo original.
-				if err := h.App.Database.Gorm().Model(&models.MediastreamSettings{}).Where("id = ?", prev.ID).Update("transcode_enabled", true).Error; err != nil {
-					h.App.Logger.Error().Err(err).Msg("settings: no se pudo habilitar el transcoder")
-				}
-			}
-		}()
 	}
 
 	h.invalidateSettingsCache()
@@ -396,6 +399,12 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		if _, ok := rawGoogleDrive["folderName"]; ok {
 			merged.GoogleDrive.FolderName = b.GoogleDrive.FolderName
 		}
+		if _, ok := rawGoogleDrive["disableAutoSync"]; ok {
+			merged.GoogleDrive.DisableAutoSync = b.GoogleDrive.DisableAutoSync
+		}
+		if _, ok := rawGoogleDrive["scanIntervalMinutes"]; ok {
+			merged.GoogleDrive.ScanIntervalMinutes = drive.NormalizeScanIntervalMinutes(b.GoogleDrive.ScanIntervalMinutes)
+		}
 	}
 
 	// ── 5. Single upsert for the main embedded settings ───────────────────────
@@ -404,15 +413,9 @@ func (h *Handler) HandleSaveSettings(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	if b.GoogleDrive != nil && h.App.DriveService != nil {
-		_ = h.App.DriveService.UpdateConfig(
-			saved.GoogleDrive.Enabled,
-			saved.GoogleDrive.ClientID,
-			saved.GoogleDrive.ClientSecret,
-			saved.GoogleDrive.RefreshToken,
-			saved.GoogleDrive.FolderID,
-			saved.GoogleDrive.FolderName,
-		)
+	if b.GoogleDrive != nil {
+		// Con credenciales del entorno, `saved` no las trae: se reconstruye desde los ajustes efectivos.
+		h.applyDriveConfig()
 	}
 
 	// ── 6. Merge-before-upsert for separate-table settings ────────────────

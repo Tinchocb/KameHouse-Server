@@ -8,7 +8,6 @@ use tauri::{
 };
 
 use crate::sidecar::SidecarManager;
-use crate::window_manager::{main_is_blank, WindowManager};
 
 pub struct TrayManager;
 
@@ -21,8 +20,6 @@ impl TrayManager {
         &self,
         app_handle: &AppHandle<R>,
         sidecar_manager: Arc<SidecarManager>,
-        _window_manager: Arc<WindowManager>,
-        _settings: crate::settings::DesktopSettings,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("[Tray] Creating system tray");
 
@@ -40,7 +37,7 @@ impl TrayManager {
             .build()?;
 
         // Get icon path
-        let icon_path = self.get_icon_path(app_handle);
+        let icon_path = self.get_icon_path();
 
         // Create tray icon
         let menu_sidecar_manager = sidecar_manager.clone();
@@ -54,16 +51,7 @@ impl TrayManager {
                     if let Some(win) = target_win {
                         if win.is_visible().unwrap_or(false) {
                             let _ = win.hide();
-                        } else if main_is_blank(app) {
-                            // La interfaz del sidecar aún no está lista: se ve el splash, no una ventana vacía.
-                            if let Some(splash) = app.get_webview_window("splash") {
-                                let _ = splash.set_focus();
-                            }
                         } else {
-                            // El splash ya cumplió si el usuario pide la ventana a mano.
-                            if let Some(splash) = app.get_webview_window("splash") {
-                                let _ = splash.destroy();
-                            }
                             let _ = win.show();
                             let _ = win.set_focus();
                         }
@@ -87,14 +75,7 @@ impl TrayManager {
                         if let Some(win) = target_win {
                             if win.is_visible().unwrap_or(false) {
                                 let _ = win.hide();
-                            } else if main_is_blank(app) {
-                                if let Some(splash) = app.get_webview_window("splash") {
-                                    let _ = splash.set_focus();
-                                }
                             } else {
-                                if let Some(splash) = app.get_webview_window("splash") {
-                                    let _ = splash.destroy();
-                                }
                                 let _ = win.show();
                                 let _ = win.set_focus();
                             }
@@ -108,13 +89,7 @@ impl TrayManager {
         Ok(())
     }
 
-    fn get_icon_path<R: Runtime>(&self, _app_handle: &AppHandle<R>) -> tauri::image::Image<'_> {
+    fn get_icon_path(&self) -> tauri::image::Image<'_> {
         tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap()
-    }
-}
-
-impl Default for TrayManager {
-    fn default() -> Self {
-        Self::new()
     }
 }

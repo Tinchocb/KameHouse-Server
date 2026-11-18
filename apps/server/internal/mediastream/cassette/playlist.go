@@ -71,20 +71,21 @@ func GenerateMasterPlaylist(info *videofile.MediaInfo, ladder []QualityLadderEnt
 // writeAudioTracks appends audio track entries to the playlist
 func writeAudioTracks(b *strings.Builder, info *videofile.MediaInfo, query string) {
 	suffix := querySuffix(query)
-	for _, audio := range info.Audios {
+	for position, audio := range info.Audios {
 		b.WriteString("#EXT-X-MEDIA:TYPE=AUDIO,")
 		b.WriteString("GROUP-ID=\"audio\",")
 		if audio.Language != nil {
 			fmt.Fprintf(b, "LANGUAGE=\"%s\",", *audio.Language)
 		}
-		switch {
-		case audio.Title != nil:
-			fmt.Fprintf(b, "NAME=\"%s\",", *audio.Title)
-		case audio.Language != nil:
-			fmt.Fprintf(b, "NAME=\"%s\",", *audio.Language)
-		default:
-			fmt.Fprintf(b, "NAME=\"Audio %d\",", audio.Index)
+		title := ""
+		if audio.Title != nil {
+			title = *audio.Title
 		}
+		// Preserve known language labels; only undefined metadata needs numbering.
+		if strings.TrimSpace(title) == "" && audio.Language != nil {
+			title = *audio.Language
+		}
+		fmt.Fprintf(b, "NAME=\"%s\",", videofile.AudioRenditionName(title, position))
 		if audio.IsDefault {
 			b.WriteString("DEFAULT=YES,")
 		}

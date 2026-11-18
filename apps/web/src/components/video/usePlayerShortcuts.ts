@@ -2,9 +2,6 @@ import { useEffect, useRef } from "react"
 
 interface UsePlayerShortcutsProps {
     videoRef: React.RefObject<HTMLVideoElement | null>
-    isPlaying: boolean
-    isMuted: boolean
-    volume: number
     isFullscreen: boolean
     skipMode: string | null
     showNextEpisode: boolean
@@ -16,16 +13,11 @@ interface UsePlayerShortcutsProps {
     toggleMute: () => void
     togglePlay: () => void
     toggleFullscreen: () => void
-    setVolume: (v: number) => void
-    setIsMuted: (m: boolean) => void
     setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>
     setShowStats: React.Dispatch<React.SetStateAction<boolean>>
-    skipToNextChapter?: () => void
-    skipToPrevChapter?: () => void
     onToggleSubtitle?: () => void
     onToggleEpisodesSidebar?: () => void
     onToggleQueueSidebar?: () => void
-    duration?: number
     handleVolume: (e: React.ChangeEvent<HTMLInputElement> | number) => void
     onToggleShortcuts?: () => void
     onEscape?: () => void
@@ -55,13 +47,10 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
                 toggleFullscreen,
                 setIsSettingsOpen,
                 setShowStats,
-                skipToNextChapter,
-                skipToPrevChapter,
                 onToggleSubtitle,
                 onToggleEpisodesSidebar,
                 onToggleQueueSidebar,
                 onEscape,
-                duration,
                 handleVolume,
             } = refs.current
             const activeEl = document.activeElement as HTMLElement | null
@@ -85,12 +74,12 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
             )
 
             if (isInteractiveElement) {
-                if (e.key.toLowerCase() === "escape") return
                 return
             }
 
+            const isInsideSettings = Boolean(activeEl?.closest(".player-settings-surface, [data-player-settings], [role='dialog']"))
             const isModalOpen = Boolean(document.querySelector('[role="dialog"][aria-modal="true"], [cmdk-root]'))
-            if (isModalOpen && e.key.toLowerCase() !== "escape") {
+            if ((isModalOpen || isInsideSettings) && e.key.toLowerCase() !== "escape") {
                 return
             }
 
@@ -100,7 +89,7 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
             if (/^[0-9]$/.test(key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
                 e.preventDefault()
                 const video = videoRef.current
-                const total = duration || video?.duration || 0
+                const total = video?.duration || 0
                 if (video && Number.isFinite(total) && total > 0) {
                     const pct = parseInt(key, 10) / 10
                     video.currentTime = pct * total
@@ -140,20 +129,8 @@ export function usePlayerShortcuts(props: UsePlayerShortcutsProps) {
                     const videoPeriod = videoRef.current
                     if (videoPeriod) {
                         if (!videoPeriod.paused) videoPeriod.pause()
-                        const total = duration || videoPeriod.duration || Infinity
+                        const total = videoPeriod.duration || Infinity
                         videoPeriod.currentTime = Math.min(total, videoPeriod.currentTime + 1 / 24)
-                    }
-                    break
-                case "[":
-                    if (skipToPrevChapter) {
-                        e.preventDefault()
-                        skipToPrevChapter()
-                    }
-                    break
-                case "]":
-                    if (skipToNextChapter) {
-                        e.preventDefault()
-                        skipToNextChapter()
                     }
                     break
                 case " ":

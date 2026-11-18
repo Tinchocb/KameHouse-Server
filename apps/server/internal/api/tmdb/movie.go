@@ -10,6 +10,7 @@ import (
 
 // GetMovieDetails fetches a specific Movie by ID with full details.
 func (c *Client) GetMovieDetails(ctx context.Context, id string) (*MovieDetails, error) {
+	generation := c.cacheGeneration()
 	cacheKey := fmt.Sprintf("movie_detail_full:%s:%s", id, c.language)
 	if cached, ok := GetCached[*MovieDetails](c, cacheKey); ok {
 		return cached, nil
@@ -36,12 +37,13 @@ func (c *Client) GetMovieDetails(ctx context.Context, id string) (*MovieDetails,
 		}
 	}
 
-	SetCached(c, cacheKey, resp, 7*24*time.Hour)
+	setCachedGeneration(c, generation, cacheKey, resp, 7*24*time.Hour)
 	return resp, nil
 }
 
 // GetMovieAlternativeTitles gets all alternative titles for a movie.
 func (c *Client) GetMovieAlternativeTitles(ctx context.Context, movieID int) ([]AlternativeTitle, error) {
+	generation := c.cacheGeneration()
 	cacheKey := fmt.Sprintf("movie_alt:%d", movieID)
 	if cached, ok := GetCached[[]AlternativeTitle](c, cacheKey); ok {
 		return cached, nil
@@ -54,6 +56,6 @@ func (c *Client) GetMovieAlternativeTitles(ctx context.Context, movieID int) ([]
 		return nil, fmt.Errorf("tmdb get movie alternative titles: %w", err)
 	}
 
-	SetCached(c, cacheKey, resp.Results, 7*24*time.Hour)
+	setCachedGeneration(c, generation, cacheKey, resp.Results, 7*24*time.Hour)
 	return resp.Results, nil
 }

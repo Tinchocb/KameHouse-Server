@@ -29,10 +29,12 @@ func metadataTestApp(t *testing.T) *App {
 		t.Fatal(err)
 	}
 	c := tmdb.NewClient("old-key", "ja-JP")
-	return &App{CoreServices: CoreServices{Database: d, Config: &Config{}, Logger: &l}, Metadata: MetadataProviders{
+	a := &App{CoreServices: CoreServices{Database: d, Config: &Config{}, Logger: &l}, Metadata: MetadataProviders{
 		tmdbClient: c,
 		Provider:   metadata_provider.NewDynamicProvider(metadata_provider.NewProvider(&metadata_provider.NewProviderImplOptions{Logger: &l, Database: d, TMDBClient: c})),
 	}}
+	t.Cleanup(func() { _ = a.Metadata.Provider.Close() })
+	return a
 }
 
 func TestMetadataHotReloadRefreshesProviderAndLanguage(t *testing.T) {
@@ -71,7 +73,7 @@ func TestMetadataHotReloadRefreshesProviderAndLanguage(t *testing.T) {
 	if err := a.Database.Gorm().Create(media).Error; err != nil {
 		t.Fatal(err)
 	}
-	meta, err := a.Metadata.Provider.GetAnimeMetadata(int(media.ID))
+	meta, err := a.Metadata.Provider.GetAnimeMetadata(media.TmdbID + 1_000_000)
 	if err != nil || meta == nil || meta.Description != "New metadata" {
 		t.Fatalf("provider did not use refreshed client: %v, %v", meta, err)
 	}

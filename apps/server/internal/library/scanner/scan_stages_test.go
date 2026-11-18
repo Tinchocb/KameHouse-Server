@@ -49,7 +49,7 @@ func TestScan_UnchangedKnownFileIsKeptWithoutRescan(t *testing.T) {
 	path := filepath.Join(dir, "Dragon Ball", "Dragon Ball - 01.mkv")
 	info := writeFile(t, path, "video")
 
-	known := dto.NewLocalFile(path, dir)
+	known := dto.NewLocalFileS(path, []string{dir})
 	known.FileSize = info.Size()
 	known.FileModTime = info.ModTime().Unix()
 	known.MediaID = 12609 // dato de un escaneo anterior que no debe perderse

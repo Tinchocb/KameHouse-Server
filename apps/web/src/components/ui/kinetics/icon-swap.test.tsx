@@ -5,13 +5,13 @@ import { iconSwapStates, useTransientFlag } from "./icon-swap"
 describe("iconSwapStates", () => {
     it("en tier full anima scale y blur", () => {
         const { hidden, shown } = iconSwapStates("full")
-        expect(hidden).toEqual({ opacity: 0, scale: 0.25, filter: "blur(4px)" })
+        expect(hidden).toEqual({ opacity: 0, scale: 0.9, filter: "blur(2px)" })
         expect(shown).toEqual({ opacity: 1, scale: 1, filter: "blur(0px)" })
     })
 
     it("en tier subtle anima scale y opacity, sin filter", () => {
         const { hidden, shown } = iconSwapStates("subtle")
-        expect(hidden).toEqual({ opacity: 0, scale: 0.25 })
+        expect(hidden).toEqual({ opacity: 0, scale: 0.96 })
         expect(shown).toEqual({ opacity: 1, scale: 1 })
         expect(hidden).not.toHaveProperty("filter")
         expect(shown).not.toHaveProperty("filter")

@@ -78,7 +78,7 @@ build-web:
 ## dev: Start the Go server in development mode
 dev:
 	@echo "🚀 Starting dev server on port $(SERVER_PORT)..."
-	$(GO) run . --datadir="$(DATA_DIR)"
+	$(GO) run . --datadir="$(DATA_DIR)" --port="$(SERVER_PORT)"
 
 ## dev-web: Start the web frontend development server
 dev-web:
@@ -89,22 +89,22 @@ dev-web:
 # Quality Assurance
 # ======================================================================
 
-## vet: Run go vet on all internal packages (including tests)
+## vet: Run go vet on root, internal and codegen packages (including tests)
 vet:
 	@echo "🔍 Running go vet..."
-	$(GO) vet ./internal/... ./codegen/...
+	$(GO) vet . ./internal/... ./codegen/...
 	@echo "✅ go vet passed"
 
 ## test: Run Go tests in short mode
 test:
 	@echo "🧪 Running tests..."
-	$(GO) test -short ./internal/... ./codegen/...
+	$(GO) test -short . ./internal/... ./codegen/...
 	@echo "✅ Tests passed"
 
 ## race: Run selected packages with the race detector (events, core, handlers, continuity, intelligence, notifier, maintenance)
 race:
 	@echo "🔬 Running race detector tests..."
-	$(GO) test -race -count=1 ./internal/events/... ./internal/core/... ./internal/handlers/... ./internal/continuity/... ./internal/intelligence/... ./internal/notifier/... ./internal/maintenance/...
+	$(GO) test -race -count=1 . ./internal/events/... ./internal/core/... ./internal/handlers/... ./internal/continuity/... ./internal/intelligence/... ./internal/notifier/... ./internal/maintenance/...
 	@echo "✅ Race detector tests passed"
 
 ## codegen-check: Run codegen and verify no drift in generated files

@@ -12,6 +12,7 @@ const VideoPlayer = React.lazy(() =>
 import { useHideAudienceScore } from "@/lib/theme/theme-hooks"
 import { useQueueStore } from "@/lib/store"
 import { getFormatLabel } from "@/lib/helpers/media"
+import { getMediumResImage, localImage } from "@/lib/helpers/images"
 import { useScanLocalFiles } from "@/api/hooks/scan.hooks"
 import { useBackupDatabase, useDownloadDatabaseBackup } from "@/api/hooks/system.hooks"
 import { useEnqueuePreTranscode } from "@/api/hooks/pretranscode.hooks"
@@ -113,7 +114,7 @@ function CommandPaletteBody() {
     const { mutate: backupDb } = useBackupDatabase()
     const { download: downloadBackup } = useDownloadDatabaseBackup()
     const { mutate: enqueuePreTranscode, isPending: isEnqueueingPreTranscode } = useEnqueuePreTranscode()
-    const { mutate: updateProgress } = useUpdateAnimeEntryProgress(undefined, 0, false)
+    const { mutate: updateProgress } = useUpdateAnimeEntryProgress(undefined, false)
     const addToQueue = useQueueStore((s) => s.addToQueue)
 
     // Devolver el foco al cerrar: al elemento que lo tenía antes de abrir, o al
@@ -321,7 +322,7 @@ function CommandPaletteBody() {
             <CommandDialog 
                 open={open} 
                 onOpenChange={setOpen} 
-                contentClass="sm:max-w-2xl surface-content"
+                contentClass="sm:max-w-2xl surface-content max-h-[min(85dvh,640px)] flex flex-col overflow-hidden"
                 commandProps={{
                     label: "Buscar en KameHouse",
                     className: "bg-transparent border-none overflow-hidden",
@@ -334,17 +335,17 @@ function CommandPaletteBody() {
                         <CommandInput
                             inputContainerClass="flex-1 min-w-0"
                             placeholder="Buscar series, películas… (> comandos, @ cronología)"
-                            className="h-12 sm:h-14 font-display !text-[1rem] sm:!text-[1.125rem] tracking-normal placeholder:text-on-surface-variant bg-transparent border-none outline-none ![backdrop-filter:none] ![--tw-shadow:0_0_#0000] ![--tw-shadow-colored:0_0_#0000] !ring-0 focus-visible:outline-none text-on-surface"
+                            className="h-12 sm:h-14 font-display !text-[1rem] sm:!text-[1.125rem] tracking-normal placeholder:text-on-surface-variant bg-transparent border-none outline-none ![backdrop-filter:none] shadow-none !ring-0 focus-visible:outline-none text-on-surface"
                             value={query}
                             onValueChange={setQuery}
                         />
                     </div>
                 </div>
-                <CommandList className="max-h-[60vh] md:max-h-[500px] p-4 custom-scrollbar">
+                <CommandList className="flex-1 min-h-0 max-h-[min(60dvh,500px)] p-4 custom-scrollbar">
                     {isCommandMode ? (
                         <>
                             <CommandEmpty className="py-10 text-center">
-                                <p className="font-display text-xl text-on-surface">Ningún comando coincide</p>
+                                <p className="font-display text-xl text-on-surface text-balance">Ningún comando coincide</p>
                             </CommandEmpty>
                             <CommandGroup heading="Comandos" className={GROUP_CLASS}>
                                 <div className="grid grid-cols-[minmax(0,1fr)] gap-2 mt-2">
@@ -353,7 +354,7 @@ function CommandPaletteBody() {
                                             key={cmd.id}
                                             value={cmd.id}
                                             onSelect={() => cmd.run()}
-                                            className="rounded-2xl border border-[var(--neutral-separator)] bg-[var(--neutral-elev-1)] aria-selected:bg-[var(--neutral-elev-2)] active:scale-[0.99] transition-[transform,background-color] duration-quick ease-out-strong p-0 overflow-hidden cursor-pointer"
+                                            className="rounded-2xl border border-[var(--neutral-separator)] bg-[var(--neutral-elev-1)] aria-selected:bg-[var(--neutral-elev-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent motion-safe:active:scale-[0.99] transition-[transform,background-color] duration-quick ease-out-strong p-0 overflow-hidden cursor-pointer"
                                         >
                                             <div className="flex w-full items-center justify-between gap-5 p-3">
                                                 <span className="text-sm font-bold text-on-surface">{cmd.label}</span>
@@ -374,21 +375,21 @@ function CommandPaletteBody() {
                             <CommandEmpty className="py-16 text-center flex flex-col items-center gap-3 animate-in fade-in duration-quick">
                                 {isChronoMode && !isSearchActive ? (
                                     <>
-                                        <p className="font-display text-2xl text-on-surface">Buscar en la cronología</p>
+                                        <p className="font-display text-2xl text-on-surface text-balance">Buscar en la cronología</p>
                                         <p className="text-sm text-on-surface-variant max-w-sm leading-relaxed">
                                             Escribe un personaje, una saga, las esferas o el nombre de un lapso. Por ejemplo: «@vegeta» o «@cell».
                                         </p>
                                     </>
                                 ) : isChronoMode ? (
                                     <>
-                                        <p className="font-display text-2xl text-on-surface">Ningún lapso coincide</p>
+                                        <p className="font-display text-2xl text-on-surface text-balance">Ningún lapso coincide</p>
                                         <p className="text-sm text-on-surface-variant max-w-sm leading-relaxed">
                                             No hay lapsos con «{query.slice(1).trim()}». Prueba con un personaje, una saga o una esfera.
                                         </p>
                                     </>
                                 ) : (
                                     <>
-                                        <p className="font-display text-2xl text-on-surface">Sin coincidencias</p>
+                                        <p className="font-display text-2xl text-on-surface text-balance">Sin coincidencias</p>
                                         <p className="text-sm text-on-surface-variant max-w-sm leading-relaxed">
                                             Revisa la ortografía o prueba con otros términos.
                                         </p>
@@ -405,7 +406,7 @@ function CommandPaletteBody() {
                                     <div className="flex items-center gap-2">
                                         <span>{isChronoMode ? "Cronología" : isSearchActive ? "Resultados" : "Tendencias globales"}</span>
                                         {results && results.length > 0 && (
-                                            <span className="animate-number-pop-in px-2 py-0.5 rounded-full text-2xs font-semibold bg-[var(--neutral-elev-2)] text-on-surface-variant">
+                                            <span className="animate-number-pop-in px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--neutral-elev-2)] text-on-surface-variant">
                                                 {results.length}
                                             </span>
                                         )}
@@ -441,7 +442,7 @@ function CommandPaletteBody() {
                                                         navigateToResult(result)
                                                     }
                                                 }}
-                                                className={`rounded-2xl border border-[var(--neutral-separator)] bg-[var(--neutral-elev-1)] aria-selected:bg-[var(--neutral-elev-2)] active:scale-[0.99] transition-[transform,background-color] duration-quick ease-out-strong p-0 overflow-hidden group cursor-pointer ${hasActions ? "pr-[5.5rem]" : ""}`}
+                                                className={`rounded-2xl border border-[var(--neutral-separator)] bg-[var(--neutral-elev-1)] aria-selected:bg-[var(--neutral-elev-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent active:scale-[0.99] transition-[transform,background-color] duration-quick ease-out-strong p-0 overflow-hidden group cursor-pointer ${hasActions ? "pr-[5.5rem]" : ""}`}
                                             >
                                                 {"isUnlinked" in result && result.isUnlinked ? (
                                                     <div className="flex w-full items-center gap-4 p-3 text-left">
@@ -471,8 +472,12 @@ function CommandPaletteBody() {
                                                             <div className="absolute inset-0 bg-gradient-to-tr from-status-warning/20 to-transparent opacity-0 transition-opacity duration-quick group-aria-selected:opacity-100" />
                                                             {media?.posterImage ? (
                                                                 <img
-                                                                    src={media.posterImage}
+                                                                    src={localImage(getMediumResImage(media.posterImage))}
                                                                     alt={title}
+                                                                    width={56}
+                                                                    height={80}
+                                                                    loading="lazy"
+                                                                    decoding="async"
                                                                     className="w-full h-full object-cover relative z-10"
                                                                 />
                                                             ) : (
@@ -541,11 +546,22 @@ function CommandPaletteBody() {
                                                             <div className="flex w-full items-center gap-4 p-3">
                                                                 <div className="flex flex-1 items-center gap-4 min-w-0">
                                                                     <div
-                                                                        className="h-20 w-14 flex-shrink-0 rounded-lg bg-cover bg-center shadow-elevation-1 border border-outline-variant/50 bg-surface-variant flex items-center justify-center overflow-hidden relative"
-                                                                        style={media?.posterImage ? { backgroundImage: `url(${media.posterImage})` } : {}}
+                                                                        className="h-20 w-14 flex-shrink-0 rounded-lg shadow-elevation-1 border border-outline-variant/50 bg-surface-variant flex items-center justify-center overflow-hidden relative"
                                                                     >
+                                                                        {media?.posterImage ? (
+                                                                            <img
+                                                                                src={localImage(getMediumResImage(media.posterImage))}
+                                                                                alt=""
+                                                                                width={56}
+                                                                                height={80}
+                                                                                loading="lazy"
+                                                                                decoding="async"
+                                                                                className="h-full w-full object-cover"
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="text-xs font-semibold text-label-2 text-center px-1">Sin portada</span>
+                                                                        )}
                                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity duration-quick group-aria-selected:opacity-100" />
-                                                                        {!media?.posterImage && <span className="text-2xs font-semibold text-label-2 text-center px-1">Sin portada</span>}
                                                                     </div>
                                                                     <div className="flex flex-col overflow-hidden text-left py-1 min-w-0">
                                                                         <span className="truncate text-lg font-bold text-on-surface group-aria-selected:text-brand-accent-readable leading-tight" title={title}>

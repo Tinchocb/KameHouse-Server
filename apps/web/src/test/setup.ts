@@ -18,15 +18,49 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
     disconnect: vi.fn(),
 }))
 
+// Mock localStorage for Node 22+ happy-dom compatibility
+const createStorageMock = () => {
+    const store = new Map<string, string>()
+    return {
+        getItem: vi.fn((key: string) => store.get(key) ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+            store.set(key, String(value))
+        }),
+        removeItem: vi.fn((key: string) => {
+            store.delete(key)
+        }),
+        clear: vi.fn(() => {
+            store.clear()
+        }),
+        key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
+        get length() {
+            return store.size
+        },
+    }
+}
+const storageMock = createStorageMock()
+Object.defineProperty(globalThis, "localStorage", {
+    value: storageMock,
+    writable: true,
+    configurable: true,
+})
+if (typeof window !== "undefined") {
+    Object.defineProperty(window, "localStorage", {
+        value: storageMock,
+        writable: true,
+        configurable: true,
+    })
+}
+
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockImplementation(query => ({
+    value: (query: string) => ({
         matches: false,
         media: query,
         onchange: null,
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
-    })),
+    }),
 })

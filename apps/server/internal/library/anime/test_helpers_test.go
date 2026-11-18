@@ -1,6 +1,7 @@
 package anime
 
 import (
+	"kamehouse/internal/database/models/dto"
 	"strconv"
 	"strings"
 )
@@ -15,7 +16,7 @@ type MockHydratedLocalFileOptions struct {
 }
 
 func MockHydratedLocalFile(opts MockHydratedLocalFileOptions) *LocalFile {
-	lf := NewLocalFile(opts.FilePath, opts.LibraryPath)
+	lf := dto.NewLocalFileS(opts.FilePath, []string{opts.LibraryPath})
 	lf.MediaID = opts.MediaID
 	lf.Metadata = &LocalFileMetadata{
 		AniDBEpisode: opts.MetadataAniDbEpisode,

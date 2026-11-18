@@ -50,7 +50,7 @@ func TestBuildFfmpegArgs(t *testing.T) {
 	t.Run("produces VOD variant playlists in the output dir", func(t *testing.T) {
 		args := buildFfmpegArgs(cassette.HwAccelProfile{}, "in.mkv", outDir, 2)
 
-		if got := args[len(args)-1]; got != filepath.Join(outDir, "%v", "index.m3u8") {
+		if got := args[len(args)-1]; got != filepath.ToSlash(filepath.Join(outDir, "%v", "index.m3u8")) {
 			t.Errorf("last arg must be the variant playlist path, got %q", got)
 		}
 		if idx := indexOf(args, "-var_stream_map"); idx == -1 || args[idx+1] != variantStreamMap(2) {
@@ -59,7 +59,7 @@ func TestBuildFfmpegArgs(t *testing.T) {
 		if idx := indexOf(args, "-hls_playlist_type"); idx == -1 || args[idx+1] != "vod" {
 			t.Error("a pre-transcode must be a VOD playlist, not a live one")
 		}
-		if idx := indexOf(args, "-hls_segment_filename"); idx == -1 || !strings.HasPrefix(args[idx+1], outDir) {
+		if idx := indexOf(args, "-hls_segment_filename"); idx == -1 || !strings.HasPrefix(args[idx+1], filepath.ToSlash(outDir)) {
 			t.Error("segments must be written inside the output dir")
 		}
 	})

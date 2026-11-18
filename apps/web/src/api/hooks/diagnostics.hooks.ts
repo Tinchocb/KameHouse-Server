@@ -1,4 +1,5 @@
 import { errorText } from "@/api/client/error-messages"
+import { getAuthorizationHeaders, setServerSession } from "@/api/client/auth"
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useServerMutation, useServerQuery } from "@/api/client/requests"
@@ -60,7 +61,8 @@ export function useDownloadDiagnosticsReport() {
         try {
             const base = getServerBaseUrl()
             const url = new URL(API_ENDPOINTS.SYSTEM.GetDiagnosticsReport.endpoint, base || window.location.origin)
-            const res = await fetch(url.toString(), { method: "GET", credentials: "include" })
+            const res = await fetch(url.toString(), { method: "GET", headers: getAuthorizationHeaders(), credentials: "include" })
+            if (res.status === 401) setServerSession(null)
             if (!res.ok) throw new Error(`Report falló con ${res.status}`)
             const blob = await res.blob()
             const disposition = res.headers.get("Content-Disposition") ?? ""

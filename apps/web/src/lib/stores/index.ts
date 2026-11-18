@@ -3,9 +3,67 @@ import { usePlayerStore } from "./player-store"
 import { useQueueStore } from "./queue-store"
 
 import { create, StateCreator } from "zustand"
-import { persist } from "zustand/middleware"
-import { subscribeWithSelector } from "zustand/middleware"
-import { devtools } from "zustand/middleware"
+import { persist, subscribeWithSelector, devtools, type PersistStorage, type StorageValue } from "zustand/middleware"
+
+function shallowEqualRecord<T extends object>(a: T, b: T): boolean {
+    const keysA = Object.keys(a) as (keyof T)[]
+    const keysB = Object.keys(b) as (keyof T)[]
+    if (keysA.length !== keysB.length) return false
+    for (const key of keysA) {
+        if (!Object.is(a[key], b[key])) return false
+    }
+    return true
+}
+
+/**
+ * Envuelve el storage de Zustand `persist` para omitir `JSON.stringify` y `localStorage.setItem`
+ * cuando solo cambian campos efímeros excluidos de `partialize`.
+ */
+function createDeduplicatedJSONStorage<T extends object>(): PersistStorage<T> {
+    let lastValue: StorageValue<T> | null = null
+    let lastJson: string | null = null
+
+    return {
+        getItem: (name) => {
+            if (typeof window === "undefined") return null
+            try {
+                const raw = window.localStorage.getItem(name)
+                if (!raw) return null
+                lastJson = raw
+                const parsed = JSON.parse(raw) as StorageValue<T>
+                lastValue = parsed
+                return parsed
+            } catch {
+                return null
+            }
+        },
+        setItem: (name, value) => {
+            if (typeof window === "undefined") return
+            if (
+                lastValue !== null &&
+                value.version === lastValue.version &&
+                shallowEqualRecord(lastValue.state, value.state)
+            ) {
+                return
+            }
+            const json = JSON.stringify(value)
+            if (json === lastJson) {
+                lastValue = value
+                return
+            }
+            lastValue = value
+            lastJson = json
+            window.localStorage.setItem(name, json)
+        },
+        removeItem: (name) => {
+            lastValue = null
+            lastJson = null
+            if (typeof window !== "undefined") {
+                window.localStorage.removeItem(name)
+            }
+        },
+    }
+}
 
 type CombinedState = 
     ReturnType<typeof useUIStore.getState> &
@@ -32,9 +90,10 @@ export const useAppStore = create<CombinedState>()(
                 }),
                 {
                     name: "kamehouse-app-settings",
+                    storage: createDeduplicatedJSONStorage(),
                     version: 1,
                     migrate: (persisted, version) => {
-                        const p = ((persisted ?? {}) as Partial<CombinedState>) ?? {}
+                        const p = (persisted ?? {}) as Partial<CombinedState>
                         if (version < 1) {
                             // Limpia colas/índices potencialmente obsoletos de versiones sin versionado
                             if (Array.isArray(p.playlistQueue) && p.playlistQueue.length > 50) {
@@ -50,6 +109,8 @@ export const useAppStore = create<CombinedState>()(
                         const rec = persistedState as Record<string, unknown> | undefined
                         const p = (rec ?? {}) as Partial<CombinedState>
                         if (rec) {
+                            delete rec.tvMode
+                            delete rec.tvModePrevPrefs
                             if ('sidebarOpen' in rec) delete rec.sidebarOpen
                             if ('globalQueueOpen' in rec) delete rec.globalQueueOpen
                             if ('activeQueuePlayItem' in rec) delete rec.activeQueuePlayItem
@@ -92,7 +153,6 @@ export const useAppStore = create<CombinedState>()(
                         subtitleSize: state.subtitleSize,
                         loopEnabled: state.loopEnabled,
                         marathonMode: state.marathonMode,
-                        tvMode: state.tvMode,
                         // Queue state
                         playlistQueue: Array.isArray(state.playlistQueue) ? state.playlistQueue.slice(0, 50) : [],
                         currentQueueIndex: typeof state.currentQueueIndex === 'number' ? Math.min(state.currentQueueIndex, 49) : -1,

@@ -1,6 +1,7 @@
 package intelligence
 
 import (
+	"errors"
 	"sort"
 	"strings"
 
@@ -43,12 +44,12 @@ func BuildChronologyProgress(database *db.Database, accountID uint) (*Chronology
 	}
 
 	var libraryMedia []*models.LibraryMedia
-	if err := database.Gorm().Where("tmdb_id IN ?", ChronologySeriesTmdbIDs).Find(&libraryMedia).Error; err != nil {
+	if err := database.Gorm().Where("tmdb_id IN ? AND type IN ?", ChronologySeriesTmdbIDs, []string{"SHOW", "ANIME"}).Find(&libraryMedia).Error; err != nil {
 		return nil, err
 	}
 
-	// El historial guarda el id de media del reproductor, que según el origen es
-	// el TMDB id o el id de biblioteca: se aceptan ambos para cada serie.
+	// Public IDs always take precedence over historical primary keys. Legacy
+	// aliases are accepted only if they do not resolve publicly to another title.
 	tmdbByMediaID := make(map[int]int)
 	tmdbByLibraryID := make(map[uint]int)
 	libraryIDs := make([]uint, 0, len(libraryMedia))
@@ -56,7 +57,9 @@ func BuildChronologyProgress(database *db.Database, accountID uint) (*Chronology
 		tmdbByMediaID[tmdbID] = tmdbID
 	}
 	for _, lm := range libraryMedia {
-		tmdbByMediaID[int(lm.ID)] = lm.TmdbID
+		if _, public := tmdbByMediaID[int(lm.ID)]; !public {
+			tmdbByMediaID[int(lm.ID)] = lm.TmdbID
+		}
 		tmdbByLibraryID[lm.ID] = lm.TmdbID
 		libraryIDs = append(libraryIDs, lm.ID)
 	}
@@ -94,8 +97,22 @@ func BuildChronologyProgress(database *db.Database, accountID uint) (*Chronology
 		Find(&history).Error; err != nil {
 		return nil, err
 	}
+	validIdentity := make(map[int]bool)
 	for _, wh := range history {
 		if wh.EpisodeNumber <= 0 || wh.Duration <= 0 || wh.CurrentTime/wh.Duration < continuity.IgnoreRatioThreshold {
+			continue
+		}
+		valid, checked := validIdentity[wh.MediaID]
+		if !checked {
+			media, err := db.ResolveLibraryMediaByPublicID(database, wh.MediaID)
+			var ambiguous *db.AmbiguousMediaIDError
+			if err != nil && !errors.As(err, &ambiguous) {
+				return nil, err
+			}
+			valid = err == nil && (media == nil || ((media.Type == "SHOW" || media.Type == "ANIME") && media.TmdbID == tmdbByMediaID[wh.MediaID]))
+			validIdentity[wh.MediaID] = valid
+		}
+		if !valid {
 			continue
 		}
 		watched[tmdbByMediaID[wh.MediaID]][wh.EpisodeNumber] = true

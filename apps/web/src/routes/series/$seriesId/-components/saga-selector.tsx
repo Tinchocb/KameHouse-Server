@@ -10,11 +10,12 @@ import { IconNavigationChevronRight, IconNavigationLayers, IconNavigationChevron
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { ElasticCounter } from "@/components/ui/kinetics/elastic-counter"
 import { prewarmImages, buildVideoThumbnailUrl } from "@/lib/helpers/images"
+import { useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 
 /** "(Relleno)" vive en los datos al final del título: se quita para mostrar solo el nombre. */
 const FILLER_SUFFIX_RE = /\s*\(relleno\)\s*$/i
 
-function stripFillerSuffix(title: string): string {
+export function stripFillerSuffix(title: string): string {
   return title.replace(FILLER_SUFFIX_RE, "").trim()
 }
 
@@ -54,7 +55,6 @@ function useScrollFadeMask() {
 interface SagaSelectorProps {
   sagas: SagaDTO[]
   localSagas?: SagaDefinition[]
-  chronologySeriesId?: string
   sagasProgressMap?: Record<string, { watched: number; total: number; percent: number }>
   activeSagaId?: string
   onSelectSaga: (sagaId: string) => void
@@ -65,7 +65,7 @@ interface SagaSelectorProps {
   onToggleCollapse?: () => void
   // New props for cinematic cards
   episodes?: Anime_Episode[]
-  heroBackdrop?: string | null
+  variant?: "default" | "modal"
 }
 
 export function SagaSelector({
@@ -80,7 +80,7 @@ export function SagaSelector({
   isCollapsed = false,
   onToggleCollapse,
   episodes,
-  heroBackdrop: _heroBackdrop,
+  variant = "default",
 }: SagaSelectorProps) {
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(() => {
     return !!activeSubSagaId
@@ -89,7 +89,7 @@ export function SagaSelector({
   const hasSubSagas = activeSaga?.subSagas && activeSaga.subSagas.length > 0
   const tabIndicatorSpring = useSpringPreset("tabIndicator")
   // layoutId propio por instancia: por debajo de lg conviven el panel de
-  // escritorio (oculto) y el de la hoja Vaul, y framer compartiría el indicador.
+  // escritorio (oculto) y el panel móvil, y framer compartiría el indicador.
   const layoutGroupId = useId()
 
   const { ref: mainListRef, isAtBottom: mainListIsAtBottom, checkPosition: mainListCheckPosition } = useScrollFadeMask()
@@ -123,6 +123,99 @@ export function SagaSelector({
     }).filter((u): u is string => Boolean(u))
     if (urls.length) prewarmImages(urls)
   }, [episodes])
+
+  const isMinimalist = useIsMinimalistMode()
+
+  // ── Modo Minimalista (Mockup Figma Screen 3) ──────────────────────────────
+  if (isMinimalist) {
+    if (isCollapsed) {
+      return (
+        <div className={cn("w-full flex flex-col items-center py-2 px-1 select-none", className)}>
+          {onToggleCollapse && (
+            <IconButton
+              intent="ghost"
+              size="sm"
+              onClick={onToggleCollapse}
+              title="Expandir panel de sagas"
+              aria-label="Expandir panel de sagas"
+              className="mb-2"
+              icon={<IconNavigationChevronRight className="w-3.5 h-3.5 text-white/50" />}
+            />
+          )}
+          <div className="flex flex-col items-center gap-1.5 pt-1">
+            {sagas.map((saga, index) => {
+              const isActive = saga.id === activeSagaId
+              const orderNum = index + 1
+              const orderFormatted = orderNum < 10 ? `0${orderNum}` : `${orderNum}`
+              const localSaga = localSagas?.find(s => s.id === saga.id)
+              const title = stripFillerSuffix(localSaga?.title || saga.name)
+
+              return (
+                <Button
+                  key={saga.id}
+                  intent={isActive ? "primary" : "ghost"}
+                  size="icon"
+                  onClick={() => onSelectSaga(saga.id)}
+                  title={title}
+                  aria-label={title}
+                  aria-current={isActive ? "true" : undefined}
+                  className={cn(
+                    "w-9 h-9 rounded-lg font-mono text-xs font-bold",
+                    isActive ? "text-amber-400" : "text-white/60 hover:text-white"
+                  )}
+                >
+                  {orderFormatted}
+                </Button>
+              )
+            })}
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <aside className={cn("sagas-sidebar-sticky w-full flex flex-col gap-1.5 select-none", className)}>
+        <div className="flex items-center justify-between pl-3 pr-1 mb-1">
+          <span className="sidebar-header-label !mb-0 !pl-0">Sagas</span>
+          {onToggleCollapse && (
+            <IconButton
+              intent="ghost"
+              size="sm"
+              onClick={onToggleCollapse}
+              title="Colapsar panel de sagas"
+              aria-label="Colapsar panel de sagas"
+              icon={<IconNavigationChevronLeft className="w-3.5 h-3.5 text-white/50" />}
+            />
+          )}
+        </div>
+        <div className="flex flex-col gap-1">
+          {sagas.map((saga, index) => {
+            const isActive = saga.id === activeSagaId
+            const orderNum = index + 1
+            const orderFormatted = orderNum < 10 ? `0${orderNum}` : `${orderNum}`
+            const localSaga = localSagas?.find(s => s.id === saga.id)
+            const rawTitle = localSaga?.title || saga.name
+            const title = stripFillerSuffix(rawTitle)
+            const startEp = saga.startEp || localSaga?.startEp
+            const endEp = saga.endEp || localSaga?.endEp
+            const epRange = (startEp && endEp) ? `Eps. ${startEp}–${endEp}` : (saga.episodeRange ? `Eps. ${saga.episodeRange}` : "")
+
+            return (
+              <button
+                key={saga.id}
+                type="button"
+                onClick={() => onSelectSaga(saga.id)}
+                className={cn("saga-sidebar-item", isActive && "on")}
+              >
+                <strong>{orderFormatted} · {title}</strong>
+                {epRange && <span>{epRange}</span>}
+              </button>
+            )
+          })}
+        </div>
+      </aside>
+    )
+  }
 
   // ── Colapsado: pastillas numéricas elegantes ──────────────────────────────
   if (isCollapsed) {
@@ -194,12 +287,12 @@ export function SagaSelector({
               >
                 {isActive && (
                   <m.div
-                    layoutId="activeCollapsedSagaPill"
+                    layoutId={`${layoutGroupId}-activeCollapsedSagaPill`}
                     transition={tabIndicatorSpring}
-                    className="absolute inset-0 rounded-xl bg-brand-accent/20 border border-brand-accent/40 pointer-events-none"
+                    className="saga-collapsed-active-pill absolute inset-0 rounded-xl bg-brand-accent/20 border border-brand-accent/40 pointer-events-none"
                   />
                 )}
-                <span className="relative z-10">{orderFormatted}</span>
+                <span className="relative z-10 tabular-nums">{orderFormatted}</span>
               </Button>
             )
           })}
@@ -208,10 +301,13 @@ export function SagaSelector({
     )
   }
 
+  const isModal = variant === "modal"
+
   return (
       <div className={cn(
-      // Sin sombra propia: .sectionbar ya aporta --sectionbar-shadow (§2 y §9).
-      "sectionbar w-full max-h-[calc(100dvh-8rem)] flex flex-col p-4 overflow-hidden relative rounded-2xl",
+      isModal
+        ? "w-full flex flex-col overflow-hidden relative"
+        : "sectionbar w-full max-h-[calc(100dvh-8rem)] flex flex-col p-4 overflow-hidden relative rounded-2xl",
       className
     )}>
       {/* Sin AnimatePresence mode="wait": el modo espera 200ms con el panel
@@ -220,7 +316,7 @@ export function SagaSelector({
           <div
             key="main-menu"
             className="w-full h-full flex flex-col min-h-0 animate-slide-right"
-            style={{ animationDuration: "200ms" }}
+            style={{ animationDuration: "var(--duration-medium)", animationTimingFunction: "var(--ease-in-out)" }}
           >
             <div className="sectionbar-header mb-3 flex-shrink-0 min-h-8">
               <div className="flex items-center gap-3">
@@ -253,11 +349,11 @@ export function SagaSelector({
                 ref={mainListRef}
                 onScroll={mainListCheckPosition}
                 className={cn(
-                  "flex flex-col gap-2.5 overflow-y-auto px-1 pt-1 no-scrollbar flex-grow min-h-0 pb-3 content-start",
+                  "flex flex-col gap-2.5 overflow-y-auto px-1.5 pt-1.5 no-scrollbar flex-grow min-h-0 pb-3 content-start",
                   !mainListIsAtBottom && "[-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]"
                 )}
               >
-                {sagas.map((saga, index) => {
+                {sagas.map((saga) => {
                   const isActive = saga.id === activeSagaId
                   const localSaga = localSagas?.find(s => s.id === saga.id)
                   const rawTitle = localSaga?.title || saga.name
@@ -293,7 +389,6 @@ export function SagaSelector({
                     <ArcCinematicCard
                       key={saga.id}
                       layoutId={`${layoutGroupId}-saga`}
-                      index={index}
                       topLeft={episodeRangeText}
                       topRight={subSagasCount > 0 ? `${subSagasCount} ${subSagasCount === 1 ? "ARCO" : "ARCOS"}` : undefined}
                       title={sagaTitle}
@@ -314,7 +409,7 @@ export function SagaSelector({
           <div
             key="sub-menu"
             className="w-full h-full flex flex-col min-h-0 animate-slide-left"
-            style={{ animationDuration: "200ms" }}
+            style={{ animationDuration: "var(--duration-medium)", animationTimingFunction: "var(--ease-in-out)" }}
           >
             <div className="flex items-center gap-2 mb-3 px-1 flex-shrink-0">
               <Button
@@ -348,7 +443,7 @@ export function SagaSelector({
                   }}
                   aria-label="Quitar filtro de sub-arco"
                   title="Quitar filtro de sub-arco"
-                  className="ml-auto shrink-0 text-2xs font-mono font-semibold text-brand-accent-readable [@media(hover:hover)_and_(pointer:fine)]:hover:underline animate-fade-in [animation-duration:var(--duration-base)] [animation-timing-function:var(--ease-out)] active:scale-95 transition-transform duration-fast ease-out-strong cursor-pointer"
+                  className="ml-auto shrink-0 text-2xs font-mono font-semibold text-brand-accent-readable [@media(hover:hover)_and_(pointer:fine)]:hover:underline animate-fade-in [animation-duration:var(--duration-base)] [animation-timing-function:var(--ease-out)] motion-safe:active:scale-[0.97] transition-transform duration-fast ease-out-strong cursor-pointer"
                 >
                   ✕ Quitar filtro
                 </button>
@@ -360,11 +455,11 @@ export function SagaSelector({
                 ref={subListRef}
                 onScroll={subListCheckPosition}
                 className={cn(
-                  "flex flex-col gap-3 overflow-y-auto px-1 pt-1 no-scrollbar flex-grow min-h-0 pb-3 content-start",
+                  "flex flex-col gap-3 overflow-y-auto px-1.5 pt-1.5 no-scrollbar flex-grow min-h-0 pb-3 content-start",
                   !subListIsAtBottom && "[-webkit-mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)] [mask-image:linear-gradient(to_bottom,black_85%,transparent_100%)]"
                 )}
               >
-                {(activeSaga?.subSagas || []).map((sub, index) => {
+                {(activeSaga?.subSagas || []).map((sub) => {
                   const isActive = sub.id === activeSubSagaId
                   const localSub = localSagas?.find(s => s.id === activeSaga?.id)?.subSagas?.find(ss => ss.id === sub.id)
                   const subTitle = stripFillerSuffix(localSub?.title || sub.name)
@@ -377,7 +472,6 @@ export function SagaSelector({
                     <ArcCinematicCard
                       key={sub.id}
                       layoutId={`${layoutGroupId}-subsaga`}
-                      index={index}
                       topLeft={episodeRangeText}
                       title={subTitle}
                       metaLeft={`${epCount} eps`}
@@ -388,7 +482,6 @@ export function SagaSelector({
                           onSelectSubSaga(isSubActive ? "" : sub.id)
                         }
                       }}
-                      onHover={() => {}}
                     />
                   )
                 })}

@@ -98,8 +98,12 @@ export function useGetLibraryEpisodeFile(
     const isFetched = batched ? batch.isFetched : single.isFetched
     // Con imagen del episodio (still de TMDB guardado en la biblioteca) se usa esa: `path` es
     // una URL de imagen, no un video, y pedirle un frame a ffmpeg solo daba error.
-    const isExactFrame = Boolean(d?.path) && !d?.hasImage
-    const thumbnailUrl = d?.hasImage ? d.path : d?.path ? buildVideoThumbnailUrl(d, { startSec }) : undefined
+    // Drive devuelve thumbnailLink, una vista previa fija que ignora `t` y puede
+    // ser solo el logo de apertura. No es un fotograma del momento: dejar que la
+    // cronología consulte el still del episodio y sus respaldos.
+    const canExtractFrame = Boolean(d?.path) && !d?.path.startsWith("gdrive://")
+    const isExactFrame = canExtractFrame && !d?.hasImage
+    const thumbnailUrl = d?.hasImage ? d.path : d && canExtractFrame ? buildVideoThumbnailUrl(d, { startSec }) : undefined
 
     return {
         thumbnailUrl,

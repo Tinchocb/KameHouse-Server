@@ -41,22 +41,53 @@ func NewTMDBProviderWithClient(client *tmdb.Client, database *db.Database) *TMDB
 	}
 }
 
-// GetTVSeason fetches the details of a specific TV season, including its episodes.
-func (p *TMDBProvider) GetTVSeason(ctx context.Context, tvID int, seasonNumber int) (tmdb.TVSeasonDetails, error) {
-	cacheKey := fmt.Sprintf("%d-%d", tvID, seasonNumber)
-	if p.db != nil {
-		var cached tmdb.TVSeasonDetails
-		found, err := db.GetMetadataCache(p.db, "tmdb-season-details", cacheKey, &cached)
-		if err == nil && found {
-			return cached, nil
+// GetTVDetails fetches the series details, including the actual season count.
+func (p *TMDBProvider) GetTVDetails(ctx context.Context, tvID int) (*tmdb.TVDetails, error) {
+	return p.client.GetTVDetails(ctx, strconv.Itoa(tvID))
+}
+
+type savedSeason struct {
+	Season  tmdb.TVSeasonDetails
+	Updated time.Time
+}
+
+func (p *TMDBProvider) CachedSeason(tvID, number int) (tmdb.TVSeasonDetails, bool, bool) {
+	var saved savedSeason
+	if p.db == nil {
+		return saved.Season, false, false
+	}
+	key := fmt.Sprintf("%d:%d:%s", tvID, number, p.client.Language())
+	found, _ := db.GetMetadataCache(p.db, "episode-season", key, &saved)
+	if !found {
+		season, cached := tmdb.GetCached[tmdb.TVSeasonDetails](p.client, fmt.Sprintf("tv_season:%d:%d:%s", tvID, number, p.client.Language()))
+		if cached {
+			_ = db.UpsertMetadataCache(p.db, "episode-season", key, savedSeason{season, time.Now()}, 0)
+			return season, true, true
 		}
 	}
+	return saved.Season, found, found && time.Since(saved.Updated) < 7*24*time.Hour
+}
 
-	details, err := p.client.GetTVSeason(ctx, tvID, seasonNumber)
-	if err == nil && p.db != nil {
-		_ = db.UpsertMetadataCache(p.db, "tmdb-season-details", cacheKey, details, 7*24*time.Hour)
+func (p *TMDBProvider) GetTVSeason(ctx context.Context, tvID int, number int) (tmdb.TVSeasonDetails, error) {
+	cached, found, fresh := p.CachedSeason(tvID, number)
+	if fresh {
+		return cached, nil
 	}
-	return details, err
+	season, err := p.client.GetTVSeason(ctx, tvID, number)
+	if err == nil {
+		_, err = tmdb.SeasonEnd(0, season)
+	}
+	if err != nil {
+		if found {
+			return cached, nil
+		}
+		return season, err
+	}
+	if p.db != nil {
+		key := fmt.Sprintf("%d:%d:%s", tvID, number, p.client.Language())
+		_ = db.UpsertMetadataCache(p.db, "episode-season", key, savedSeason{season, time.Now()}, 0)
+	}
+	return season, nil
 }
 
 func (p *TMDBProvider) GetProviderID() string {

@@ -15,6 +15,14 @@ interface CharacterAvatarProps {
     onSelect?: (name: string) => void
 }
 
+function getCharacterInitials(name: string): string {
+    const clean = name.trim().replace(/[^\p{L}\p{N}\s]/gu, "")
+    const parts = clean.split(/\s+/).filter(Boolean)
+    if (parts.length === 0) return "DB"
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+}
+
 function roleToneClass(roleTag?: string | null): string {
     if (!roleTag) return "text-on-surface-variant"
     const lower = roleTag.toLowerCase()
@@ -29,8 +37,10 @@ function scrollIntoViewOnFocus(e: React.FocusEvent<HTMLButtonElement>) {
 }
 
 export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect }: CharacterAvatarProps) {
+    const [imgError, setImgError] = React.useState(false)
     const handleSelect = () => onSelect?.(name)
     const tooltipText = roleTag ? `${name} · ${roleTag}` : `Ver detalles de ${name}`
+    const showImage = Boolean(avatarUrl) && !imgError
 
     return (
         <AnimatedTooltip content={tooltipText} side="top">
@@ -40,25 +50,33 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect 
                 onClick={handleSelect}
                 onFocus={scrollIntoViewOnFocus}
                 className={cn(
-                    "flex flex-col items-center text-center gap-2.5 group cursor-pointer rounded-xl active:scale-95 transition-transform duration-fast ease-out-strong",
+                    "character-avatar-card flex flex-col items-center text-center gap-2.5 group cursor-pointer rounded-xl motion-safe:active:scale-[0.97] transition-transform duration-fast ease-out-strong",
                     "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-accent/70",
                     className
                 )}
             >
                 <div
                     className={cn(
-                        "w-24 h-24 rounded-2xl overflow-hidden border border-white/20 border-t-white/40 border-b-white/10 relative shadow-[shadow:var(--glass-highlight-lg),0_8px_20px_rgba(0,0,0,0.6)] bg-surface-container-lowest/80 transform-gpu",
-                        "[@media(hover:hover)_and_(pointer:fine)]:group-hover:border-brand-accent/50 [@media(hover:hover)_and_(pointer:fine)]:group-hover:shadow-[0_0_22px_hsl(var(--brand-accent)/0.35)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:-translate-y-1",
+                        "character-avatar-frame w-24 h-24 rounded-2xl overflow-hidden border border-white/20 border-t-white/40 border-b-white/10 relative shadow-[shadow:var(--glass-highlight-lg),0_8px_20px_rgba(0,0,0,0.6)] bg-surface-container-lowest/80 transform-gpu",
+                        "[@media(hover:hover)_and_(pointer:fine)]:group-hover:border-brand-accent/50 [@media(hover:hover)_and_(pointer:fine)]:group-hover:shadow-[0_0_22px_hsl(var(--brand-accent)/0.35)] motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:-translate-y-1",
                         "transition-[border-color,box-shadow,transform] duration-base ease-smooth-out"
                     )}
                 >
-                    {avatarUrl && (
+                    {showImage && avatarUrl ? (
                         <img
                             src={avatarUrl}
                             alt={name}
                             loading="lazy"
-                            className="w-full h-full object-cover [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-base ease-smooth-out transform-gpu"
+                            onError={() => setImgError(true)}
+                            className="w-full h-full object-cover motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-base ease-smooth-out transform-gpu"
                         />
+                    ) : (
+                        <div
+                            aria-hidden="true"
+                            className="character-avatar-fallback w-full h-full flex items-center justify-center bg-surface-container-high/60 text-on-surface font-display font-extrabold text-lg sm:text-xl tracking-wider select-none"
+                        >
+                            {getCharacterInitials(name)}
+                        </div>
                     )}
                     <div
                         className="absolute inset-0 opacity-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100 transition-opacity duration-fast ease-smooth-out"
@@ -71,7 +89,7 @@ export function CharacterAvatar({ name, avatarUrl, roleTag, className, onSelect 
                     </p>
                     {roleTag && (
                         <p className={cn(
-                            "text-xs font-medium mt-0.5 transition-colors duration-fast ease-smooth-out",
+                            "character-avatar-role text-xs font-medium mt-0.5 transition-colors duration-fast ease-smooth-out",
                             roleToneClass(roleTag)
                         )}>
                             {roleTag}

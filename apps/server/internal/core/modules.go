@@ -150,7 +150,6 @@ func (a *App) initModulesOnce() {
 				defer util.HandlePanicInModuleThen("core/refreshAfterAutoScan", func() {})
 				a.Logger.Info().Msg("app: Refreshing anime collection after auto-scan")
 				_, _ = a.GetAnimeCollection(true)
-				anime.InvalidateCuratedHomeCache()
 				_, _ = a.Metadata.Platform.RefreshAnimeCollection(a.ShutdownCtx())
 			})
 		},
@@ -183,6 +182,12 @@ func HandleNewDatabaseEntries(database *db.Database, logger *zerolog.Logger) {
 // applyEnvSettingsOverrides pisa, sobre la copia que recibe, los ajustes que se
 // definen por variables de entorno (Docker/dev). Nunca se guarda en la base.
 func applyEnvSettingsOverrides(s *models.Settings) {
+	// Installations can provision their OAuth application once, keeping the
+	// account connection flow free of client credentials. Never mix half a pair.
+	if id, secret := strings.TrimSpace(os.Getenv("KAMEHOUSE_GOOGLE_DRIVE_CLIENT_ID")), strings.TrimSpace(os.Getenv("KAMEHOUSE_GOOGLE_DRIVE_CLIENT_SECRET")); id != "" && secret != "" {
+		s.GoogleDrive.ClientID = id
+		s.GoogleDrive.ClientSecret = secret
+	}
 	if envSeries := os.Getenv("KAMEHOUSE_SERIES_PATHS"); envSeries != "" {
 		s.Library.SeriesPaths = strings.Split(envSeries, ",")
 	}
@@ -217,11 +222,10 @@ func (a *App) InitOrRefreshModules() {
 		return
 	}
 
-	a.Settings = settings
+	a.publishSettings(settings)
 
 	allPaths := settings.GetLibrary().GetAllPaths()
 	if len(allPaths) > 0 {
-		a.LibraryDir = allPaths[0]
 		a.FeatureManager.UpdateFromSettings(&settings.Library)
 	}
 
@@ -304,7 +308,7 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 		})
 	}
 
-	a.SecondarySettings.Mediastream = settings
+	a.publishMediastreamSettings(settings)
 
 	if s, err := a.Database.GetSettings(); err == nil && s != nil {
 		if a.DriveService != nil {
@@ -323,11 +327,12 @@ func (a *App) InitOrRefreshMediastreamSettings() {
 func (a *App) performActionsOnce() {
 	a.startBackground(func() {
 		defer util.HandlePanicInModuleThen("core/performActionsOnce", func() {})
-		if a.Settings == nil {
+		settings := a.SettingsSnapshot()
+		if settings == nil {
 			return
 		}
 
-		if a.Settings.GetLibrary().RefreshLibraryOnStart {
+		if settings.GetLibrary().RefreshLibraryOnStart {
 			a.startBackground(func() {
 				defer util.HandlePanicInModuleThen("core/refreshLibraryOnStart", func() {})
 				a.Logger.Debug().Msg("app: Refreshing library")

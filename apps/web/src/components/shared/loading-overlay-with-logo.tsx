@@ -129,7 +129,7 @@ export function LoadingOverlayWithLogo({
         >
             {/* Título & Branding */}
             <div className="flex flex-col items-center gap-7 z-[1] text-center">
-                <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-cinema-md uppercase leading-none text-white drop-shadow-[0_0_28px_rgba(245,158,11,0.25)] pl-[0.3em]">
+                <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-cinema-md uppercase leading-none text-label-1 drop-shadow-[0_0_24px_color-mix(in_srgb,var(--brand-accent-hex)_20%,transparent)] pl-[0.3em]">
                     {title ?? "KAMEHOUSE"}
                 </h1>
 
@@ -173,7 +173,7 @@ export function LoadingOverlayWithLogo({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-                    className="flex flex-col items-center gap-3 mt-6 z-[1] max-w-sm px-6 py-5 rounded-2xl bg-surface-container-high/80 border border-outline-variant/40 backdrop-blur-overlay-md shadow-elevation-3 text-center mx-4"
+                    className="flex flex-col items-center gap-3 mt-6 z-[1] max-w-sm px-6 py-5 rounded-2xl bg-surface-container-high/80 border border-outline-variant/40 backdrop-blur-overlay-md [[data-flat=true]_&]:backdrop-blur-none [[data-flat=true]_&]:bg-surface-container-high shadow-elevation-3 text-center mx-4"
                 >
                     {/* Ilustración de error recortada a la mitad inferior (solo cuello, hombros y manos). Decorativa: el texto explica el error. */}
                     <img
@@ -184,7 +184,7 @@ export function LoadingOverlayWithLogo({
                         className="w-48 aspect-[900/256] object-cover object-bottom select-none pointer-events-none"
                     />
                     <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-brand-destructive/10 border border-brand-destructive/20">
-                        <span className="w-2 h-2 rounded-full bg-brand-destructive animate-pulse" />
+                        <span className="w-2 h-2 rounded-full bg-brand-destructive animate-pulse motion-reduce:animate-none" />
                         <span className="text-xs font-semibold text-brand-destructive">
                             Sin conexión con el servidor
                         </span>
@@ -198,18 +198,18 @@ export function LoadingOverlayWithLogo({
                                 if (refetch) refetch()
                                 else window.location.reload()
                             }}
-                            intent="primary-glass"
+                            intent="primary"
                             size="sm"
-                            className="flex-1 rounded-xl text-xs font-semibold [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/15 cursor-pointer active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out"
+                            className="flex-1 rounded-xl text-xs font-semibold cursor-pointer transition-[background-color,border-color,transform] duration-fast ease-smooth-out"
                             leftIcon={<IconUiRefresh className="w-3.5 h-3.5" />}
                         >
                             Reintentar
                         </Button>
                         <Button
                             onClick={() => { window.location.href = "/settings" }}
-                            intent="gray-glass"
+                            intent="secondary"
                             size="sm"
-                            className="flex-1 rounded-xl text-xs font-semibold cursor-pointer active:scale-95 transition-[background-color,border-color,transform] duration-fast ease-smooth-out"
+                            className="flex-1 rounded-xl text-xs font-semibold cursor-pointer transition-[background-color,border-color,transform] duration-fast ease-smooth-out"
                             leftIcon={<IconNavigationSettings className="w-3.5 h-3.5" />}
                         >
                             Ajustes

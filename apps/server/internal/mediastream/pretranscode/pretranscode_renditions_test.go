@@ -44,6 +44,18 @@ func TestMasterPlaylistListsEveryAudioRendition(t *testing.T) {
 	}
 }
 
+func TestMasterPlaylistDoesNotExposeUndefinedAudioTitles(t *testing.T) {
+	got := masterPlaylist(sourceStreams{Audio: []sourceAudio{
+		{Title: "und", Language: "und"},
+		{Title: " UNKNOWN ", Language: "und"},
+	}}, 500_000)
+	for _, name := range []string{"Audio 1", "Audio 2"} {
+		if !strings.Contains(got, `NAME="`+name+`"`) {
+			t.Fatalf("missing %q in master:\n%s", name, got)
+		}
+	}
+}
+
 // A file without audio still gets a playable master: no rendition group, video codec only.
 func TestMasterPlaylistWithoutAudio(t *testing.T) {
 	got := masterPlaylist(sourceStreams{Width: 320, Height: 180}, 500_000)

@@ -105,7 +105,7 @@ func TestPruneDirectory_Generic(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
-func TestPruneDiskCache_TTLEviction(t *testing.T) {
+func TestPruneDirectory_TTLEviction(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a fresh file (10 minutes old) and an expired file (40 days old)
@@ -119,7 +119,7 @@ func TestPruneDiskCache_TTLEviction(t *testing.T) {
 	_ = os.Chtimes(freshFile, now.Add(-10*time.Minute), now.Add(-10*time.Minute))
 	_ = os.Chtimes(expiredFile, now.Add(-40*24*time.Hour), now.Add(-40*24*time.Hour))
 
-	freed, count, err := PruneDiskCache(tmpDir, 30*24*time.Hour, 0)
+	freed, count, err := PruneDirectory(tmpDir, ".jpg", 30*24*time.Hour, 0)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2000), freed)
 	assert.Equal(t, 1, count)
@@ -129,7 +129,7 @@ func TestPruneDiskCache_TTLEviction(t *testing.T) {
 	assert.FileExists(t, freshFile)
 }
 
-func TestPruneDiskCache_SizeEviction(t *testing.T) {
+func TestPruneDirectory_SizeEviction(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	now := time.Now()
@@ -151,7 +151,7 @@ func TestPruneDiskCache_SizeEviction(t *testing.T) {
 	// Deleting f1 (1000B) brings it to 2000B (which is > 1600).
 	// Deleting f2 (1000B) brings it to 1000B (which is <= 1600).
 	// So f1 and f2 should be evicted, and f3 should remain.
-	freed, count, err := PruneDiskCache(tmpDir, 0, 2000)
+	freed, count, err := PruneDirectory(tmpDir, ".jpg", 0, 2000)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2000), freed)
 	assert.Equal(t, 2, count)
@@ -161,7 +161,7 @@ func TestPruneDiskCache_SizeEviction(t *testing.T) {
 	assert.FileExists(t, f3)
 }
 
-func TestPruneDiskCache_OrphanedTmpFiles(t *testing.T) {
+func TestPruneDirectory_OrphanedTmpFiles(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	now := time.Now()
@@ -174,7 +174,7 @@ func TestPruneDiskCache_OrphanedTmpFiles(t *testing.T) {
 	_ = os.Chtimes(staleTmp, now.Add(-2*time.Hour), now.Add(-2*time.Hour))
 	_ = os.Chtimes(freshTmp, now.Add(-5*time.Minute), now.Add(-5*time.Minute))
 
-	freed, count, err := PruneDiskCache(tmpDir, 0, 0)
+	freed, count, err := PruneDirectory(tmpDir, ".jpg", 0, 0)
 	require.NoError(t, err)
 	assert.Equal(t, int64(500), freed)
 	assert.Equal(t, 1, count)

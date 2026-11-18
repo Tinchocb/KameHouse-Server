@@ -23,9 +23,9 @@ const props = {
 describe("SpotlightLowerHub: pestañas y contenido", () => {
     it("mantiene el panel asociado al cambiar de pestaña con teclado", async () => {
         render(<LazyMotion features={domAnimation}><SpotlightLowerHub {...props} /></LazyMotion>)
-        const sagas = screen.getByRole("tab", { name: /Sagas y arcos/ })
+        const sagas = screen.getByRole("tab", { name: /Sagas/ })
         const movies = screen.getByRole("tab", { name: /Películas/ })
-        const panel = screen.getByRole("tabpanel", { name: /Sagas y arcos/ })
+        const panel = screen.getByRole("tabpanel", { name: /Sagas/ })
         expect(sagas).toHaveAttribute("aria-controls", panel.id)
         expect(movies).toHaveAttribute("aria-controls", panel.id)
         sagas.focus()
@@ -37,7 +37,7 @@ describe("SpotlightLowerHub: pestañas y contenido", () => {
         await waitFor(() => expect(screen.queryByText("Saga disponible")).not.toBeInTheDocument())
         fireEvent.keyDown(movies, { key: "Home" })
         expect(sagas).toHaveFocus()
-        expect(screen.getByRole("tabpanel", { name: /Sagas y arcos/ })).toBe(panel)
+        expect(screen.getByRole("tabpanel", { name: /Sagas/ })).toBe(panel)
         await waitFor(() => expect(screen.queryByText("Película disponible")).not.toBeInTheDocument())
     })
 

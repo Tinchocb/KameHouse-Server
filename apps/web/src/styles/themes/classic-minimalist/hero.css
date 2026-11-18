@@ -1,0 +1,143 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  hero.css — Superficie Hero Spotlight & Fichas Multimedia             ║
+   ║  Spotlight Hero, Detail Hero, MediaHero                               ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
+
+/* Cero ruido visual ni auras borrosas detrás del hero */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([aria-label="Contenido destacado"], [aria-label="Película destacada"]) > div.pointer-events-none:first-child {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Card del Hero: filete sobrio; sin sombra exterior ni elevación */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-hero-card {
+  border: 1px solid var(--minimal-line-3) !important;
+  box-shadow: var(--minimal-hero-shadow) !important;
+  border-radius: var(--minimal-radius-lg) !important;
+  --spotlight-title-hover: var(--minimal-text-hi) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-hero-card h1,
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .hero-title {
+  font-family: var(--font-display) !important;
+  font-weight: var(--minimal-weight-semibold) !important;
+  text-transform: none !important;
+  letter-spacing: -0.02em !important;
+  text-shadow: var(--minimal-text-shadow-hero) !important;
+  --tw-drop-shadow: none !important;
+  filter: none !important;
+}
+
+/* Desactivar barrido shimmer decorativo */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .shimmer-sweep {
+  display: none !important;
+}
+
+/* CTAs del hero: el color viene de las recetas de buttons.css; acá talla,
+   elevación de 1 px y el único halo del tema («Reproducir»). */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-play-cta {
+  font-size: var(--minimal-font-md) !important;
+  min-height: var(--minimal-control-lg) !important;
+  padding-left: 1.375rem !important;
+  padding-right: 1.625rem !important;
+  box-shadow: var(--minimal-shadow-cta) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-play-cta:hover:where(:not(:disabled, [aria-disabled="true"], :active)) {
+  box-shadow: var(--minimal-shadow-cta-hover) !important;
+  transform: var(--minimal-lift) !important;
+}
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .era-opening-player {
+  font-size: var(--minimal-font-md) !important;
+  min-height: var(--minimal-control-lg) !important;
+  padding-left: 1.25rem !important;
+  padding-right: 1.375rem !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .era-opening-player:hover:where(:not(:disabled, [aria-disabled="true"], :active)),
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .detail-round-action:hover:where(:not(:disabled, [aria-disabled="true"], :active)) {
+  transform: var(--minimal-lift) !important;
+}
+}
+
+/* Chips "Sagas:" dentro del Hero */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-hero-card div:has(> .spotlight-saga-chip) {
+  display: flex !important;
+}
+
+/* Cabecera del hub inferior */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .sectionbar-minimal:has(.UI-SegmentedControl_root) > .sectionbar-header {
+  display: flex !important;
+}
+
+/* Chips de sagas */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-chip {
+  background: var(--minimal-fill-2) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  color: var(--minimal-text-2) !important;
+  border-radius: var(--minimal-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .spotlight-saga-chip:hover:where(:not(:disabled, [aria-disabled="true"], :active)) {
+  background: var(--minimal-fill-4) !important;
+  color: var(--minimal-text-hi) !important;
+  border-color: var(--minimal-line-4) !important;
+}
+}
+
+/* Metadatos de ficha y MediaMetadataCapsule: texto continuo separado por «·» */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .detail-meta-chip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--minimal-text-3) !important;
+  padding: 0 !important;
+  font-size: var(--minimal-font-sm) !important;
+  font-weight: var(--minimal-weight-medium) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .detail-meta-chip:not(:last-child)::after {
+  content: "·";
+  margin-left: 0.5rem;
+  margin-right: 0.25rem;
+  color: var(--minimal-text-faint);
+}
+
+/* Insignias de era en Hero: sólidas y monocromas */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.series-hero-era-badge, .movies-hero-era-badge) {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-3) !important;
+  color: var(--minimal-text-1) !important;
+  border-radius: var(--minimal-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+/* Acción redonda de la ficha (receta secundaria en buttons.css) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .detail-round-action {
+  width: var(--minimal-control-lg) !important;
+  height: var(--minimal-control-lg) !important;
+}
+
+/* Indicadores de puntos del carrusel: barra de avance monocroma perla sin degradados de era */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-label="Indicadores del carrusel"] {
+  --dot-accent: var(--minimal-accent) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-label="Indicadores del carrusel"] .animate-hero-progress {
+  background: var(--minimal-accent) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-label="Indicadores del carrusel"] span[style*="linear-gradient"] {
+  background: var(--minimal-accent) !important;
+}
+

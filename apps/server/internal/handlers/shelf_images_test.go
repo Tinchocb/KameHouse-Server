@@ -31,8 +31,16 @@ func TestShelfImageURLsCoincideConElFront(t *testing.T) {
 }
 
 func TestShelfImageURLsSoloPeliculasSinDaima(t *testing.T) {
-	got := shelfImageURLs([]models.LibraryMedia{{Type: "MOVIE", Format: "MOVIE", PosterImage: "https://image.tmdb.org/t/p/original/m.jpg"}})
-	want := []string{"https://image.tmdb.org/t/p/w342/m.jpg"}
+	got := shelfImageURLs([]models.LibraryMedia{
+		{Type: "MOVIE", Format: "MOVIE", PosterImage: "https://image.tmdb.org/t/p/original/m.jpg"},
+		{Type: "ANIME", Format: "OVA", PosterImage: "https://image.tmdb.org/t/p/original/ova.jpg"},
+		{Type: "ANIME", Format: "SPECIAL", PosterImage: "https://image.tmdb.org/t/p/original/sp.jpg"},
+	})
+	want := []string{
+		"https://image.tmdb.org/t/p/w342/m.jpg",
+		"https://image.tmdb.org/t/p/w342/ova.jpg",
+		"https://image.tmdb.org/t/p/w342/sp.jpg",
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v\nwant %v", got, want)
 	}

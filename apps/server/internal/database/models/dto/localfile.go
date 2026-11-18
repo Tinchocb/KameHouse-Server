@@ -164,15 +164,6 @@ func NewLocalFileS(opath string, dirPaths []string) *LocalFile {
 	return newLocalFile(opath, info)
 }
 
-// NewLocalFile creates and returns a reference to a new LocalFile struct.
-// It will parse the file's name and its directory names to extract necessary information.
-//   - opath: The full path to the file.
-//   - dirPath: The full path to the directory containing the file. (The library root path)
-func NewLocalFile(opath, dirPath string) *LocalFile {
-	info := filesystem.SeparateFilePath(opath, dirPath)
-	return newLocalFile(opath, info)
-}
-
 func newLocalFile(opath string, info *filesystem.SeparatedFilePath) *LocalFile {
 	// Parse filename
 	fElements := habari.Parse(info.Filename)

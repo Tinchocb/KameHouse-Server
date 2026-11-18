@@ -128,3 +128,34 @@ func TestProxyImageDesdeCacheSirveElTipoRealYEndurece(t *testing.T) {
 		t.Errorf("Content-Security-Policy = %q", got)
 	}
 }
+
+func TestProxyImageSirveDesdeMemoriaYPuedePurgarse(t *testing.T) {
+	ip := &ImageProxy{CacheDir: t.TempDir()}
+	const url = "http://127.0.0.1:1/ram.png"
+	cachePath := ip.getCachePath(url)
+	if err := os.WriteFile(cachePath, pngBytes, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Primera lectura carga disco en un open y puebla caché caliente en RAM.
+	first := serveProxyImage(t, ip, url)
+	if first.Code != http.StatusOK || first.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("primera lectura = %d (%q)", first.Code, first.Header().Get("Content-Type"))
+	}
+
+	// Incluso sin archivo en disco, la segunda lectura sale directo de RAM.
+	if err := os.Remove(cachePath); err != nil {
+		t.Fatal(err)
+	}
+	second := serveProxyImage(t, ip, url)
+	if second.Code != http.StatusOK || second.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("lectura desde RAM = %d (%q)", second.Code, second.Header().Get("Content-Type"))
+	}
+
+	// Al purgar la RAM (ej. desde Ajustes), vuelve a intentar disco/red y ya no sirve el eliminado.
+	ip.PurgeMemoryCache()
+	third := serveProxyImage(t, ip, url)
+	if third.Code == http.StatusOK {
+		t.Fatalf("tras purgar memoria no debería seguir sirviendo un archivo borrado")
+	}
+}

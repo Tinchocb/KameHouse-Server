@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"kamehouse/internal/database/models"
+	"slices"
 	"sync"
 
 	"gorm.io/gorm"
@@ -20,8 +21,7 @@ func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (
 		if media, _ := v.(*models.LibraryMedia); media == nil {
 			return nil, nil
 		} else {
-			copy := *media
-			return &copy, nil
+			return cloneLibraryMediaSnapshot(media), nil
 		}
 	}
 	var media models.LibraryMedia
@@ -34,35 +34,20 @@ func GetLibraryMediaByTmdbIdAndType(d *Database, tmdbID int, mediaType string) (
 		return nil, err
 	}
 	cache.Store(cacheKey, &media)
-	copy := media
-	return &copy, nil
+	return cloneLibraryMediaSnapshot(&media), nil
 }
 
-// GetLibraryMediaByID retrieves a LibraryMedia by its primary key ID.
-// Cloned to prevent caller mutating cached object.
-func GetLibraryMediaByID(d *Database, id uint) (*models.LibraryMedia, error) {
-	cache := d.libraryMediaSnapshot()
-	cacheKey := fmt.Sprintf("pk_%d", id)
-	if v, ok := cache.Load(cacheKey); ok {
-		if media, _ := v.(*models.LibraryMedia); media == nil {
-			return nil, nil
-		} else {
-			copy := *media
-			return &copy, nil
-		}
-	}
-	var media models.LibraryMedia
-	err := d.Gorm().First(&media, id).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			cache.Store(cacheKey, (*models.LibraryMedia)(nil))
-			return nil, nil
-		}
-		return nil, err
-	}
-	cache.Store(cacheKey, &media)
-	copy := media
-	return &copy, nil
+// Cache entries come exclusively from SQL, so the GORM-ignored Relations and
+// Characters fields are nil. Copy every persisted JSON buffer before exposing
+// a snapshot: copying the struct alone still shares their backing arrays.
+func cloneLibraryMediaSnapshot(media *models.LibraryMedia) *models.LibraryMedia {
+	copy := *media
+	copy.Synonyms = slices.Clone(media.Synonyms)
+	copy.Genres = slices.Clone(media.Genres)
+	copy.Tags = slices.Clone(media.Tags)
+	copy.AudioTracks = slices.Clone(media.AudioTracks)
+	copy.SubtitleTracks = slices.Clone(media.SubtitleTracks)
+	return &copy
 }
 
 // GetMediaEntryListData retrieves the MediaEntryListData for a given LibraryMedia ID.
@@ -111,7 +96,7 @@ func UpsertLibraryMediaBatchContext(ctx context.Context, d *Database, media []*m
 
 // InsertLibraryMediaBatchIfMissing inserta solo los LibraryMedia cuyo (tmdb_id, type)
 // todavía no existe; los existentes quedan intactos. Es para orígenes con datos
-// parciales (NFO locales): UpsertLibraryMediaBatch pisaría con campos vacíos el
+// parciales (NFO locales): UpsertLibraryMediaBatchContext pisaría con campos vacíos el
 // póster, la descripción y demás que un enriquecimiento previo ya había guardado.
 func InsertLibraryMediaBatchIfMissing(d *Database, media []*models.LibraryMedia, batchSize int) error {
 	if len(media) == 0 {

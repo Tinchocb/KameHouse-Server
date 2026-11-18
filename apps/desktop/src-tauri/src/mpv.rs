@@ -6,7 +6,6 @@
 // playback-sync endpoint, so continuity/scrobbling work exactly like the web player.
 //
 // Events emitted to the webview:
-//   mpv:started  { mediaId, episodeNumber }
 //   mpv:progress { currentTime, duration, paused, mediaId, episodeNumber }
 //   mpv:exited   { currentTime, duration, mediaId, episodeNumber }
 //
@@ -246,11 +245,6 @@ impl MpvManager {
         for (id, prop) in [(1, "time-pos"), (2, "duration"), (3, "pause")] {
             let _ = cmd_tx.send(format!(r#"{{"command":["observe_property",{},"{}"]}}"#, id, prop));
         }
-
-        let _ = app.emit(
-            "mpv:started",
-            serde_json::json!({ "mediaId": req.media_id, "episodeNumber": req.episode_number }),
-        );
 
         // Reader task: parse mpv events with serde_json::from_slice on raw bytes.
         // Avoids UTF-8 validation and String allocation from lines().

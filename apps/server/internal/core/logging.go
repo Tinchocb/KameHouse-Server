@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sort"
@@ -11,6 +12,13 @@ import (
 )
 
 func TrimLogEntries(dir string, logger *zerolog.Logger) {
+	TrimLogEntriesContext(context.Background(), dir, logger)
+}
+
+func TrimLogEntriesContext(ctx context.Context, dir string, logger *zerolog.Logger) {
+	if ctx.Err() != nil {
+		return
+	}
 	// Get all log files in the directory
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -20,6 +28,9 @@ func TrimLogEntries(dir string, logger *zerolog.Logger) {
 
 	var files []os.FileInfo
 	for _, entry := range entries {
+		if ctx.Err() != nil {
+			return
+		}
 		if entry.IsDir() {
 			continue
 		}
@@ -34,6 +45,9 @@ func TrimLogEntries(dir string, logger *zerolog.Logger) {
 	var scanLogFiles []os.FileInfo
 
 	for _, file := range files {
+		if ctx.Err() != nil {
+			return
+		}
 		if strings.HasPrefix(file.Name(), "KameHouse-") {
 			serverLogFiles = append(serverLogFiles, file)
 		} else if strings.Contains(file.Name(), "-scan") {
@@ -55,6 +69,9 @@ func TrimLogEntries(dir string, logger *zerolog.Logger) {
 		// Delete all log files older than 14 days
 		deleted := 0
 		for i := 1; i < len(files); i++ {
+			if ctx.Err() != nil {
+				return
+			}
 			if time.Since(files[i].ModTime()) > 14*24*time.Hour {
 				err := os.Remove(filepath.Join(dir, files[i].Name()))
 				if err != nil {

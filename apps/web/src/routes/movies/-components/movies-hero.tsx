@@ -1,7 +1,6 @@
 import * as React from "react"
 import { cn } from "@/components/ui/core/styling"
-import { useIsClassicMode } from "@/lib/theme/use-classic-mode"
-import { getFormatLabel } from "@/lib/helpers/media"
+import { useIsClassicMode, useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 import { useState, useCallback, useMemo } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { m, AnimatePresence } from "framer-motion"
@@ -17,26 +16,26 @@ import { SpotlightEraNav } from "@/components/ui/spotlight/spotlight-era-nav"
 import type { SwimlaneItem } from "@/components/ui/swimlane"
 import { useHeroBackdrop } from "@/hooks/use-hero"
 import { stripHtml } from "@/lib/helpers/sanitizer"
-import { getMediumResImage, getLowResImage, localImage } from "@/lib/helpers/images"
+import { getMediumResImage, getLowResImage, localImage, prewarmImages } from "@/lib/helpers/images"
+import { Skeleton } from "@/components/ui/skeleton/skeleton"
+import { HeroContent } from "@/components/ui/spotlight/hero-content"
 import { HeroBackdrop } from "@/components/ui/spotlight/hero-backdrop"
 import { useQueueStore } from "@/lib/store"
 import {
     useMotionTier,
     heroContainerVariants,
     heroItemVariants,
-    heroFadeOnlyVariants,
     heroBackdropFadeVariants,
+    heroBackdropSubtleVariants,
 } from "@/components/ui/kinetics"
 import { fetchAnimeEntry } from "@/api/hooks/anime_entries.hooks"
 import { toast } from "sonner"
 import { EmptyState } from "@/components/shared/empty-state"
 import { MoreActionsMenu, PrimaryPlayButton, ResumeProgress, RoundAction } from "@/components/media-detail/detail-actions"
-import { useHideAudienceScore } from "@/lib/theme/theme-hooks"
 import { getMovieLore, getEntryTitle, getLoreDescription, createShuffledIndices, getMovieProgress } from "./movies-utils"
 import { getMovieHeroArt, heroArtFromUrl, DEFAULT_MOVIE_FOCAL, POSTER_FOCAL } from "@/lib/config/hero-art"
 import { HERO_AURA_CLASS, HERO_STAGE_CLASS } from "@/lib/config/hero-stage"
 import { HeroCarouselDots } from "@/components/ui/spotlight/hero-carousel-dots"
-import { HeroMetaLine } from "@/components/ui/spotlight/hero-meta-line"
 
 interface MoviesHeroProps {
     topFeatured: MovieEntry[]
@@ -69,11 +68,25 @@ export function MoviesHero({
     const [, setShuffleQueue] = useState<number[]>([])
     const [isHeroHovered, setIsHeroHovered] = useState(false)
     const motionTier = useMotionTier()
-    const hideAudienceScore = useHideAudienceScore()
     const allowCinematicMotion = motionTier === "full"
 
     // Identificador estable de la colección para detectar cambios reales de era o filtro
     const topFeaturedIds = useMemo(() => topFeatured.map((m, idx) => m.mediaId ?? idx).join(","), [topFeatured])
+
+    // Precarga en reposo de las portadas del carrusel para transiciones instantáneas
+    React.useEffect(() => {
+        if (!topFeatured.length) return
+        const urls = topFeatured.slice(0, 8).map(m => {
+            const art = getMovieHeroArt({
+                mediaId: m.mediaId,
+                tmdbId: m.media?.tmdbId,
+                bannerImage: m.media?.bannerImage,
+                posterImage: m.media?.posterImage,
+            })
+            return art?.src ?? m.media?.bannerImage ?? null
+        }).filter(Boolean)
+        prewarmImages(urls)
+    }, [topFeatured])
 
     // Entrada aleatoria y nueva cola shuffle al cambiar de era / colección de películas
     const [prevFeaturedIds, setPrevFeaturedIds] = useState(topFeaturedIds)
@@ -117,7 +130,7 @@ export function MoviesHero({
             setFeaturedIndex(nextIdx)
             return queue
         })
-    }, [topFeatured.length, featuredIndex])
+    }, [topFeatured.length, featuredIndex, setShuffleQueue, setFeaturedIndex])
 
     const handleSelectSlide = useCallback((index: number) => {
         setFeaturedIndex(index)
@@ -132,6 +145,7 @@ export function MoviesHero({
     const currentColors = ERA_COLOR_MAP[currentEraId]
     // Neutro: el color de saga queda solo en el punto de la era (identidad); filete, brillo y aura van en gris.
     const isClassic = useIsClassicMode()
+    const isMinimalist = useIsMinimalistMode()
     const currentEraLabel = ERAS.find(e => e.id === currentEraId)?.title ?? "Dragon Ball"
 
     // Progreso: misma regla que la tarjeta y los filtros (getMovieProgress).
@@ -141,18 +155,17 @@ export function MoviesHero({
     const remainingMinutes = hasProgress && watchDuration > 0
         ? Math.max(1, Math.round((watchDuration - (watchItem?.currentTime || 0)) / 60))
         : null
-    // El runtime de la ficha viene en 0 en muchas películas: se completa con la duración del historial.
-    const runtimeMinutes = (displayMedia?.runtime ?? 0) > 0
-        ? displayMedia?.runtime ?? 0
-        : watchDuration > 0 ? Math.round(watchDuration / 60) : 0
     const hasLocalFiles = (currentMovie?.libraryData?.mainFileCount || 0) > 0
 
-    const heroArt = getMovieHeroArt({
+    // Argumentos en variable: React Compiler no admite ?. dentro de la prueba de un ??.
+    const heroArtInput = {
         mediaId: currentMovie?.mediaId,
         tmdbId: displayMedia?.tmdbId,
         bannerImage: displayMedia?.bannerImage,
         posterImage: displayMedia?.posterImage,
-    }) ?? (displayMedia?.bannerImage ? heroArtFromUrl(displayMedia.bannerImage, { focal: DEFAULT_MOVIE_FOCAL }) : null)
+    }
+    const heroArtFromMedia = getMovieHeroArt(heroArtInput)
+    const heroArt = heroArtFromMedia ?? (displayMedia?.bannerImage ? heroArtFromUrl(displayMedia.bannerImage, { focal: DEFAULT_MOVIE_FOCAL }) : null)
     const backdropSrc = heroArt?.src ?? null
     const posterSrc = displayMedia?.posterImage ?? null
     // Si no hay backdrop horizontal ni banner, usamos poster como fallback visual seguro
@@ -182,11 +195,11 @@ export function MoviesHero({
     // El botón confirma en el lugar (lista → ✓) además del toast.
     const [justQueued, flashQueued] = useTransientFlag(1600)
 
-    const handleAddToQueue = async (e: React.MouseEvent) => {
+    const handleAddToQueue = (e: React.MouseEvent) => {
         e.stopPropagation()
         if (!currentMovie?.mediaId) return
-        try {
-            const fullEntry = await fetchAnimeEntry(String(currentMovie.mediaId))
+        // Promesa en vez de try/catch: el compilador de React no optimiza componentes con try.
+        void fetchAnimeEntry(String(currentMovie.mediaId)).then((fullEntry) => {
             const localFile = fullEntry?.localFiles?.[0]
             if (localFile && localFile.path) {
                 useQueueStore.getState().addToQueue({
@@ -206,27 +219,11 @@ export function MoviesHero({
             } else {
                 toast.info("Esta película no tiene archivos locales para reproducir.")
             }
-        } catch (err) {
+        }).catch((err) => {
             console.error(err)
             toast.error("No se pudo añadir a Mi Lista")
-        }
+        })
     }
-
-    // Metadatos en una línea: formato (solo si no es "Película") · año · min · era · valoración · estado.
-    const formatLabel = getFormatLabel(displayMedia?.format, "Película")
-    const score = displayMedia?.score ?? 0
-    const rating = !hideAudienceScore && score > 0 ? (score / 10).toFixed(1) : null
-    const metaItems: React.ReactNode[] = [
-        formatLabel !== "Película" ? formatLabel : null,
-        displayMedia?.year ? String(displayMedia.year) : null,
-        runtimeMinutes > 0 ? `${runtimeMinutes} min` : null,
-        rating ? <span key="rating">★ {rating}</span> : null,
-        isCompleted ? (
-            <span key="seen" className="inline-flex items-center gap-1 text-status-success font-semibold">
-                <IconUiCheck className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" /> Visto
-            </span>
-        ) : null,
-    ].filter(Boolean)
 
     const moreItems = [
         { label: "Ver en la Cronología", onSelect: () => { void navigate({ to: "/chronology", search: { era: currentEraId } }) } },
@@ -243,42 +240,46 @@ export function MoviesHero({
             className="relative w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-nav pb-8 select-none flex flex-col justify-start space-y-4"
         >
             {/* Ambient Aura Background */}
-            <div className={HERO_AURA_CLASS}>
-                {/* AnimatePresence (sync): fundido cruzado entre auras, sin bache de luz.
-                    Solo opacidad (sin scale sobre la capa con blur); 0.32 es el único valor
-                    destino. 0.5 s = --duration-very-slow, curva --ease-smooth-out. */}
-                <AnimatePresence initial={false}>
-                    {backdropSrc && currentMovie && (
-                        <m.div
-                            key={currentMovie.mediaId + "_outer_aura"}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.32 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                            className="absolute -inset-16 pointer-events-none overflow-hidden"
-                            style={{
-                                backgroundImage: `url(${localImage(getLowResImage(backdropSrc))})`,
-                                backgroundSize: "cover",
-                                backgroundPosition: "center 20%",
-                                filter: isClassic ? "blur(48px) saturate(15%)" : "blur(48px) saturate(140%)",
-                                maskImage: "radial-gradient(ellipse 90% 80% at 70% 40%, black 0%, transparent 75%)",
-                                WebkitMaskImage: "radial-gradient(ellipse 90% 80% at 70% 40%, black 0%, transparent 75%)",
-                            }}
-                        />
-                    )}
-                </AnimatePresence>
+            {!isMinimalist && !isClassic && (
+                <div className={HERO_AURA_CLASS}>
+                    {/* AnimatePresence (sync): fundido cruzado entre auras, sin bache de luz.
+                        Solo opacidad (sin scale sobre la capa con blur); 0.32 es el único valor
+                        destino. 0.5 s = --duration-very-slow, curva --ease-smooth-out. */}
+                    <AnimatePresence initial={false}>
+                        {backdropSrc && currentMovie && (
+                            <m.div
+                                key={currentMovie.mediaId + "_outer_aura"}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 0.32 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                                className="absolute -inset-16 pointer-events-none overflow-hidden"
+                                style={{
+                                    backgroundImage: `url(${localImage(getLowResImage(backdropSrc))})`,
+                                    backgroundSize: "cover",
+                                    backgroundPosition: "center 20%",
+                                    filter: "blur(48px) saturate(140%)",
+                                    maskImage: "radial-gradient(ellipse 90% 80% at 70% 40%, black 0%, transparent 75%)",
+                                    WebkitMaskImage: "radial-gradient(ellipse 90% 80% at 70% 40%, black 0%, transparent 75%)",
+                                }}
+                            />
+                        )}
+                    </AnimatePresence>
 
-                {/* Sin orbe de era: el color llega solo por el tinte de fondo de arriba. */}
-            </div>
+                    {/* Sin orbe de era: el color llega solo por el tinte de fondo de arriba. */}
+                </div>
+            )}
 
-            {/* 1. Filtro de era: riel fijo (portal), no ocupa una franja del flujo */}
-            <SpotlightEraNav
-                activeEraId={activeEraId}
-                categorizedData={categorizedData}
-                onSelectEra={onSelectEra}
-                onHoverSound={onHoverSound}
-                showAllOption
-            />
+            {/* 1. Filtro de era: riel fijo (portal), solo cuando hay películas en la biblioteca */}
+            {libraryHasMovies && (
+                <SpotlightEraNav
+                    activeEraId={activeEraId}
+                    categorizedData={categorizedData}
+                    onSelectEra={onSelectEra}
+                    onHoverSound={onHoverSound}
+                    showAllOption
+                />
+            )}
 
             {/* 2. Escenario del hero */}
             <div className="relative z-10 w-full">
@@ -286,8 +287,8 @@ export function MoviesHero({
                     loading={isLoading && !currentMovie}
                     skeleton={
                         // Misma caja que el escenario real: sin salto al llegar los datos.
-                        <div
-                            className={cn("w-full relative rounded-hero overflow-hidden border border-outline-variant bg-bg-primary animate-pulse", HERO_STAGE_CLASS)}
+                        <Skeleton
+                            className={cn("w-full relative rounded-hero", HERO_STAGE_CLASS)}
                             role="status"
                             aria-label="Cargando películas destacadas"
                         />
@@ -295,10 +296,15 @@ export function MoviesHero({
                 >
                     {!currentMovie ? (
                         <div
-                            className="w-full relative rounded-hero overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] flex items-center justify-center border border-outline-variant shadow-hero bg-bg-primary transition-colors duration-700 p-6"
-                            style={{
+                            className={cn(
+                                "w-full relative flex items-center justify-center p-6",
+                                libraryHasMovies
+                                    ? "rounded-hero overflow-hidden min-h-[320px] sm:min-h-[360px] md:min-h-[400px] border border-[var(--neutral-separator)] shadow-hero bg-bg-primary transition-colors duration-700"
+                                    : "py-10"
+                            )}
+                            style={libraryHasMovies ? {
                                 borderColor: isClassic ? "var(--neutral-separator)" : `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
-                            }}
+                            } : undefined}
                         >
                             <EmptyState
                                 headingLevel="h2"
@@ -310,7 +316,12 @@ export function MoviesHero({
                                     <Link
                                         to="/settings"
                                         search={{ tab: "library" }}
-                                        className={ButtonAnatomy.root({ intent: "primary", size: "lg" })}
+                                        data-intent="primary"
+                                        data-size="lg"
+                                        className={cn(
+                                            ButtonAnatomy.root({ intent: "primary", size: "lg" }),
+                                            "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong motion-safe:active:scale-[0.97]"
+                                        )}
                                     >
                                         Ir a Ajustes
                                     </Link>
@@ -319,16 +330,16 @@ export function MoviesHero({
                         </div>
                     ) : (
                         <div
-                            className={`w-full relative rounded-hero overflow-hidden ${HERO_STAGE_CLASS} flex flex-col justify-end border border-outline-variant shadow-hero bg-bg-primary transition-colors duration-700`}
+                            className={`w-full relative rounded-hero overflow-hidden ${HERO_STAGE_CLASS} flex flex-col justify-end border border-[var(--neutral-separator)] shadow-hero bg-bg-primary transition-colors duration-700`}
                             style={{
                                 borderColor: isClassic ? "var(--neutral-separator)" : `color-mix(in srgb, ${currentColors.accent} 25%, rgba(255,255,255,0.12))`
                             }}
                         >
                         {/* Arte a sangre con fundido cinematográfico */}
-                        <AnimatePresence mode="popLayout">
+                        <AnimatePresence mode="sync">
                             <m.div
                                 key={currentMovie.mediaId + "_visual"}
-                                variants={heroBackdropFadeVariants}
+                                variants={allowCinematicMotion ? heroBackdropFadeVariants : heroBackdropSubtleVariants}
                                 initial="initial"
                                 animate="animate"
                                 exit="exit"
@@ -352,60 +363,70 @@ export function MoviesHero({
                         </AnimatePresence>
 
                         {/* Contenido Cinematográfico Natural: flota directamente con respiro y jerarquía */}
-                        <div className="relative z-hero-content flex flex-wrap items-end justify-between p-6 sm:p-8 md:p-10 lg:p-12 gap-6 w-full pointer-events-none">
-                            <div className="flex flex-col gap-3.5 w-full max-w-2xl pointer-events-auto text-left">
-                                <AnimatePresence mode="wait" initial={false}>
-                                    <m.div
+                        <div className="relative z-hero-content flex flex-col justify-end p-5 sm:p-6 md:p-8 space-y-2.5 w-full pointer-events-none">
+                            <div className="grid w-full max-w-sm sm:max-w-md lg:max-w-hero-content">
+                                <AnimatePresence mode="sync" initial={false}>
+                                    <HeroContent
                                         key={currentMovie.mediaId + "_content"}
                                         variants={allowCinematicMotion ? heroContainerVariants : undefined}
                                         initial={allowCinematicMotion ? "hidden" : { opacity: 0 }}
-                                        animate={allowCinematicMotion ? "visible" : { opacity: 1, transition: { duration: 0.25 } }}
-                                        exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                                        className="flex flex-col gap-3 transform-gpu will-change-transform text-left w-full"
+                                        animate={allowCinematicMotion ? "visible" : { opacity: 1, transition: { duration: 0.35, ease: "easeInOut" } }}
+                                        exit={{ opacity: 0, transition: { duration: 0.25, ease: "easeInOut" } }}
+                                        className="flex flex-col space-y-2.5 text-left w-full pointer-events-auto"
+                                        style={{
+                                            "--spotlight-title-hover": isClassic ? "var(--label-1)" : (currentColors?.accent ?? "var(--brand-accent)"),
+                                        } as React.CSSProperties}
                                     >
-                                        {/* Eyebrow Pill de la Era */}
-                                        <m.div variants={heroFadeOnlyVariants} className="flex items-center gap-2">
-                                            <span
-                                                className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border backdrop-blur-md"
-                                                style={{
-                                                    backgroundColor: `color-mix(in srgb, ${currentColors.accent} 18%, transparent)`,
-                                                    borderColor: `color-mix(in srgb, ${currentColors.accent} 35%, transparent)`,
-                                                    color: currentColors.accent,
-                                                }}
-                                            >
-                                                {currentEraLabel}
-                                            </span>
-                                            {displayMedia?.year ? (
-                                                <span className="hidden sm:inline text-xs text-white/70 font-medium [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]">
-                                                    · {displayMedia.year}
-                                                </span>
-                                            ) : null}
-                                        </m.div>
-
                                         <m.h1
                                             variants={heroItemVariants}
-                                            className="font-display font-extrabold text-hero-title tracking-tight leading-[1.04] text-white select-none text-balance line-clamp-2 text-edge-glow"
+                                            className="hero-title font-display font-extrabold text-hero-title tracking-tight leading-[1.04] text-white select-none text-balance line-clamp-2 text-edge-glow"
                                         >
-                                            {movieTitle}
+                                            <span
+                                                role="link"
+                                                tabIndex={0}
+                                                aria-label={`Ver ${movieTitle}`}
+                                                onClick={() => {
+                                                    if (currentMovie.mediaId != null) {
+                                                        handleMovieClick(currentMovie.mediaId)
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" || e.key === " ") {
+                                                        e.preventDefault()
+                                                        if (currentMovie.mediaId != null) {
+                                                            handleMovieClick(currentMovie.mediaId)
+                                                        }
+                                                    }
+                                                }}
+                                                className="cursor-pointer hover:text-[var(--spotlight-title-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent rounded"
+                                            >
+                                                {movieTitle}
+                                            </span>
                                         </m.h1>
-
-                                        {/* Metadatos en una línea */}
-                                        <HeroMetaLine items={metaItems} variants={heroFadeOnlyVariants} />
 
                                         {plainDescription && (
                                             <m.p
                                                 variants={heroItemVariants}
-                                                className="text-on-surface/90 text-xs sm:text-sm md:text-base leading-relaxed font-normal select-none line-clamp-3 text-pretty max-w-xl [text-shadow:0_1px_3px_rgba(0,0,0,0.85)]"
+                                                className="hero-synopsis text-on-surface/90 text-xs sm:text-sm font-normal max-w-xl leading-relaxed select-none line-clamp-3 text-pretty drop-shadow"
                                             >
                                                 {plainDescription}
                                             </m.p>
                                         )}
-                                    </m.div>
-                                </AnimatePresence>
 
-                                {/* Acción principal + acciones redondas */}
-                                <div className="flex flex-wrap items-center gap-3 pt-1">
+                                        {hasProgress && (
+                                            <div className="w-full max-w-sm pointer-events-none pt-0.5">
+                                                <ResumeProgress percent={progressPercent} label={`${progressPercent} % visto`} />
+                                            </div>
+                                        )}
+                                    </HeroContent>
+                                </AnimatePresence>
+                            </div>
+
+                            {/* Fila de acciones y dots unificada */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 w-full pointer-events-auto">
+                                <div className="hero-actions flex flex-wrap items-center gap-3">
                                     <PrimaryPlayButton
+                                        className="spotlight-play-cta"
                                         label={hasProgress ? "Continuar" : isCompleted ? "Ver de nuevo" : "Ver película"}
                                         detail={remainingMinutes ? `quedan ${remainingMinutes} min` : null}
                                         onClick={() => {
@@ -429,31 +450,25 @@ export function MoviesHero({
                                     <MoreActionsMenu items={moreItems} />
                                 </div>
 
-                                {hasProgress && (
-                                    <div className="w-full max-w-sm pointer-events-none">
-                                        <ResumeProgress percent={progressPercent} label={`${progressPercent} % visto`} />
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Puntos del carrusel (compartidos con Inicio) */}
-                            <div className="pointer-events-auto ml-auto">
-                                <HeroCarouselDots
-                                    count={topFeatured.length}
-                                    activeIndex={featuredIndex}
-                                    onSelect={handleSelectSlide}
-                                    getLabel={(i) => `Ir a película ${i + 1} de ${topFeatured.length}`}
-                                    accentColor={currentColors?.accent}
-                                    getAccentColor={(i) => ERA_COLOR_MAP[topFeatured[i]?.eraId ?? currentEraId]?.accent}
-                                    getPeekTitle={(i) => {
-                                        const entry = topFeatured[i]
-                                        if (!entry) return undefined
-                                        return cleanMovieTitle(getEntryTitle(entry) || getMovieLore(entry)?.title || "Película")
-                                    }}
-                                    paused={isHeroHovered || !!debouncedMovie}
-                                    showProgress={allowCinematicMotion}
-                                    onCycleComplete={advanceShuffle}
-                                />
+                                {/* Puntos del carrusel */}
+                                <div className="pointer-events-auto ml-auto">
+                                    <HeroCarouselDots
+                                        count={topFeatured.length}
+                                        activeIndex={featuredIndex}
+                                        onSelect={handleSelectSlide}
+                                        getLabel={(i) => `Ir a película ${i + 1} de ${topFeatured.length}`}
+                                        accentColor={isClassic ? "var(--label-1)" : currentColors?.accent}
+                                        getAccentColor={isClassic ? () => "var(--label-1)" : (i) => ERA_COLOR_MAP[topFeatured[i]?.eraId ?? currentEraId]?.accent}
+                                        getPeekTitle={(i) => {
+                                            const entry = topFeatured[i]
+                                            if (!entry) return undefined
+                                            return cleanMovieTitle(getEntryTitle(entry) || getMovieLore(entry)?.title || "Película")
+                                        }}
+                                        paused={isHeroHovered || !!debouncedMovie}
+                                        showProgress={allowCinematicMotion}
+                                        onCycleComplete={advanceShuffle}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

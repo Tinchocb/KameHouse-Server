@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
 import { cn } from "@/components/ui/core/styling"
 import { Button, IconButton } from "@/components/ui/button"
-import { IconUiMinus, IconUiPlus, IconUiCheck, IconUiSpinner } from "@/components/ui/icons";
+import { IconUiMinus, IconUiPlus, IconUiSpinner } from "@/components/ui/icons";
+import { SelectionMark } from "@/components/ui/kinetics/selection-mark"
 import { useSubtitleLoadStore } from "@/components/video/subtitle-load-store"
 import type { SubtitleTrack } from "../track-types"
+import { subtitleTrackName } from "./track-labels"
 
 /** Los subtítulos externos (archivos sueltos junto al video) usan índices desde 1000. */
 const EXTERNAL_TRACK_BASE = 1000
@@ -119,7 +121,7 @@ export function SubtitleSettings({
                                     style={{ transform: `scaleX(${(drive.state === "running" ? Math.max(3, drive.percent) : 3) / 100})` }}
                                 />
                             </div>
-                            <Button type="button" intent="gray-basic" size="xs" className="self-start" onClick={driveActions.cancel}>
+                            <Button type="button" intent="ghost" size="xs" className="self-start" onClick={driveActions.cancel}>
                                 Cancelar
                             </Button>
                         </div>
@@ -128,7 +130,7 @@ export function SubtitleSettings({
                             {drive.state === "error" && drive.error && (
                                 <p className="text-xs text-[color:color-mix(in_srgb,var(--status-error),white_35%)]" role="alert">{drive.error}</p>
                             )}
-                            <Button type="button" intent="gray-subtle" size="sm" className="self-start" onClick={driveActions.extract}>
+                            <Button type="button" intent="secondary" size="sm" className="self-start" onClick={driveActions.extract}>
                                 {drive.state === "error" ? "Reintentar extracción" : "Extraer subtítulos"}
                             </Button>
                         </>
@@ -138,25 +140,21 @@ export function SubtitleSettings({
 
             {/* Track list */}
             <button
+                type="button"
                 onClick={() => onSelectSubtitle(null)}
+                aria-pressed={activeSubtitleIndex === null}
                 className={cn(
-                    "w-full flex items-center justify-between min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer group text-left relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                    "w-full flex items-center justify-between min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-out-strong motion-safe:active:scale-[0.97] cursor-pointer group text-left relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
                     activeSubtitleIndex === null ? "bg-[var(--neutral-elev-3)] text-label-1" : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1"
                 )}
             >
-                {/* Hover/Active left-edge accent indicator */}
-                <span className={cn(
-                    "hidden",
-                    activeSubtitleIndex === null ? "h-1/2 bg-brand-accent" : "h-0 bg-outline-variant group-hover:h-1/3"
-                )} />
-
                 <span className={cn(
                     "text-xs font-bold transition-colors duration-base",
                     activeSubtitleIndex === null ? "text-brand-accent-readable" : "text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
                 )}>
                     Desactivado
                 </span>
-                {activeSubtitleIndex === null && <IconUiCheck className="w-4 h-4 text-brand-accent" />}
+                <SelectionMark selected={activeSubtitleIndex === null} />
             </button>
 
             {isEmpty && (
@@ -191,7 +189,7 @@ export function SubtitleSettings({
                 </div>
             )}
 
-            {subtitleTracks.map((track) => {
+            {subtitleTracks.map((track, position) => {
                 const isActive = track.index === activeSubtitleIndex
                 const isPending = !!track.needsExtraction
                 const isCurrentLoad = isActive && loadingIndex === track.index
@@ -207,28 +205,24 @@ export function SubtitleSettings({
                             : [isExternal ? "Archivo externo" : undefined, track.codec?.toUpperCase(), track.forced ? "Forzado" : undefined].filter(Boolean).join(" · ")
                 return (
                     <button
+                        type="button"
                         key={track.index}
                         onClick={() => onSelectSubtitle(track)}
+                        aria-pressed={isActive}
                         disabled={isPending}
                         aria-busy={isLoadingThis}
                         className={cn(
-                            "w-full flex items-center justify-between min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-out-strong active:scale-95 cursor-pointer group text-left relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
-                            isPending && "opacity-60 cursor-not-allowed active:scale-100",
+                            "w-full flex items-center justify-between min-h-[44px] py-2 px-3 rounded-full transition-[background-color,color,transform] duration-fast ease-out-strong motion-safe:active:scale-[0.97] cursor-pointer group text-left relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent",
+                            isPending && "opacity-60 cursor-not-allowed motion-safe:active:scale-100",
                             isActive ? "bg-[var(--neutral-elev-3)] text-label-1" : "text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1"
                         )}
                     >
-                        {/* Hover/Active left-edge accent indicator */}
-                        <span className={cn(
-                            "hidden",
-                            isActive ? "h-1/2 bg-brand-accent" : "h-0 bg-outline-variant group-hover:h-1/3"
-                        )} />
-
                         <div className="flex flex-col transition-transform duration-base ease-out">
                             <span className={cn(
                                 "text-xs font-bold leading-none transition-colors duration-base",
                                 isActive ? "text-brand-accent-readable" : "text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface"
                             )}>
-                                {track.title || getFriendlyLanguage(track.language)}
+                                {subtitleTrackName(track, position, getFriendlyLanguage)}
                             </span>
                             <span
                                 className={cn(
@@ -240,9 +234,7 @@ export function SubtitleSettings({
                                 {subLabel}
                             </span>
                         </div>
-                        {isLoadingThis
-                            ? <IconUiSpinner className="w-4 h-4 text-brand-accent animate-spin" />
-                            : isActive && !hasError && <IconUiCheck className="w-4 h-4 text-brand-accent" />}
+                        <SelectionMark selected={isActive && !hasError} pending={isLoadingThis} />
                     </button>
                 )
             })}

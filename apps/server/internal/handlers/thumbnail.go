@@ -12,12 +12,13 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"kamehouse/internal/util"
 	"kamehouse/internal/util/cache"
 	"kamehouse/internal/util/ffmpegutil"
+	"kamehouse/internal/util/resourcebudget"
+	"kamehouse/internal/util/result"
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/sync/singleflight"
@@ -41,8 +42,9 @@ var (
 	// singleflight only dedupes identical keys: without this cap a cold grid spawns one
 	// ffprobe+ffmpeg per tile at the same time.
 	thumbnailGenSem = make(chan struct{}, thumbnailGenConcurrency())
-	// hash -> time.Time of the last failed extraction.
-	thumbnailFailed sync.Map
+	// Bound failures as well as successful images: expired one-off hashes must
+	// not accumulate forever when a large library contains broken files.
+	thumbnailFailed = result.NewBoundedCache[string, bool](2048)
 
 	errThumbnailUnavailable = errors.New("thumbnail extraction failed recently")
 )
@@ -51,8 +53,6 @@ func thumbnailGenConcurrency() int {
 	return min(max(runtime.NumCPU()/2, 2), 4)
 }
 
-// thumbnailHash identifies one extracted frame: source path, mtime, size and optional offset.
-// The disk file, the memory LRU entry and the ETag all derive from it.
 // isLexicallyUnder reports whether path is inside dir by path syntax alone,
 // without touching the filesystem.
 func isLexicallyUnder(dir, path string) bool {
@@ -66,6 +66,8 @@ func isLexicallyUnder(dir, path string) bool {
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
 
+// thumbnailHash identifies a frame by source path, mtime, size and offset.
+// The disk file, memory LRU entry and ETag all derive from it.
 func thumbnailHash(videoPath string, videoStat os.FileInfo, offsetSec *int) string {
 	key := make([]byte, 0, len(videoPath)+64)
 	key = append(key, videoPath...)
@@ -100,15 +102,8 @@ func etagMatches(ifNoneMatch, etag string) bool {
 }
 
 func thumbnailFailedRecently(hash string) bool {
-	at, ok := thumbnailFailed.Load(hash)
-	if !ok {
-		return false
-	}
-	if time.Since(at.(time.Time)) < thumbnailFailedTTL {
-		return true
-	}
-	thumbnailFailed.Delete(hash)
-	return false
+	_, ok := thumbnailFailed.Get(hash)
+	return ok
 }
 
 // HandleGetVideoThumbnail ...
@@ -249,16 +244,6 @@ func (h *Handler) ensureThumbnailFile(parentCtx context.Context, videoPath strin
 		return cacheFile, nil
 	}
 
-	// 2. Backward compatibility fallback: check for legacy hash (videoPath only) when offsetSec is nil
-	if offsetSec == nil {
-		legacyHash := fmt.Sprintf("%x", sha256.Sum256([]byte(videoPath)))
-		legacyCacheFile := filepath.Join(cacheDir, legacyHash+".jpg")
-		if _, err := os.Stat(legacyCacheFile); err == nil {
-			_ = os.Rename(legacyCacheFile, cacheFile)
-			return cacheFile, nil
-		}
-	}
-
 	if parentCtx.Err() != nil {
 		return "", parentCtx.Err()
 	}
@@ -266,7 +251,7 @@ func (h *Handler) ensureThumbnailFile(parentCtx context.Context, videoPath strin
 		return "", errThumbnailUnavailable
 	}
 
-	// 3. Cold cache: generate via FFMpeg with singleflight deduplication
+	// Cold cache: generate via FFMpeg with singleflight deduplication.
 	flight := thumbnailSingleFlight.DoChan(hash, func() (interface{}, error) {
 		// Double check if created while waiting
 		if _, err := os.Stat(cacheFile); err == nil {
@@ -285,11 +270,19 @@ func (h *Handler) ensureThumbnailFile(parentCtx context.Context, videoPath strin
 		case <-queueCtx.Done():
 			return nil, queueCtx.Err()
 		}
+		// Catalogue thumbnails share the short-preview budget with seek frames.
+		// Cached responses above never wait here. Live playback can still proceed,
+		// while only one low-priority frame extraction runs across these paths.
+		release, err := resourcebudget.Shared.Preview(queueCtx)
+		if err != nil {
+			return nil, err
+		}
+		defer release()
 
 		var customFfmpeg, customFfprobe string
-		if h.App.SecondarySettings.Mediastream != nil {
-			customFfmpeg = h.App.SecondarySettings.Mediastream.FfmpegPath
-			customFfprobe = h.App.SecondarySettings.Mediastream.FfprobePath
+		if settings := h.App.MediastreamSettingsSnapshot(); settings != nil {
+			customFfmpeg = settings.FfmpegPath
+			customFfprobe = settings.FfprobePath
 		}
 		ffmpegPath := ffmpegutil.ResolveFFmpegPath(h.App.Config.Cache.Dir, customFfmpeg)
 		ffprobePath := ffmpegutil.ResolveFFprobePath(h.App.Config.Cache.Dir, customFfprobe)
@@ -307,21 +300,26 @@ func (h *Handler) ensureThumbnailFile(parentCtx context.Context, videoPath strin
 		// Debe terminar en .jpg: ffmpeg elige el muxer por la extension y con ".tmp" falla
 		// ("Unable to choose an output format"). ".tmp" sigue en el nombre para PruneDirectory.
 		tmpCacheFile := fmt.Sprintf("%s.%d.tmp.jpg", cacheFile, time.Now().UnixNano())
-		cmd := util.NewCmdCtx(
+		cmd := util.NewCmdCtxLowPriority(
 			ctx,
 			ffmpegPath,
+			"-nostdin",
+			"-threads", "1",
 			"-ss", seekTime,
 			"-i", videoPath,
+			"-an", "-sn", "-dn",
 			"-vframes", "1",
 			"-q:v", "5",
 			"-vf", "scale=480:-2",
+			"-filter_threads", "1",
+			"-threads", "1",
 			"-y",
 			tmpCacheFile,
 		)
 
 		if out, err := cmd.CombinedOutput(); err != nil {
 			_ = os.Remove(tmpCacheFile)
-			thumbnailFailed.Store(hash, time.Now())
+			thumbnailFailed.SetT(hash, true, thumbnailFailedTTL)
 			h.App.Logger.Error().Err(err).Str("path", videoPath).Str("output", string(out)).Msg("thumbnail: failed to extract frame")
 			return nil, err
 		}
@@ -348,6 +346,7 @@ func (h *Handler) ensureThumbnailFile(parentCtx context.Context, videoPath strin
 // clearThumbnailFailures forgets failed extractions, e.g. after a manual cache purge.
 func clearThumbnailFailures() {
 	thumbnailFailed.Clear()
+	driveThumbMissing.Clear()
 }
 
 func formatSeekTimestamp(dur time.Duration) string {

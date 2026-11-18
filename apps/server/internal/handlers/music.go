@@ -29,6 +29,39 @@ func isAllowedSystemDir(cleanDir string) bool {
 	return !util.IsBlockedSystemDir(cleanDir)
 }
 
+// Only the host may browse arbitrary folders. Remote players can access the
+// music root saved locally in settings (including its openings subdirectory).
+func (h *Handler) authorizeMusicDirectory(c echo.Context, dir string) (string, error) {
+	realDir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", echo.NewHTTPError(http.StatusBadRequest, "music directory does not exist")
+	}
+	realDir, err = filepath.Abs(realDir)
+	if err != nil || !isAllowedSystemDir(realDir) {
+		return "", echo.NewHTTPError(http.StatusForbidden, "music directory forbidden")
+	}
+	if isLoopbackRequest(c) {
+		return realDir, nil
+	}
+	if h.App == nil || h.App.Database == nil {
+		return "", echo.NewHTTPError(http.StatusForbidden, "music directory is not shared")
+	}
+	theme, err := h.App.Database.GetTheme()
+	if err != nil || theme == nil || strings.TrimSpace(theme.BgMusicDir) == "" {
+		return "", echo.NewHTTPError(http.StatusForbidden, "music directory is not shared")
+	}
+	root, err := filepath.EvalSymlinks(theme.BgMusicDir)
+	if err != nil {
+		return "", echo.NewHTTPError(http.StatusForbidden, "music directory is not shared")
+	}
+	root, err = filepath.Abs(root)
+	rel, relErr := filepath.Rel(root, realDir)
+	if err != nil || relErr != nil || (rel != "." && !util.IsFileUnderDir(root, realDir)) {
+		return "", echo.NewHTTPError(http.StatusForbidden, "music directory is not shared")
+	}
+	return realDir, nil
+}
+
 type BackgroundMusicTrack struct {
 	Name string `json:"name"`
 	File string `json:"file"`
@@ -60,6 +93,10 @@ func (h *Handler) HandleScanBackgroundMusic(c echo.Context) error {
 	}
 	if !isAllowedSystemDir(cleanDir) {
 		return echo.NewHTTPError(http.StatusForbidden, "access to system directory forbidden")
+	}
+	cleanDir, err := h.authorizeMusicDirectory(c, cleanDir)
+	if err != nil {
+		return err
 	}
 	info, err := os.Stat(cleanDir)
 	if err != nil || !info.IsDir() {
@@ -129,7 +166,15 @@ func (h *Handler) HandleStreamBackgroundMusic(c echo.Context) error {
 	if !isAllowedSystemDir(cleanDir) {
 		return echo.NewHTTPError(http.StatusForbidden, "access to system directory forbidden")
 	}
+	cleanDir, err := h.authorizeMusicDirectory(c, cleanDir)
+	if err != nil {
+		return err
+	}
 	path := filepath.Clean(filepath.Join(cleanDir, file))
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "file not found")
+	}
 	if !util.IsFileUnderDir(cleanDir, path) {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid file path")
 	}

@@ -27,6 +27,7 @@ func newDriveSubsRepo(t *testing.T, ffmpeg string) *Repository {
 		settings: mo.Some(&models.MediastreamSettings{FfmpegPath: ffmpeg}),
 	}
 	r.playbackManager = NewPlaybackManager(r)
+	t.Cleanup(r.OnCleanup)
 	return r
 }
 
@@ -39,6 +40,21 @@ func TestDriveSubtitleStatusWithoutExtraction(t *testing.T) {
 	require.ErrorIs(t, err, ErrDriveSubtitlesTooLarge)
 	_, err = r.StartDriveSubtitleExtraction("gdrive://nada/x.mkv", "x", nil, 0)
 	require.Error(t, err)
+}
+
+func TestDriveSubtitleStatusAfterCachePrune(t *testing.T) {
+	r := newDriveSubsRepo(t, "ffmpeg")
+	path := "gdrive://pruned-test/ep.mkv"
+	hash := DriveSubtitleHash(path)
+	r.driveSubJobs.Store(hash, &driveSubJob{status: DriveSubtitleStatus{State: DriveSubtitlesDone, Percent: 100}})
+	t.Cleanup(func() { r.driveSubJobs.Delete(hash) })
+	marker := driveSubsDonePath(r.CacheDir(), hash)
+	require.NoError(t, os.MkdirAll(filepath.Dir(marker), 0700))
+	require.NoError(t, os.WriteFile(marker, []byte("done"), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(filepath.Dir(marker), "attachments.complete.json"), []byte(`{"signature":"fixture","files":{}}`), 0600))
+	require.Equal(t, DriveSubtitlesDone, r.DriveSubtitleStatus(path).State)
+	require.NoError(t, os.Remove(marker))
+	require.Equal(t, DriveSubtitlesNone, r.DriveSubtitleStatus(path).State)
 }
 
 func TestDriveSubtitleExtractionFlow(t *testing.T) {
@@ -115,4 +131,5 @@ func TestDriveSubtitleExtractionFailureIsRetryable(t *testing.T) {
 	st, err := r.StartDriveSubtitleExtraction(drivePath, filepath.Join(t.TempDir(), "no-existe.mkv"), mi, 0)
 	require.NoError(t, err)
 	require.NotEqual(t, DriveSubtitlesDone, st.State)
+	require.Eventually(t, func() bool { return r.DriveSubtitleStatus(drivePath).State == DriveSubtitlesFailed }, 30*time.Second, 50*time.Millisecond)
 }

@@ -125,4 +125,24 @@ describe("SagaSelector: botones del sistema", () => {
         expect(screen.queryByText(/Garlic Jr/i)).not.toBeInTheDocument()
         expect(screen.queryByText(/Torneo del Otro Mundo/i)).not.toBeInTheDocument()
     })
+
+    it("tarjeta activa: renderiza el indicador con geometría concéntrica y sin doble anillo", () => {
+        render(
+            <SagaSelector
+                sagas={SAGAS}
+                activeSagaId="frieza"
+                onSelectSaga={vi.fn()}
+            />,
+        )
+
+        const activeBtn = screen.getByRole("button", { name: /Saga Frieza/i })
+        const inactiveBtn = screen.getByRole("button", { name: /Saga Saiyan/i })
+
+        const indicator = activeBtn.querySelector<HTMLElement>(".arc-card-active-indicator")
+        expect(indicator).not.toBeNull()
+        expect(indicator).toHaveClass("rounded-lg")
+        expect(indicator?.className).not.toContain("ring-1")
+        expect(indicator?.style.borderRadius).toBe("16px")
+        expect(inactiveBtn.querySelector(".arc-card-active-indicator")).toBeNull()
+    })
 })

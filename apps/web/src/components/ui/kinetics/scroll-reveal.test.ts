@@ -11,7 +11,7 @@ class FakeIO {
 }
 vi.stubGlobal("IntersectionObserver", FakeIO)
 
-import { observeReveal, observeRevealBatched, readingOrder, revealConfigForTier, type RevealConfig } from "./scroll-reveal"
+import { observeRevealBatched, readingOrder, revealConfigForTier, type RevealConfig } from "./scroll-reveal"
 import { scrollProgress } from "./scroll-progress"
 
 const FULL = revealConfigForTier("full") as RevealConfig
@@ -29,6 +29,66 @@ function intersect(...els: HTMLElement[]) {
 }
 
 describe("scroll reveal", () => {
+    it("cancels the fallback timer when opacity finishes", async () => {
+        const element = el(1200)
+        observeRevealBatched(element, FULL)
+        await Promise.resolve()
+        intersect(element)
+        expect(vi.getTimerCount()).toBe(1)
+        const end = new Event("transitionend")
+        Object.defineProperty(end, "propertyName", { value: "opacity" })
+        element.dispatchEvent(end)
+        expect(vi.getTimerCount()).toBe(0)
+        expect(element.style.transition).toBe("")
+    })
+    it("releases an active animation and its timer on unmount", async () => {
+        const element = el(1200)
+        const release = observeRevealBatched(element, FULL)
+        await Promise.resolve()
+        intersect(element)
+        release()
+        expect(vi.getTimerCount()).toBe(0)
+        expect(element.style.transition).toBe("")
+    })
+    it("an old release cannot clear a reused node's new animation", async () => {
+        const element = el(1200)
+        const oldRelease = observeRevealBatched(element, FULL)
+        await Promise.resolve()
+        intersect(element)
+        vi.advanceTimersByTime(200)
+        const newRelease = observeRevealBatched(element, { ...FULL, duration: 900 })
+        await Promise.resolve()
+        intersect(element)
+        const transition = element.style.transition
+        oldRelease()
+        vi.advanceTimersByTime(FULL.duration + 80 - 200)
+        expect(element.style.transition).toBe(transition)
+        expect(vi.getTimerCount()).toBe(1)
+        newRelease()
+        expect(vi.getTimerCount()).toBe(0)
+    })
+    it("preserves a transition subsequently installed by another owner", async () => {
+        const element = el(1200)
+        const release = observeRevealBatched(element, FULL)
+        await Promise.resolve()
+        intersect(element)
+        element.style.transition = "color 100ms linear"
+        release()
+        expect(element.style.transition).toBe("color 100ms linear")
+        expect(vi.getTimerCount()).toBe(0)
+    })
+    it("commits one layout read for an entire entering batch", async () => {
+        const elements = Array.from({ length: 30 }, (_, i) => el(1200 + i * 100))
+        let reads = 0
+        for (const element of elements) {
+            Object.defineProperty(element, "offsetWidth", { get: () => { reads++; return 100 } })
+            observeRevealBatched(element, FULL)
+        }
+        await Promise.resolve()
+        intersect(...elements)
+        expect(reads).toBe(1)
+        expect(elements.every(element => element.style.opacity === "")).toBe(true)
+    })
     beforeEach(() => {
         vi.useFakeTimers()
         Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 })
@@ -38,18 +98,20 @@ describe("scroll reveal", () => {
     })
     afterEach(() => vi.useRealTimers())
 
-    it("no anima lo que ya está en pantalla al montar", () => {
+    it("no anima lo que ya está en pantalla al montar", async () => {
         const visible = el(100)
-        observeReveal(visible, FULL)
+        observeRevealBatched(visible, FULL)
+        await Promise.resolve()
         expect(visible.style.opacity).toBe("")
         expect(observed.has(visible)).toBe(false)
     })
 
-    it("oculta lo que está abajo y lo revela al entrar, escalonado en orden de lectura", () => {
+    it("oculta lo que está abajo y lo revela al entrar, escalonado en orden de lectura", async () => {
         const a = el(1200, 300)
         const b = el(1200, 0)
         const c = el(1500, 0)
-        for (const e of [a, b, c]) observeReveal(e, FULL)
+        for (const e of [a, b, c]) observeRevealBatched(e, FULL)
+        await Promise.resolve()
         expect(a.style.opacity).toBe("0")
         expect(a.style.transform).toContain("18px")
 
@@ -64,16 +126,18 @@ describe("scroll reveal", () => {
         expect(a.style.transition).toBe("") // limpia: el hover vuelve a controlar transform
     })
 
-    it("el retraso tiene tope", () => {
+    it("el retraso tiene tope", async () => {
         const many = Array.from({ length: 20 }, (_, i) => el(1200 + i * 120))
-        for (const e of many) observeReveal(e, FULL)
+        for (const e of many) observeRevealBatched(e, FULL)
+        await Promise.resolve()
         intersect(...many)
         expect(many[19].style.transition).toContain(` ${FULL.maxDelay}ms`)
     })
 
-    it("un contenedor altísimo se revela con un tramo visible, aunque no llegue al 8 % de su alto", () => {
+    it("un contenedor altísimo se revela con un tramo visible, aunque no llegue al 8 % de su alto", async () => {
         const tall = el(1200)
-        observeReveal(tall, FULL)
+        observeRevealBatched(tall, FULL)
+        await Promise.resolve()
         const entry = (ratio: number, visible: number) => ({
             target: tall, isIntersecting: true, boundingClientRect: tall.getBoundingClientRect(),
             intersectionRatio: ratio, intersectionRect: { height: visible } as DOMRectReadOnly,
@@ -87,9 +151,10 @@ describe("scroll reveal", () => {
         expect(observed.has(tall)).toBe(false)
     })
 
-    it("la baja restaura el elemento", () => {
+    it("la baja restaura el elemento", async () => {
         const e = el(2000)
-        const release = observeReveal(e, FULL)
+        const release = observeRevealBatched(e, FULL)
+        await Promise.resolve()
         release()
         expect(e.style.opacity).toBe("")
         expect(observed.has(e)).toBe(false)
@@ -125,20 +190,24 @@ describe("scroll reveal con clave", () => {
     })
     afterEach(() => vi.useRealTimers())
 
-    it("un ítem ya revelado no se vuelve a animar al remontarse (listas virtualizadas)", () => {
+    it("un ítem ya revelado no se vuelve a animar al remontarse (listas virtualizadas)", async () => {
         const first = el(1500)
-        observeReveal(first, FULL, "ep:1:5")
+        observeRevealBatched(first, FULL, "ep:1:5")
+        await Promise.resolve()
         intersect(first)
         const remount = el(1500)
-        observeReveal(remount, FULL, "ep:1:5")
+        observeRevealBatched(remount, FULL, "ep:1:5")
+        await Promise.resolve()
         expect(remount.style.opacity).toBe("")
         expect(observed.has(remount)).toBe(false)
     })
 
-    it("lo que se vio al montar cuenta como revelado", () => {
-        observeReveal(el(100), FULL, "ep:1:1")
+    it("lo que se vio al montar cuenta como revelado", async () => {
+        observeRevealBatched(el(100), FULL, "ep:1:1")
+        await Promise.resolve()
         const remount = el(1500)
-        observeReveal(remount, FULL, "ep:1:1")
+        observeRevealBatched(remount, FULL, "ep:1:1")
+        await Promise.resolve()
         expect(remount.style.opacity).toBe("")
     })
 })

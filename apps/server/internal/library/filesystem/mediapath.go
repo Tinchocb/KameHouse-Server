@@ -9,36 +9,12 @@ import (
 )
 
 type SeparatedFilePath struct {
-	Filename   string
-	Dirnames   []string
-	PrefixPath string
-}
-
-// SeparateFilePath separates a path into a filename and a slice of dirnames while ignoring the prefix.
-func SeparateFilePath(path string, prefixPath string) *SeparatedFilePath {
-	path = filepath.ToSlash(path)
-	prefixPath = filepath.ToSlash(prefixPath)
-	cleaned := path
-	if strings.HasPrefix(strings.ToLower(path), strings.ToLower(prefixPath)) {
-		cleaned = path[len(prefixPath):] // Remove prefix
-	}
-	fp := filepath.Base(filepath.ToSlash(path))
-	// Use strings-based dir computation to keep forward slashes on Windows
-	cleanedSlash := strings.TrimPrefix(cleaned, "/")
-	parentsPath := ""
-	if idx := strings.LastIndex(cleanedSlash, "/"); idx >= 0 {
-		parentsPath = cleanedSlash[:idx]
-	}
-
-	return &SeparatedFilePath{
-		Filename:   fp,
-		Dirnames:   strings.Split(parentsPath, "/"),
-		PrefixPath: prefixPath,
-	}
+	Filename string
+	Dirnames []string
 }
 
 // SeparateFilePathS separates a path into a filename and a slice of dirnames while ignoring the prefix.
-// Unlike [SeparateFilePath], it will check multiple prefixes.
+// It checks multiple potential prefixes and chooses the longest match.
 //
 // Example:
 //
@@ -77,9 +53,8 @@ func SeparateFilePathS(path string, potentialPrefixes []string) *SeparatedFilePa
 	}
 
 	return &SeparatedFilePath{
-		Filename:   filename,
-		Dirnames:   dirs,
-		PrefixPath: prefixPath,
+		Filename: filename,
+		Dirnames: dirs,
 	}
 }
 

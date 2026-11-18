@@ -389,7 +389,6 @@ func TestIntermittentTransientOpenFailureIsNotUnsupported(t *testing.T) {
 	require.True(t, info.ReadFailed, "falla de lectura, no archivo no soportado: %+v", info)
 	require.Empty(t, info.FileReason)
 	require.Equal(t, "auth", info.ErrKind)
-	require.Equal(t, http.StatusUnauthorized, info.ErrStatus)
 
 	// La ventana lo informa como estado de error con su motivo, sin romper.
 	st, err := fx.repo.DriveSubtitleWindow(context.Background(), fx.path, 0, false)

@@ -4,7 +4,7 @@
   "description": "Tauri 2 based Desktop client for KameHouse",
   "type": "module",
   "scripts": {
-    "dev": "tauri dev",
+    "dev": "node ../../scripts/prepare-desktop-dev.mjs && tauri dev",
     "build": "tauri build",
     "build:debug": "tauri build --debug",
     "preview": "tauri preview",

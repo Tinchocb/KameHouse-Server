@@ -34,15 +34,20 @@ type (
 		reqMu              sync.Mutex
 		cacheDir           string      // where attachments are stored
 		transcodeDir       string      // where stream segments are stored
-		warmingActive      atomic.Bool // guards WarmMediaInfo against overlapping runs
+		warmingActive      atomic.Bool // guards WarmMediaInfoContext against overlapping runs
 		settingsMu         sync.RWMutex
 		initMu             sync.Mutex // serialize configuration comparison and module replacement
 		// modulesMu guards transcoder and preTranscoder. They are read by every
 		// HLS request while initializeTranscoder/initializePreTranscoder swap
 		// them, so they must never be touched directly — use the accessors.
-		modulesMu sync.RWMutex
+		modulesMu  sync.RWMutex
+		background repositoryBackground
 		// driveWin: subtítulos embebidos de Drive leídos por ventanas de tiempo.
-		driveWin driveWindowRegistry
+		driveWin          driveWindowRegistry
+		driveRevisions    sync.Map // Drive file ID -> revision identity
+		driveSubJobs      sync.Map // hash -> *driveSubJob; owned by this repository
+		driveSubJobsMu    sync.Mutex
+		driveSubPublishMu sync.Mutex // serialize marker commits and cancellation rollback
 	}
 
 	NewRepositoryOptions struct {
@@ -104,6 +109,10 @@ func (r *Repository) swapPreTranscoder(next mo.Option[*pretranscode.Manager]) mo
 }
 
 func (r *Repository) OnCleanup() {
+	r.stopWork()
+	if r.mediaInfoExtractor != nil {
+		r.mediaInfoExtractor.Close()
+	}
 	if tc, ok := r.swapTranscoder(mo.None[*cassette.Cassette]()).Get(); ok {
 		tc.Destroy()
 	}
@@ -233,7 +242,6 @@ func (r *Repository) initializePreTranscoder(settings *models.MediastreamSetting
 		// Pre-transcoding is background work: keep it to a single ffmpeg so it can't
 		// starve a live playback transcode of CPU/GPU.
 		Concurrency: 1,
-		Extractor:   r.mediaInfoExtractor,
 	})
 	m.Start()
 
@@ -257,11 +265,6 @@ func (r *Repository) TranscoderStats() (cassette.GovernorStats, bool) {
 	return cassette.GovernorStats{}, false
 }
 
-// WarmMediaInfo pre-extracts and caches media info (ffprobe) for the given files
-// using a small worker pool, so the first play of any file skips the cold-start
-// ffprobe. GetInfo is cache-aware (30-day disk TTL keyed by path hash), so
-// already-warmed files are near-free. Best-effort: failures are logged at debug
-// and never block. Safe to call from a goroutine; overlapping calls are skipped.
 // GetMediaInfoContext devuelve la media info (ffprobe, cacheada por hash) de una ruta
 // local o de una URL remota con soporte de cancelación (el ffprobe se corta si ctx termina).
 func (r *Repository) GetMediaInfoContext(ctx context.Context, path string) (*videofile.MediaInfo, error) {
@@ -278,7 +281,12 @@ func (r *Repository) GetMediaInfoContext(ctx context.Context, path string) (*vid
 	return r.mediaInfoExtractor.GetInfoContext(ctx, ffprobePath, path)
 }
 
-func (r *Repository) WarmMediaInfo(paths []string) {
+// WarmMediaInfoContext pre-extracts and caches media info (ffprobe) for the given files
+// using a small worker pool, so the first play of any file skips the cold-start
+// ffprobe. GetInfo is cache-aware (30-day disk TTL keyed by path hash), so
+// already-warmed files are near-free. Best-effort: failures are logged at debug
+// and never block. Safe to call from a goroutine; overlapping calls are skipped.
+func (r *Repository) WarmMediaInfoContext(ctx context.Context, paths []string) {
 	if !r.IsInitialized() || len(paths) == 0 {
 		return
 	}
@@ -304,12 +312,17 @@ func (r *Repository) WarmMediaInfo(paths []string) {
 	var wg sync.WaitGroup
 	var warmed atomic.Int64
 
+warmLoop:
 	for _, p := range paths {
 		if p == "" {
 			continue
 		}
+		select {
+		case <-ctx.Done():
+			break warmLoop
+		case sem <- struct{}{}:
+		}
 		wg.Add(1)
-		sem <- struct{}{}
 		go func(path string) {
 			defer wg.Done()
 			defer func() { <-sem }()
@@ -318,10 +331,10 @@ func (r *Repository) WarmMediaInfo(paths []string) {
 					r.logger.Warn().Msgf("mediastream: panic in WarmMediaInfo worker: %v", rec)
 				}
 			}()
-			if !r.IsInitialized() {
+			if ctx.Err() != nil || !r.IsInitialized() {
 				return
 			}
-			if _, err := r.mediaInfoExtractor.GetInfo(ffprobePath, path); err != nil {
+			if _, err := r.mediaInfoExtractor.GetInfoContext(ctx, ffprobePath, path); err != nil {
 				r.logger.Debug().Err(err).Str("filepath", path).Msg("mediastream: Media-info warm failed")
 				return
 			}
@@ -356,6 +369,11 @@ func (r *Repository) ClearTranscodeDir() {
 		}
 
 		for _, file := range files {
+			// Keyframe indexes survive engine replacement. Stream sessions are
+			// deliberately cleared here after the old transcoder is destroyed.
+			if file.Name() == "keyframes" {
+				continue
+			}
 			err = os.RemoveAll(filepath.Join(transDir, file.Name()))
 			if err != nil {
 				r.logger.Error().Err(err).Msg("mediastream: Failed to remove file from transcode directory")
@@ -507,6 +525,9 @@ func canPassthroughVideo(info *videofile.MediaInfo, caps *ClientCapabilities) bo
 // pre-transcode is queued, so it doesn't compete with playback; if the viewer
 // then switches to an audio track the client can't decode, HLS starts at once.
 func (r *Repository) WarmTranscodeSession(filepath string) error {
+	if err := r.workContext().Err(); err != nil {
+		return err
+	}
 	if !r.IsInitialized() {
 		return errors.New("module not initialized")
 	}
@@ -529,7 +550,7 @@ func (r *Repository) WarmTranscodeSession(filepath string) error {
 		r.reqMu.Unlock()
 	}
 
-	go func() {
+	if !r.startWork(func(parentCtx context.Context) {
 		defer func() {
 			if rec := recover(); rec != nil {
 				r.logger.Warn().Interface("panic", rec).Msg("mediastream: panic warming transcode session")
@@ -544,7 +565,7 @@ func (r *Repository) WarmTranscodeSession(filepath string) error {
 		if !ok {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
+		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Minute)
 		defer cancel()
 		start := time.Now()
 		if err := tc.WarmSession(ctx, container.Filepath, container.Hash, container.MediaInfo); err != nil {
@@ -552,7 +573,9 @@ func (r *Repository) WarmTranscodeSession(filepath string) error {
 			return
 		}
 		r.logger.Debug().Str("filepath", filepath).Dur("elapsed", time.Since(start)).Msg("mediastream: Transcode session warmed")
-	}()
+	}) {
+		return errors.New("media repository is shutting down")
+	}
 	return nil
 }
 

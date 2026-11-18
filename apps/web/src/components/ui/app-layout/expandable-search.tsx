@@ -3,16 +3,23 @@
 import * as React from "react"
 import { getFormatLabel } from "@/lib/helpers/media"
 import { useNavigate } from "@tanstack/react-router"
-import { m, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence, useIsPresent, type HTMLMotionProps } from "framer-motion"
 import { IconNavigationSearch, IconUiClose, IconUiSpinner, IconStatusSparkles, IconNavigationFilm, IconNavigationTv, IconTimeClock, IconArrowRight } from "@/components/ui/icons"
 import { useGlobalSearch, type GlobalSearchResultItem } from "@/hooks/use-global-search"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
-import { useSpringPreset } from "@/components/ui/kinetics/hooks"
+import { useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
 
 const RECENT_SEARCHES_KEY = "kamehouse_recent_searches"
 const MAX_RECENTS = 5
 const SUGGESTIONS = ["Dragon Ball Z", "Películas", "Dragon Ball Super", "Daima"]
+
+function SearchSurface(props: HTMLMotionProps<"div">) {
+    const isPresent = useIsPresent()
+    return <m.div {...props} inert={!isPresent} aria-hidden={!isPresent || undefined}
+        style={{ ...props.style, pointerEvents: isPresent ? "auto" : "none" }} />
+}
 
 function getStoredRecents(): string[] {
     if (typeof window === "undefined") return []
@@ -46,7 +53,12 @@ function removeStoredRecent(term: string) {
     }
 }
 
-export function ExpandableSearch() {
+interface ExpandableSearchProps {
+    onExpandedChange?: (expanded: boolean) => void
+}
+
+export function ExpandableSearch(props: ExpandableSearchProps = {}) {
+    const { onExpandedChange } = props
     const { playSound } = useSound()
     const navigate = useNavigate()
     const [isExpanded, setIsExpanded] = React.useState(false)
@@ -54,7 +66,9 @@ export function ExpandableSearch() {
     const [recentSearches, setRecentSearches] = React.useState<string[]>([])
     const containerRef = React.useRef<HTMLDivElement>(null)
     const inputRef = React.useRef<HTMLInputElement>(null)
-    const tabIndicatorSpring = useSpringPreset('tabIndicator')
+    const triggerRef = React.useRef<HTMLButtonElement>(null)
+    const reduceMotion = useReducedMotion()
+    const isMinimalist = useIsMinimalistMode()
 
     const { query, setQuery, results, isLoading, isSearchActive } = useGlobalSearch(isExpanded)
 
@@ -74,10 +88,18 @@ export function ExpandableSearch() {
     // Expand handler
     const handleExpand = () => {
         if (!isExpanded) {
+            // La franja de Minimalista admite la búsqueda superpuesta desde 768 px.
+            // Las islas de los otros temas mantienen su límite anterior.
+            if (typeof window !== "undefined" && window.innerWidth < (isMinimalist ? 768 : 1024)) {
+                playSound("category", 0.3)
+                window.dispatchEvent(new CustomEvent("open-command-palette"))
+                return
+            }
             playSound("category", 0.3)
             setRecentSearches(getStoredRecents())
             setSelectedIndex(-1)
             setIsExpanded(true)
+            onExpandedChange?.(true)
         }
     }
 
@@ -92,7 +114,8 @@ export function ExpandableSearch() {
         setIsExpanded(false)
         setQuery("")
         setSelectedIndex(-1)
-    }, [setQuery])
+        onExpandedChange?.(false)
+    }, [setQuery, onExpandedChange])
 
     // Click outside listener to collapse
     React.useEffect(() => {
@@ -105,6 +128,7 @@ export function ExpandableSearch() {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === "Escape" && isExpanded) {
                 handleCollapse()
+                triggerRef.current?.focus({ preventScroll: true })
             }
         }
 
@@ -201,40 +225,41 @@ export function ExpandableSearch() {
         if (e.key === "Escape") {
             e.preventDefault()
             handleCollapse()
+            triggerRef.current?.focus({ preventScroll: true })
         }
     }
 
     return (
-        <div ref={containerRef} className="relative flex items-center">
+        <div ref={containerRef} data-expanded={isExpanded} className="expandable-search relative flex items-center">
             {/* Cápsula: el ancho pasa por una transición CSS con tokens y no por un spring de
                 framer que escribía el estilo en cada cuadro. Es `width` porque la isla tiene que
                 crecer con el buscador; el alto es fijo (h-8), así que no hay salto vertical.
                 Con movimiento reducido la regla global deja la transición en 0. */}
             <div
                 className={cn(
-                    "relative flex items-center h-8 rounded-full border overflow-hidden",
+                    "expandable-search-field relative flex items-center h-8 [@media(pointer:coarse)]:h-11 rounded-full border overflow-hidden",
                     "transition-[width,background-color,border-color,box-shadow] duration-base ease-smooth-out",
                     // Foco de teclado en la cápsula (el input lleva data-field-embedded y no dibuja el suyo).
                     "has-[input:focus-visible]:outline has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:[outline-color:hsl(var(--focus-ring)/0.9)]",
                     isExpanded
-                        ? "w-[260px] bg-white/[0.08] border-white/20 shadow-glass-highlight-md"
-                        : "w-9 bg-transparent border-transparent"
+                        ? "w-[184px] xl:w-[260px] bg-[var(--neutral-elev-2)] border-[var(--glass-border-strong)] shadow-glass-highlight-md"
+                        : "w-9 [@media(pointer:coarse)]:w-11 bg-transparent border-transparent"
                 )}
             >
                 {/* Search Icon Trigger - Zero Shift geometry */}
                 <m.button
+                    ref={triggerRef}
                     type="button"
                     onClick={handleExpand}
                     aria-label="Buscar"
                     aria-keyshortcuts="Control+K"
                     title={isExpanded ? undefined : "Buscar (Ctrl+K)"}
-                    whileTap={{ scale: 0.96 }}
-                    whileHover={{ scale: isExpanded ? 1 : 1.05 }}
+                    whileTap={reduceMotion ? undefined : { scale: isMinimalist ? 0.98 : 0.97 }}
                     className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors duration-150",
+                        "w-8 h-8 [@media(pointer:coarse)]:w-11 [@media(pointer:coarse)]:h-11 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-colors duration-150",
                         isExpanded
                             ? "text-brand-accent-readable"
-                            : "text-on-surface-variant hover:text-on-surface hover:bg-white/10"
+                            : "text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10"
                     )}
                 >
                     <IconNavigationSearch className="w-3.5 h-3.5" />
@@ -244,16 +269,16 @@ export function ExpandableSearch() {
                 <AnimatePresence>
                     {isExpanded && (
                         <m.div
-                            initial={{ opacity: 0, x: -6 }}
+                            initial={{ opacity: 0, x: reduceMotion ? 0 : -6 }}
                             animate={{
                                 opacity: 1,
                                 x: 0,
-                                transition: { duration: 0.18, ease: [0.2, 1, 0.2, 1] },
+                                transition: { duration: reduceMotion ? 0 : isMinimalist ? 0.18 : 0.25, ease: "easeInOut" },
                             }}
                             exit={{
                                 opacity: 0,
-                                x: -4,
-                                transition: { duration: 0.1, ease: "easeOut" },
+                                x: reduceMotion ? 0 : -4,
+                                transition: { duration: reduceMotion ? 0 : isMinimalist ? 0.16 : 0.15, ease: "easeInOut" },
                             }}
                             className="flex-1 flex items-center min-w-0 pr-1.5 overflow-hidden"
                         >
@@ -291,9 +316,9 @@ export function ExpandableSearch() {
                                         handleCollapse()
                                     }
                                 }}
-                                className="p-1 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-white/10 shrink-0 cursor-pointer"
+                                className="relative p-1 rounded-full text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 shrink-0 cursor-pointer after:absolute after:-inset-2 after:content-['']"
                                 aria-label={query ? "Limpiar búsqueda" : "Cerrar búsqueda"}
-                                whileTap={{ scale: 0.95 }}
+                                whileTap={reduceMotion ? undefined : { scale: isMinimalist ? 0.98 : 0.97 }}
                             >
                                 <IconUiClose className="w-3 h-3" />
                             </m.button>
@@ -305,11 +330,12 @@ export function ExpandableSearch() {
             {/* Instant Floating Results & Recents Dropdown */}
             <AnimatePresence>
                 {isExpanded && (
-                    <m.div
-                        initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                    <SearchSurface
+                        initial={{ opacity: 0, y: reduceMotion ? 0 : -6, scale: reduceMotion || isMinimalist ? 1 : 0.96 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                        transition={tabIndicatorSpring}
+                        exit={{ opacity: 0, y: reduceMotion ? 0 : -4, scale: reduceMotion || isMinimalist ? 1 : 0.96, transition: { duration: reduceMotion ? 0 : isMinimalist ? 0.16 : 0.15, ease: "easeOut" } }}
+                        transition={{ duration: reduceMotion ? 0 : isMinimalist ? 0.18 : 0.25, ease: "easeInOut" }}
+                        data-liquid-surface="panel"
                         className="glass-frosted absolute top-[calc(100%+10px)] right-0 origin-top-right w-80 sm:w-96 max-h-[70vh] flex flex-col shadow-[shadow:var(--glass-highlight-md),var(--elevation-4)] p-2.5 z-50 overflow-hidden"
                     >
                         <span role="status" className="sr-only">
@@ -318,7 +344,7 @@ export function ExpandableSearch() {
                         {isSearchActive ? (
                             <>
                                 {/* Header bar */}
-                                <div className="flex items-center justify-between px-2 py-1 border-b border-white/10 text-3xs uppercase font-black tracking-widest text-on-surface-variant">
+                                <div className="flex items-center justify-between px-2 py-1 border-b border-[var(--neutral-separator)] text-3xs uppercase font-black tracking-widest text-on-surface-variant">
                                     <span className="flex items-center gap-1.5 text-brand-accent-readable">
                                         <IconStatusSparkles className="w-3 h-3" />
                                         Resultados instantáneos
@@ -327,7 +353,7 @@ export function ExpandableSearch() {
                                 </div>
 
                                 {/* List container */}
-                                <div id={listId} role="listbox" aria-label="Resultados de búsqueda" aria-busy={isLoading || undefined} className="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1 custom-scrollbar max-h-[360px]">
+                                <div id={listId} data-search-results="listbox" role="listbox" aria-label="Resultados de búsqueda" aria-busy={isLoading || undefined} className="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1 custom-scrollbar max-h-[360px]">
                                     {visibleResults.length > 0 ? (
                                         visibleResults.map((res, index) => {
                                             const result = res as GlobalSearchResultItem
@@ -344,28 +370,28 @@ export function ExpandableSearch() {
 
                                             return (
                                                 <button
+                                                    type="button"
                                                     key={`${String(result?.mediaId ?? "result")}-${index}`}
                                                     id={`${listId}-option-${index}`}
                                                     role="option"
                                                     aria-selected={isSelected}
                                                     tabIndex={-1}
                                                     onMouseDown={(event) => event.preventDefault()}
-                                                    type="button"
                                                     onClick={() => handleSelectResult(result)}
                                                     className={cn(
-                                                        "w-full group flex items-center gap-3 p-2 rounded-xl transition-transform duration-fast ease-out-strong active:scale-[0.99] cursor-pointer text-left",
+                                                        "w-full group flex items-center gap-3 p-2 rounded-xl transition-transform duration-fast ease-out-strong motion-safe:active:scale-[0.99] cursor-pointer text-left",
                                                         isSelected
                                                             ? "bg-brand-accent/20 border border-brand-accent/40"
                                                             : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/10 active:bg-white/15 border border-transparent"
                                                     )}
                                                 >
                                                     {/* Poster preview */}
-                                                    <div className="w-9 h-12 rounded-lg bg-surface-container-high border border-white/10 overflow-hidden shrink-0 relative flex items-center justify-center">
+                                                    <div className="w-9 h-12 rounded-lg bg-surface-container-high border border-[var(--neutral-separator)] overflow-hidden shrink-0 relative flex items-center justify-center">
                                                         {media?.posterImage ? (
                                                             <img
                                                                 src={media.posterImage}
                                                                 alt={title}
-                                                                className="w-full h-full object-cover [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-out-strong"
+                                                                className="w-full h-full object-cover motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-out-strong"
                                                             />
                                                         ) : isChronology ? (
                                                             <IconStatusSparkles className="w-4 h-4 text-status-warning" />
@@ -429,7 +455,7 @@ export function ExpandableSearch() {
                                                     setQuery(tag)
                                                     inputRef.current?.focus()
                                                 }}
-                                                className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 hover:border-white/20 text-2xs font-medium text-on-surface active:scale-95 transition-[background-color,border-color,color,transform] duration-fast ease-out-strong cursor-pointer flex items-center gap-1"
+                                                className="px-2.5 py-1 rounded-full bg-[var(--neutral-elev-2)] hover:bg-[var(--neutral-elev-3)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] text-2xs font-medium text-on-surface motion-safe:active:scale-[0.97] transition-[background-color,border-color,color,transform] duration-fast ease-out-strong cursor-pointer flex items-center gap-1"
                                             >
                                                 <span>{tag}</span>
                                                 <IconArrowRight className="w-2.5 h-2.5 text-on-surface-variant" />
@@ -440,7 +466,7 @@ export function ExpandableSearch() {
 
                                 {/* Búsquedas recientes */}
                                 {recentSearches.length > 0 && (
-                                    <div className="space-y-1.5 pt-2 border-t border-white/10">
+                                    <div className="space-y-1.5 pt-2 border-t border-[var(--neutral-separator)]">
                                         <div className="flex items-center justify-between text-2xs font-semibold text-label-2">
                                             <span className="flex items-center gap-1">
                                                 <IconTimeClock className="w-3 h-3 text-brand-accent" />
@@ -453,7 +479,7 @@ export function ExpandableSearch() {
                                                     setRecentSearches([])
                                                 }}
                                                 aria-label="Borrar las búsquedas recientes"
-                                                className="text-2xs font-medium text-on-surface-variant hover:text-on-surface cursor-pointer active:scale-95 transition-[color,transform] duration-fast"
+                                                className="text-2xs font-medium text-on-surface-variant hover:text-on-surface cursor-pointer motion-safe:active:scale-[0.97] transition-[color,transform] duration-fast"
                                             >
                                                 Borrar todo
                                             </button>
@@ -470,7 +496,7 @@ export function ExpandableSearch() {
                                                             setQuery(term)
                                                             inputRef.current?.focus()
                                                         }}
-                                                        className="flex-1 text-left text-xs text-on-surface group-hover/recent:text-on-surface truncate cursor-pointer active:scale-[0.99] transition-[color,transform] duration-fast"
+                                                        className="flex-1 text-left text-xs text-on-surface group-hover/recent:text-on-surface truncate cursor-pointer motion-safe:active:scale-[0.99] transition-[color,transform] duration-fast"
                                                     >
                                                         {term}
                                                     </button>
@@ -480,7 +506,7 @@ export function ExpandableSearch() {
                                                             removeStoredRecent(term)
                                                             setRecentSearches(getStoredRecents())
                                                         }}
-                                                        className="text-label-2 hover:text-status-error p-0.5 rounded cursor-pointer active:scale-90 transition-[color,transform] duration-fast"
+                                                        className="relative text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-status-error p-1 [@media(pointer:coarse)]:min-h-[36px] [@media(pointer:coarse)]:min-w-[36px] flex items-center justify-center rounded cursor-pointer motion-safe:active:scale-[0.97] transition-[color,transform] duration-fast"
                                                         aria-label={`Quitar «${term}» de recientes`}
                                                     >
                                                         <IconUiClose className="w-3 h-3" />
@@ -494,19 +520,19 @@ export function ExpandableSearch() {
                         )}
 
                         {/* Footer - Link to full command palette */}
-                        <div className="pt-2 mt-1 border-t border-white/10 px-1">
+                        <div className="pt-2 mt-1 border-t border-[var(--neutral-separator)] px-1">
                             <button
                                 type="button"
                                 onClick={handleOpenFullPalette}
-                                className="w-full py-1.5 px-2.5 rounded-lg text-left text-2xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-white/10 active:scale-[0.99] transition-[background-color,color,transform] duration-fast ease-out-strong flex items-center justify-between group cursor-pointer"
+                                className="w-full py-1.5 px-2.5 rounded-lg text-left text-2xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-white/10 motion-safe:active:scale-[0.99] transition-[background-color,color,transform] duration-fast ease-out-strong flex items-center justify-between group cursor-pointer"
                             >
                                 <span>Búsqueda avanzada</span>
-                                <kbd className="text-3xs font-mono px-1.5 py-0.5 rounded bg-white/10 text-on-surface-variant border border-white/10 group-hover:border-white/20">
+                                <kbd className="text-3xs font-mono px-1.5 py-0.5 rounded bg-[var(--neutral-elev-2)] text-on-surface-variant border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)]">
                                     Ctrl+K
                                 </kbd>
                             </button>
                         </div>
-                    </m.div>
+                    </SearchSurface>
                 )}
             </AnimatePresence>
         </div>

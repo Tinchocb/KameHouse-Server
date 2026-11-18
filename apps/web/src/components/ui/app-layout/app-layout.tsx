@@ -1,7 +1,7 @@
 import { __isDesktop__ } from "@/types/constants"
 import { cva, VariantProps } from "class-variance-authority"
 import * as React from "react"
-import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
+import { cn, defineStyleAnatomy } from "../core/styling"
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -26,7 +26,6 @@ const AppLayoutContentAnatomy = defineStyleAnatomy({
  * -----------------------------------------------------------------------------------------------*/
 
 type AppLayoutProps = React.ComponentPropsWithRef<"div"> &
-    ComponentAnatomy<typeof AppLayoutAnatomy> &
     VariantProps<typeof AppLayoutAnatomy.root>
 
 export const AppLayout = React.forwardRef<HTMLDivElement, AppLayoutProps>((props, ref) => {

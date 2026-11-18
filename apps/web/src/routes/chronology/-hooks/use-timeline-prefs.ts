@@ -38,7 +38,7 @@ function dropLegacyReadIds() {
  * todo guardado en el servidor por cuenta.
  */
 export function useChronologyProgress(spans: SpanRange[]) {
-    const { data, isLoading } = useGetChronologyProgress()
+    const { data } = useGetChronologyProgress()
     const { mutate: saveOverrides } = useSaveChronologySpanOverrides()
 
     const progressById = useMemo(() => computeSpanProgress(spans, data), [spans, data])
@@ -85,33 +85,16 @@ export function useChronologyProgress(spans: SpanRange[]) {
         [readVolumeIds, setWatched],
     )
 
-    /** Foto de las marcas actuales, para deshacer "marcar todos" y "reiniciar". */
-    const snapshotOverrides = useCallback((): Record<string, boolean | null> => {
-        const current = data?.overrides ?? {}
-        const snapshot: Record<string, boolean | null> = {}
-        for (const span of spans) snapshot[span.id] = current[span.id] ?? null
-        return snapshot
-    }, [data, spans])
-
-    const restoreOverrides = useCallback(
-        (snapshot: Record<string, boolean | null>) => saveOverrides({ overrides: snapshot }),
-        [saveOverrides],
-    )
-
     return {
-        isLoading,
         progressById: progressById as ReadonlyMap<string, SpanProgress>,
         readVolumeIds,
         handleToggleRead,
-        setWatched,
-        snapshotOverrides,
-        restoreOverrides,
     }
 }
 
 /** Mostrar u ocultar los interludios entre lapsos, persistido en localStorage. */
 export function useShowInterludes() {
-    const [showInterludes, setShowInterludes] = useState<boolean>(() => {
+    const [showInterludes] = useState<boolean>(() => {
         try {
             const saved = localStorage.getItem(SHOW_INTERLUDES_KEY)
             if (saved === "false") return false
@@ -121,19 +104,7 @@ export function useShowInterludes() {
         return true
     })
 
-    const handleToggleInterludes = useCallback(() => {
-        setShowInterludes((prev) => {
-            const next = !prev
-            try {
-                localStorage.setItem(SHOW_INTERLUDES_KEY, JSON.stringify(next))
-            } catch (e) {
-                console.error("Error saving interludes preference to localStorage:", e)
-            }
-            return next
-        })
-    }, [])
-
-    return { showInterludes, handleToggleInterludes }
+    return { showInterludes }
 }
 
 /** Valor de una preferencia de este dispositivo (localStorage) con su setter. */

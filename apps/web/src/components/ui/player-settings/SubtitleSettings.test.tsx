@@ -62,6 +62,33 @@ describe("SubtitleSettings: estados (nunca silencio)", () => {
     })
 })
 
+describe("SubtitleSettings: pistas sin nombre ni idioma", () => {
+    // MKV de anime con la pista sin título y con idioma "und": la fila decía "und" / "ASS".
+    it('muestra "Subtítulos N" y el codec, nunca el código "und"', () => {
+        renderPanel([{ index: 0, language: "und", title: "", codec: "ass", url: "/x" }])
+        expect(screen.getByText("Subtítulos 1")).toBeTruthy()
+        expect(screen.getByText("ASS")).toBeTruthy()
+        expect(screen.queryByText("und")).toBeNull()
+    })
+
+    it("numera por posición para distinguir varias pistas sin nombre", () => {
+        renderPanel([
+            { index: 0, language: "spa", title: "Español", codec: "ass", url: "/a" },
+            { index: 1, language: "und", title: "", codec: "ass", url: "/b" },
+            { index: 2, language: "und", title: "", codec: "subrip", url: "/c" },
+        ])
+        expect(screen.getByText("Español")).toBeTruthy()
+        expect(screen.getByText("Subtítulos 2")).toBeTruthy()
+        expect(screen.getByText("Subtítulos 3")).toBeTruthy()
+    })
+
+    it("un título que es solo el código de idioma tampoco se muestra", () => {
+        renderPanel([{ index: 0, language: "und", title: "und", codec: "ass", url: "/x" }])
+        expect(screen.getByText("Subtítulos 1")).toBeTruthy()
+        expect(screen.queryByText("und")).toBeNull()
+    })
+})
+
 describe("SubtitleSettings: subtítulos embebidos de Drive", () => {
     const pending: SubtitleTrack[] = [
         { index: 0, language: "spa", title: "Español", codec: "ass", needsExtraction: true },

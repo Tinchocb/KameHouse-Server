@@ -32,6 +32,19 @@ func TestResolveCorsOriginsIncluyeElWebviewDeEscritorio(t *testing.T) {
 	}
 }
 
+func TestConfigReloadKeepsOriginPolicyUntilRestart(t *testing.T) {
+	a := cleanupTestApp()
+	a.Config = &Config{}
+	a.Config.Server.Port = 43211
+	a.Config.Server.CorsOrigins = []string{"http://tauri.localhost", "http://127.0.0.1:43211"}
+	next := &Config{}
+	next.Server.CorsOrigins = []string{"null", "https://untrusted.example"}
+	a.handleConfigChange(next)
+	if len(a.Config.Server.CorsOrigins) != 2 || a.Config.Server.CorsOrigins[0] != "http://tauri.localhost" || a.Config.Server.CorsOrigins[1] != "http://127.0.0.1:43211" {
+		t.Fatalf("reload changed active origin policy: %v", a.Config.Server.CorsOrigins)
+	}
+}
+
 func TestResolveCorsOriginsNoAceptaOrigenesAjenosNiComodin(t *testing.T) {
 	for _, k := range []string{"KAMEHOUSE_ENV", "KAMEHOUSE_DEV_CORS_ORIGINS", "KAMEHOUSE_CORS_ALLOWED_ORIGINS", "KAMEHOUSE_ALLOW_LAN"} {
 		t.Setenv(k, "")
@@ -62,5 +75,28 @@ func TestResolveCorsOriginsNoDuplica(t *testing.T) {
 	}
 	if n != 1 {
 		t.Errorf("http://tauri.localhost aparece %d veces", n)
+	}
+}
+
+func TestOpaqueOriginsRequirePassword(t *testing.T) {
+	for _, password := range []string{"", "test-secret"} {
+		t.Run(password, func(t *testing.T) {
+			t.Setenv("KAMEHOUSE_ENV", "production")
+			t.Setenv("KAMEHOUSE_DEV_CORS_ORIGINS", "")
+			t.Setenv("KAMEHOUSE_CORS_ALLOWED_ORIGINS", "")
+			cfg := &Config{}
+			cfg.Server.Password = password
+			// Even an explicit allowlist must not trust opaque origins without auth.
+			cfg.Server.CorsOrigins = []string{"null", "file://", "FILE:///app"}
+			resolveCorsOrigins(cfg)
+			for _, origin := range []string{"null", "file://", "FILE:///app"} {
+				if containsString(cfg.Server.CorsOrigins, origin) != (password != "") {
+					t.Fatalf("password configured=%v: unexpected policy %v", password != "", cfg.Server.CorsOrigins)
+				}
+			}
+			if !containsString(cfg.Server.CorsOrigins, "http://tauri.localhost") {
+				t.Fatal("Tauri origin removed")
+			}
+		})
 	}
 }

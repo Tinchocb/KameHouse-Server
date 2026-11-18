@@ -12,7 +12,7 @@ import (
 
 // makeSampleVideo renders a short clip with ffmpeg so the integration test drives
 // a real encode instead of a fixture. Skips the test when ffmpeg is unavailable.
-func makeSampleVideo(t *testing.T, dir string) string {
+func makeSampleVideo(t testing.TB, dir string) string {
 	t.Helper()
 
 	path := filepath.Join(dir, "sample.mkv")
@@ -145,9 +145,8 @@ func TestPreTranscodeReportsFailure(t *testing.T) {
 	}
 }
 
-// TestProbeDurationFallback covers the path that made progress silently report
-// 0%: with no shared extractor wired in, duration must still come from ffprobe.
-func TestProbeDurationFallback(t *testing.T) {
+// One probe supplies duration for progress and streams for audio renditions.
+func TestProbeStreamsIncludesDuration(t *testing.T) {
 	if _, err := exec.LookPath("ffprobe"); err != nil {
 		t.Skip("ffprobe not installed")
 	}
@@ -155,18 +154,16 @@ func TestProbeDurationFallback(t *testing.T) {
 	work := t.TempDir()
 	src := makeSampleVideo(t, work) // 8 seconds
 
-	logger := zerolog.Nop()
-	m := New(Options{
-		Logger:      &logger,
-		OutputDir:   filepath.Join(work, "out"),
-		FfmpegPath:  "ffmpeg",
-		FfprobePath: "ffprobe",
-		// Extractor deliberately omitted.
-	})
-
-	got := m.probeDuration(t.Context(), src)
+	streams, err := probeStreams(t.Context(), "ffprobe", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if streams.Width != 320 || streams.Height != 180 || len(streams.Audio) != 1 {
+		t.Fatalf("unexpected streams: %+v", streams)
+	}
+	got := streams.Duration
 	if got < 7 || got > 9 {
-		t.Errorf("probeDuration() = %v, want ~8s — progress would be stuck at 0%%", got)
+		t.Errorf("duration = %v, want ~8s — progress would be stuck at 0%%", got)
 	}
 }
 

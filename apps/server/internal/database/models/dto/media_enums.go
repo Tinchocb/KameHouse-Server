@@ -7,7 +7,6 @@ const (
 	MediaFormatMovie   MediaFormat = "MOVIE"
 	MediaFormatSpecial MediaFormat = "SPECIAL"
 	MediaFormatOVA     MediaFormat = "OVA"
-	MediaFormatMusic   MediaFormat = "MUSIC"
 )
 
 type MediaStatus string

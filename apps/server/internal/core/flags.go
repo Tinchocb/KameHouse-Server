@@ -12,7 +12,6 @@ type (
 		DataDir          string
 		Host             string
 		Port             int
-		Update           bool
 		IsDesktopSidecar bool
 		DisableFeatures  []FeatureKey
 		Password         string
@@ -36,7 +35,6 @@ func GetKameHouseFlags() KameHouseFlags {
 		fmt.Printf("  --datadir string              directory that contains all KameHouse data\n")
 		fmt.Printf("  --host string                 host address to bind to (default: 127.0.0.1)\n")
 		fmt.Printf("  --port int                    port to bind to (default: 43211)\n")
-		fmt.Printf("  --update                      update the application\n")
 		fmt.Printf("  --desktop-sidecar             run as the desktop sidecar\n")
 		fmt.Printf("  --disable-features string     comma-separated list of features to disable\n")
 		fmt.Printf("  --disable-all-features        disable all features that can be disabled\n")
@@ -49,7 +47,6 @@ func GetKameHouseFlags() KameHouseFlags {
 	flag.StringVar(&flags.DataDir, "data-dir", "", "Alias for --datadir")
 	flag.StringVar(&flags.Host, "host", "", "Host address to bind to")
 	flag.IntVar(&flags.Port, "port", 0, "Port to bind to")
-	flag.BoolVar(&flags.Update, "update", false, "Update the application")
 	flag.BoolVar(&flags.IsDesktopSidecar, "desktop-sidecar", false, "Run as the desktop sidecar")
 	flag.StringVar(&disableFeaturesStr, "disable-features", "", "Comma-separated list of features to disable")
 	flag.BoolVar(&flags.LockDown, "disable-all-features", false, "Disables all features that can be disabled")

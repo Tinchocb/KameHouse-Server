@@ -6,12 +6,15 @@ import { describe, expect, it } from "vitest"
 
 // El acento viene de la configuración del usuario, así que el brillo va inline,
 // pero como color-mix sobre ese acento, nunca como el color crudo ni como rgba.
-describe("AppearanceTab: brillo del acento en la vista previa", () => {
+describe("AppearanceTab: ausencia de preview flotante y control de acento", () => {
     const source = readFileSync(join(__dirname, "appearance-tab.tsx"), "utf8")
 
-    it("el punto y la barra de muestra usan color-mix sobre el acento", () => {
-        expect(source).toMatch(/boxShadow: `0 0 8px color-mix\(in srgb, \$\{accentColor\} 80%, transparent\)`/)
-        expect(source).toMatch(/boxShadow: `0 0 6px color-mix\(in srgb, \$\{accentColor\} 80%, transparent\)`/)
+    it("la vista previa redundante AppearanceThemeLivePreview está removida", () => {
+        expect(source).not.toMatch(/AppearanceThemeLivePreview/)
+    })
+
+    it("la comparativa redundante TransparencyCompare está removida", () => {
+        expect(source).not.toMatch(/TransparencyCompare/)
     })
 
     it("ninguna sombra usa el acento crudo", () => {

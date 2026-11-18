@@ -9,12 +9,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/drive"
 	"kamehouse/internal/util/cache"
+	"kamehouse/internal/util/result"
 
 	"github.com/labstack/echo/v4"
 )
@@ -32,7 +32,7 @@ var (
 	// cold cache doesn't burst the API quota.
 	driveThumbSem = make(chan struct{}, 4)
 	// Remembers files Drive has no thumbnail for, so we don't re-ask on every render.
-	driveThumbMissing sync.Map // hash -> time.Time
+	driveThumbMissing = result.NewBoundedCache[string, bool](2048)
 )
 
 // serveDriveThumbnail serves Drive's own preview frame for an indexed gdrive:// file,
@@ -141,7 +141,7 @@ func (h *Handler) fetchDriveThumbnail(hash, cacheFile, driveFileID string) ([]by
 	})
 	if err != nil {
 		if errors.Is(err, drive.ErrNoThumbnail) {
-			driveThumbMissing.Store(hash, time.Now())
+			driveThumbMissing.SetT(hash, true, driveThumbMissingTTL)
 			if os.MkdirAll(filepath.Dir(cacheFile), 0755) == nil {
 				_ = os.WriteFile(driveThumbnailMissingMarker(cacheFile), nil, 0644)
 			}
@@ -158,7 +158,7 @@ func driveThumbnailMissingMarker(cacheFile string) string {
 // driveThumbnailKnownMissing dice si ya se sabe (en memoria o por la marca en disco) que Drive
 // no tiene frame para este archivo, sin volver a preguntarle.
 func driveThumbnailKnownMissing(hash, cacheFile string) bool {
-	if at, ok := driveThumbMissing.Load(hash); ok && time.Since(at.(time.Time)) < driveThumbMissingTTL {
+	if _, ok := driveThumbMissing.Get(hash); ok {
 		return true
 	}
 	if info, err := os.Stat(driveThumbnailMissingMarker(cacheFile)); err == nil && time.Since(info.ModTime()) < driveThumbMissingDiskTTL {

@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,10 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/database/models"
 	"kamehouse/internal/database/models/dto"
 	"kamehouse/internal/library/anime"
+	librarymetadata "kamehouse/internal/library/metadata"
 	"kamehouse/internal/util/result"
 
 	"github.com/labstack/echo/v4"
@@ -20,28 +23,63 @@ import (
 )
 
 var (
-	animeEntryCache    = result.NewBoundedCache[int, *anime.Entry](128)
-	animeEntryCacheTTL = 5 * time.Minute
-	animeEntryGroup    singleflight.Group
+	animeEntryCache      = result.NewBoundedCache[int, *anime.Entry](128)
+	animeEntryCacheTTL   = 5 * time.Minute
+	animeEntryGroup      singleflight.Group
+	animeEntryCacheMu    sync.RWMutex
+	animeEntryGeneration uint64
 )
 
 func InvalidateAnimeEntryCache(mediaID int) {
+	animeEntryCacheMu.Lock()
+	defer animeEntryCacheMu.Unlock()
+	animeEntryGeneration++
 	animeEntryCache.Delete(mediaID)
 }
 
 func ClearAnimeEntryCache() {
+	animeEntryCacheMu.Lock()
+	defer animeEntryCacheMu.Unlock()
+	animeEntryGeneration++
 	animeEntryCache.Clear()
+}
+
+func cachedAnimeEntry(mediaID int) (*anime.Entry, uint64) {
+	animeEntryCacheMu.RLock()
+	defer animeEntryCacheMu.RUnlock()
+	entry, _ := animeEntryCache.Get(mediaID)
+	return entry, animeEntryGeneration
+}
+
+func animeEntryGenerationCurrent(generation uint64) bool {
+	animeEntryCacheMu.RLock()
+	defer animeEntryCacheMu.RUnlock()
+	return generation == animeEntryGeneration
+}
+
+// Both foreground builds and background enrichment may finish after a scan or
+// progress/source change. A retired snapshot must never repopulate the cache.
+func publishAnimeEntry(mediaID int, generation uint64, entry *anime.Entry) bool {
+	animeEntryCacheMu.Lock()
+	defer animeEntryCacheMu.Unlock()
+	if generation != animeEntryGeneration {
+		return false
+	}
+	animeEntryCache.SetT(mediaID, entry, animeEntryCacheTTL)
+	return true
 }
 
 func getAnimeEntryETag(entry *anime.Entry) string {
 	if entry == nil || entry.Media == nil {
 		return `W/"entry-empty"`
 	}
-	progress := 0
-	if entry.EntryListData != nil {
-		progress = entry.EntryListData.Progress
+	// Background enrichment changes episode metadata without updating the media
+	// row. Validate the whole response so a cached empty summary cannot hide it.
+	hash := sha256.New()
+	if err := json.NewEncoder(hash).Encode(entry); err != nil {
+		return ""
 	}
-	return fmt.Sprintf(`W/"entry-%d-%d-%d-%d"`, entry.MediaID, entry.Media.UpdatedAt.Unix(), len(entry.LocalFiles), progress)
+	return fmt.Sprintf(`W/"entry-%x"`, hash.Sum(nil)[:16])
 }
 
 var fillerFetchAttempts sync.Map
@@ -77,7 +115,8 @@ func (h *Handler) getAnimeEntry(ctx context.Context, lfs []*dto.LocalFile, mID i
 
 	if !h.App.FillerManager.HasFillerFetched(mID) {
 		if _, loading := fillerFetchAttempts.LoadOrStore(mID, true); !loading {
-			go func(mediaID int, media *models.LibraryMedia) {
+			mediaID, media := mID, entry.Media
+			if !h.App.StartBackground(func() {
 				defer fillerFetchAttempts.Delete(mediaID)
 				// Parsea datos externos fuera del request: sin recover, un panic
 				// acá tiraba el servidor (el middleware Recover no lo ve).
@@ -86,7 +125,7 @@ func (h *Handler) getAnimeEntry(ctx context.Context, lfs []*dto.LocalFile, mID i
 						h.App.Logger.Error().Interface("panic", r).Int("mediaId", mediaID).Msg("filler: panic fetching filler data")
 					}
 				}()
-				if media == nil {
+				if media == nil || h.App.ShutdownCtx().Err() != nil {
 					return
 				}
 				titles := make([]string, 0)
@@ -100,7 +139,9 @@ func (h *Handler) getAnimeEntry(ctx context.Context, lfs []*dto.LocalFile, mID i
 					titles = append(titles, media.TitleOriginal)
 				}
 				_ = h.App.FillerManager.FetchAndStoreFillerData(mediaID, titles)
-			}(mID, entry.Media)
+			}) {
+				fillerFetchAttempts.Delete(mID)
+			}
 		}
 	}
 
@@ -127,11 +168,12 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 	// corre en segundo plano después de responder (scheduleAnimeEnrichment) y la siguiente visita
 	// ya la encuentra completa en caché.
 	scheduleEnrich := false
-	if cached, ok := animeEntryCache.Get(mID); ok && cached != nil {
+	cached, generation := cachedAnimeEntry(mID)
+	if cached != nil {
 		entry = cached
 	} else {
-		val, err, _ := animeEntryGroup.Do(strconv.Itoa(mID), func() (interface{}, error) {
-			if cached, ok := animeEntryCache.Get(mID); ok && cached != nil {
+		val, err, _ := animeEntryGroup.Do(fmt.Sprintf("%d:%d", generation, mID), func() (interface{}, error) {
+			if cached, current := cachedAnimeEntry(mID); cached != nil && current == generation {
 				return cached, nil
 			}
 			lfs, err := db.GetLocalFilesByMediaID(h.App.Database, mID)
@@ -144,10 +186,36 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 			if err != nil {
 				return nil, err
 			}
-			if animeEntryNeedsEnrichment(mID, e) {
+			refresh := false
+			if e.Media != nil && e.Media.TmdbID > 0 && len(e.Episodes) > 0 {
+				if client := h.App.Metadata.GetTMDBClient(); client != nil {
+					provider := librarymetadata.NewTMDBProviderWithClient(client, h.App.Database)
+					mapped := make(map[int]tmdb.TVEpisode)
+					offset := 0
+					for sn := 1; ; sn++ {
+						season, found, fresh := provider.CachedSeason(e.Media.TmdbID, sn)
+						if !found {
+							break
+						}
+						end, err := tmdb.SeasonEnd(offset, season)
+						if err != nil {
+							break
+						}
+						for _, ep := range season.Episodes {
+							mapped[offset+ep.EpisodeNumber] = ep
+						}
+						offset = end
+						refresh = refresh || !fresh
+					}
+					applyEpisodeMap(e, mapped)
+				}
+			}
+			if refresh || animeEntryNeedsEnrichment(mID, e) {
+				e.EpisodeEnrichmentPending = true
 				scheduleEnrich = true
+				publishAnimeEntry(mID, generation, e)
 			} else {
-				animeEntryCache.SetT(mID, e, animeEntryCacheTTL)
+				publishAnimeEntry(mID, generation, e)
 			}
 			return e, nil
 		})
@@ -158,7 +226,7 @@ func (h *Handler) HandleGetAnimeEntry(c echo.Context) error {
 	}
 	if scheduleEnrich {
 		// Se ejecuta al terminar esta función, es decir, después de escribir la respuesta.
-		defer h.scheduleAnimeEnrichment(mID)
+		defer h.scheduleAnimeEnrichment(mID, generation)
 	}
 
 	etag := getAnimeEntryETag(entry)
@@ -225,12 +293,17 @@ func (h *Handler) HandleUpdateAnimeEntryProgress(c echo.Context) error {
 		return h.RespondWithCodeError(c, 400, errors.New("invalid progress: must be >= 0"))
 	}
 
-	err := h.App.Metadata.Platform.UpdateEntryProgress(c.Request().Context(), b.MediaID, b.Progress, nil)
+	media, err := db.ResolveLibraryMediaByPublicID(h.App.Database, b.MediaID)
 	if err != nil {
 		return h.RespondWithError(c, err)
 	}
+	if media == nil {
+		return h.RespondWithCodeError(c, http.StatusNotFound, errors.New("media not found in library"))
+	}
+	if err := db.SetManualMediaProgress(c.Request().Context(), h.App.Database, media, b.Progress); err != nil {
+		return h.RespondWithError(c, err)
+	}
 
-	_, _ = h.App.Metadata.Platform.RefreshAnimeCollection(context.Background())
 	InvalidateAnimeEntryCache(b.MediaID)
 	ClearLibraryCollectionCache()
 

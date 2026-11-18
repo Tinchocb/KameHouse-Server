@@ -63,6 +63,9 @@ type SynthOptions struct {
 	VideoBytesPerSec int
 	// CuesEveryMs: una Cue cada tantos ms de video. 0: una por cluster; negativo: sin Cues.
 	CuesEveryMs int
+	// SubtitleCues agrega una Cue por bloque de subtítulo, con su posición dentro del
+	// cluster y su duración (como hace mkvmerge).
+	SubtitleCues bool
 	// CuesFirst pone las Cues antes de los clusters (cues_to_front). Por defecto van al
 	// final, apuntadas por el SeekHead.
 	CuesFirst bool
@@ -240,6 +243,8 @@ const (
 	eCueTrackPos   = 0xB7
 	eCueTrack      = 0xF7
 	eCueClusterPos = 0xF1
+	eCueRelPos     = 0xF0
+	eCueDuration   = 0xB2
 	eVoid          = 0xEC
 	eCRC32         = 0xBF
 )
@@ -250,6 +255,13 @@ const assHeaderForSynth = "[Script Info]\nScriptType: v4.00+\nPlayResX: 640\nPla
 	"Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n" +
 	"Style: Default,Arial,28,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,2,10,10,10,1\n\n" +
 	"[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+
+func assStyle(e Event) string {
+	if e.Style == "" {
+		return "Default"
+	}
+	return e.Style
+}
 
 var noise = func() []byte {
 	b := make([]byte, 1<<20)
@@ -272,6 +284,15 @@ type timedItem struct {
 	ms    int64
 	order int
 	data  []byte
+	sub   *subCue // el bloque es de subtítulo: datos para su Cue
+}
+
+// subCue es lo que la Cue de un bloque de subtítulo necesita saber de él.
+type subCue struct {
+	cluster    int
+	track      uint64
+	start, dur int64
+	rel        int64 // posición dentro de los datos del cluster
 }
 
 func xiphLaces(frames [][]byte) []byte {
@@ -440,7 +461,7 @@ func BuildSynth(o SynthOptions) *Synth {
 			e := evs[i]
 			var payload []byte
 			if t.Kind == KindASS {
-				payload = []byte(fmt.Sprintf("%d,0,Default,,0,0,0,,%s", i, e.Text))
+				payload = []byte(fmt.Sprintf("%d,0,%s,,0,0,0,,%s", i, assStyle(e), e.Text))
 			} else {
 				payload = []byte(e.Text)
 			}
@@ -452,7 +473,7 @@ func BuildSynth(o SynthOptions) *Synth {
 					i++
 					p2 := []byte(evs[i].Text)
 					if t.Kind == KindASS {
-						p2 = []byte(fmt.Sprintf("%d,0,Default,,0,0,0,,%s", i, evs[i].Text))
+						p2 = []byte(fmt.Sprintf("%d,0,%s,,0,0,0,,%s", i, assStyle(evs[i]), evs[i].Text))
 					}
 					frames = append(frames, enc(p2))
 				}
@@ -469,6 +490,7 @@ func BuildSynth(o SynthOptions) *Synth {
 	// Clusters
 	nClusters := (o.Secs*1000 + o.ClusterMs - 1) / o.ClusterMs
 	var clusterBytes [][]byte
+	var subCues []subCue
 	subIdx := 0
 	videoFrame := o.VideoBytesPerSec * o.FrameMs / 1000
 	if videoFrame < 16 {
@@ -491,7 +513,7 @@ func BuildSynth(o SynthOptions) *Synth {
 		var items []timedItem
 		order := 0
 		add := func(ms int64, data []byte) {
-			items = append(items, timedItem{ms, order, data})
+			items = append(items, timedItem{ms: ms, order: order, data: data})
 			order++
 		}
 		rel := func(ms int64) []byte {
@@ -537,6 +559,7 @@ func BuildSynth(o SynthOptions) *Synth {
 			} else {
 				add(sb.start, el(eSimpleBlock, cat(hdr, body)))
 			}
+			items[len(items)-1].sub = &subCue{cluster: c, track: sb.trackNum, start: sb.start, dur: sb.dur}
 		}
 		sort.SliceStable(items, func(i, j int) bool {
 			if items[i].ms != items[j].ms {
@@ -549,7 +572,16 @@ func BuildSynth(o SynthOptions) *Synth {
 			body = append(body, el(eCRC32, []byte{0, 0, 0, 0}))
 		}
 		body = append(body, uintEl(eTimecode, uint64(toTicks(cs))))
+		relPos := 0
+		for _, b := range body {
+			relPos += len(b)
+		}
 		for _, it := range items {
+			if it.sub != nil {
+				it.sub.rel = int64(relPos)
+				subCues = append(subCues, *it.sub)
+			}
+			relPos += len(it.data)
 			body = append(body, it.data)
 		}
 		payload := cat(body...)
@@ -598,6 +630,19 @@ func BuildSynth(o SynthOptions) *Synth {
 				uintEl4(eCueTime, uint64(toTicks(cs))),
 				el(eCueTrackPos, cat(uintEl(eCueTrack, 1), uintEl4(eCueClusterPos, uint64(pos)))),
 			)))
+		}
+		if o.SubtitleCues {
+			for _, sc := range subCues {
+				pts = append(pts, el(eCuePoint, cat(
+					uintEl4(eCueTime, uint64(toTicks(sc.start))),
+					el(eCueTrackPos, cat(
+						uintEl(eCueTrack, sc.track),
+						uintEl4(eCueClusterPos, uint64(clusterPos[sc.cluster])),
+						uintEl4(eCueRelPos, uint64(sc.rel)),
+						uintEl4(eCueDuration, uint64(toTicks(sc.dur))),
+					)),
+				)))
+			}
 		}
 		return el(eCues, cat(pts...))
 	}

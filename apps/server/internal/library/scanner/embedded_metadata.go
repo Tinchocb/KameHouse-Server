@@ -192,7 +192,7 @@ func applyEmbeddedMediaIdentity(lf *dto.LocalFile, identity *dto.LocalFileEmbedd
 
 func parsedMediaFromLocalFile(lf *dto.LocalFile) parser.ParsedMedia {
 	if lf == nil {
-		return parser.ParsedMedia{Season: 1, Episodes: []int{1}, Resolution: "UNKNOWN"}
+		return parser.ParsedMedia{Season: 1, Episodes: []int{1}}
 	}
 
 	name := lf.Name

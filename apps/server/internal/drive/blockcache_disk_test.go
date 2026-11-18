@@ -55,7 +55,7 @@ func TestBlockCacheConcurrentWritesRespectBudget(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			c.persistBlock(filepath.Join(c.Dir(), string(rune('a'+i))+".blk"), make([]byte, 1000))
+			c.persistBlockGeneration(filepath.Join(c.Dir(), string(rune('a'+i))+".blk"), make([]byte, 1000), c.currentGeneration())
 		}(i)
 	}
 	wg.Wait()
@@ -77,11 +77,29 @@ func TestBlockCacheLowSpaceEvictsBeforeWriting(t *testing.T) {
 		}
 		return blockCacheDiskReserve, nil
 	}
-	c.persistBlock(filepath.Join(c.Dir(), "new.blk"), make([]byte, 1000))
+	c.persistBlockGeneration(filepath.Join(c.Dir(), "new.blk"), make([]byte, 1000), c.currentGeneration())
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatal("old block was not evicted to preserve disk reserve")
 	}
 	if size, _ := c.Stats(); size != 1000 {
 		t.Fatalf("new block was not persisted after reclaiming space: %d", size)
+	}
+}
+
+func TestBlockCacheNoBorraSiNoAlcanzaLaReserva(t *testing.T) {
+	c := newTestCache(t, 1000, 10000)
+	kept := filepath.Join(c.Dir(), "kept.blk")
+	if err := os.WriteFile(kept, make([]byte, 2000), 0600); err != nil {
+		t.Fatal(err)
+	}
+	c.used = 2000
+	// Aun vaciando los 2000 bytes de la caché, el disco quedaría bajo la reserva.
+	c.freeBytes = func(string) (uint64, error) { return blockCacheDiskReserve - 5000, nil }
+	c.persistBlockGeneration(filepath.Join(c.Dir(), "new.blk"), make([]byte, 1000), c.currentGeneration())
+	if _, err := os.Stat(kept); err != nil {
+		t.Fatalf("la caché se vació aunque la reserva de disco no se alcanzaba: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(c.Dir(), "new.blk")); !os.IsNotExist(err) {
+		t.Fatal("se persistió un bloque sin espacio suficiente en disco")
 	}
 }

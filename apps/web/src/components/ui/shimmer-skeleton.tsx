@@ -10,8 +10,8 @@ export function BentoDetailsSkeleton({ className, isMovie = false }: { className
         // Misma geometría que DetailHero (fichas de película): contenedor, póster y columna de texto con las
         // mismas clases, así al llegar los datos nada se mueve (el póster compartido aterriza en su sitio).
         return (
-            <div role="status" aria-label="Cargando película" className={cn("relative min-h-screen text-on-surface overflow-x-hidden", className)}>
-                <section className="relative isolate w-full min-h-screen flex items-end bg-bg-primary overflow-hidden">
+            <div role="status" aria-label="Cargando película" className={cn("relative min-h-dvh text-on-surface overflow-x-clip", className)}>
+                <section className="relative isolate w-full min-h-dvh flex items-end bg-bg-primary overflow-hidden">
                     <div className="relative z-hero-content page-container pt-28 pb-16 md:pb-20 w-full flex flex-col md:flex-row items-center md:items-end gap-6 sm:gap-8 md:gap-10 lg:gap-14">
                         {/* Póster */}
                         <Skeleton className="shrink-0 w-36 sm:w-44 md:w-52 lg:w-60 aspect-[2/3] h-auto rounded-2xl" />
@@ -34,7 +34,7 @@ export function BentoDetailsSkeleton({ className, isMovie = false }: { className
     }
 
     return (
-        <div role="status" aria-label="Cargando contenido" className={cn("relative min-h-screen text-on-surface overflow-x-hidden", className)}>
+        <div role="status" aria-label="Cargando contenido" className={cn("relative min-h-dvh text-on-surface overflow-x-clip", className)}>
             <div className="relative z-10 flex flex-col page-container pt-nav pb-8 space-y-4">
                 {/* Hero cinematográfico — espeja MediaHero min-h-[70svh] */}
                 <div className="relative w-full min-h-[70svh] lg:min-h-[80svh] rounded-3xl overflow-hidden border border-white/[0.13] bg-bg-primary shadow-glass-highlight-sm flex flex-col justify-end p-6 sm:p-8 md:p-10">
@@ -81,10 +81,10 @@ export function BentoDetailsSkeleton({ className, isMovie = false }: { className
 export function HomeSkeleton({ className }: { className?: string }) {
     useEraRailReservation()
     return (
-        <div role="status" aria-label="Cargando contenido" className={cn("relative min-h-screen text-on-surface overflow-x-hidden", className)}>
+        <div role="status" aria-label="Cargando contenido" className={cn("relative min-h-dvh text-on-surface overflow-x-clip", className)}>
             <div className="relative pt-nav pb-8 w-full max-w-content-desktop mx-auto flex flex-col justify-start space-y-4 px-4 sm:px-6 md:px-8 lg:px-10">
                 {/* Hero cinematográfico — espeja HERO_STAGE_CLASS. El hero real recibe mt-4 del space-y de su caja */}
-                <Skeleton className={cn("relative z-10 mt-4 w-full rounded-3xl", HERO_STAGE_CLASS)} />
+                <Skeleton className={cn("relative z-10 mt-4 w-full rounded-hero", HERO_STAGE_CLASS)} />
 
                 {/* Hub inferior (SpotlightLowerHub): cabecera de sección, selector Sagas/Películas y rejilla */}
                 <div className="relative z-10 w-full pt-4 md:pt-6">
@@ -94,9 +94,9 @@ export function HomeSkeleton({ className }: { className?: string }) {
                             <Skeleton className="h-6 w-28 rounded-full" />
                         </div>
                         <div className="flex flex-wrap items-center justify-between gap-3 pb-1 pt-1">
-                            <Skeleton className="h-[54px] w-[351px] max-w-full rounded-full" />
+                            <Skeleton className="h-11 w-[351px] max-w-full rounded-full" />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-1 pb-4 w-full">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4.5 sm:gap-5 pt-1 pb-4 w-full">
                             {/* En móvil (1 columna) cada celda ocupa 209 px con su hueco: se pintan 7 arcos, como la era DB
                                 en DRAGON_BALL_SAGAS. La 8.ª celda aparece desde sm, donde 7 u 8 celdas ocupan las mismas filas. */}
                             {Array.from({ length: 8 }).map((_, idx) => (

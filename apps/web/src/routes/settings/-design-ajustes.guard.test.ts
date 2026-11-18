@@ -34,4 +34,10 @@ describe("Ajustes: sombras por token", () => {
         expect(line).toMatch(/shadow-\[shadow:var\(--shadow-glow-status-success\)\]/)
         expect(line).not.toMatch(/rgba\(/)
     })
+
+    it("la cabecera de Ajustes fluye con el scroll sin quedarse sticky encima de las tarjetas", () => {
+        const headerLine = lineWith(index, "<header className=")
+        expect(headerLine).toContain("sectionbar-minimal")
+        expect(headerLine).not.toMatch(/\bsticky\b/)
+    })
 })

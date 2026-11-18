@@ -1,4 +1,5 @@
 import { getServerBaseUrl } from "@/api/client/server-url"
+import { authorizeResourceUrl } from "@/api/client/auth"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { queueIdlePreload } from "@/lib/idle-preload-queue"
 import { isDataSavingEnabled } from "@/lib/network-preferences"
@@ -11,6 +12,20 @@ import { isDataSavingEnabled } from "@/lib/network-preferences"
 /** URL de imagen de TMDB (con segmento de tamaño `/t/p/<size>/`). */
 export function isTmdbImageUrl(url: string): boolean {
     return url.includes("tmdb.org") || url.includes("themoviedb.org")
+}
+
+const CORS_SAFE_IMAGE_PATH = /^\/api\/v1\/(?:image-proxy|video-thumbnail|thumbnail\/)/
+
+/** URLs del servidor local o TMDB que responden con `Access-Control-Allow-Origin: *`. */
+export function supportsAnonymousCors(url: string): boolean {
+    if (!url) return false
+    if (url.startsWith("/")) return CORS_SAFE_IMAGE_PATH.test(url)
+    try {
+        const parsed = new URL(url)
+        return parsed.hostname === "image.tmdb.org" || CORS_SAFE_IMAGE_PATH.test(parsed.pathname)
+    } catch {
+        return false
+    }
 }
 
 const TMDB_SIZE_SEGMENT = /\/t\/p\/(?:original|w\d+)/
@@ -111,12 +126,12 @@ export const getLowResImage = (url: string | null | undefined): string => {
  */
 export const localImage = (url: string | null | undefined): string => {
     if (!url) return ""
-    if (!/^https?:\/\/image\.tmdb\.org\//.test(url)) return url
+    if (!/^https?:\/\/image\.tmdb\.org\//.test(url)) return authorizeResourceUrl(url)
     // La base va en la clave: en escritorio la UI pinta antes de que Tauri
     // resuelva el puerto del sidecar, y una URL cacheada con la base previa
     // quedaría apuntando al puerto equivocado para siempre.
     const base = getServerBaseUrl()
-    return getCachedOrResolve(`local:${base}|${url}`, () => `${base}/api/v1/image-proxy?url=${encodeURIComponent(url)}`)
+    return authorizeResourceUrl(getCachedOrResolve(`local:${base}|${url}`, () => `${base}/api/v1/image-proxy?url=${encodeURIComponent(url)}`))
 }
 
 export const getLargeResImage = (url: string | null | undefined): string => {
@@ -144,6 +159,9 @@ export const getPixelSampleImage = (url: string | null | undefined): string => {
     if (!url) return ""
 
     return getCachedOrResolve(`sample:${url}`, () => {
+        if (url.startsWith("/api/v1/image-proxy") || url.includes("/api/v1/image-proxy")) {
+            return url
+        }
         if (isTmdbImageUrl(url)) {
             const resized = withTmdbSize(url, "w300")
             return `${resized}${resized.includes("?") ? "&" : "?"}kh-cors=1`
@@ -178,7 +196,7 @@ export const buildVideoThumbnailUrl = (
         params.set("v", `${source.fileModTime.toString(36)}-${source.fileSize.toString(36)}`)
     }
     const base = options.base ?? getServerBaseUrl()
-    return `${base}${API_ENDPOINTS.THUMBNAIL.GetVideoThumbnail.endpoint}?${params.toString()}`
+    return authorizeResourceUrl(`${base}${API_ENDPOINTS.THUMBNAIL.GetVideoThumbnail.endpoint}?${params.toString()}`)
 }
 
 // Solo son cadenas: topes holgados para que una biblioteca grande (cientos de episodios y
@@ -217,6 +235,7 @@ export const prewarmImages = (urls: (string | null | undefined)[]) => {
         prewarmedUrls.add(url)
         queueIdlePreload(`image:${url}`, () => new Promise<void>((resolve) => {
             const img = new Image()
+            if (supportsAnonymousCors(url)) img.crossOrigin = "anonymous"
             img.decoding = "async"
             img.fetchPriority = "low"
             let settled = false

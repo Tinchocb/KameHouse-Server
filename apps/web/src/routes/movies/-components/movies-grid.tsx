@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback, mem
 import { m } from "framer-motion"
 import { Link } from "@tanstack/react-router"
 import { Button, ButtonAnatomy } from "@/components/ui/button"
+import { cn } from "@/components/ui/core/styling"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Continuity_WatchHistory } from "@/api/generated/types"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -26,19 +27,18 @@ interface MoviesGridProps {
 
 /**
  * Grid canónico compartido con Home (SpotlightLowerHub):
- * 2 / 3 / 4 / 5 / 6 columnas según el ancho real del contenedor. Esqueleto,
- * lista simple y lista virtualizada usan las mismas columnas: misma geometría.
+ * 1 / 2 / 3 / 4 columnas según el ancho real del contenedor (formato de ficha lateral amplia).
+ * Requiere >=420px por columna (por la ficha lateral abierta): solo escala a 4 columnas
+ * en monitores muy amplios (>= 1660px) para no desbalancear portátiles (1024-1366px).
+ * Esqueleto, lista simple y lista virtualizada usan las mismas columnas: misma geometría.
  */
 function columnsForWidth(width: number): number {
-    if (width < 640) return 2
-    if (width < 768) return 3
-    if (width < 1024) return 4
-    if (width < 1280) return 5
-    return 6
+    if (width < 640) return 1
+    if (width < 1024) return 2
+    if (width >= 1660) return 4
+    return 3
 }
 
-// gap-x-3.5 canónico en px para el cálculo de la altura de fila.
-const CARD_GAP = 14
 // Aire bajo cada fila (pb-6 / gap-y-6).
 const ROW_BOTTOM_PADDING = 24
 // Hasta este número de títulos la grilla es una lista normal (Tab, buscar en la
@@ -47,18 +47,18 @@ const ROW_BOTTOM_PADDING = 24
 // monte solo las filas cercanas (ver la medición de la entrada en el informe).
 const VIRTUALIZE_FROM = 12
 
-/** Esqueleto con la geometría de la grilla real: mismas columnas y póster 2:3 full-bleed */
+/** Esqueleto con la geometría de la grilla real: mismas columnas y ficha lateral 3-col */
 function MoviesGridSkeleton({ columns }: { columns: number }) {
     return (
         <div
             role="status"
             aria-label="Cargando películas"
-            className="grid gap-x-3.5 gap-y-6"
+            className="grid gap-x-4.5 gap-y-6"
             style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         >
             {Array.from({ length: columns * 2 }).map((_, idx) => (
                 <div key={idx} className="w-full">
-                    <Skeleton className="aspect-[2/3] h-auto w-full rounded-2xl" />
+                    <Skeleton className="h-[225px] sm:h-[240px] w-full rounded-2xl" />
                 </div>
             ))}
         </div>
@@ -186,11 +186,10 @@ export const MoviesGrid = memo(function MoviesGrid({
         return r
     }, [filteredSorted, columns, virtualized])
 
-    // Alto aproximado de una tarjeta: póster Full-Bleed (aspect 2/3).
+    // Alto calibrado para formato de ficha lateral amplia (h-[225px] sm:h-[240px])
     const cardHeight = useMemo(() => {
-        const cardWidth = Math.max(80, (gridWidth - (columns - 1) * CARD_GAP) / columns)
-        return Math.ceil(cardWidth * 1.5)
-    }, [gridWidth, columns])
+        return gridWidth < 640 ? 225 : 240
+    }, [gridWidth])
     const rowHeight = cardHeight + ROW_BOTTOM_PADDING
 
     // eslint-disable-next-line react-hooks/incompatible-library -- useVirtualizer devuelve funciones no memoizables por diseño; React Compiler lo omite a proposito.
@@ -198,7 +197,7 @@ export const MoviesGrid = memo(function MoviesGrid({
         count: rows.length,
         getScrollElement: () => scrollEl,
         estimateSize: () => rowHeight,
-        overscan: 2,
+        overscan: 3,
         scrollMargin: scrollMargin,
         enabled: virtualized,
     })
@@ -208,16 +207,21 @@ export const MoviesGrid = memo(function MoviesGrid({
         [addedBaseline, filteredSorted],
     )
     const now = useMemo(() => Date.now(), [])
+    const priorityCount = columns * 2
 
     const renderCard = useCallback((entry: MovieEntry, itemIndex: number) => {
         const shouldAnimateEntrance = !isInitialEntranceDone && itemIndex < 12
+        const isAboveFold = itemIndex < priorityCount
         return (
             <div
                 key={entry.mediaId ?? `idx-${itemIndex}`}
                 ref={shouldAnimateEntrance ? undefined : revealRef}
                 data-reveal-key={`movie:${entry.mediaId ?? itemIndex}`}
-                className="h-full [content-visibility:auto] relative hover:z-20 transition-[transform,opacity] duration-300"
-                style={{ containIntrinsicSize: `auto ${cardHeight}px` }}
+                className={virtualized || isAboveFold
+                    ? "h-full relative hover:z-20 transition-[transform,opacity] duration-300"
+                    : "h-full [content-visibility:auto] relative hover:z-20 transition-[transform,opacity] duration-300"
+                }
+                style={virtualized || isAboveFold ? undefined : { containIntrinsicSize: `auto ${cardHeight}px` }}
             >
                 <MovieCard
                     entry={entry}
@@ -227,12 +231,13 @@ export const MoviesGrid = memo(function MoviesGrid({
                     index={shouldAnimateEntrance ? itemIndex : undefined}
                     initial={shouldAnimateEntrance ? "hidden" : false}
                     isNew={isNewlyAdded(entry, baseline, now)}
+                    priority={isAboveFold}
                     onClick={handleMovieClick}
                     onHoverCard={handleHoverCard}
                 />
             </div>
         )
-    }, [isInitialEntranceDone, revealRef, cardHeight, watchHistory, baseline, now, handleMovieClick, handleHoverCard])
+    }, [isInitialEntranceDone, priorityCount, virtualized, revealRef, cardHeight, watchHistory, baseline, now, handleMovieClick, handleHoverCard])
 
     return (
         <div ref={attachWrapper} className="w-full relative pb-32">
@@ -254,7 +259,12 @@ export const MoviesGrid = memo(function MoviesGrid({
                                 <Link
                                     to="/settings"
                                     search={{ tab: "library" }}
-                                    className={ButtonAnatomy.root({ intent: "primary", size: "lg" })}
+                                    data-intent="primary"
+                                    data-size="lg"
+                                    className={cn(
+                                        ButtonAnatomy.root({ intent: "primary", size: "lg" }),
+                                        "transition-[transform,background-color,border-color,color,box-shadow,filter] duration-fast ease-out-strong motion-safe:active:scale-[0.97]"
+                                    )}
                                 >
                                     Ir a Ajustes
                                 </Link>
@@ -276,7 +286,7 @@ export const MoviesGrid = memo(function MoviesGrid({
                             return (
                                 <div
                                     key={virtualRow.index}
-                                    className="absolute left-0 top-0 w-full grid gap-x-3.5 pb-6 items-start"
+                                    className="absolute left-0 top-0 w-full grid gap-x-4.5 pb-6 items-start"
                                     style={{
                                         gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                                         height: `${virtualRow.size}px`,
@@ -290,7 +300,7 @@ export const MoviesGrid = memo(function MoviesGrid({
                     </div>
                 ) : (
                     <div
-                        className="grid w-full gap-x-3.5 gap-y-6 items-start"
+                        className="grid w-full gap-x-4.5 gap-y-6 items-start"
                         style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
                     >
                         {filteredSorted.map((entry, idx) => renderCard(entry, idx))}

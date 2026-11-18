@@ -145,19 +145,34 @@ const config: RsbuildConfig = {
             type: "all-chunks",
             // Solo el subset latin (cubre á, ñ, ¿, ¡): latin-ext y vietnamese casi
             // nunca se usan y precargarlos competía con el JS del primer render.
-            include: [/(?:outfit|space-mono)-latin-(?!ext)[^/]*\.woff2$/, /motion-features\.[\w]+\.js$/],
+            include: [/(?:outfit|space-mono)-latin-(?!ext)[^/]*\.woff2$/, /motion-features(?:-vendor)?\.[\w]+\.js$/],
         } : undefined,
         chunkSplit: process.env.NODE_ENV === "production" ? {
+            strategy: "split-by-experience",
+            override: {
+                cacheGroups: {
+                    // Agrupar los módulos async de framer-motion/domMax en un chunk preloaded
+                    // para evitar la cascada de descarga motion-features -> chunk anónimo.
+                    motionFeatures: {
+                        test: /[\\/]node_modules[\\/](?:framer-motion|motion-dom|motion-utils)[\\/]/,
+                        chunks: "async",
+                        name: "motion-features-vendor",
+                        priority: 50,
+                        enforce: true,
+                    },
+                },
+            },
             forceSplitting: {
                 "react-core": /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
                 "hls": /[\\/]node_modules[\\/]hls\.js[\\/]/,
                 "jassub": /[\\/]node_modules[\\/]jassub[\\/]/,
                 "lucide": /[\\/]node_modules[\\/]lucide-react[\\/]/,
-                "tanstack-query": /[\\/]node_modules[\\/]@tanstack[\\/]react-query/,
-                "tanstack-router": /[\\/]node_modules[\\/]@tanstack[\\/]react-router/,
+                "tanstack-query": /[\\/]node_modules[\\/]@tanstack[\\/](?:react-query|query-core|react-query-persist-client)[\\/]/,
+                "tanstack-router": /[\\/]node_modules[\\/]@tanstack[\\/](?:react-router|router-core)[\\/]/,
                 // framer-motion NO se fuerza a un chunk inicial: sus funciones
                 // (domMax) se cargan aparte vía import() (lib/motion-features.ts).
-                "ui-primitives": /[\\/]node_modules[\\/](@radix-ui|vaul|cmdk)[\\/]/,
+                // cmdk se carga dinámicamente con CommandPalette (Ctrl+K); no se fuerza en el inicial.
+                "ui-primitives": /[\\/]node_modules[\\/]@radix-ui[\\/](?!react-select[\\/]|react-scroll-area[\\/]|react-popover[\\/]|react-popper[\\/]|number[\\/])/, // select, scroll-area, popover, popper y number se usan solo en rutas o modales lazy: fuera del inicial (A/B: −29 KB min)
                 "fontsource": /[\\/]node_modules[\\/]@fontsource/,
                 "zod": /[\\/]node_modules[\\/]zod[\\/]/,
             },

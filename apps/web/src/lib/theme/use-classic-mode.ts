@@ -12,7 +12,7 @@ function subscribe(cb: () => void) {
     listeners.add(cb)
     if (!observer && typeof MutationObserver !== "undefined") {
         observer = new MutationObserver(() => listeners.forEach((l) => l()))
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mode"] })
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mode", "data-ui-style", "data-tv", "data-flat"] })
     }
     return () => {
         listeners.delete(cb)
@@ -23,17 +23,49 @@ function subscribe(cb: () => void) {
     }
 }
 
-const getSnapshot = () => document.documentElement.dataset.mode === "classic"
-const getServerSnapshot = () => true
-
 /**
  * Interruptor del "cromo en grises" de Neutro (Series, Cronología, Películas).
- * DESACTIVADO por decisión del usuario (06/10): Neutro conserva el color de saga.
- * Para reactivarlo, poner NEUTRAL_CHROME en true.
+ * ACTIVADO: Modo Neutro (Linear-style Dark UI) es 100% acromático en su cromo;
+ * los colores de saga y auras pertenecen exclusivamente al Modo Por Era (`data-mode="era"`).
  */
-const NEUTRAL_CHROME = false
+const NEUTRAL_CHROME = true
 
-export function useIsClassicMode(): boolean {
-    const isClassic = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
-    return NEUTRAL_CHROME && isClassic
+const getMinimalistSnapshot = () =>
+    typeof document !== "undefined" && document.documentElement?.dataset?.uiStyle === "classic-minimalist" && document.documentElement.dataset.tv !== "true"
+
+const getFlatSnapshot = () =>
+    typeof document !== "undefined" && document.documentElement?.dataset?.flat === "true"
+
+export function isMinimalistModeActive(): boolean {
+    return getMinimalistSnapshot()
+}
+
+const getClassicSnapshot = () => document.documentElement.dataset.mode === "classic"
+const getSnapshot = () =>
+    getMinimalistSnapshot() ||
+    (NEUTRAL_CHROME && getClassicSnapshot())
+const getSeriesSnapshot = () =>
+    NEUTRAL_CHROME && getClassicSnapshot()
+const getServerSnapshot = () => false
+
+export function useIsClassicMode(options?: { preserveSeriesGradients?: boolean }): boolean {
+    const snapshot = options?.preserveSeriesGradients ? getSeriesSnapshot : getSnapshot
+    return useSyncExternalStore(subscribe, snapshot, getServerSnapshot)
+}
+
+const getEraSnapshot = () => document.documentElement.dataset.mode === "era"
+
+/** ¿La interfaz está en Por era (`data-mode="era"`)? Para los guiños de Dragon Ball que solo van ahí. */
+export function useIsEraMode(): boolean {
+    return useSyncExternalStore(subscribe, getEraSnapshot, getServerSnapshot)
+}
+
+/** Identidad explícita del tema, independiente de Neutro y sus preferencias. */
+export function useIsMinimalistMode(): boolean {
+    return useSyncExternalStore(subscribe, getMinimalistSnapshot, getServerSnapshot)
+}
+
+/** ¿El shell tiene transparencia desactivada (`data-flat="true"`)? Lee el atributo en <html> sin requerir providers. */
+export function useIsFlatMode(): boolean {
+    return useSyncExternalStore(subscribe, getFlatSnapshot, getServerSnapshot)
 }

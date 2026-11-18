@@ -40,18 +40,20 @@ declare module "@tanstack/react-router" {
     }
 }
 
-// React Scan para profiling visual (activable con VITE_SCAN=true o localStorage.setItem("kamehouse:scan", "true"))
-const shouldEnableScan = typeof window !== "undefined" && import.meta.env.DEV && (
-    import.meta.env.VITE_SCAN === "true" ||
-    window.localStorage?.getItem("kamehouse:scan") === "true"
-)
-if (shouldEnableScan) {
-    import("react-scan").then(({ scan }) => {
-        scan({
-            enabled: true,
-            log: false,
-        })
-    }).catch(() => {})
+// React Scan para profiling visual (activable con localStorage.setItem("kamehouse:scan", "true")).
+// La guarda literal en el `if` permite a Rspack descartar el import() en producción para no emitir el chunk.
+if (import.meta.env.DEV) {
+    const shouldEnableScan = typeof window !== "undefined" && (
+        window.localStorage?.getItem("kamehouse:scan") === "true"
+    )
+    if (shouldEnableScan) {
+        import("react-scan").then(({ scan }) => {
+            scan({
+                enabled: true,
+                log: false,
+            })
+        }).catch(() => {})
+    }
 }
 
 // Global error telemetry — capture unhandled errors and promise rejections.
@@ -110,16 +112,16 @@ function init() {
         </ClientProviders>,
     )
 
-    if (__isDesktop__ && __isTauriDesktop__) {
+    if (__isDesktop__ && __isTauriDesktop__ && !window.__KAMEHOUSE_PORT__ && typeof window.desktop?.localServer?.getPort !== "function") {
         import("@tauri-apps/api/core").then(({ invoke }) => {
             // NOTA: el aviso `startup_renderer_ready` NO va acá: se envía desde
             // __root.tsx (desktopApi.startup.ready) cuando la interfaz ya está pintada,
             // para que la ventana principal se revele con la app lista y no con el loader.
 
-            // Resolvemos el puerto dinámico del servidor Go
+            // Resolvemos el puerto dinámico del servidor Go solo si no lo resolvió desktop-bridge
             invoke<number>("get_local_server_port")
                 .then((port) => {
-                    if (port) {
+                    if (port && window.__KAMEHOUSE_PORT__ !== port) {
                         window.__KAMEHOUSE_PORT__ = port
                         queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.STATUS.GetStatus.key] })
                         window.dispatchEvent(new CustomEvent("kamehouse-port-resolved", { detail: { port } }))

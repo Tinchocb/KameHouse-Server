@@ -361,7 +361,7 @@ func (t *ClientTracker) killOrphanedHeads(path string, quality *Quality, audio i
 			}
 			dist := int32(99999)
 			for _, c := range t.clients {
-				if c.Head == -1 {
+				if c.Path != path || c.Head == -1 {
 					continue
 				}
 				if d := util.Abs32(c.Head - h.segment); d < dist {

@@ -57,6 +57,31 @@ func TestSettingsRefreshPreservesUnchangedEngine(t *testing.T) {
 	}
 }
 
+func TestEngineReplacementPreservesPersistentKeyframes(t *testing.T) {
+	l := zerolog.Nop()
+	r := NewRepository(&NewRepositoryOptions{Logger: &l})
+	t.Cleanup(r.OnCleanup)
+	base := t.TempDir()
+	dir := filepath.Join(base, "transcode")
+	keyframe := filepath.Join(dir, "keyframes", "index.json")
+	segment := filepath.Join(dir, "streams", "old.ts")
+	for _, path := range []string{keyframe, segment} {
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("fixture"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r.InitializeModules(&models.MediastreamSettings{}, base, dir)
+	if _, err := os.Stat(keyframe); err != nil {
+		t.Fatalf("keyframes lost: %v", err)
+	}
+	if _, err := os.Stat(segment); !os.IsNotExist(err) {
+		t.Fatalf("stale stream survived: %v", err)
+	}
+}
+
 func TestSettingsRefreshAppliesEngineChangesOnce(t *testing.T) {
 	changes := map[string]func(*models.MediastreamSettings){
 		"gpu":                    func(s *models.MediastreamSettings) { s.TranscodeHwAccel = "custom" },

@@ -78,7 +78,7 @@ describe('buildMarathonPlan', () => {
   });
 
   it('el resumen cuenta episodios y avisa de lo que quedó afuera', () => {
-    const plan = (n: number, missing: number, truncated: number) => ({ items: new Array(n).fill({}) as PlaylistItem[], missing, truncated });
+    const plan = (n: number, missing: number, truncated: number) => ({ items: Array.from({ length: n }, () => ({})) as PlaylistItem[], missing, truncated });
     expect(marathonSummary(1, plan(1, 0, 0))).toBe('1 episodio');
     expect(marathonSummary(3, plan(3, 2, 0))).toBe('3 episodios. 2 sin archivo en tu biblioteca.');
     expect(marathonSummary(50, plan(50, 0, 12))).toContain('quedaron fuera 12');

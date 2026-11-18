@@ -3,7 +3,6 @@ package dto
 type NormalizedMedia struct {
 	ID                int
 	TmdbID            *int
-	TvdbId            *int
 	MyanimelistId     *int
 	ExplicitProvider  string
 	ExplicitID        string

@@ -38,7 +38,7 @@ export const SpanProgressBar: React.FC<SpanProgressBarProps> = ({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={value}
-      className={cn(segments ? 'flex min-w-0 gap-[3px]' : cn('min-w-0 overflow-hidden rounded-full bg-white/[0.12]', h), className)}
+      className={cn("chronology-progress-bar", segments ? 'flex min-w-0 gap-[3px]' : cn('min-w-0 overflow-hidden rounded-full bg-white/[0.12]', h), className)}
     >
       {segments ? (
         // Color y anillo (box-shadow) se funden al cambiar de estado; en el primer pintado no hay transición.
@@ -47,7 +47,7 @@ export const SpanProgressBar: React.FC<SpanProgressBarProps> = ({
             key={i}
             className={cn(
               h,
-              'flex-1 rounded-full transition-[background-color,box-shadow] duration-base ease-smooth-out motion-reduce:transition-none',
+              'chronology-progress-segment flex-1 rounded-full transition-[background-color,box-shadow] duration-base ease-smooth-out motion-reduce:transition-none',
               SEGMENT_CLASS[state],
             )}
           />

@@ -1,5 +1,6 @@
 import type { EraFilter, VolumeData } from '../types';
 import type { SpanProgress } from './spanProgress';
+import type { EraThemeId } from '@/lib/theme/era.theme';
 
 export type EraKey = Exclude<EraFilter, 'all'>;
 
@@ -29,6 +30,15 @@ export function eraOfSectionId(sectionId: string | undefined): EraKey | null {
   const series = sectionId.slice('era-section-'.length) as NonNullable<VolumeData['seriesId']>;
   return ERA_FILTER_BY_SERIES[series] ?? null;
 }
+
+/** Tema de era de Apariencia de cada era de la línea de tiempo (lo sigue Universo DB). */
+export const THEME_ERA_BY_ERA_KEY: Record<EraKey, EraThemeId> = {
+  'db-clasico': 'era-db',
+  'db-z': 'era-dbz',
+  'db-daima': 'era-daima',
+  'db-super': 'era-dbs',
+  'db-gt': 'era-dbgt',
+};
 
 /** Era de un lapso, o null si el lapso no declara serie. */
 export function eraOfVolume(volume: Pick<VolumeData, 'seriesId'>): EraKey | null {

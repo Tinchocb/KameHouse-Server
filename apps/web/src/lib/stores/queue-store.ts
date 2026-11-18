@@ -15,9 +15,9 @@ export interface PlaylistItem {
     mediaFormat?: string | null
 }
 
-export type QueueRepeatMode = "off" | "all" | "one"
+type QueueRepeatMode = "off" | "all" | "one"
 
-export interface QueueState {
+interface QueueState {
     playlistQueue: PlaylistItem[]
     currentQueueIndex: number
     activeQueuePlayItem: PlaylistItem | null

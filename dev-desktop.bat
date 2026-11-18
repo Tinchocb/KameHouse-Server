@@ -9,11 +9,6 @@ set "REPO_ROOT=%~dp0"
 if "%REPO_ROOT:~-1%"=="\" set "REPO_ROOT=%REPO_ROOT:~0,-1%"
 
 
-:: ---------------------------------------------------------
-:: Splash instantaneo: se abre ya (splash.html en ventana app liviana)
-:: y se cierra solo cuando aparece la ventana de Tauri. En dev, Tauri
-:: no muestra nada hasta terminar de compilar Rust + levantar Rsbuild.
-:: ---------------------------------------------------------
 :: El arranque usa una única ventana principal en Tauri (sin splash de navegador previo).
 
 echo.
@@ -49,14 +44,12 @@ where go >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo  [ERROR] Go no esta instalado o no esta en el PATH.
     echo          Descargalo de https://go.dev/dl/
-    call :close_splash
     pause
     exit /b 1
 )
 where pnpm >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo  [ERROR] pnpm no esta instalado o no esta en el PATH.
-    call :close_splash
     pause
     exit /b 1
 )
@@ -64,7 +57,6 @@ where node >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo  [ERROR] Node.js no esta instalado o no esta en el PATH.
     echo          Descargalo de https://nodejs.org/
-    call :close_splash
     pause
     exit /b 1
 )
@@ -72,12 +64,17 @@ if %ERRORLEVEL% NEQ 0 (
 :: ---------------------------------------------------------
 :: 1c. Verificar dependencias (node_modules)
 :: ---------------------------------------------------------
+set "INSTALL_DEPS="
 if not exist "node_modules\.bin\concurrently.CMD" (
+    set "INSTALL_DEPS=1"
+)
+if not exist "apps\desktop\node_modules\.bin\tauri.CMD" if not exist "node_modules\.bin\tauri.CMD" set "INSTALL_DEPS=1"
+if not exist "apps\web\node_modules\.bin\rsbuild.CMD" if not exist "node_modules\.bin\rsbuild.CMD" set "INSTALL_DEPS=1"
+if defined INSTALL_DEPS (
     echo  [INFO] Dependencias no encontradas o incompletas. Instalando con pnpm...
     call pnpm install
     if !ERRORLEVEL! NEQ 0 (
         echo  [ERROR] Fallo al instalar dependencias con pnpm.
-        call :close_splash
         pause
         exit /b 1
     )
@@ -108,7 +105,6 @@ if %ERRORLEVEL% NEQ 0 (
     echo  [ERROR] Falta el toolchain MSVC -rc.exe/link.exe-. Tauri no puede compilar sin el.
     echo          Instala con: winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --add Microsoft.VisualStudio.Component.Windows11SDK.22621"
     echo          Doc: https://tauri.app/start/prerequisites/
-    call :close_splash
     pause
     exit /b 1
 )
@@ -174,8 +170,8 @@ echo        (compilando en fondo, log: %GO_BUILD_LOG%)
 :: ---------------------------------------------------------
 echo  [3/3] Iniciando entorno (Rsbuild :43210 + Tauri + Sidecar :43212)...
 echo.
-echo  Tip: El splash aparece al instante.
-echo       El servidor Go compila en fondo y se conecta solo.
+echo  La ventana aparece cuando termina la compilacion de Rust.
+echo  El servidor Go compila en fondo y se conecta solo.
 echo.
 
 :: Con el servidor reutilizado solo se lanza Tauri: pnpm dev:desktop levantaria otro Rsbuild en
@@ -192,7 +188,6 @@ set EXIT_CODE=%ERRORLEVEL%
 :: ---------------------------------------------------------
 echo.
 echo  Limpiando procesos...
-call :close_splash
 taskkill /F /IM kamehouse.exe >nul 2>&1
 taskkill /F /IM kamehouse-desktop.exe >nul 2>&1
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":43212.*LISTENING" 2^>nul') do (
@@ -205,12 +200,6 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":43212.*LISTENING" 2^>nul') 
 
 if %EXIT_CODE% NEQ 0 (
     echo  [ERROR] El proceso termino con codigo: %EXIT_CODE%
-    call :close_splash
     if "%CI%"=="" pause
 )
 exit /b %EXIT_CODE%
-
-:: Cierra el splash de dev (si sigue abierto).
-:close_splash
-powershell -NoProfile -ExecutionPolicy Bypass -File "%REPO_ROOT%\scripts\dev-splash.ps1" -Close >nul 2>&1
-exit /b 0

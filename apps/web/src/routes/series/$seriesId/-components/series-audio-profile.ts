@@ -2,7 +2,7 @@ import type { MediaAudioProfile } from "@/api/generated/types"
 
 export type AudioProfileChoice = "latino" | "castellano" | "japanese" | "english" | "auto"
 
-export const AUDIO_PROFILE_LABELS: Record<AudioProfileChoice, string> = {
+const AUDIO_PROFILE_LABELS: Record<AudioProfileChoice, string> = {
     latino: "Latino",
     castellano: "Castellano",
     japanese: "Japonés",
@@ -10,7 +10,7 @@ export const AUDIO_PROFILE_LABELS: Record<AudioProfileChoice, string> = {
     auto: "Automático",
 }
 
-export const AUDIO_PROFILE_SIGLAS: Record<AudioProfileChoice, string> = {
+const AUDIO_PROFILE_SIGLAS: Record<AudioProfileChoice, string> = {
     latino: "LAT",
     castellano: "CAS",
     japanese: "JAP",

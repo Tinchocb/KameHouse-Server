@@ -94,5 +94,5 @@ export function usePlayerVolume({ videoRef, status }: UsePlayerVolumeInput) {
         setIsMuted(nextMute)
     }, [videoRef, isMuted, setPlayerVolume])
 
-    return { volume, isMuted, setVolume, setIsMuted, handleVolume, toggleMute }
+    return { volume, isMuted, handleVolume, toggleMute }
 }

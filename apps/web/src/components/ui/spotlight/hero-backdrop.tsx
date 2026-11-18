@@ -2,7 +2,7 @@ import * as React from "react"
 import { DeferredImage, getTmdbHeroSrcSet } from "@/components/shared/deferred-image"
 import { cn } from "@/components/ui/core/styling"
 import { type ImagePalette, useImagePalette, ZONE_COLS, ZONE_ROWS } from "@/hooks/use-image-palette"
-import { HERO_ART_ASPECT, HERO_COMPACT_MAX_WIDTH, heroObjectPosition, type HeroArt } from "@/lib/config/hero-art"
+import { HERO_ART_ASPECT, heroObjectPosition, type HeroArt } from "@/lib/config/hero-art"
 import { getLargeResImage, getLowResImage } from "@/lib/helpers/images"
 
 const isLocal = (src: string) => src.startsWith("/")
@@ -120,28 +120,6 @@ export function heroRightRect(art: Pick<HeroArt, "aspect">, box: Box | null) {
     return { left: 0, top: Math.round((box.height - height) / 2), width: box.width, height }
 }
 
-/** Alto (fracción del stage) del arte compacto: se ve a un tamaño cercano al real. */
-const COMPACT_SCALE = 0.84
-/** Separación del borde derecho del stage (fracción del ancho). */
-const COMPACT_INSET_X = 0.02
-
-export function isCompactArt(art: Pick<HeroArt, "sourceWidth">): boolean {
-    return art.sourceWidth != null && art.sourceWidth < HERO_COMPACT_MAX_WIDTH
-}
-
-/**
- * Arte de baja resolución en modo `right`: más chico (cerca de su tamaño real)
- * y un poco hacia arriba, lejos del texto; alrededor, el desenfoque.
- */
-export function heroCompactRect(art: Pick<HeroArt, "aspect">, box: Box | null) {
-    if (!box || box.width <= 0 || box.height <= 0) return null
-    const height = Math.round(box.height * COMPACT_SCALE)
-    const width = Math.round(height * (art.aspect ?? HERO_ART_ASPECT))
-    if (width >= box.width * 0.8) return null
-    const top = Math.round((box.height - height) * 0.35)
-    return { left: Math.round(box.width - width - box.width * COMPACT_INSET_X), top, width, height }
-}
-
 /**
  * Gradiente de máscara con curva smoothstep entre dos posiciones (px): sin la
  * "línea" que deja un lineal de 2 paradas ni escalones visibles en oscuro.
@@ -191,7 +169,7 @@ function sharpMask(rect: Rect, box: Box, seamFade: number): React.CSSProperties 
     const layers: string[] = []
     // Izquierda: siempre que la imagen no arranque en el borde del stage.
     layers.push(rect.left > 0 ? easedMask(0, seamFade) : "linear-gradient(black, black)")
-    // Arriba/abajo/derecha: solo si la imagen no llega a ese borde (compacta o achicada).
+    // Arriba/abajo/derecha: solo si la imagen no llega a ese borde (achicada).
     const top = rect.top > 0 ? `transparent 0px, black ${fade * 0.6}px` : "black 0px"
     const bottom = rect.top + rect.height < box.height ? `black calc(100% - ${fade * 0.6}px), transparent 100%` : "black 100%"
     layers.push(`linear-gradient(to bottom, ${top}, ${bottom})`)
@@ -386,7 +364,7 @@ const FIT_EDGE_MASK = "linear-gradient(to bottom, transparent 0%, black 10%, bla
 export function HeroBackdrop({
     art,
     alt,
-    variant: _variant = "stage",
+    variant = "stage",
     priority = true,
     wide = "cover",
     scrims = false,
@@ -396,16 +374,15 @@ export function HeroBackdrop({
     const src = heroHighResSrc(art)
     const lowSrc = heroLowResSrc(art) ?? src
     const [boxRef, box] = useElementSize<HTMLDivElement>()
-    const fit = wide === "right" ? null : heroFitRect(art, box)
-    const compact = wide === "right" && isCompactArt(art) ? heroCompactRect(art, box) : null
-    const right = wide === "right" && !compact ? heroRightRect(art, box) : null
+    const fit = variant === "bleed" || wide === "right" ? null : heroFitRect(art, box)
+    const right = wide === "right" ? heroRightRect(art, box) : null
     // Recorte lateral sin zoom (`art.cropLeft`): la ventana visible se achica
     // desde la izquierda y la imagen queda a su tamaño, pegada a la derecha.
     const cropPx = right && art.cropLeft ? Math.round(right.width * art.cropLeft) : 0
     const shown = right && cropPx > 0 ? { ...right, left: right.left + cropPx, width: right.width - cropPx } : right
-    // Imagen visible en modo `right` (normal, recortada o compacta).
-    const placed = shown ?? compact
-    const frame = fit ?? compact ?? right
+    // Imagen visible en modo `right` (normal o recortada).
+    const placed = shown
+    const frame = fit ?? right
     // Colores reales del borde para el relleno (solo modo `right`; comparte caché con `useHeroTone`).
     const palette = useImagePalette(wide === "right" ? src : null)
 
@@ -448,6 +425,8 @@ export function HeroBackdrop({
                     objectPosition={fit || placed ? "50% 50%" : heroObjectPosition(art, box)}
                     className="!bg-transparent h-full w-full block"
                     imgClassName={cn("!h-full !w-full !object-cover", imgClassName)}
+                    showSkeleton={false}
+                    placeholderColor="transparent"
                 />
                 </div>
             </div>

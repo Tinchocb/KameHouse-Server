@@ -13,8 +13,8 @@ import { MediaHero } from "@/components/ui/media-hero"
 import type { HeroArt } from "@/lib/config/hero-art"
 import { MediaMetadataCapsule } from "@/components/ui/media-metadata-capsule"
 import { useHideAudienceScore } from "@/lib/theme/theme-hooks"
-import { PlayCta } from "@/components/ui/play-cta"
-import { GlassIconButton } from "@/components/ui/glass-icon-button"
+import { useIsClassicMode, useIsMinimalistMode } from "@/lib/theme/use-classic-mode"
+import { PrimaryPlayButton, RoundAction } from "@/components/media-detail/detail-actions"
 import { useSound } from "@/hooks/use-sound"
 import { SeriesHeroCollapse } from "./series-hero-collapse"
 import { summarizeSeriesAudio } from "./series-audio-summary"
@@ -42,7 +42,6 @@ interface SeriesHeroProps {
   /** Activa el switch de Z o Kai en la tarjeta de presentación */
   isZSeries?: boolean
   zVariant?: 'z' | 'kai'
-  onZVariantChange?: (variant: 'z' | 'kai') => void
 }
 
 // ── Component — hero unificado sobre MediaHero compartido (paridad Movies) ───
@@ -73,6 +72,8 @@ export const SeriesHero = React.memo(function SeriesHero({
     || "Título Desconocido"
   const rating = media?.score ? media.score / 10 : undefined
   const hideAudienceScore = useHideAudienceScore()
+  const isMinimalist = useIsMinimalistMode()
+  const isClassic = useIsClassicMode()
   const year = media?.year
   // Sinopsis canónica en español primero; la de la API (AniList) viene en inglés.
   const synopsis = (heroSeriesId ? DRAGON_BALL_SERIES_INFO[heroSeriesId]?.description : undefined)
@@ -156,19 +157,25 @@ export const SeriesHero = React.memo(function SeriesHero({
   const eraInfo = eraId ? ERAS.find((e) => e.id === eraId) : undefined
   const eraColors = eraId ? ERA_COLOR_MAP[eraId] : undefined
 
-  const topBadge = (
+  const topBadge = isMinimalist ? null : (
     <div className="flex flex-wrap items-center gap-2.5">
       <span
-        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider backdrop-blur-md border shadow-sm"
+        className="series-hero-era-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider border shadow-[shadow:var(--elevation-1)]"
         style={
-          eraColors
+          !isMinimalist && eraColors
             ? {
-                backgroundColor: `color-mix(in srgb, ${eraColors.accent} 20%, rgba(0,0,0,0.45))`,
+                backgroundColor: `color-mix(in srgb, ${eraColors.accent} 22%, rgba(0,0,0,0.65))`,
                 borderColor: `color-mix(in srgb, ${eraColors.accent} 45%, transparent)`,
                 color: eraColors.accent,
               }
+            : isClassic
+            ? {
+                backgroundColor: "var(--neutral-elev-2)",
+                borderColor: "var(--neutral-separator)",
+                color: "var(--label-1)",
+              }
             : {
-                backgroundColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(0,0,0,0.60)",
                 borderColor: "rgba(255,255,255,0.22)",
                 color: "var(--label-1)",
               }
@@ -187,7 +194,7 @@ export const SeriesHero = React.memo(function SeriesHero({
     </div>
   )
 
-  const metadataRow = (
+  const metadataRow = isMinimalist ? null : (
     <MediaMetadataCapsule
       year={effectiveYear}
       episodes={effectiveEpisodes}
@@ -197,7 +204,7 @@ export const SeriesHero = React.memo(function SeriesHero({
       audio={audio.dubs.length > 0 ? audio.dubs.join(" · ") : null}
     >
       {audio.subs.length > 0 && (
-        <span className="relative z-10 rounded-md border border-white/15 bg-white/10 backdrop-blur-md px-2.5 py-1 text-xs font-semibold text-on-surface">
+        <span className="relative z-10 rounded-md border border-white/15 border-t-white/25 bg-black/60 shadow-glass-highlight-sm px-2.5 py-1 text-xs font-semibold text-on-surface">
           Subs: {audio.subs.join(" · ")}
         </span>
       )}
@@ -207,24 +214,22 @@ export const SeriesHero = React.memo(function SeriesHero({
   const actionButtons = (
     <>
       {onPlay && (
-        <PlayCta
+        <PrimaryPlayButton
+          label={hasProgress ? "Continuar" : "Reproducir"}
+          detail={hasProgress && resumeEpisodeNumber != null ? `Ep. ${resumeEpisodeNumber}` : null}
           onClick={onPlay}
           onHoverIntent={onPlayHover}
-          label={hasProgress ? "Continuar" : "Reproducir"}
-          sublabel={hasProgress
-            ? (resumeEpisodeNumber != null ? `Continuar · Ep ${resumeEpisodeNumber}` : "Continuar viendo")
-            : "Comenzar episodio"}
         />
       )}
       {entry?.localFiles && entry.localFiles.length > 0 && (
-        <GlassIconButton
+        <RoundAction
+          label={justQueued ? "Añadido a Mi Lista" : "Añadir a Mi Lista"}
           onClick={handleAddToQueue}
           icon={
-            <IconSwap swapKey={justQueued ? "queued" : "add"}>
+            <IconSwap subtle swapKey={justQueued ? "queued" : "add"}>
               {justQueued ? <IconUiCheck className="w-5 h-5" /> : <IconUiListPlus className="w-5 h-5" />}
             </IconSwap>
           }
-          title={justQueued ? "Añadido a la cola" : "Añadir a la cola"}
         />
       )}
     </>
@@ -258,12 +263,8 @@ export const SeriesHero = React.memo(function SeriesHero({
         synopsis={synopsis}
         topBadge={topBadge}
         footerText={footerText}
-        // En celular la barra inferior flota sobre la ficha: la franja reserva su alto (más el
-        // safe-area) para que el CTA no quede debajo al cargar. Desde md no hay barra.
         actionButtons={
-          <div className="w-full pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0">
-            <div className="flex flex-wrap items-center gap-4">{actionButtons}</div>
-          </div>
+          <div className="hero-actions flex flex-wrap items-center gap-4">{actionButtons}</div>
         }
         showPosterColumn={false}
         // Pantalla completa al entrar: en angosto el contenedor arranca bajo la barra superior,
@@ -272,7 +273,7 @@ export const SeriesHero = React.memo(function SeriesHero({
         // En celular, pantallas bajas: si el contenido no entra en el alto, el hero crece hacia abajo
         // y el CTA cae bajo la barra. El aire superior de 80 px (pt-20 de MediaHero) sobra ahí; con
         // 16 px el CTA queda por encima de la barra. Desde md no cambia.
-        className="min-h-[calc(100svh-var(--chrome-stick))] pt-4 md:min-h-screen"
+        className="min-h-[calc(100svh-var(--chrome-stick))] pt-4 md:min-h-dvh"
         onBackdropClick={onPlay}
         onTitleClick={onPlay}
       />

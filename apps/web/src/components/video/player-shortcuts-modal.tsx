@@ -39,10 +39,8 @@ const SHORTCUT_GROUPS: { groupName: string; shortcuts: ShortcutItem[] }[] = [
         ],
     },
     {
-        groupName: "Capítulos y paneles",
+        groupName: "Episodios y paneles",
         shortcuts: [
-            { keyCombination: ["["], description: "Capítulo anterior" },
-            { keyCombination: ["]"], description: "Siguiente capítulo" },
             { keyCombination: ["S"], description: "Saltar intro o créditos" },
             { keyCombination: ["N"], description: "Siguiente episodio" },
             { keyCombination: ["E"], description: "Abrir lista de episodios" },
@@ -110,6 +108,8 @@ export function PlayerShortcutsModal({ isOpen, onClose }: PlayerShortcutsModalPr
                         ref={dialogRef}
                         key="shortcuts-dialog"
                         role="dialog"
+                        data-liquid-surface="panel"
+                        data-liquid-context="video"
                         aria-modal="true"
                         aria-label="Atajos de teclado del reproductor"
                         initial={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 16 }}
@@ -125,6 +125,7 @@ export function PlayerShortcutsModal({ isOpen, onClose }: PlayerShortcutsModalPr
                         <div className="flex items-center justify-between h-14 pl-6 pr-2 border-b border-[var(--neutral-separator)]">
                             <h3 className="font-display text-lg font-medium tracking-tight text-label-1">Atajos de teclado</h3>
                             <button
+                                type="button"
                                 onClick={onClose}
                                 aria-label="Cerrar atajos de teclado"
                                 className={PLAYER_ICON_BTN}
@@ -153,7 +154,7 @@ export function PlayerShortcutsModal({ isOpen, onClose }: PlayerShortcutsModalPr
                                                     {shortcut.keyCombination.map((key, kIdx) => (
                                                         <kbd
                                                             key={kIdx}
-                                                            className="px-2 py-0.5 min-w-[24px] text-center text-xs font-mono font-semibold tabular-nums bg-[var(--neutral-elev-3)] text-label-1 rounded-full"
+                                                            className="px-2.5 py-0.5 min-w-[24px] text-center text-xs font-mono font-semibold tabular-nums bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-ring)] text-label-1 rounded-full"
                                                         >
                                                             {key}
                                                         </kbd>

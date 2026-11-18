@@ -3,12 +3,9 @@
     "src/main.tsx",
     "src/routeTree.gen.ts",
     "src/sw.ts",
-    "rsbuild.config.ts",
+    "src/routes/**/*.lazy.tsx",
     "rsbuild.pwa.ts",
     "rsbuild.jassub.ts",
-    "vitest.config.ts",
-    "tailwind.config.ts",
-    "eslint.config.js",
     "scripts/**/*.mjs"
   ],
   "project": ["src/**/*.{ts,tsx}"],

@@ -187,7 +187,7 @@ func TestDriveThumbnailKnownMissing(t *testing.T) {
 	require.NoError(t, os.Chtimes(marker, old, old))
 	assert.False(t, driveThumbnailKnownMissing(hash, cacheFile), "la marca vence y se vuelve a intentar")
 
-	driveThumbMissing.Store(hash, time.Now())
+	driveThumbMissing.SetT(hash, true, driveThumbMissingTTL)
 	t.Cleanup(func() { driveThumbMissing.Delete(hash) })
 	assert.True(t, driveThumbnailKnownMissing(hash, cacheFile), "también en memoria")
 }
@@ -220,7 +220,7 @@ func TestWarmOneThumbnail_ExistenteNoTocaFFmpeg(t *testing.T) {
 
 	// Drive sin integración activa: no hay nada que hacer.
 	generated, err = h.warmOneThumbnail(context.Background(), &dto.LocalFile{Path: "gdrive://x/y.mkv", DriveFileID: "x"})
-	require.NoError(t, err)
+	require.ErrorIs(t, err, errWarmIneligible)
 	assert.False(t, generated)
 }
 

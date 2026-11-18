@@ -10,6 +10,7 @@ import type { ScanLiveView } from "./views"
 interface ScanStatusStat {
     label: string
     value: number | string
+    hint?: string
     /** Con total se dibuja "valor / total" y una barra de cobertura. */
     total?: number
     tone?: "warn" | "ok"
@@ -90,7 +91,7 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                 "rounded-2xl border overflow-hidden transition-colors duration-base ease-smooth-out",
                 running ? "bg-brand-accent/[0.04] border-brand-accent/30"
                     : failed ? "bg-status-error/20 border-status-error/25"
-                    : "bg-[var(--neutral-elev-2)] border-[var(--neutral-separator)]",
+                    : "bg-[var(--neutral-elev-2)] border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)]",
             )}
         >
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5">
@@ -180,7 +181,7 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                                             state === "active" ? "text-brand-accent" : state === "done" ? "text-status-success/80" : "text-on-surface-variant/40",
                                         )}
                                     >
-                                        {state === "done" ? <Check className="size-3 shrink-0" /> : <step.icon className={cn("size-3 shrink-0", state === "active" && "animate-pulse")} />}
+                                        {state === "done" ? <Check className="size-3 shrink-0" /> : <step.icon className={cn("size-3 shrink-0", state === "active" && "animate-pulse motion-reduce:animate-none")} />}
                                         <span className={cn("truncate", state !== "active" && "hidden md:inline")}>{step.label}</span>
                                         {i < view.steps.length - 1 && <span className="text-on-surface-variant/25 px-0.5" aria-hidden>›</span>}
                                     </li>
@@ -235,6 +236,9 @@ export function ScanStatusCard({ view, isScanning, canScan, onScan, sourcesLabel
                                     </span>
                                     {stat.total !== undefined && (
                                         <span className="text-2xs font-mono text-label-2"> / {stat.total}</span>
+                                    )}
+                                    {stat.hint && (
+                                        <p className="mt-0.5 text-2xs text-label-2 truncate">{stat.hint}</p>
                                     )}
                                     {pct !== null && (
                                         <div className="mt-1.5 h-1 rounded-full bg-[var(--neutral-elev-3)] overflow-hidden" aria-hidden>

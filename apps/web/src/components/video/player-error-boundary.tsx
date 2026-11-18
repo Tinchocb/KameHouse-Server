@@ -48,7 +48,7 @@ export class PlayerErrorBoundary extends React.Component<Props, State> {
                 <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-black/80 text-label-1 rounded-lg p-8 min-h-[200px]">
                     <IconUiAlert className="w-10 h-10 text-brand-warning shrink-0" />
                     <div className="text-center space-y-1">
-                        <p className="font-semibold text-base">{label} encontró un error</p>
+                        <h3 className="font-semibold text-base text-balance">{label} encontró un error</h3>
                         <p className="text-sm text-label-2">No pudimos continuar la reproducción. Intentá de nuevo o cerrá el reproductor y abrí otro video.</p>
                     </div>
                     <div className="flex items-center gap-3">

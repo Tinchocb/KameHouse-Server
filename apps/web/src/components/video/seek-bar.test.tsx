@@ -45,6 +45,13 @@ describe("SeekBar component", () => {
         expect(container.querySelector("[data-marker=ed]")).toBeInTheDocument()
     })
 
+    it("does not draw corrupt or out-of-bounds skip markers", () => {
+        const { container } = render(<SeekBar {...defaultProps} skipTimesOp={{ startTime: 90, endTime: 1390 }} skipTimesEd={{ startTime: 1300, endTime: 2000 }} />)
+        expect(container.querySelector("[data-marker=op]")).toBeNull()
+        expect(container.querySelector("[data-marker=ed]")).toBeNull()
+        expect(screen.getByRole("slider", { name: /línea de tiempo/i })).toBeEnabled()
+    })
+
     it("handles zero duration gracefully", () => {
         render(<SeekBar {...defaultProps} duration={0} chapters={[]} skipTimesOp={undefined} skipTimesEd={undefined} />)
         const slider = screen.getByRole("slider", { name: /línea de tiempo/i })

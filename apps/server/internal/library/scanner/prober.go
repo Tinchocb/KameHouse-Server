@@ -3,9 +3,10 @@ package scanner
 import (
 	"context"
 	"kamehouse/internal/database/models/dto"
+	"kamehouse/internal/util/ffmpegutil"
+	"kamehouse/internal/util/parallel"
 	"runtime"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -20,9 +21,6 @@ type FileProber struct {
 }
 
 func NewFileProber(ffprobePath string, logger *zerolog.Logger) *FileProber {
-	if ffprobePath != "" {
-		ffprobe.SetFFProbeBinPath(ffprobePath)
-	}
 	return &FileProber{
 		FFprobePath: ffprobePath,
 		Logger:      logger,
@@ -31,51 +29,29 @@ func NewFileProber(ffprobePath string, logger *zerolog.Logger) *FileProber {
 
 // ProbeFiles populates TechnicalInfo for a list of LocalFiles using a bounded worker pool.
 func (p *FileProber) ProbeFiles(ctx context.Context, files []*dto.LocalFile) {
-	if len(files) == 0 {
+	if len(files) == 0 || ctx.Err() != nil {
 		return
 	}
 
 	p.Logger.Info().Int("count", len(files)).Msg("scanner: Initiating parallel file probing...")
 
-	maxWorkers := runtime.NumCPU()
-	if maxWorkers < 2 {
-		maxWorkers = 2
+	if len(files) == 1 {
+		p.probeFile(ctx, files[0])
+		return
 	}
-	if maxWorkers > 8 {
-		maxWorkers = 8 // Cap it to avoid too many simultaneous FFprobe processes
+	parallel.EachTaskLimitContext(ctx, files, min(8, max(2, runtime.NumCPU())), func(lf *dto.LocalFile, _ int) { p.probeFile(ctx, lf) })
+}
+
+func (p *FileProber) probeFile(ctx context.Context, lf *dto.LocalFile) {
+	if lf == nil || ctx.Err() != nil {
+		return
 	}
-
-	jobs := make(chan *dto.LocalFile, len(files))
-	for _, lf := range files {
-		jobs <- lf
+	if isMatroskaPath(lf.Path) {
+		ingestLocalFileEmbeddedMetadata(ctx, lf, p.Logger)
 	}
-	close(jobs)
-
-	var wg sync.WaitGroup
-	for i := 0; i < maxWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for lf := range jobs {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-
-				// 1. Try fast MKV parsing first (covers most anime collections)
-				if isMatroskaPath(lf.Path) {
-					ingestLocalFileEmbeddedMetadata(ctx, lf, p.Logger)
-				}
-
-				// 2. If TechnicalInfo is still empty or missing basic fields, fallback to FFprobe
-				if shouldFallbackToFFprobe(lf) && p.FFprobePath != "" {
-					p.probeWithFFprobe(ctx, lf)
-				}
-			}
-		}()
+	if shouldFallbackToFFprobe(lf) && p.FFprobePath != "" {
+		p.probeWithFFprobe(ctx, lf)
 	}
-	wg.Wait()
 }
 
 func shouldFallbackToFFprobe(lf *dto.LocalFile) bool {
@@ -94,26 +70,59 @@ func (p *FileProber) probeWithFFprobe(ctx context.Context, lf *dto.LocalFile) {
 	ffprobeCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	data, err := ffprobe.ProbeURL(ffprobeCtx, lf.Path)
+	data, err := ffmpegutil.ProbeURL(ffprobeCtx, p.FFprobePath, lf.Path)
 	if err != nil {
 		p.Logger.Debug().Err(err).Str("path", lf.Path).Msg("scanner: FFprobe failed")
 		return
 	}
 
-	if lf.TechnicalInfo == nil {
-		lf.TechnicalInfo = &dto.FileTechnicalInfo{}
+	applyProbeData(lf, data)
+}
+
+// Publish a fresh snapshot: repeated probes replace embedded streams while
+// retaining sidecars and flags owned by other scanners.
+func applyProbeData(lf *dto.LocalFile, data *ffprobe.ProbeData) {
+	if data == nil || data.Format == nil {
+		return
+	}
+	var next dto.FileTechnicalInfo
+	if lf.TechnicalInfo != nil {
+		next = *lf.TechnicalInfo
+	}
+	next.VideoStream = nil
+	var audioCount, subtitleCount int
+	for _, stream := range data.Streams {
+		if stream == nil {
+			continue
+		}
+		if stream.CodecType == string(ffprobe.StreamAudio) {
+			audioCount++
+		}
+		if stream.CodecType == string(ffprobe.StreamSubtitle) {
+			subtitleCount++
+		}
+	}
+	next.AudioStreams, next.SubtitleStreams = nil, nil
+	if audioCount > 0 {
+		next.AudioStreams = make([]*dto.AudioStreamInfo, 0, audioCount)
+	}
+	if subtitleCount > 0 {
+		next.SubtitleStreams = make([]*dto.AudioStreamInfo, 0, subtitleCount)
 	}
 
-	lf.TechnicalInfo.Duration = time.Duration(data.Format.DurationSeconds) * time.Second
-	lf.TechnicalInfo.Size, _ = strconv.ParseInt(data.Format.Size, 10, 64)
-	lf.TechnicalInfo.Bitrate, _ = strconv.ParseInt(data.Format.BitRate, 10, 64)
-	lf.TechnicalInfo.Format = data.Format.FormatName
+	next.Duration = time.Duration(data.Format.DurationSeconds * float64(time.Second))
+	next.Size, _ = strconv.ParseInt(data.Format.Size, 10, 64)
+	next.Bitrate, _ = strconv.ParseInt(data.Format.BitRate, 10, 64)
+	next.Format = data.Format.FormatName
 
 	for _, stream := range data.Streams {
+		if stream == nil {
+			continue
+		}
 		switch stream.CodecType {
 		case string(ffprobe.StreamVideo):
-			if lf.TechnicalInfo.VideoStream == nil {
-				lf.TechnicalInfo.VideoStream = &dto.VideoStreamInfo{
+			if next.VideoStream == nil {
+				next.VideoStream = &dto.VideoStreamInfo{
 					Codec:     stream.CodecName,
 					Profile:   stream.Profile,
 					Width:     stream.Width,
@@ -122,17 +131,18 @@ func (p *FileProber) probeWithFFprobe(ctx context.Context, lf *dto.LocalFile) {
 				}
 			}
 		case string(ffprobe.StreamAudio):
-			lf.TechnicalInfo.AudioStreams = append(lf.TechnicalInfo.AudioStreams, &dto.AudioStreamInfo{
+			next.AudioStreams = append(next.AudioStreams, &dto.AudioStreamInfo{
 				Codec:    stream.CodecName,
 				Language: stream.Tags.Language,
 				Title:    stream.Tags.Title,
 			})
 		case string(ffprobe.StreamSubtitle):
-			lf.TechnicalInfo.SubtitleStreams = append(lf.TechnicalInfo.SubtitleStreams, &dto.AudioStreamInfo{
+			next.SubtitleStreams = append(next.SubtitleStreams, &dto.AudioStreamInfo{
 				Codec:    stream.CodecName,
 				Language: stream.Tags.Language,
 				Title:    stream.Tags.Title,
 			})
 		}
 	}
+	lf.TechnicalInfo = &next
 }

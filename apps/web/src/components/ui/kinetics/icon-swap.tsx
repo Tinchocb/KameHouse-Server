@@ -10,11 +10,13 @@ interface IconSwapProps {
     swapKey: string
     children: React.ReactNode
     className?: string
+    /** Controles frecuentes: fundido breve sin escala ni blur. */
+    subtle?: boolean
 }
 
 /**
  * Estados del cambio según el tier de movimiento. El blur (`filter`) solo corre en "full":
- * en "subtle" (ahorro de energía o modo TV) se quita porque repinta el ícono en cada frame.
+ * en "subtle" (ahorro de energía) se quita porque repinta el ícono en cada frame.
  * Con movimiento reducido ("off") queda solo el fade.
  */
 export function iconSwapStates(tier: MotionTier): { hidden: TargetAndTransition; shown: TargetAndTransition } {
@@ -22,24 +24,24 @@ export function iconSwapStates(tier: MotionTier): { hidden: TargetAndTransition;
         return { hidden: { opacity: 0 }, shown: { opacity: 1 } }
     }
     if (tier === "subtle") {
-        return { hidden: { opacity: 0, scale: 0.25 }, shown: { opacity: 1, scale: 1 } }
+        return { hidden: { opacity: 0, scale: 0.96 }, shown: { opacity: 1, scale: 1 } }
     }
     return {
-        hidden: { opacity: 0, scale: 0.25, filter: "blur(4px)" },
+        hidden: { opacity: 0, scale: 0.9, filter: "blur(2px)" },
         shown: { opacity: 1, scale: 1, filter: "blur(0px)" },
     }
 }
 
 /**
  * Cambio de ícono por estado (p. ej. "+" → "✓" al confirmar una acción).
- * Ambos íconos ocupan la misma celda: el nuevo entra desde scale 0.25 (con un
+ * Ambos íconos ocupan la misma celda: el nuevo entra desde scale 0.9 (con un
  * blur leve en tier "full") mientras el viejo sale igual, sin saltos de layout.
  * Con movimiento reducido solo hace fade.
  */
-export function IconSwap({ swapKey, children, className }: IconSwapProps) {
+export function IconSwap({ swapKey, children, className, subtle = false }: IconSwapProps) {
     const tier = useMotionTier()
     const spring = useSpringPreset("iconSwap")
-    const { hidden, shown } = iconSwapStates(tier)
+    const { hidden, shown } = iconSwapStates(subtle ? "off" : tier)
     return (
         <span className={cn("inline-grid place-items-center", className)}>
             <AnimatePresence initial={false}>
@@ -49,7 +51,7 @@ export function IconSwap({ swapKey, children, className }: IconSwapProps) {
                     initial={hidden}
                     animate={shown}
                     exit={hidden}
-                    transition={spring}
+                    transition={subtle ? { duration: tier === "off" ? 0.15 : 0.25, ease: "easeInOut" } : spring}
                 >
                     {children}
                 </m.span>

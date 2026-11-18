@@ -16,6 +16,7 @@ import (
 	"kamehouse/internal/database/db"
 	"kamehouse/internal/database/models"
 	"kamehouse/internal/events"
+	"kamehouse/internal/util/ffmpegutil"
 	"kamehouse/internal/util/filecache"
 )
 
@@ -346,8 +347,6 @@ func (d *Detector) loadEpisodes(ctx context.Context, mediaID int) ([]episodeFile
 		return nil, 0, err
 	}
 
-	ffprobe.SetFFProbeBinPath(d.ffprobePath)
-
 	var episodes []episodeFile
 	for _, lf := range localFiles {
 		epNum := lf.GetEpisodeNumber()
@@ -366,7 +365,7 @@ func (d *Detector) loadEpisodes(ctx context.Context, mediaID int) ([]episodeFile
 		var probed *ffprobe.ProbeData
 		if duration == 0 || !hasAudioInfo {
 			probeCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-			if data, perr := ffprobe.ProbeURL(probeCtx, input); perr == nil {
+			if data, perr := ffmpegutil.ProbeURL(probeCtx, d.ffprobePath, input); perr == nil {
 				probed = data
 			}
 			cancel()

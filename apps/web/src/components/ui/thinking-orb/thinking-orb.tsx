@@ -1,9 +1,9 @@
 import { ThinkingOrb } from "thinking-orbs"
-import { useReducedMotion } from "framer-motion"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { usePerformanceStore, selectIsHeavyEffectsAllowed } from "@/lib/hardware/performance-store"
 
 // Los 9 estados semánticos del paquete
-export type OrbState =
+type OrbState =
     | "working"
     | "searching"
     | "solving"
@@ -14,7 +14,7 @@ export type OrbState =
     | "breathing"
     | "shaping"
 
-export interface ThinkingOrbProps {
+interface ThinkingOrbProps {
     state: OrbState
     /**
      * 64 → chat-avatar scale (overlay centrado)

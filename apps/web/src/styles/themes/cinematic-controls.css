@@ -1,0 +1,253 @@
+/* Neutro y Por era: misma jerarquía y comportamiento, materia de cada paleta.
+   Minimalista conserva su contrato independiente. TV queda fuera del alcance. */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) {
+  --fs-2xs: 12px;
+  --fs-3xs: 12px;
+  --fs-4xs: 12px;
+  --fs-5xs: 12px;
+  --type-caption-size: 13px;
+  --caption: 500 13px / 1.6 var(--font-sans);
+  --control-label-size: 16px;
+  --control-help-size: 13px;
+  --control-text-size: 14px;
+  --control-text-small: 13px;
+  --control-height-md: 40px;
+  --control-hit-size: 44px;
+  --control-disabled-opacity: 0.45;
+  --control-secondary-bg: var(--neutral-elev-2);
+  --control-secondary-hover: var(--neutral-elev-3);
+  --control-selected-bg: color-mix(in srgb, var(--brand-accent-hex) 12%, var(--neutral-elev-2));
+  --control-selected-border: color-mix(in srgb, var(--brand-accent-hex) 40%, var(--neutral-separator));
+  --control-border: var(--neutral-separator);
+  --control-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  --control-press: scale(0.97);
+  --control-transition: background-color var(--duration-quick) var(--ease-smooth-out),
+    border-color var(--duration-quick) var(--ease-smooth-out),
+    color var(--duration-quick) var(--ease-smooth-out),
+    opacity var(--duration-quick) var(--ease-smooth-out),
+    transform var(--duration-quick) var(--ease-out);
+}
+
+/* Etiquetas y ayudas por función: el arte y los títulos conservan su escala. */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-settings-theme-choice][aria-checked="true"] {
+  background: var(--control-selected-bg);
+  border-color: var(--control-selected-border);
+  box-shadow: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-settings-theme-choice] [data-settings-choice-ring] {
+  display: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(.settings-field-label, .UI-BasicField__fieldLabel) {
+  font-size: var(--control-label-size);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(.settings-field-help, .UI-BasicField__fieldHelpText, .sectionbar-header-desc) {
+  color: var(--label-2);
+  font-size: var(--control-help-size);
+  font-weight: 500;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-BasicField__fieldErrorText {
+  font-size: var(--control-help-size);
+  line-height: 1.6;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(.UI-Input__root, [data-field-embedded]) {
+  font-size: var(--control-text-size);
+}
+
+/* Tallas estables; IconButton mantiene la escala de sus glifos y sus medidas. */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root {
+  transition: var(--control-transition);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root:not(.UI-IconButton_root) {
+  font-size: var(--control-text-size);
+  font-weight: 600;
+  line-height: 1.25;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root:not(.UI-IconButton_root):is([data-size="xs"], [data-size="sm"]) {
+  font-size: var(--control-text-small);
+}
+
+/* Secundarios: superficie legible con bisel especular doble (Double-Bezel). */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root[data-intent="secondary"] {
+  background: var(--control-secondary-bg);
+  color: var(--label-1);
+  border: 1px solid var(--control-border);
+  border-top-color: var(--glass-frosted-border-top);
+  box-shadow: var(--double-bezel-control-shadow);
+  filter: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root[data-intent="glass"] {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-strong);
+  border-top-color: var(--glass-frosted-border-top);
+  color: var(--label-1);
+  box-shadow: var(--double-bezel-control-shadow);
+  filter: none;
+}
+
+/* Selección persistente y pulsación son distintas de la acción principal. */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root:is([data-intent="secondary"], [data-intent="glass"], [data-intent="ghost"], [data-intent="outline"]):is([aria-pressed="true"], :active:not(:disabled)) {
+  background: var(--control-selected-bg);
+  color: var(--label-1);
+  border-color: var(--control-selected-border);
+  filter: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root:active:not(:disabled) {
+  transform: var(--control-press);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(.UI-Button_root, .player-icon-button):disabled {
+  opacity: var(--control-disabled-opacity);
+  transform: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root[aria-busy="true"] {
+  opacity: 1;
+  cursor: progress;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(.UI-Input__root:disabled, [role="combobox"]:disabled, [data-field-surface][data-disabled="true"]) {
+  opacity: var(--control-disabled-opacity);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-field-surface][data-disabled="true"] input {
+  opacity: 1;
+}
+
+/* Un anillo independiente de las sombras: permanece al combinar foco y hover. */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--focus-ring));
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-field-embedded]:focus-visible {
+  outline: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-field-surface]:has(input:focus-visible) {
+  outline: 2px solid hsl(var(--focus-ring));
+  outline-offset: 3px;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-settings-control="toggle"]:focus-visible::before {
+  box-shadow: none;
+}
+
+/* Switch: el mínimo táctil es el área de interacción, no la pista visible. */
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-switch] {
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-switch]::after {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  min-width: var(--control-hit-size);
+  min-height: var(--control-hit-size);
+  transform: translate(-50%, -50%);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-switch-thumb] {
+  box-shadow: var(--control-thumb-shadow);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-switch-thumb] > span {
+  display: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is([data-switch][data-disabled="true"], [data-settings-control="toggle"][aria-disabled="true"]) {
+  opacity: var(--control-disabled-opacity);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-settings-control="toggle"][aria-disabled="true"] [data-switch] {
+  opacity: 1;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-SegmentedControl_root {
+  box-shadow: var(--double-bezel-inset-shadow);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-SegmentedControl_indicator {
+  background: var(--control-selected-bg);
+  border: 1px solid var(--control-selected-border);
+  box-shadow: var(--soft-thumb-shadow);
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-SegmentedControl_option {
+  font-family: var(--font-sans);
+  font-size: var(--control-text-size);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-SegmentedControl_option:is([aria-checked="true"], [aria-selected="true"]) {
+  color: var(--label-1);
+  font-weight: 600;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) [data-settings-choice] .uppercase {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 600;
+}
+
+:root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"])[data-flat="true"] :is(.UI-Button_root, .UI-SegmentedControl_indicator, [data-switch-thumb]) {
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root:not(.UI-IconButton_root):is([data-size="md"], [data-size="icon"]) {
+    height: var(--control-height-md);
+  }
+
+  :root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root:not(.UI-IconButton_root)[data-size="icon"] {
+    width: var(--control-height-md);
+  }
+
+  :root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) .UI-Button_root:is([data-intent="secondary"], [data-intent="glass"]):hover:not(:disabled):not([aria-pressed="true"]):not(:active) {
+    background: var(--control-secondary-hover);
+    border-color: var(--control-selected-border);
+  }
+}
+
+@media (any-pointer: coarse), (hover: none) {
+  :root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(.UI-Button_root, .UI-SegmentedControl_option) {
+    min-height: var(--control-hit-size);
+  }
+
+  :root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(.UI-IconButton_root, .UI-Button_root[data-size^="icon"]) {
+    min-width: var(--control-hit-size);
+  }
+
+  :root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) :is(.UI-Input__root, [data-field-embedded]) {
+    font-size: 16px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:is([data-mode="classic"], [data-mode="era"]):not([data-ui-style="classic-minimalist"]):not([data-tv="true"]) {
+    --control-transition: none;
+    --control-press: none;
+  }
+}

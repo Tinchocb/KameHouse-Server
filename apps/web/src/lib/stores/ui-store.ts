@@ -4,6 +4,7 @@ import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
 import { useQueueStore } from "./queue-store"
 import { isNavDensity, type NavDensity } from "@/lib/nav-compact"
+import { normalizeThemePreference } from "@/lib/theme/themes-registry"
 
 export interface BackgroundMusicTrack {
     name: string
@@ -20,15 +21,13 @@ interface ThemeVisualPatch {
     themeEra?: string
     themeMode?: string
     enableColorSettings?: boolean
-    backgroundColor?: string
-    accentColor?: string
     themeEnableBlurringEffects?: boolean
+    themeEnableLiquidGlass?: boolean
     themeEnableMediaPageBlurredBackground?: boolean
     themeAnimeLibraryCollectionDefaultSorting?: string
 }
 
-export interface UIState {
-    searchQuery: string
+interface UIState {
     isVideoActive: boolean
     bgMusicEnabled: boolean
     bgMusicVolume: number
@@ -50,7 +49,6 @@ export interface UIState {
     seriesHeroCardEnabled: boolean
     /** Barra de navegación flotante: solo íconos al bajar (auto), siempre (compact) o nunca (expanded). */
     navDensity: NavDensity
-    setSearchQuery: (query: string) => void
     setVideoActive: (active: boolean) => void
     setBgMusicEnabled: (enabled: boolean) => void
     setBgMusicVolume: (volume: number) => void
@@ -77,7 +75,6 @@ export const useUIStore = create<UIState>()(
         subscribeWithSelector(
             persist(
                 (set) => ({
-                    searchQuery: "",
                     isVideoActive: false,
                     bgMusicEnabled: true,
                     bgMusicVolume: 0.25,
@@ -95,9 +92,8 @@ export const useUIStore = create<UIState>()(
                     showInitialSetup: false,
                     activeSeriesContext: null,
                     seriesSoundtrackMode: true,
-                    themeVisual: {},
+                    themeVisual: { themeMode: "era", themeEra: "era-universe" },
                     hideAudienceScore: undefined,
-                    setSearchQuery: (query) => set({ searchQuery: query }),
                     setVideoActive: (active) => set({ isVideoActive: active }),
                     setBgMusicEnabled: (enabled) => set({ bgMusicEnabled: enabled }),
                     setBgMusicVolume: (volume) => set({ bgMusicVolume: volume }),
@@ -120,6 +116,16 @@ export const useUIStore = create<UIState>()(
                 }),
                 {
                     name: "kamehouse-ui-settings",
+                    merge: (persistedState, currentState) => {
+                        const rec = persistedState as Record<string, unknown> | undefined
+                        const p = (rec ?? {}) as Partial<UIState>
+                        if (rec && "uiStyle" in rec) {
+                            delete rec.uiStyle
+                        }
+                        const tv = (p.themeVisual ?? {}) as ThemeVisualPatch
+                        p.themeVisual = normalizeThemePreference(tv)
+                        return { ...currentState, ...p }
+                    },
                     partialize: (state) => ({
                         bgMusicEnabled: state.bgMusicEnabled,
                         bgMusicVolume: state.bgMusicVolume,

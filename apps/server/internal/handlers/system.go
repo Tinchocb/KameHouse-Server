@@ -1,16 +1,10 @@
 package handlers
 
 import (
-	"archive/zip"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"io/fs"
-	"kamehouse/internal/constants"
 	"os"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -23,7 +17,7 @@ import (
 //	@returns db.BackupResult
 func (h *Handler) HandleBackupDatabase(c echo.Context) error {
 	backupDir := filepath.Join(h.App.Config.Data.AppDataDir, "backups")
-	res, err := h.App.Database.Backup(backupDir, 5) // Keep last 5 backups
+	res, err := h.App.Database.BackupContext(c.Request().Context(), backupDir, 5) // Keep last 5 backups
 	if err != nil {
 		h.App.Logger.Error().Err(err).Msg("handlers: Failed to backup database")
 		return h.RespondWithError(c, err)
@@ -85,123 +79,5 @@ func (h *Handler) HandleGetDiagnosticsReport(c echo.Context) error {
 	c.Response().Header().Set("Content-Type", "application/zip")
 	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 
-	pr, pw := io.Pipe()
-	go func() {
-		zipWriter := zip.NewWriter(pw)
-		var writeErr error
-		defer func() {
-			// Un panic armando el zip cortaba el servidor entero; ahora corta
-			// solo la descarga (el pipe se cierra con error).
-			if r := recover(); r != nil {
-				writeErr = fmt.Errorf("backup: panic generando el zip: %v", r)
-			}
-			if writeErr != nil {
-				_ = pw.CloseWithError(writeErr)
-			} else {
-				_ = pw.Close()
-			}
-		}()
-
-		// 1. Logs
-		if h.App.OnFlushLogs != nil {
-			h.App.OnFlushLogs()
-			time.Sleep(100 * time.Millisecond)
-		}
-		logPath, err := h.latestServerLogPath()
-		if err == nil {
-			if logFile, err := os.Open(logPath); err == nil {
-				if f, err := zipWriter.Create("logs/latest.log"); err == nil && f != nil {
-					_, writeErr = io.Copy(f, logFile)
-				}
-				_ = logFile.Close()
-			}
-		}
-
-		// 2. Settings (Redacted)
-		settings, err := h.App.Database.GetSettings()
-		if err == nil && settings != nil {
-			// GetSettings returns the shared cached pointer (db.CurrSettings); copy
-			// before redacting so the live in-memory API keys are not destroyed.
-			settingsCopy := *settings
-			redact := func(s string) string {
-				if s != "" {
-					return "<redacted>"
-				}
-				return s
-			}
-			settingsCopy.Library.TmdbApiKey = redact(settingsCopy.Library.TmdbApiKey)
-			settingsCopy.GoogleDrive.ClientSecret = redact(settingsCopy.GoogleDrive.ClientSecret)
-			settingsCopy.GoogleDrive.RefreshToken = redact(settingsCopy.GoogleDrive.RefreshToken)
-
-			if settingsJSON, err := json.MarshalIndent(&settingsCopy, "", "  "); err == nil {
-				if f, err := zipWriter.Create("settings.json"); err == nil && f != nil {
-					_, _ = f.Write(settingsJSON)
-				}
-			}
-		}
-
-		// 3. Runtime
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-		runtimeInfo := map[string]interface{}{
-			"version":      constants.Version,
-			"versionName":  constants.VersionName,
-			"goVersion":    runtime.Version(),
-			"goOS":         runtime.GOOS,
-			"goArch":       runtime.GOARCH,
-			"numCPU":       runtime.NumCPU(),
-			"numGoroutine": runtime.NumGoroutine(),
-			"memStats":     mapMemStats(m),
-		}
-		if runtimeJSON, err := json.MarshalIndent(runtimeInfo, "", "  "); err == nil {
-			if f, err := zipWriter.Create("runtime.json"); err == nil && f != nil {
-				_, _ = f.Write(runtimeJSON)
-			}
-		}
-
-		// 4. Disk Usage
-		fileCacheSize, _ := h.App.FileCacher.GetTotalSize()
-		videoFilesSize, _ := h.App.FileCacher.GetMediastreamVideoFilesTotalSize()
-
-		// Get DB size
-		var dbSize int64
-		dbInfo, err := os.Stat(filepath.Join(h.App.Config.Data.AppDataDir, h.App.Config.Database.Name+".db"))
-		if err == nil {
-			dbSize = dbInfo.Size()
-		}
-
-		diskUsage := map[string]interface{}{
-			"fileCacheBytes":    fileCacheSize,
-			"videoFilesBytes":   videoFilesSize,
-			"databaseBytes":     dbSize,
-			"transcodeDirBytes": dirSizeBytes(h.App.Config.Cache.TranscodeDir),
-			"logsDirBytes":      dirSizeBytes(h.App.Config.Logs.Dir),
-		}
-		if diskUsageJSON, err := json.MarshalIndent(diskUsage, "", "  "); err == nil {
-			if f2, err := zipWriter.Create("disk-usage.json"); err == nil && f2 != nil {
-				_, _ = f2.Write(diskUsageJSON)
-			}
-		}
-
-		_ = zipWriter.Close()
-	}()
-
-	// Si el cliente corta la descarga, c.Stream deja de leer pero no cierra el lector: sin esto
-	// la goroutine del zip quedaria bloqueada en pw.Write con el log abierto.
-	defer pr.Close()
-	return c.Stream(200, "application/zip", pr)
-}
-
-func dirSizeBytes(root string) int64 {
-	var total int64
-	_ = filepath.WalkDir(root, func(_ string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return nil
-		}
-		if info, e := d.Info(); e == nil {
-			total += info.Size()
-		}
-		return nil
-	})
-	return total
+	return h.writeDiagnosticsArchive(c.Request().Context(), c.Response())
 }

@@ -65,7 +65,7 @@ export const CompactTimeline: React.FC<CompactTimelineProps> = memo(({
   const showDividers = showInterludes && order === 'chronological';
 
   return (
-    <div className="flex w-full flex-col gap-6 py-2" data-view="compact">
+    <div className="flex w-full max-w-[1440px] mx-auto flex-col gap-6 py-2" data-view="compact">
       {eraGroups.map((group) => {
         const era = ERA_FILTER_BY_SERIES[group.seriesId];
         const eraVolumes = group.sagas.flatMap((s) => s.volumes);
@@ -80,7 +80,7 @@ export const CompactTimeline: React.FC<CompactTimelineProps> = memo(({
           >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
               <div className="min-w-0">
-                <h2 className="truncate font-display text-lg font-black text-on-surface">{group.seriesTag}</h2>
+                <h2 className="truncate font-display text-lg font-black text-on-surface text-balance">{group.seriesTag}</h2>
                 <p className="text-xs text-label-2 tabular-nums">
                   {order === 'release' ? `Emitida en ${AIR_YEARS_BY_ERA[era]}` : group.yearsLabel} · {read}/{eraVolumes.length}{' '}
                   {eraVolumes.length === 1 ? 'lapso visto' : 'lapsos vistos'}
@@ -92,28 +92,55 @@ export const CompactTimeline: React.FC<CompactTimelineProps> = memo(({
                 </Button>
               )}
             </div>
-            <ol className="flex flex-col">
-              {eraVolumes.map((vol, i) => {
-                const prev = i > 0 ? eraVolumes[i - 1] : null;
-                const interlude = showDividers && prev ? interludeMap.get(`${prev.id}::${vol.id}`) : undefined;
-                const progress = progressById?.get(vol.id);
-                return (
-                  <React.Fragment key={vol.id}>
-                    {interlude && <CompactInterlude interlude={interlude} />}
-                    <CompactRow
-                      volume={vol}
-                      order={order}
-                      accentHex={group.accentHex}
-                      isRead={readVolumeIds.has(vol.id)}
-                      progress={progress}
-                      isHighlighted={vol.id === highlightedVolumeId}
-                      onOpen={onOpenVolume}
-                      onPlay={onPlayVolume}
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </ol>
+            <div className="flex flex-col gap-3">
+              {group.sagas.map((saga) => (
+                <div
+                  key={`${group.seriesId}-${saga.sagaId}`}
+                  className="rounded-2xl border border-l-[5px] p-3 sm:p-4"
+                  style={{
+                    borderColor: 'rgb(var(--era) / 0.25)',
+                    borderLeftColor: 'rgb(var(--era) / 0.85)',
+                    background:
+                      'linear-gradient(180deg, rgb(var(--era) / 0.07) 0%, rgba(255, 255, 255, 0.015) 100%)',
+                  }}
+                >
+                  <div
+                    className="mb-2.5 flex flex-wrap items-baseline justify-between gap-2 border-b pb-2"
+                    style={{ borderColor: 'rgb(var(--era) / 0.18)' }}
+                  >
+                    <h3 className="font-display text-sm font-black tracking-tight text-on-surface">
+                      {saga.sagaName}
+                    </h3>
+                    <span className="text-xs font-semibold tabular-nums" style={{ color: 'rgb(var(--era) / 0.9)' }}>
+                      {saga.volumes.length} {saga.volumes.length === 1 ? 'lapso' : 'lapsos'}
+                    </span>
+                  </div>
+                  <ol className="flex flex-col">
+                    {saga.volumes.map((vol) => {
+                      const eraIdx = eraVolumes.indexOf(vol);
+                      const prev = eraIdx > 0 ? eraVolumes[eraIdx - 1] : null;
+                      const interlude = showDividers && prev ? interludeMap.get(`${prev.id}::${vol.id}`) : undefined;
+                      const progress = progressById?.get(vol.id);
+                      return (
+                        <React.Fragment key={vol.id}>
+                          {interlude && <CompactInterlude interlude={interlude} />}
+                          <CompactRow
+                            volume={vol}
+                            order={order}
+                            accentHex={group.accentHex}
+                            isRead={readVolumeIds.has(vol.id)}
+                            progress={progress}
+                            isHighlighted={vol.id === highlightedVolumeId}
+                            onOpen={onOpenVolume}
+                            onPlay={onPlayVolume}
+                          />
+                        </React.Fragment>
+                      );
+                    })}
+                  </ol>
+                </div>
+              ))}
+            </div>
           </section>
         );
       })}
@@ -174,7 +201,7 @@ const CompactRow = memo(function CompactRow({ volume, order, accentHex, isRead, 
       {near ? (
         <div
           className={cn(
-            'flex h-full items-center gap-2 rounded-xl border bg-surface-container-lowest pr-2 transition-[border-color,box-shadow] ease-smooth-out motion-reduce:transition-none',
+            'chronology-compact-row flex h-full items-center gap-2 rounded-xl border bg-[var(--surface-content)] pr-2 transition-[border-color,box-shadow] ease-smooth-out motion-reduce:transition-none',
             // El resaltado (j/k, búsqueda) aparece al instante; al apagarse, borde y anillo se funden juntos.
             isHighlighted ? 'duration-0' : 'duration-medium',
             isHighlighted ? 'border-[rgb(var(--era)/0.7)] ring-2 ring-[rgb(var(--era)/0.5)]' : isRead ? 'border-status-success/30' : 'border-[var(--neutral-separator)]',
@@ -184,9 +211,9 @@ const CompactRow = memo(function CompactRow({ volume, order, accentHex, isRead, 
             type="button"
             onClick={() => onOpen(volume)}
             aria-label={`Abrir ${volume.title}`}
-            className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl p-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)]"
+            className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl p-1.5 text-left transition-[background-color,transform] duration-fast ease-smooth-out motion-safe:active:scale-[0.99] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-1)]"
           >
-            <span className={cn('relative h-full w-24 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br', volume.coverArt.auraGradient)}>
+            <span className={cn('relative h-full w-20 sm:w-24 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br', volume.coverArt.auraGradient)}>
               <span aria-hidden="true" className="absolute inset-0 grid place-items-center font-kanji text-3xl font-black text-white/[0.12]">
                 {volume.coverArt.symbolGlyph}
               </span>
@@ -199,10 +226,10 @@ const CompactRow = memo(function CompactRow({ volume, order, accentHex, isRead, 
               />
             </span>
             <span className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="truncate font-display text-sm font-bold leading-tight text-on-surface" title={volume.title}>
+              <span className="chronology-compact-title truncate font-display text-sm font-bold leading-tight text-on-surface text-balance" title={volume.title}>
                 {volume.title}
               </span>
-              <span className="flex items-baseline justify-between gap-2 text-2xs text-label-2 tabular-nums">
+              <span className="flex items-baseline justify-between gap-2 text-xs text-label-2 tabular-nums">
                 <span className="truncate">{year}</span>
                 <span
                   className={cn(

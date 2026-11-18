@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/library/anime"
 	"kamehouse/internal/library/scanner"
 	"kamehouse/internal/library/summary"
 	"kamehouse/internal/util/ffmpegutil"
@@ -62,12 +61,13 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		}
 	}()
 
-	if h.App.Settings == nil {
+	settings := h.App.SettingsSnapshot()
+	if settings == nil {
 		return h.RespondWithCodeError(c, 400, errors.New("invalid settings: ajustes no encontrados, por favor configura la biblioteca primero"))
 	}
 
 	// Retrieve the user's library path
-	libraryPaths := h.App.Settings.GetLibrary().GetAllPaths()
+	libraryPaths := settings.GetLibrary().GetAllPaths()
 	if len(libraryPaths) == 0 {
 		return h.RespondWithCodeError(c, 400, errors.New("invalid settings: no hay carpetas de origen configuradas"))
 	}
@@ -83,21 +83,8 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		return h.RespondWithError(c, err)
 	}
 
-	// For deep scans: clear lastScanAt so the walker traverses all directories
-	if b.Mode == "deep" && h.App.Database != nil {
-		if cached, err := h.App.Database.GetStoredSettings(); err == nil && cached != nil {
-			updated := *cached // copia: no mutar el puntero cacheado y compartido
-			s := &updated
-			s.Library.LastScanAt = time.Time{}
-			// CRITICAL: Reset all media IDs in local_files to force the matcher to re-run
-			if err := h.App.Database.ResetLocalFilesMediaIds(); err != nil {
-				h.App.Logger.Warn().Err(err).Msg("scan: failed to reset media IDs (best-effort, continuing)")
-			}
-			if _, err := h.App.Database.UpsertSettings(s); err != nil {
-				h.App.Logger.Warn().Err(err).Msg("scan: failed to upsert settings (best-effort, continuing)")
-			}
-		}
-	}
+	// Deep scans reset only their working copies during discovery. The walker
+	// already traverses every directory; never erase persisted identities here.
 
 	// Get the latest shelved local files
 	existingShelvedLfs, err := db.GetShelvedLocalFiles(h.App.Database)
@@ -132,8 +119,8 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 	sc := scanner.NewScanner(&scanner.ScannerOptions{
 		DirPath:              libraryPath,
 		OtherDirPaths:        additionalLibraryPaths,
-		SeriesPaths:          h.App.Settings.GetLibrary().SeriesPaths,
-		MoviePaths:           h.App.Settings.GetLibrary().MoviePaths,
+		SeriesPaths:          settings.GetLibrary().SeriesPaths,
+		MoviePaths:           settings.GetLibrary().MoviePaths,
 		Enhanced:             true,
 		ScanMode:             b.Mode, // Pass the mode
 		PlatformRef:          h.App.Metadata.Platform,
@@ -147,16 +134,16 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 		ScanLogger:           scanLogger,
 		Database:             h.App.Database,
 		MetadataProviderRef:  h.App.Metadata.Provider,
-		MatchingThreshold:    h.App.Settings.GetLibrary().ScannerMatchingThreshold,
-		StrictStructure:      h.App.Settings.GetLibrary().ScannerStrictStructure,
+		MatchingThreshold:    settings.GetLibrary().ScannerMatchingThreshold,
+		StrictStructure:      settings.GetLibrary().ScannerStrictStructure,
 		WithShelving:         true,
 		ExistingShelvedFiles: existingShelvedLfs,
 		AnimeCollection:      ac,
-		UseTMDB:              h.App.Settings.GetLibrary().ScannerProvider == "tmdb",
+		UseTMDB:              settings.GetLibrary().ScannerProvider == "tmdb",
 		TMDBClient:           h.App.Metadata.GetTMDBClient(),
 		FFprobePath:          ffprobePath,
 		BackgroundQueue:      h.App.BackgroundQueue,
-		UnifiedScan:          h.App.Settings.GetLibrary().UnifiedScan,
+		UnifiedScan:          settings.GetLibrary().UnifiedScan,
 	})
 
 	cleanupLock = false
@@ -212,14 +199,14 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 					paths = append(paths, lf.Path)
 				}
 			}
-			go func(p []string) {
+			h.App.StartBackground(func() {
 				defer func() {
 					if r := recover(); r != nil {
 						h.App.Logger.Warn().Interface("panic", r).Msg("scan: panic during WarmMediaInfo")
 					}
 				}()
-				h.App.MediastreamRepository.WarmMediaInfo(p)
-			}(paths)
+				h.App.MediastreamRepository.WarmMediaInfoContext(h.App.ShutdownCtx(), paths)
+			})
 		}
 
 		// Save the scan summary
@@ -230,7 +217,6 @@ func (h *Handler) HandleScanLocalFiles(c echo.Context) error {
 
 		// Post-scan maintenance tasks executed under scanCtx before clearing scan lock
 		ClearLibraryCollectionCache()
-		anime.InvalidateCuratedHomeCache()
 		h.prewarmShelfImages(0) // series nuevas: sus fondos al disco local
 		// Frames que faltan, en segundo plano y de a uno.
 		h.warmThumbnailsAfterScan(2 * time.Second)

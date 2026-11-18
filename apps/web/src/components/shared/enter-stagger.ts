@@ -11,16 +11,14 @@
  *   elementos que framer-motion maneja por su cuenta.
  */
 
-/** Curva ease-out fuerte del sistema (--ease-out en animation.css). */
-const EASE_OUT = "cubic-bezier(0.23, 1, 0.32, 1)"
+/** Curva de superficies del sistema (--ease-smooth-out en animation.css). */
+const EASE_OUT = "cubic-bezier(0.22, 1, 0.36, 1)"
 /** Duración de cada bloque: con el escalonado, toda la entrada cierra dentro del tope de 250 ms (navigation-transition.ts). */
 const BLOCK_MS = 170
 /** Desfase entre bloques: igual que --duration-stagger (animation.css). */
 const STAGGER_MS = 40
-const RISE_PX = 12
+const RISE_PX = 8
 const MAX_BLOCKS = 3
-/** Fin de la entrada escalonada: el último bloque arranca en (MAX_BLOCKS - 1) * STAGGER_MS. Tiene que quedar en 250 ms o menos. */
-export const ENTER_STAGGER_TOTAL_MS = BLOCK_MS + (MAX_BLOCKS - 1) * STAGGER_MS
 /** Bloques más bajos que esto (separadores, rieles) no valen una animación propia. */
 const MIN_BLOCK_HEIGHT = 48
 

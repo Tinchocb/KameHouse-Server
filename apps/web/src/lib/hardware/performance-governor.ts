@@ -3,8 +3,11 @@ import { usePerformanceStore } from "./performance-store"
 
 /** Tiempo seguido fuera de rango antes de cambiar de modo (activar o soltar el ahorro). */
 export const GOVERNOR_SUSTAIN_MS = 5000
+/** Pausa en reposo sano entre ráfagas de 1 s (evita correr rAF a 60–240 Hz en quietud). */
+export const GOVERNOR_IDLE_COOLDOWN_MS = 5000
 /** Tiempo tras arrancar que no cuenta: la carga y el primer render no son el rendimiento real. */
 const WARMUP_MS = 2000
+const SAMPLE_WINDOW_MS = 1000
 
 export interface GovernorStreaks {
     /** Desde cuándo el FPS está bajo el mínimo sano; `null` si no lo está. */
@@ -57,8 +60,9 @@ export function stepGovernor(
 }
 
 /**
- * Mide el FPS cuadro a cuadro y activa o suelta el modo ahorro (`autoThrottleActive`). Corre sin
- * depender del panel de diagnóstico: protege también a quien no lo abre. Devuelve la función que lo detiene.
+ * Mide el FPS mediante ráfagas periódicas y activa o suelta el modo ahorro (`autoThrottleActive`).
+ * En reposo sano suspende rAF entre ventanas (`GOVERNOR_IDLE_COOLDOWN_MS`) y despierta al instante
+ * con actividad del usuario; durante caídas de FPS o con ahorro activo mide cuadro a cuadro.
  */
 export function startPerformanceGovernor(): () => void {
     const startedAt = performance.now()
@@ -66,20 +70,75 @@ export function startPerformanceGovernor(): () => void {
     const ticks: number[] = []
     let streaks: GovernorStreaks = { lowSince: null, healthySince: null }
     let rafId = 0
+    let cooldownTimer: ReturnType<typeof setTimeout> | null = null
     let observableSince: number | null = null
+    let stopped = false
+    let wakeListening = false
 
-    const resetWindow = () => {
+    const resetBurstWindow = () => {
         ticks.length = 0
-        streaks = { lowSince: null, healthySince: null }
         observableSince = null
+    }
+    const resetWindow = () => {
+        resetBurstWindow()
+        streaks = { lowSince: null, healthySince: null }
     }
     // Ventana tapada, en segundo plano o sin foco: el navegador recorta los rAF y las lecturas bajas no
     // reflejan el rendimiento real de la app.
     const isObservable = () => document.visibilityState === "visible" && document.hasFocus()
 
+    const scheduleFrame = () => {
+        if (!stopped && !rafId && isObservable()) {
+            rafId = requestAnimationFrame(frame)
+        }
+    }
+
+    const detachWakeListeners = () => {
+        if (!wakeListening) return
+        wakeListening = false
+        window.removeEventListener("scroll", wakeBurst, { capture: true })
+        window.removeEventListener("pointerdown", wakeBurst, { capture: true })
+        window.removeEventListener("keydown", wakeBurst, { capture: true })
+    }
+
+    const clearCooldown = () => {
+        if (cooldownTimer !== null) {
+            clearTimeout(cooldownTimer)
+            cooldownTimer = null
+        }
+        detachWakeListeners()
+    }
+
+    const wakeBurst = () => {
+        clearCooldown()
+        if (!stopped && isObservable()) {
+            resetBurstWindow()
+            scheduleFrame()
+        }
+    }
+
+    const attachWakeListeners = () => {
+        if (wakeListening || stopped) return
+        wakeListening = true
+        window.addEventListener("scroll", wakeBurst, { capture: true, passive: true })
+        window.addEventListener("pointerdown", wakeBurst, { capture: true, passive: true })
+        window.addEventListener("keydown", wakeBurst, { capture: true, passive: true })
+    }
+
+    const enterCooldown = () => {
+        if (stopped || cooldownTimer !== null || !isObservable()) return
+        resetBurstWindow()
+        attachWakeListeners()
+        cooldownTimer = setTimeout(() => {
+            cooldownTimer = null
+            wakeBurst()
+        }, GOVERNOR_IDLE_COOLDOWN_MS)
+    }
+
     const frame = (now: number) => {
-        rafId = requestAnimationFrame(frame)
-        if (!isObservable()) {
+        rafId = 0
+        if (stopped || !isObservable()) {
+            clearCooldown()
             resetWindow()
             return
         }
@@ -93,8 +152,11 @@ export function startPerformanceGovernor(): () => void {
         // Ventana de 1 s recién llena: sin warm-up tras volver a ser observable.
         // Con 2–10 FPS la marca más antigua del buffer nunca necesariamente alcanza
         // 900 ms: medir el tiempo observable, no la separación entre muestras retenidas.
-        const warmed = now - startedAt > WARMUP_MS && now - observableSince >= 1000
-        if (!warmed) return
+        const warmed = now - startedAt > WARMUP_MS && now - observableSince >= SAMPLE_WINDOW_MS
+        if (!warmed) {
+            scheduleFrame()
+            return
+        }
 
         const state = usePerformanceStore.getState()
         const result = stepGovernor(streaks, {
@@ -105,18 +167,37 @@ export function startPerformanceGovernor(): () => void {
         })
         streaks = result.streaks
         if (result.action) state.setAutoThrottleActive(result.action === "throttle")
+
+        const nextThrottled = result.action ? result.action === "throttle" : state.autoThrottleActive
+        if (streaks.lowSince !== null || nextThrottled) {
+            scheduleFrame()
+        } else {
+            enterCooldown()
+        }
     }
 
-    document.addEventListener("visibilitychange", resetWindow)
-    window.addEventListener("blur", resetWindow)
-    window.addEventListener("focus", resetWindow)
-    rafId = requestAnimationFrame(frame)
+    const syncActivity = () => {
+        clearCooldown()
+        resetWindow()
+        if (stopped || !isObservable()) {
+            if (rafId) cancelAnimationFrame(rafId)
+            rafId = 0
+        } else {
+            scheduleFrame()
+        }
+    }
+    document.addEventListener("visibilitychange", syncActivity)
+    window.addEventListener("blur", syncActivity)
+    window.addEventListener("focus", syncActivity)
+    syncActivity()
 
     return () => {
+        stopped = true
+        clearCooldown()
         cancelAnimationFrame(rafId)
-        document.removeEventListener("visibilitychange", resetWindow)
-        window.removeEventListener("blur", resetWindow)
-        window.removeEventListener("focus", resetWindow)
+        document.removeEventListener("visibilitychange", syncActivity)
+        window.removeEventListener("blur", syncActivity)
+        window.removeEventListener("focus", syncActivity)
     }
 }
 

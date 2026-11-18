@@ -5,9 +5,11 @@ import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hook
 import { cn } from "@/components/ui/core/styling"
 import { IconButton } from "@/components/ui/button"
 import { PLAYER_GLASS } from "@/components/video/player-theme"
+import { IconSwap } from "@/components/ui/kinetics/icon-swap"
 
 interface SettingsLayoutProps {
     title: string
+    titleId?: string
     onBack?: () => void
     onClose: () => void
     children: React.ReactNode
@@ -15,8 +17,8 @@ interface SettingsLayoutProps {
 }
 
 /** Sentido de la navegación que llega como `custom` del AnimatePresence del panel:
- * -1 al volver al menú, 1 al entrar a un submenú. Por defecto 1: la hoja de Vaul
- * monta las vistas sin AnimatePresence propio ni `custom` (sin esto, `x` daba NaN). */
+ * -1 al volver al menú, 1 al entrar a un submenú. Por defecto 1 cuando el panel
+ * monta las vistas sin datos de presencia (evita que `x` resulte NaN). */
 const toDirection = (d: unknown): 1 | -1 => (d === -1 ? -1 : 1)
 
 // --ease-out y --duration-quick: la vista que se va sale más corta que lo que entra.
@@ -34,11 +36,11 @@ const VIEW_VARIANTS_REDUCED: Variants = {
     exit: { opacity: 0, transition: VIEW_EXIT_TRANSITION },
 }
 
-export function SettingsLayout({ title, onBack, onClose, children, className }: SettingsLayoutProps) {
+export function SettingsLayout({ title, titleId, onBack, onClose, children, className }: SettingsLayoutProps) {
     const spring = useSpringPreset("tabContent")
     const prefersReduced = useReducedMotion()
     const direction = toDirection(usePresenceData())
-    // Mientras sale (popLayout la deja encima unos 150 ms) no recibe clics.
+    // Mientras sale no recibe clics, foco ni navegación del lector de pantalla.
     const isPresent = useIsPresent()
 
     return (
@@ -49,7 +51,11 @@ export function SettingsLayout({ title, onBack, onClose, children, className }: 
             animate="animate"
             exit="exit"
             transition={spring}
-            className={cn("w-full md:w-80 rounded-2xl overflow-hidden flex flex-col", PLAYER_GLASS, !isPresent && "pointer-events-none", className)}
+            inert={!isPresent}
+            data-liquid-surface="panel"
+            data-liquid-context="video"
+            aria-hidden={!isPresent || undefined}
+            className={cn("player-settings-surface w-full md:w-80 rounded-2xl overflow-hidden flex flex-col", PLAYER_GLASS, !isPresent && "pointer-events-none", className)}
         >
             {/* Header */}
             <div className="flex items-center justify-between h-12 px-1.5 border-b border-[var(--neutral-separator)]">
@@ -63,7 +69,7 @@ export function SettingsLayout({ title, onBack, onClose, children, className }: 
                             icon={<IconNavigationChevronLeft className="w-4 h-4" />}
                         />
                     )}
-                    <span className="text-sm font-semibold text-label-1">
+                    <span id={titleId} className="text-sm font-semibold text-label-1">
                         {title}
                     </span>
                 </div>
@@ -90,19 +96,27 @@ interface MenuButtonProps {
     value?: string
     onClick: () => void
     rightElement?: React.ReactNode
+    disabled?: boolean
 }
 
-export function MenuButton({ icon, label, value, onClick, rightElement }: MenuButtonProps) {
+export function MenuButton({ icon, label, value, onClick, rightElement, disabled }: MenuButtonProps) {
     return (
         <button
+            type="button"
+            disabled={disabled}
             onClick={onClick}
-            className="w-full min-h-[44px] h-11 flex items-center gap-3 px-3 rounded-full [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] active:scale-95 transition-[background-color,transform] duration-fast ease-out-strong group text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
+            className="w-full min-h-[44px] h-11 flex items-center gap-3 px-3 rounded-full [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] motion-safe:active:scale-[0.97] transition-[background-color,transform] duration-fast ease-out-strong group text-left cursor-pointer disabled:opacity-[var(--control-disabled-opacity)] disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent"
         >
             <span className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent transition-colors duration-quick">{icon}</span>
             <span className="flex-1 text-sm font-semibold text-label-1">{label}</span>
-            {value && <span className="text-xs text-label-2 truncate max-w-[45%]">{value}</span>}
+            {value && <span className="text-xs text-label-2 min-w-0 max-w-[45%]">
+                <span className="sr-only">{value}</span>
+                <span aria-hidden="true" className="block truncate">
+                    <IconSwap swapKey={value} subtle>{value}</IconSwap>
+                </span>
+            </span>}
             {rightElement || (
-                <IconNavigationChevronLeft className="w-4 h-4 rotate-180 text-label-3 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-2 transition-colors duration-quick shrink-0" />
+                <IconNavigationChevronLeft className="w-4 h-4 rotate-180 text-label-3 [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-label-2 transition-[color,transform] duration-quick ease-smooth-out motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5 motion-safe:group-focus-visible:translate-x-0.5 shrink-0" />
             )}
         </button>
     )

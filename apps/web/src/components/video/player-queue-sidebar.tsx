@@ -1,5 +1,5 @@
 import React from "react"
-import { m, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence, useIsPresent, type HTMLMotionProps } from "framer-motion"
 import { IconUiClose, IconMediaPlay } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { IconButton } from "@/components/ui/button"
@@ -18,6 +18,37 @@ interface PlayerQueueSidebarProps {
     onSelectItem?: (item: PlaylistItem, index: number) => void
 }
 
+const QueueRow = React.forwardRef<HTMLDivElement, HTMLMotionProps<"div">>((props, ref) => {
+    const isPresent = useIsPresent()
+    return <m.div {...props} ref={ref} inert={!isPresent} aria-hidden={!isPresent || undefined}
+        style={{ ...props.style, pointerEvents: isPresent ? "auto" : "none" }} />
+})
+QueueRow.displayName = "PlayerQueueRow"
+
+function focusQueueHeader(element: Element | null) {
+    element?.closest("[role=dialog]")?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true })
+}
+
+function focusQueueNeighbor(button: HTMLButtonElement) {
+    const row = button.closest("[data-queue-row]")
+    for (const direction of ["nextElementSibling", "previousElementSibling"] as const) {
+        let neighbor = row?.[direction]
+        while (neighbor) {
+            const style = getComputedStyle(neighbor)
+            if (neighbor.hasAttribute("data-queue-row") && !neighbor.closest('[inert], [aria-hidden="true"], [hidden]')
+                && style.display !== "none" && style.visibility !== "hidden" && style.visibility !== "collapse") {
+                const target = neighbor.querySelector<HTMLButtonElement>("button:not(:disabled)")
+                if (target) {
+                    target.focus({ preventScroll: true })
+                    return
+                }
+            }
+            neighbor = neighbor[direction]
+        }
+    }
+    focusQueueHeader(button)
+}
+
 export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
     isOpen,
     onClose,
@@ -27,6 +58,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
 }: PlayerQueueSidebarProps) {
     const itemSpring = useSpringPreset("tabContent")
     const prefersReducedMotion = useReducedMotion()
+    const listRef = React.useRef<HTMLDivElement>(null)
 
     return (
         <PlayerPanelReveal
@@ -41,19 +73,20 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
             ariaLabel="Mi Lista"
         >
             {/* Queue Items List */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 no-scrollbar">
+            <div ref={listRef} className="flex-1 overflow-y-auto p-2 space-y-1 no-scrollbar">
                 <AnimatePresence mode="popLayout" initial={false}>
                     {playlistQueue.map((item, idx) => {
                         const isCurrent = idx === currentQueueIndex
 
                         return (
-                            <m.div
+                            <QueueRow
                                 key={`${String(item.id)}_${String(item.episodeNumber ?? "")}_${String(item.mediaId)}_${item.playableUrl}`}
                                 layout={!prefersReducedMotion}
                                 initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
                                 transition={itemSpring}
+                                data-queue-row=""
                                 className={cn(
                                     "w-full flex items-center gap-1 p-2 rounded-xl transition-colors duration-quick group relative",
                                     isCurrent ? "bg-[var(--neutral-elev-3)]" : "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-2)]"
@@ -68,7 +101,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                     }}
                                     aria-label={`Reproducir ${item.title}`}
                                     aria-current={isCurrent ? "true" : undefined}
-                                    className="flex-1 min-w-0 flex items-center gap-3 cursor-pointer text-left active:scale-[0.985] transition-transform duration-fast ease-out-strong"
+                                    className="flex-1 min-w-0 flex items-center gap-3 cursor-pointer text-left active:scale-[0.985] motion-reduce:active:scale-100 transition-transform duration-fast ease-out-strong"
                                 >
                                     {/* Thumbnail */}
                                     <div className="relative w-24 aspect-video rounded-sm overflow-hidden shrink-0 bg-[var(--neutral-elev-2)]">
@@ -104,6 +137,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                     size="md"
                                     onClick={(e) => {
                                         e.stopPropagation()
+                                        focusQueueNeighbor(e.currentTarget)
                                         useQueueStore.getState().removeFromQueue(idx)
                                     }}
                                     aria-label={`Quitar ${item.title} de Mi Lista`}
@@ -111,7 +145,7 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                                     className="text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1"
                                     icon={<IconUiClose className="w-4 h-4" />}
                                 />
-                            </m.div>
+                            </QueueRow>
                         )
                     })}
                 </AnimatePresence>
@@ -134,9 +168,10 @@ export const PlayerQueueSidebar = React.memo(function PlayerQueueSidebar({
                         confirmLabel="Lista vaciada"
                         variant="destructive"
                         onConfirm={() => {
+                            focusQueueHeader(listRef.current)
                             useQueueStore.getState().clearQueue()
                         }}
-                        className="w-full h-10 rounded-full text-xs font-semibold tracking-wide text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-[color,background-color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
+                        className="w-full h-10 rounded-full text-xs font-semibold tracking-wide text-label-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-label-1 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[var(--neutral-elev-3)] transition-[color,background-color,transform] duration-fast ease-smooth-out active:scale-[0.97] motion-reduce:active:scale-100 cursor-pointer"
                     />
                 </div>
             )}

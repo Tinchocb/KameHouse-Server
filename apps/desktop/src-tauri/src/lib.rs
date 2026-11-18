@@ -8,6 +8,8 @@ mod window_manager;
 mod tray;
 mod ipc;
 mod mpv;
+#[cfg(target_os = "windows")]
+mod updates;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -145,7 +147,12 @@ pub fn run() {
             setup_window_manager.create_windows(&handle, dev_mode, settings.clone()).map_err(|e| e as Box<dyn std::error::Error>)?;
 
             // Initialize tray
-            tray_manager.create_tray(&handle, setup_sidecar_manager.clone(), setup_window_manager.clone(), settings.clone()).map_err(|e| e as Box<dyn std::error::Error>)?;
+            tray_manager.create_tray(&handle, setup_sidecar_manager.clone()).map_err(|e| e as Box<dyn std::error::Error>)?;
+
+            #[cfg(target_os = "windows")]
+            if !dev_mode {
+                updates::check(handle.clone(), setup_sidecar_manager.clone());
+            }
 
             // Initialize sidecar
             let sidecar_mgr = setup_sidecar_manager.clone();

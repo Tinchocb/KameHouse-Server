@@ -7,6 +7,7 @@ export const DRIVE_SUBTITLES_ENDPOINTS = {
     extract: "/api/v1/drive/subtitles/extract",
     cancel: "/api/v1/drive/subtitles/cancel",
     window: "/api/v1/drive/subtitles/window",
+    titleCard: "/api/v1/drive/subtitles/title-card",
 } as const
 
 export interface DriveSubtitlesResponse {

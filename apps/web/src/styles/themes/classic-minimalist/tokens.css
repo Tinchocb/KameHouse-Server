@@ -1,0 +1,436 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  tokens.css — Tokens globales del tema Minimalista                    ║
+   ║  Única fuente de color, geometría, tipografía y movimiento del tema   ║
+   ╚════════════════════════════════════════════════════════════════════════╝
+
+   Contrato (docs/TEMA-MINIMALISTA.md · «Contrato»; lo comprueba classic-minimalist.guard.test.ts):
+
+     1. Plano      Minimalista activa el modo plano (data-flat, motivo "theme"): cero
+                   desenfoque en toda la app. El tema no declara backdrop-filter.
+     2. Monocromo  El cromo usa solo la rampa de grises y el blanco perla. Excepciones:
+                   el selector de eras (lo pinta el componente), la estantería de Series
+                   y el rojo de error. Calificaciones, vistos y progreso van en blanco.
+     3. Botones    Dos recetas, las del hero de Inicio: primario perla y secundario
+                   translúcido con filete. Tres alturas: 46 · 40 · 36 px.
+     4. Texto      Cuatro tamaños (12 · 13 · 14 · 16 px), dos pesos (500 · 600), sin
+                   mayúsculas forzadas.
+     5. Radios     6 · 8 · 12 · 16 px y píldora solo para islas de navegación.
+     6. Sombras    Solo en lo que flota (islas, menús, avisos, diálogos) y en el cursor
+                   de la línea de tiempo. El único halo es el de «Reproducir» del hero.
+
+   Capas: 1 primitivas → 2 semánticos --minimal-* → 3 contrato global de la app →
+   4 acentos de era. Las demás hojas del tema solo leen la capa 2.
+
+   Contraste medido (31/10) del texto sobre la rampa:
+
+     token            lienzo  superficie  elevada  hover   relleno-5
+     ───────────────  ──────  ──────────  ───────  ──────  ─────────
+     --minimal-text-1  18,4     16,9       15,9     14,2      —
+     --minimal-text-2  11,1     10,2        9,6      8,5      7,3
+     --minimal-text-3   7,0      6,4        6,1      5,4      4,6
+     --minimal-text-4   5,5      5,1        4,8      4,3      —     (solo placeholder) */
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) {
+  /* ─── 1. Primitivas ───────────────────────────────────────────────────────
+     Negro obsidiana casi neutro (B = R + 2…6), pasos de ~3–4 L*. */
+  --minimal-gray-0: #08080A;
+  --minimal-gray-1: #141418;
+  --minimal-gray-2: #1A1A20;
+  --minimal-gray-3: #24242A;
+  --minimal-pearl: #F5F5F7;
+  --minimal-white: #FFFFFF;
+
+  /* ─── 2a. Superficies (todas opacas) ──────────────────────────────────── */
+  --minimal-canvas: var(--minimal-gray-0);               /* fondo de página */
+  --minimal-surface: var(--minimal-gray-1);              /* islas, menús, modales, avisos, campos */
+  --minimal-surface-raised: var(--minimal-gray-2);       /* tooltip, campo en hover o foco */
+  --minimal-surface-hover: var(--minimal-gray-3);        /* hover o selección sobre una superficie */
+  --minimal-scrim: rgba(0, 0, 0, 0.82);                  /* texto chico directo sobre arte */
+
+  /* ─── 2b. Rellenos (blanco translúcido, solo para estados de control) ──── */
+  --minimal-fill-1: rgba(255, 255, 255, 0.04);           /* hover de filas y opciones */
+  --minimal-fill-2: rgba(255, 255, 255, 0.06);           /* chips, insignias, esqueletos, hover ghost */
+  --minimal-fill-3: rgba(255, 255, 255, 0.08);           /* control secundario en reposo, selección tenue */
+  --minimal-fill-4: rgba(255, 255, 255, 0.12);           /* control secundario en hover, selección marcada */
+  --minimal-fill-5: rgba(255, 255, 255, 0.16);           /* encendido o presionado */
+
+  /* ─── 2c. Líneas ──────────────────────────────────────────────────────── */
+  --minimal-line-1: rgba(255, 255, 255, 0.06);           /* separador entre filas */
+  --minimal-line-2: rgba(255, 255, 255, 0.08);           /* borde de superficie: modal, aviso, tarjeta */
+  --minimal-line-3: rgba(255, 255, 255, 0.12);           /* borde de control e isla */
+  --minimal-line-4: rgba(255, 255, 255, 0.20);           /* hover, seleccionado */
+  --minimal-line-5: rgba(255, 255, 255, 0.32);           /* hover de borde ya marcado, marcadores */
+
+  /* ─── 2d. Texto ───────────────────────────────────────────────────────── */
+  --minimal-text-hi: var(--minimal-white);               /* hover y énfasis máximo */
+  --minimal-text-1: var(--minimal-pearl);                /* principal */
+  --minimal-text-2: #C0C0C7;                             /* secundario: sinopsis, chips */
+  --minimal-text-3: #9898A0;                             /* atenuado: metadatos, ghost */
+  --minimal-text-4: #86868E;                             /* placeholder; nunca texto informativo */
+  --minimal-text-faint: rgba(255, 255, 255, 0.28);       /* solo glifos decorativos (separador ·) */
+
+  --minimal-font-xs: 12px;                               /* piso: insignias, contadores, etiquetas */
+  --minimal-font-sm: 13px;                               /* metadatos, pestañas, botones chicos */
+  --minimal-font-md: 14px;                               /* botones, títulos de fila */
+  --minimal-font-lg: 16px;                               /* cuerpo */
+  --minimal-weight-medium: 500;                          /* cuerpo, secundario */
+  --minimal-weight-semibold: 600;                        /* títulos, primario, seleccionado */
+
+  /* ─── 2e. Acento ──────────────────────────────────────────────────────────
+     Un solo acento (blanco perla) reservado a la acción principal de cada bloque. */
+  --minimal-accent: var(--minimal-pearl);
+  --minimal-accent-hover: var(--minimal-white);
+  --minimal-on-accent: var(--minimal-gray-0);
+  --minimal-accent-rgb: 245 245 247;
+  --minimal-focus-ring: 0 0 0 1.5px rgba(255, 255, 255, 0.72), 0 0 0 4px rgba(255, 255, 255, 0.12);
+  --minimal-field-error: var(--status-error-fg);           /* excepción funcional: validación de campos */
+
+  /* ─── 2f. Botones: las dos recetas del hero de Inicio ─────────────────────
+     Primario: perla plano. Secundario: relleno translúcido, filete de 1 px y canto
+     superior. Todas las familias (Button, CTAs, .btn-ui, .ep-action-btn) las usan. */
+  --minimal-primary-bg: var(--minimal-accent);
+  --minimal-primary-bg-hover: var(--minimal-accent-hover);
+  --minimal-primary-bg-pressed: #DEDEE3;
+  --minimal-primary-fg: var(--minimal-on-accent);
+  --minimal-secondary-bg: var(--minimal-fill-3);
+  --minimal-secondary-bg-hover: var(--minimal-fill-4);
+  --minimal-secondary-bg-pressed: var(--minimal-fill-5);
+  --minimal-secondary-fg: var(--minimal-text-1);
+  --minimal-secondary-border: var(--minimal-line-3);
+  --minimal-secondary-border-hover: var(--minimal-line-4);
+  --minimal-secondary-edge: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --minimal-secondary-edge-hover: inset 0 1px 0 rgba(255, 255, 255, 0.20);
+
+  /* ─── 2g. Sombras solo en lo que flota (islas, menús, modales, avisos, tooltips) ─ */
+  --minimal-shadow-control: 0 1px 4px rgba(0, 0, 0, 0.45);
+  --minimal-shadow-float: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 10px 28px -4px rgba(0, 0, 0, 0.62);
+  --minimal-shadow-menu: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 44px -6px rgba(0, 0, 0, 0.74);
+  --minimal-shadow-modal: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 28px 68px -8px rgba(0, 0, 0, 0.82);
+  --minimal-shadow-cta: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 6px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(255, 255, 255, 0.16);
+  --minimal-shadow-cta-hover: inset 0 1px 0 rgba(255, 255, 255, 1), 0 4px 10px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(255, 255, 255, 0.24);
+  --minimal-card-edge: none;
+  --minimal-card-edge-hover: none;
+  --minimal-hero-shadow: none;
+  --minimal-text-shadow-hero: 0 2px 16px rgba(0, 0, 0, 0.85), 0 1px 3px rgba(0, 0, 0, 0.92);
+
+  /* ─── 2h. Geometría ───────────────────────────────────────────────────────
+     Radios concéntricos 16 → 12 → 8 → 6; píldora solo en islas de navegación. */
+  --minimal-radius-xs: 6px;                               /* insignias y contadores */
+  --minimal-radius-sm: 8px;                               /* sub-ítems, chips, opciones, botón chico */
+  --minimal-radius-md: 12px;                              /* botones, campos, tarjetas */
+  --minimal-radius-lg: 16px;                              /* contenedores, modales, paneles, avisos */
+  --minimal-radius-pill: 9999px;                          /* islas de navegación */
+
+  /* Mapeo de la escala global de radios (radius.css) a la escala concéntrica del tema */
+  --radius-xs: var(--minimal-radius-xs);
+  --radius-sm: var(--minimal-radius-sm);
+  --radius-md: var(--minimal-radius-md);
+  --radius-lg: var(--minimal-radius-lg);
+  --radius-xl: var(--minimal-radius-md);
+  --radius-2xl: var(--minimal-radius-lg);
+  --radius-3xl: var(--minimal-radius-lg);
+  --radius-4xl: var(--minimal-radius-lg);
+  --radius-card: var(--minimal-radius-md);
+  --radius-modal: var(--minimal-radius-lg);
+  --radius-popover: var(--minimal-radius-md);
+  --radius-hero: var(--minimal-radius-lg);
+  --radius-container: var(--minimal-radius-lg);
+  --radius-corner-lg: var(--minimal-radius-lg);
+  --radius-player: var(--minimal-radius-lg);
+  --radius-sidebar: var(--minimal-radius-lg);
+  --radius-navbar: var(--minimal-radius-lg);
+  --minimal-control-lg: 46px;                             /* acciones del hero y de la ficha */
+  --minimal-control-md: 40px;
+  --minimal-control-sm: 36px;                             /* acciones de fila, pestañas */
+  --minimal-control-padding-sm: 14px;
+  --minimal-control-padding-md: 18px;
+  --minimal-control-padding-lg: 22px;
+  --minimal-hit: 44px;                                    /* área mínima de interacción */
+  --minimal-disabled-opacity: 0.45;
+  --minimal-leading-control: 1.25;
+  --minimal-leading-body: 1.6;
+  --minimal-leading-meta: 1.4;
+
+  /* La escala pequeña también alcanza badges, resultados y ayudas heredadas. */
+  --fs-2xs: var(--minimal-font-xs);
+  --fs-3xs: var(--minimal-font-xs);
+  --fs-4xs: var(--minimal-font-xs);
+  --fs-5xs: var(--minimal-font-xs);
+  --weight-normal: var(--minimal-weight-medium);
+  --weight-bold: var(--minimal-weight-semibold);
+  --weight-extrabold: var(--minimal-weight-semibold);
+  --weight-black: var(--minimal-weight-semibold);
+  --page-title-weight: var(--minimal-weight-semibold);
+  --caption: var(--minimal-weight-medium) var(--minimal-font-sm) / var(--minimal-leading-meta) var(--font-sans);
+  --label-sm: var(--minimal-weight-medium) var(--minimal-font-xs) / var(--minimal-leading-meta) var(--font-sans);
+
+  /* Roles tipográficos compartidos; los títulos mantienen su escala de composición. */
+  --type-display-weight: var(--minimal-weight-semibold);
+  --type-title-weight: var(--minimal-weight-semibold);
+  --type-headline-weight: var(--minimal-weight-semibold);
+  --type-body-size: var(--minimal-font-md);
+  --type-body-weight: var(--minimal-weight-medium);
+  --type-body-leading: var(--minimal-leading-body);
+  --type-label-size: var(--minimal-font-xs);
+  --type-label-weight: var(--minimal-weight-medium);
+  --type-label-leading: var(--minimal-leading-meta);
+  --type-caption-size: var(--minimal-font-sm);
+  --type-caption-weight: var(--minimal-weight-medium);
+  --type-caption-leading: var(--minimal-leading-meta);
+
+  /* ─── 2i. Movimiento ──────────────────────────────────────────────────────
+     ≤ 180 ms y sin rebote; la reducción de movimiento los anula más abajo. */
+  --minimal-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --minimal-duration-fast: 160ms;
+  --minimal-duration: 180ms;
+  --minimal-transition: transform var(--minimal-duration-fast) var(--minimal-ease),
+                        background var(--minimal-duration) ease,
+                        background-color var(--minimal-duration) ease,
+                        border-color var(--minimal-duration) ease,
+                        box-shadow var(--minimal-duration) ease,
+                        color var(--minimal-duration-fast) ease,
+                        opacity var(--minimal-duration-fast) ease;
+  --minimal-press: scale(0.98);
+  --minimal-lift: translateY(-1px);
+
+  /* ─── 3. Contrato global ──────────────────────────────────────────────────
+     Minimalista siempre corre en plano: la escala --flat-* (blur.css) pasa a ser la
+     rampa del tema y todo lo que el plano asigna (vidrio, sectionbar, MD3,
+     --neutral-elev-*) resuelve a los mismos grises que las hojas del tema. */
+  --flat-0: var(--minimal-canvas);
+  --flat-1: var(--minimal-surface);
+  --flat-2: var(--minimal-surface-raised);
+  --flat-3: var(--minimal-surface-hover);
+  --flat-separator: var(--minimal-line-2);
+  --flat-edge: var(--minimal-line-2);
+  --flat-edge-top: var(--minimal-line-2);
+  --flat-shadow: var(--minimal-shadow-float);
+  --flat-shadow-raised: var(--minimal-shadow-menu);
+
+  --bg-primary: var(--minimal-canvas);
+  --bg-secondary: var(--minimal-surface);
+  --bg-tertiary: var(--minimal-surface-raised);
+  --bg-quaternary: var(--minimal-surface-hover);
+  --neutral-elev-0: var(--minimal-canvas);
+  --neutral-elev-1: var(--minimal-surface);
+  --neutral-elev-2: var(--minimal-surface-raised);
+  --neutral-elev-3: var(--minimal-surface-hover);
+  --neutral-separator: var(--minimal-line-2);
+  --glass-border-top: var(--neutral-separator);
+  --glass-border-side: var(--neutral-separator);
+  --glass-border-strong: var(--minimal-line-3);
+  --glass-frosted-border-top: var(--neutral-separator);
+  --glass-frosted-border: var(--neutral-separator);
+  --glass-frosted-bg: var(--minimal-surface);
+  --glass-highlight-sm: none;
+  --glass-highlight-md: none;
+  --glass-highlight-lg: none;
+  --glass-highlight-sm-color: transparent;
+  --glass-highlight-md-color: transparent;
+  --glass-highlight-lg-color: transparent;
+  --double-bezel-ring: 0 0 0 0 transparent;
+  --double-bezel-specular: 0 0 0 0 transparent;
+  --double-bezel-shadow: none;
+  --double-bezel-shadow-strong: none;
+  --double-bezel-control-shadow: none;
+  --double-bezel-inset-shadow: none;
+  --soft-pill-shadow: none;
+  --soft-inset-shadow: none;
+  --soft-thumb-shadow: none;
+  --glass-frosted-shadow: none;
+  --sectionbar-shadow: none;
+  --sectionbar-shadow-strong: none;
+  --surface-content: var(--minimal-surface);
+  --surface-content-raised: var(--minimal-surface-raised);
+  --surface-content-border: var(--minimal-line-2);
+
+  --label-1: var(--minimal-text-1);
+  --label-2: var(--minimal-text-2);
+  --label-3: var(--minimal-text-3);
+  --md-sys-color-on-surface: var(--minimal-text-1);
+  --on-surface-rgb: 245, 245, 247;
+  --md-sys-color-on-surface-variant: var(--minimal-text-2);
+  --on-surface-variant-rgb: 192, 192, 199;
+  --classic-text-primary: var(--minimal-text-1);
+  --classic-text-secondary: var(--minimal-text-2);
+  --classic-text-muted: var(--minimal-text-3);
+  --classic-border-subtle: var(--minimal-line-2);
+  --classic-border-strong: var(--minimal-line-3);
+  --classic-hover: var(--minimal-surface-hover);
+  --classic-active: var(--minimal-surface-hover);
+
+  --selected-bg: var(--minimal-fill-3);
+  --selected-fg: var(--minimal-text-1);
+  --selected-border: var(--minimal-line-4);
+  --control-primary-bg: var(--minimal-primary-bg);
+  --control-primary-fg: var(--minimal-primary-fg);
+  --control-secondary-bg: var(--minimal-surface);
+  --control-secondary-hover: var(--minimal-surface-raised);
+  --switch-track-off: var(--minimal-surface-hover);
+  --switch-thumb-off: var(--minimal-text-2);
+
+  /* Monocromo: neutralización de la rampa de acento y colores globales */
+  --brand-accent: 240 11% 96%;
+  --brand-accent-hex: #F5F5F7;
+  --brand-accent-readable: var(--minimal-text-1);
+  --brand-primary: 240 11% 96%;
+  --brand-secondary: 240 4% 76%;
+  --brand-magic: 240 11% 96%;
+  --primary: 240 11% 96%;
+  --ring: 240 11% 96%;
+  --focus-ring: var(--minimal-focus-ring);
+  --dot-accent: var(--minimal-accent);
+  --brand-accent-100: var(--minimal-text-1);
+  --brand-accent-200: var(--minimal-text-1);
+  --brand-accent-300: var(--minimal-text-2);
+  --brand-accent-400: var(--minimal-text-2);
+  --brand-accent-500: var(--minimal-accent);
+  --brand-accent-600: var(--minimal-surface-hover);
+  --brand-accent-700: var(--minimal-surface-raised);
+  --brand-accent-800: var(--minimal-surface);
+  --brand-accent-900: var(--minimal-canvas);
+
+  /* Monocromo: «visto» y «completado» van en blanco, como el progreso */
+  --status-success: var(--minimal-text-1);
+  --status-success-rgb: 245, 245, 247;
+  --brand-success: 240 11% 96%;
+  /* Avisos y metadatos usan texto e iconos; el rojo queda reservado al error. */
+  --status-warning: var(--minimal-text-2);
+  --status-warning-rgb: 192, 192, 199;
+  --brand-warning: 240 4% 76%;
+
+  /* Sin cantos especulares ni halos en los componentes compartidos. Sombra
+     transparente (no `none`) para no invalidar las listas de box-shadow. */
+  --glass-highlight-sm: inset 0 0 0 0 transparent;
+  --glass-highlight-md: inset 0 0 0 0 transparent;
+  --glass-highlight-lg: inset 0 0 0 0 transparent;
+  --brand-glow: 0 0 0 transparent;
+  --glow-chip-success: none;
+  --glow-chip-warning: none;
+  --glow-chip-accent: none;
+  --drop-shadow-favorite: none;
+  --switch-glow-on: none;
+  --shadow-glow-status-success: none;
+  --shadow-brand-primary: none;
+  --shadow-brand-secondary: none;
+  --shadow-play-cta: none;
+
+  /* Superficies de vidrio globales mapeadas a superficies mate del tema */
+  --glass-frosted-bg: var(--minimal-surface);
+  --glass-frosted-border: var(--minimal-line-2);
+  --glass-frosted-border-top: var(--minimal-line-3);
+  --glass-frosted-border-bottom: var(--minimal-line-2);
+  --glass-frosted-shadow: var(--minimal-shadow-menu);
+
+  /* Arte del hero nítido: sin desenfoque de fondo */
+  --filter-blur-hero: 0px !important;
+
+  /* ─── 4. Acentos de era ───────────────────────────────────────────────────
+     El selector de eras recibe su color del componente. El contenido general
+     resuelve a la rampa monocroma del tema (blanco perla y gris). */
+  --era-db-text: var(--minimal-text-1);
+  --era-db-text-rgb: 245 245 247;
+  --era-dbz-text: var(--minimal-text-1);
+  --era-dbz-text-rgb: 245 245 247;
+  --era-dbgt-text: var(--minimal-text-1);
+  --era-dbgt-text-rgb: 245 245 247;
+  --era-dbkai-text: var(--minimal-text-1);
+  --era-dbkai-text-rgb: 245 245 247;
+  --era-dbs-text: var(--minimal-text-1);
+  --era-dbs-text-rgb: 245 245 247;
+  --era-daima-text: var(--minimal-text-1);
+  --era-daima-text-rgb: 245 245 247;
+
+  --era: 245 245 247;
+  --era-text: 245 245 247;
+  --tick: 245 245 247;
+
+  --spotlight-db-vivid-2: var(--minimal-text-2);
+  --spotlight-dbz-vivid-2: var(--minimal-text-2);
+  --spotlight-dbgt-vivid-2: var(--minimal-text-2);
+  --spotlight-dbkai-vivid-2: var(--minimal-text-2);
+  --spotlight-dbs-vivid-2: var(--minimal-text-2);
+  --spotlight-daima-vivid-2: var(--minimal-text-2);
+}
+
+/* El plano de Neutro reasigna --neutral-elev-* y shadcn con más especificidad
+   (0,3,0); acá se vuelve a la rampa del tema. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"])[data-flat="true"] {
+  --neutral-elev-0: var(--minimal-canvas);
+  --neutral-elev-1: var(--minimal-surface);
+  --neutral-elev-2: var(--minimal-surface-raised);
+  --neutral-elev-3: var(--minimal-surface-hover);
+  --neutral-separator: var(--minimal-line-2);
+  --glass-border-top: var(--neutral-separator);
+  --glass-border-side: var(--neutral-separator);
+  --glass-border-strong: var(--minimal-line-3);
+  --glass-frosted-border-top: var(--neutral-separator);
+  --glass-frosted-border: var(--neutral-separator);
+  --glass-frosted-bg: var(--minimal-surface);
+  --glass-highlight-sm: none;
+  --glass-highlight-md: none;
+  --glass-highlight-lg: none;
+  --glass-highlight-sm-color: transparent;
+  --glass-highlight-md-color: transparent;
+  --glass-highlight-lg-color: transparent;
+  --double-bezel-ring: 0 0 0 0 transparent;
+  --double-bezel-specular: 0 0 0 0 transparent;
+  --double-bezel-shadow: none;
+  --double-bezel-shadow-strong: none;
+  --double-bezel-control-shadow: none;
+  --double-bezel-inset-shadow: none;
+  --soft-pill-shadow: none;
+  --soft-inset-shadow: none;
+  --soft-thumb-shadow: none;
+  --glass-frosted-shadow: none;
+  --sectionbar-shadow: none;
+  --sectionbar-shadow-strong: none;
+  --background: 240 11% 3.5%;
+  --card: 240 9% 8.6%;
+  --popover: 240 10% 11.4%;
+  --secondary: 240 10% 11.4%;
+  --muted: 240 9% 8.6%;
+  --accent: 240 8% 15.3%;
+  --muted-foreground: 240 4% 61.2%;
+  --border: 0 0% 100% / 0.08;
+  --input: 0 0% 100% / 0.08;
+  --primary: 240 11% 96%;
+  --ring: 240 11% 96%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) {
+    --minimal-transition: none;
+    --minimal-press: none;
+    --minimal-lift: none;
+  }
+}
+
+/* Excepción: SeriesCard y la estantería de /series conservan
+   los textos y degradados originales de cada era (valores de colors.css). */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(
+  .series-shelf-card,
+  .vhs-shelf,
+  [id^="series-card-"],
+  [aria-label="Seleccionar era de Dragon Ball"]
+) {
+  --era-db-text: #FB923C;
+  --era-db-text-rgb: 251 146 60;
+  --era-dbz-text: #FCD34D;
+  --era-dbz-text-rgb: 252 211 77;
+  --era-dbgt-text: #FB7185;
+  --era-dbgt-text-rgb: 251 113 133;
+  --era-dbkai-text: #34D399;
+  --era-dbkai-text-rgb: 52 211 153;
+  --era-dbs-text: #60A5FA;
+  --era-dbs-text-rgb: 96 165 250;
+  --era-daima-text: #C084FC;
+  --era-daima-text-rgb: 192 132 252;
+
+  --spotlight-db-vivid-2: #FDBA74;
+  --spotlight-dbz-vivid-2: #FDE68A;
+  --spotlight-dbgt-vivid-2: #FDA4AF;
+  --spotlight-dbkai-vivid-2: #6EE7B7;
+  --spotlight-dbs-vivid-2: #38BDF8;
+  --spotlight-daima-vivid-2: #D8B4FE;
+}

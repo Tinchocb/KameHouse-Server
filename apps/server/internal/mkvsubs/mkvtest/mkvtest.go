@@ -25,6 +25,8 @@ import (
 type Event struct {
 	StartMs, EndMs int64
 	Text           string
+	// Style es el estilo ASS del evento ("Default" si está vacío).
+	Style string
 }
 
 // MKV es el archivo de prueba: video con ruido (bloques grandes), audio, una pista ASS
@@ -77,14 +79,14 @@ func events(secs int) (ass, srt []Event) {
 			end = start + 40000
 			text = "Cartel largo"
 		}
-		ass = append(ass, Event{start, end, text})
+		ass = append(ass, Event{StartMs: start, EndMs: end, Text: text})
 	}
 	for i := 0; ; i++ {
 		start := int64(i)*2500 + 700
 		if start >= int64(secs-2)*1000 {
 			break
 		}
-		srt = append(srt, Event{start, start + 1800, fmt.Sprintf("Hello %d\nsecond line", i)})
+		srt = append(srt, Event{StartMs: start, EndMs: start + 1800, Text: fmt.Sprintf("Hello %d\nsecond line", i)})
 	}
 	return ass, srt
 }

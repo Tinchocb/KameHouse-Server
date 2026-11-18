@@ -11,12 +11,12 @@ import { cn, defineStyleAnatomy } from "../core/styling"
 const ToasterAnatomy = defineStyleAnatomy({
     toaster: cva(["group toaster z-toast"]),
     toast: cva([
-        "group/toast",
+        "group toast liquid-content",
         "select-none cursor-default",
         "group-[.toaster]:py-4 group-[.toaster]:px-5 group-[.toaster]:gap-3",
         "group-[.toaster]:text-sm group-[.toaster]:font-medium",
         "group-[.toaster]:rounded-2xl group-[.toaster]:border group-[.toaster]:border-t group-[.toaster]:shadow-elevation-4",
-        "group-[.toaster]:bg-[color:color-mix(in_srgb,var(--md-sys-color-surface-container)_90%,transparent)] group-[.toaster]:backdrop-blur-overlay-sm group-[.toaster]:backdrop-saturate-[180%] group-[.toaster]:border-white/15 group-[.toaster]:border-t-white/35",
+        "group-[.toaster]:bg-[var(--sectionbar-bg)] group-[.toaster]:backdrop-blur-overlay-sm group-[.toaster]:backdrop-saturate-[180%] group-[.toaster]:border-[var(--sectionbar-border)] group-[.toaster]:border-t-[var(--sectionbar-border-top)]",
         "group-[.toaster]:text-on-surface",
         // Sin clases transition-*: pisarían la transición propia de Sonner (transform/opacity/height)
         // y los avisos aparecerían y se irían de golpe en vez de deslizarse.
@@ -33,22 +33,22 @@ const ToasterAnatomy = defineStyleAnatomy({
         "data-[type=warning]:[&_[data-icon]]:!w-12 data-[type=warning]:[&_[data-icon]]:!h-20 data-[type=warning]:[&_[data-icon]]:shrink-0",
     ]),
     description: cva([
-        "group/toast:text-xs group/toast:font-normal group/toast:mt-1",
-        "group/toast:text-label-2",
+        "group-[.toast]:text-xs group-[.toast]:font-normal group-[.toast]:mt-1",
+        "group-[.toast]:text-label-2",
         "cursor-default",
     ]),
     actionButton: cva([
-        "group/toast:bg-white group/toast:text-black",
-        "group/toast:rounded-full group/toast:px-3.5 group/toast:py-1.5",
-        "group/toast:text-xs group/toast:font-bold",
-        "group/toast:transition-[background-color,transform] group/toast:duration-fast group/toast:ease-out-strong group/toast:hover:bg-white/90 group/toast:active:scale-95 cursor-pointer",
-        "group/toast:shadow-elevation-1",
+        "group-[.toast]:bg-white group-[.toast]:text-black",
+        "group-[.toast]:rounded-full group-[.toast]:px-3.5 group-[.toast]:py-1.5",
+        "group-[.toast]:text-xs group-[.toast]:font-bold",
+        "group-[.toast]:transition-[background-color,transform] group-[.toast]:duration-fast group-[.toast]:ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:!bg-white/90 motion-safe:active:scale-[0.97] cursor-pointer",
+        "group-[.toast]:shadow-elevation-1",
     ]),
     cancelButton: cva([
-        "group/toast:bg-transparent group/toast:text-on-surface-variant",
-        "group/toast:rounded-full group/toast:px-3.5 group/toast:py-1.5",
-        "group/toast:text-xs group/toast:font-medium",
-        "group/toast:transition-[background-color,transform] group/toast:duration-fast group/toast:ease-out-strong group/toast:hover:bg-white/10 group/toast:active:scale-95 cursor-pointer",
+        "group-[.toast]:bg-transparent group-[.toast]:text-on-surface-variant",
+        "group-[.toast]:rounded-full group-[.toast]:px-3.5 group-[.toast]:py-1.5",
+        "group-[.toast]:text-xs group-[.toast]:font-medium",
+        "group-[.toast]:transition-[background-color,transform] group-[.toast]:duration-fast group-[.toast]:ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:hover:!bg-white/10 motion-safe:active:scale-[0.97] cursor-pointer",
     ]),
 })
 
@@ -67,7 +67,7 @@ export const Toaster = ({ position = "top-center", className, toastOptions, icon
             icons={{
                 info: (
                     <img
-                        src="/illustrations/bulma-announcement.png"
+                        src="/illustrations/bulma-announcement.webp"
                         alt=""
                         aria-hidden="true"
                         width={48}
@@ -80,7 +80,7 @@ export const Toaster = ({ position = "top-center", className, toastOptions, icon
                 warning: (
                     <span className="relative block h-20 w-12" aria-hidden="true">
                         <img
-                            src="/illustrations/bulma-guidance.png"
+                            src="/illustrations/bulma-guidance.webp"
                             alt=""
                             width={48}
                             height={80}
@@ -95,18 +95,10 @@ export const Toaster = ({ position = "top-center", className, toastOptions, icon
             }}
             // Región en español para lectores de pantalla (por defecto: "Notifications alt+T").
             containerAriaLabel="Avisos"
-            // Sonner no conoce las zonas seguras: con viewport-fit=cover (PWA o
-            // celular en horizontal) el toast quedaba bajo la muesca/isla o la
-            // barra de gestos. Mismos márgenes por defecto + el inset. Arriba se
-            // deja lugar para la barra de navegación (isla ~63 px en escritorio,
-            // cabecera de 64 px en móvil): antes el aviso se superponía a ella.
+            // Margen canónico desktop: arriba deja espacio para la barra flotante (~63px).
             offset={{
-                top: "calc(76px + env(safe-area-inset-top, 0px))",
-                bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
-            }}
-            mobileOffset={{
-                top: "calc(72px + env(safe-area-inset-top, 0px))",
-                bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+                top: "76px",
+                bottom: "24px",
             }}
             className={cn(ToasterAnatomy.toaster(), className)}
             toastOptions={{

@@ -7,9 +7,6 @@ const (
 	TrackTypeVideo    TrackType = "video"
 	TrackTypeAudio    TrackType = "audio"
 	TrackTypeSubtitle TrackType = "subtitle"
-	TrackTypeLogo     TrackType = "logo"
-	TrackTypeButtons  TrackType = "buttons"
-	TrackTypeComplex  TrackType = "complex"
 	TrackTypeUnknown  TrackType = "unknown"
 )
 
@@ -39,9 +36,6 @@ type TrackInfo struct {
 	Video *VideoTrack `json:"video,omitempty"`
 	// Audio specific
 	Audio *AudioTrack `json:"audio,omitempty"`
-	// Internal fields
-	contentEncodings *ContentEncodings `json:"-"`
-	defaultDuration  uint64            `json:"-"` // in ns
 }
 
 // ChapterInfo holds extracted information about a chapter.

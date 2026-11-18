@@ -216,7 +216,7 @@ func (scn *Scanner) fetchAndMatchMedia(ctx context.Context, localFiles []*dto.Lo
 
 	// Clientes y proveedores de metadata (TMDB, AniList, Jikan, AniDB).
 	sp := scn.buildMetadataProviders()
-	tmdbClient, tmdbProvider, providers := sp.tmdbClient, sp.tmdbProvider, sp.providers
+	tmdbProvider, providers := sp.tmdbProvider, sp.providers
 
 	mf, err := NewMediaFetcher(ctx, &MediaFetcherOptions{
 		PlatformRef:            scn.PlatformRef,
@@ -249,7 +249,6 @@ func (scn *Scanner) fetchAndMatchMedia(ctx context.Context, localFiles []*dto.Lo
 	mc := NewMediaContainer(&MediaContainerOptions{
 		AllMedia:   mf.AllMedia,
 		ScanLogger: scn.ScanLogger,
-		TmdbClient: tmdbClient,
 	})
 
 	scn.Logger.Debug().
@@ -263,12 +262,13 @@ func (scn *Scanner) fetchAndMatchMedia(ctx context.Context, localFiles []*dto.Lo
 	if scn.ScanMode != "metadata" {
 		// Create a new matcher
 		matcher := &Matcher{
-			LocalFiles:      localFiles,
-			MediaContainer:  mc,
-			Logger:          scn.Logger,
-			Database:        scn.Database,
-			Threshold:       scn.MatchingThreshold,
-			StrictStructure: scn.StrictStructure,
+			LocalFiles:              localFiles,
+			MediaContainer:          mc,
+			Logger:                  scn.Logger,
+			Database:                scn.Database,
+			Threshold:               scn.MatchingThreshold,
+			StrictStructure:         scn.StrictStructure,
+			IgnoreGhostAssociations: scn.ScanMode == "deep",
 		}
 
 		telemetry.Send(events.EventScanProgress, 60)

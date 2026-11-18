@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
@@ -87,7 +86,7 @@ func TestHandleGetVideoThumbnail_CacheHeaders(t *testing.T) {
 	// A recently failed extraction answers fast and is never cached by the browser.
 	offset := 42
 	failedHash := thumbnailHash(videoPath, videoStat, &offset)
-	thumbnailFailed.Store(failedHash, time.Now())
+	thumbnailFailed.SetT(failedHash, true, thumbnailFailedTTL)
 	t.Cleanup(clearThumbnailFailures)
 	rec = get(pathQuery+"&t=42", nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code)

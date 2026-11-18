@@ -40,7 +40,9 @@ func newWindowFixture(t *testing.T) *windowFixture {
 	cache, err := drive.NewBlockCache(t.TempDir(), max(size/64, 64<<10), 0)
 	require.NoError(t, err)
 	fd := &mkvtest.FakeDrive{Data: tm.Bytes}
-	fetch := cache.Fetcher("fileWin123", fd.Fetch)
+	// Match driveSubtitleSource: sparse subtitle windows share cached blocks
+	// with playback, but do not trigger playback's speculative read-ahead.
+	fetch := cache.FetcherWithoutReadAhead("fileWin123", fd.Fetch)
 
 	ffmpeg := "ffmpeg"
 	r := newDriveSubsRepo(t, ffmpeg)

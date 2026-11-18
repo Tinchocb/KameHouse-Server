@@ -65,14 +65,6 @@ function resolveTotalEpisodes(entry: MappableEntry, media: SafeMedia): number {
     return findCanonicalSeries(entry.mediaId, media.tmdbId, media.id)?.totalEpisodes ?? 0
 }
 
-/** Score en escala 0–10; acepta 0–100 y strings numéricos. */
-function normalizeScore(value: unknown): number | undefined {
-    const n = typeof value === "string" && value.trim() !== "" ? Number(value) : value
-    if (typeof n !== "number" || !Number.isFinite(n) || n <= 0) return undefined
-    const score = n > 10 ? n / 10 : n
-    return score > 10 ? undefined : score
-}
-
 function buildSubtitle(year: number | null, format: string | null): string {
     return [year, format].filter(part => part !== null).join(" · ")
 }
@@ -101,7 +93,6 @@ export function mapLibraryEntryToMediaCard(
     const localFilesCount = toPositiveInt(entry.libraryData?.mainFileCount) ?? 0
     const totalEpisodesCount = resolveTotalEpisodes(entry, media)
     const isSeriesComplete = totalEpisodesCount > 0 && localFilesCount >= totalEpisodesCount
-    const missingCount = Math.max(0, totalEpisodesCount - localFilesCount)
 
     const resolvedBackdrop = movieLike
         ? getMovieWidescreenBackdrop({ mediaId: targetId, tmdbId, bannerImage, posterImage })
@@ -118,13 +109,11 @@ export function mapLibraryEntryToMediaCard(
         description: stripHtml(media.description),
         aspect: "poster",
         year: year ?? undefined,
-        rating: normalizeScore(media.score),
+        runtime: toPositiveInt(media.runtime) ?? undefined,
+        watched: Boolean(media.watched || entry.listData?.status === "COMPLETED"),
         onClick: () => onNavigate(targetId),
         backdropUrl: resolvedBackdrop || bannerImage || undefined,
-        localFilesCount,
-        totalEpisodesCount,
         isSeriesComplete,
-        missingCount,
     }
 }
 

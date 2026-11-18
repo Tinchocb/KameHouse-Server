@@ -2,8 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import * as React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
-import { useAppStore } from "@/lib/stores"
-import { EraRail } from "./era-rail"
+import { EraRail, useEraRailReservation } from "./era-rail"
 import type { EraRailItem } from "./era-rail-model"
 
 // Cada capa con `layout` o `layoutId` anota su `transition`: es lo que decide si el riel anima con el resorte
@@ -28,7 +27,7 @@ const ERAS: EraRailItem<"all" | "db" | "dbz" | "dbgt">[] = [
     { id: "dbgt", label: "Dragon Ball GT", kanji: "星", accent: "red", years: "1996–1997", disabled: true },
 ]
 
-function Harness({ variant = "rail" as "rail" | "bar", initial = "db" as "all" | "db" | "dbz" | "dbgt", onSelect = vi.fn() }) {
+function Harness({ variant = "rail" as "auto" | "rail" | "bar", initial = "db" as "all" | "db" | "dbz" | "dbgt", onSelect = vi.fn() }) {
     const [active, setActive] = React.useState(initial)
     return (
         <EraRail
@@ -42,6 +41,50 @@ function Harness({ variant = "rail" as "rail" | "bar", initial = "db" as "all" |
 }
 
 const radios = () => screen.getAllByRole("radio")
+
+describe("EraRail · integración con Minimalista", () => {
+    const originalMatchMedia = window.matchMedia
+    beforeEach(() => {
+        window.matchMedia = vi.fn().mockImplementation(query => ({
+            matches: query === "(min-width: 1024px)", media: query, onchange: null,
+            addEventListener: vi.fn(), removeEventListener: vi.fn(),
+            addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+        }))
+    })
+
+    afterEach(() => {
+        cleanup()
+        delete document.documentElement.dataset.uiStyle
+        window.matchMedia = originalMatchMedia
+    })
+
+    it("cambia a barra en Minimalista y recupera el riel al salir del tema", async () => {
+        render(<Harness variant="auto" />)
+        expect(document.documentElement.dataset.eraRail).toBe("rail")
+        await act(async () => { document.documentElement.dataset.uiStyle = "classic-minimalist" })
+        expect(document.documentElement.dataset.eraRail).toBe("bar")
+        expect(document.querySelector('[data-era-selector="bar"]')).not.toBeNull()
+        expect(screen.getByRole("radio", { name: /^Dragon Ball,/ })).toHaveAttribute("aria-checked", "true")
+        await act(async () => { delete document.documentElement.dataset.uiStyle })
+        expect(document.documentElement.dataset.eraRail).toBe("rail")
+    })
+
+    it("el esqueleto reserva la misma barra que el selector de Minimalista en escritorio", () => {
+        document.documentElement.dataset.uiStyle = "classic-minimalist"
+        function Skeleton() { useEraRailReservation(); return null }
+        render(<Skeleton />)
+        expect(document.documentElement.dataset.eraRail).toBe("bar")
+    })
+
+    it("una barra inline conserva el teclado sin reservar margen global ni crear portal", () => {
+        const onSelect = vi.fn()
+        const { container } = render(<EraRail inline eras={ERAS} activeId="db" onSelect={onSelect} label="Eras" />)
+        expect(container).toContainElement(screen.getByRole("radiogroup", { name: "Eras" }))
+        expect(document.documentElement.dataset.eraRail).toBeUndefined()
+        fireEvent.keyDown(screen.getByRole("radio", { name: /^Dragon Ball,/ }), { key: "ArrowRight" })
+        expect(onSelect).toHaveBeenCalledWith("dbz")
+    })
+})
 
 afterEach(() => {
     cleanup()
@@ -278,7 +321,6 @@ describe("EraRail · gate de movimiento (useMotionTier)", () => {
     beforeEach(() => {
         railTransitions.length = 0
         usePerformanceStore.setState({ performanceProfile: "auto", autoThrottleActive: false })
-        useAppStore.setState({ tvMode: false })
     })
 
     it("con hardware capaz el cambio de era usa el resorte del riel", () => {
@@ -289,9 +331,9 @@ describe("EraRail · gate de movimiento (useMotionTier)", () => {
         unmount()
     })
 
-    it("en modo TV no anima aunque el hardware sea capaz", () => {
+    it("en perfil de ahorro no anima aunque el hardware sea capaz", () => {
         usePerformanceStore.setState({ performanceProfile: "ultra" })
-        useAppStore.setState({ tvMode: true })
+        usePerformanceStore.setState({ performanceProfile: "eco" })
         const { unmount } = render(<Harness />)
         expect(railTransitions.length).toBeGreaterThan(0)
         expect(railTransitions.every((t) => t.duration === 0)).toBe(true)

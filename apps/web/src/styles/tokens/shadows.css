@@ -36,17 +36,9 @@
   /* ─── Alias Semánticos (para migración gradual) ─────────────────────────── */
   --shadow-card:        var(--elevation-1);
   --shadow-elevated:    var(--elevation-2);
-  --shadow-modal:       var(--elevation-3);
-  --shadow-player:      var(--elevation-4);
-  --shadow-overlay:     var(--elevation-5);
 
   /* Póster al pasar el puntero (movie-poster-card, spotlight-saga-card). Mismo valor que tenían escrito a mano. */
   --shadow-poster-hover: 0 15px 35px rgba(0, 0, 0, 0.9);
-
-  /* Legacy glass shadows (DEPRECATED - mantener por compatibilidad temporal) */
-  --shadow-glass:
-    0 4px 30px rgba(0, 0, 0, 0.30),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
 
   /* Liquid glass — borde de luz + sombra de contacto + glow del acento */
   --shadow-glass-liquid:
@@ -70,16 +62,6 @@
   /* ─── Brand Glows (por era — usan variables dinámicas) ──────────────────── */
   --shadow-brand-primary:   0 8px 24px -4px var(--glow-primary);
   --shadow-brand-secondary: 0 8px 24px -4px var(--glow-secondary);
-  --shadow-brand-destructive: 0 8px 24px -4px var(--glow-destructive);
-  --shadow-brand-success:   0 8px 24px -4px var(--glow-success);
-  --shadow-brand-magic:     0 8px 24px -4px var(--glow-magic);
-
-  /* Focus glow — anillo difuso centrado para inputs/toggles enfocados
-     (reemplaza el arbitrario 0 0 24px hsl(var(--brand-accent)/0.3) repetido) */
-  --shadow-brand-focus:     0 0 24px hsl(var(--brand-accent) / 0.3);
-
-  /* Punta luminosa de barras de progreso (reemplaza shadow-[0_0_12px_#ffffff]) */
-  --shadow-glow-tip:        0 0 12px rgb(255 255 255 / 0.9);
 
   /* Brillo del punto de estado activo (OsSelect de Ajustes): verde de éxito al 80 % */
   --shadow-glow-status-success: 0 0 8px rgba(var(--status-success-rgb), 0.8);
@@ -92,13 +74,6 @@
 
   /* Sombra cinematográfica de los heroes (Spotlight y Películas) */
   --shadow-hero:                   0 25px 60px -15px rgba(0, 0, 0, 0.95);
-  --shadow-hero-platter:
-    var(--glass-highlight-lg),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-    0 18px 36px -8px rgba(0, 0, 0, 0.55);
-  --shadow-hero-cta-primary:       inset 0 1px 1px 0 rgba(255, 255, 255, 0.6), 0 8px 24px rgba(255, 255, 255, 0.25);
-  --shadow-hero-cta-primary-hover: 0 12px 32px rgba(255, 255, 255, 0.35);
-  --shadow-hero-dot-active:        0 0 10px rgba(255, 255, 255, 0.4);
 
   /* Botón de play de los pósteres (hub de Inicio): sombra de caída + brillo interior, sin rgba inline.
      Los valores son los que tenía escritos a mano el botón. */
@@ -124,52 +99,67 @@
   /* ─── Focus Ring (compatibilidad shadcn/Tailwind) ──────────────────────── */
   --focus-ring: var(--brand-accent);
 
-  /* ─── SectionBar — Contenedor unificado de sección (bordes blanco sutil + glass)
-     Spec canónico v5: rim top 0.35, lados 0.15, bottom 0.10, bg zinc-950/40 ─ */
-  --sectionbar-border:         rgba(255, 255, 255, 0.15);
-  --sectionbar-border-top:     rgba(255, 255, 255, 0.35);
-  --sectionbar-border-bottom:  rgba(255, 255, 255, 0.10);
-  --sectionbar-bg:             rgba(20, 20, 25, 0.45);
+  /* ─── Double-Bezel / Specular Border (Linear-style UI & Dark Glassmorphism) ───
+     Anillo exterior oscuro de 1px (cápsula encastrada) + bisel interno especular de 1px */
+  --double-bezel-ring: 0 0 0 1px rgba(0, 0, 0, 0.85);
+  --double-bezel-specular:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.55);
+  --double-bezel-shadow:
+    var(--double-bezel-specular),
+    var(--double-bezel-ring),
+    0 14px 34px -10px rgba(0, 0, 0, 0.72),
+    0 4px 12px rgba(0, 0, 0, 0.48);
+  --double-bezel-shadow-strong:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.65),
+    var(--double-bezel-ring),
+    0 20px 44px -12px rgba(0, 0, 0, 0.82),
+    0 6px 16px rgba(0, 0, 0, 0.56);
+  --double-bezel-control-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.09),
+    0 0 0 1px rgba(0, 0, 0, 0.75),
+    0 4px 10px -2px rgba(0, 0, 0, 0.50);
+  --double-bezel-inset-shadow:
+    inset 0 1px 2px 0 rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 1px 0 0 rgba(255, 255, 255, 0.05);
+
+  /* ─── SectionBar — Contenedor unificado de sección (Dark Glassmorphism + Double-Bezel) ─ */
+  --sectionbar-border:         rgba(255, 255, 255, 0.08);
+  --sectionbar-border-top:     rgba(255, 255, 255, 0.14);
+  --sectionbar-border-bottom:  rgba(255, 255, 255, 0.06);
+  --sectionbar-bg:             rgba(20, 20, 22, 0.82);
   --sectionbar-blur:           var(--blur-overlay-md);
-  --sectionbar-saturate:       190%;
-  --sectionbar-shadow:
-    var(--glass-highlight-md),
-    0 12px 36px -6px rgba(0, 0, 0, 0.75);
+  --sectionbar-saturate:       125%;
+  --sectionbar-shadow:         var(--double-bezel-shadow);
 
-  --sectionbar-border-strong:       rgba(255, 255, 255, 0.22);
-  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.45);
-  --sectionbar-bg-strong:           rgba(25, 25, 30, 0.55);
-  --sectionbar-shadow-strong:
-    var(--glass-highlight-lg),
-    0 16px 48px -8px rgba(0, 0, 0, 0.80);
+  --sectionbar-border-strong:       rgba(255, 255, 255, 0.12);
+  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.18);
+  --sectionbar-bg-strong:           rgba(28, 29, 32, 0.88);
+  --sectionbar-shadow-strong:       var(--double-bezel-shadow-strong);
 
-  /* ─── Sombra y Brillo para Vidrio Esmerilado Canónico ───────────────────── */
-  --glass-frosted-shadow:
-    var(--glass-highlight-lg),
-    0 12px 32px -4px rgba(0, 0, 0, 0.75);
+  /* ─── Soft UI / Double-Bezel Táctil (Píldoras, Rieles Hundidos y Thumbs) ─── */
+  --soft-pill-shadow:   var(--double-bezel-control-shadow);
+  --soft-inset-shadow:  var(--double-bezel-inset-shadow);
+  --soft-thumb-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 2px 8px 0 rgba(0, 0, 0, 0.55);
+
+  /* ─── Sombra y Brillo para Vidrio Esmerilado Canónico (Double-Bezel) ────── */
+  --glass-frosted-shadow: var(--double-bezel-shadow);
 }
 
-/* ─── SectionBar: overrides por modo — fuente única (antes duplicados en
-   colors.css). Van fuera de :root y DESPUÉS de él: data-mode/data-flat viven
-   en <html>, así que un bloque anidado en :root (":root [data-flat]") nunca
-   matcheaba; y con igual especificidad que :root, un override en colors.css
-   quedaba pisado porque este archivo carga después. ─── */
+/* ─── SectionBar: overrides por modo y plano ───────────────────────────────
+   Los overrides específicos de Neutro ([data-mode="classic"]) y Por Era
+   (:root[data-mode="era"]:not([data-flat="true"])) viven en sus archivos de
+   tema (`styles/themes/neutral.css` y `styles/themes/era.css`), que se
+   importan después de los tokens base.
+   Flat (`:root[data-flat="true"]`, especificidad 0,2,0) desactiva el blur
+   en todos los modos. ─── */
 
-/* Clásico (Neutro, Apple HIG): la barra es una capa elevada 1 (fuerte = 2);
-   se distingue por luminancia, el borde es solo un separador. */
-[data-mode="classic"] {
-  --sectionbar-border:              rgba(255, 255, 255, 0.10);
-  --sectionbar-border-top:          rgba(255, 255, 255, 0.20);
-  --sectionbar-border-bottom:       rgba(255, 255, 255, 0.06);
-  --sectionbar-bg:                  color-mix(in srgb, var(--neutral-elev-1) 60%, transparent);
-  --sectionbar-border-strong:       rgba(255, 255, 255, 0.14);
-  --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.28);
-  --sectionbar-bg-strong:           color-mix(in srgb, var(--neutral-elev-2) 72%, transparent);
-}
-
-/* Flat: superficies sólidas, sin blur. Declarado después de Clásico para
-   ganarle cuando ambos están activos. */
-[data-flat="true"] {
+:root[data-flat="true"] {
   --sectionbar-border:              rgba(255, 255, 255, 0.12);
   --sectionbar-border-top:          rgba(255, 255, 255, 0.20);
   --sectionbar-border-bottom:       rgba(255, 255, 255, 0.08);
@@ -180,13 +170,11 @@
   --sectionbar-border-top-strong:   rgba(255, 255, 255, 0.28);
   --sectionbar-bg-strong:           var(--bg-tertiary);
   --sectionbar-shadow-strong:       0 4px 12px rgba(0, 0, 0, 0.35);
-}
-
-/* Por era (vidrio): la base de la barra sale de la rampa de la era, igual que las capas de
-   elevación. Con el gris frío de arriba quedaba azul-gris sobre fondos cálidos (DB) o azules. */
-:root[data-mode="era"]:not([data-flat="true"]) {
-  --sectionbar-bg:                  color-mix(in srgb, var(--bg-tertiary) 45%, transparent);
-  --sectionbar-bg-strong:           color-mix(in srgb, var(--bg-quaternary) 55%, transparent);
+  --double-bezel-control-shadow:    none;
+  --double-bezel-inset-shadow:      none;
+  --soft-pill-shadow:               none;
+  --soft-inset-shadow:              none;
+  --soft-thumb-shadow:              none;
 }
 
 /* ─── Clases Utilitarias ───────────────────────────────────────────────────── */
@@ -197,12 +185,6 @@
 .shadow-elevation-5 { box-shadow: var(--elevation-5); }
 
 /* Alias semánticos (solo los usados en tsx) */
-.shadow-modal      { box-shadow: var(--shadow-modal); }
-
 .shadow-brand-primary   { box-shadow: var(--shadow-brand-primary); }
 .shadow-brand-secondary { box-shadow: var(--shadow-brand-secondary); }
-.shadow-brand-success   { box-shadow: var(--shadow-brand-success); }
-.shadow-brand-magic     { box-shadow: var(--shadow-brand-magic); }
-.shadow-brand-focus     { box-shadow: var(--shadow-brand-focus); }
 .shadow-hero               { box-shadow: var(--shadow-hero); }
-.shadow-hero-dot           { box-shadow: var(--shadow-hero-dot-active); }

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import { LazyMotion, domAnimation } from "framer-motion"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { SeriesHero } from "./series-hero"
@@ -72,7 +72,6 @@ describe("SeriesHero: estilo Apple TV+ Inmersivo (sin switch Z vs Kai)", () => {
                 backdropUrl={null}
                 isZSeries={true}
                 zVariant="kai"
-                onZVariantChange={vi.fn()}
             />
         )
 
@@ -90,7 +89,6 @@ describe("SeriesHero: estilo Apple TV+ Inmersivo (sin switch Z vs Kai)", () => {
                 backdropUrl={null}
                 isZSeries={true}
                 zVariant="z"
-                onZVariantChange={vi.fn()}
             />
         )
 

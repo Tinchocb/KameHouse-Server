@@ -134,8 +134,8 @@ export const BasicField = React.memo(React.forwardRef<HTMLDivElement, BasicField
         label,
         error,
         help,
-        disabled,
-        readonly,
+        disabled: _disabled,
+        readonly: _readonly,
         required,
         fieldClass,
         fieldDetailsClass,
@@ -158,7 +158,7 @@ export const BasicField = React.memo(React.forwardRef<HTMLDivElement, BasicField
         >
             {!!label &&
                 <label
-                    htmlFor={disabled ? undefined : id}
+                    htmlFor={id}
                     className={cn(BasicFieldAnatomy.fieldLabel(), fieldLabelClass)}
                     data-error={!!error}
                     {...labelProps}
@@ -175,9 +175,9 @@ export const BasicField = React.memo(React.forwardRef<HTMLDivElement, BasicField
             {(!!help || !!error) &&
                 <div className={cn(BasicFieldAnatomy.fieldDetails(), fieldDetailsClass)}>
                     {!!help &&
-                        <div className={cn(BasicFieldAnatomy.fieldHelpText(), fieldHelpTextClass)}>{help}</div>}
+                        <div id={id ? `${id}-help` : undefined} className={cn(BasicFieldAnatomy.fieldHelpText(), fieldHelpTextClass)}>{help}</div>}
                     {!!error &&
-                        <div className={cn(BasicFieldAnatomy.fieldErrorText(), fieldErrorTextClass)}>{error}</div>}
+                        <div id={id ? `${id}-error` : undefined} className={cn(BasicFieldAnatomy.fieldErrorText(), fieldErrorTextClass)}>{error}</div>}
                 </div>
             }
         </div>

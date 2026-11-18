@@ -6,7 +6,7 @@ import { useShallow } from "zustand/react/shallow"
 import { useThemeSettings } from "@/lib/theme/theme-hooks"
 import { useTransparencyState } from "@/lib/theme/apply-custom-theme"
 import { usePerformanceStore, selectEffectiveTier } from "@/lib/hardware/performance-store"
-import { getLowResImage } from "@/lib/helpers/images"
+import { getLowResImage, localImage } from "@/lib/helpers/images"
 import { useReducedMotion } from "@/components/ui/kinetics/hooks"
 
 /**
@@ -34,11 +34,10 @@ export function DynamicBackdrop() {
     
     const isDetailPage = Boolean(pathname.match(/\/(movies|series)\/\d+/))
 
-    const { isEnabled, isMotionEnabled, tvMode } = useAppStore(
+    const { isEnabled, isMotionEnabled } = useAppStore(
         useShallow(state => ({
             isEnabled: state.dynamicBackdropEnabled,
             isMotionEnabled: state.dynamicBackdropMotionEnabled,
-            tvMode: state.tvMode,
         }))
     )
     const currentBackdropUrl = useIntelligenceStore(s => s.currentBackdropUrl)
@@ -82,7 +81,13 @@ export function DynamicBackdrop() {
 
     if (activeBackdropUrl !== prevBackdropUrl) {
         setPrevBackdropUrl(activeBackdropUrl)
-        if (!activeBackdropUrl) {
+        if (!isEnabled || isFlat || hasLocalHeroAura || isDetailPage) {
+            // The local hero (or a solid theme) already owns the background.
+            // Do not animate or decode a second image which cannot be painted.
+            setDisplayedUrl(activeBackdropUrl)
+            setNextUrl(null)
+            setIsCrossFading(false)
+        } else if (!activeBackdropUrl) {
             setIsCrossFading(true)
         } else if (!displayedUrl) {
             setDisplayedUrl(activeBackdropUrl)
@@ -92,15 +97,15 @@ export function DynamicBackdrop() {
         }
     }
 
-    const displayedUrlLowRes = React.useMemo(() => displayedUrl ? getLowResImage(displayedUrl) : null, [displayedUrl])
-    const nextUrlLowRes = React.useMemo(() => nextUrl ? getLowResImage(nextUrl) : null, [nextUrl])
+    const displayedUrlLowRes = React.useMemo(() => displayedUrl ? localImage(getLowResImage(displayedUrl)) : null, [displayedUrl])
+    const nextUrlLowRes = React.useMemo(() => nextUrl ? localImage(getLowResImage(nextUrl)) : null, [nextUrl])
+    const showBackdropImage = !isFlat && !hasLocalHeroAura && !isDetailPage && Boolean(displayedUrlLowRes || nextUrlLowRes)
 
     const backdropWrapperRef = React.useRef<HTMLDivElement>(null)
 
-    // Mouse parallax (GPU-accelerated, disabled in TV, Eco mode, reduced motion, or Home — en Home el hero
-    // tiene su propio backdrop sin blur; mover una capa con blur activo invalida una capa enorme)
+    // Mouse parallax (GPU-accelerated, disabled in Eco mode, reduced motion, Home, or cuando no hay capa de imagen visible)
     React.useEffect(() => {
-        if (!isEnabled || !isMotionEnabled || tvMode || isEcoMode || isHomePage || prefersReduced) return
+        if (!isEnabled || !isMotionEnabled || isEcoMode || isHomePage || prefersReduced || !showBackdropImage) return
         // La capa es siempre el mismo nodo mientras el parallax está activo: se toma una vez para la limpieza.
         const wrapper = backdropWrapperRef.current
         let rafId: number | null = null
@@ -160,7 +165,7 @@ export function DynamicBackdrop() {
             // (y al reactivarse, currentX arranca en 0 y saltaría).
             if (wrapper) wrapper.style.transform = "translate3d(0px, 0px, 0px)"
         }
-    }, [isEnabled, isMotionEnabled, tvMode, isEcoMode, isHomePage, prefersReduced])
+    }, [isEnabled, isMotionEnabled, isEcoMode, isHomePage, prefersReduced, showBackdropImage])
 
     // Cross-fade timer
     React.useEffect(() => {
@@ -180,18 +185,19 @@ export function DynamicBackdrop() {
 
     // Preload next low-res image
     React.useEffect(() => {
-        if (!nextUrl) return
-        const lowRes = getLowResImage(nextUrl)
+        if (!isEnabled || !showBackdropImage || !nextUrl) return
+        const lowRes = localImage(getLowResImage(nextUrl))
         if (typeof window !== "undefined" && lowRes) {
             const img = new Image()
             img.src = lowRes
         }
-    }, [nextUrl])
+    }, [nextUrl, isEnabled, showBackdropImage])
 
     if (!isEnabled) return null
 
-    // La capa de Universo solo se renderiza en modo Era cuando el tema activo es Universo DB
-    const showEraUniverseLayer = !tvMode && !isEcoMode && ts.effectiveMode === "era" && ts.themeEra === "era-universe" && !isDetailPage
+    // La capa de Universo existe mientras Universo DB está elegido. Se ve (con fundido de
+    // opacidad, themes/era.css) solo cuando <html> no tomó la saga de la pantalla.
+    const showEraUniverseLayer = !isEcoMode && ts.effectiveMode === "era" && ts.themeEra === "era-universe"
 
     return (
         <div
@@ -200,7 +206,7 @@ export function DynamicBackdrop() {
             style={{ contain: "paint" }}
         >
             {/* Capa de degradé del tema Universo. Sin orbes flotantes: el color de la
-                era llega por --page-gradient, que tiñe el fondo sin formas visibles. */}
+                era llega por --page-gradient (themes/era.css), que da a cada saga su forma de fondo. */}
             {showEraUniverseLayer && (
                 <div className="absolute inset-0 overflow-hidden">
                     <div className="era-universe-layer absolute inset-0 transition-opacity duration-slow opacity-0" />

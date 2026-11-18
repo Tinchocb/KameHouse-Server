@@ -1,25 +1,32 @@
 import * as React from "react"
 import { useThemeSettings } from "./theme-hooks"
-import { useAppStore } from "@/lib/store"
+import { resolveDomThemeContract } from "./themes-registry"
+import { resolveFollowedTheme, selectScreenEra, useScreenEraStore } from "./screen-era"
 import { usePerformanceStore, selectEffectiveTier } from "@/lib/hardware/performance-store"
-
-function useMediaMatch(query: string): boolean {
-    return React.useSyncExternalStore(
-        (onChange) => {
-            if (typeof window === "undefined" || !window.matchMedia) return () => {}
-            const mql = window.matchMedia(query)
-            mql.addEventListener("change", onChange)
-            return () => mql.removeEventListener("change", onChange)
-        },
-        () => typeof window !== "undefined" && !!window.matchMedia && window.matchMedia(query).matches,
-        () => false,
-    )
-}
+import { useMotionTier } from "@/components/ui/kinetics/motion-tier"
+import { crossfadeThemeChange } from "@/lib/helpers/transitions"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 /** Por qué la app está en modo plano (sin transparencia). Si hay varios motivos
- *  manda el más explícito: el interruptor del usuario, luego TV, el contraste
- *  del sistema, el gobernador automático y por último el perfil de ahorro. */
-export type FlatReason = "manual" | "tv" | "contrast" | "auto" | "eco"
+ *  manda el más explícito: el interruptor del usuario, el tema (Minimalista es
+ *  plano por diseño), el contraste del sistema, el gobernador automático y por
+ *  último el perfil de ahorro. */
+export type FlatReason = "manual" | "theme" | "contrast" | "auto" | "eco"
+
+export function resolveFlatReason(input: {
+    blurDisabled: boolean
+    themeMode: string
+    contrastMore: boolean
+    autoThrottleActive: boolean
+    lowPower: boolean
+}): FlatReason | null {
+    if (input.blurDisabled) return "manual"
+    if (input.themeMode === "classic-minimalist") return "theme"
+    if (input.contrastMore) return "contrast"
+    if (input.autoThrottleActive) return "auto"
+    if (input.lowPower) return "eco"
+    return null
+}
 
 interface TransparencyState {
     /** true ⇒ <html data-flat="true"> (superficies sólidas, 0 backdrop-filter). */
@@ -32,19 +39,18 @@ interface TransparencyState {
 
 export function useTransparencyState(): TransparencyState {
     const ts = useThemeSettings()
-    const tvMode = useAppStore(state => state.tvMode)
     const autoThrottleActive = usePerformanceStore(state => state.autoThrottleActive)
     const effectiveTier = usePerformanceStore(selectEffectiveTier)
-    const contrastMore = useMediaMatch("(prefers-contrast: more)")
-    const systemSuggestsReduce = useMediaMatch("(prefers-reduced-transparency: reduce)")
+    const contrastMore = useMediaQuery("(prefers-contrast: more)")
+    const systemSuggestsReduce = useMediaQuery("(prefers-reduced-transparency: reduce)")
 
-    const reason: FlatReason | null =
-        ts.themeEnableBlurringEffects === false ? "manual"
-        : tvMode ? "tv"
-        : contrastMore ? "contrast"
-        : autoThrottleActive ? "auto"
-        : effectiveTier === "low_power" ? "eco"
-        : null
+    const reason = resolveFlatReason({
+        blurDisabled: ts.themeEnableBlurringEffects === false,
+        themeMode: ts.effectiveMode,
+        contrastMore,
+        autoThrottleActive,
+        lowPower: effectiveTier === "low_power",
+    })
 
     return { flat: reason !== null, reason, systemSuggestsReduce }
 }
@@ -112,43 +118,50 @@ function setStyleProp(style: CSSStyleDeclaration, name: string, value: string | 
 export function useApplyCustomTheme() {
     const ts = useThemeSettings()
     const { flat: flatOn } = useTransparencyState()
+    // Universo DB: la saga de la pantalla (ficha, hero de Inicio, sección de la Cronología)
+    const screenEra = useScreenEraStore(selectScreenEra)
+    const screenEraFade = useScreenEraStore((s) => s.fade)
+    // Fundido solo con movimiento completo: no en movimiento reducido, ahorro ni equipos modestos
+    const canFade = useMotionTier() === "full"
 
     React.useLayoutEffect(() => {
         const root = document.documentElement.style
         const html = document.documentElement
 
         const applyDOMChanges = () => {
-            const mode = ts.effectiveMode
-            setDatasetProp(html, "mode", mode)
+            const themeEra = resolveFollowedTheme(ts.effectiveMode, ts.themeEra, screenEra)
+            const contract = resolveDomThemeContract(ts.effectiveMode, themeEra, ts.hasEraTheme)
 
-            // 1. Efectos por modo — el plano (data-flat) lo decide useTransparencyState:
-            // interruptor "Reducir transparencia", TV, contraste alto del sistema,
+            // 1. Contrato declarativo de los dos diseños (Minimalista · Por era)
+            setDatasetProp(html, "mode", contract.mode)
+            setDatasetProp(html, "uiStyle", contract.uiStyle)
+            // Universo DB cambiando de saga dentro de la misma pantalla: fundido entre paletas.
+            // Al entrar o salir de una pantalla cambia al instante (la ruta trae su fundido).
+            const previousTheme = html.dataset.theme
+            const fadePalette = canFade && screenEraFade &&
+                previousTheme !== contract.theme &&
+                !!previousTheme?.startsWith("era-") && !!contract.theme?.startsWith("era-")
+            if (fadePalette) {
+                crossfadeThemeChange(() => setDatasetProp(html, "theme", contract.theme))
+            } else {
+                setDatasetProp(html, "theme", contract.theme)
+            }
+
+            // 2. Efectos transversales — el plano (data-flat) lo decide useTransparencyState:
+            // interruptor "Reducir transparencia", contraste alto del sistema,
             // gobernador automático o perfil de ahorro. Con flat: 0 backdrop-filter.
             setDatasetProp(html, "flat", flatOn ? "true" : undefined)
 
-            const liquidOn = !flatOn && Boolean(ts.themeEnableLiquidGlass)
+            // Por era usa Liquid Glass según la preferencia guardada; Minimalista siempre es plano.
+            const liquidOn = !flatOn && contract.mode === "era" && Boolean(ts.themeEnableLiquidGlass)
             setDatasetProp(html, "liquid", liquidOn ? "true" : undefined)
 
-            // 2. Paleta — Clásico soporta presets clásicos o color personalizado;
-            // Por Era aplica la era elegida + overrides del preset Personalizado.
-            const eraOn = mode === "era" && ts.hasEraTheme
-            const bgOn = ts.enableColorSettings && ts.hasCustomBackground
-            const accentOn = ts.enableColorSettings && ts.hasCustomAccentColor
-
-            if (mode === "classic") {
-                const classicTheme = ts.themeEra?.startsWith("classic") ? ts.themeEra : "classic"
-                setDatasetProp(html, "theme", classicTheme)
-            } else if (eraOn) {
-                setDatasetProp(html, "theme", ts.themeEra)
-            } else {
-                setDatasetProp(html, "theme", undefined)
-            }
-
-            setStyleProp(root, "--glow-color-1", null)
-            setStyleProp(root, "--glow-color-2", null)
-            setStyleProp(root, "--glow-color-3", null)
-            setStyleProp(root, "--glow-color-4", null)
-            setStyleProp(root, "--glow-color-5", null)
+            // 3. Overrides personalizados de color (cuando están habilitados).
+            // Nunca en Por era: cada saga trae su paleta, y un acento o fondo guardado por
+            // versiones viejas (o por el reset de fábrica) la pisaría en todas las sagas.
+            const customOn = ts.enableColorSettings && ts.effectiveMode !== "era"
+            const bgOn = customOn && ts.hasCustomBackground
+            const accentOn = customOn && ts.hasCustomAccentColor
 
             if (bgOn) {
                 setStyleProp(root, "--bg-primary", ts.backgroundColor)
@@ -172,6 +185,9 @@ export function useApplyCustomTheme() {
     }, [
         ts.effectiveMode,
         ts.themeEra,
+        screenEra,
+        screenEraFade,
+        canFade,
         flatOn,
         ts.themeEnableLiquidGlass,
         ts.enableColorSettings,

@@ -37,23 +37,24 @@ func fakeSubtitleDrive(t *testing.T, calls *atomic.Int32) *httptest.Server {
 	return srv
 }
 
-func TestListSubtitleFiles(t *testing.T) {
+func TestSiblingSubtitleFilesLookupAndValidation(t *testing.T) {
 	var calls atomic.Int32
 	srv := fakeSubtitleDrive(t, &calls)
-	c := testClient(srv)
+	logger := zerolog.Nop()
+	svc := &Service{logger: &logger, enabled: true, folderID: "root", client: testClient(srv)}
 
-	files, err := c.ListSubtitleFiles(context.Background(), "vid1")
+	files, err := svc.SiblingSubtitleFiles(context.Background(), "vid1")
 	require.NoError(t, err)
 	require.Len(t, files, 2)
 	require.Equal(t, "Ep 01.es.srt", files[0].Name)
 	require.Equal(t, int64(12), files[0].Size)
 	require.Contains(t, files[0].SubtitleVersionKey(), "s1:")
 
-	files, err = c.ListSubtitleFiles(context.Background(), "orphan")
+	files, err = svc.SiblingSubtitleFiles(context.Background(), "orphan")
 	require.NoError(t, err)
 	require.Empty(t, files)
 
-	_, err = c.ListSubtitleFiles(context.Background(), "bad id/..")
+	_, err = svc.SiblingSubtitleFiles(context.Background(), "bad id/..")
 	require.Error(t, err)
 }
 
@@ -62,10 +63,6 @@ func TestServiceSiblingSubtitleFilesCachesAndReads(t *testing.T) {
 	srv := fakeSubtitleDrive(t, &calls)
 	logger := zerolog.Nop()
 	svc := &Service{logger: &logger, enabled: true, folderID: "root", client: testClient(srv)}
-
-	subtitleListMu.Lock()
-	subtitleListCache = map[string]subtitleListEntry{}
-	subtitleListMu.Unlock()
 
 	_, err := svc.SiblingSubtitleFiles(context.Background(), "vid1")
 	require.NoError(t, err)

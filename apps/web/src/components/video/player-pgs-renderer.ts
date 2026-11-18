@@ -1,7 +1,9 @@
 import { logger } from "@/lib/helpers/debug"
+import type { AspectRatioMode } from "./video-aspect"
 
 interface VideoCorePgsRendererOptions {
     videoElement: HTMLVideoElement
+    aspectRatio?: AspectRatioMode
     debug?: boolean
 }
 
@@ -36,13 +38,21 @@ export class VideoCorePgsRenderer {
     private _resizeRafId: number | null = null
     private _lastRenderedTime: number = -1
     private _lastIsPlaying: boolean = false
+    private _aspectRatio: AspectRatioMode = "contain"
 
     constructor(options: VideoCorePgsRendererOptions) {
         this._videoElement = options.videoElement
+        this._aspectRatio = options.aspectRatio ?? "contain"
         this._debug = options.debug ?? false
         this._setupCanvas()
         this._setupWorker()
         this._startRenderLoop()
+    }
+
+    setAspectRatio(aspectRatio: AspectRatioMode) {
+        if (this._aspectRatio === aspectRatio) return
+        this._aspectRatio = aspectRatio
+        this._applyResize()
     }
 
     addEvents(events: PgsEvent[]) {
@@ -111,14 +121,17 @@ export class VideoCorePgsRenderer {
         // Insert canvas after video element
         const parent = this._videoElement.parentElement
         if (parent) {
-            parent.style.position = "relative"
+            if (getComputedStyle(parent).position === "static") {
+                parent.style.position = "relative"
+            }
             parent.appendChild(this._canvas)
         }
 
         // Set initial size before transferring
-        const videoContentSize = this._getRenderedVideoContentSize(
-            this._videoElement.clientWidth,
-            this._videoElement.clientHeight,
+        const target = parent ?? this._videoElement
+        const videoContentSize = this._getTargetCanvasBox(
+            target.clientWidth || this._videoElement.clientWidth,
+            target.clientHeight || this._videoElement.clientHeight,
         )
         if (videoContentSize) {
             const { displayedWidth, displayedHeight, offsetX, offsetY } = videoContentSize
@@ -126,13 +139,14 @@ export class VideoCorePgsRenderer {
             this._canvas.height = displayedHeight
             this._canvasWidth = displayedWidth
             this._canvasHeight = displayedHeight
+            this._canvas.style.objectFit = this._aspectRatio === "contain" || this._aspectRatio === "cover" ? "contain" : "fill"
             this._canvas.style.width = `${displayedWidth}px`
             this._canvas.style.height = `${displayedHeight}px`
             this._canvas.style.left = `${offsetX}px`
             this._canvas.style.top = `${offsetY}px`
         }
 
-        // Add resize observer to handle video element size changes
+        // Add resize observer to handle video/stage size changes
         this._setupResizeObserver()
     }
 
@@ -165,6 +179,32 @@ export class VideoCorePgsRenderer {
         }, [offscreenCanvas])
     }
 
+    private _applyResize() {
+        if (this._isDestroyed || !this._canvas || !this._worker) return
+        const target = this._videoElement.parentElement ?? this._videoElement
+        const width = target.clientWidth || this._videoElement.clientWidth
+        const height = target.clientHeight || this._videoElement.clientHeight
+        if (!width || !height) return
+        const videoContentSize = this._getTargetCanvasBox(width, height)
+        if (!videoContentSize) return
+
+        const { displayedWidth, displayedHeight, offsetX, offsetY } = videoContentSize
+        this._canvasWidth = displayedWidth
+        this._canvasHeight = displayedHeight
+        this._canvas.style.objectFit = this._aspectRatio === "contain" || this._aspectRatio === "cover" ? "contain" : "fill"
+        this._canvas.style.width = `${displayedWidth}px`
+        this._canvas.style.height = `${displayedHeight}px`
+        this._canvas.style.left = `${offsetX}px`
+        this._canvas.style.top = `${offsetY}px`
+        this._worker.postMessage({
+            type: "resize",
+            payload: { width: displayedWidth, height: displayedHeight },
+        })
+        if (this._debug) {
+            log.info("Resized canvas", { width: displayedWidth, height: displayedHeight, left: offsetX, top: offsetY })
+        }
+    }
+
     private _setupResizeObserver() {
         if (!this._videoElement || !this._canvas) return
 
@@ -174,32 +214,14 @@ export class VideoCorePgsRenderer {
             }
             // batch reads and writes
             if (this._resizeRafId !== null) return
-            const { width, height } = entries[0].contentRect
             this._resizeRafId = requestAnimationFrame(() => {
                 this._resizeRafId = null
-                if (this._isDestroyed || !this._canvas || !this._worker) return
-                const videoContentSize = this._getRenderedVideoContentSize(width, height)
-                if (!videoContentSize) return
-
-                const { displayedWidth, displayedHeight, offsetX, offsetY } = videoContentSize
-                this._canvasWidth = displayedWidth
-                this._canvasHeight = displayedHeight
-                // batch all style writes together
-                this._canvas.style.width = `${displayedWidth}px`
-                this._canvas.style.height = `${displayedHeight}px`
-                this._canvas.style.left = `${offsetX}px`
-                this._canvas.style.top = `${offsetY}px`
-                this._worker.postMessage({
-                    type: "resize",
-                    payload: { width: displayedWidth, height: displayedHeight },
-                })
-                if (this._debug) {
-                    log.info("Resized canvas", { width: displayedWidth, height: displayedHeight, left: offsetX, top: offsetY })
-                }
+                this._applyResize()
             })
         })
 
-        this._resizeObserver.observe(this._videoElement)
+        const target = this._videoElement.parentElement ?? this._videoElement
+        this._resizeObserver.observe(target)
     }
 
     private _startRenderLoop() {
@@ -274,6 +296,13 @@ export class VideoCorePgsRenderer {
         schedule()
     }
 
+
+    private _getTargetCanvasBox(containerWidth: number, containerHeight: number) {
+        if (this._aspectRatio !== "contain") {
+            return { displayedWidth: containerWidth, displayedHeight: containerHeight, offsetX: 0, offsetY: 0 }
+        }
+        return this._getRenderedVideoContentSize(containerWidth, containerHeight)
+    }
 
     private _getRenderedVideoContentSize(containerWidth: number, containerHeight: number) {
         const videoWidth = this._videoElement.videoWidth

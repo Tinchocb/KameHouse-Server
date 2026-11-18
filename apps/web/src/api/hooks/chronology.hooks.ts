@@ -23,13 +23,6 @@ export const fetchChronologyProgress = async () => {
     })
 }
 
-export const fetchChronologyMomentTimes = async () => {
-    return buildApiQuery<Record<string, number>>({
-        endpoint: API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.endpoint,
-        method: API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.methods[0],
-    })
-}
-
 /**
  * Avance de la cronología de la cuenta actual: episodios vistos por serie de
  * Dragon Ball y marcas manuales por lapso. Vive en el servidor para que todos
@@ -55,7 +48,7 @@ export function useSaveChronologySpanOverrides() {
             await queryClient.cancelQueries({ queryKey: PROGRESS_QUERY_KEY })
             const previous = queryClient.getQueryData<ChronologyProgressResponse>(PROGRESS_QUERY_KEY)
             queryClient.setQueryData<ChronologyProgressResponse>(PROGRESS_QUERY_KEY, (old) => {
-                const next = { ...(old?.overrides ?? {}) }
+                const next = { ...old?.overrides }
                 for (const [spanId, watched] of Object.entries(overrides)) {
                     if (watched === null) delete next[spanId]
                     else next[spanId] = watched
@@ -76,31 +69,11 @@ export function useSaveChronologySpanOverrides() {
 }
 
 /**
- * Hook to retrieve all custom calibrated chronology moment times ({ [momentKey]: seconds }).
- */
-export function useGetChronologyMomentTimes(options?: { enabled?: boolean }) {
-    return useServerQuery<Record<string, number>>({
-        endpoint: API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.endpoint,
-        method: API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.methods[0],
-        queryKey: [API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.key],
-        enabled: options?.enabled ?? true,
-        staleTime: 5 * 60 * 1000,
-        refetchOnWindowFocus: false,
-    })
-}
-
-/**
  * Hook to save or delete a custom calibrated moment start time.
  */
 export function useSaveChronologyMomentTime() {
-    const queryClient = useQueryClient()
     return useServerMutation<boolean, SaveChronologyMomentTimeVariables>({
         endpoint: API_ENDPOINTS.CHRONOLOGY_MOMENTS.SaveChronologyMomentTime.endpoint,
         method: API_ENDPOINTS.CHRONOLOGY_MOMENTS.SaveChronologyMomentTime.methods[0],
-        onSuccess: () => {
-            queryClient.invalidateQueries({
-                queryKey: [API_ENDPOINTS.CHRONOLOGY_MOMENTS.GetChronologyMomentTimes.key],
-            })
-        },
     })
 }

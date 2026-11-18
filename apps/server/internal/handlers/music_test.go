@@ -14,6 +14,7 @@ import (
 
 func newTestContext(e *echo.Echo, query url.Values) (echo.Context, *httptest.ResponseRecorder) {
 	req := httptest.NewRequest(http.MethodGet, "/?"+query.Encode(), nil)
+	req.RemoteAddr = "127.0.0.1:12345"
 	rec := httptest.NewRecorder()
 	return e.NewContext(req, rec), rec
 }

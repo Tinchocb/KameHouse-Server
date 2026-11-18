@@ -1,11 +1,16 @@
+import { useScreenEra } from '@/lib/theme/screen-era';
+import { themeEraFromEraId, type EraId } from '@/lib/config/eras';
+import { PresenceSurface } from "@/components/ui/kinetics/presence-surface"
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router';
 import { Fragment, useState, useMemo, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { AnimatePresence } from "framer-motion"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useGetLibraryCollection } from '@/api/hooks/anime_collection.hooks';
-import { useGetContinuityWatchHistory } from '@/api/hooks/continuity.hooks';
 import { SeriesCard, getVhsColor, SPINE_EXPANDED_BASIS, SPINE_COLLAPSED_BASIS, SPINE_EXPANDED_GROW, SPINE_SHELF_GAP, SPINE_SHELF_PADDING } from './-SeriesCard';
 import { SeriesSpineRow } from './-SeriesSpineRow';
 import { getHighResImage, getLowResImage, localImage, prewarmImages } from '@/lib/helpers/images';
+import { SPINE_IDLE_ART_URLS } from '@/lib/helpers/goku-panorama';
+import { queueIdlePreload } from '@/lib/idle-preload-queue';
 import { IconNavigationChevronLeft, IconNavigationChevronRight } from '@/components/ui/icons';
 import { loadSwapVariants, useMotionTier, viewSwapVariants } from '@/components/ui/kinetics';
 import { getSeriesEraAccent } from '@/lib/helpers/series';
@@ -13,18 +18,16 @@ import { Skeleton } from '@/components/ui/skeleton/skeleton';
 import { IconButton } from '@/components/ui/button';
 import { LibraryEmptyState } from '@/components/shared/library-empty-state';
 import { LibraryErrorState } from '@/components/shared/library-error-state';
-import { useResponsive } from '@/hooks/use-responsive';
 import { useSound } from '@/hooks/use-sound';
 import { useThemeSettings } from '@/lib/theme/theme-hooks';
-import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
+import { useIsMinimalistMode } from '@/lib/theme/use-classic-mode';
 import { useUIStore } from '@/lib/store';
 import { cn } from '@/components/ui/core/styling';
-import { usePerformanceStore, selectEffectiveTier } from '@/lib/hardware/performance-store';
 import { HERO_AURA_CLASS, HERO_STAGE_CLASS } from '@/lib/config/hero-stage';
 import { ViewModeTabs, type SeriesViewMode } from './-ViewModeTabs';
-import { getGlowTransform, AmbientAura } from './-AmbientAura';
-import { SeriesPosterGridItem } from './-SeriesPosterGridItem';
-import { buildSeriesList, loadSeriesPrefs, saveSeriesPrefs, sortSeries } from './-series-model';
+import { AmbientAura } from './-AmbientAura';
+import { buildSeriesList, loadSeriesPrefs, saveSeriesPrefs } from './-series-model';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 /** Delay de stagger por card, en ms (tope acotado para fluidez). */
 const ENTRY_STAGGER_MS = 40;
@@ -32,31 +35,18 @@ const ENTRY_STAGGER_MS = 40;
 // Lomos que entran en pantalla al abrir (escritorio): sus fondos se piden ya.
 const SHELF_EAGER_ITEMS = 7;
 
-const ENTRY_STAGGER_MAX_ITEMS = 12;
+const ENTRY_STAGGER_MAX_ITEMS = 7;
 
 export const Route = createLazyFileRoute('/series/')({
     component: SeriesFullscreenIndex,
 });
 
-const GRID_CLASS = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 w-full';
-
-/** Misma geometría que la grilla de Portadas: tarjetas 2:3 en las mismas columnas. */
-function PosterGridPlaceholder() {
-    return (
-        <div role="status" aria-busy="true" aria-label="Cargando series" className={GRID_CLASS}>
-            {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-[2/3] h-auto w-full rounded-2xl" />
-            ))}
-        </div>
-    );
-}
-
-/** Misma geometría que las cintas de la estantería móvil (72 px de alto, 8 px entre ellas). */
+/** Misma geometría que las tarjetas horizontales (136px en pantallas grandes, 124px en tablet, 104px en móvil). */
 function SpineListPlaceholder() {
     return (
-        <div role="status" aria-busy="true" aria-label="Cargando series" className="flex flex-col gap-2">
+        <div role="status" aria-busy="true" aria-label="Cargando series" className="flex flex-col gap-3.5 sm:gap-4 lg:gap-5">
             {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-[74px] w-full rounded-xl" />
+                <Skeleton key={i} className="h-[104px] sm:h-[124px] lg:h-[136px] w-full rounded-2xl" />
             ))}
         </div>
     );
@@ -67,15 +57,14 @@ function SeriesFullscreenIndex() {
     const { view: viewParam } = Route.useSearch();
     // Preferencias de este dispositivo (vista y orden). La URL manda si trae `view`.
     const [prefs] = useState(loadSeriesPrefs);
-    const view: SeriesViewMode = viewParam ?? prefs.view ?? 'shelf';
+    const view: SeriesViewMode = (viewParam === 'shelf' || viewParam === 'cards' ? viewParam : undefined)
+        ?? (prefs.view === 'shelf' || prefs.view === 'cards' ? prefs.view : 'cards');
     const { playSound } = useSound();
     const ts = useThemeSettings();
+    const isMinimalist = useIsMinimalistMode();
     const reduceMotion = useReducedMotion();
-    const effectiveTier = usePerformanceStore(selectEffectiveTier);
-    // Glows caros (blur 80-100px + animaciones 8s) solo con tier "full": GPU capaz, sin reduced-motion ni modo TV.
+    // Efectos de brillo cinematográfico solo con tier "full": GPU capaz, sin reduced-motion.
     const allowGlowFx = useMotionTier() === 'full';
-    // En eco (low_power) se apagan incluso los blurs estáticos de los glows.
-    const isEco = effectiveTier === 'low_power';
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const shelfRef = useRef<HTMLDivElement | null>(null);
     // El shelf se monta y desmonta con AnimatePresence al cambiar de vista: el efecto de anchos
@@ -85,16 +74,7 @@ function SeriesFullscreenIndex() {
         shelfRef.current = node;
         setShelfEl(node);
     }, []);
-    // Tablet (768-1023) usa el grid de posters en vez del shelf horizontal
-    const { isMobile: isPhone, isTablet } = useResponsive();
-    const isMobile = isPhone || isTablet;
-
-    const { data: collection, isLoading, isError, error, refetch } = useGetLibraryCollection();
-    const { data: history } = useGetContinuityWatchHistory();
-
-    const handleNavigate = useCallback((id: string) => {
-        navigate({ to: '/series/$seriesId', params: { seriesId: id } });
-    }, [navigate]);
+    const isMobile = useMediaQuery('(max-width: 1023px)');
 
     // Estantería móvil: una sola cinta abierta. Al entrar todas arrancan colapsadas.
     const [openSpineId, setOpenSpineId] = useState<number | null>(null);
@@ -107,6 +87,22 @@ function SeriesFullscreenIndex() {
         });
     }, [navigate]);
 
+    const activeSpineId = openSpineId;
+
+    const handleToggleSpine = useCallback((id: number) => {
+        setOpenSpineId(id === activeSpineId ? null : id);
+        if (id !== activeSpineId) {
+            playSound('series', 0.1);
+            setSelectedId(id);
+        }
+    }, [activeSpineId, playSound]);
+
+    const { data: collection, isLoading, isError, error, refetch } = useGetLibraryCollection();
+
+    const handleNavigate = useCallback((id: string) => {
+        navigate({ to: '/series/$seriesId', params: { seriesId: id } });
+    }, [navigate]);
+
     const handleViewChange = useCallback((nextView: SeriesViewMode) => {
         playSound('category', 0.1);
         saveSeriesPrefs({ view: nextView });
@@ -117,11 +113,8 @@ function SeriesFullscreenIndex() {
         navigate({ to: '/series', search: { view: nextView }, replace: true });
     }, [navigate, playSound]);
 
-    const allSeries = useMemo(() => buildSeriesList(collection, history), [collection, history]);
-    const displayedList = useMemo(
-        () => sortSeries(allSeries, 'saga'),
-        [allSeries],
-    );
+    const allSeries = useMemo(() => buildSeriesList(collection), [collection]);
+    const displayedList = allSeries;
 
     // Pre-cargar portadas + banners visibles iniciales una sola vez por montaje.
     // El hero expandido y el aura usan el banner (item.img); sin esto el primer
@@ -150,15 +143,18 @@ function SeriesFullscreenIndex() {
         if (!el || shelfCount === 0) return;
         const apply = () => {
             const availableWidth = el.clientWidth - SPINE_SHELF_PADDING * 2 - SPINE_SHELF_GAP * (shelfCount - 1);
-            const free = Math.max(0, availableWidth - (SPINE_EXPANDED_BASIS + SPINE_COLLAPSED_BASIS * (shelfCount - 1)));
+            const expandedBasis = Math.min(SPINE_EXPANDED_BASIS, Math.max(280, el.clientWidth - SPINE_SHELF_PADDING * 2 - 8));
+            const free = Math.max(0, availableWidth - (expandedBasis + SPINE_COLLAPSED_BASIS * (shelfCount - 1)));
             const share = free / (shelfCount - 1 + SPINE_EXPANDED_GROW);
-            const expW = Math.round(SPINE_EXPANDED_BASIS + SPINE_EXPANDED_GROW * share);
+            const expW = Math.round(expandedBasis + SPINE_EXPANDED_GROW * share);
+            el.style.setProperty('--spine-exp-basis', `${expandedBasis}px`);
             el.style.setProperty('--spine-exp-w', `${expW}px`);
             el.style.setProperty('--spine-exp-width', String(expW));
             el.style.setProperty('--spine-art-height', String(Math.max(1, el.clientHeight - SPINE_SHELF_PADDING * 2 - 144)));
             const colW = hayLomoAbierto
                 ? SPINE_COLLAPSED_BASIS + share
                 : Math.max(SPINE_COLLAPSED_BASIS, availableWidth / shelfCount);
+            el.style.setProperty('--spine-col-basis', `${Math.round(SPINE_COLLAPSED_BASIS)}px`);
             el.style.setProperty('--spine-col-w', `${Math.round(colW)}px`);
             el.style.setProperty('--spine-col-width', String(Math.round(colW)));
         };
@@ -207,12 +203,20 @@ function SeriesFullscreenIndex() {
         return displayedList.findIndex(item => item.id === effectiveSelectedId);
     }, [displayedList, effectiveSelectedId]);
     const selectedItem = displayedList[selectedIndex] ?? null;
-    const isClassic = useIsClassicMode();
     const selectedAccent = getSeriesEraAccent(selectedItem?.seriesId, selectedItem ? getVhsColor(selectedItem.id) : undefined);
+    const selectedThemeEra = selectedItem?.seriesId ? themeEraFromEraId(selectedItem.seriesId as EraId) : null;
+    useScreenEra(selectedThemeEra);
 
     // Aura ambiental sin flash: arte difuminado ultra-liviano (w185) con crossfade nativo
     const rawAuraSrc = selectedItem?.img || selectedItem?.poster || null;
     const lowAuraSrc = useMemo(() => rawAuraSrc ? localImage(getLowResImage(rawAuraSrc)) : null, [rawAuraSrc]);
+
+    // Precarga en idle del arte panorámico de los lomos solo al entrar en /series.
+    useEffect(() => {
+        return queueIdlePreload("series:spine-art", () => {
+            prewarmImages([...SPINE_IDLE_ART_URLS])
+        }, 2)
+    }, [])
 
     // Precarga predictiva en idle: serie seleccionada y vecinos contiguos (±1).
     // Cubre tanto item.poster (card expandida) como item.img (aura ambiental) y sus variantes low.
@@ -228,16 +232,6 @@ function SeriesFullscreenIndex() {
         });
         prewarmImages(targets.map(localImage));
     }, [selectedIndex, displayedList]);
-
-    const activeSpineId = openSpineId;
-
-    const handleToggleSpine = useCallback((id: number) => {
-        setOpenSpineId(id === activeSpineId ? null : id);
-        if (id !== activeSpineId) {
-            playSound('series', 0.1);
-            setSelectedId(id);
-        }
-    }, [activeSpineId, playSound]);
 
     // Callback estable (lee lo último vía ref): si cambiara de identidad con cada selección
     // rompería el memo de SeriesCard y las 6 tarjetas se renderizarían de nuevo (~35 ms).
@@ -270,6 +264,8 @@ function SeriesFullscreenIndex() {
         };
     }, [displayedList, selectedId, setActiveSeriesContext]);
 
+    const isHorizontal = view === 'cards' || (view === 'shelf' && isMobile);
+
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             const t = e.target as HTMLElement | null;
@@ -280,16 +276,19 @@ function SeriesFullscreenIndex() {
                 if (target && target.id !== selectedId) {
                     playSound('series', 0.1);
                     setSelectedId(target.id);
+                    if (isHorizontal) {
+                        setOpenSpineId(target.id);
+                    }
                 }
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [displayedList, selectedId, view, isMobile, playSound]);
+    }, [displayedList, selectedId, view, isHorizontal, playSound]);
 
     // Scroll automático hacia la card seleccionada
     useEffect(() => {
-        if (!effectiveSelectedId || isMobile || view === 'etapas') return;
+        if (!effectiveSelectedId || isHorizontal) return;
         // Sin selección del usuario la tarjeta activa es la primera, que ya está a la izquierda del
         // estante: medir rects acá forzaba un layout completo dentro del montaje de la página.
         if (selectedId === null) return;
@@ -301,7 +300,7 @@ function SeriesFullscreenIndex() {
                 cardEl.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' });
             }
         }
-    }, [effectiveSelectedId, selectedId, isMobile, view, reduceMotion]);
+    }, [effectiveSelectedId, selectedId, isHorizontal, reduceMotion]);
 
     if (isError && !collection) return <LibraryErrorState error={error} onRetry={() => { void refetch(); }} />;
 
@@ -318,36 +317,32 @@ function SeriesFullscreenIndex() {
     return (
         <div className="neutro-sentence relative w-full max-w-content-desktop mx-auto px-4 sm:px-6 md:px-8 lg:px-10 pt-nav pb-8 select-none flex flex-col justify-start space-y-4 text-on-surface">
             {/* ── Ambient Aura Background (mismo tamaño que Home / Películas) ── */}
-            <div className={cn(HERO_AURA_CLASS, "[contain:paint]")}>
-                <AmbientAura src={lowAuraSrc} allowGlowFx={allowGlowFx} />
-                {/* Tinte de la era sobre todo el hero (sin esto el wash queda gris). Antes era
-                    un orbe que respiraba arriba a la izquierda; ahora es un velo sin forma visible.
-                    Color en background-color y forma en la máscara: un degradado en `background` no se
-                    interpola y el tinte saltaba de golpe al cambiar de serie. */}
-                {selectedItem && !isClassic && (
-                    <div
-                        className="absolute inset-0 pointer-events-none transition-[background-color] duration-slow ease-smooth-out"
-                        style={{
-                            backgroundColor: `color-mix(in srgb, ${selectedAccent} 16%, transparent)`,
-                            maskImage: 'radial-gradient(ellipse 80% 60% at 30% 30%, black 0%, transparent 70%)',
-                            WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 30% 30%, black 0%, transparent 70%)',
-                        }}
+            {!isMinimalist && (
+                <div className={cn(HERO_AURA_CLASS, "[contain:paint]")}>
+                    <AmbientAura
+                        src={lowAuraSrc}
+                        accent={selectedItem && !isMinimalist ? selectedAccent : null}
+                        seriesKey={selectedItem?.id ?? null}
+                        allowGlowFx={allowGlowFx}
                     />
-                )}
-            </div>
+                </div>
+            )}
 
             <h1 className="sr-only">Series</h1>
-            {/* Selector de vista (Estantería / Portadas): riel fijo, no ocupa espacio en el flujo. */}
-            <ViewModeTabs mode={view} onChange={handleViewChange} />
+            {/* Selector de vista (Estantería / Portadas): riel fijo, solo cuando hay series o están cargando. */}
+            {(hasList || loadingList) && <ViewModeTabs mode={view} onChange={handleViewChange} />}
 
             {/* ── Main Content ── */}
             {/* Cambio de vista: el panel saliente se va antes de que entre el nuevo. */}
             <AnimatePresence mode="wait" initial={false}>
             {view === 'shelf' && !isMobile ? (
                 /* ═══════════════════════ VISTA VHS SHELF (desktop, mismo stage que Home/Películas) ═══════════════════════ */
-                <m.div key="shelf" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full">
+                <PresenceSurface key="shelf" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full">
                 <div
-                    className={cn("w-full relative z-10 flex flex-col rounded-hero overflow-hidden flex-none", HERO_STAGE_CLASS)}
+                    className={cn(
+                        "vhs-shelf-stage w-full relative z-10 flex flex-col rounded-hero overflow-hidden flex-none",
+                        HERO_STAGE_CLASS
+                    )}
                 >
                     <div
                         ref={setShelfNode}
@@ -358,50 +353,21 @@ function SeriesFullscreenIndex() {
                         aria-orientation={hasList ? "horizontal" : undefined}
                         aria-label={hasList ? "Series" : undefined}
                         className="vhs-shelf w-full h-full flex bg-transparent overflow-x-auto overflow-y-hidden no-scrollbar relative z-10"
-                        style={{ scrollSnapType: 'x proximity', scrollPadding: '0 16px', gap: SPINE_SHELF_GAP, padding: SPINE_SHELF_PADDING }}
+                        style={{ scrollSnapType: 'x proximity', scrollPadding: '0 0px', gap: SPINE_SHELF_GAP, padding: SPINE_SHELF_PADDING }}
                     >
-                        {/* Glow interno del shelf (respira como Home) */}
-                        {selectedItem && !isEco && (
-                            allowGlowFx ? (
-                                <m.div
-                                    animate={{ opacity: [0.09, 0.15, 0.09] }}
-                                    transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-                                    className="absolute top-1/2 left-0 w-[500px] h-[500px] pointer-events-none blur-[80px] z-0 transform-gpu"
-                                    style={{
-                                        background: `radial-gradient(circle, ${selectedAccent} 0%, transparent 60%)`,
-                                        transform: getGlowTransform(selectedIndex, displayedList.length, 250),
-                                        // Framer solo anima la opacidad: el halo sigue a la
-                                        // cinta elegida por CSS, igual que la variante balanced.
-                                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1)',
-                                    }}
-                                />
-                            ) : (
-                                // balanced: gradiente sin blur. Color en background-color y forma en la máscara
-                                // (el degradado en `background` no se interpola): el color se funde con el del tinte.
-                                <div
-                                    className="absolute top-1/2 left-0 w-[500px] h-[500px] pointer-events-none z-0"
-                                    style={{
-                                        opacity: 0.07,
-                                        backgroundColor: selectedAccent,
-                                        maskImage: 'radial-gradient(circle, black 0%, transparent 60%)',
-                                        WebkitMaskImage: 'radial-gradient(circle, black 0%, transparent 60%)',
-                                        transform: getGlowTransform(selectedIndex, displayedList.length, 250),
-                                        transition: 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background-color var(--duration-slow) var(--ease-smooth-out)',
-                                    }}
-                                />
-                            )
-                        )}
+                        {/* Sin glow interno redundante en el shelf: la atmósfera unificada vive en AmbientAura
+                            (evita doble blur y recorte abrupto en los bordes con overflow-hidden). */}
 
-                        {/* mode="wait": las cintas entran (con su propia cascada) recién cuando el skeleton terminó de irse. */}
-                        <AnimatePresence mode="wait" initial={false}>
+                        {/* El skeleton sale superpuesto: las cintas disponibles entran sin esperar. */}
+                        <AnimatePresence initial={false}>
                         {loadingList ? (
-                            <m.div key="skeleton" role="status" aria-busy="true" aria-label="Cargando series" variants={loadSwapVariants} exit="exit" className="w-full h-full flex items-stretch gap-2 relative z-10">
+                            <PresenceSurface key="skeleton" role="status" aria-busy="true" aria-label="Cargando series" variants={loadSwapVariants} exit="exit" className="absolute inset-0 w-full h-full flex items-stretch gap-2 z-10">
                                 {Array.from({ length: 6 }).map((_, i) => (
                                     <div key={i} className="h-full flex flex-col shrink-0" style={{ flex: `1 0 ${SPINE_COLLAPSED_BASIS}px` }}>
                                         <Skeleton className="flex-1 h-auto rounded-2xl" />
                                     </div>
                                 ))}
-                            </m.div>
+                            </PresenceSurface>
                         ) : !hasList ? (
                             <div key="empty" className="w-full h-full flex items-center justify-center relative z-10 p-6">
                                 {emptyLibrary}
@@ -429,15 +395,21 @@ function SeriesFullscreenIndex() {
                     </div>
                     {/* El zócalo oscuro de la base vive ahora en cada lomo colapsado (-SeriesCard): a nivel de
                         shelf tapaba con un degradé gris el botón y el panel de la tarjeta seleccionada. */}
-                    {/* Fades laterales del shelf */}
+                    {/* Fades laterales del shelf: solo visibles cuando hay contenido desbordado para desplazar */}
                     <div
                         aria-hidden
-                        className="absolute inset-y-0 left-0 w-10 z-20 pointer-events-none"
+                        className={cn(
+                            "absolute inset-y-0 left-0 w-10 z-20 pointer-events-none transition-opacity duration-base",
+                            canScroll.left ? "opacity-100" : "opacity-0"
+                        )}
                         style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--md-sys-color-surface) 65%, transparent), transparent)' }}
                     />
                     <div
                         aria-hidden
-                        className="absolute inset-y-0 right-0 w-10 z-20 pointer-events-none"
+                        className={cn(
+                            "absolute inset-y-0 right-0 w-10 z-20 pointer-events-none transition-opacity duration-base",
+                            canScroll.right ? "opacity-100" : "opacity-0"
+                        )}
                         style={{ background: 'linear-gradient(to left, color-mix(in srgb, var(--md-sys-color-surface) 65%, transparent), transparent)' }}
                     />
                     {/* Flechas: solo si hay lomos fuera de pantalla (con la biblioteca actual caben todos) */}
@@ -464,12 +436,12 @@ function SeriesFullscreenIndex() {
                         />
                     )}
                 </div>
-                </m.div>
-            ) : view === 'shelf' && isMobile ? (
-                /* ═══════════════════════ VISTA ESTANTERÍA MÓVIL (cintas apiladas) ═══════════════════════ */
-                <m.div key="spines" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="w-full max-w-2xl mx-auto pt-1 pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
+                </PresenceSurface>
+            ) : (
+                /* ═══════════════════════ VISTA TARJETAS HORIZONTALES (cintas apiladas) ═══════════════════════ */
+                <PresenceSurface key="cards" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="w-full max-w-content-desktop mx-auto pt-2 pb-16 px-2 sm:px-4 lg:px-6">
                     {loadingList ? <SpineListPlaceholder /> : !hasList ? (emptyLibrary) : (
-                        <ul aria-label="Series" className="flex flex-col gap-2">
+                        <ul aria-label="Colección de series" className="flex flex-col gap-3.5 sm:gap-4 lg:gap-5">
                             {displayedList.map((item, i) => (
                                 <SeriesSpineRow
                                     key={item.id}
@@ -484,26 +456,7 @@ function SeriesFullscreenIndex() {
                             ))}
                         </ul>
                     )}
-                </m.div>
-            ) : (
-                /* ═══════════════════════ VISTA PORTADAS (grid) ═══════════════════════ */
-                <m.div key="grid" variants={viewSwapVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full pb-[calc(8rem+env(safe-area-inset-bottom,0px))]">
-                    {loadingList ? <PosterGridPlaceholder /> : !hasList ? (
-                        <div className="min-h-[50vh] flex items-center justify-center p-2">{emptyLibrary}</div>
-                    ) : (
-                        <div className={GRID_CLASS}>
-                            {displayedList.map((item, i) => (
-                                <SeriesPosterGridItem
-                                    key={item.id}
-                                    item={item}
-                                    index={i}
-                                    showUnwatchedCount={ts.themeShowAnimeUnwatchedCount}
-                                    onNavigate={handleNavigate}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </m.div>
+                </PresenceSurface>
             )}
             </AnimatePresence>
         </div>

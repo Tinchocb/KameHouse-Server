@@ -13,9 +13,7 @@ type ParsedMedia struct {
 	EpisodeTitle  string // Title of the episode if present (e.g. "Aparece un guerrero misterioso")
 	Season        int
 	Episodes      []int // Multi-episode support: [1, 2, 3] for ranges like "01-03"
-	Resolution    string
 	ReleaseGroup  string
-	IsMulti       bool // Flag indicating multi-episode file
 	IsEpisodeOnly bool // Flag indicating filename contained only episode number without series title
 
 	// Deprecated: Use Episodes instead. Kept for backwards compatibility.
@@ -83,16 +81,12 @@ func Parse(filename string) ParsedMedia {
 	base := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
 
 	pm := ParsedMedia{
-		Season:     1,
-		Episodes:   []int{1},
-		Resolution: "UNKNOWN",
+		Season:   1,
+		Episodes: []int{1},
 	}
 
-	// Extract and Remove Resolution
-	if res := resolutionRegex.FindStringSubmatch(base); res != nil {
-		pm.Resolution = strings.ToUpper(res[1])
-		base = resolutionRegex.ReplaceAllString(base, "")
-	}
+	// Remove Resolution
+	base = resolutionRegex.ReplaceAllString(base, "")
 
 	// Remove CRC32 Hashes
 	base = crc32Regex.ReplaceAllString(base, "")
@@ -127,7 +121,6 @@ func Parse(filename string) ParsedMedia {
 			for i := start; i <= end; i++ {
 				pm.Episodes = append(pm.Episodes, i)
 			}
-			pm.IsMulti = true
 		} else {
 			pm.Episodes = []int{start}
 		}
@@ -170,7 +163,6 @@ func Parse(filename string) ParsedMedia {
 			for i := start; i <= end; i++ {
 				pm.Episodes = append(pm.Episodes, i)
 			}
-			pm.IsMulti = true
 		} else {
 			pm.Episodes = []int{start}
 		}
@@ -217,7 +209,6 @@ func Parse(filename string) ParsedMedia {
 			for i := start; i <= end; i++ {
 				pm.Episodes = append(pm.Episodes, i)
 			}
-			pm.IsMulti = true
 		} else {
 			pm.Episodes = []int{start}
 		}
@@ -271,7 +262,6 @@ func Parse(filename string) ParsedMedia {
 			for i := start; i <= end; i++ {
 				pm.Episodes = append(pm.Episodes, i)
 			}
-			pm.IsMulti = true
 		} else {
 			pm.Episodes = []int{start}
 		}

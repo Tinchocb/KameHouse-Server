@@ -27,9 +27,7 @@ const LoadingSpinnerAnatomy = defineStyleAnatomy({
  * LoadingSpinner
  * -----------------------------------------------------------------------------------------------*/
 
-type LoadingSpinnerProps = React.ComponentPropsWithRef<"div"> & ComponentAnatomy<typeof LoadingSpinnerAnatomy> & {
-    spinner?: React.ReactNode
-}
+type LoadingSpinnerProps = React.ComponentPropsWithRef<"div"> & ComponentAnatomy<typeof LoadingSpinnerAnatomy>
 
 export const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>((props, ref) => {
 
@@ -37,7 +35,7 @@ export const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerPro
         className,
         containerClass,
         iconClass,
-        spinner,
+        titleClass,
         title,
         ...rest
     } = props
@@ -52,8 +50,8 @@ export const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerPro
             {...rest}
             ref={ref}
         >
-            {spinner ? spinner : <Spinner className={iconClass} />}
-            {title && <p className={LoadingSpinnerAnatomy.title()}>{title}</p>}
+            <Spinner className={iconClass} />
+            {title && <p className={cn(LoadingSpinnerAnatomy.title(), titleClass)}>{title}</p>}
         </div>
     )
 
@@ -66,14 +64,7 @@ LoadingSpinner.displayName = "LoadingSpinner"
  * Spinner
  * -----------------------------------------------------------------------------------------------*/
 
-interface SpinnerProps extends React.ComponentPropsWithRef<"svg"> {
-    children?: React.ReactNode
-}
-
-const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>((props, _ref) => {
-
-    const { className } = props
-
+function Spinner({ className }: { className?: string }) {
     return (
         <IconUiSpinner
             className={cn(
@@ -82,7 +73,4 @@ const Spinner = React.forwardRef<SVGSVGElement, SpinnerProps>((props, _ref) => {
             )}
         />
     )
-
-})
-
-Spinner.displayName = "Spinner"
+}

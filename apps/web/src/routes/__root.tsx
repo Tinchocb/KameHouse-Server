@@ -7,11 +7,8 @@ import { __isTauriDesktop__ } from "@/types/constants"
 import React from "react"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { AppLayout, AppLayoutContent } from "@/components/ui/app-layout/app-layout"
-import { AppBottomNav, AppTopNav } from "@/components/ui/app-layout/app-topnav"
 import { FloatingPillNav } from "@/components/ui/app-layout/floating-pill-nav"
-import { TvNavBar } from "@/components/ui/app-layout/tv-nav-bar"
 import { ScrollEdgeBlur } from "@/components/ui/kinetics"
-import { useTvDpad } from "@/hooks/use-tv-dpad"
 import { LiquidGlassDefs } from "@/components/shared/liquid-glass-defs"
 
 const CommandPalette = React.lazy(() =>
@@ -25,8 +22,9 @@ const PerformanceMonitor = React.lazy(() =>
 )
 import { PageTransition } from "@/components/shared/page-transition"
 
-import { useAppStore, usePlayerStore, useQueueStore, useUIStore } from "@/lib/store"
+import { useAppStore, useQueueStore, useUIStore } from "@/lib/store"
 import { DynamicBackdrop } from "@/components/shared/dynamic-backdrop"
+import { EraKanjiWatermark } from "@/components/shared/era-kanji-watermark"
 import { useGetStatus } from "@/api/hooks/settings.hooks"
 const GlobalQueueSidebar = React.lazy(() =>
     import("@/components/shared/global-queue-sidebar").then((m) => ({ default: m.GlobalQueueSidebar }))
@@ -37,11 +35,8 @@ const GettingStarted = React.lazy(() =>
 import { startViewTransition } from "@/lib/helpers/transitions"
 import { useApplyCustomTheme, CustomThemeStyles } from "@/lib/theme/apply-custom-theme"
 import { usePerformanceGovernor } from "@/lib/hardware/performance-governor"
-import { prewarmVideoPlayer } from "@/components/video/prewarm"
 import { useMotionFeaturesReady } from "@/lib/motion-features-loader"
-import { SPINE_IDLE_ART_URLS } from "@/lib/helpers/goku-panorama"
 import { queueIdlePreload } from "@/lib/idle-preload-queue"
-import { prewarmImages } from "@/lib/helpers/images"
 
 const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() {
     const activeQueuePlayItem = useAppStore(state => state.activeQueuePlayItem)
@@ -76,7 +71,6 @@ const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() 
                 malId={activeQueuePlayItem.malId}
                 mediaFormat={activeQueuePlayItem.mediaFormat}
                 nextStreamUrl={nextItem?.playableUrl}
-                nextStreamType="direct"
                 nextEpisodeTitle={nextItem?.subtitle || nextItem?.title}
                 nextEpisodeNumber={nextItem?.episodeNumber}
                 nextEpisodeImage={nextItem?.thumbnail}
@@ -99,7 +93,6 @@ const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() 
                 onClose={() => {
                     startViewTransition(() => {
                         useQueueStore.getState().setActiveQueuePlayItem(null)
-                        usePlayerStore.getState().setTvMode(false)
                     })
                 }}
             />
@@ -107,38 +100,83 @@ const GlobalQueuePlayerOverlay = React.memo(function GlobalQueuePlayerOverlay() 
     )
 })
 
+/**
+ * Aplica el tema (y la era en pantalla de Universo DB) en una hoja que no pinta nada. Así el
+ * cambio de era, que ocurre cada 5 s en el hero de Inicio y en cada sección de la Cronología, no
+ * re-renderiza todo el shell (barra, islas, reproductor en cola): solo esta hoja.
+ */
+function ThemeSync() {
+    useApplyCustomTheme()
+    return null
+}
+
 function RootComponent() {
-    const tvMode = useAppStore(state => state.tvMode)
+    return (
+        <>
+            <ThemeSync />
+            <RootShell />
+        </>
+    )
+}
+
+function BootReadySync({
+    status,
+    isLoading,
+    showInitialSetup,
+    onReady,
+}: {
+    status: ReturnType<typeof useGetStatus>["data"]
+    isLoading: boolean
+    showInitialSetup: boolean
+    onReady: () => void
+}) {
+    const queryClient = useQueryClient()
+    const isCollectionFetching = useIsFetching({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] }) > 0
+    const routerIsLoading = useRouterState({ select: (s) => s.isLoading })
+    const motionReady = useMotionFeaturesReady()
+
+    const isReadyNow = motionReady && !isLoading && !!status && (
+        status.setupRequired ||
+        showInitialSetup ||
+        (!routerIsLoading && (!isCollectionFetching || !!queryClient.getQueryData([API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key])))
+    )
+
+    React.useEffect(() => {
+        if (isReadyNow) {
+            onReady()
+        }
+    }, [isReadyNow, onReady])
+
+    // Safety fallback timeout: never hold splash screen longer than 1.5s after status is resolved
+    React.useEffect(() => {
+        if (isLoading || !status) return
+        const safetyTimer = setTimeout(onReady, 1500)
+        return () => clearTimeout(safetyTimer)
+    }, [isLoading, status, onReady])
+
+    return null
+}
+
+function RootShell() {
     const showInitialSetup = useAppStore(state => state.showInitialSetup)
     const setShowInitialSetup = useUIStore(state => state.setShowInitialSetup)
-    useTvDpad()
     const { data: status, isLoading, isError, refetch } = useGetStatus()
 
     const router = useRouter()
-    const queryClient = useQueryClient()
-    const isCollectionFetching = useIsFetching({ queryKey: [API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key] }) > 0
     const [isInterfaceReady, setIsInterfaceReady] = React.useState(false)
-    // `isLoading` del router solo decide cuándo termina el arranque. Sin selector el root (que envuelve
-    // TODO el shell) se re-renderizaba con cada cambio del router (URL, búsqueda, y dos veces por
-    // navegación por isLoading true/false). Pasado el arranque el selector devuelve un valor constante
-    // y el root deja de depender del router.
-    const routerIsLoading = useRouterState({ select: (s) => (isInterfaceReady ? false : s.isLoading) })
+    const markInterfaceReady = React.useCallback(() => setIsInterfaceReady(true), [])
 
-    useApplyCustomTheme()
     // Gobernador de FPS: baja los efectos si el rendimiento cae de forma sostenida. Corre en producción;
     // el panel de diagnóstico (solo en desarrollo) ya no es quien lo activa.
     usePerformanceGovernor(isInterfaceReady)
 
-    // Warm the player chunk during idle so the first play is instant (no on-click
-    // JS download, no Suspense fallback flash).
-    // Una sola cola tras el arranque: rutas primero, player después, arte al final.
+    // Precarga selectiva de catálogos principales en idle tras pintar la interfaz;
+    // el reproductor y el arte de lomos de /series se calientan bajo demanda en sus rutas.
     React.useEffect(() => {
         if (!isInterfaceReady) return
-        const cancel = (["/series", "/movies", "/chronology", "/settings"] as const).map((to) =>
+        const cancel = (["/series", "/movies"] as const).map((to) =>
             queueIdlePreload(`route:${to}`, () => router.preloadRoute({ to }), 0)
         )
-        prewarmVideoPlayer()
-        prewarmImages([...SPINE_IDLE_ART_URLS])
         return () => cancel.forEach((stop) => stop())
     }, [isInterfaceReady, router])
 
@@ -156,30 +194,6 @@ function RootComponent() {
         }
     }, [isLoading, status, isInterfaceReady])
 
-    // El splash espera también las funciones de animación (chunk diferido): sin
-    // ellas los m.* con initial={{ opacity: 0 }} quedarían invisibles.
-    const motionReady = useMotionFeaturesReady()
-    const isReadyNow = motionReady && !isLoading && !!status && (
-        !status.settings?.id ||
-        showInitialSetup ||
-        (!routerIsLoading && (!isCollectionFetching || !!queryClient.getQueryData([API_ENDPOINTS.ANIME_COLLECTION.GetLibraryCollection.key])))
-    )
-
-    if (!isInterfaceReady && isReadyNow) {
-        setIsInterfaceReady(true)
-    }
-
-    // Safety fallback timeout: never hold splash screen longer than 1.5s after status is resolved
-    React.useEffect(() => {
-        if (isInterfaceReady || isLoading || !status) return
-
-        const safetyTimer = setTimeout(() => {
-            setIsInterfaceReady(true)
-        }, 1500)
-
-        return () => clearTimeout(safetyTimer)
-    }, [isInterfaceReady, isLoading, status])
-
     // Once interface is ready, reveal the interface and remove the HTML loader.
     React.useEffect(() => {
         if (!isInterfaceReady) return
@@ -193,33 +207,32 @@ function RootComponent() {
         const loader = document.getElementById("global-loader")
         if (!loader) return
 
-        // Transición loader → interfaz (estilos en index.html): crossfade limpio y
-        // rápido (~220 ms) con un leve asentamiento de escala en compositor.
+        // La interfaz permanece estable detrás del loader durante el fundido.
         const startDelay = 60
-        const root = document.getElementById("root")
         let removeTimer: ReturnType<typeof setTimeout> | undefined
         let exitStarted = false
         let disposed = false
         let splashClosedSeen = false
         let unlistenSplashClosed: (() => void) | undefined
 
+        const removeLoader = () => {
+            loader.removeEventListener("transitionend", onLoaderExit)
+            if (removeTimer) clearTimeout(removeTimer)
+            loader.remove()
+        }
+        const onLoaderExit = (event: TransitionEvent) => {
+            if (event.target === loader && event.propertyName === "opacity") removeLoader()
+        }
+
         // La salida arranca una sola vez: con el evento "splash-closed" de Tauri
         // o tras el breve margen de 60 ms para que la barra complete el 100 %.
         const beginExit = () => {
             if (exitStarted) return
             exitStarted = true
+            loader.addEventListener("transitionend", onLoaderExit)
             loader.classList.add("is-exiting")
-            if (root) {
-                root.classList.add("kh-root-enter")
-                const onEnd = (e: AnimationEvent) => {
-                    // animationend burbujea desde los hijos: solo cuenta la del propio #root
-                    if (e.target !== root) return
-                    root.classList.remove("kh-root-enter")
-                    root.removeEventListener("animationend", onEnd)
-                }
-                root.addEventListener("animationend", onEnd)
-            }
-            removeTimer = setTimeout(() => loader.remove(), 260)
+            // Respaldo si el navegador no emite transitionend (p. ej., pestaña oculta).
+            removeTimer = setTimeout(removeLoader, 450)
         }
 
         const startTimer = setTimeout(beginExit, startDelay)
@@ -247,6 +260,7 @@ function RootComponent() {
             disposed = true
             clearTimeout(startTimer)
             if (removeTimer) clearTimeout(removeTimer)
+            loader.removeEventListener("transitionend", onLoaderExit)
             unlistenSplashClosed?.()
         }
     }, [isInterfaceReady])
@@ -280,9 +294,17 @@ function RootComponent() {
         return null
     }
 
-    if (!status.settings?.id || showInitialSetup) {
+    if (status.setupRequired || showInitialSetup) {
         return (
             <AppLayout>
+                {!isInterfaceReady && (
+                    <BootReadySync
+                        status={status}
+                        isLoading={isLoading}
+                        showInitialSetup={showInitialSetup}
+                        onReady={markInterfaceReady}
+                    />
+                )}
                 <React.Suspense fallback={null}>
                     <GettingStarted status={status} onClose={() => setShowInitialSetup(false)} />
                 </React.Suspense>
@@ -292,16 +314,25 @@ function RootComponent() {
 
     return (
         <AppLayout>
+            {!isInterfaceReady && (
+                <BootReadySync
+                    status={status}
+                    isLoading={isLoading}
+                    showInitialSetup={showInitialSetup}
+                    onReady={markInterfaceReady}
+                />
+            )}
             <SkipToContent />
             <CustomThemeStyles />
             <LiquidGlassDefs />
             <DynamicBackdrop />
+            <EraKanjiWatermark />
             {import.meta.env.DEV && (
                 <React.Suspense fallback={null}>
                     <PerformanceMonitor />
                 </React.Suspense>
             )}
-            {!tvMode && <FloatingPillNav />}
+            <FloatingPillNav />
             <React.Suspense fallback={null}>
                 <CommandPalette />
             </React.Suspense>
@@ -309,21 +340,19 @@ function RootComponent() {
                 <GlobalQueueSidebar />
             </React.Suspense>
             <AppLayoutContent
-                className={tvMode ? "pb-24" : "w-full"}
+                className="w-full"
             >
-                {!tvMode && <AppTopNav />}
-                {!tvMode && <ScrollEdgeBlur />}
+                <ScrollEdgeBlur />
 
                 <PageTransition
                     id={MAIN_CONTENT_ID}
                     tabIndex={-1}
                     data-scroll-container="true"
-                    className={`flex-1 w-full overflow-y-auto outline-none ${!tvMode ? "pt-[calc(4rem+env(safe-area-inset-top,0px))] md:pt-0 pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] scroll-pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:pb-0 md:scroll-pb-0" : ""}`}
+                    className="flex-1 w-full overflow-y-auto outline-none pt-0 pb-[var(--chrome-bottom,0px)]"
                 >
                     <Outlet />
                 </PageTransition>
             </AppLayoutContent>
-            {tvMode ? <TvNavBar /> : <AppBottomNav />}
 
             <GlobalQueuePlayerOverlay />
         </AppLayout>

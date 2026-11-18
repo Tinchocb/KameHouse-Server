@@ -3,7 +3,6 @@ import { useState } from "react"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { LazyMotion, domAnimation } from "framer-motion"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
-import { useAppStore } from "@/lib/stores"
 import { SegmentedControl, type SegmentedControlProps } from "./segmented-control"
 
 type Mode = "sagas" | "movies" | "specials"
@@ -174,11 +173,10 @@ describe("SegmentedControl y el nivel de rendimiento", () => {
     })
 })
 
-describe("SegmentedControl y el modo TV", () => {
+describe("SegmentedControl y el perfil de ahorro", () => {
     // Antes de cada caso y no al salir: al salir el control sigue montado y el cambio de store lo re-renderiza fuera de act.
     beforeEach(() => {
         usePerformanceStore.setState({ performanceProfile: "auto", autoThrottleActive: false })
-        useAppStore.setState({ tvMode: false })
     })
 
     // La pill animada es un m.div con layoutId y su radio en style; sin animación es un div plano sin style.
@@ -191,9 +189,9 @@ describe("SegmentedControl y el modo TV", () => {
         expect(pillOf(/Sagas/)?.style.borderRadius).toBe("9999px")
     })
 
-    it("con modo TV la pill no anima, aunque el hardware sea capaz", () => {
+    it("con perfil de ahorro la pill no anima, aunque el hardware sea capaz", () => {
         usePerformanceStore.setState({ performanceProfile: "ultra" })
-        useAppStore.setState({ tvMode: true })
+        usePerformanceStore.setState({ performanceProfile: "eco" })
         renderControl()
         expect(pillOf(/Sagas/)?.style.borderRadius).toBe("")
     })

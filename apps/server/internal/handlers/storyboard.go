@@ -67,8 +67,8 @@ func (h *Handler) HandleGetStoryboard(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusConflict, "El archivo cambió")
 	}
 	var custom string
-	if h.App.SecondarySettings.Mediastream != nil {
-		custom = h.App.SecondarySettings.Mediastream.FfmpegPath
+	if settings := h.App.MediastreamSettingsSnapshot(); settings != nil {
+		custom = settings.FfmpegPath
 	}
 	input := path
 	if strings.HasPrefix(path, "gdrive://") {

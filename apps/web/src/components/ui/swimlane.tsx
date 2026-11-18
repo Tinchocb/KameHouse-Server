@@ -11,21 +11,16 @@ export interface SwimlaneItem {
     image: string
     subtitle?: string
     badge?: string
-    mediaTypeBadge?: string
-    availabilityType?: "FULL_LOCAL" | "HYBRID" | "ONLY_ONLINE"
     description?: string
     progress?: number
     aspect?: CardAspect
-    intelligenceTag?: string
     year?: string | number
-    rating?: number
+    runtime?: number
+    watched?: boolean
     episodeNumber?: number
     tmdbId?: number
     mediaId?: number
     onClick: () => void
     backdropUrl?: string
-    localFilesCount?: number
-    totalEpisodesCount?: number
     isSeriesComplete?: boolean
-    missingCount?: number
 }

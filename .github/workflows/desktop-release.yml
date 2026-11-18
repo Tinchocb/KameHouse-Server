@@ -1,0 +1,48 @@
+name: Publicar KameHouse Desktop
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+      - name: Preparar versión y firma
+        env:
+          PUBLIC_KEY: ${{ vars.KAMEHOUSE_UPDATER_PUBLIC_KEY }}
+        run: |
+          if ($env:GITHUB_REF_NAME -notmatch '^v(\d+\.\d+\.\d+)$') { throw "Se requiere vX.Y.Z" }
+          $version = $Matches[1]
+          if (!$env:PUBLIC_KEY) { throw "Falta la clave pública del actualizador" }
+          $path = 'apps/desktop/src-tauri/tauri.conf.json'
+          $config = Get-Content -Raw $path | ConvertFrom-Json -AsHashtable
+          $config.version = $version
+          $config.bundle.createUpdaterArtifacts = $true
+          $config.plugins.updater.pubkey = $env:PUBLIC_KEY
+          $config | ConvertTo-Json -Depth 20 | Set-Content $path
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:web
+      - run: pnpm build:server
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: pnpm tauri
+          args: --bundles nsis
+          tagName: ${{ github.ref_name }}
+          releaseName: KameHouse ${{ github.ref_name }}
+          releaseDraft: true
+          includeUpdaterJson: true

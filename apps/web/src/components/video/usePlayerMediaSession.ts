@@ -7,7 +7,6 @@ interface UsePlayerMediaSessionProps {
     isPlaying: boolean
     title?: string
     episodeNumber?: number
-    episodeImage?: string
     togglePlay: () => void
     skipTime: (amount: number) => void
     onNextEpisode?: () => void
@@ -25,7 +24,6 @@ export function usePlayerMediaSession({
     isPlaying,
     title,
     episodeNumber,
-    episodeImage,
     togglePlay,
     skipTime,
     onNextEpisode,
@@ -125,30 +123,14 @@ export function usePlayerMediaSession({
                 : `Episodio ${episodeNumber}`
         }
 
-        const artwork: MediaImage[] = []
-        if (episodeImage) {
-            const lower = episodeImage.toLowerCase()
-            const type = lower.endsWith(".png")
-                ? "image/png"
-                : lower.endsWith(".jpg") || lower.endsWith(".jpeg")
-                    ? "image/jpeg"
-                    : undefined
-            artwork.push({
-                src: episodeImage,
-                sizes: "512x512",
-                ...(type ? { type } : {}),
-            })
-        }
-
         try {
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: displayTitle,
                 artist: seriesName || displayTitle,
                 album: seriesName || undefined,
-                artwork,
             })
         } catch {}
-    }, [title, episodeNumber, episodeImage])
+    }, [title, episodeNumber])
 
     // Update playback state when playing changes
     useEffect(() => {

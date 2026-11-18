@@ -1,7 +1,7 @@
 import { useState, useEffect, type ReactNode } from "react"
 import { m, AnimatePresence, useIsPresent } from "framer-motion"
 import { useSpringPreset, useReducedMotion } from "@/components/ui/kinetics/hooks"
-import { IconUiSpinner, IconUiAlert, IconMediaPlay, IconMediaVolume2, IconMediaVolumeX, IconStatusZap } from "@/components/ui/icons"
+import { IconUiSpinner, IconUiAlert, IconMediaPlay, IconMediaPause, IconMediaSkipNext, IconMediaVolume2, IconMediaVolumeX, IconStatusZap } from "@/components/ui/icons"
 import { cn } from "@/components/ui/core/styling"
 import { ElasticCounter } from "@/components/ui/kinetics/elastic-counter"
 import { Button } from "@/components/ui/button"
@@ -33,7 +33,6 @@ export function LoadingErrorOverlay({
 }: {
     status: "loading" | "ready" | "error"
     errorMsg: string
-    streamType: string
     isBuffering: boolean
     isSeeking?: boolean
     /** true cuando el loading es un cambio de stream mid-playback (ej. switch de pista de audio). */
@@ -101,7 +100,6 @@ export function LoadingErrorOverlay({
                                 intent="primary"
                                 size="lg"
                                 onClick={() => { window.location.href = "/settings" }}
-                                className="[[data-tv=true]_&]:h-14 [[data-tv=true]_&]:text-base"
                             >
                                 Ir a Ajustes
                             </Button>
@@ -111,7 +109,6 @@ export function LoadingErrorOverlay({
                                 intent="primary"
                                 size="lg"
                                 onClick={onRetry}
-                                className="[[data-tv=true]_&]:h-14 [[data-tv=true]_&]:text-base"
                             >
                                 Reintentar
                             </Button>
@@ -120,7 +117,6 @@ export function LoadingErrorOverlay({
                             intent={onRetry ? "glass" : "primary"}
                             size="lg"
                             onClick={onClose}
-                            className="[[data-tv=true]_&]:h-14 [[data-tv=true]_&]:text-base"
                         >
                             Volver
                         </Button>
@@ -150,8 +146,8 @@ export function CenterPlayFlash({ flash }: { flash: "play" | "pause" | null }) {
                         className={cn("flex items-center justify-center w-20 h-20 rounded-full", PLAYER_GLASS)}
                     >
                         {flash === "play"
-                            ? <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-white ml-1"><path d="M8 5v14l11-7z" /></svg>
-                            : <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-white"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                            ? <IconMediaPlay className="w-8 h-8 text-white ml-1 fill-current" />
+                            : <IconMediaPause className="w-8 h-8 text-white fill-current" />
                         }
                     </m.div>
                 </div>
@@ -169,10 +165,15 @@ export function SkipIntroOverlay({
     shortcutKey = "S",
     controlsVisible = true,
     stackAbove = false,
+    hasNextEpisode = false,
+    nextEpisodeTitle,
 }: {
     show: boolean
     onSkip: () => void
-    skipMode?: "intro" | "outro" | "recap"
+    skipMode?: "intro" | "outro" | "recap" | "preview"
+    hasNextEpisode?: boolean
+    /** Título del siguiente episodio: el outro lo muestra en el botón si está disponible. */
+    nextEpisodeTitle?: string
     remainingSeconds?: number
     segmentProgress?: number
     shortcutKey?: string
@@ -182,7 +183,8 @@ export function SkipIntroOverlay({
     controlsVisible?: boolean
 }) {
     const isOutro = skipMode === "outro"
-    const label = skipMode === "recap" ? "Saltar resumen" : isOutro ? "Saltar créditos" : "Saltar intro"
+    const nextLabel = nextEpisodeTitle ? `Próximo: ${nextEpisodeTitle}` : "Próximo episodio"
+    const label = skipMode === "preview" ? "Saltar adelanto" : skipMode === "recap" ? "Saltar resumen" : isOutro ? (hasNextEpisode ? nextLabel : "Saltar créditos") : "Saltar intro"
     const fillProgress = 100 - segmentProgress
     // Alturas: tarjeta h-14 (3.5rem) + separación 0.75rem; el botón parte de bottom-8 (2rem).
     // Con la barra visible la tarjeta sube 6rem, sin barra no sube.
@@ -205,6 +207,7 @@ export function SkipIntroOverlay({
                     : cn("opacity-0 pointer-events-none", controlsVisible ? "-translate-y-[5.25rem]" : "translate-y-3")
             )}>
             <button
+                type="button"
                 id="skip-intro-btn"
                 tabIndex={show ? 0 : -1}
                 aria-label={label}
@@ -214,11 +217,11 @@ export function SkipIntroOverlay({
                 }}
                 className={cn(
                     // Pastilla clara (AVKit): la única acción blanca sobre el video.
-                    "relative isolate flex items-center gap-2.5 h-12 [[data-tv=true]_&]:h-16 pl-5 pr-2 overflow-hidden rounded-full",
+                    "player-skip-btn relative isolate flex items-center gap-2.5 h-12 pl-5 pr-2 overflow-hidden rounded-full",
                     "bg-[var(--selected-bg)] text-[var(--selected-fg)] shadow-elevation-2",
-                    "text-sm [[data-tv=true]_&]:text-lg font-semibold tracking-wide",
+                    "text-sm font-semibold tracking-wide",
                     "[@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95",
-                    "transition-[color,filter,transform] duration-fast active:scale-95 ease-out-strong cursor-pointer group",
+                    "transition-[color,filter,transform] duration-fast motion-safe:active:scale-[0.97] ease-out-strong cursor-pointer group",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 )}
             >
@@ -232,11 +235,9 @@ export function SkipIntroOverlay({
                     style={{ transform: `scaleX(${Math.min(100, Math.max(0, fillProgress)) / 100})` }}
                 />
 
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 shrink-0">
-                    <path d="M5 5.5v13a1 1 0 0 0 1.53.85L15.5 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.53 4.65A1 1 0 0 0 5 5.5z" />
-                </svg>
+                <IconMediaSkipNext className="w-4 h-4 shrink-0 fill-current" />
 
-                <span className="whitespace-nowrap">{label}</span>
+                <span className="truncate max-w-[min(18rem,55vw)]">{label}</span>
 
                 {remainingSeconds !== undefined && remainingSeconds > 0 && (
                     <span className="tabular-nums text-[color:color-mix(in_srgb,var(--selected-fg)_70%,transparent)]">
@@ -273,7 +274,6 @@ export function AutoSkipToastOverlay({
         : showType === "segment"
             ? "Segmento saltado"
             : "Intro saltada"
-    const canUndo = true
 
     return (
         // El contenedor sube sobre la barra de controles con transform (no con `bottom`,
@@ -288,6 +288,7 @@ export function AutoSkipToastOverlay({
             {showType && (
                 <m.div
                     key="auto-skip-toast"
+                    data-toast="auto-skip"
                     initial={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: reduceMotion ? 0 : 16 }}
@@ -302,7 +303,7 @@ export function AutoSkipToastOverlay({
                     )}>
                         <span className="whitespace-nowrap">{label}</span>
 
-                        {canUndo && <Button
+                        <Button
                             intent="secondary"
                             size="xs"
                             tabIndex={0}
@@ -313,7 +314,7 @@ export function AutoSkipToastOverlay({
                             }}
                         >
                             Deshacer
-                        </Button>}
+                        </Button>
                     </div>
                 </m.div>
             )}
@@ -359,15 +360,12 @@ export function NextEpisodeOverlay({
     controlsVisible = true,
 }: {
     show: boolean
-    tvMode: boolean
-    marathonMode?: boolean
     showCountdown: boolean
     countdownSeconds: number
     nextEpisodeTitle?: string
     nextEpisodeImage?: string
     nextEpisodeNumber?: number
     onNext: () => void
-    duration: number
     remainingProgress: number
     /** Con la barra de controles visible, la pastilla sube para no pisarla. */
     controlsVisible?: boolean
@@ -387,6 +385,7 @@ export function NextEpisodeOverlay({
             {show && (
                 <NextEpisodeLayer key="next-episode-overlay">
                     <button
+                        type="button"
                         tabIndex={0}
                         aria-label={nextEpisodeTitle ? `Ver siguiente episodio: ${nextEpisodeTitle}` : "Ver siguiente episodio"}
                         onClick={(e) => {
@@ -394,9 +393,9 @@ export function NextEpisodeOverlay({
                             onNext()
                         }}
                         className={cn(
-                            "relative isolate flex items-center gap-3 h-14 [[data-tv=true]_&]:h-20 max-w-[min(26rem,calc(100vw-1.5rem))] pl-1.5 pr-5 overflow-hidden rounded-full text-left",
+                            "player-next-ep-btn relative isolate flex items-center gap-3 h-14 max-w-[min(26rem,calc(100vw-1.5rem))] pl-1.5 pr-5 overflow-hidden rounded-full text-left",
                             "bg-[var(--selected-bg)] text-[var(--selected-fg)] shadow-elevation-2 [@media(hover:hover)_and_(pointer:fine)]:hover:brightness-95",
-                            "transition-[filter,transform] duration-fast active:scale-95 ease-out-strong cursor-pointer",
+                            "transition-[filter,transform] duration-fast motion-safe:active:scale-[0.97] ease-out-strong cursor-pointer",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                         )}
                     >
@@ -410,20 +409,20 @@ export function NextEpisodeOverlay({
                         )}
 
                         {nextEpisodeImage ? (
-                            <span className="relative shrink-0 h-11 [[data-tv=true]_&]:h-16 aspect-video rounded-full overflow-hidden bg-black/10">
+                            <span className="player-next-ep-thumb relative shrink-0 h-11 aspect-video rounded-full overflow-hidden bg-black/10">
                                 <img src={nextEpisodeImage} alt="" className="w-full h-full object-cover" loading="lazy" />
                                 <span className="absolute inset-0 flex items-center justify-center bg-black/35 text-white">
                                     <IconMediaPlay className="w-4 h-4 fill-current" />
                                 </span>
                             </span>
                         ) : (
-                            <span className="shrink-0 flex items-center justify-center w-11 h-11 rounded-full bg-black text-white">
+                            <span className="player-next-ep-thumb shrink-0 flex items-center justify-center w-11 h-11 rounded-full bg-black text-white">
                                 <IconMediaPlay className="w-4 h-4 fill-current ml-0.5" />
                             </span>
                         )}
 
                         <span className="flex flex-col min-w-0">
-                            <span className="text-sm [[data-tv=true]_&]:text-lg font-semibold tracking-wide whitespace-nowrap">
+                            <span className="text-sm font-semibold tracking-wide whitespace-nowrap">
                                 {nextEpisodeNumber ? `Siguiente episodio · ${nextEpisodeNumber}` : "Siguiente episodio"}
                             </span>
                             {nextEpisodeTitle && (
@@ -445,10 +444,9 @@ export function NextEpisodeOverlay({
 }
 
 export interface PlayerHudData {
-    type: "volume" | "speed" | "brightness"
+    type: "volume" | "speed"
     value: number
     isMuted?: boolean
-    text?: string
 }
 
 export function PlayerHudOverlay({ hud }: { hud: PlayerHudData | null }) {
@@ -461,9 +459,9 @@ export function PlayerHudOverlay({ hud }: { hud: PlayerHudData | null }) {
                 <div className="absolute top-12 sm:top-14 left-1/2 -translate-x-1/2 z-player-overlay pointer-events-none">
                     <m.div
                         key={`hud-${hud.type}`}
-                        initial={{ opacity: 0, y: reduceMotion ? 0 : -8, scale: 0.94 }}
+                        initial={{ opacity: 0, y: reduceMotion ? 0 : -8, scale: reduceMotion ? 1 : 0.94 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: reduceMotion ? 0 : -6, scale: 0.96 }}
+                        exit={{ opacity: 0, y: reduceMotion ? 0 : -6, scale: reduceMotion ? 1 : 0.96 }}
                         transition={hudSpring}
                         className={cn(
                             "flex items-center gap-2.5 h-10 px-4 rounded-full text-label-1 text-xs font-semibold tracking-wide select-none",

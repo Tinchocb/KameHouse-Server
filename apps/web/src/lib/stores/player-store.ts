@@ -2,10 +2,10 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { subscribeWithSelector } from "zustand/middleware"
 import { devtools } from "zustand/middleware"
-import { persistLibraryPatch } from "@/lib/server/persist-settings"
+import { languageFamily } from "@/components/video/track-selection"
 
 
-export interface PlayerState {
+interface PlayerState {
     playerVolume: number
     isFullscreen: boolean
     setPlayerVolume: (volume: number) => void
@@ -15,7 +15,6 @@ export interface PlayerState {
     autoSkipOutro: boolean
     setAutoSkipOutro: (auto: boolean) => void
     skipStepSeconds: number
-    setSkipStepSeconds: (seconds: number) => void
     playbackRate: number
     setPlaybackRate: (rate: number) => void
     preferredAudioProfile: "latino" | "castellano" | "japanese" | "english" | "auto"
@@ -40,16 +39,13 @@ export interface PlayerState {
     setAutoDisableSubtitlesWhenDubbed: (auto: boolean) => void
     marathonMode: boolean
     setMarathonMode: (enabled: boolean) => void
-    tvMode: boolean
-    setTvMode: (enabled: boolean) => void
-    tvModePrevPrefs: { autoSkipIntro: boolean; autoSkipOutro: boolean; marathonMode: boolean } | null
 }
 
 export const usePlayerStore = create<PlayerState>()(
     devtools(
         subscribeWithSelector(
             persist(
-                (set, get) => ({
+                (set) => ({
                     playerVolume: 1,
                     isFullscreen: false,
                     autoSkipIntro: false,
@@ -60,7 +56,6 @@ export const usePlayerStore = create<PlayerState>()(
                     setFullscreen: (fullscreen) => set({ isFullscreen: fullscreen }),
                     setAutoSkipIntro: (autoSkipIntro) => set({ autoSkipIntro }),
                     setAutoSkipOutro: (autoSkipOutro) => set({ autoSkipOutro }),
-                    setSkipStepSeconds: (skipStepSeconds) => set({ skipStepSeconds }),
                     setPlaybackRate: (playbackRate) => set({ playbackRate }),
                     preferredAudioProfile: "latino",
                     setPreferredAudioProfile: (preferredAudioProfile) => set({ preferredAudioProfile }),
@@ -88,46 +83,21 @@ export const usePlayerStore = create<PlayerState>()(
                     setAutoDisableSubtitlesWhenDubbed: (autoDisableSubtitlesWhenDubbed) => set({ autoDisableSubtitlesWhenDubbed }),
                     marathonMode: false,
                     setMarathonMode: (marathonMode) => set({ marathonMode }),
-                    tvMode: false,
-                    tvModePrevPrefs: null,
-                    setTvMode: (tvMode) => {
-                        set((state) => {
-                        if (tvMode) {
-                            return {
-                                tvMode: true,
-                                tvModePrevPrefs: state.tvModePrevPrefs ?? {
-                                    autoSkipIntro: state.autoSkipIntro,
-                                    autoSkipOutro: state.autoSkipOutro,
-                                    marathonMode: state.marathonMode,
-                                },
-                                autoSkipIntro: true,
-                                autoSkipOutro: true,
-                                marathonMode: true,
-                            }
-                        }
-                        const prev = state.tvModePrevPrefs ?? { autoSkipIntro: false, autoSkipOutro: false, marathonMode: false }
-                        return {
-                            tvMode: false,
-                            tvModePrevPrefs: null,
-                            autoSkipIntro: prev.autoSkipIntro,
-                            autoSkipOutro: prev.autoSkipOutro,
-                            marathonMode: prev.marathonMode,
-                        }
-                        })
-                        // Persistir al servidor: si no, Ajustes resetea el store
-                        // al visitarlo y el modo TV "se pierde" solo. Van también
-                        // los flags que el modo fuerza/restaura, o Ajustes los revertía.
-                        const s = get()
-                        persistLibraryPatch({
-                            tvMode,
-                            autoSkipIntro: s.autoSkipIntro,
-                            autoSkipOutro: s.autoSkipOutro,
-                            marathonMode: s.marathonMode,
-                        })
-                    },
                 }),
                 {
                     name: "kamehouse-player-settings",
+                    // Ignore retired TV fields left in an existing browser profile.
+                    merge: (persisted, current) => {
+                        const saved = { ...(persisted as Record<string, unknown> | undefined) }
+                        delete saved.tvMode
+                        delete saved.tvModePrevPrefs
+                        // Un bug anterior guardaba "und" (pista sin idioma) como idioma de subtítulos
+                        // preferido: no identifica ningún idioma, así que se descarta y vuelve el valor por defecto.
+                        if (typeof saved.preferredSubtitleLang === "string" && !languageFamily(saved.preferredSubtitleLang)) {
+                            delete saved.preferredSubtitleLang
+                        }
+                        return { ...current, ...saved }
+                    },
                     partialize: (state) => ({
                         playerVolume: state.playerVolume,
                         autoSkipIntro: state.autoSkipIntro,
@@ -145,10 +115,6 @@ export const usePlayerStore = create<PlayerState>()(
                         subtitleSize: state.subtitleSize,
                         loopEnabled: state.loopEnabled,
                         marathonMode: state.marathonMode,
-                        tvMode: state.tvMode,
-                        // Sin esto, tras recargar con el modo TV activo, al apagarlo se
-                        // restauraban los valores por defecto y no los del usuario.
-                        tvModePrevPrefs: state.tvModePrevPrefs,
                     }),
                 }
             )

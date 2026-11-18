@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ import (
 	"golang.org/x/time/rate"
 	"gorm.io/gorm"
 	"kamehouse/internal/core"
+	"kamehouse/internal/database/db"
 	util "kamehouse/internal/util/proxies"
 )
 
@@ -26,7 +28,7 @@ import (
 // falsificar con X-Forwarded-For). No por la cookie KameHouse-Client-Id: quien
 // no la manda recibe un ID nuevo en cada request y nunca llegaría al límite.
 const (
-	// Login: ráfaga de 5 intentos y después 1 cada 5 s por IP.
+	// Authentication failures: burst of 5, then 1 every 5 s per IP.
 	authRateLimit = rate.Limit(0.2)
 	authRateBurst = 5
 	// Resto de la API desde otra máquina (TV, celular): holgado para grillas de
@@ -38,6 +40,13 @@ const (
 // limitersCache es seguro entre goroutines por si mismo (lru.Cache lleva su propio lock) y
 // lru.New solo falla con tamano <= 0: no hace falta mutex externo ni reconstruirlo.
 var limitersCache, _ = lru.New[string, *rate.Limiter](1000)
+
+type authFailureBudget struct {
+	mu      sync.Mutex
+	limiter *rate.Limiter
+}
+
+var authBudgets, _ = lru.New[string, *authFailureBudget](1000)
 
 func getLimiter(key string, r rate.Limit, b int) *rate.Limiter {
 	if l, ok := limitersCache.Get(key); ok {
@@ -52,7 +61,9 @@ func getLimiter(key string, r rate.Limit, b int) *rate.Limiter {
 }
 
 func tooManyRequests(c echo.Context) error {
-	c.Response().Header().Set("Retry-After", "1")
+	if c.Response().Header().Get("Retry-After") == "" {
+		c.Response().Header().Set("Retry-After", "1")
+	}
 	return c.JSON(http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
 }
 
@@ -62,8 +73,8 @@ func rateLimitMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		path := c.Request().URL.Path
 
-		// Auth tiene su propio límite (authRateLimitMiddleware); health se cachea.
-		if path == "/api/health" || strings.HasPrefix(path, "/api/v1/auth/") || isLoopbackRequest(c) {
+		// Health se cachea. Los fallos de autenticación tienen un límite separado.
+		if path == "/api/health" || isLoopbackRequest(c) {
 			return next(c)
 		}
 
@@ -74,18 +85,35 @@ func rateLimitMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// authRateLimitMiddleware limita los intentos de login por IP, incluso desde
-// loopback (un proceso local tampoco debería poder probar contraseñas a ritmo libre).
-func authRateLimitMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		if !strings.HasPrefix(c.Request().URL.Path, "/api/v1/auth/") {
-			return next(c)
+// authorizeWithRateLimit applies the failure budget to real authentication
+// entry points (API, status and WS), including loopback. Successful requests
+// don't consume it, so HLS traffic doesn't exhaust a login-sized budget.
+func authorizeWithRateLimit(c echo.Context, validate func() bool) (bool, error) {
+	key := c.RealIP()
+	budget, ok := authBudgets.Get(key)
+	if !ok {
+		budget = &authFailureBudget{limiter: rate.NewLimiter(authRateLimit, authRateBurst)}
+		if previous, exists, _ := authBudgets.PeekOrAdd(key, budget); exists {
+			budget = previous
 		}
-		if !getLimiter("auth:"+c.RealIP(), authRateLimit, authRateBurst).Allow() {
-			return tooManyRequests(c)
-		}
-		return next(c)
 	}
+	// Serialize the check and failure debit per IP: concurrent guesses must not
+	// all validate against the same remaining token.
+	budget.mu.Lock()
+	defer budget.mu.Unlock()
+	limiter := budget.limiter
+	if limiter.Tokens() < 1 {
+		c.Response().Header().Set("Retry-After", "5")
+		return false, tooManyRequests(c)
+	}
+	if validate() {
+		return true, nil
+	}
+	if !limiter.Allow() {
+		c.Response().Header().Set("Retry-After", "5")
+		return false, tooManyRequests(c)
+	}
+	return false, nil
 }
 
 // isGzipSkippedPath indicates which routes should bypass the Gzip middleware.
@@ -107,7 +135,32 @@ func isGzipSkippedPath(path string) bool {
 }
 
 type Handler struct {
-	App *core.App
+	App               *core.App
+	driveOAuthMu      sync.Mutex
+	driveOAuthStates  map[string]driveOAuthAttempt
+	driveAutoSyncOnce sync.Once
+}
+
+func corsMiddleware(allowedOrigins []string) echo.MiddlewareFunc {
+	// CORS — incluye cabeceras byte-range requeridas por el reproductor web de video
+	return middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: allowedOrigins,
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions, http.MethodHead},
+		AllowHeaders: []string{
+			"Origin", "Content-Type", "Accept", "Cookie", "Authorization",
+			"Range", "Accept-Ranges", "Content-Range", "If-Range",
+			"X-KameHouse-Token",
+		},
+		ExposeHeaders: []string{
+			"Accept-Ranges", "Content-Range", "Content-Length", "Content-Disposition",
+			"Retry-After",
+		},
+		AllowCredentials: true,
+		Skipper: func(c echo.Context) bool {
+			// Skip CORS for health endpoint — handled manually with permissive headers
+			return c.Path() == "/api/health"
+		},
+	})
 }
 
 func InitRoutes(app *core.App, e *echo.Echo) {
@@ -119,28 +172,10 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		app.Logger.Fatal().Msg("CORS: wildcard origin with credentials detected — rejecting to prevent session hijack. Remove '*' from CorsOrigins or disable credentials.")
 	}
 
-	// CORS — incluye cabeceras byte-range requeridas por el reproductor web de video
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: allowedOrigins,
-		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions, http.MethodHead},
-		AllowHeaders: []string{
-			"Origin", "Content-Type", "Accept", "Cookie", "Authorization",
-			"Range", "Accept-Ranges", "Content-Range", "If-Range",
-			"X-KameHouse-Token",
-		},
-		ExposeHeaders: []string{
-			"Accept-Ranges", "Content-Range", "Content-Length", "Content-Disposition",
-		},
-		AllowCredentials: true,
-		Skipper: func(c echo.Context) bool {
-			// Skip CORS for health endpoint — handled manually with permissive headers
-			return c.Path() == "/api/health"
-		},
-	}))
+	e.Use(corsMiddleware(allowedOrigins))
 
 	e.Use(crossOriginWriteGuard(allowedOrigins))
 	e.Use(rateLimitMiddleware)
-	e.Use(authRateLimitMiddleware)
 
 	e.HTTPErrorHandler = CustomHTTPErrorHandler
 
@@ -157,7 +192,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 		"/api/v1/mediastream/transcode/",
 		"/api/v1/mediastream/direct/play",
 		"/api/v1/mediastream/hls/",
-		"/api/v1/mediastream/video-thumbnail",
+		"/api/v1/video-thumbnail",
 	}
 
 	e.Use(lecho.Middleware(lecho.Config{
@@ -263,8 +298,6 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	// baja prioridad; los que ya están en disco se saltan sin tocar ffmpeg ni Drive.
 	h.warmThumbnailsAfterScan(45 * time.Second)
 	v1.GET("/status", h.HandleGetStatus)
-	v1.GET("/home/curated", h.HandleGetHomeCurated)
-	v1.GET("/home/continue-watching", h.HandleGetContinueWatching)
 	v1.POST("/home/retag", h.HandleRetagEpisodes)
 	v1.GET("/log/*", h.HandleGetLogContent)
 	v1.GET("/logs/filenames", h.HandleGetLogFilenames)
@@ -293,6 +326,7 @@ func InitRoutes(app *core.App, e *echo.Echo) {
 	h.RegisterStreamingRoutes(v1)
 	h.RegisterDriveRoutes(v1)
 	h.RegisterSettingsRoutes(v1)
+	h.RegisterAuthRoutes(v1)
 	h.RegisterLocalRoutes(v1)
 	h.RegisterIntelligenceRoutes(v1)
 	h.RegisterAdminRoutes(v1)
@@ -349,11 +383,14 @@ func (h *Handler) RespondWithError(c echo.Context, err error) error {
 // ajeno ya no decide el status si el error tiene tipo.
 func errorStatusCode(err error) (int, bool) {
 	var httpErr *echo.HTTPError
+	var ambiguousMediaID *db.AmbiguousMediaIDError
 	switch {
 	case err == nil:
 		return 0, false
 	case errors.As(err, &httpErr):
 		return httpErr.Code, true
+	case errors.As(err, &ambiguousMediaID):
+		return http.StatusConflict, true
 	case errors.Is(err, gorm.ErrRecordNotFound), errors.Is(err, fs.ErrNotExist):
 		return 404, true
 	case errors.Is(err, fs.ErrPermission):

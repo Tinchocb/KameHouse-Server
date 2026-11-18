@@ -48,13 +48,15 @@ function fakeVideo(duration = 1000) {
     return { currentTime: 0, duration } as unknown as HTMLVideoElement
 }
 
-function renderSeek(video: HTMLVideoElement) {
+function renderSeek(video: HTMLVideoElement, options?: { thumbRef?: React.RefObject<HTMLDivElement | null>; progressInputRef?: React.RefObject<HTMLInputElement | null>; duration?: number }) {
     const checkManualSkipOverrides = vi.fn()
     const triggerControlsVisibility = vi.fn()
     const videoRef = { current: video } as React.RefObject<HTMLVideoElement | null>
-    const hook = renderHook(() => usePlayerSeek({ videoRef, checkManualSkipOverrides, triggerControlsVisibility }))
+    const hook = renderHook(() => usePlayerSeek({ videoRef, checkManualSkipOverrides, triggerControlsVisibility, ...options }))
     return { ...hook, checkManualSkipOverrides, triggerControlsVisibility }
 }
+
+const seekTo = (time: number) => ({ target: { value: String(time) }, currentTarget: { value: String(time) } }) as React.ChangeEvent<HTMLInputElement>
 
 describe("usePlayerSeek", () => {
     beforeEach(() => {
@@ -67,13 +69,13 @@ describe("usePlayerSeek", () => {
         const video = fakeVideo()
         const { result, checkManualSkipOverrides } = renderSeek(video)
 
-        act(() => result.current.performSeek(100))
+        act(() => result.current.handleSeek(seekTo(100)))
         expect(video.currentTime).toBe(100)
         expect(checkManualSkipOverrides).toHaveBeenCalledWith(100)
 
         // Dentro de la ventana de throttle: no se mueve todavía.
-        act(() => result.current.performSeek(200))
-        act(() => result.current.performSeek(300))
+        act(() => result.current.handleSeek(seekTo(200)))
+        act(() => result.current.handleSeek(seekTo(300)))
         expect(video.currentTime).toBe(100)
 
         act(() => { vi.advanceTimersByTime(SEEK_THROTTLE_MS) })
@@ -85,7 +87,7 @@ describe("usePlayerSeek", () => {
         const { result, triggerControlsVisibility } = renderSeek(video)
 
         act(() => result.current.handleSeekStart())
-        act(() => result.current.performSeek(500))
+        act(() => result.current.handleSeek(seekTo(500)))
         expect(video.currentTime).toBe(0)
         expect(result.current.isSeeking).toBe(true)
 
@@ -109,7 +111,31 @@ describe("usePlayerSeek", () => {
         expect(video.currentTime).toBe(0)
 
         vi.setSystemTime(30_000)
-        act(() => result.current.performSeek(NaN))
+        act(() => result.current.handleSeek(seekTo(NaN)))
         expect(video.currentTime).toBe(0)
+    })
+
+    it("synchronizes thumbRef and progressInputRef immediately during seek and seekEnd", () => {
+        const video = fakeVideo(1000)
+        const thumbDiv = document.createElement("div")
+        const thumbRef = { current: thumbDiv }
+        const progressInput = document.createElement("input")
+        progressInput.type = "range"
+        progressInput.max = "1000"
+        const progressInputRef = { current: progressInput }
+
+        const { result } = renderSeek(video, { thumbRef, progressInputRef })
+
+        // During seek (dragging / scrubbing), thumb and input sync immediately
+        act(() => result.current.handleSeekStart())
+        act(() => result.current.handleSeek(seekTo(400)))
+        expect(thumbDiv.style.transform).toBe("translateX(40%)")
+        expect(progressInput.value).toBe("400")
+
+        // On seek end, thumb and input sync to final position
+        const release = { currentTarget: { value: "450" } } as unknown as React.MouseEvent<HTMLInputElement>
+        act(() => result.current.handleSeekEnd(release))
+        expect(thumbDiv.style.transform).toBe("translateX(45%)")
+        expect(progressInput.value).toBe("450")
     })
 })

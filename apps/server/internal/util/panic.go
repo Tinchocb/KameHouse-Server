@@ -40,13 +40,6 @@ func HandlePanicInModuleWithError(module string, err *error) {
 	}
 }
 
-func HandlePanicThen(f func()) {
-	if r := recover(); r != nil {
-		f()
-		printRuntimeError(r, "")
-	}
-}
-
 func HandlePanicInModuleThen(module string, f func()) {
 	if r := recover(); r != nil {
 		f()

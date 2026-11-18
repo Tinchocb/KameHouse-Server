@@ -1,7 +1,7 @@
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 import { cva } from "class-variance-authority"
 import * as React from "react"
-import { cn, ComponentAnatomy, defineStyleAnatomy } from "../core/styling"
+import { cn, defineStyleAnatomy } from "../core/styling"
 
 /* -------------------------------------------------------------------------------------------------
  * Anatomy
@@ -17,21 +17,10 @@ const ScrollAreaAnatomy = defineStyleAnatomy({
         "h-full w-full rounded-container",
         "[&>div]:!block",
     ]),
-    scrollbar:
-        cva([
-            "UI-ScrollArea__scrollbar",
-            "flex touch-none select-none transition-colors",
-        ], {
-            variants: {
-                orientation: {
-                    vertical: "h-full w-2.5 border-l border-l-transparent p-[1px]",
-                    horizontal: "h-2.5 flex-col border-t border-t-transparent p-[1px]",
-                },
-            },
-            defaultVariants: {
-                orientation: "vertical",
-            },
-        }),
+    scrollbar: cva([
+        "UI-ScrollArea__scrollbar",
+        "flex touch-none select-none transition-colors h-full w-2.5 border-l border-l-transparent p-[1px]",
+    ]),
     thumb: cva([
         "UI-ScrollArea__thumb",
         "relative flex-1 rounded-full bg-outline-variant/40 hover:bg-outline-variant/70 transition-colors",
@@ -42,23 +31,12 @@ const ScrollAreaAnatomy = defineStyleAnatomy({
  * ScrollArea
  * -----------------------------------------------------------------------------------------------*/
 
-type ScrollAreaProps =
-    React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
-    & ComponentAnatomy<typeof ScrollAreaAnatomy> &
-    {
-        orientation?: "vertical" | "horizontal",
-        viewportRef?: React.RefObject<HTMLDivElement>
-    }
+type ScrollAreaProps = React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
 
 export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>((props, ref) => {
     const {
         className,
-        scrollbarClass,
-        thumbClass,
-        viewportClass,
         children,
-        orientation = "vertical",
-        viewportRef,
         ...rest
     } = props
     return (
@@ -67,17 +45,10 @@ export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>((pro
             className={cn(ScrollAreaAnatomy.root(), className)}
             {...rest}
         >
-            <ScrollAreaPrimitive.Viewport
-                ref={viewportRef}
-                className={cn(ScrollAreaAnatomy.viewport(), viewportClass)}
-            >
+            <ScrollAreaPrimitive.Viewport className={ScrollAreaAnatomy.viewport()}>
                 {children}
             </ScrollAreaPrimitive.Viewport>
-            <ScrollBar
-                className={scrollbarClass}
-                thumbClass={thumbClass}
-                orientation={orientation}
-            />
+            <ScrollBar />
             <ScrollAreaPrimitive.Corner />
         </ScrollAreaPrimitive.Root>
     )
@@ -89,26 +60,19 @@ ScrollArea.displayName = "ScrollArea"
  * ScrollBar
  * -----------------------------------------------------------------------------------------------*/
 
-type ScrollBarProps =
-    React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar> &
-    Pick<ComponentAnatomy<typeof ScrollAreaAnatomy>, "thumbClass">
+type ScrollBarProps = React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
 
 const ScrollBar = React.forwardRef<HTMLDivElement, ScrollBarProps>((props, ref) => {
-    const {
-        className,
-        thumbClass,
-        orientation = "vertical",
-        ...rest
-    } = props
+    const { className, ...rest } = props
 
     return (
         <ScrollAreaPrimitive.ScrollAreaScrollbar
             ref={ref}
-            orientation={orientation}
-            className={cn(ScrollAreaAnatomy.scrollbar({ orientation }), className)}
+            orientation="vertical"
+            className={cn(ScrollAreaAnatomy.scrollbar(), className)}
             {...rest}
         >
-            <ScrollAreaPrimitive.ScrollAreaThumb className={cn(ScrollAreaAnatomy.thumb(), thumbClass)} />
+            <ScrollAreaPrimitive.ScrollAreaThumb className={ScrollAreaAnatomy.thumb()} />
         </ScrollAreaPrimitive.ScrollAreaScrollbar>
     )
 })

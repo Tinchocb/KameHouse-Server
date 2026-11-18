@@ -24,7 +24,7 @@ function patchSettingsCache(section: "library" | "theme", patch: Record<string, 
 
 /**
  * Persiste flags de Biblioteca al servidor sin pasar por el form de Ajustes
- * (fire-and-forget). Los toggles fuera de Ajustes (Modo TV, maraton) solo
+ * (fire-and-forget). Los toggles fuera de Ajustes (maratón) solo
  * tocaban el store local y el servidor quedaba divergente: al visitar
  * Ajustes, el sync reseteaba el store y el modo se "perdia" solo.
  */

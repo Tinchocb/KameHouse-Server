@@ -17,7 +17,6 @@ const EPISODE_LIST = leer("../../routes/series/$seriesId/-components/premium-epi
 const SAGA_SELECTOR = leer("../../routes/series/$seriesId/-components/saga-selector.tsx")
 const ARC_CARD = leer("../../routes/series/$seriesId/-components/arc-cinematic-card.tsx")
 const AUDIO_PICKER = leer("../../routes/series/$seriesId/-components/series-audio-profile-picker.tsx")
-const POSTER_ITEM = leer("../../routes/series/-SeriesPosterGridItem.tsx")
 const CHARACTER_MODAL = leer("../shared/character-detail-modal.tsx")
 
 const TOCADOS = {
@@ -27,7 +26,6 @@ const TOCADOS = {
     "premium-episode-list.tsx": EPISODE_LIST,
     "saga-selector.tsx": SAGA_SELECTOR,
     "arc-cinematic-card.tsx": ARC_CARD,
-    "SeriesPosterGridItem.tsx": POSTER_ITEM,
     "character-detail-modal.tsx": CHARACTER_MODAL,
 }
 
@@ -75,12 +73,6 @@ describe("zona Series: sombras con tokens (§2, §9)", () => {
 })
 
 describe("zona Series: sin blur repetido por fila o badge (§2, §9)", () => {
-    it("el badge de volumen y el de kanji de la grilla de Portadas no llevan backdrop-blur", () => {
-        expect(POSTER_ITEM).not.toContain("backdrop-blur")
-        expect(linea(POSTER_ITEM, "top-2.5 left-2.5")).toContain("bg-black/75")
-        expect(linea(POSTER_ITEM, "top-2.5 right-2.5 w-7")).toContain("bg-black/75")
-    })
-
     it("la pastilla de interludio no usa .sectionbar y queda sin backdrop-filter", () => {
         const pastilla = linea(INTERLUDE, "group/interlude")
         expect(pastilla).not.toContain("sectionbar")

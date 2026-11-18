@@ -33,7 +33,7 @@ export function AdminHeader() {
     return (
         <header className="relative z-10">
             <div className="w-full">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-4">
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 mb-4">
                     <div className="flex items-start gap-3 sm:gap-4">
                         <IconButton
                             intent="outline"
@@ -45,8 +45,8 @@ export function AdminHeader() {
                             className="shrink-0 mt-1"
                         />
                         <div>
-                            <h1 className="type-title text-on-surface">Panel de administración</h1>
-                            <p className="text-body-md text-label-2 mt-2">Gestiona y monitorea KameHouse</p>
+                            <h1 className="type-title text-on-surface text-balance">Panel de administración</h1>
+                            <p className="text-body-md text-label-2 mt-2">Biblioteca, actividad y estado del servidor</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 w-full sm:w-auto flex-wrap">

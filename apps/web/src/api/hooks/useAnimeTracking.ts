@@ -34,8 +34,6 @@ interface UseAnimeTrackingReturn {
     onProgress: (currentTime: number, duration: number) => void
     /** Reset the "already synced" flag — call when switching episodes */
     reset: () => void
-    /** Whether the current episode has been marked as watched */
-    isWatched: () => boolean
 }
 
 export function useAnimeTracking({
@@ -47,11 +45,8 @@ export function useAnimeTracking({
 }: UseAnimeTrackingOptions): UseAnimeTrackingReturn {
     const { mutate: saveContinuity } = useUpdateContinuityWatchHistoryItem({ background: true })
 
-    // Guards — fire only once per episode
+    // Guard — fire only once per episode
     const syncedRef = useRef(false)
-    const watchedRef = useRef(false)
-
-    const isWatched = useCallback(() => watchedRef.current, [])
 
     const onProgress = useCallback(
         (currentTime: number, duration: number) => {
@@ -60,11 +55,6 @@ export function useAnimeTracking({
             if (duration <= 0) return
 
             const progress = currentTime / duration
-
-            // Mark as watched when crossing the threshold
-            if (progress >= threshold && !watchedRef.current) {
-                watchedRef.current = true
-            }
 
             // Sync to backend (once, at threshold)
             if (progress >= threshold) {
@@ -94,8 +84,7 @@ export function useAnimeTracking({
 
     const reset = useCallback(() => {
         syncedRef.current = false
-        watchedRef.current = false
     }, [])
 
-    return { onProgress, reset, isWatched }
+    return { onProgress, reset }
 }

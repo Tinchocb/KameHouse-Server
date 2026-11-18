@@ -11,8 +11,6 @@ const (
 	EntityCharacter      SemanticEntityType = "CHARACTER"
 	EntityTransformation SemanticEntityType = "TRANSFORMATION"
 	EntitySaga           SemanticEntityType = "SAGA"
-	EntityMovie          SemanticEntityType = "MOVIE"
-	EntityTechnique      SemanticEntityType = "TECHNIQUE"
 )
 
 // SemanticEntity represents a indexed concept in Dragon Ball lore.

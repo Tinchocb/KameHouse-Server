@@ -21,28 +21,9 @@ const ANILIST_ID_BY_SERIES_SLUG: Record<string, number> = {
   daima: 170083,
 };
 
-/** Slug de carpeta local para /public/episodes/<slug>/<abs>.webp */
-const LOCAL_SLUG_BY_VOLUME: Record<string, string> = {
-  'vol-clasico-origen': 'classic',
-  'vol-clasico-redribbon': 'classic',
-  'vol-clasico-piccolo': 'classic',
-  'vol-saiyan-choque': 'z',
-  'vol-freezer-ssj': 'z',
-  'vol-cell-trunks': 'z',
-  'vol-cell-games': 'z',
-  'vol-buu-caos': 'z',
-  'vol-daima-reino': 'daima',
-  'vol-super-dioses': 'super',
-  'vol-super-black': 'super',
-  'vol-super-torneo': 'super',
-  'vol-gt-viaje': 'gt',
-};
-
 function getSeriesSlugForVolume(volume: Pick<VolumeData, 'id' | 'seriesTag'> & { seriesId?: string }): string {
   const withSeries = volume as { seriesId?: string };
   if (withSeries.seriesId && TMDB_ID_BY_SERIES_SLUG[withSeries.seriesId]) return withSeries.seriesId;
-  const direct = LOCAL_SLUG_BY_VOLUME[volume.id];
-  if (direct) return direct;
   const tag = volume.seriesTag.toLowerCase();
   if (tag.includes('gt')) return 'gt';
   if (tag.includes('daima')) return 'daima';
@@ -67,17 +48,4 @@ export function parseAbsoluteEpisode(label: string | undefined | null): number |
   if (!m) return undefined;
   const n = Number.parseInt(m[1], 10);
   return Number.isFinite(n) && n > 0 ? n : undefined;
-}
-
-export function getLocalEpisodeThumbnail(
-  volume: Pick<VolumeData, 'id' | 'seriesTag'> & { seriesId?: string },
-  absoluteEpisode: number | undefined,
-  explicitUrl?: string,
-): string | undefined {
-  if (explicitUrl && explicitUrl.trim() !== '') return explicitUrl;
-  // No hay set curado en /public/episodes: adivinar la ruta daba un 404 por miniatura
-  // (y un re-render al caer a la fuente siguiente). Solo cuenta una URL explícita.
-  void volume;
-  void absoluteEpisode;
-  return undefined;
 }

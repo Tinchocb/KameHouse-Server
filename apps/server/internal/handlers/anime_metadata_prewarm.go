@@ -19,24 +19,28 @@ func (h *Handler) prewarmAnimeMetadata(delay time.Duration) {
 	if h.App == nil || h.App.Database == nil || h.App.Metadata.Provider == nil {
 		return
 	}
-	go func() {
+	h.App.StartBackground(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				h.App.Logger.Error().Interface("panic", r).Msg("anime: panic prewarming anime metadata")
 			}
 		}()
-		if delay > 0 {
-			time.Sleep(delay)
+		ctx := h.App.ShutdownCtx()
+		if !waitBackground(ctx, delay) {
+			return
 		}
 
 		var media []models.LibraryMedia
-		if err := h.App.Database.Gorm().Select("tmdb_id", "type").Where("tmdb_id > 0").Find(&media).Error; err != nil {
+		if err := h.App.Database.Gorm().WithContext(ctx).Select("tmdb_id", "type").Where("tmdb_id > 0").Find(&media).Error; err != nil {
 			return
 		}
 
 		start := time.Now()
 		done := 0
 		for _, m := range media {
+			if ctx.Err() != nil {
+				return
+			}
 			mediaID := canonicalAnimeMediaID(m)
 			if mediaID <= 0 {
 				continue
@@ -50,14 +54,16 @@ func (h *Handler) prewarmAnimeMetadata(delay time.Duration) {
 				h.App.Logger.Warn().Err(err).Msg("anime: Jikan no responde, se suspende la precarga de fichas")
 				break
 			}
-			time.Sleep(animeMetadataPrewarmPause)
+			if !waitBackground(ctx, animeMetadataPrewarmPause) {
+				return
+			}
 		}
 		h.App.Logger.Info().
 			Int("titles", len(media)).
 			Int("fetched", done).
 			Dur("elapsed", time.Since(start)).
 			Msg("anime: Metadata de fichas precargada")
-	}()
+	})
 }
 
 // animeMetadataPrewarmPause separa cada consulta a Jikan (su limitador permite ~1 por segundo).

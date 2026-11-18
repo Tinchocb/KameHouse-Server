@@ -6,7 +6,7 @@
 // Importing the orchestrator transitively pulls player-core + its static deps
 // (hls.js, jassub), so warming these two dynamic imports warms the whole payload.
 //
-// Call once from an eagerly-loaded surface (the root) at browser idle.
+// Call once from playback-capable detail views (series/$seriesId, movies/$movieId) at browser idle.
 
 import { isDataSavingEnabled } from "@/lib/network-preferences"
 import { queueIdlePreload } from "@/lib/idle-preload-queue"

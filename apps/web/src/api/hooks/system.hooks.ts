@@ -3,6 +3,7 @@ import { useState } from "react"
 import { useServerMutation } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { getServerBaseUrl } from "@/api/client/server-url"
+import { getAuthorizationHeaders, setServerSession } from "@/api/client/auth"
 import { toast } from "sonner"
 
 interface DatabaseBackupResult {
@@ -29,7 +30,8 @@ export function useDownloadDatabaseBackup() {
         try {
             const base = getServerBaseUrl()
             const url = new URL(API_ENDPOINTS.SYSTEM.DownloadDatabaseBackup.endpoint, base || window.location.origin)
-            const res = await fetch(url.toString(), { method: "GET", credentials: "include" })
+            const res = await fetch(url.toString(), { method: "GET", headers: getAuthorizationHeaders(), credentials: "include" })
+            if (res.status === 401) setServerSession(null)
             if (!res.ok) throw new Error(`Backup falló con ${res.status}`)
             const blob = await res.blob()
             const disposition = res.headers.get("Content-Disposition") ?? ""

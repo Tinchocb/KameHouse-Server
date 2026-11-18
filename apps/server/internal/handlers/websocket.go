@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"kamehouse/internal/events"
 	"net/http"
 	"strconv"
@@ -26,6 +25,11 @@ import (
 const wsMaxClientMessageBytes = 1 << 20 // 1 MiB
 
 func (h *Handler) webSocketEventHandler(c echo.Context) error {
+	// Reject browser origins before authentication: a foreign web page must
+	// not consume the failure budget shared by legitimate localhost clients.
+	if !h.isAllowedWebSocketOrigin(c.Request()) {
+		return echo.NewHTTPError(http.StatusForbidden, "origin not allowed")
+	}
 	// Client identity — passed as query parameters since WS browsers can't set custom headers.
 	id := c.QueryParam("id")
 	if id == "" || id == "0" {
@@ -36,12 +40,24 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 	token := extractWSToken(c.Request())
 
 	if h.App.Config.Server.Password != "" {
-		isAuthed := h.isCorrectPasswordToken(token)
-		if !isAuthed && token != "" {
+		isAuthed, err := authorizeWithRateLimit(c, func() bool {
+			if h.isCorrectPasswordToken(token) {
+				return true
+			}
+			if h.sessionWSRequest(c.Request(), token) {
+				return true
+			}
+			if token == "" {
+				return false
+			}
 			hmacAuth := h.App.GetServerPasswordHMACAuth()
 			if claims, errHmac := hmacAuth.ValidateToken(token, c.Request().URL.Path); errHmac == nil && claims.Endpoint != "*" { // el token comodín de streaming no abre el WebSocket
-				isAuthed = true
+				return true
 			}
+			return false
+		})
+		if err != nil || c.Response().Committed {
+			return err
 		}
 		if !isAuthed {
 			h.App.Logger.Warn().Str("id", id).Msg("ws: Unauthorized WebSocket connection attempt rejected")
@@ -50,32 +66,7 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 	}
 
 	var upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			origin := r.Header.Get("Origin")
-			if origin == "" {
-				return true
-			}
-
-			// Allow if matches any config CORS origins
-			for _, o := range h.App.Config.Server.CorsOrigins {
-				if o == origin || o == "*" {
-					return true
-				}
-			}
-
-			// Allow if origin matches the request's own Host (same-origin direct access)
-			scheme := "http"
-			if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-				scheme = "https"
-			}
-			requestOrigin := fmt.Sprintf("%s://%s", scheme, r.Host)
-			if origin == requestOrigin {
-				return true
-			}
-
-			h.App.Logger.Warn().Str("origin", origin).Str("host", r.Host).Msg("ws: rejected origin")
-			return false
-		},
+		CheckOrigin: h.isAllowedWebSocketOrigin,
 	}
 
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
@@ -155,6 +146,25 @@ func (h *Handler) webSocketEventHandler(c echo.Context) error {
 	}
 
 	return nil
+}
+
+func (h *Handler) isAllowedWebSocketOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	for _, allowed := range h.App.Config.Server.CorsOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+	// Reuse the HTTP guard's loopback/local-host rules. Matching an arbitrary
+	// public Host is insufficient: DNS rebinding can supply that Host locally.
+	if isTrustedWriteOrigin(origin, r, nil) {
+		return true
+	}
+	h.App.Logger.Warn().Str("origin", origin).Str("host", r.Host).Msg("ws: rejected origin")
+	return false
 }
 
 func UnmarshalWebsocketClientEvent(msg []byte) (*events.WebsocketClientEvent, error) {

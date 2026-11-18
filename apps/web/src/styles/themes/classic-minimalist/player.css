@@ -1,0 +1,137 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  player.css — Reproductor de Video Minimalista                        ║
+   ║  Seekbar, HUD Capsules, Controles, Volumen, Marcadores                ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
+
+/* Cápsula HUD: sólida; dentro de la barra inferior va sin caja */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-hud-capsule {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-bar-fg .player-hud-capsule {
+  background: transparent !important;
+  border: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-hud-capsule.rounded-full {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.player-hud-capsule button.rounded-full, [data-settings-view] button.w-full.rounded-full, .player-hud-capsule [data-settings-view] button) {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.player-icon-active, .player-marathon-btn[aria-pressed="true"]) {
+  background: var(--minimal-fill-5) !important;
+  color: var(--minimal-text-hi) !important;
+  box-shadow: none !important;
+}
+
+/* Línea de tiempo: fina, blanca y con área de 44 px */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-hit-area {
+  min-height: var(--minimal-hit);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-track {
+  background: var(--minimal-line-4);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-fill {
+  background-color: var(--minimal-accent-hover) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-thumb {
+  background-color: var(--minimal-accent-hover) !important;
+  box-shadow: var(--minimal-shadow-control) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([data-marker="op"], [data-marker="ed"]) {
+  background-color: var(--minimal-line-5) !important;
+  border-color: var(--minimal-text-3) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-bar [data-marker="chapter"] {
+  width: 3px;
+  margin-inline-start: -1.5px;
+  background: var(--minimal-canvas);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-input:focus-visible {
+  opacity: 0;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-hit-area:has(.player-seek-input:focus-visible) .player-seek-track {
+  height: 4px;
+  box-shadow: var(--minimal-focus-ring);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-bar[data-disabled="true"] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Saltar intro y siguiente episodio usan la receta primaria (buttons.css) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-next-ep-thumb {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-eyebrow-text {
+  color: var(--minimal-text-3) !important;
+  text-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-bar-fg span {
+  text-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) input[type="range"][aria-label="Volumen"] {
+  accent-color: var(--minimal-accent-hover) !important;
+}
+
+/* Controles redundantes (±10 s, Mi lista y Abrir en mpv) viven en «Más opciones» */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.player-skip-back-btn, .player-skip-fwd-btn, .player-skip-separator, .player-queue-btn, .player-mpv-btn) {
+  display: none !important;
+}
+
+/* Atajos de teclado y diálogos del reproductor */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is([role="dialog"][aria-label="Atajos de teclado del reproductor"] :is(kbd, span.rounded-full), [role="dialog"][aria-label="Episodios"] span.rounded-full) {
+  border-radius: var(--minimal-radius-xs) !important;
+}
+
+/* Menú unificado de ajustes del reproductor (SettingsLayout) */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-settings-surface {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-lg) !important;
+  box-shadow: var(--minimal-shadow-menu) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-settings-surface button {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+/* Cajón de episodios en el reproductor: radios concéntricos 16 -> 12 -> 8 -> 6 px */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="dialog"][aria-label="Episodios"] {
+  border-radius: var(--minimal-radius-lg) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="dialog"][aria-label="Episodios"] button[data-episode-index] {
+  border-radius: var(--minimal-radius-md) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [role="dialog"][aria-label="Episodios"] button[data-episode-index] .rounded-xl {
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+/* Vista previa flotante del fotograma sobre la línea de tiempo */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .player-seek-preview {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: var(--minimal-shadow-menu) !important;
+}

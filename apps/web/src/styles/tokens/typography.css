@@ -1,23 +1,22 @@
 /* ╔════════════════════════════════════════════════════════════════════════╗
    ║  typography.css — KameHouse Design System v3 (Cinematic Minimalist)  ║
-   ║  Space Grotesk display + Inter sans + tracking-tight headings        ║
+   ║  Google Sans display + Google Sans sans + tracking-tight headings    ║
    ╚════════════════════════════════════════════════════════════════════════╝ */
 
 :root {
   /* ─── Micro-texto (text-2xs..5xs de Tailwind) ──────────────────────────
-     Etiquetas, badges y metadatos. En modo TV (10-foot UI) suben ~30%: a 2-3 m
-     9-11px no se leen. Tailwind los lee de acá (fontSize en tailwind.config.ts). */
+     Etiquetas, badges y metadatos. Tailwind los lee de acá (fontSize en tailwind.config.ts). */
   --fs-2xs: 11px;
   --fs-3xs: 11px;   /* mínimo legible (escala semántica: Caption 11); antes 10px */
   --fs-4xs: 10px;   /* antes 9px */
   --fs-5xs: 9px;    /* antes 8px */
 
   /* ─── Font Stacks ───────────────────────────────────────────────────── */
-  --font-sans:      "Outfit Variable", "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display:   "Outfit Variable", "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:      "Google Sans Flex", "Google Sans", "Product Sans", "Outfit Variable", "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display:   "Google Sans Flex", "Google Sans", "Product Sans", "Outfit Variable", "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono:      "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-serif:     "Cormorant Garamond", Georgia, Cambria, "Times New Roman", serif;
-  --font-numeric:   "Outfit Variable", "Tabular Numbers", var(--font-mono);
+  --font-numeric:   "Google Sans Flex", "Google Sans", "Product Sans", "Outfit Variable", "Tabular Numbers", var(--font-mono);
 
   /* ─── Escala Tipográfica (clamp para responsive fluido) ─────────────── */
   --text-xs:     clamp(0.70rem, 0.65rem + 0.25vw, 0.75rem);    /* ~11-12px */
@@ -64,13 +63,10 @@
   --tracking-wide:     0.025em;
   --tracking-wider:    0.05em;
   --tracking-widest:   0.1em;
-  --tracking-display:  0.15em;   /* labels de contenido (media-card, poster, spotlight) */
   --tracking-ultra:    0.2em;
   /* ─── Cinematic display — mayúsculas muy espaciadas (player, heroes, overlays) ─── */
   --tracking-cinema:     0.25em;  /* chrome del player, badges cinematic */
   --tracking-cinema-md:  0.3em;   /* overlays/heroes del player */
-  --tracking-cinema-lg:  0.4em;   /* decoraciones hero/collections */
-  --tracking-cinema-xl:  0.5em;   /* decoración vertical hero */
 
   /* ─── Estilos de Display (Hero, logos grandes) ──────────────────────── */
   --display-xl:   var(--weight-normal) var(--text-9xl) / var(--leading-none) var(--font-display);
@@ -142,7 +138,6 @@
 /* ─── Clases utilitarias (solo las usadas en tsx; las variables --* se conservan) ─── */
 .text-body-md { font: var(--body-md); }
 
-.text-label-md { font: var(--label-md); }
 .text-label-sm { font: var(--label-sm); }
 
 .text-caption { font: var(--caption); }
@@ -158,9 +153,3 @@
 .type-body     { font-family: var(--font-sans);    font-size: var(--type-body-size);     font-weight: var(--type-body-weight);     line-height: var(--type-body-leading); }
 .type-label    { font-family: var(--font-sans);    font-size: var(--type-label-size);    font-weight: var(--type-label-weight);    line-height: var(--type-label-leading); }
 .type-caption  { font-family: var(--font-sans);    font-size: var(--type-caption-size);  font-weight: var(--type-caption-weight);  line-height: var(--type-caption-leading); }
-[data-tv="true"] {
-  --fs-2xs: 14px;
-  --fs-3xs: 13px;
-  --fs-4xs: 12px;
-  --fs-5xs: 11px;
-}

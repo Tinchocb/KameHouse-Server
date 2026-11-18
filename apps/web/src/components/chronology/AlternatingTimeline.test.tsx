@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { usePerformanceStore } from '@/lib/hardware/performance-store';
-import { useAppStore } from '@/lib/stores';
 import { AlternatingTimeline } from './AlternatingTimeline';
 import { SPAN_VOLUMES } from './data/spansToVolumes';
 import { CHRONOLOGY_INTERLUDES } from './data/interludes';
@@ -47,7 +46,7 @@ describe('AlternatingTimeline · tarjetas expandidas en vista detallada y colaps
     vi.spyOn(scroller, 'getBoundingClientRect').mockReturnValue({ top: 0, bottom: 800, height: 800 } as DOMRect);
     const volumes = SPAN_VOLUMES.slice(0, 10);
     const view = render(<AlternatingTimeline
-      volumes={volumes} readVolumeIds={new Set()} onToggleRead={vi.fn()}
+      volumes={volumes} readVolumeIds={new Set()}
       showInterludes={false} onInspectThumbnail={vi.fn()}
     />, { container: scroller });
     const nodes = volumes.map(v => {
@@ -121,7 +120,6 @@ function renderFirstRow(index: number): { entrance: HTMLElement; unmount: () => 
     <AlternatingTimeline
       volumes={[SPAN_VOLUMES[index]]}
       readVolumeIds={new Set()}
-      onToggleRead={vi.fn()}
       showInterludes={false}
       onInspectThumbnail={vi.fn()}
     />,
@@ -134,7 +132,6 @@ describe('AlternatingTimeline · entrada de la tarjeta según el tier de movimie
   // Antes de cada caso: al salir la fila sigue montada y el cambio de store la re-renderiza fuera de act.
   beforeEach(() => {
     usePerformanceStore.setState({ performanceProfile: 'auto', autoThrottleActive: false });
-    useAppStore.setState({ tvMode: false });
     motionPrefs.reduced = false;
   });
 
@@ -150,9 +147,9 @@ describe('AlternatingTimeline · entrada de la tarjeta según el tier de movimie
     unmount();
   });
 
-  it('en modo TV la tarjeta solo se funde, sin desplazamiento', () => {
+  it('en perfil de ahorro la tarjeta solo se funde, sin desplazamiento', () => {
     usePerformanceStore.setState({ performanceProfile: 'ultra' });
-    useAppStore.setState({ tvMode: true });
+    usePerformanceStore.setState({ performanceProfile: "eco" });
     const { entrance, unmount } = renderFirstRow(1);
     expect(entrance.style.opacity).toBe('0');
     expect(entrance.style.transform).not.toContain('16px');
@@ -174,7 +171,6 @@ describe('AlternatingTimeline · divisores de interludio diferidos', () => {
     nearObserver.reset();
     farObserver.reset();
     usePerformanceStore.setState({ performanceProfile: 'auto', autoThrottleActive: false });
-    useAppStore.setState({ tvMode: false });
     motionPrefs.reduced = false;
   });
 
@@ -201,7 +197,7 @@ describe('AlternatingTimeline · divisores de interludio diferidos', () => {
     const from = SPAN_VOLUMES.findIndex((v) => v.id === il.fromVolumeId);
     const volumes = SPAN_VOLUMES.slice(from, from + 2);
     const { container } = render(<AlternatingTimeline
-      volumes={volumes} readVolumeIds={new Set()} onToggleRead={vi.fn()}
+      volumes={volumes} readVolumeIds={new Set()}
       showInterludes onInspectThumbnail={vi.fn()}
     />);
     const row = document.getElementById(`timeline-node-${volumes[1].id}`);

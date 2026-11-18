@@ -1,0 +1,219 @@
+/* ╔════════════════════════════════════════════════════════════════════════╗
+   ║  navigation.css — Barra de Navegación Flotante y Riel de Eras         ║
+   ║  Floating Pill Nav, EraRail, Islas de Control                         ║
+   ╚════════════════════════════════════════════════════════════════════════╝ */
+
+/* Islas flotantes: superficie sólida, filete y sombra de flotante */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(
+  .floating-nav-island,
+  .glass-frosted-pill,
+  [data-era-selector="rail"] .glass-frosted-pill,
+  [data-era-selector="bar"] .glass-frosted-pill
+) {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-3) !important;
+  box-shadow: var(--minimal-shadow-float) !important;
+  border-radius: var(--minimal-radius-pill) !important;
+}
+
+/* Ítem activo en la barra: selección tenue con texto claro */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-active-indicator {
+  background: var(--minimal-fill-3) !important;
+  border: 1px solid var(--minimal-line-4) !important;
+  border-radius: var(--minimal-radius-md) !important;
+  box-shadow: none !important;
+}
+
+/* Contador Mi Lista */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-queue-badge {
+  background-color: var(--minimal-fill-4) !important;
+  border: 1px solid var(--minimal-line-4) !important;
+  color: var(--minimal-text-1) !important;
+  border-radius: var(--minimal-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+/* Acciones rápidas (Maratón, Aleatorio, Música): encendido = acento tenue con texto claro */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-label="Acciones rápidas"] button[aria-pressed="true"] {
+  background: var(--minimal-fill-5) !important;
+  color: var(--minimal-text-hi) !important;
+  border: 1px solid var(--minimal-line-4) !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-label="Acciones rápidas"] button[aria-pressed="true"] svg {
+  color: var(--minimal-text-hi) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-label="Acciones rápidas"] button:not([aria-pressed="true"]) {
+  border-color: transparent !important;
+  color: var(--minimal-text-3) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [aria-label="Acciones rápidas"] button:not([aria-pressed="true"]):hover {
+  background-color: var(--minimal-fill-3) !important;
+  color: var(--minimal-text-hi) !important;
+}
+}
+
+/* Encabezados SectionBar universales: icono monocromático sobrio */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .sectionbar-header-icon {
+  background: var(--minimal-fill-2) !important;
+  border-color: var(--minimal-line-3) !important;
+  color: var(--minimal-text-1) !important;
+  border-radius: var(--minimal-radius-sm) !important;
+}
+
+/* Selector de eras: barra mate estructurada, monocromo con relieve sutil */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-era-selector="rail"] span[style*="left: 0"] {
+  background: var(--minimal-accent) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-era-selector] .font-kanji {
+  color: var(--minimal-text-1) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-era-selector] .era-row-active .font-kanji {
+  color: var(--minimal-text-hi) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) :is(.era-selector-indicator, [data-era-progress-fill]) {
+  background: var(--minimal-accent) !important;
+}
+
+/* Barra de eras: dock mate estructurado con relieve sutil y emblemas visibles */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-era-selector="bar"] .glass-frosted-pill {
+  background: var(--minimal-surface) !important;
+  border: 1px solid var(--minimal-line-2) !important;
+  box-shadow: none !important;
+  border-radius: var(--minimal-radius-pill) !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) [data-era-selector="bar"] .era-row-active {
+  color: var(--era-item-accent);
+}
+
+/* Navegación principal: ítems con contraste nítido y selección tenue con texto claro */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-main :is(a, button) {
+  color: var(--minimal-text-2);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-main :is(a[aria-current="page"], button[aria-pressed="true"]) {
+  color: var(--minimal-text-1) !important;
+  font-weight: var(--minimal-weight-semibold) !important;
+}
+
+/* Franja sólida; búsqueda superpuesta sin desplazar destinos ni duplicar navegación. */
+@media (min-width: 768px) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip {
+    gap: 8px;
+    padding-inline: 16px;
+    background: var(--minimal-surface) !important;
+    border-bottom: 1px solid var(--minimal-line-2) !important;
+    box-shadow: var(--minimal-shadow-float) !important;
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip nav {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip-tools {
+    width: 144px;
+    justify-content: flex-end;
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip .expandable-search-field,
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip .expandable-search-field > button {
+    min-width: var(--minimal-hit);
+    height: var(--minimal-hit);
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip .expandable-search[data-expanded="true"] {
+    position: absolute;
+    left: 76px;
+    right: 116px;
+    top: 6px;
+    z-index: 1;
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip .expandable-search[data-expanded="true"] .expandable-search-field {
+    width: 100%;
+    transition: var(--minimal-transition);
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip a {
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip {
+    padding-inline: 32px;
+  }
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-strip .expandable-search[data-expanded="true"] {
+    left: 190px;
+    right: 132px;
+  }
+}
+
+/* En móvil (< 768 px): navegación inferior con radio concéntrico y área táctil de 44 px */
+@media (max-width: 767px) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-main .floating-nav-island {
+    border-radius: var(--minimal-radius-lg) !important;
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-main :is(a, button) {
+    min-height: var(--minimal-hit);
+    border-radius: var(--minimal-radius-sm);
+  }
+
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-main .floating-nav-active-indicator {
+    background: var(--minimal-fill-3) !important;
+    border: 1px solid var(--minimal-line-4) !important;
+    border-radius: var(--minimal-radius-sm) !important;
+  }
+}
+
+/* El contenido del Popover reutiliza las mismas acciones con etiquetas visibles. */
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-quick-menu {
+  width: 15rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.375rem;
+  background: var(--minimal-surface);
+  border-color: var(--minimal-line-3);
+  border-radius: var(--minimal-radius-md);
+  box-shadow: var(--minimal-shadow-menu);
+  animation-duration: var(--minimal-duration);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-quick-menu .floating-nav-quick-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-quick-menu button {
+  justify-content: flex-start;
+  gap: 0.75rem;
+  min-height: var(--minimal-hit);
+  border-radius: var(--minimal-radius-sm);
+  font-size: var(--minimal-font-md);
+  transition: var(--minimal-transition);
+}
+
+[data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-quick-menu .floating-nav-quick-label {
+  display: inline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-style="classic-minimalist"]:not([data-tv="true"]) .floating-nav-quick-menu {
+    animation: none;
+  }
+}

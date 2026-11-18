@@ -1,38 +1,48 @@
+import { persistLibraryPatch } from "@/lib/server/persist-settings"
 import { IconUiSpinner, IconNavigationTv, IconUiClose, IconMediaClapperboard } from "@/components/ui/icons";
 
 import * as React from "react"
-import { m, AnimatePresence } from "framer-motion"
+import { m, AnimatePresence, useIsPresent } from "framer-motion"
 
 import { toast } from "sonner"
 
 import { cn } from "@/components/ui/core/styling"
+import { IconButton } from "@/components/ui/button"
 import { useGetLibraryCollection } from "@/api/hooks/anime_collection.hooks"
 import { fetchAnimeEntryLocalFiles } from "@/api/hooks/anime_entries.hooks"
 import { useSound } from "@/hooks/use-sound"
-import { LoadSwap, useSpringPreset } from "@/components/ui/kinetics"
-import { useMinWidth } from "@/components/ui/app-layout/use-nav-compact"
+import { LoadSwap, useReducedMotion, useSpringPreset } from "@/components/ui/kinetics"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { useFocusTrap } from "@/hooks/use-focus-trap"
-import { useAppStore, usePlayerStore, useQueueStore, useUIStore, PlaylistItem } from "@/lib/store"
+import { usePlayerStore, useQueueStore, useUIStore, PlaylistItem } from "@/lib/store"
 import { getSafeCollectionEntries } from "@/lib/helpers/collection"
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } = {}) {
+function PickerLayer({ children }: { children: React.ReactNode }) {
+    const isPresent = useIsPresent()
+    return (
+        <div inert={!isPresent} aria-hidden={!isPresent || undefined}
+            className={cn("fixed inset-0 z-modal flex items-center justify-center p-4 md:p-6", isPresent ? "pointer-events-auto" : "pointer-events-none")}>
+            {children}
+        </div>
+    )
+}
+
+export function RandomPlayButton() {
     const { playSound } = useSound()
     const [showPicker, setShowPicker] = React.useState(false)
     const [isLoading, setIsLoading] = React.useState<"movie" | "episode" | false>(false)
-    // La escala de hover solo desde `sm`: en celular el hover de framer queda pegado tras el toque.
-    // La pulsación (whileTap) sigue activa en todos los tamaños.
-    const canHoverScale = useMinWidth(640)
-    // Resorte del diálogo (preset "selector"): antes estaba escrito a mano en el motion.div del modal.
-    const selectorSpring = useSpringPreset("selector")
-    const tvMode = useAppStore(state => state.tvMode)
-    const setTvMode = usePlayerStore(state => state.setTvMode)
+    // Hover solo con ratón; el ancho de pantalla no identifica dispositivos táctiles.
+    const canHoverScale = useMediaQuery("(hover: hover) and (pointer: fine)")
+    // El diálogo comparte la entrada gradual de las superficies grandes.
+    const reduceMotion = useReducedMotion()
+    const pressSpring = useSpringPreset("press")
+    const setMarathonMode = usePlayerStore(state => state.setMarathonMode)
 
-    const { data: collection } = useGetLibraryCollection()
+    const { data: collection } = useGetLibraryCollection({ enabled: showPicker })
 
     const modalRef = React.useRef<HTMLDivElement>(null)
-    const triggerRef = React.useRef<HTMLButtonElement>(null)
 
     const operationRef = React.useRef(0)
     const pickingRef = React.useRef(false)
@@ -56,10 +66,11 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
         operationRef.current += 1
     }, [])
 
-    // All library entries flattened (sin huecos nulos del backend)
+    // All library entries flattened (solo se deriva al abrir el selector)
     const allEntries = React.useMemo(() => {
+        if (!showPicker) return []
         return getSafeCollectionEntries(collection)
-    }, [collection])
+    }, [collection, showPicker])
 
     const playRandomSound = React.useCallback(() => {
         playSound("random", 0.5)
@@ -214,9 +225,10 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
             })
             useUIStore.getState().setGlobalQueueOpen(false)
 
-            setTvMode(true)
+            setMarathonMode(true)
+            persistLibraryPatch({ marathonMode: true })
 
-            toast.success(isMovie ? "Película al azar en modo TV" : "Serie al azar en modo TV", {
+            toast.success(isMovie ? "Película al azar en modo maratón" : "Serie al azar en modo maratón", {
                 description: `${seriesTitle}${!isMovie ? ` · ep. ${activeItem.episodeNumber}` : ""}`,
                 duration: 3000,
             })
@@ -234,96 +246,33 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
 
     return (
         <>
-            {/* ─── Hero Trigger Button (Sidebar / Footer) ─────────────────── */}
-            {!modalOnly && (
-                <div className="w-full flex justify-center">
-                    <m.button
-                        ref={triggerRef}
-                        id="random-play-btn"
-                        disabled={Boolean(isLoading)}
-                        title="Sorpréndeme"
-                        aria-label="Sorpréndeme"
-                        onClick={() => {
-                            playRandomSound()
-                            openPicker()
-                        }}
-                        whileHover={canHoverScale ? { scale: 1.02 } : undefined}
-                        whileTap={{ scale: 0.96 }}
-                        className={cn(
-                            "group relative flex items-center rounded-2xl transition-[width,height,padding,gap,background-color,border-color,color,box-shadow,transform] duration-base ease-smooth-out w-full outline-none overflow-hidden",
-                            "border shadow-elevation-2",
-                            "h-14 md:w-14 w-full justify-center px-0",
-                            tvMode || showPicker
-                                ? "bg-brand-accent/20 border-brand-accent/50 text-on-surface shadow-brand-accent/20"
-                                : "bg-white/[0.04] border-white/[0.08] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.08] text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface"
-                        )}
-                    >
-                        {/* Glowing background hint */}
-                        <div className={cn(
-                            "absolute inset-0 bg-gradient-to-r from-brand-accent/20 via-transparent to-transparent opacity-0 transition-opacity duration-base ease-smooth-out pointer-events-none",
-                            (tvMode || showPicker) ? "opacity-100" : "group-hover:opacity-100"
-                        )} />
-
-                        {/* Active vertical bar indicator */}
-                        <div className={cn(
-                            "absolute left-0 w-1.5 h-8 bg-brand-accent rounded-r-full transition-[transform,opacity] duration-base ease-smooth-out hidden md:block",
-                            (tvMode || showPicker) ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
-                        )} />
-                        
-                        {/* Icon with glowing badge */}
-                        <div className={cn(
-                            "relative shrink-0 z-10 flex items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-fast ease-out-strong w-10 h-10",
-                            (tvMode || showPicker)
-                                ? "bg-brand-accent text-on-primary shadow-brand-primary scale-105"
-                                : "bg-white/[0.06] group-hover:bg-brand-accent/20 group-hover:text-brand-accent text-on-surface-variant"
-                        )}>
-                            <LoadSwap
-                                loading={Boolean(isLoading)}
-                                skeleton={<IconUiSpinner className="w-5 h-5 animate-spin" />}
-                            >
-                                <IconNavigationTv className="w-5 h-5 transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105" />
-                            </LoadSwap>
-                        </div>
-                        
-                        {/* Text Label */}
-                        <div className="z-10 flex flex-col text-left transition-colors duration-fast ease-out-strong whitespace-nowrap overflow-hidden hidden md:hidden">
-                            <span className="text-label-md font-bold text-on-surface leading-tight">
-                                Sorpréndeme
-                            </span>
-                            <span className="text-3xs font-medium text-label-2">
-                                {tvMode ? "Modo TV activado" : "Algo al azar"}
-                            </span>
-                        </div>
-                    </m.button>
-                </div>
-            )}
-
             {/* ─── Full-Screen Blurred Modal Overlay (Framer Motion) ─────────────── */}
             <AnimatePresence>
                 {showPicker && (
-                    <div className="fixed inset-0 z-modal pointer-events-auto flex items-end sm:items-center justify-center p-4 md:p-6">
-                        {/* Backdrop Blur Overlay */}
+                    <PickerLayer>
+                        {/* Backdrop Overlay (sin blur duplicado debajo de .glass-frosted) */}
                         <m.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.25 }}
                             onClick={closePicker}
-                            className="absolute inset-0 bg-black/65 backdrop-blur-overlay-xs pointer-events-auto cursor-pointer"
+                            className="absolute inset-0 bg-black/65 pointer-events-auto cursor-pointer"
                         />
 
                         {/* Modal Container — Animated from Bottom */}
                         <m.div
                             ref={modalRef}
                             role="dialog"
+                                data-liquid-surface="panel"
                             aria-modal="true"
-                            aria-labelledby="tv-mode-dialog-title"
-                            initial={{ opacity: 0, y: 100, scale: 0.95 }}
+                            aria-labelledby="random-play-dialog-title"
+                            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 80, scale: 0.95 }}
-                            transition={selectorSpring}
+                            exit={{ opacity: 0, y: 0, scale: 1, transition: { duration: 0.15, ease: "easeInOut" } }}
+                            transition={{ duration: reduceMotion ? 0.15 : 0.35, ease: "easeInOut" }}
                             className={cn(
-                                "glass-frosted relative z-10 w-full max-w-2xl flex flex-col rounded-3xl overflow-hidden pointer-events-auto text-on-surface"
+                                "glass-frosted relative z-10 w-full max-w-2xl flex flex-col rounded-3xl overflow-hidden pointer-events-auto text-on-surface border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow-strong)]"
                             )}
                         >
                             {/* Top Ambient Glow */}
@@ -336,32 +285,32 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                         <IconNavigationTv className="w-7 h-7" />
                                     </div>
                                     <div>
-                                        <h2 id="tv-mode-dialog-title" className="text-2xl md:text-3xl font-black tracking-tight text-on-surface text-balance">
+                                        <h2 id="random-play-dialog-title" className="text-2xl md:text-3xl font-black tracking-tight text-on-surface text-balance">
                                             Sorpréndeme
                                         </h2>
                                         <p className="text-xs md:text-sm text-label-2 font-medium text-pretty">
-                                            Elige qué quieres ver. Empezamos con algo al azar de tu biblioteca, en modo TV.
+                                            Elige qué quieres ver. Empezamos con algo al azar de tu biblioteca, en modo maratón.
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* Close Button */}
-                                <button
-                                    type="button"
+                                <IconButton
+                                    intent="secondary"
+                                    size="md"
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         closePicker()
                                     }}
-                                    className="p-2.5 rounded-xl bg-white/[0.05] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-white/[0.1] border border-white/15 border-t-white/30 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface transition-[background-color,border-color,color,transform] duration-fast ease-smooth-out active:scale-95 outline-none pointer-events-auto cursor-pointer shadow-glass-highlight-md"
+                                    className="pointer-events-auto"
                                     title="Cerrar (Esc)"
                                     aria-label="Cerrar"
-                                >
-                                    <IconUiClose className="w-5 h-5" />
-                                </button>
+                                    icon={<IconUiClose className="w-5 h-5" />}
+                                />
                             </div>
 
                             {/* Divider */}
-                            <div className="h-px bg-white/10 mx-6 md:mx-8" />
+                            <div className="h-px bg-[var(--neutral-separator)] mx-6 md:mx-8" />
 
                             {/* Hero Cards Container */}
                             <div className="p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
@@ -370,17 +319,18 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     type="button"
                                     disabled={Boolean(isLoading)}
                                     onClick={() => pick("episode")}
-                                    whileHover={{ y: -4, scale: 1.02 }}
-                                    whileTap={{ scale: 0.95 }}
+                                    whileHover={canHoverScale && !reduceMotion ? { y: -3 } : undefined}
+                                    whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+                                    transition={pressSpring}
                                     className={cn(
                                         "group relative flex flex-col p-6 rounded-2xl text-left transition-[background-color,border-color,box-shadow] duration-base ease-smooth-out outline-none pointer-events-auto cursor-pointer",
-                                        "surface-content surface-content-row [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70",
-                                        "shadow-glass-highlight-md [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-brand-accent/15",
+                                        "surface-content surface-content-row border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70",
+                                        "[@media(hover:hover)_and_(pointer:fine)]:hover:shadow-brand-accent/15",
                                         isLoading === "episode" && "opacity-75 pointer-events-none"
                                     )}
                                 >
                                      <div className="flex items-center justify-between w-full mb-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent flex items-center justify-center transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 shadow-md shadow-brand-accent/20">
+                                        <div className="w-14 h-14 rounded-2xl bg-brand-accent/15 border border-brand-accent/30 text-brand-accent flex items-center justify-center transition-transform duration-fast ease-out-strong motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 shadow-[shadow:var(--double-bezel-ring)]">
                                             <LoadSwap
                                                 loading={isLoading === "episode"}
                                                 skeleton={<IconUiSpinner className="w-6 h-6 animate-spin text-brand-accent" />}
@@ -388,19 +338,19 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                                 <IconNavigationTv className="w-7 h-7" />
                                             </LoadSwap>
                                         </div>
-                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-accent/20 text-on-surface-variant group-hover:text-brand-accent-readable text-2xs font-semibold transition-colors border border-white/10 group-hover:border-brand-accent/30">
+                                        <span className="px-2.5 py-1 rounded-full bg-[var(--neutral-elev-2)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-brand-accent/20 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent-readable text-2xs font-semibold transition-colors border border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-brand-accent/30">
                                             Maratón
                                         </span>
                                     </div>
 
-                                    <h3 className="text-lg font-bold text-on-surface group-hover:text-brand-accent-readable transition-colors">
+                                    <h3 className="text-lg font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent-readable transition-colors">
                                         Series
                                     </h3>
                                     <p className="text-xs text-label-2 mt-1 leading-relaxed font-medium">
                                         Empieza un maratón con una serie al azar.
                                     </p>
 
-                                    <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-accent-readable group-hover:translate-x-1 transition-transform">
+                                    <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-accent-readable motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-1 transition-transform">
                                         <span>Ver una serie</span>
                                         <span aria-hidden="true">›</span>
                                     </div>
@@ -411,17 +361,18 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                     type="button"
                                     disabled={Boolean(isLoading)}
                                     onClick={() => pick("movie")}
-                                    whileHover={{ y: -4, scale: 1.02 }}
-                                    whileTap={{ scale: 0.95 }}
+                                    whileHover={canHoverScale && !reduceMotion ? { y: -3 } : undefined}
+                                    whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+                                    transition={pressSpring}
                                     className={cn(
                                         "group relative flex flex-col p-6 rounded-2xl text-left transition-[background-color,border-color,box-shadow] duration-base ease-smooth-out outline-none pointer-events-auto cursor-pointer",
-                                        "surface-content surface-content-row [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70 [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-secondary/60",
-                                        "shadow-glass-highlight-md [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-brand-secondary/15",
+                                        "surface-content surface-content-row border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] shadow-[shadow:var(--double-bezel-shadow)] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high/70 [@media(hover:hover)_and_(pointer:fine)]:hover:border-brand-secondary/60",
+                                        "[@media(hover:hover)_and_(pointer:fine)]:hover:shadow-brand-secondary/15",
                                         isLoading === "movie" && "opacity-75 pointer-events-none"
                                     )}
                                 >
                                     <div className="flex items-center justify-between w-full mb-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-brand-secondary/15 border border-brand-secondary/30 text-brand-secondary flex items-center justify-center transition-transform duration-fast ease-out-strong [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 shadow-md shadow-brand-secondary/20">
+                                        <div className="w-14 h-14 rounded-2xl bg-brand-secondary/15 border border-brand-secondary/30 text-brand-secondary flex items-center justify-center transition-transform duration-fast ease-out-strong motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 shadow-[shadow:var(--double-bezel-ring)]">
                                             <LoadSwap
                                                 loading={isLoading === "movie"}
                                                 skeleton={<IconUiSpinner className="w-6 h-6 animate-spin text-brand-secondary" />}
@@ -429,19 +380,19 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                                 <IconMediaClapperboard className="w-7 h-7" />
                                             </LoadSwap>
                                         </div>
-                                        <span className="px-2.5 py-1 rounded-full bg-white/[0.06] group-hover:bg-brand-secondary/20 text-on-surface-variant group-hover:text-brand-secondary text-2xs font-semibold transition-colors border border-white/10 group-hover:border-brand-secondary/30">
+                                        <span className="px-2.5 py-1 rounded-full bg-[var(--neutral-elev-2)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-brand-secondary/20 text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-secondary text-2xs font-semibold transition-colors border border-[var(--neutral-separator)] [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-brand-secondary/30">
                                             Cine
                                         </span>
                                     </div>
 
-                                    <h3 className="text-lg font-bold text-on-surface group-hover:text-brand-secondary transition-colors">
+                                    <h3 className="text-lg font-bold text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-secondary transition-colors">
                                         Películas
                                     </h3>
                                     <p className="text-xs text-label-2 mt-1 leading-relaxed font-medium">
                                         Reproduce una película, OVA o especial al azar.
                                     </p>
 
-                                    <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-secondary group-hover:translate-x-1 transition-transform">
+                                    <div className="mt-6 flex items-center gap-1.5 text-xs font-bold text-brand-secondary motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-1 transition-transform">
                                         <span>Ver una película</span>
                                         <span aria-hidden="true">›</span>
                                     </div>
@@ -455,7 +406,7 @@ export function RandomPlayButton({ modalOnly = false }: { modalOnly?: boolean } 
                                 </p>
                             </div>
                         </m.div>
-                    </div>
+                    </PickerLayer>
                 )}
             </AnimatePresence>
         </>

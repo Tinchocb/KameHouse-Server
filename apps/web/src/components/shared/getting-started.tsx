@@ -2,8 +2,7 @@ import { Status } from "@/api/generated/types"
 import { useGettingStarted } from "@/api/hooks/settings.hooks"
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/components/ui/core/styling"
-import { getDefaultSettings, gettingStartedSchema } from "@/lib/server/settings"
+import { buildGettingStartedPayload } from "@/lib/server/settings"
 import React from "react"
 import { IconNavigationHome, IconNavigationRocket } from "@/components/ui/icons"
 import { toast } from "sonner"
@@ -12,6 +11,7 @@ import { usePlayerStore } from "@/lib/store"
 import { LibraryStep } from "@/components/shared/getting-started-steps/library-step"
 import { AnimatePresence, m } from "framer-motion"
 import { useReducedMotion } from "@/components/ui/kinetics/hooks"
+import { useIsClassicMode } from "@/lib/theme/use-classic-mode"
 
 /* ---------------- GETTING STARTED: un solo paso obligatorio ----------------
    Sólo se pregunta dónde están los episodios. Motor de vídeo (FFmpeg), reproducción
@@ -20,29 +20,25 @@ import { useReducedMotion } from "@/components/ui/kinetics/hooks"
 export function GettingStarted({
     status,
     onClose,
-    isModal = false,
-    embedded = false,
 }: {
     status: Status
     onClose?: () => void
-    isModal?: boolean
-    embedded?: boolean
 }) {
-    const { mutate: mutateStart, isPending } = useGettingStarted()
+    const { mutateAsync: saveSetup, isPending } = useGettingStarted()
     const navigate = useNavigate()
     const reduceMotion = useReducedMotion()
+    const isClassic = useIsClassicMode()
     const currentSettings = status?.settings
-    const hasSavedSettings = !!currentSettings?.id
+    const canSkipSetup = !status.setupRequired
 
     const [paths, setPaths] = React.useState<string[]>(() => currentSettings?.library?.seriesPaths ?? [])
 
-    // El player lee marathon/tvMode del store local, no del servidor:
+    // El player lee maratón del store local, no del servidor:
     // sincronizar al guardar para no quedar divergente hasta pasar por Ajustes.
-    const syncLocalPlaybackModes = (lib: { marathonMode?: boolean; tvMode?: boolean } | undefined) => {
+    const syncLocalPlaybackModes = (lib: { marathonMode?: boolean } | undefined) => {
         try {
             const st = usePlayerStore.getState()
             st.setMarathonMode?.(lib?.marathonMode ?? currentSettings?.library?.marathonMode ?? false)
-            st.setTvMode?.(lib?.tvMode ?? currentSettings?.library?.tvMode ?? false)
         } catch {}
     }
 
@@ -61,81 +57,58 @@ export function GettingStarted({
 
     const canContinue = paths.length > 0
 
-    const handleSave = () => {
-        if (!canContinue) return
-        const lib = currentSettings?.library
-        // Valores por defecto razonables para lo que ya no se pregunta; si había
-        // ajustes guardados se respetan (el onboarding no pisa nada).
-        const data = gettingStartedSchema.parse({
-            enableTranscode: currentSettings?.mediastream?.transcodeEnabled ?? false,
-            mediaPlayer: currentSettings?.mediaPlayer || {},
-            library: {
-                enableRichPresence: false,
-                enableWatchContinuity: lib?.enableWatchContinuity ?? true,
-                autoDetectSkipTimes: lib?.autoDetectSkipTimes ?? true,
-                autoPlayNextEpisode: lib?.autoPlayNextEpisode ?? true,
-                autoScan: lib?.autoScan ?? false,
+    const handleSave = async (source: "local" | "drive") => {
+        if (isPending || (source === "local" && !canContinue)) return
+        try {
+            // Dentro del try: si la validación falla, el usuario ve el aviso y no un botón que no hace nada.
+            const payload = buildGettingStartedPayload({
+                current: currentSettings,
+                mediastream: status.mediastreamSettings,
                 seriesPaths: paths,
-                moviePaths: lib?.moviePaths ?? [],
-                disableLocalScanning: lib?.disableLocalScanning ?? false,
-                disableCloudSource: lib?.disableCloudSource ?? false,
-                tmdbApiKey: lib?.tmdbApiKey || "",
-                scannerProvider: lib?.scannerProvider || "tmdb",
-                tmdbLanguage: lib?.tmdbLanguage || "es-MX",
-            },
-            notifications: {
-                disableNotifications: currentSettings?.notifications?.disableNotifications ?? false,
-                disableAutoScannerNotifications: currentSettings?.notifications?.disableAutoScannerNotifications ?? false,
-            },
-        })
-        const payload = getDefaultSettings(data, currentSettings)
-
-        mutateStart(payload, {
-            onSuccess: () => {
-                syncLocalPlaybackModes(data.library)
-                toast.success("Carpeta guardada. Ya puedes explorar KameHouse.")
-                handleGoToHome()
-            },
-            onError: () => {
-                toast.error("No se pudo guardar la carpeta", { description: "Inténtalo de nuevo." })
-            },
-        })
+            })
+            await saveSetup(payload)
+            syncLocalPlaybackModes(payload.library)
+        } catch {
+            toast.error("No se pudo guardar la configuración", { description: "Inténtalo de nuevo." })
+            return
+        }
+        onClose?.()
+        if (source === "drive") {
+            await navigate({ to: "/settings", search: { tab: "library" }, hash: "google-drive-integration" })
+        } else {
+            await navigate({ to: "/home" })
+        }
     }
-
-    // Pantalla completa: es el contenido principal de la página (axe landmark-one-main / region).
-    const Root = embedded || isModal ? "div" : "main"
 
     // Formulario y overlay de carga se alternan con AnimatePresence (mode="wait"): el formulario
     // sale con un fundido corto (80 ms) y el overlay sale con el suyo (150 ms) antes de que entre el contenido.
     const content = (
         <m.div key="content" className="w-full" exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.08 } }}>
-            <Root className={cn(
-                "w-full bg-bg-primary relative flex flex-col justify-between select-none overflow-hidden",
-                embedded ? "rounded-2xl border border-[var(--neutral-separator)] p-4 sm:p-6" : isModal ? "p-4 sm:p-6" : "min-h-[100dvh] h-[100dvh]"
-            )}>
-                {/* Fondo: velo fijo con tres colores de era desde las esquinas, sin orbes
-                    flotantes (misma línea que el fondo del Modo por Era). */}
+            <main className="w-full bg-bg-primary relative flex flex-col justify-between select-none overflow-hidden min-h-[100dvh] h-[100dvh]">
+                {/* Fondo: velo fijo con tres colores de era desde las esquinas en Modo Era,
+                    o gradiente acromático sutil en Modo Neutro (sin orbes flotantes). */}
                 <div
                     aria-hidden
                     className="absolute inset-0 overflow-hidden pointer-events-none"
                     style={{
-                        background: [
-                            "radial-gradient(90% 70% at 0% 0%, color-mix(in srgb, var(--era-db-hex) 14%, transparent), transparent 60%)",
-                            "radial-gradient(80% 65% at 100% 0%, color-mix(in srgb, var(--era-dbz-hex) 10%, transparent), transparent 60%)",
-                            "radial-gradient(90% 70% at 100% 100%, color-mix(in srgb, var(--era-dbgt-hex) 10%, transparent), transparent 60%)",
-                        ].join(", "),
+                        background: isClassic
+                            ? "radial-gradient(90% 70% at 50% 0%, rgba(255, 255, 255, 0.03), transparent 70%)"
+                            : [
+                                "radial-gradient(90% 70% at 0% 0%, color-mix(in srgb, var(--era-db-hex) 14%, transparent), transparent 60%)",
+                                "radial-gradient(80% 65% at 100% 0%, color-mix(in srgb, var(--era-dbz-hex) 10%, transparent), transparent 60%)",
+                                "radial-gradient(90% 70% at 100% 100%, color-mix(in srgb, var(--era-dbgt-hex) 10%, transparent), transparent 60%)",
+                            ].join(", "),
                     }}
                 />
 
                 {/* Top header bar */}
-                {!isModal && !embedded && (
-                    <div className="w-full relative z-10 px-4 sm:px-8 pt-4 sm:pt-6 flex justify-between items-center border-b border-[var(--neutral-separator)] pb-3">
+                <div className="w-full relative z-10 px-4 sm:px-8 pt-4 sm:pt-6 flex justify-between items-center border-b border-[var(--neutral-separator)] pb-3">
                         <span className="font-display text-lg sm:text-xl font-bold text-on-surface">
                             KameHouse
                         </span>
 
-                        {/* Con ajustes ya guardados el paso no es obligatorio: se puede volver. */}
-                        {hasSavedSettings && (
+                        {/* Con el asistente ya completado el paso no es obligatorio: se puede volver. */}
+                        {canSkipSetup && (
                             <Button
                                 type="button"
                                 size="sm"
@@ -147,37 +120,36 @@ export function GettingStarted({
                             </Button>
                         )}
                     </div>
-                )}
 
                 {/* Middle scrollable content */}
-                <div className="w-full flex-1 overflow-y-auto relative z-10 px-4 sm:px-8 py-3 sm:py-5 flex flex-col justify-center items-center">
-                    <div className="w-full max-w-2xl">
-                        <LibraryStep paths={paths} onAdd={addPath} onRemove={removePath} />
+                <div className="w-full flex-1 overflow-y-auto relative z-10 px-4 sm:px-8 py-3 sm:py-5 flex flex-col items-center">
+                    <div className="w-full max-w-2xl my-auto">
+                        <LibraryStep paths={paths} onAdd={addPath} onRemove={removePath} onChooseDrive={() => void handleSave("drive")} />
                     </div>
                 </div>
 
                 {/* Bottom action bar */}
-                <div className="w-full relative z-20 bg-surface/90 backdrop-blur-overlay-md border-t border-[var(--neutral-separator)] px-4 sm:px-8 py-3.5 flex justify-between items-center gap-3 max-w-3xl mx-auto rounded-t-2xl shadow-modal mt-2">
+                <div className="w-full relative z-20 bg-surface/90 backdrop-blur-overlay-md border border-b-0 border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] px-4 sm:px-8 py-3.5 flex justify-between items-center gap-3 max-w-3xl mx-auto rounded-t-2xl shadow-[shadow:var(--double-bezel-shadow)] mt-2">
                     <p id="getting-started-hint" className="text-xs text-on-surface-variant min-w-0">
                         {canContinue
                             ? "Podrás ajustar el resto cuando quieras desde Ajustes."
-                            : "Añade al menos una carpeta para continuar."}
+                            : "Selecciona una carpeta local o continúa con Google Drive."}
                     </p>
                     <Button
                         type="button"
                         intent="primary"
-                        size="sm"
-                        onClick={handleSave}
+                        size="md"
+                        onClick={() => void handleSave("local")}
                         disabled={!canContinue}
                         aria-describedby="getting-started-hint"
                         className="shrink-0 px-6"
                         loading={isPending}
                         rightIcon={<IconNavigationRocket className="w-4 h-4" />}
                     >
-                        Guardar y continuar
+                        Abrir biblioteca
                     </Button>
                 </div>
-            </Root>
+            </main>
         </m.div>
     )
 

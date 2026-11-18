@@ -1,3 +1,4 @@
+import { PresenceSurface } from "@/components/ui/kinetics/presence-surface"
 import React, { useState, useMemo, useCallback, useEffect, useLayoutEffect } from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import { createLazyFileRoute, useNavigate, useRouter } from '@tanstack/react-router';
@@ -6,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { VOLUMES_DATA, LEGACY_VOLUME_TO_SPANS } from '@/components/chronology/data/volumes';
 import type { VolumeData, EraFilter } from '@/components/chronology/types';
 import type { EraProgress } from '@/components/chronology/ChronologyEraNav';
-import { compareInUniverse } from '@/components/chronology/data/spansToVolumes';
 import { compareRelease, type TimelineOrder } from '@/components/chronology/data/releaseOrder';
 import { CompactTimeline } from '@/components/chronology/CompactTimeline';
 import { TimelineControls } from '@/components/chronology/TimelineControls';
@@ -20,20 +20,20 @@ import { ChronologyBackdrop } from '@/components/chronology/ChronologyBackdrop';
 import { AlternatingTimeline } from '@/components/chronology/AlternatingTimeline';
 import { groupVolumesByEra } from '@/components/chronology/data/spansToVolumes';
 import { neutralizeVolume } from '@/components/chronology/data/neutralChrome';
-import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
+import { useIsClassicMode, useIsMinimalistMode } from '@/lib/theme/use-classic-mode';
 import { type MomentPlayInfo } from '@/components/chronology/types';
 import { useSpringPreset, useReducedMotion, useMotionTier } from '@/components/ui/kinetics/hooks';
 
 const VolumeInspectorModal = React.lazy(() =>
   import('@/components/chronology/VolumeInspectorModal').then((mod) => ({ default: mod.VolumeInspectorModal }))
 );
-import { useGetChronologyMomentTimes } from '@/api/hooks/chronology.hooks';
 import { useGetLibraryCollection } from '@/api/hooks/anime_collection.hooks';
 import { getSafeCollectionEntries } from '@/lib/helpers/collection';
 import { DRAGON_BALL_SERIES } from '@/lib/config/dragonball_sagas';
 import { DRAGON_BALL_STORY_SPANS } from '@/lib/config/dragonball_story_spans';
-import { getVolumeLoreEnrichment } from '@/components/chronology/data/loreEnrichment';
-import { computeEraBar, eraOfSectionId, ERA_FILTER_BY_SERIES, sectionIdForEra, type EraKey } from '@/components/chronology/data/eraBar';
+import { computeEraBar, eraOfSectionId, ERA_FILTER_BY_SERIES, sectionIdForEra, THEME_ERA_BY_ERA_KEY, type EraKey } from '@/components/chronology/data/eraBar';
+import { useScreenEra } from '@/lib/theme/screen-era';
+import { useSettledValue } from '@/hooks/use-settled-value';
 import { useSectionSpy } from '@/components/chronology/utils/sectionSpy';
 import { scrollToSection } from '@/components/chronology/utils/scrollToSection';
 import { ScrollProgress } from '@/components/ui/kinetics/scroll-progress';
@@ -82,6 +82,69 @@ const ENRICHED_VOLUME_CACHE = new Map<string, VolumeData>();
 /** Sin secciones: el espía de eras no mide nada mientras la lista todavía no está montada. */
 const NO_SECTIONS: readonly string[] = [];
 
+interface TimelineEraTransitionProps {
+  eraKey: string;
+  reduceMotion: boolean;
+  motionTier: string;
+  children: React.ReactNode;
+}
+
+/**
+ * Contenedor con transición cinematográfica entre eras y vistas.
+ * Al cambiar de era, la era anterior se desvanece suavemente con un leve desplazamiento hacia arriba,
+ * el scroll se restablece limpiamente al inicio mientras la opacidad es 0 (evitando cualquier salto visible),
+ * y la nueva era emerge flotando hacia su posición final con aceleración por GPU.
+ */
+function TimelineEraTransition({
+  eraKey,
+  reduceMotion,
+  motionTier,
+  children,
+}: TimelineEraTransitionProps) {
+  const isMinimalist = useIsMinimalistMode();
+
+  useLayoutEffect(() => {
+    const scroller = document.getElementById('main-content');
+    if (scroller) {
+      scroller.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+
+    const raf = requestAnimationFrame(() => {
+      if (scroller) scroller.scrollTop = 0;
+      window.scrollTo(0, 0);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [eraKey]);
+
+  const enterDuration = reduceMotion ? 0.12 : isMinimalist ? 0.18 : 0.25;
+  const exitDuration = reduceMotion ? 0.08 : 0.11;
+  const travel = !reduceMotion && motionTier === 'full' ? (isMinimalist ? 6 : 10) : 0;
+
+  return (
+    <PresenceSurface
+      initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: travel }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        transition: { duration: enterDuration, ease: [0.22, 1, 0.36, 1] },
+      }}
+      exit={{
+        opacity: 0,
+        y: reduceMotion ? 0 : -Math.round(travel * 0.6),
+        transition: { duration: exitDuration, ease: [0.22, 1, 0.36, 1] },
+      }}
+      className="flex-1 w-full py-2 flex flex-col gap-6"
+    >
+      {children}
+    </PresenceSurface>
+  );
+}
+
 function ChronologyPage() {
   const searchParams = Route.useSearch();
   const reduceMotion = useReducedMotion();
@@ -109,9 +172,7 @@ function ChronologyPage() {
   const [prevEraParam, setPrevEraParam] = React.useState(searchParams.era);
   if (searchParams.era !== prevEraParam) {
     setPrevEraParam(searchParams.era);
-    if (searchParams.era) {
-      setEraFilter(parseEraParam(searchParams.era));
-    }
+    setEraFilter(parseEraParam(searchParams.era));
   }
 
   const [prevHighlightParam, setPrevHighlightParam] = React.useState(searchParams.highlight);
@@ -128,7 +189,6 @@ function ChronologyPage() {
   }
 
   const searchQuery = searchParams.q ?? '';
-  const { data: serverMomentTimes } = useGetChronologyMomentTimes();
 
   // La lista se monta después del primer pintado (DeferredMount) salvo con ?highlight: el deep-link necesita
   // su fila en el DOM al hacer el salto. Si el resaltado llega con la instancia ya montada y la lista todavía
@@ -279,11 +339,10 @@ function ChronologyPage() {
           ? `${vol.sagaLabel} • ${vol.subtitle.includes('•') ? vol.subtitle.split(' • ').slice(1).join(' • ') : vol.subtitle}`
           : vol.subtitle;
 
-      const lore = getVolumeLoreEnrichment(vol.id);
-      const fillerEpisodes = isKai ? [] : (lore?.fillerEpisodes ?? vol.fillerEpisodes);
+      const fillerEpisodes = isKai ? [] : vol.fillerEpisodes;
       const recommendedStartEpisode = isKaiFiller
         ? undefined
-        : (kaiStart ?? lore?.recommendedStartEpisode ?? vol.recommendedStartEpisode);
+        : (kaiStart ?? vol.recommendedStartEpisode);
 
       const enriched: VolumeData = {
         ...vol,
@@ -298,12 +357,16 @@ function ChronologyPage() {
         episodesRange,
         fillerEpisodes,
         recommendedStartEpisode,
-        previouslyOn: lore?.previouslyOn ?? vol.previouslyOn,
-        quickCatchUpKeys: lore?.quickCatchUpKeys ?? vol.quickCatchUpKeys,
+        previouslyOn: vol.previouslyOn,
+        quickCatchUpKeys: vol.quickCatchUpKeys,
       };
+      if (ENRICHED_VOLUME_CACHE.size >= 200) {
+        const oldestKey = ENRICHED_VOLUME_CACHE.keys().next().value;
+        if (oldestKey !== undefined) ENRICHED_VOLUME_CACHE.delete(oldestKey);
+      }
       ENRICHED_VOLUME_CACHE.set(cacheKey, enriched);
       return enriched;
-    }).sort(compareInUniverse);
+    });
   }, [seriesMediaMap, zVariant]);
 
   // Avance por lapso (historial + marcas manuales), guardado en el servidor.
@@ -391,6 +454,7 @@ function ChronologyPage() {
         q: targetQ,
       }),
       replace: true,
+      resetScroll: false,
     });
   }, [eraFilter, searchQuery, searchParams.era, searchParams.q, navigate]);
 
@@ -449,26 +513,26 @@ function ChronologyPage() {
   const spySectionId = useSectionSpy(listMounted ? sectionIds : NO_SECTIONS);
   const spyEraId: EraFilter | undefined = eraOfSectionId(spySectionId) ?? undefined;
 
-  // Cambiar el filtro y asegurar que la vista comience al tope del contenido de la era elegida.
+  // Universo DB sigue la era que se está viendo. Espera a que el scroll se asiente para no
+  // encadenar fundidos al cruzar varias eras de un tirón.
+  const visibleEra = useSettledValue(spyEraId ?? (eraFilter !== 'all' ? eraFilter : undefined), 250);
+  useScreenEra(visibleEra ? THEME_ERA_BY_ERA_KEY[visibleEra] : null);
+
+  // Cambiar el filtro o volver suavemente al inicio si se toca la era actualmente activa.
   const applyEraFilter = useCallback(
     (next: EraFilter) => {
-      setEraFilter(next);
-      const scroller = document.getElementById('main-content');
-      if (scroller) {
-        scroller.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      if (next === eraFilter) {
+        const scroller = document.getElementById('main-content');
+        if (scroller) {
+          scroller.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+        }
+        window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+        return;
       }
-      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      setEraFilter(next);
     },
-    [reduceMotion]
+    [eraFilter, reduceMotion]
   );
-
-  // Al cambiar de era elegida (o volver a todas), asegura que el scroll quede al inicio del nuevo contenido
-  useEffect(() => {
-    const scroller = document.getElementById('main-content');
-    if (scroller && scroller.scrollTop > 0) {
-      scroller.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
-    }
-  }, [eraFilter, reduceMotion]);
 
   /**
    * Barra de eras: tocar una era filtra la línea de tiempo a esa era y comienza desde el primer lapso.
@@ -544,6 +608,10 @@ function ChronologyPage() {
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (inspectorOpen || pendingMarathon !== null || document.querySelector('[role="dialog"]')) {
+        return;
+      }
       const target = e.target as HTMLElement | null;
       if (
         target &&
@@ -578,7 +646,7 @@ function ChronologyPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filteredVolumes, highlightedVolumeId, handleToggleRead, handlePlayVolume, motionTier]);
+  }, [filteredVolumes, highlightedVolumeId, handleToggleRead, handlePlayVolume, motionTier, inspectorOpen, pendingMarathon]);
 
   // Vacío y error entran con el preset canónico (guía §5.7).
   const emptyStateSpring = useSpringPreset('entrance');
@@ -590,9 +658,9 @@ function ChronologyPage() {
   );
 
   return (
-    <div className="neutro-sentence relative min-h-screen text-on-surface overflow-x-hidden selection:bg-brand-accent/30 font-sans">
+    <div className="neutro-sentence relative min-h-dvh text-on-surface overflow-x-clip selection:bg-brand-accent/30 font-sans">
       {/* Fondo cinematográfico inmersivo de la cronología con aura y transición de eras */}
-      <ChronologyBackdrop eraFilter={spyEraId ?? eraFilter} />
+      <ChronologyBackdrop eraFilter={visibleEra ?? 'all'} />
 
       {/* Cuánto de la línea de tiempo se recorrió (página muy larga). */}
       <ScrollProgress />
@@ -620,7 +688,7 @@ function ChronologyPage() {
               volumes={filteredVolumes}
               accentByEra={yearScaleAccents}
               onJumpToVolume={handleJumpToScaleVolume}
-              className="mb-2"
+              className="mb-2 max-w-[1440px] mx-auto"
             />
           )}
 
@@ -631,32 +699,35 @@ function ChronologyPage() {
             immediate={!deferList}
             onMount={handleListMounted}
           >
-          <AnimatePresence initial={false}>
-          <m.div
-            // Al cambiar de era o vista la lista entra con un fundido corto, solo de opacidad
-            // (--duration-quick y --ease-out): el desplazamiento lo dan las filas, sin doble entrada.
-            // `initial={false}` en AnimatePresence: la primera vez no anima, y con movimiento reducido tampoco.
+          <AnimatePresence initial={false} mode="wait">
+          <TimelineEraTransition
             key={`${view}|${eraFilter}|${zVariant}`}
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
-            className="flex-1 w-full py-2 flex flex-col gap-6"
+            eraKey={`${view}|${eraFilter}|${zVariant}`}
+            reduceMotion={Boolean(reduceMotion)}
+            motionTier={motionTier}
           >
             {filteredVolumes.length === 0 ? (
               <div className="flex min-h-[50vh] items-center justify-center px-4">
                 <m.div
-                  initial={{ opacity: 0, scale: 0.95, y: 16 }}
+                  initial={reduceMotion ? false : { opacity: 0, scale: 0.98, y: 8 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={emptyStateSpring}
                   className="glass-card rounded-3xl p-8 max-w-md w-full text-center border border-[var(--glass-border-side)] shadow-elevation-2 space-y-3"
                 >
-                  <h3 className="font-display text-lg font-bold text-on-surface">Sin resultados</h3>
+                  <h2 className="font-display text-lg font-bold text-on-surface text-balance">Sin resultados</h2>
                   <p className="text-sm text-label-2">
                     No hay lapsos para los filtros elegidos
                     {searchQuery && ` con la búsqueda «${searchQuery}»`}.
                   </p>
                   <div className="pt-2">
-                    <Button intent="primary" onClick={() => { applyEraFilter('all'); }}>
+                    <Button intent="primary" onClick={() => {
+                      void navigate({
+                        to: '/chronology',
+                        search: (prev) => ({ ...prev, era: undefined, q: undefined }),
+                        replace: true,
+                        resetScroll: false,
+                      });
+                    }}>
                       Restablecer filtros
                     </Button>
                   </div>
@@ -683,8 +754,6 @@ function ChronologyPage() {
                 volumes={filteredVolumes}
                 readVolumeIds={readVolumeIds}
                 progressById={progressById}
-                serverMomentTimes={serverMomentTimes}
-                onToggleRead={handleToggleRead}
                 showInterludes={showInterludes}
                 onInspectThumbnail={handleOpenInspector}
                 onPlayVolume={handlePlayVolume}
@@ -699,7 +768,7 @@ function ChronologyPage() {
                 )}
               </>
             )}
-          </m.div>
+          </TimelineEraTransition>
           </AnimatePresence>
           </DeferredMount>
 

@@ -37,7 +37,7 @@ declare module "jassub" {
         setCurrentTime(time: number): void
         setVolume(volume: number): void
         setIsPaused(isPaused: boolean): void
-        resize(forceRepaint?: boolean): Promise<void>
+        resize(forceRepaint?: boolean, renderWidth?: number, renderHeight?: number): Promise<void>
     }
 
     export default JASSUB

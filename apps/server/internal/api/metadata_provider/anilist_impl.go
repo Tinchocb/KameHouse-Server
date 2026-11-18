@@ -11,7 +11,6 @@ import (
 	apiMetadata "kamehouse/internal/api/metadata"
 	"kamehouse/internal/api/tmdb"
 	"kamehouse/internal/database/db"
-	"kamehouse/internal/database/models"
 	"kamehouse/internal/platforms/platform"
 
 	"github.com/rs/zerolog"
@@ -61,7 +60,7 @@ func (p *AniListProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetada
 	// 2. Check Database Persistent Cache
 	if p.db != nil {
 		var cachedData apiMetadata.AnimeMetadata
-		found, err := db.GetMetadataCache(p.db, "anilist-anime-episodes", strconv.Itoa(id), &cachedData)
+		found, err := db.GetMetadataCache(p.db, "anilist-anime-episodes", "public-v2:"+strconv.Itoa(id), &cachedData)
 		if err == nil && found {
 			p.mu.Lock()
 			p.cache[id] = &anilistCachedEntry{
@@ -80,17 +79,7 @@ func (p *AniListProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetada
 		return nil, fmt.Errorf("database required to map local ID to AniList")
 	}
 
-	var media *models.LibraryMedia
-	var err error
-	if m, errGet := db.GetLibraryMediaByID(p.db, uint(id)); errGet == nil && m != nil {
-		media = m
-	} else {
-		if id >= 1_000_000 {
-			media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id-1_000_000, "MOVIE")
-		} else {
-			media, err = db.GetLibraryMediaByTmdbIdAndType(p.db, id, "SHOW")
-		}
-	}
+	media, err := db.ResolveLibraryMediaByPublicID(p.db, id)
 	if err != nil || media == nil {
 		return nil, fmt.Errorf("media not found in library for ID %d", id)
 	}
@@ -213,7 +202,7 @@ func (p *AniListProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetada
 
 	// 3. Save to Database Persistent Cache
 	if p.db != nil {
-		_ = db.UpsertMetadataCache(p.db, "anilist-anime-episodes", strconv.Itoa(id), result, 7*24*time.Hour)
+		_ = db.UpsertMetadataCache(p.db, "anilist-anime-episodes", "public-v2:"+strconv.Itoa(id), result, 7*24*time.Hour)
 	}
 
 	return result, nil
@@ -222,8 +211,6 @@ func (p *AniListProviderImpl) GetAnimeMetadata(id int) (*apiMetadata.AnimeMetada
 func (p *AniListProviderImpl) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *apiMetadata.AnimeMetadata) AnimeMetadataWrapper {
 	return NewSimpleAnimeMetadataWrapper(animeMetadata)
 }
-
-func (p *AniListProviderImpl) SetUseFallbackProvider(v bool) {}
 
 func (p *AniListProviderImpl) ClearCache() {
 	p.mu.Lock()

@@ -53,14 +53,6 @@ var noiseWords = map[string]struct{}{
 // Suffixes commonly found in file names that should be stripped for better matching
 var fileSuffixRegex = regexp.MustCompile(`(?i)\s*[\(\[](dub|dubbed|sub|subbed|bd|bluray|blu-ray|bdrip|dvd|dvdrip|web|web-dl|webrip|remux|dual[- ]?audio|multi[- ]?subs?|uncensored|censored|batch|complete|hevc|x264|x265|h\.?264|h\.?265|10bit|aac|flac|1080p|720p|480p|4k|2160p)[\)\]]`)
 
-// Roman numerals
-// Note: skip I and X bc they are ambiguous
-var romanToNumber = map[string]string{
-	"ii": "2", "iii": "3", "iv": "4", "v": "5",
-	"vi": "6", "vii": "7", "viii": "8", "ix": "9",
-	"xi": "11", "xii": "12", "xiii": "13",
-}
-
 // isSeparatorChar returns true for characters that should be normalized to spaces
 func isSeparatorChar(r rune) bool {
 	switch r {
@@ -125,14 +117,11 @@ var (
 
 // NormalizedTitle holds the normalized form and extracted metadata
 type NormalizedTitle struct {
-	Original       string
-	Normalized     string
-	Tokens         []string
-	Season         int
-	Part           int
-	Year           int
-	CleanBaseTitle string // Title without season/part/year info
-	IsMain         bool   // Whether this title is a main title (romaji,english)
+	Original string
+	Tokens   []string
+	Season   int
+	Year     int
+	IsMain   bool // Whether this title is a main title (romaji,english)
 }
 
 var titleReplacer = strings.NewReplacer(
@@ -169,29 +158,15 @@ func NormalizeTitle(title string) *NormalizedTitle {
 	result := &NormalizedTitle{
 		Original: title,
 		Season:   -1,
-		Part:     -1,
 		Year:     -1,
 	}
 
 	// Extract metadata
 	result.Season = comparison.ExtractSeasonNumber(title)
-	result.Part = ExtractPartNumber(title)
 	result.Year = ExtractYear(title)
 
-	// Normalize the full title
-	normalizedFull := normalizeString(title)
-	result.Normalized = normalizedFull
-
-	// Tokenize
-	result.Tokens = tokenize(normalizedFull)
-
-	// Create a clean base title (without season/part/year markers)
-	// Since normalizeString already removes season and part markers, we only need to remove the year in parentheses.
-	cleanTitle := title
-	if strings.Contains(title, "(") {
-		cleanTitle = yearParenRegex.ReplaceAllString(title, " ")
-	}
-	result.CleanBaseTitle = normalizeString(cleanTitle)
+	// Normalize the full title and tokenize
+	result.Tokens = tokenize(normalizeString(title))
 
 	return result
 }
@@ -357,44 +332,6 @@ func tokenize(s string) []string {
 		result = append(result, s[fieldStart:])
 	}
 	return result
-}
-
-// removeSeasonPartMarkers removes season/part indicators from a title
-// ExtractPartNumber extracts the part number from a title string
-func ExtractPartNumber(val string) int {
-	val = strings.ToLower(val)
-
-	// Check explicit patterns first: "Part 2", "Cour 2"
-	matches := partPatternExplicit.FindStringSubmatch(val)
-	if len(matches) > 1 {
-		if num, err := strconv.Atoi(matches[1]); err == nil {
-			return num
-		}
-	}
-
-	// Check ordinal patterns, e.g. "2nd Part", "2nd Cour"
-	matches = partPatternOrdinal.FindStringSubmatch(val)
-	if len(matches) > 1 {
-		if num, err := strconv.Atoi(matches[1]); err == nil {
-			return num
-		}
-	}
-
-	// Check roman numeral patterns, e.g. "Part II", not I or X since they're ambiguous
-	matches = partPatternRoman.FindStringSubmatch(val)
-	if len(matches) > 1 {
-		romanNum := strings.ToLower(matches[1])
-		if romanNum == "i" || romanNum == "x" {
-			return -1
-		}
-		if numStr, ok := romanToNumber[romanNum]; ok {
-			if num, err := strconv.Atoi(numStr); err == nil {
-				return num
-			}
-		}
-	}
-
-	return -1
 }
 
 // ExtractYear extracts a year from a title string

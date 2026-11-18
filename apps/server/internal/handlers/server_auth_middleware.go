@@ -56,6 +56,9 @@ func (h *Handler) isAuthorized(c echo.Context) bool {
 		if h.isCorrectPasswordToken(token) {
 			return true
 		}
+		if h.isAPISessionToken(token) {
+			return true
+		}
 		if h.isValidHMACToken(token, c.Request().Method, path) {
 			return true
 		}
@@ -86,6 +89,8 @@ var streamTokenPathPrefixes = []string{
 	"/api/v1/mediastream/att/",
 	"/api/v1/drive/play",
 	"/api/v1/video-thumbnail",
+	"/api/v1/video-storyboard",
+	"/api/v1/image-proxy",
 	"/api/v1/music/stream",
 }
 
@@ -144,6 +149,7 @@ var sensitiveMethodRoutes = map[string][]string{
 	"/api/v1/mediastream/settings": {http.MethodPatch},
 	"/api/v1/drive/callback":       {http.MethodPost},
 	"/api/v1/drive/disconnect":     {http.MethodPost},
+	"/api/v1/drive/auth-url":       {http.MethodGet},
 }
 
 // lanWriteRoutes son las únicas rutas de escritura (POST/PUT/PATCH/DELETE) que
@@ -205,14 +211,16 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 		path := c.Request().URL.Path
 
 		// Endpoints públicos que no requieren autenticación:
-		// Login, Logout, Status y Callback OAuth de Google Drive (protegido por CSRF state token).
-		if path == "/api/v1/auth/login" ||
-			path == "/api/v1/auth/logout" ||
-			path == "/api/v1/status" ||
+		// Status y Callback OAuth de Google Drive (protegido por CSRF state token).
+		if path == "/api/v1/status" ||
 			(path == "/api/v1/drive/callback" && c.Request().Method == "GET") {
 
-			if path == "/api/v1/status" {
-				if !h.isAuthorized(c) {
+			if path == "/api/v1/status" && h.App.Config != nil && h.App.Config.Server.Password != "" {
+				ok, err := authorizeWithRateLimit(c, func() bool { return h.isAuthorized(c) })
+				if err != nil || c.Response().Committed {
+					return err
+				}
+				if !ok {
 					c.Set("unauthenticated", true)
 				}
 			}
@@ -232,7 +240,11 @@ func (h *Handler) OptionalAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc
 
 		// Todos los demás endpoints (streaming, proxy, local-files, explorer,
 		// directory-selector, websocket, etc.) requieren autorización válida cuando hay password configurada.
-		if h.isAuthorized(c) {
+		ok, err := authorizeWithRateLimit(c, func() bool { return h.isAuthorized(c) })
+		if err != nil || c.Response().Committed {
+			return err
+		}
+		if ok {
 			return next(c)
 		}
 

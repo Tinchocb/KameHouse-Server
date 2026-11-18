@@ -3,8 +3,6 @@ import {
     findActiveChapter,
     findSkippableChapter,
     getChapterSkipKey,
-    getNextChapterTarget,
-    getPrevChapterTarget,
 } from "./chapter-navigation"
 import type { Chapter } from "./skip-windows"
 
@@ -28,28 +26,6 @@ describe("findActiveChapter", () => {
     it("devuelve null fuera de capítulos", () => {
         expect(findActiveChapter(chapters, 1400)).toBeNull()
         expect(findActiveChapter([], 10)).toBeNull()
-    })
-})
-
-describe("getNextChapterTarget", () => {
-    it("salta al siguiente inicio con ventana de 0.5s", () => {
-        expect(getNextChapterTarget(chapters, 10)).toBe(85)
-        expect(getNextChapterTarget(chapters, 84.8)).toBe(600)
-    })
-
-    it("devuelve null si no hay siguiente", () => {
-        expect(getNextChapterTarget(chapters, 1250)).toBeNull()
-    })
-})
-
-describe("getPrevChapterTarget", () => {
-    it("retrocede con histéresis de 1.5s", () => {
-        expect(getPrevChapterTarget(chapters, 700)).toBe(660)
-        expect(getPrevChapterTarget(chapters, 90)).toBe(85)
-    })
-
-    it("devuelve 0 al inicio", () => {
-        expect(getPrevChapterTarget(chapters, 10)).toBe(0)
     })
 })
 

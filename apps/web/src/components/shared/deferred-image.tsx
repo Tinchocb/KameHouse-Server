@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/components/ui/core/styling';
 import { IconStatusImageOff } from "@/components/ui/icons";
 import { usePerformanceStore, selectIsHeavyEffectsAllowed } from '@/lib/hardware/performance-store';
-import { isImageLoaded, markImageLoaded, isTmdbImageUrl, withTmdbSize, localImage } from '@/lib/helpers/images';
+import { isImageLoaded, markImageLoaded, isTmdbImageUrl, withTmdbSize, localImage, supportsAnonymousCors } from '@/lib/helpers/images';
 
 interface DeferredImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "onDrag"> {
     src: string;
@@ -104,6 +104,7 @@ export function DeferredImage(props: DeferredImageProps) {
         timeoutMs = 10000,
         sizes,
         srcSet,
+        crossOrigin,
         fetchPriority,
         loading,
         decoding,
@@ -117,11 +118,13 @@ export function DeferredImage(props: DeferredImageProps) {
     // Las de TMDB se piden siempre por el proxy local (idempotente si ya vienen de él).
     const src = localImage(rawSrc);
     const lowResSrc = rawLowResSrc ? localImage(rawLowResSrc) : rawLowResSrc;
+    const resolvedCrossOrigin = crossOrigin ?? (supportsAnonymousCors(src) ? "anonymous" : undefined);
 
     const [isIntersecting, setIsIntersecting] = useState(priority);
     // Si la URL ya terminó de descargarse antes (rotación o prewarm), no
-    // flashear el skeleton: arrancar como cargada.
+    // flashear el skeleton: arrancar como cargada sin fundido lento.
     const [isLoaded, setIsLoaded] = useState(() => isImageLoaded(src));
+    const [skipFade, setSkipFade] = useState(() => isImageLoaded(src));
     // El skeleton (y con él el placeholderColor) se va recién cuando la imagen terminó de
     // fundirse encima; si se desmontaba al cargar, durante el fundido asomaba el
     // fondo del padre (claro → hueco → imagen).
@@ -146,6 +149,7 @@ export function DeferredImage(props: DeferredImageProps) {
         setIsIntersecting(priority);
         const alreadyLoaded = isImageLoaded(src);
         setIsLoaded(alreadyLoaded);
+        setSkipFade(alreadyLoaded);
         setIsSkeletonGone(alreadyLoaded);
         setIsLowResLoaded(false);
         setHasError(false);
@@ -175,10 +179,10 @@ export function DeferredImage(props: DeferredImageProps) {
     // Respaldo del onTransitionEnd del skeleton: si la imagen carga antes de que el
     // navegador calcule el estilo inicial del skeleton, el fundido no arranca y
     // transitionend nunca llega (quedaría montado, invisible y con su pulse corriendo).
-    // 700 ms = retraso --duration-slow (400) + fundido --duration-quick (150) + margen.
+    // 500 ms = retraso --duration-base (250) + fundido --duration-quick (150) + margen.
     useEffect(() => {
         if (!isLoaded || isSkeletonGone) return;
-        const timer = setTimeout(() => setIsSkeletonGone(true), 700);
+        const timer = setTimeout(() => setIsSkeletonGone(true), 500);
         return () => clearTimeout(timer);
     }, [isLoaded, isSkeletonGone]);
 
@@ -194,6 +198,17 @@ export function DeferredImage(props: DeferredImageProps) {
         setHasError(true);
         onError?.(e);
     }, [onError]);
+
+    // Si la imagen ya estaba en la caché HTTP del navegador, el navegador completa la carga
+    // antes del primer pintado: revelamos de inmediato sin esperar otro ciclo de transición.
+    const handleImgRef = useCallback((node: HTMLImageElement | null) => {
+        if (node && node.complete && node.naturalWidth > 0 && !isLoaded) {
+            markImageLoaded(src);
+            setSkipFade(true);
+            setIsLoaded(true);
+            setIsSkeletonGone(true);
+        }
+    }, [isLoaded, src]);
 
     useEffect(() => {
         if (priority || isIntersecting) return;
@@ -223,7 +238,7 @@ export function DeferredImage(props: DeferredImageProps) {
         >
             {/* Single Pulse Skeleton Layer: sin z-index, queda debajo de la <img> (posicionada
                 y después en el DOM). Al cargar sigue opaco mientras la imagen se funde encima
-                (duration-slow) y recién después se apaga y se desmonta. */}
+                (duration-base) y recién después se apaga y se desmonta. */}
             {!isSkeletonGone && !hasError && isIntersecting && showSkeleton && (
                 <div
                     onTransitionEnd={(e) => {
@@ -231,10 +246,10 @@ export function DeferredImage(props: DeferredImageProps) {
                     }}
                     className={cn(
                         "absolute inset-0 overflow-hidden",
-                        isLoaded && "opacity-0 transition-opacity duration-quick ease-out-strong [transition-delay:var(--duration-slow)] motion-reduce:delay-0"
+                        isLoaded && "opacity-0 transition-opacity duration-quick ease-out-strong [transition-delay:var(--duration-base)] motion-reduce:delay-0"
                     )}
                 >
-                    <div className="h-full w-full animate-pulse bg-surface-container-high/80 border border-white/5" />
+                    <div className="h-full w-full animate-pulse motion-reduce:animate-none bg-surface-container-high/80 border border-white/5" />
                 </div>
             )}
 
@@ -244,11 +259,12 @@ export function DeferredImage(props: DeferredImageProps) {
                     src={lqipSrc}
                     alt=""
                     aria-hidden="true"
+                    crossOrigin={resolvedCrossOrigin}
                     decoding="async"
                     onLoad={() => setIsLowResLoaded(true)}
                     style={objectPosition ? { objectPosition } : undefined}
                     className={cn(
-                        "absolute inset-0 h-full w-full object-cover scale-[1.08] filter blur-md transition-opacity duration-slow ease-out",
+                        "absolute inset-0 h-full w-full object-cover scale-[1.08] filter blur-md transition-opacity duration-base ease-out",
                         isLowResLoaded ? "opacity-100" : "opacity-0",
                         imgClassName
                     )}
@@ -258,19 +274,22 @@ export function DeferredImage(props: DeferredImageProps) {
             {/* Main high-res image */}
             {!hasError && isIntersecting && (
                 <img
+                    ref={handleImgRef}
                     src={src}
                     srcSet={computedSrcSet}
                     sizes={computedSizes}
+                    crossOrigin={resolvedCrossOrigin}
                     alt={alt}
                     loading={loading ?? (priority ? "eager" : "lazy")}
-                    decoding={decoding ?? "async"}
+                    decoding={decoding ?? (priority ? "sync" : "async")}
                     // Sin prioridad explícita, "auto": Chrome sube a alta las que ya están en pantalla y deja
                     // en baja las que apenas se precargan; un "low" fijo retrasaba incluso a las visibles.
                     fetchPriority={fetchPriority ?? (priority ? "high" : "auto")}
                     onLoad={handleLoad}
                     onError={handleError}
                     className={cn(
-                        "relative h-full w-full object-cover transition-opacity duration-slow ease-out",
+                        "relative h-full w-full object-cover",
+                        !skipFade && "transition-opacity duration-base ease-out",
                         !isLoaded && "will-change-[opacity]",
                         isLoaded ? "opacity-100" : "opacity-0",
                         imgClassName

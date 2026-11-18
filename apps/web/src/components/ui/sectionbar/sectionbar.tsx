@@ -11,6 +11,7 @@ interface SectionBarProps {
   description?: string;
   icon?: React.ElementType;
   badge?: React.ReactNode;
+  action?: React.ReactNode;
   children: React.ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
@@ -20,7 +21,6 @@ interface SectionBarProps {
   /** `content`: superficie de contenido (translúcida en Neutro con vidrio) y títulos en sentence-case. */
   variant?: "default" | "strong" | "minimal" | "content";
   className?: string;
-  layoutId?: string;
   /** Nivel del título. h2 por defecto (cuelga del h1 de la página); h3 si la barra va dentro de otra sección. */
   headingLevel?: "h2" | "h3";
 }
@@ -46,7 +46,7 @@ function CollapsibleContent({ children, transition, triggerRef }: {
       animate={{ height: "auto", opacity: 1 }}
       exit={{ height: 0, opacity: 0 }}
       transition={transition}
-      className="overflow-hidden border-t border-white/[0.08]"
+      className="overflow-hidden border-t border-[var(--sectionbar-border)]"
     >
       <div className="p-4 sm:p-5 space-y-3.5 sectionbar-divide">{children}</div>
     </m.div>
@@ -59,6 +59,7 @@ export function SectionBar({
   description,
   icon: Icon,
   badge,
+  action,
   children,
   collapsible = false,
   defaultOpen = true,
@@ -67,7 +68,6 @@ export function SectionBar({
   searchQuery,
   variant = "default",
   className,
-  layoutId,
   headingLevel: Heading = "h2",
 }: SectionBarProps) {
   const [internalIsOpen, setInternalIsOpen] = React.useState(defaultOpen);
@@ -85,8 +85,7 @@ export function SectionBar({
   };
   const isSearching = !!searchQuery && searchQuery.trim().length > 0;
   const collapseSpring = useSpringPreset("tabContent");
-  // Las secciones que están más abajo entran con el revelado de scroll. No se
-  // aplica con layoutId: ahí framer controla el transform del contenedor.
+  // Las secciones que están más abajo entran con el revelado de scroll.
   const revealRef = React.useRef<HTMLDivElement>(null);
   useScrollReveal(revealRef);
 
@@ -102,42 +101,17 @@ export function SectionBar({
   );
 
   if (!collapsible) {
-    if (layoutId) {
-      return (
-        <m.div id={id} layoutId={layoutId} transition={collapseSpring} className={cn(baseClasses, "space-y-3.5", variant === "minimal" ? "py-5 md:py-6" : "p-5 md:p-6")}>
-          <div className="sectionbar-header">
-            <div className="flex items-center gap-3">
-              {Icon && (
-                <div className="sectionbar-header-icon">
-                  <Icon className="w-4 h-4" />
-                </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <Heading className={titleClass}>{label}</Heading>
-                  {badge && <span className="sectionbar-header-badge">{badge}</span>}
-                </div>
-                {description && (
-                  <p className="sectionbar-header-desc">{description}</p>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="sectionbar-divide">{children}</div>
-        </m.div>
-      );
-    }
     return (
-      <div id={id} ref={revealRef} className={cn(baseClasses, "space-y-3.5", variant === "minimal" ? "py-5 md:py-6" : "p-5 md:p-6")}>
+      <div id={id} data-liquid-surface={variant === "minimal" ? undefined : "content"} ref={revealRef} className={cn(baseClasses, "space-y-3.5", variant === "minimal" ? "py-5 md:py-6" : "p-5 md:p-6")}>
         <div className="sectionbar-header">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {Icon && (
               <div className="sectionbar-header-icon">
                 <Icon className="w-4 h-4" />
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <Heading className={titleClass}>{label}</Heading>
                 {badge && <span className="sectionbar-header-badge">{badge}</span>}
               </div>
@@ -146,6 +120,7 @@ export function SectionBar({
               )}
             </div>
           </div>
+          {action && <div className="flex items-center gap-2 shrink-0">{action}</div>}
         </div>
         <div className="sectionbar-divide">{children}</div>
       </div>
@@ -153,11 +128,9 @@ export function SectionBar({
   }
 
   const showContent = isOpen || isSearching;
-  const Wrapper = layoutId ? m.div : "div";
-  const wrapperProps = layoutId ? { layoutId, transition: collapseSpring } : {};
 
   return (
-    <Wrapper id={id} ref={layoutId ? undefined : revealRef} className={baseClasses} {...wrapperProps}>
+    <div id={id} data-liquid-surface={variant === "minimal" ? undefined : "content"} ref={revealRef} className={baseClasses}>
       <Heading>
       <button
         ref={triggerRef}
@@ -176,7 +149,7 @@ export function SectionBar({
       >
         <span className="flex items-center gap-3.5 min-w-0 pr-4">
           {Icon ? (
-            <span className="w-7 h-7 rounded-lg bg-white/[0.06] border border-white/15 border-t-white/30 flex items-center justify-center text-on-surface shrink-0 group-hover:scale-105 transition-transform duration-fast ease-out-strong shadow-inner">
+            <span className="sectionbar-icon-box w-7 h-7 rounded-lg bg-white/[0.06] border border-white/15 border-t-white/30 flex items-center justify-center text-on-surface shrink-0 motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105 transition-transform duration-fast ease-out-strong shadow-inner">
               <Icon className="w-3.5 h-3.5 text-on-surface" />
             </span>
           ) : (
@@ -184,13 +157,13 @@ export function SectionBar({
           )}
           <span className="min-w-0">
             <span className="flex items-center gap-2">
-              <span className={cn(isContent ? "type-headline text-on-surface" : "text-sm font-bold text-on-surface", "group-hover:text-brand-accent-readable transition-colors truncate text-balance")}>
+              <span className={cn(isContent ? "type-headline text-on-surface" : "text-sm font-bold text-on-surface", "[@media(hover:hover)_and_(pointer:fine)]:group-hover:text-brand-accent-readable transition-colors text-balance break-words")}>
                 {label}
               </span>
               {badge}
             </span>
             {description && (
-              <span className="text-2xs text-label-2 leading-normal font-medium line-clamp-1 mt-0.5">
+              <span className="sectionbar-header-desc block text-xs text-label-2 leading-relaxed font-medium mt-0.5">
                 {description}
               </span>
             )}
@@ -198,7 +171,7 @@ export function SectionBar({
         </span>
         <span
           className={cn(
-            "w-6.5 h-6.5 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center text-on-surface-variant group-hover:text-on-surface group-hover:bg-white/[0.08] transition-[transform,background-color,border-color,color] duration-base ease-smooth-out shrink-0",
+            "sectionbar-toggle-btn w-6.5 h-6.5 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-on-surface [@media(hover:hover)_and_(pointer:fine)]:group-hover:bg-white/[0.08] transition-[transform,background-color,border-color,color] duration-base ease-smooth-out shrink-0",
             showContent && "rotate-180 text-on-surface bg-white/10 border-white/20"
           )}
         >
@@ -219,7 +192,7 @@ export function SectionBar({
         )}
       </AnimatePresence>
       </div>
-    </Wrapper>
+    </div>
   );
 }
 

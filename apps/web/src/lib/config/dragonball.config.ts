@@ -107,7 +107,7 @@ export function isDragonBallTmdbId(tmdbId: number | undefined | null): boolean {
 
 /**
  * Maps a Dragon Ball series TMDB ID to its era theme token, matching the
- * `[data-theme="era-*"]` selectors defined in styles/tokens/colors.css.
+ * `[data-theme="era-*"]` selectors defined in styles/themes/era.css.
  * Returns null for non-Dragon Ball media (caller should fall back to the
  * default brand theme).
  */
@@ -120,6 +120,7 @@ export function getSeriesEraTheme(tmdbId: number | undefined | null): string | n
         case DRAGON_BALL_SERIES.Z: return "era-dbz"
         case DRAGON_BALL_SERIES.GT: return "era-dbgt"
         case DRAGON_BALL_SERIES.KAI: return "era-dbkai"
+        case DRAGON_BALL_SERIES.KAI_FINAL_CHAPTERS: return "era-dbkai"
         case DRAGON_BALL_SERIES.SUPER: return "era-dbs"
         case DRAGON_BALL_SERIES.DAIMA: return "era-daima"
     }

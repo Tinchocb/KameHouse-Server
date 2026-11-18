@@ -22,21 +22,17 @@ export interface PlayerCoreProps {
     }
     /** Segundo desde el que arranca la reproducción (p. ej. "Continuar viendo" de la ficha). */
     initialProgressSeconds?: number
-    onProgress?: (seconds: number) => void
     onNextEpisode?: () => void
     hasNextEpisode?: boolean
     mediaId?: number
     episodeNumber?: number
     malId?: number | null
-    /** Editorial filler mark (animefillerlist). */
-    isFillerEpisode?: boolean
     clientId?: string
     onClose: () => void
     title?: string
     /** e.g. "TV", "TV_SHORT", "MOVIE", "OVA", "SPECIAL" — used to decide fallback skip window */
     mediaFormat?: string | null
     nextStreamUrl?: string
-    nextStreamType?: "local" | "online" | "direct" | "transcode" | "optimized"
     streamType?: "local" | "online" | "direct" | "transcode" | "optimized"
     /** Permite al core pedir un cambio de tipo de stream (ej. direct → transcode
      *  cuando el usuario elige una pista de audio y el navegador no soporta
@@ -49,9 +45,6 @@ export interface PlayerCoreProps {
     /** Mensaje listo para mostrar si el servidor rechazó la petición del stream
      *  (archivo inexistente, fuera de la biblioteca...). Evita esperar el timeout. */
     streamRequestError?: string | null
-    nextEpisodeTitle?: string
-    nextEpisodeNumber?: number
-    nextEpisodeImage?: string
     /** Duración real del archivo según ffprobe (mediaInfo.duration del server).
      *  Fallback cuando el navegador reporta Infinity/NaN (MKV directo sin
      *  duración en el header): sin esto, todas las lógicas de "cerca del final"
@@ -59,7 +52,6 @@ export interface PlayerCoreProps {
     metadataDuration?: number
     onToggleEpisodesSidebar?: () => void
     onToggleQueueSidebar?: () => void
-    onToggleSubtitle?: () => void
     onEscape?: () => void
 }
 
@@ -92,7 +84,7 @@ export interface PlayerCore {
         isSeeking: boolean
         flash: "play" | "pause" | null
         /** null = hidden, "intro" = showing skip-intro button, "outro" = showing skip-outro button */
-        skipMode: "intro" | "outro" | "recap" | null
+        skipMode: "intro" | "outro" | "recap" | "preview" | null
         skipRemainingSeconds: number
         /** 0–100: how much of the current skip segment has elapsed (used for progress fill on the button) */
         segmentProgress: number
@@ -106,13 +98,10 @@ export interface PlayerCore {
         subtitleTracks: SubtitleTrack[]
         activeSubtitleIndex: number | null
         isJassubLoading: boolean
-        isJassubActive: boolean
         isPgsLoading: boolean
-        isPgsActive: boolean
         isSettingsOpen: boolean
         autoSkipIntro: boolean
         autoSkipOutro: boolean
-        skipStepSeconds: number
         playbackRate: number
         aspectRatio: "contain" | "fill" | "cover" | "16/9" | "21/9"
         subtitleSize: number
@@ -125,16 +114,12 @@ export interface PlayerCore {
         previewManager: PlayerPreviewManager | null
         autoDisableSubtitlesWhenDubbed: boolean
         marathonMode: boolean
-        tvMode: boolean
         /** AniSkip intervals exposed to child components for rendering timeline markers */
         skipTimesOp?: { startTime: number; endTime: number }
         skipTimesEd?: { startTime: number; endTime: number }
         showAutoSkipToast: "intro" | "outro" | "recap" | "segment" | null
         chapters: { startTime: number; endTime: number; name: string; type?: string }[]
         activeChapter: string | null
-        absoluteLanUrl?: string
-        serverIPs?: string[] | null
-        serverPort?: number
     }
     actions: {
         setIsPlaying: (playing: boolean) => void
@@ -149,31 +134,24 @@ export interface PlayerCore {
         handleSeekStart: () => void
         handleSeekEnd: (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => void
         skipTime: (seconds: number) => void
-        skipOpening: () => void
         handleVolume: (e: React.ChangeEvent<HTMLInputElement> | number) => void
         toggleMute: () => void
         onSelectAudio: (track: AudioTrack, opts?: { auto?: boolean }) => void
         onSelectSubtitle: (track: SubtitleTrack | null, opts?: { auto?: boolean }) => void
-        toggleSubtitle: () => void
         toggleFullscreen: () => void
         handleSkipIntro: () => void
         undoSkip: () => void
         handleTimeUpdate: (e?: React.SyntheticEvent<HTMLVideoElement>) => void
         changePlaybackRate: (rate: number) => void
-        setShowStats: (show: boolean) => void
         setShowShortcuts: (show: boolean) => void
         setAutoSkipIntro: (val: boolean) => void
         setAutoSkipOutro: (val: boolean) => void
-        setSkipStepSeconds: (val: number) => void
         setHlsLevel: (level: number) => void
         setAspectRatio: (val: "contain" | "fill" | "cover" | "16/9" | "21/9") => void
         setSubtitleSize: (val: number) => void
         setLoopEnabled: (val: boolean) => void
         setMarathonMode: (val: boolean) => void
-        setTvMode: (val: boolean) => void
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => void
-        skipToNextChapter: () => void
-        skipToPrevChapter: () => void
         retryStream: () => void
         /** Cambia Direct Play ↔ Transcodificado sin perder la posición. */
         switchSource: (type: string) => void

@@ -14,13 +14,11 @@ import { useMediastreamShutdownTranscodeStream, usePreloadMediastreamMediaContai
 import { usePlayerStore } from "@/lib/store"
 import { persistLibraryPatch } from "@/lib/server/persist-settings"
 import { useShallow } from "zustand/react/shallow"
-import { useGetStatus } from "@/api/hooks/settings.hooks"
 import type { PlayerCoreProps, PlayerCore, PlayerStats } from "./player-core.types"
 
 import { usePlayerSkip } from "./usePlayerSkip"
 import { usePlayerVolume } from "./usePlayerVolume"
 import { usePlayerTrackSelection } from "./usePlayerTrackSelection"
-import { resolveLanUrl } from "./lan-url"
 import { usePlayerDuration } from "./usePlayerDuration"
 import { usePlayerSeek } from "./usePlayerSeek"
 import { usePlayerFullscreen } from "./usePlayerFullscreen"
@@ -44,7 +42,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         backendTracks,
         initialProgressSeconds = 0,
         onClose,
-        onProgress,
         onNextEpisode,
         hasNextEpisode = false,
         mediaId,
@@ -54,22 +51,12 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         mediaFormat,
         title,
         nextStreamUrl,
-        nextStreamType,
         streamType,
         onRequestStreamTypeChange,
         onDirectPlayFailed,
         streamRequestError,
         metadataDuration,
-        onToggleSubtitle,
     } = props
-
-    const { data: statusQuery } = useGetStatus()
-    const serverIPs = statusQuery?.serverIPs
-    const serverPort = statusQuery?.serverPort
-
-    const absoluteLanUrl = useMemo(() => {
-        return resolveLanUrl(playableUrl, serverIPs, serverPort)
-    }, [playableUrl, serverIPs, serverPort])
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -94,7 +81,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const { duration, setDuration } = usePlayerDuration(metadataDuration)
     // Volumen con persistencia (hook extraído; ver usePlayerVolume).
     const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
-    const { volume, isMuted, setVolume, setIsMuted, handleVolume, toggleMute } = usePlayerVolume({ videoRef, status })
+    const { volume, isMuted, handleVolume, toggleMute } = usePlayerVolume({ videoRef, status })
     // Cambios de stream a mitad de reproducción (ver usePlayerStreamSwitch).
     const { isStreamSwitching, streamSwitchReason, setFallbackStreamSwitching, onAudioStreamSwitch, switchSource } = usePlayerStreamSwitch({
         videoRef,
@@ -118,9 +105,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     }, [])
 
     const [isJassubLoading, setIsJassubLoading] = useState(false)
-    const [isJassubActive, setIsJassubActive] = useState(false)
     const [isPgsLoading, setIsPgsLoading] = useState(false)
-    const [isPgsActive, setIsPgsActive] = useState(false)
     const { hlsLevels, setHlsLevels, activeHlsLevel, setActiveHlsLevel, setHlsLevel } = usePlayerHlsLevel({ hlsRef })
 
     // Auto-ocultado de controles y panel de ajustes (ver usePlayerControlsVisibility).
@@ -133,7 +118,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         autoSkipOutro: autoSkipOutroPref,
         setAutoSkipOutro,
         skipStepSeconds: skipStepSecondsPref,
-        setSkipStepSeconds: setSkipStepSecondsPref,
         playbackRate: playbackRatePref,
         setPlaybackRate: setPlaybackRatePref,
         preferredAudioLang,
@@ -148,8 +132,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         setLoopEnabled: setLoopEnabledPref,
         autoDisableSubtitlesWhenDubbed,
         marathonMode,
-        tvMode,
-        setTvMode,
     } = usePlayerStore(
         // Note: playerVolume/setPlayerVolume already destructured above (D3).
         useShallow(state => ({
@@ -159,7 +141,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             autoSkipOutro: state.autoSkipOutro,
             setAutoSkipOutro: state.setAutoSkipOutro,
             skipStepSeconds: state.skipStepSeconds,
-            setSkipStepSeconds: state.setSkipStepSeconds,
             playbackRate: state.playbackRate,
             setPlaybackRate: state.setPlaybackRate,
             preferredAudioLang: state.preferredAudioLang,
@@ -174,9 +155,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             setLoopEnabled: state.setLoopEnabled,
             autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
             marathonMode: state.marathonMode,
-            setMarathonMode: state.setMarathonMode,
-            tvMode: state.tvMode,
-            setTvMode: state.setTvMode,
         }))
     )
     
@@ -218,8 +196,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     const [showShortcuts, setShowShortcuts] = useState(false)
     const [statsData, setStatsData] = useState<PlayerStats | null>(null)
 
-    const lastReportedTimeRef = useRef(0)
-
     const wsUrl = useApiWebSocketUrl()
     const { sendJsonMessage } = useWebSocket(wsUrl)
     const lastStatsUpdateRef = useRef(0)
@@ -240,11 +216,8 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         activeChapter,
         remainingProgress,
         skipOpening,
-        skipToNextChapter,
-        skipToPrevChapter,
         handleSetAutoSkipIntro,
         handleSetAutoSkipOutro,
-        handleSetTvMode,
         handleSetMarathonMode,
         handleSkipIntro,
         undoSkip,
@@ -255,7 +228,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         videoRef,
         playableUrl,
         duration,
-        isPlaying,
         malId,
         episodeNumber,
         chapters,
@@ -263,24 +235,25 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         autoSkipIntroPref,
         autoSkipOutroPref,
         skipStepSecondsPref,
-        tvMode,
         hasNextEpisode,
         onNextEpisode,
         setAutoSkipIntro,
         setAutoSkipOutro,
-        setTvMode,
         triggerControlsVisibility,
         clientId,
         nextStreamUrl,
-        nextStreamType,
         streamType,
         mediaId,
         preferredAudioLang,
+        drivePath: streamUrl,
     })
 
     // Seek con throttle y scrub sin inundar de peticiones (ver usePlayerSeek).
     const { progressBarRef, timeTextRef, isSeeking, setIsSeeking, isSeekingRef, handleSeekStart, handleSeek, handleSeekEnd, skipTime } = usePlayerSeek({
         videoRef,
+        thumbRef,
+        progressInputRef,
+        duration,
         checkManualSkipOverrides,
         triggerControlsVisibility,
     })
@@ -333,7 +306,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         videoRef,
         hlsRef,
         playableUrl,
-        absoluteLanUrl,
         backendTracks: backendTracks || null,
         initialProgressSeconds,
         streamSwitchResumeRef,
@@ -368,10 +340,10 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         activeSubtitleIndex,
         subtitleTracks,
         subtitleSizePref,
+        aspectRatio: aspectRatioPref,
         fontUrls: backendTracks?.fontUrls,
         refreshKey: subtitleRefreshKey,
         setIsJassubLoading,
-        setIsJassubActive,
     })
 
     // --- PGS Plugin ---
@@ -379,23 +351,39 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         videoRef,
         subtitleTracks,
         activeSubtitleIndex,
+        aspectRatio: aspectRatioPref,
         setIsPgsLoading,
-        setIsPgsActive,
     })
 
     // Preview Manager
     useEffect(() => {
-        const video = videoRef.current
-        if (!video || !playableUrl) return
+        if (!streamUrl || streamType === "online") return
 
-        const pm = new PlayerPreviewManager(video, playableUrl as string, (streamType || "direct") as "local" | "online" | "direct" | "transcode" | "optimized")
+        const video = videoRef.current
+        const pm = new PlayerPreviewManager(streamUrl, () => video?.duration ?? 0)
         setPreviewManager(pm)
 
+        // Prepare the current contact sheet only after playback has started.
+        // No metadata request or image generation blocks the first frame.
+        let warmTimer: ReturnType<typeof setTimeout> | undefined
+        const warm = () => {
+            warmTimer = setTimeout(() => {
+                pm.prewarm()
+            }, 5000)
+        }
+        video?.addEventListener("playing", warm, { once: true })
+        if (video && !video.paused && video.readyState >= 3) {
+            video.removeEventListener("playing", warm)
+            warm()
+        }
+
         return () => {
+            clearTimeout(warmTimer)
+            video?.removeEventListener("playing", warm)
             pm.cleanup()
             setPreviewManager(null)
         }
-    }, [playableUrl, streamType])
+    }, [streamUrl, streamType])
 
     const togglePlay = useCallback(() => {
         const video = videoRef.current
@@ -424,10 +412,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
 
     const handleToggleSubtitle = useCallback(() => {
-        if (onToggleSubtitle) {
-            onToggleSubtitle()
-            return
-        }
         if (subtitleTracks.length === 0) return
         if (activeSubtitleIndex !== null) {
             onSelectSubtitle(null)
@@ -435,7 +419,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
             const preferred = (preferredSubtitleLang && subtitleTracks.find(t => t.language?.toLowerCase() === preferredSubtitleLang?.toLowerCase())) || subtitleTracks[0]
             onSelectSubtitle(preferred)
         }
-    }, [onToggleSubtitle, subtitleTracks, activeSubtitleIndex, preferredSubtitleLang, onSelectSubtitle])
+    }, [subtitleTracks, activeSubtitleIndex, preferredSubtitleLang, onSelectSubtitle])
 
     const { changePlaybackRate } = usePlayerPlaybackPrefs({
         videoRef,
@@ -464,9 +448,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     // Keyboard shortcuts hook
     usePlayerShortcuts({
         videoRef,
-        isPlaying,
-        isMuted,
-        volume,
         isFullscreen,
         skipMode,
         showNextEpisode,
@@ -478,15 +459,11 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         toggleMute,
         togglePlay,
         toggleFullscreen,
-        setVolume,
-        setIsMuted,
         setIsSettingsOpen,
         setShowStats,
-        skipToNextChapter,
-        skipToPrevChapter,
         onToggleEpisodesSidebar: props.onToggleEpisodesSidebar,
         onToggleQueueSidebar: props.onToggleQueueSidebar,
-        onToggleSubtitle: props.onToggleSubtitle ?? handleToggleSubtitle,
+        onToggleSubtitle: handleToggleSubtitle,
         handleVolume,
         onToggleShortcuts: () => setShowShortcuts((prev) => !prev),
         onEscape: props.onEscape,
@@ -508,7 +485,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
         if (thumbRef.current) {
             const percent = total > 0 ? (curr / total) * 100 : 0
-            thumbRef.current.style.left = `${percent}%`
+            thumbRef.current.style.transform = `translateX(${percent}%)`
         }
 
         if (progressInputRef.current) {
@@ -518,11 +495,6 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
 
         if (timeTextRef.current) {
             timeTextRef.current.innerText = formatPlaybackTime(curr)
-        }
-
-        if (onProgress && Math.abs(curr - lastReportedTimeRef.current) >= 10) {
-            onProgress(curr)
-            lastReportedTimeRef.current = curr
         }
 
         const now = Date.now()
@@ -544,7 +516,7 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
                 source: playableUrl.substring(0, 50) + "...",
             })
         }
-    }, [showStats, processTimeUpdates, onProgress, flushBackendSync, playableUrl, duration, isSeekingRef, progressBarRef, timeTextRef])
+    }, [showStats, processTimeUpdates, flushBackendSync, playableUrl, duration, isSeekingRef, progressBarRef, timeTextRef])
 
     // Última versión de handleTimeUpdate para el efecto de abajo, que solo debe
     // re-evaluar al cambiar las preferencias de skip (no en cada render).
@@ -568,10 +540,9 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
     }), [progressBarRef, timeTextRef])
 
     const state = useMemo(() => ({
-        isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast,
+        isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isPgsLoading, isSettingsOpen, remainingProgress, showAutoSkipToast,
         autoSkipIntro: autoSkipIntroPref,
         autoSkipOutro: autoSkipOutroPref,
-        skipStepSeconds: skipStepSecondsPref,
         playbackRate: playbackRatePref,
         aspectRatio: aspectRatioPref,
         subtitleSize: subtitleSizePref,
@@ -591,32 +562,25 @@ export function usePlayerCore(props: PlayerCoreProps): PlayerCore {
         skipTimesEd,
         chapters,
         activeChapter,
-        absoluteLanUrl,
-        serverIPs,
-        serverPort,
-    }), [isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, tvMode, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isJassubActive, isPgsLoading, isPgsActive, isSettingsOpen, remainingProgress, showAutoSkipToast, autoSkipIntroPref, autoSkipOutroPref, skipStepSecondsPref, playbackRatePref, aspectRatioPref, subtitleSizePref, loopEnabledPref, showStats, showShortcuts, statsData, hlsLevels, activeHlsLevel, previewManager, autoDisableSubtitlesWhenDubbed, marathonMode, skipTimesOp, skipTimesEd, chapters, activeChapter, absoluteLanUrl, serverIPs, serverPort])
+    }), [isPlaying, duration, volume, isMuted, isFullscreen, controlsVisible, status, isStreamSwitching, streamSwitchReason, errorMsg, isBuffering, isSeeking, flash, skipMode, skipRemainingSeconds, segmentProgress, showNextEpisode, hasNextEpisode, countdownSeconds, showCountdown, audioTracks, activeAudioIndex, subtitleTracks, activeSubtitleIndex, isJassubLoading, isPgsLoading, isSettingsOpen, remainingProgress, showAutoSkipToast, autoSkipIntroPref, autoSkipOutroPref, playbackRatePref, aspectRatioPref, subtitleSizePref, loopEnabledPref, showStats, showShortcuts, statsData, hlsLevels, activeHlsLevel, previewManager, autoDisableSubtitlesWhenDubbed, marathonMode, skipTimesOp, skipTimesEd, chapters, activeChapter])
 
     const actions = useMemo(() => ({
-        setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleSubtitle: handleToggleSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate,
-        changePlaybackRate, setShowStats, setShowShortcuts,
+        setIsPlaying, setDuration, setIsBuffering, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate,
+        changePlaybackRate, setShowShortcuts,
         // Los flags de Biblioteca se persisten al servidor: Ajustes sincroniza el
         // store desde el servidor al montarse y, si no, revertía lo cambiado aquí.
         setAutoSkipIntro: (val: boolean) => { handleSetAutoSkipIntro(val); persistLibraryPatch({ autoSkipIntro: val }) },
         setAutoSkipOutro: (val: boolean) => { handleSetAutoSkipOutro(val); persistLibraryPatch({ autoSkipOutro: val }) },
-        setSkipStepSeconds: setSkipStepSecondsPref,
         setHlsLevel,
         setAspectRatio: setAspectRatioPref,
         setSubtitleSize: setSubtitleSizePref,
         setLoopEnabled: setLoopEnabledPref,
-        setTvMode: handleSetTvMode,
         setMarathonMode: (val: boolean) => { handleSetMarathonMode(val); persistLibraryPatch({ marathonMode: val }) },
         setAutoDisableSubtitlesWhenDubbed: (val: boolean) => { usePlayerStore.getState().setAutoDisableSubtitlesWhenDubbed(val); persistLibraryPatch({ autoDisableSubtitlesWhenDubbed: val }) },
-        skipToNextChapter,
-        skipToPrevChapter,
         retryStream,
         switchSource,
         flushProgressSync: () => flushBackendSync(true),
-    }), [switchSource, setDuration, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, skipOpening, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, handleToggleSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, setHlsLevel, handleSetTvMode, handleSetMarathonMode, skipToNextChapter, skipToPrevChapter, retryStream, flushBackendSync, setSkipStepSecondsPref, setAspectRatioPref, setSubtitleSizePref, setLoopEnabledPref])
+    }), [switchSource, setDuration, setIsSeeking, setControlsVisible, setIsSettingsOpen, triggerControlsVisibility, togglePlay, handleSeek, handleSeekStart, handleSeekEnd, skipTime, handleVolume, toggleMute, onSelectAudio, onSelectSubtitle, toggleFullscreen, handleSkipIntro, undoSkip, handleTimeUpdate, changePlaybackRate, handleSetAutoSkipIntro, handleSetAutoSkipOutro, setHlsLevel, handleSetMarathonMode, retryStream, flushBackendSync, setAspectRatioPref, setSubtitleSizePref, setLoopEnabledPref])
 
     return { domElements, state, actions }
 }

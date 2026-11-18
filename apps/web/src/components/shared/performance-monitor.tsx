@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react"
 import { m, AnimatePresence } from "framer-motion"
+import { useReducedMotion } from "@/components/ui/kinetics/hooks"
 import { IconStatusActivity, IconUiTrash, IconUiClose, IconStatusZap, IconStatusCpu, IconUiAlert, IconUiCheckCircle } from "@/components/ui/icons";
 import { useRouteLatency } from "./use-route-latency"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
@@ -17,6 +18,7 @@ export function PerformanceMonitor() {
     const [longestFrame, setLongestFrame] = useState(0)
     const [memory, setMemory] = useState<{ used: number; total: number } | null>(null)
     const routeLatency = useRouteLatency()
+    const reduceMotion = useReducedMotion()
     const rafIdRef = useRef<number | null>(null)
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
     const fpsHistoryRef = useRef<number[]>([])
@@ -68,20 +70,22 @@ export function PerformanceMonitor() {
 
         lastUpdateRef.current = performance.now()
         const frames = createFrameWindow()
-        const resetWindow = () => frames.reset()
-        document.addEventListener("visibilitychange", resetWindow)
-        window.addEventListener("blur", resetWindow)
-        window.addEventListener("focus", resetWindow)
+        let stopped = false
+        const observable = () => document.visibilityState === "visible" && document.hasFocus()
+        const schedule = () => {
+            if (!stopped && observable() && rafIdRef.current === null) rafIdRef.current = requestAnimationFrame(loop)
+        }
 
         const loop = (now: number) => {
-            if (document.visibilityState !== "visible" || !document.hasFocus()) {
+            if (stopped) return
+            rafIdRef.current = null
+            if (!observable()) {
                 frames.reset()
-                rafIdRef.current = requestAnimationFrame(loop)
                 return
             }
             const sample = frames.sample(now)
             if (!sample) {
-                rafIdRef.current = requestAnimationFrame(loop)
+                schedule()
                 return
             }
             const { delta, fps: currentFps } = sample
@@ -183,15 +187,27 @@ export function PerformanceMonitor() {
                 }
             }
 
-            rafIdRef.current = requestAnimationFrame(loop)
+            schedule()
         }
 
-        rafIdRef.current = requestAnimationFrame(loop)
+        const syncActivity = () => {
+            frames.reset()
+            lastUpdateRef.current = performance.now()
+            if (!observable()) {
+                if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current)
+                rafIdRef.current = null
+            } else schedule()
+        }
+        document.addEventListener("visibilitychange", syncActivity)
+        window.addEventListener("blur", syncActivity)
+        window.addEventListener("focus", syncActivity)
+        syncActivity()
 
         return () => {
-            document.removeEventListener("visibilitychange", resetWindow)
-            window.removeEventListener("blur", resetWindow)
-            window.removeEventListener("focus", resetWindow)
+            stopped = true
+            document.removeEventListener("visibilitychange", syncActivity)
+            window.removeEventListener("blur", syncActivity)
+            window.removeEventListener("focus", syncActivity)
             if (rafIdRef.current) {
                 cancelAnimationFrame(rafIdRef.current)
                 rafIdRef.current = null
@@ -274,33 +290,34 @@ export function PerformanceMonitor() {
         <AnimatePresence>
             {isOpen && (
                 <m.div
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                    className="fixed top-6 left-4 right-4 sm:left-auto sm:right-6 z-tooltip w-auto sm:w-[350px] max-w-sm backdrop-blur-overlay-xl border border-outline-variant rounded-corner-lg shadow-elevation-4 p-4 sm:p-5 select-none font-sans text-on-surface"
-                    style={{ background: "color-mix(in srgb, var(--md-sys-color-surface-container) 90%, transparent)" }}
+                    exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 10 }}
+                    transition={reduceMotion ? { duration: 0.15 } : { type: "spring", stiffness: 380, damping: 26 }}
+                    className="fixed top-6 left-4 right-4 sm:left-auto sm:right-6 z-tooltip w-auto sm:w-[350px] max-w-sm max-h-[calc(100dvh-3rem)] overflow-y-auto backdrop-blur-overlay-md bg-[color-mix(in_srgb,var(--neutral-elev-1)_88%,transparent)] [[data-flat=true]_&]:bg-[var(--neutral-elev-2)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] rounded-corner-lg shadow-[shadow:var(--double-bezel-shadow-strong)] p-4 sm:p-5 select-none font-sans text-on-surface"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
+                    <div className="flex items-center justify-between pb-3 border-b border-[var(--neutral-separator)]">
                         <div className="flex items-center gap-2">
-                            <IconStatusActivity className="text-brand-accent animate-pulse w-4 h-4" />
+                            <IconStatusActivity className="text-brand-accent animate-pulse motion-reduce:animate-none w-4 h-4" />
                             <span className="text-label-sm font-black uppercase tracking-ultra text-on-surface-variant">
                                 Diagnóstico de Rendimiento
                             </span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <button
+                                type="button"
                                 onClick={handleClearStats}
-                                className="p-1 rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
+                                className="min-h-11 min-w-11 [@media(pointer:fine)]:min-h-7 [@media(pointer:fine)]:min-w-7 [@media(pointer:fine)]:w-7 [@media(pointer:fine)]:h-7 flex items-center justify-center rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent transition-[background-color,color,transform] duration-fast ease-smooth-out motion-safe:active:scale-[0.97] cursor-pointer"
                                 aria-label="Reiniciar estadísticas"
                                 title="Reiniciar estadísticas"
                             >
                                 <IconUiTrash size={12} />
                             </button>
                             <button
+                                type="button"
                                 onClick={() => setIsOpen(false)}
-                                className="p-1 rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface transition-[background-color,color,transform] duration-fast ease-smooth-out active:scale-95 cursor-pointer"
+                                className="min-h-11 min-w-11 [@media(pointer:fine)]:min-h-7 [@media(pointer:fine)]:min-w-7 [@media(pointer:fine)]:w-7 [@media(pointer:fine)]:h-7 flex items-center justify-center rounded bg-surface-container [@media(hover:hover)_and_(pointer:fine)]:hover:bg-surface-container-high text-on-surface-variant [@media(hover:hover)_and_(pointer:fine)]:hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent transition-[background-color,color,transform] duration-fast ease-smooth-out motion-safe:active:scale-[0.97] cursor-pointer"
                                 aria-label="Cerrar diagnóstico de rendimiento"
                                 title="Cerrar diagnóstico"
                             >
@@ -310,7 +327,7 @@ export function PerformanceMonitor() {
                     </div>
 
                     {/* Hardware Tier Badge */}
-                    <div className="mt-3 p-2 bg-surface-container-low border border-outline-variant/30 rounded-xl flex items-center justify-between">
+                    <div className="mt-3 p-2 bg-surface-container-low border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] rounded-xl shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
                             <IconStatusZap size={13} className="text-brand-accent shrink-0" />
                             <span className="text-caption font-bold text-on-surface-variant truncate" title={hardwareSpecs?.gpuRenderer || "Detectando GPU..."}>
@@ -323,7 +340,7 @@ export function PerformanceMonitor() {
                                     THROTTLED
                                 </span>
                             )}
-                            <span className="text-caption font-black uppercase px-2 py-0.5 rounded bg-surface-container-high text-brand-accent-readable border border-outline-variant/40">
+                            <span className="text-caption font-black uppercase px-2 py-0.5 rounded bg-[var(--neutral-elev-2)] text-brand-accent-readable border border-[var(--neutral-separator)]">
                                 {getEffectiveTier() === "high" ? "TIER 1 (ULTRA)" : getEffectiveTier() === "balanced" ? "TIER 2 (BALANCED)" : "TIER 3 (ECO)"}
                             </span>
                         </div>
@@ -332,7 +349,7 @@ export function PerformanceMonitor() {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-4 py-4">
                         {/* Live FPS */}
-                        <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
+                        <div className="bg-surface-container-low border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] rounded-xl shadow-[shadow:var(--double-bezel-ring)] p-3 flex flex-col items-start">
                             <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60">FPS Actual</span>
                             <div className="flex items-baseline gap-1 mt-1">
                                 <span className={`text-3xl font-display tracking-wide ${getFpsColor(fps)}`}>
@@ -343,7 +360,7 @@ export function PerformanceMonitor() {
                         </div>
 
                         {/* Stability Index */}
-                        <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
+                        <div className="bg-surface-container-low border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] rounded-xl shadow-[shadow:var(--double-bezel-ring)] p-3 flex flex-col items-start">
                             <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60">Estabilidad UI</span>
                             <div className="flex items-baseline gap-1 mt-1">
                                 <span className={`text-3xl font-display tracking-wide ${getSmoothnessColor(smoothnessIndex)}`}>
@@ -354,7 +371,7 @@ export function PerformanceMonitor() {
                         </div>
 
                         {/* Dropped Frames */}
-                        <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
+                        <div className="bg-surface-container-low border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] rounded-xl shadow-[shadow:var(--double-bezel-ring)] p-3 flex flex-col items-start">
                             <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60">Cuadros lentos</span>
                             <span className="text-xl font-bold text-status-error mt-2 font-mono tabular-nums">
                                 {droppedFrames}
@@ -363,7 +380,7 @@ export function PerformanceMonitor() {
                         </div>
 
                         {/* JS Memory */}
-                        <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-3 flex flex-col items-start">
+                        <div className="bg-surface-container-low border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] rounded-xl shadow-[shadow:var(--double-bezel-ring)] p-3 flex flex-col items-start">
                             <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60">Memoria Heap JS</span>
                             {memory ? (
                                 <div className="flex items-baseline gap-0.5 mt-2">
@@ -377,13 +394,13 @@ export function PerformanceMonitor() {
                     </div>
 
                     {/* Chart Canvas */}
-                    <div className="backdrop-blur-overlay-sm border border-outline-variant/30 rounded-xl p-2 relative h-16 w-full flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--md-sys-color-surface) 40%, transparent)" }}>
+                    <div className="bg-[var(--neutral-elev-1)] border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] rounded-xl shadow-[shadow:var(--double-bezel-ring)] p-2 relative h-16 w-full flex items-center justify-center">
                         <canvas ref={canvasRef} width={300} height={48} className="w-full h-full block" />
                         <span className="absolute bottom-1 right-2 text-caption text-on-surface-variant/50 font-black tracking-widest uppercase pointer-events-none">HISTORIAL 10s</span>
                     </div>
 
                     {/* Page transition latency info */}
-                    <div className="mt-4 p-3 bg-surface-container-low border border-outline-variant/30 rounded-xl flex items-center justify-between">
+                    <div className="mt-4 p-3 bg-surface-container-low border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] rounded-xl shadow-[shadow:var(--double-bezel-ring)] flex items-center justify-between">
                         <span className="text-caption font-black uppercase tracking-wider text-on-surface-variant/60 flex items-center gap-1.5">
                             <IconStatusCpu size={12} className="text-brand-accent" />
                             Navegación estimada
@@ -394,12 +411,12 @@ export function PerformanceMonitor() {
                     </div>
 
                     {/* Tips and Solutions */}
-                    <div className="mt-4 border-t border-outline-variant/30 pt-4 space-y-2.5 max-h-[140px] overflow-y-auto no-scrollbar">
+                    <div className="mt-4 border-t border-[var(--neutral-separator)] pt-4 space-y-2.5 max-h-[140px] overflow-y-auto no-scrollbar">
                         <p className="text-caption font-black uppercase tracking-cinema text-on-surface-variant/60 mb-1">
                             Diagnóstico y Solución
                         </p>
                         {optimizationTips.map((tip) => (
-                            <div key={tip.id} className="flex items-start gap-2.5 bg-surface-container-low p-2.5 border border-outline-variant/20 rounded-lg">
+                            <div key={tip.id} className="flex items-start gap-2.5 bg-surface-container-low p-2.5 border border-[var(--neutral-separator)] rounded-lg">
                                 {tip.level === "warning" ? (
                                     <IconUiAlert size={14} className="text-status-warning shrink-0 mt-0.5" />
                                 ) : (

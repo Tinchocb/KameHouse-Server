@@ -9,7 +9,6 @@ import "kamehouse/internal/database/models/dto"
 type LocalFile = dto.LocalFile
 type LocalFileType = dto.LocalFileType
 type LocalFileMetadata = dto.LocalFileMetadata
-type LocalFileParsedData = dto.LocalFileParsedData
 
 // Constant aliases for LocalFileType values used throughout the anime package.
 const (
@@ -17,6 +16,3 @@ const (
 	LocalFileTypeSpecial = dto.LocalFileTypeSpecial
 	LocalFileTypeNC      = dto.LocalFileTypeNC
 )
-
-// Function aliases for dto constructors used throughout the anime package.
-var NewLocalFile = dto.NewLocalFile

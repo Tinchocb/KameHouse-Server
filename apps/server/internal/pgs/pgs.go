@@ -38,12 +38,11 @@ type PgsDecoder struct {
 }
 
 type PgsObject struct {
-	ID       uint16
-	Version  uint8
-	Width    uint16
-	Height   uint16
-	Data     []byte
-	Complete bool
+	ID      uint16
+	Version uint8
+	Width   uint16
+	Height  uint16
+	Data    []byte
 }
 
 type PgsComposition struct {
@@ -320,19 +319,17 @@ func (d *PgsDecoder) parseODS(data []byte) (image.Image, error) {
 	if sequenceFlag&0x80 != 0 {
 		// First segment, initialize object
 		d.currentObject = &PgsObject{
-			ID:       objectID,
-			Version:  version,
-			Width:    width,
-			Height:   height,
-			Data:     make([]byte, 0, dataLength),
-			Complete: false,
+			ID:      objectID,
+			Version: version,
+			Width:   width,
+			Height:  height,
+			Data:    make([]byte, 0, dataLength),
 		}
 		d.currentObject.Data = append(d.currentObject.Data, rleData...)
 	} else if sequenceFlag&0x40 != 0 {
 		// Last segment, complete object
 		if d.currentObject != nil && d.currentObject.ID == objectID {
 			d.currentObject.Data = append(d.currentObject.Data, rleData...)
-			d.currentObject.Complete = true
 
 			// Decode complete object
 			img := image.NewPaletted(

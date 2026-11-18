@@ -20,6 +20,7 @@ func (c *Client) GetTVSeason(ctx context.Context, tvID int, seasonNumber int) (T
 }
 
 func (c *Client) fetchTVSeason(ctx context.Context, tvID int, seasonNumber int, cacheKey string) (TVSeasonDetails, error) {
+	generation := c.cacheGeneration()
 	if cached, ok := GetCached[TVSeasonDetails](c, cacheKey); ok {
 		return cached, nil
 	}
@@ -71,12 +72,18 @@ func (c *Client) fetchTVSeason(ctx context.Context, tvID int, seasonNumber int, 
 		}
 	}
 
-	SetCached(c, cacheKey, *resp, 7*24*time.Hour)
+	setCachedGeneration(c, generation, cacheKey, *resp, 7*24*time.Hour)
 	return *resp, nil
 }
 
 // GetTVDetails fetches a specific TV show by ID with full details.
 func (c *Client) GetTVDetails(ctx context.Context, id string) (*TVDetails, error) {
+	return dedupe(ctx, c, "tv_detail_full:"+id+":"+c.language, func(ctx context.Context) (*TVDetails, error) {
+		return c.getTVDetails(ctx, id)
+	})
+}
+func (c *Client) getTVDetails(ctx context.Context, id string) (*TVDetails, error) {
+	generation := c.cacheGeneration()
 	cacheKey := fmt.Sprintf("tv_detail_full:%s:%s", id, c.language)
 	if cached, ok := GetCached[*TVDetails](c, cacheKey); ok {
 		return cached, nil
@@ -103,12 +110,13 @@ func (c *Client) GetTVDetails(ctx context.Context, id string) (*TVDetails, error
 		}
 	}
 
-	SetCached(c, cacheKey, resp, 7*24*time.Hour)
+	setCachedGeneration(c, generation, cacheKey, resp, 7*24*time.Hour)
 	return resp, nil
 }
 
 // GetTVAlternativeTitles gets all alternative titles for a TV show.
 func (c *Client) GetTVAlternativeTitles(ctx context.Context, tvID int) ([]AlternativeTitle, error) {
+	generation := c.cacheGeneration()
 	cacheKey := fmt.Sprintf("tv_alt:%d", tvID)
 	if cached, ok := GetCached[[]AlternativeTitle](c, cacheKey); ok {
 		return cached, nil
@@ -121,7 +129,7 @@ func (c *Client) GetTVAlternativeTitles(ctx context.Context, tvID int) ([]Altern
 		return nil, fmt.Errorf("tmdb get tv alternative titles: %w", err)
 	}
 
-	SetCached(c, cacheKey, resp.Results, 7*24*time.Hour)
+	setCachedGeneration(c, generation, cacheKey, resp.Results, 7*24*time.Hour)
 	return resp.Results, nil
 }
 
@@ -140,6 +148,7 @@ func (c *Client) fetchTVDetails(ctx context.Context, tvID int) (TVDetails, error
 }
 
 func (c *Client) fetchTVDetailsUncached(ctx context.Context, tvID int, cacheKey string) (TVDetails, error) {
+	generation := c.cacheGeneration()
 
 	params := url.Values{}
 	params.Set("language", c.language)
@@ -149,8 +158,24 @@ func (c *Client) fetchTVDetailsUncached(ctx context.Context, tvID int, cacheKey 
 		return TVDetails{}, fmt.Errorf("tmdb fetch tv details: %w", err)
 	}
 
-	SetCached(c, cacheKey, *resp, 7*24*time.Hour)
+	setCachedGeneration(c, generation, cacheKey, *resp, 7*24*time.Hour)
 	return *resp, nil
+}
+
+// SeasonEnd returns the last absolute episode in a contiguous, validated season.
+func SeasonEnd(offset int, season TVSeasonDetails) (int, error) {
+	count := len(season.Episodes)
+	if count == 0 {
+		return offset, fmt.Errorf("empty season %d", season.SeasonNumber)
+	}
+	seen := make(map[int]bool, count)
+	for _, ep := range season.Episodes {
+		if ep.EpisodeNumber < 1 || ep.EpisodeNumber > count || seen[ep.EpisodeNumber] {
+			return offset, fmt.Errorf("incomplete numbering in season %d", season.SeasonNumber)
+		}
+		seen[ep.EpisodeNumber] = true
+	}
+	return offset + count, nil
 }
 
 // AbsoluteToStandardMapping maps an absolute episode number to TMDB's standard (Season, Episode) format.
@@ -171,19 +196,19 @@ func (c *Client) AbsoluteToStandardMapping(ctx context.Context, tvID int, absolu
 	for seasonNum := 1; seasonNum <= details.NumberOfSeasons; seasonNum++ {
 		seasonDetails, err := c.GetTVSeason(ctx, tvID, seasonNum)
 		if err != nil {
-			continue // Skip seasons that fail
+			return 0, 0, err
 		}
 
-		seasonEpisodeCount := len(seasonDetails.Episodes)
-		if seasonEpisodeCount == 0 {
-			continue
+		end, err := SeasonEnd(accumulatedEpisodes, seasonDetails)
+		if err != nil {
+			return 0, 0, err
 		}
 
 		// Check if the absolute episode falls within this season's range
-		if absoluteEpisode <= accumulatedEpisodes+seasonEpisodeCount {
+		if absoluteEpisode <= end {
 			return seasonNum, absoluteEpisode - accumulatedEpisodes, nil
 		}
-		accumulatedEpisodes += seasonEpisodeCount
+		accumulatedEpisodes = end
 	}
 
 	// If not found in regular seasons, check for specials (season 0)

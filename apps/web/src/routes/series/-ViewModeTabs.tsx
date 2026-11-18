@@ -1,15 +1,15 @@
-import { IconNavigationLibrary, IconStatusImage } from '@/components/ui/icons';
+import { IconNavigationLibrary, IconNavigationList } from '@/components/ui/icons';
 import { EraRail, type EraRailItem } from '@/components/ui/era-rail';
 
-export type SeriesViewMode = 'shelf' | 'etapas';
+export type SeriesViewMode = 'cards' | 'shelf';
 
 const SERIES_VIEWS: ReadonlyArray<EraRailItem<SeriesViewMode>> = [
-    { id: 'shelf', label: 'Estantería', kanji: '棚', icon: <IconNavigationLibrary className="size-5" aria-hidden="true" />, accent: 'var(--label-1)', years: 'Series por estante' },
-    { id: 'etapas', label: 'Portadas', kanji: '絵', icon: <IconStatusImage className="size-5" aria-hidden="true" />, accent: 'var(--label-1)', years: 'Series por portada' },
+    { id: 'cards', label: 'Tarjetas', kanji: '帯', icon: <IconNavigationList className="size-5" aria-hidden="true" />, accent: 'var(--label-1)', years: 'Tarjetas horizontales' },
+    { id: 'shelf', label: 'Estantería', kanji: '棚', icon: <IconNavigationLibrary className="size-5" aria-hidden="true" />, accent: 'var(--label-1)', years: 'Repisa VHS' },
 ];
 
 /**
- * Selector de vista de Series (Estantería / Portadas). Reutiliza el EraRail de la sidebar de eras:
+ * Selector de vista de Series (Tarjetas / Estantería). Reutiliza el EraRail de la sidebar:
  * riel vertical en escritorio, barra compacta en móvil y tableta.
  */
 export function ViewModeTabs({

@@ -4,105 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"kamehouse/internal/api/metadata_provider"
-	"kamehouse/internal/continuity"
 	"kamehouse/internal/database/models"
-	"kamehouse/internal/database/models/dto"
-	"kamehouse/internal/library/anime"
-	"sort"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
-
-// HandleGetHomeCurated returns the intelligent swimlanes for the home page.
-func (h *Handler) HandleGetHomeCurated(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	if h.App.Database == nil {
-		return c.JSON(500, NewErrorResponse(errors.New("database not initialized")))
-	}
-
-	resp, err := anime.GetCuratedHome(ctx, h.App.Database)
-	if err != nil {
-		return c.JSON(500, NewErrorResponse(err))
-	}
-
-	return c.JSON(200, NewDataResponse(resp))
-}
-
-// HandleGetContinueWatching returns the "Continue Watching" items for the user.
-//
-// Fuente de verdad: el filecache de continuidad (el mismo que sirve
-// /continuity/history y consume la página de serie). watch_histories en DB es
-// solo un espejo asíncrono del TelemetryManager y puede ir hasta un flush atrás.
-// El filecache no distingue cuentas: válido mientras la instalación sea
-// single-user (ver currentAccountID).
-func (h *Handler) HandleGetContinueWatching(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	if h.App.Database == nil {
-		return h.RespondWithError(c, errors.New("database not initialized"))
-	}
-
-	empty := make([]dto.ContinueWatchingItem, 0)
-	cm := h.App.ContinuityManager
-	if cm == nil {
-		return h.RespondWithData(c, empty)
-	}
-	if st := cm.GetSettings(); st == nil || !st.WatchContinuityEnabled {
-		return h.RespondWithData(c, empty)
-	}
-
-	history := continueWatchingHistory(cm.GetWatchHistory(), currentAccountID(c))
-
-	svc := anime.NewIntelligenceService(h.App.Database, nil, h.App.Logger)
-	resp, err := svc.ContinueWatchingFromHistory(ctx, history)
-	if err != nil {
-		return h.RespondWithError(c, err)
-	}
-
-	if resp == nil {
-		resp = empty
-	}
-
-	return h.RespondWithData(c, resp)
-}
-
-// continueWatchingMaxItems replica el LIMIT de la consulta histórica en DB.
-const continueWatchingMaxItems = 20
-
-// continueWatchingHistory convierte el historial del filecache (ya reducido a
-// la entrada más reciente por media) en filas ordenadas por recencia.
-func continueWatchingHistory(wh continuity.WatchHistory, accountID uint) []models.WatchHistory {
-	items := make([]*continuity.WatchHistoryItem, 0, len(wh))
-	for _, it := range wh {
-		if it == nil || !validPlaybackBeat(it.MediaID, it.EpisodeNumber, it.CurrentTime, it.Duration) {
-			continue
-		}
-		items = append(items, it)
-	}
-	sort.SliceStable(items, func(i, j int) bool {
-		if !items[i].TimeUpdated.Equal(items[j].TimeUpdated) {
-			return items[i].TimeUpdated.After(items[j].TimeUpdated)
-		}
-		return items[i].MediaID < items[j].MediaID
-	})
-	if len(items) > continueWatchingMaxItems {
-		items = items[:continueWatchingMaxItems]
-	}
-
-	out := make([]models.WatchHistory, 0, len(items))
-	for _, it := range items {
-		out = append(out, models.WatchHistory{
-			AccountID:     accountID,
-			MediaID:       it.MediaID,
-			EpisodeNumber: it.EpisodeNumber,
-			CurrentTime:   it.CurrentTime,
-			Duration:      it.Duration,
-		})
-	}
-	return out
-}
 
 // HandleRetagEpisodes re-runs IntelligenceTagger on all LibraryEpisode records
 // using the titles and descriptions already stored in the DB — no TMDB API needed.
@@ -214,8 +120,6 @@ func (h *Handler) HandleRetagEpisodes(c echo.Context) error {
 	}
 
 	h.App.Logger.Info().Int("updated", updated).Int("total", len(episodes)).Msg("retag: Complete")
-
-	anime.InvalidateCuratedHomeCache()
 
 	return c.JSON(200, NewDataResponse(map[string]any{
 		"episodes_retagged": updated,

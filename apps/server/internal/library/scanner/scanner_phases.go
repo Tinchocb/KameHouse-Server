@@ -317,7 +317,7 @@ func folderNfoPaths(cache *sync.Map, dir string) []string {
 }
 
 // persistNfoEntries es la única fase que escribe a la DB: los registros con
-// TMDB ID van por UpsertLibraryMediaBatch; los locales (tmdb_id = 0) se insertan
+// TMDB ID van por UpsertLibraryMediaBatchContext; los locales (tmdb_id = 0) se insertan
 // uno a uno para preservar la unicidad. Después propaga los IDs de carpeta.
 func (scn *Scanner) persistNfoEntries(localFiles []*dto.LocalFile, nfoEntries []*nfoEntry) {
 	// folder path → LibraryMedia ID (uint), para propagar a los hermanos.

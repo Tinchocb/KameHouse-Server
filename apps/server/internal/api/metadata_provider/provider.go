@@ -15,9 +15,9 @@ import (
 )
 
 type Provider interface {
+	// GetAnimeMetadata accepts a public library ID, never a LibraryMedia primary key.
 	GetAnimeMetadata(id int) (*metadata.AnimeMetadata, error)
 	GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *metadata.AnimeMetadata) AnimeMetadataWrapper
-	SetUseFallbackProvider(v bool)
 	ClearCache()
 	Close() error
 }
@@ -37,7 +37,6 @@ func (p *ProviderImpl) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia,
 	return NewSimpleAnimeMetadataWrapper(animeMetadata)
 }
 
-func (p *ProviderImpl) SetUseFallbackProvider(v bool) {}
 func (p *ProviderImpl) ClearCache()                   {}
 func (p *ProviderImpl) Close() error                  { return nil }
 
@@ -99,7 +98,7 @@ func NewRoutingProvider(jikanProv *JikanProviderImpl, tmdbProv *TMDBProviderImpl
 
 func (p *RoutingProvider) GetAnimeMetadata(id int) (*metadata.AnimeMetadata, error) {
 	if p.database != nil && p.tmdbProvider != nil {
-		if m, err := db.GetLibraryMediaByID(p.database, uint(id)); err == nil && m != nil {
+		if m, err := db.ResolveLibraryMediaByPublicID(p.database, id); err == nil && m != nil {
 			if m.Type == "MOVIE" || m.Type == "SHOW" {
 				meta, err := p.tmdbProvider.GetAnimeMetadata(id)
 				if err == nil && meta != nil {
@@ -115,26 +114,7 @@ func (p *RoutingProvider) GetAnimeMetadata(id int) (*metadata.AnimeMetadata, err
 }
 
 func (p *RoutingProvider) GetAnimeMetadataWrapper(baseAnime *platform.UnifiedMedia, animeMetadata *metadata.AnimeMetadata) AnimeMetadataWrapper {
-	if p.database != nil && baseAnime != nil && p.tmdbProvider != nil {
-		if m, err := db.GetLibraryMediaByID(p.database, uint(baseAnime.ID)); err == nil && m != nil {
-			if m.Type == "MOVIE" || m.Type == "SHOW" {
-				return p.tmdbProvider.GetAnimeMetadataWrapper(baseAnime, animeMetadata)
-			}
-		}
-	}
-	if p.jikanProvider != nil {
-		return p.jikanProvider.GetAnimeMetadataWrapper(baseAnime, animeMetadata)
-	}
 	return NewSimpleAnimeMetadataWrapper(animeMetadata)
-}
-
-func (p *RoutingProvider) SetUseFallbackProvider(v bool) {
-	if p.jikanProvider != nil {
-		p.jikanProvider.SetUseFallbackProvider(v)
-	}
-	if p.tmdbProvider != nil {
-		p.tmdbProvider.SetUseFallbackProvider(v)
-	}
 }
 
 func (p *RoutingProvider) ClearCache() {

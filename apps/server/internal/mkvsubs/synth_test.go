@@ -301,7 +301,7 @@ func TestOpenReportsReadFailuresAsSuch(t *testing.T) {
 		// El SeekHead sí se lee; las Cues (al final del archivo) fallan.
 		_, err := Open(context.Background(), failingSource{BytesSource(s.Bytes), size - 2000, size, boom}, Options{ChunkSize: 64 << 10})
 		require.ErrorIs(t, err, boom)
-		require.NotErrorIs(t, err, ErrNoCues)
+		require.NotErrorIs(t, err, ErrNotMatroska)
 	})
 	t.Run("sano", func(t *testing.T) {
 		f, err := Open(context.Background(), BytesSource(s.Bytes), Options{})

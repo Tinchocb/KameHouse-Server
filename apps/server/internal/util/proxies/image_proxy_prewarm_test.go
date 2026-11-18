@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -35,7 +36,7 @@ func TestPrewarmBajaUnaVezOmiteCacheadasYNoGuardaErrores(t *testing.T) {
 	ip := &ImageProxy{CacheDir: t.TempDir()}
 	urls := []string{srv.URL + "/a.jpg", srv.URL + "/b.jpg", srv.URL + "/a.jpg", srv.URL + "/missing.jpg", ""}
 
-	if n := ip.Prewarm(urls, 2); n != 2 {
+	if n := ip.PrewarmContext(context.Background(), urls, 2); n != 2 {
 		t.Fatalf("descargadas = %d, se esperaban 2", n)
 	}
 	if hits.Load() != 3 { // a, b y el 404 (a repetida no se pide dos veces)
@@ -47,7 +48,7 @@ func TestPrewarmBajaUnaVezOmiteCacheadasYNoGuardaErrores(t *testing.T) {
 
 	// Segunda pasada: todo lo válido ya está en disco.
 	hits.Store(0)
-	if n := ip.Prewarm(urls, 2); n != 0 {
+	if n := ip.PrewarmContext(context.Background(), urls, 2); n != 0 {
 		t.Fatalf("segunda pasada descargó %d, se esperaban 0", n)
 	}
 	if hits.Load() != 1 { // solo reintenta el que falló

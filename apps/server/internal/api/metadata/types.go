@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"strings"
-	"time"
 )
 
 type (
@@ -25,8 +24,6 @@ type (
 		Openings     []string            `json:"openings,omitempty"`
 		Endings      []string            `json:"endings,omitempty"`
 		Characters   []CharacterMetadata `json:"characters,omitempty"`
-
-		currentEpisodeCount int `json:"-"`
 	}
 
 	AnimeMappings struct {
@@ -98,38 +95,6 @@ func (m *AnimeMetadata) GetMainEpisodeCount() int {
 		return 0
 	}
 	return m.EpisodeCount
-}
-
-func (m *AnimeMetadata) GetCurrentEpisodeCount() int {
-	if m == nil {
-		return 0
-	}
-	if m.currentEpisodeCount > 0 {
-		return m.currentEpisodeCount
-	}
-	count := 0
-	for _, ep := range m.Episodes {
-		// ep.Episode puede venir vacío (p.ej. películas o metadata parcial de TMDB);
-		// acceder a [0] sin verificar longitud panickeaba y devolvía 500 en toda la
-		// entrada de anime, rompiendo la página de detalle.
-		if ep.Episode == "" {
-			continue
-		}
-		firstChar := ep.Episode[0]
-		if firstChar >= '0' && firstChar <= '9' {
-			// Check if aired
-			if ep.AirDate != "" {
-				date, err := time.Parse("2006-01-02", ep.AirDate)
-				if err == nil {
-					if date.Before(time.Now()) || date.Equal(time.Now()) {
-						count++
-					}
-				}
-			}
-		}
-	}
-	m.currentEpisodeCount = count
-	return count
 }
 
 // GetOffset returns the offset of the first episode relative to the absolute episode number.

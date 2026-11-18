@@ -71,7 +71,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 	}
 
 	if path == "master.m3u8" {
-		ret, err := tc.GetMaster(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientID, "", mediaContainer.VideoPassthrough)
+		ret, err := tc.GetMaster(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, clientID, c.QueryParam("token"), mediaContainer.VideoPassthrough)
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Msg("mediastream: GetMaster failed")
 			return err
@@ -102,7 +102,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		ret, err := tc.GetVideoIndex(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, clientID, "")
+		ret, err := tc.GetVideoIndex(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, quality, clientID, c.QueryParam("token"))
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Str("quality", split[0]).Msg("mediastream: GetVideoIndex failed")
 			return err
@@ -125,7 +125,7 @@ func (r *Repository) ServeEchoTranscodeStream(c echo.Context, clientID string) e
 			return err
 		}
 
-		ret, err := tc.GetAudioIndex(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientID, "")
+		ret, err := tc.GetAudioIndex(c.Request().Context(), mediaContainer.Filepath, mediaContainer.Hash, mediaContainer.MediaInfo, int32(audioIndex), clientID, c.QueryParam("token"))
 		if err != nil {
 			r.logger.Error().Err(err).Str("path", mediaContainer.Filepath).Str("audio", split[1]).Msg("mediastream: GetAudioIndex failed")
 			return err
@@ -238,7 +238,7 @@ func (r *Repository) ServeEchoOptimizedStream(c echo.Context, clientID string) e
 			return err
 		}
 		c.Response().Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		return c.Blob(http.StatusOK, "application/vnd.apple.mpegurl", []byte(withClientID(string(body), clientID)))
+		return c.Blob(http.StatusOK, "application/vnd.apple.mpegurl", []byte(withPlaybackCredentials(string(body), clientID, c.QueryParam("token"))))
 	} else if strings.HasSuffix(absPath, ".ts") {
 		c.Response().Header().Set("Content-Type", "video/mp2t")
 		// La URL del segmento es la misma en todos los episodios (el archivo se resuelve por

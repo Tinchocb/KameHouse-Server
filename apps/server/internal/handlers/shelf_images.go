@@ -36,7 +36,7 @@ func shelfImageURLs(media []models.LibraryMedia) []string {
 	out := make([]string, 0, len(media)*4+2)
 	hasSeries := false
 	for _, m := range media {
-		if strings.EqualFold(m.Type, "MOVIE") || strings.EqualFold(m.Format, "MOVIE") {
+		if strings.EqualFold(m.Type, "MOVIE") || strings.EqualFold(m.Format, "MOVIE") || strings.EqualFold(m.Format, "OVA") || strings.EqualFold(m.Format, "SPECIAL") {
 			// Grilla de /movies y Home: solo el póster en w342 (moviePosterUrls).
 			if strings.HasPrefix(m.PosterImage, "http") {
 				out = append(out, tmdbSized(m.PosterImage, "w342"))
@@ -98,22 +98,23 @@ func (h *Handler) prewarmShelfImages(delay time.Duration) {
 	if ip == nil || h.App == nil || h.App.Database == nil {
 		return
 	}
-	go func() {
+	h.App.StartBackground(func() {
 		defer func() {
 			if r := recover(); r != nil {
 				h.App.Logger.Error().Interface("panic", r).Msg("images: panic prewarming shelf images")
 			}
 		}()
-		if delay > 0 {
-			time.Sleep(delay)
+		ctx := h.App.ShutdownCtx()
+		if !waitBackground(ctx, delay) {
+			return
 		}
 		var media []models.LibraryMedia
-		if err := h.App.Database.Gorm().Select("type", "format", "poster_image", "banner_image").Find(&media).Error; err != nil {
+		if err := h.App.Database.Gorm().WithContext(ctx).Select("type", "format", "poster_image", "banner_image").Find(&media).Error; err != nil {
 			return
 		}
 		urls := shelfImageURLs(media)
 		start := time.Now()
-		n := ip.Prewarm(urls, 3)
+		n := ip.PrewarmContext(ctx, urls, 6)
 		if n > 0 {
 			h.App.Logger.Info().Int("fetched", n).Int("total", len(urls)).Dur("elapsed", time.Since(start)).Msg("images: Shelf images cached locally")
 		}
@@ -121,14 +122,17 @@ func (h *Handler) prewarmShelfImages(delay time.Duration) {
 		// Stills de episodios: después de la estantería y con menos concurrencia, para no
 		// competir con lo que el usuario está mirando.
 		var stills []string
-		if err := h.App.Database.Gorm().Model(&models.LibraryEpisode{}).Where("image LIKE ?", "https://image.tmdb.org/%").Distinct().Pluck("image", &stills).Error; err != nil {
+		if ctx.Err() != nil {
+			return
+		}
+		if err := h.App.Database.Gorm().WithContext(ctx).Model(&models.LibraryEpisode{}).Where("image LIKE ?", "https://image.tmdb.org/%").Distinct().Pluck("image", &stills).Error; err != nil {
 			return
 		}
 		stillURLs := episodeStillURLs(stills)
 		start = time.Now()
-		n = ip.Prewarm(stillURLs, 2)
+		n = ip.PrewarmContext(ctx, stillURLs, 2)
 		if n > 0 {
 			h.App.Logger.Info().Int("fetched", n).Int("total", len(stillURLs)).Dur("elapsed", time.Since(start)).Msg("images: Episode stills cached locally")
 		}
-	}()
+	})
 }

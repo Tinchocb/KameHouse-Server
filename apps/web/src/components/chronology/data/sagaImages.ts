@@ -34,19 +34,6 @@ const SAGA_IMAGE_MAP: Record<string, string[]> = {
   'dbgt-baby-ssj4': ['/sagas/baby.webp'],
   'dbgt-super-17': ['/sagas/baby.webp'],
   'dbgt-dragones-malignos': ['/sagas/black-star.webp'],
-  'vol-clasico-origen': ['/sagas/pilaf.webp', '/sagas/torneo-21.webp', '/sagas/original/busqueda-esferas.webp'],
-  'vol-clasico-redribbon': ['/sagas/red-ribbon.webp', '/sagas/torneo-22.webp'],
-  'vol-clasico-piccolo': ['/sagas/piccolo-daimaku.webp', '/sagas/original/goku-vs-piccolo-jr.webp'],
-  'vol-saiyan-choque': ['/sagas/saiyajin.webp', '/sagas/z/vegeta-saga.webp'],
-  'vol-freezer-ssj': ['/sagas/namek-freezer.webp', '/sagas/z/goku-llega-namek.webp'],
-  'vol-cell-trunks': ['/sagas/trunks-androides-cell.webp', '/sagas/z/trunks-saga.webp'],
-  'vol-cell-games': ['/sagas/z/cell-games-saga.webp', '/sagas/z/perfect-cell-saga.webp'],
-  'vol-buu-caos': ['/sagas/majin-buu.webp', '/sagas/z/fusion-saga.webp', '/sagas/z/kid-buu-saga.webp'],
-  'vol-daima-reino': ['/sagas/daima.webp'],
-  'vol-super-dioses': ['/sagas/batalla-dioses.webp', '/sagas/resurreccion-f.webp'],
-  'vol-super-black': ['/sagas/trunks-futuro.webp'],
-  'vol-super-torneo': ['/sagas/super/ultra-instinto-completo-victoria.webp', '/sagas/super/torneo-u6.webp'],
-  'vol-gt-viaje': ['/sagas/black-star.webp', '/sagas/baby.webp', '/sagas/gt/omega-shenron.webp'],
 };
 
 export function getSagaFallbackImages(volumeId: string): string[] {

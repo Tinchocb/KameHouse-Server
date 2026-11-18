@@ -504,8 +504,7 @@ func (mp *MatroskaParser) parseSegmentChildren() error {
 // Returns:
 //   - error: An error if the SegmentInfo element could not be read or parsed.
 func (mp *MatroskaParser) parseSegmentInfo(size uint64) error {
-	data := make([]byte, size)
-	_, err := io.ReadFull(mp.reader, data)
+	data, err := mp.reader.readMetadata(size)
 	if err != nil {
 		return err
 	}
@@ -615,8 +614,8 @@ func (mp *MatroskaParser) parseSeekHead(size uint64) error {
 	// adelantó hasta 64 KB del lector de abajo, así que leer directo de r
 	// devolvía bytes de otra posición y la apertura caía al modo sin pistas.
 	// EBMLReader.Read ya avanza mp.reader.pos.
-	data := make([]byte, size)
-	if _, err := io.ReadFull(mp.reader, data); err != nil {
+	data, err := mp.reader.readMetadata(size)
+	if err != nil {
 		return err
 	}
 

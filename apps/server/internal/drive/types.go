@@ -38,6 +38,7 @@ func getFileExt(name string) string {
 
 // DriveStatus represents current connection and health status of Google Drive integration.
 type DriveStatus struct {
+	OAuthConfigured bool   `json:"oauthConfigured"`
 	Connected       bool   `json:"connected"`
 	UserEmail       string `json:"userEmail,omitempty"`
 	DisplayName     string `json:"displayName,omitempty"`
@@ -48,6 +49,17 @@ type DriveStatus struct {
 	Error           string `json:"error,omitempty"`
 	// Progress is the live (or last finished) scan snapshot; nil if no scan ran since startup.
 	Progress *ScanProgress `json:"progress,omitempty"`
+	// AutoSync dice si KameHouse escanea Drive sola; ScanIntervalMinutes es cada cuánto.
+	AutoSync            bool `json:"autoSync"`
+	ScanIntervalMinutes int  `json:"scanIntervalMinutes"`
+	// NextScanAt es el próximo escaneo automático (nil si no hay ninguno previsto).
+	NextScanAt *time.Time `json:"nextScanAt,omitempty"`
+}
+
+// DriveFolder es una carpeta de Drive que ofrece el selector de carpeta.
+type DriveFolder struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // ScanPhase identifies the current stage of a Drive scan.

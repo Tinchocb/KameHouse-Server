@@ -2,6 +2,7 @@ import { renderHook, cleanup } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { usePerformanceStore } from "./performance-store"
 import {
+    GOVERNOR_IDLE_COOLDOWN_MS,
     GOVERNOR_SUSTAIN_MS,
     governorThresholds,
     startPerformanceGovernor,
@@ -113,6 +114,34 @@ describe("stepGovernor", () => {
 })
 
 describe("startPerformanceGovernor", () => {
+    it("suspends frame requests on blur and resumes once on focus", () => {
+        const stop = startPerformanceGovernor()
+        expect(pending).not.toBeNull()
+        focused = false
+        window.dispatchEvent(new Event("blur"))
+        expect(pending).toBeNull()
+        focused = true
+        window.dispatchEvent(new Event("focus"))
+        expect(pending).not.toBeNull()
+        stop()
+        window.dispatchEvent(new Event("focus"))
+        expect(pending).toBeNull()
+    })
+    it("suspends frames while hidden and resets the observation window on return", () => {
+        let visible = true
+        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visible ? "visible" : "hidden" })
+        const stop = startPerformanceGovernor()
+        visible = false
+        document.dispatchEvent(new Event("visibilitychange"))
+        expect(pending).toBeNull()
+        visible = true
+        document.dispatchEvent(new Event("visibilitychange"))
+        const now = performance.now()
+        frameAt(now + 10000)
+        expect(throttled()).toBe(false)
+        expect(pending).not.toBeNull()
+        stop()
+    })
     it("también detecta degradación extrema de 2 FPS", () => {
         const t0 = performance.now()
         const stop = startPerformanceGovernor()
@@ -157,6 +186,37 @@ describe("startPerformanceGovernor", () => {
         expect(pending).not.toBeNull()
         stop()
         expect(pending).toBeNull()
+    })
+
+    it("suspende rAF en reposo sano tras el warmup y despierta tras cooldown o interacción", () => {
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+        try {
+            const t0 = performance.now()
+            const stop = startPerformanceGovernor()
+
+            // Ráfaga inicial sana a ~62 FPS durante warmup + 1 s
+            runFrames(t0 + 16, t0 + 3200, 16)
+            expect(pending).toBeNull()
+            expect(throttled()).toBe(false)
+
+            // Al pasar el cooldown periódico vuelve a pedir un cuadro
+            vi.advanceTimersByTime(GOVERNOR_IDLE_COOLDOWN_MS)
+            expect(pending).not.toBeNull()
+
+            // Nueva ráfaga sana vuelve a entrar en cooldown
+            runFrames(t0 + 8300, t0 + 9500, 16)
+            expect(pending).toBeNull()
+
+            // Una interacción (scroll) despierta inmediatamente una ráfaga
+            window.dispatchEvent(new Event("scroll"))
+            expect(pending).not.toBeNull()
+
+            stop()
+            window.dispatchEvent(new Event("scroll"))
+            expect(pending).toBeNull()
+        } finally {
+            vi.useRealTimers()
+        }
     })
 })
 

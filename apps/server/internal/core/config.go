@@ -22,8 +22,6 @@ type Config struct {
 		Host          string   `mapstructure:"host"`
 		Port          int      `mapstructure:"port"`
 		UseBinaryPath bool     `mapstructure:"useBinaryPath"`
-		Systray       bool     `mapstructure:"systray"`
-		DoHUrl        string   `mapstructure:"dohUrl"`
 		Password      string   `mapstructure:"password"`
 		CorsOrigins   []string `mapstructure:"corsOrigins"`
 		AuthTokenTTL  string   `mapstructure:"authTokenTTL"` // e.g. "24h", "1h", "30m" (min 5m)
@@ -52,6 +50,9 @@ type Config struct {
 			DiskTTLHours     int    `mapstructure:"diskTTLHours"`
 			CleanupInterval  string `mapstructure:"cleanupInterval"`
 		} `mapstructure:"thumbnails"`
+		Drive struct {
+			DiskMaxSizeMB int64 `mapstructure:"diskMaxSizeMB"`
+		} `mapstructure:"drive"`
 	} `mapstructure:"cache"`
 	Data struct {
 		AppDataDir string
@@ -191,6 +192,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("cache.thumbnails.diskMaxSizeMB", 5120) // 5GB
 	v.SetDefault("cache.thumbnails.diskTTLHours", 720)   // 30 days
 	v.SetDefault("cache.thumbnails.cleanupInterval", "12h")
+	// Caché de bloques de Drive; 0 usa el mismo valor que drive.DefaultBlockCacheMaxBytes.
+	v.SetDefault("cache.drive.diskMaxSizeMB", 2048)
 	v.SetDefault("logs.dir", "$KAMEHOUSE_DATA_DIR/logs")
 	v.SetDefault("metadata.provider", "jikan")
 	v.SetDefault("metadata.tmdbApiKey", "")
@@ -220,6 +223,10 @@ func initAppDataDir(defined string, logger *zerolog.Logger) (string, string, err
 	configPath := filepath.FromSlash(filepath.Join(dataDir, constants.ConfigFileName))
 	return filepath.FromSlash(dataDir), configPath, nil
 }
+
+// minDriveBlockCacheMB es el mínimo (distinto de 0) de cache.drive.diskMaxSizeMB:
+// cuatro bloques de 16 MiB, para que la caché pueda guardar más que un bloque.
+const minDriveBlockCacheMB int64 = 64
 
 func validateConfig(cfg *Config) error {
 	checks := []struct {
@@ -273,6 +280,13 @@ func validateConfig(cfg *Config) error {
 		} else if d < 1*time.Minute {
 			return errors.New("config validation failed: cache.thumbnails.cleanupInterval must be at least 1m")
 		}
+	}
+
+	if cfg.Cache.Drive.DiskMaxSizeMB < 0 {
+		return errors.New("config validation failed: cache.drive.diskMaxSizeMB must be >= 0")
+	}
+	if cfg.Cache.Drive.DiskMaxSizeMB > 0 && cfg.Cache.Drive.DiskMaxSizeMB < minDriveBlockCacheMB {
+		return fmt.Errorf("config validation failed: cache.drive.diskMaxSizeMB must be 0 (default) or at least %d", minDriveBlockCacheMB)
 	}
 
 	return nil
@@ -434,17 +448,31 @@ func resolveCorsOrigins(cfg *Config) {
 		}
 	}
 
-	// Orígenes del webview de la app de escritorio empaquetada (Tauri en Windows,
-	// macOS y Linux). Sin ellos el CORS y el WebSocket rechazan a la propia app,
-	// que carga la interfaz desde archivos locales y llama al sidecar por
-	// 127.0.0.1. Solo el webview puede originar pedidos con estos orígenes.
+	// Tauri and packaged TV origins. An opaque origin (null/file://) does not
+	// identify an application: sandboxed web pages can send it too. It is only
+	// usable when the API and WebSocket require the configured password.
 	for _, o := range desktopWebviewOrigins {
 		if !containsString(origins, o) {
 			origins = append(origins, o)
 		}
 	}
+	if cfg.Server.Password == "" {
+		filtered := make([]string, 0, len(origins))
+		for _, origin := range origins {
+			if !IsOpaqueOrigin(origin) {
+				filtered = append(filtered, origin)
+			}
+		}
+		origins = filtered
+	}
 
 	cfg.Server.CorsOrigins = origins
+}
+
+// IsOpaqueOrigin reports origins that cannot establish a trusted app identity.
+func IsOpaqueOrigin(origin string) bool {
+	origin = strings.ToLower(strings.TrimSpace(origin))
+	return origin == "null" || strings.HasPrefix(origin, "file:")
 }
 
 // desktopWebviewOrigins son los orígenes que Tauri asigna a su webview y los

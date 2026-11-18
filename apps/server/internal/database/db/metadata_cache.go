@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"github.com/goccy/go-json"
 	"kamehouse/internal/database/models"
 	"time"
@@ -58,16 +59,13 @@ func UpsertMetadataCache(d *Database, provider, key string, value interface{}, t
 	}).Create(&cache).Error
 }
 
-// DeleteMetadataCacheByProvider removes all cached entries for a given provider.
-// This is useful when enrichment logic changes and we need to force a re-fetch.
-func DeleteMetadataCacheByProvider(d *Database, provider string) error {
-	return d.Gorm().Where("provider = ?", provider).Delete(&models.MetadataCache{}).Error
-}
-
-// DeleteExpiredMetadataCache removes all cached entries that have expired.
+// DeleteExpiredMetadataCacheContext removes all cached entries that have expired.
 // Entries with ExpiresAt set to the zero value (no TTL) are preserved.
-func DeleteExpiredMetadataCache(d *Database) (int64, error) {
+func DeleteExpiredMetadataCacheContext(ctx context.Context, d *Database) (int64, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
 	zeroTime := time.Time{}
-	res := d.Gorm().Where("expires_at < ? AND expires_at > ?", time.Now(), zeroTime).Delete(&models.MetadataCache{})
+	res := d.Gorm().WithContext(ctx).Where("expires_at < ? AND expires_at > ?", time.Now(), zeroTime).Delete(&models.MetadataCache{})
 	return res.RowsAffected, res.Error
 }

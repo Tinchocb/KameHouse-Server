@@ -43,10 +43,21 @@ describe("DeferredImage: imágenes de TMDB por el proxy local", () => {
         const { container } = render(<DeferredImage src={raw} alt="Visible" priority />)
         const high = container.querySelector("img[alt='Visible']") as HTMLImageElement
         expect(high.getAttribute("fetchpriority")).toBe("high")
+        expect(high.getAttribute("decoding")).toBe("sync")
+        expect(high.getAttribute("crossorigin")).toBe("anonymous")
 
         const { container: c2 } = render(<DeferredImage src={raw} alt="Normal" priority={false} fetchPriority="auto" />)
         // Sin intersección todavía no hay <img>; el contenedor existe y no rompe.
         expect(c2.querySelector("img[alt='Normal']")).toBeNull()
+    })
+
+    it("unifica crossOrigin=anonymous para el proxy local sin forzarlo en hosts externos sin CORS", () => {
+        const proxied = localImage("https://image.tmdb.org/t/p/w342/poster.jpg")
+        const { container: cProxy } = render(<DeferredImage src={proxied} alt="Proxy" priority />)
+        expect(cProxy.querySelector("img")?.getAttribute("crossorigin")).toBe("anonymous")
+
+        const { container: cExt } = render(<DeferredImage src="https://example.com/poster.jpg" alt="Externo" priority />)
+        expect(cExt.querySelector("img")?.getAttribute("crossorigin")).toBeNull()
     })
 
     it("getTmdbHeroSrcSet también va por el proxy y llega a original", () => {

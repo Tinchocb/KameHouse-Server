@@ -7,7 +7,7 @@ describe("autoocultado de controles", () => {
     beforeEach(() => vi.useFakeTimers())
     afterEach(() => { vi.useRealTimers(); document.body.innerHTML = "" })
 
-    it.each(["player-top-bar", "player-bottom-bar", "player-center-controls"])("mantiene visibles los controles enfocados en %s", async (className) => {
+    it.each(["player-top-bar", "player-bottom-bar"])("mantiene visibles los controles enfocados en %s", async (className) => {
         const bar = document.createElement("div")
         bar.className = className
         const button = document.createElement("button")

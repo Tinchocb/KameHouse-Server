@@ -1,10 +1,13 @@
 import * as React from 'react';
+import { m, AnimatePresence } from 'framer-motion';
 import { EraFilter } from './types';
 import { ChronologyEraNav, type EraProgress } from './ChronologyEraNav';
 import { ERA_COLOR_MAP } from '@/lib/config/eras';
 import { ElasticCounter } from '@/components/ui/kinetics/elastic-counter';
 import { cn } from '@/components/ui/core/styling';
 import type { TimelineOrder } from './data/releaseOrder';
+import { useIsClassicMode } from '@/lib/theme/use-classic-mode';
+import { useReducedMotion } from '@/components/ui/kinetics/hooks';
 
 interface HeaderProps {
   currentEraFilter: EraFilter;
@@ -80,6 +83,8 @@ export const Header: React.FC<HeaderProps> = ({
   order = 'chronological',
   actions,
 }) => {
+  const isClassic = useIsClassicMode();
+  const reduceMotion = useReducedMotion();
   const meta = ERA_HEADER_META[currentEraFilter] ?? ERA_HEADER_META.all;
 
   return (
@@ -91,21 +96,36 @@ export const Header: React.FC<HeaderProps> = ({
       {/* 2. Fila: título y progreso de completitud */}
       <div className="relative z-10 flex flex-wrap items-center gap-x-3 gap-y-3 min-w-0 pt-1">
         <div
-          className="w-10 h-10 rounded-xl p-[2px] shrink-0 transition-colors duration-base"
+          className="chrono-era-kanji-frame w-10 h-10 rounded-xl p-[2px] shrink-0 transition-[background] duration-base ease-smooth-out"
           style={{
-            background: `linear-gradient(135deg, ${meta.accent}, transparent 80%)`,
+            background: isClassic
+              ? 'var(--neutral-separator)'
+              : `linear-gradient(135deg, ${meta.accent}, transparent 80%)`,
           }}
         >
           <div
             className={cn(
-              "w-full h-full rounded-xl flex items-center justify-center border transition-colors duration-base",
-              meta.badgeBg,
-              meta.badgeBorder
+              "chrono-era-kanji-badge w-full h-full rounded-xl flex items-center justify-center border transition-colors duration-base overflow-hidden",
+              isClassic
+                ? "bg-[var(--neutral-elev-2)] border-[var(--neutral-separator)] border-t-[var(--glass-border-top)]"
+                : cn(meta.badgeBg, meta.badgeBorder)
             )}
           >
-            <span className={cn("font-kanji font-black text-xl leading-none transition-colors duration-base", meta.badgeText)}>
-              {meta.kanji}
-            </span>
+            <AnimatePresence mode="wait" initial={false}>
+              <m.span
+                key={meta.kanji}
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.85 }}
+                transition={{ duration: reduceMotion ? 0.08 : 0.16, ease: [0.22, 1, 0.36, 1] }}
+                className={cn(
+                  "chrono-era-kanji-glyph font-kanji font-black text-xl leading-none",
+                  isClassic ? "text-[var(--label-1)]" : meta.badgeText
+                )}
+              >
+                {meta.kanji}
+              </m.span>
+            </AnimatePresence>
           </div>
         </div>
 

@@ -1,6 +1,5 @@
 import type { VolumeData, SagaCategory, DetailedStoryNarrative, ChapterMilestone } from '../types';
 import { DRAGON_BALL_STORY_SPANS, type StorySpan } from '@/lib/config/dragonball_story_spans';
-import { DETAILED_STORIES } from './detailedStories';
 import { SPAN_DETAILED_STORIES } from './spanDetailedStories';
 import { SPAN_LORE } from './spanLore';
 
@@ -147,11 +146,6 @@ function charactersFromSpan(span: StorySpan): string[] {
   return out.length > 0 ? out : ['Goku'];
 }
 
-/** Spans que reutilizan tal cual la historia detallada de un tomo legacy (alcance 1:1). */
-const LEGACY_STORY_ALIAS: Record<string, string> = {
-  'dbs-goku-black': 'vol-super-black',
-};
-
 const SERIES_ICON_EMOJI: Record<StorySpan['seriesId'], string> = {
   classic: '🐉',
   z: '💥',
@@ -182,20 +176,18 @@ export function formatSecondsToTime(totalSeconds: number): string {
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
-function buildEpisodeMilestones(span: StorySpan, accentHex: string, auraGradient: string): ChapterMilestone[] {
+function buildEpisodeMilestones(span: StorySpan, accentHex: string): ChapterMilestone[] {
   const iconEmoji = SERIES_ICON_EMOJI[span.seriesId];
-  return span.milestones.map((m, index) => ({
+  return span.milestones.map((m) => ({
     episode: `Cap. ${m.episode}`,
     title: m.title,
     synopsis: m.description,
     sceneHighlight: m.description,
     accentColor: accentHex,
-    bgGradient: auraGradient,
     iconEmoji,
     characterFocus: span.seriesTitle,
     absoluteEpisode: m.episode,
     startSec: parseTimeToSeconds(m.time),
-    momentKey: `${span.id}:${m.episode}:${index}`,
   }));
 }
 
@@ -204,30 +196,25 @@ function spanToVolume(span: StorySpan): VolumeData {
   const saga = coarseSagaForSpan(span);
   const episodesCount = span.endEpisode - span.startEpisode + 1;
   const coverArt = COVER_TEMPLATES[span.seriesId];
-  const generatedMilestones = buildEpisodeMilestones(span, coverArt.accentHex, coverArt.auraGradient);
+  const generatedMilestones = buildEpisodeMilestones(span, coverArt.accentHex);
   const curated = SPAN_DETAILED_STORIES[span.id];
-  const aliased = !curated ? LEGACY_STORY_ALIAS[span.id] : undefined;
-  const legacyStory: DetailedStoryNarrative | undefined = aliased ? DETAILED_STORIES[aliased] : undefined;
-  const detailedStory: DetailedStoryNarrative | undefined =
-    DETAILED_STORIES[span.id] ??
-    legacyStory ??
-    (curated
-      ? {
-          prologue: curated.prologue,
-          escalation: curated.escalation,
-          turningPoint: curated.turningPoint,
-          aftermath: curated.aftermath,
-          keyBattles: curated.keyBattles,
-          episodeMilestones: generatedMilestones,
-        }
-      : ({
-          prologue: span.previouslyOn,
-          escalation: span.detailedPlot.slice(0, 600),
-          turningPoint: span.quickCatchUpKeys.join(' '),
-          aftermath: span.detailedPlot.slice(600, 1200) || span.detailedPlot,
-          keyBattles: [],
-          episodeMilestones: generatedMilestones,
-        } as DetailedStoryNarrative));
+  const detailedStory: DetailedStoryNarrative = curated
+    ? {
+        prologue: curated.prologue,
+        escalation: curated.escalation,
+        turningPoint: curated.turningPoint,
+        aftermath: curated.aftermath,
+        keyBattles: curated.keyBattles,
+        episodeMilestones: generatedMilestones,
+      }
+    : {
+        prologue: span.previouslyOn,
+        escalation: span.detailedPlot.slice(0, 600),
+        turningPoint: span.quickCatchUpKeys.join(' '),
+        aftermath: span.detailedPlot.slice(600, 1200) || span.detailedPlot,
+        keyBattles: [],
+        episodeMilestones: generatedMilestones,
+      };
 
   return {
     id: span.id,

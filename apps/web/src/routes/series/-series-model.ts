@@ -1,4 +1,4 @@
-import type { Anime_LibraryCollection, Continuity_WatchHistory } from '@/api/generated/types';
+import type { Anime_LibraryCollection } from '@/api/generated/types';
 import { getSafeCollectionEntries } from '@/lib/helpers/collection';
 import { getMediumResImage } from '@/lib/helpers/images';
 import {
@@ -22,64 +22,37 @@ export interface SeriesItem {
     seriesId?: string;
     /** Episodios vistos. */
     watched?: number;
-    /** Marca de tiempo (ms) de la última reproducción; 0 si nunca se vio. */
-    lastVisit?: number;
     yearNum?: number;
     orderNum?: number;
 }
 
 // ─── Orden ────────────────────────────────────────────────────────────────────
 
-type SeriesSort = 'saga' | 'alpha' | 'year' | 'recent' | 'progress';
-
 const COLLATOR = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
 
 const bySaga = (a: SeriesItem, b: SeriesItem) =>
     (a.orderNum ?? 999) - (b.orderNum ?? 999) || (a.yearNum ?? 9999) - (b.yearNum ?? 9999) || COLLATOR.compare(a.title, b.title);
 
-export function sortSeries(list: readonly SeriesItem[], sort: SeriesSort): SeriesItem[] {
-    const out = [...list];
-    switch (sort) {
-        case 'alpha':
-            return out.sort((a, b) => COLLATOR.compare(a.title, b.title));
-        case 'year':
-            return out.sort((a, b) => (a.yearNum ?? 9999) - (b.yearNum ?? 9999) || bySaga(a, b));
-        case 'recent':
-            // Las vistas hace poco primero; las que nunca se vieron quedan al final en orden de saga.
-            return out.sort((a, b) => (b.lastVisit ?? 0) - (a.lastVisit ?? 0) || bySaga(a, b));
-        case 'progress':
-            // Las que vas a medias primero, luego las sin empezar y al final las completas.
-            return out.sort((a, b) => progressRank(a) - progressRank(b) || b.progress - a.progress || bySaga(a, b));
-        default:
-            return out.sort(bySaga);
-    }
-}
-
-function progressRank(s: SeriesItem): number {
-    if (s.progress >= 100) return 2;
-    return s.progress > 0 ? 0 : 1;
+export function sortSeries(list: readonly SeriesItem[]): SeriesItem[] {
+    return [...list].sort(bySaga);
 }
 
 // ─── Preferencias por dispositivo ─────────────────────────────────────────────
 
-type SeriesViewPref = 'shelf' | 'etapas';
+type SeriesViewPref = 'cards' | 'shelf';
 
 interface SeriesPrefs {
     view?: SeriesViewPref;
-    sort?: SeriesSort;
 }
 
 const SERIES_PREFS_KEY = 'kamehouse-series-prefs';
-
-const SORT_VALUES: readonly string[] = ['saga', 'alpha', 'year', 'recent', 'progress'];
 
 export function parseSeriesPrefs(raw: string | null): SeriesPrefs {
     if (!raw) return {};
     try {
         const v = JSON.parse(raw) as Record<string, unknown>;
         const prefs: SeriesPrefs = {};
-        if (v.view === 'shelf' || v.view === 'etapas') prefs.view = v.view;
-        if (typeof v.sort === 'string' && SORT_VALUES.includes(v.sort)) prefs.sort = v.sort as SeriesSort;
+        if (v.view === 'shelf' || v.view === 'cards') prefs.view = v.view;
         return prefs;
     } catch {
         return {};
@@ -109,7 +82,6 @@ type CollectionEntry = ReturnType<typeof getSafeCollectionEntries>[number];
 /** Series (no películas ni especiales) de la colección, sin repetidos y en orden de saga. */
 export function buildSeriesList(
     collection: Anime_LibraryCollection | undefined,
-    history?: Continuity_WatchHistory | null,
 ): SeriesItem[] {
     if (!collection?.lists) return [];
     const raw = getSafeCollectionEntries(collection).filter(entry => {
@@ -155,9 +127,6 @@ export function buildSeriesList(
             : (media?.posterImage || media?.bannerImage || canonicalInfo?.poster || '');
         const bannerImg = media?.bannerImage || media?.posterImage || canonicalInfo?.banner || '';
 
-        const stamp = history?.[s.mediaId as number]?.timeUpdated;
-        const lastVisit = stamp ? Date.parse(stamp) || 0 : 0;
-
         return {
             id: s.mediaId as number,
             title: canonicalInfo?.title || title,
@@ -169,11 +138,10 @@ export function buildSeriesList(
             poster: getMediumResImage(posterImg),
             desc,
             seriesId,
-            lastVisit,
             yearNum: year === 'N/A' ? 9999 : Number(year),
             orderNum: DRAGON_BALL_SERIES_ORDER[seriesId] ?? 999,
         };
     });
 
-    return sortSeries(mapped, 'saga');
+    return sortSeries(mapped);
 }

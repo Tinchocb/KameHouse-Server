@@ -1,0 +1,598 @@
+{
+  "scope": "Inventario estático; las coincidencias por nombre no prueban consumo. Excluye .git, node_modules, out y out-ui-kit.",
+  "active_urls": [
+    "/icons/series-icons/daima/combate-ssj-kamehameha.png",
+    "/icons/series-icons/daima/reposo-pose.png",
+    "/icons/series-icons/db/combate-kamehameha.png",
+    "/icons/series-icons/db/reposo-guardia-sin-texto.png",
+    "/icons/series-icons/dbgt/combate-ssj4-kamehameha.png",
+    "/icons/series-icons/dbgt/reposo-clasico-hd.png",
+    "/icons/series-icons/dbkai/combate-ssj-lateral.png",
+    "/icons/series-icons/dbkai/reposo-brazos-cruzados.png",
+    "/icons/series-icons/dbs/combate-ultra-instinto.png",
+    "/icons/series-icons/dbs/reposo-hombro.png",
+    "/icons/series-icons/dbz/combate-kamehameha.png",
+    "/icons/series-icons/dbz/reposo-frente.png"
+  ],
+  "candidate_count": 64,
+  "candidate_bytes": 26618011,
+  "candidates": [
+    {
+      "path": "apps/web/public/icons/series-icons/daima/ataque.png",
+      "bytes": 500436,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/ataque.webp",
+      "bytes": 406046,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/combate-ssj-kamehameha-referencia.png",
+      "bytes": 662407,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:89"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/combate-ssj4-referencia.jpg",
+      "bytes": 233710,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/combate-ssj4.png",
+      "bytes": 1601119,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:71"
+      ],
+      "basename_matches": [
+        "docs/auditoria/Z2-catalogo.md:19",
+        "apps/web/public/icons/series-icons/SOURCES.md:9",
+        "apps/web/public/icons/series-icons/SOURCES.md:89"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/normal.png",
+      "bytes": 332016,
+      "tracked": true,
+      "references": [],
+      "basename_matches": [
+        "docs/auditoria/Z2-catalogo.md:69"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/normal.webp",
+      "bytes": 232982,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/reposo-baculo.jpg",
+      "bytes": 180868,
+      "tracked": true,
+      "references": [],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:65"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/reposo-pose-referencia.jpg",
+      "bytes": 51585,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/reposo-referencia.jpg",
+      "bytes": 66668,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:65"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/daima/reposo.png",
+      "bytes": 333053,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:65"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:7"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/ataque.png",
+      "bytes": 576617,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/ataque.webp",
+      "bytes": 378048,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/normal.png",
+      "bytes": 220189,
+      "tracked": true,
+      "references": [],
+      "basename_matches": [
+        "docs/auditoria/Z2-catalogo.md:69"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/reposo-baculo-referencia.jpg",
+      "bytes": 79488,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:47"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/reposo-baculo.jpg",
+      "bytes": 79488,
+      "tracked": true,
+      "references": [],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:65"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/reposo-baculo.png",
+      "bytes": 600428,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:47",
+        "apps/web/public/icons/series-icons/SOURCES.md:49"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/reposo-guardia-referencia.jpg",
+      "bytes": 73507,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/reposo-guardia.png",
+      "bytes": 1221802,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:67"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/reposo-salto.png",
+      "bytes": 44198,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:35"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/reposo.png",
+      "bytes": 309330,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:7"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:65"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/db/reposo.webp",
+      "bytes": 184598,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/ataque.png",
+      "bytes": 330216,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/combate-ssj4-kamehameha-referencia.jpg",
+      "bytes": 246744,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:53"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/combate-ssj4.png",
+      "bytes": 738318,
+      "tracked": true,
+      "references": [
+        "docs/auditoria/Z2-catalogo.md:19",
+        "apps/web/public/icons/series-icons/SOURCES.md:9"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:71",
+        "apps/web/public/icons/series-icons/SOURCES.md:89"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/combate-ssj4.webp",
+      "bytes": 483272,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/normal.png",
+      "bytes": 296873,
+      "tracked": true,
+      "references": [],
+      "basename_matches": [
+        "docs/auditoria/Z2-catalogo.md:69"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/reposo-anime.png",
+      "bytes": 1352835,
+      "tracked": true,
+      "references": [
+        "docs/auditoria/Z2-catalogo.md:19",
+        "apps/web/public/icons/series-icons/SOURCES.md:8"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/reposo-anime.webp",
+      "bytes": 818608,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/reposo-clasico-referencia.jpg",
+      "bytes": 28963,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:77"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/reposo-ssj-referencia.png",
+      "bytes": 1001614,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:51"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbgt/reposo-ssj.png",
+      "bytes": 1390719,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:51"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:45",
+        "apps/web/public/icons/series-icons/SOURCES.md:75",
+        "apps/web/public/icons/series-icons/SOURCES.md:77"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/ataque.png",
+      "bytes": 321933,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/combate-kamehameha-referencia.jpg",
+      "bytes": 134125,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:59"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/combate-kamehameha.png",
+      "bytes": 1410175,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:59",
+        "apps/web/public/icons/series-icons/SOURCES.md:83",
+        "apps/web/public/icons/series-icons/SOURCES.md:85"
+      ],
+      "basename_matches": [
+        "docs/auditoria/shelf-art-optimization.json:19",
+        "docs/auditoria/shelf-art-optimization.json:20",
+        "docs/auditoria/shelf-art-optimization.json:43",
+        "docs/auditoria/shelf-art-optimization.json:44",
+        "apps/web/public/icons/series-icons/SOURCES.md:38",
+        "apps/web/src/lib/helpers/goku-panorama.ts:50",
+        "apps/web/src/lib/helpers/goku-panorama.ts:75",
+        "apps/web/src/lib/helpers/goku-panorama.test.ts:51"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/combate-namek.png",
+      "bytes": 49928,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:12"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/combate-namek.webp",
+      "bytes": 49048,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/combate-ssj-frontal.jpg",
+      "bytes": 88938,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:85"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:87"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/combate-ssj-lateral-referencia.jpg",
+      "bytes": 229334,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:87"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/combate-ssj.png",
+      "bytes": 74873,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:10"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/normal.png",
+      "bytes": 343247,
+      "tracked": true,
+      "references": [],
+      "basename_matches": [
+        "docs/auditoria/Z2-catalogo.md:69"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/reposo-campera.png",
+      "bytes": 36543,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:11"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/reposo-espaldas-referencia.jpg",
+      "bytes": 60271,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:57"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/reposo-espaldas.png",
+      "bytes": 890062,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:57"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:81"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/reposo-frente-referencia.jpg",
+      "bytes": 204749,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:81"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbkai/reposo-goku.jpg",
+      "bytes": 205873,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:55"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:57"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbs/ataque.png",
+      "bytes": 363851,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbs/ataque.webp",
+      "bytes": 229030,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbs/combate-ultra-instinto-referencia.jpg",
+      "bytes": 276880,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:63"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbs/normal.png",
+      "bytes": 342391,
+      "tracked": true,
+      "references": [],
+      "basename_matches": [
+        "docs/auditoria/Z2-catalogo.md:69"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbs/normal.webp",
+      "bytes": 229996,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbs/reposo-god-referencia.jpg",
+      "bytes": 117915,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:61"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbs/reposo-god.png",
+      "bytes": 798158,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:61"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:79"
+      ]
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbs/reposo-hombro-referencia.jpg",
+      "bytes": 58912,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:79"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/ataque.png",
+      "bytes": 489818,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/ataque.webp",
+      "bytes": 314500,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/combate-ssj-espaldas-referencia.jpg",
+      "bytes": 76648,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:43"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/combate-ssj-espaldas.png",
+      "bytes": 1452231,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:43"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/normal.png",
+      "bytes": 260220,
+      "tracked": true,
+      "references": [
+        "docs/auditoria/Z2-catalogo.md:69"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/normal.webp",
+      "bytes": 187262,
+      "tracked": true,
+      "references": [],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/reposo-brazos-cruzados-referencia.jpg",
+      "bytes": 206941,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:75"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/reposo-n.png",
+      "bytes": 1033598,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:41"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/reposo-ssj-referencia.jpg",
+      "bytes": 112775,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:45"
+      ],
+      "basename_matches": []
+    },
+    {
+      "path": "apps/web/public/icons/series-icons/dbz/reposo-ssj.png",
+      "bytes": 911041,
+      "tracked": true,
+      "references": [
+        "apps/web/public/icons/series-icons/SOURCES.md:45"
+      ],
+      "basename_matches": [
+        "apps/web/public/icons/series-icons/SOURCES.md:51",
+        "apps/web/public/icons/series-icons/SOURCES.md:75",
+        "apps/web/public/icons/series-icons/SOURCES.md:77"
+      ]
+    }
+  ]
+}

@@ -189,7 +189,7 @@ func TestLegacyMigrationPreservesFileMetadataAndIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestLibraryMediaMappingsInvalidateBothCacheAliases(t *testing.T) {
+func TestLibraryMediaMappingsInvalidateCache(t *testing.T) {
 	g := openBackendSafetyDB(t)
 	if err := g.AutoMigrate(&models.LibraryMedia{}); err != nil {
 		t.Fatal(err)
@@ -199,27 +199,18 @@ func TestLibraryMediaMappingsInvalidateBothCacheAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := &Database{gormdb: g}
-	if _, err := GetLibraryMediaByID(d, m.ID); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW"); err != nil {
 		t.Fatal(err)
 	}
 	if err := UpdateLibraryMediaMappings(d, m.ID, 2, 20); err != nil {
 		t.Fatal(err)
 	}
-	readers := []func() (*models.LibraryMedia, error){
-		func() (*models.LibraryMedia, error) { return GetLibraryMediaByID(d, m.ID) },
-		func() (*models.LibraryMedia, error) { return GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW") },
+	got, err := GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW")
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, read := range readers {
-		got, err := read()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got == nil || got.MyanimelistId != 20 || got.AnidbId != 2 {
-			t.Fatalf("stale mapping: %+v", got)
-		}
+	if got == nil || got.MyanimelistId != 20 || got.AnidbId != 2 {
+		t.Fatalf("stale mapping: %+v", got)
 	}
 	pool, _ := g.DB()
 	if err := pool.Close(); err != nil {
@@ -228,7 +219,7 @@ func TestLibraryMediaMappingsInvalidateBothCacheAliases(t *testing.T) {
 	if err := UpdateLibraryMediaMappings(d, m.ID, 3, 30); err == nil {
 		t.Fatal("closed DB update succeeded")
 	}
-	if got, err := GetLibraryMediaByID(d, m.ID); err != nil || got == nil || got.MyanimelistId != 20 {
+	if got, err := GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW"); err != nil || got == nil || got.MyanimelistId != 20 {
 		t.Fatalf("failed SQL discarded valid cached data: %v %v", got, err)
 	}
 }
@@ -236,87 +227,82 @@ func TestLibraryMediaMappingsInvalidateBothCacheAliases(t *testing.T) {
 // A SQL read finishing after a committed write must not poison its cache.
 func TestLibraryMediaConcurrentReadCannotRepublishStaleData(t *testing.T) {
 	for _, existing := range []bool{true, false} {
-		for _, alias := range []string{"pk", "tmdb"} {
-			t.Run(fmt.Sprintf("existing=%v/%s", existing, alias), func(t *testing.T) {
-				g := openBackendSafetyDB(t)
-				if err := g.AutoMigrate(&models.LibraryMedia{}); err != nil {
+		t.Run(fmt.Sprintf("existing=%v", existing), func(t *testing.T) {
+			g := openBackendSafetyDB(t)
+			if err := g.AutoMigrate(&models.LibraryMedia{}); err != nil {
+				t.Fatal(err)
+			}
+			m := &models.LibraryMedia{BaseModel: models.BaseModel{ID: 1}, TmdbID: 123, Type: "SHOW", MyanimelistId: 10}
+			if existing {
+				if err := g.Create(m).Error; err != nil {
 					t.Fatal(err)
 				}
-				m := &models.LibraryMedia{BaseModel: models.BaseModel{ID: 1}, TmdbID: 123, Type: "SHOW", MyanimelistId: 10}
-				if existing {
-					if err := g.Create(m).Error; err != nil {
-						t.Fatal(err)
-					}
+			}
+			d := &Database{gormdb: g}
+			read := func() (*models.LibraryMedia, error) {
+				return GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW")
+			}
+			captured, resume, finished := make(chan struct{}), make(chan struct{}), make(chan struct{})
+			var once sync.Once
+			unblock := func() { once.Do(func() { close(resume) }) }
+			var paused atomic.Bool
+			const callback = "test:pause_library_media_read"
+			if err := g.Callback().Query().After("gorm:query").Register(callback, func(tx *gorm.DB) {
+				if tx.Statement.Table == "library_media" && paused.CompareAndSwap(false, true) {
+					close(captured)
+					<-resume
 				}
-				d := &Database{gormdb: g}
-				read := func() (*models.LibraryMedia, error) {
-					if alias == "pk" {
-						return GetLibraryMediaByID(d, 1)
-					}
-					return GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW")
-				}
-				captured, resume, finished := make(chan struct{}), make(chan struct{}), make(chan struct{})
-				var once sync.Once
-				unblock := func() { once.Do(func() { close(resume) }) }
-				var paused atomic.Bool
-				const callback = "test:pause_library_media_read"
-				if err := g.Callback().Query().After("gorm:query").Register(callback, func(tx *gorm.DB) {
-					if tx.Statement.Table == "library_media" && paused.CompareAndSwap(false, true) {
-						close(captured)
-						<-resume
-					}
-				}); err != nil {
-					t.Fatal(err)
-				}
-				t.Cleanup(func() { g.Callback().Query().Remove(callback) })
-				type result struct {
-					media *models.LibraryMedia
-					err   error
-				}
-				old := make(chan result, 1)
-				go func() { defer close(finished); m, err := read(); old <- result{m, err} }()
-				defer func() {
-					unblock()
-					select {
-					case <-finished:
-					case <-time.After(3 * time.Second):
-						t.Error("old reader did not finish")
-					}
-				}()
-				select {
-				case <-captured:
-				case <-time.After(3 * time.Second):
-					t.Fatal("SQL snapshot not captured")
-				}
-				if existing {
-					if err := UpdateLibraryMediaMappings(d, 1, 2, 20); err != nil {
-						t.Fatal(err)
-					}
-				} else {
-					m.MyanimelistId = 20
-					if _, err := InsertLibraryMedia(d, m); err != nil {
-						t.Fatal(err)
-					}
-				}
-				if got, err := read(); err != nil || got == nil || got.MyanimelistId != 20 {
-					t.Fatalf("write not visible: %+v %v", got, err)
-				}
+			}); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { g.Callback().Query().Remove(callback) })
+			type result struct {
+				media *models.LibraryMedia
+				err   error
+			}
+			old := make(chan result, 1)
+			go func() { defer close(finished); m, err := read(); old <- result{m, err} }()
+			defer func() {
 				unblock()
-				previous := <-old
-				if previous.err != nil {
-					t.Fatal(previous.err)
+				select {
+				case <-finished:
+				case <-time.After(3 * time.Second):
+					t.Error("old reader did not finish")
 				}
-				if existing && (previous.media == nil || previous.media.MyanimelistId != 10) {
-					t.Fatalf("old reader did not retain snapshot: %+v", previous.media)
+			}()
+			select {
+			case <-captured:
+			case <-time.After(3 * time.Second):
+				t.Fatal("SQL snapshot not captured")
+			}
+			if existing {
+				if err := UpdateLibraryMediaMappings(d, 1, 2, 20); err != nil {
+					t.Fatal(err)
 				}
-				if !existing && previous.media != nil {
-					t.Fatalf("old negative read changed: %+v", previous.media)
+			} else {
+				m.MyanimelistId = 20
+				if _, err := InsertLibraryMedia(d, m); err != nil {
+					t.Fatal(err)
 				}
-				if got, err := read(); err != nil || got == nil || got.MyanimelistId != 20 {
-					t.Fatalf("late reader poisoned cache: %+v %v", got, err)
-				}
-			})
-		}
+			}
+			if got, err := read(); err != nil || got == nil || got.MyanimelistId != 20 {
+				t.Fatalf("write not visible: %+v %v", got, err)
+			}
+			unblock()
+			previous := <-old
+			if previous.err != nil {
+				t.Fatal(previous.err)
+			}
+			if existing && (previous.media == nil || previous.media.MyanimelistId != 10) {
+				t.Fatalf("old reader did not retain snapshot: %+v", previous.media)
+			}
+			if !existing && previous.media != nil {
+				t.Fatalf("old negative read changed: %+v", previous.media)
+			}
+			if got, err := read(); err != nil || got == nil || got.MyanimelistId != 20 {
+				t.Fatalf("late reader poisoned cache: %+v %v", got, err)
+			}
+		})
 	}
 }
 
@@ -339,9 +325,6 @@ func TestLibraryMediaWritersInvalidateNegativeCache(t *testing.T) {
 				t.Fatal(err)
 			}
 			d := &Database{gormdb: g}
-			if got, err := GetLibraryMediaByID(d, 1); err != nil || got != nil {
-				t.Fatalf("unexpected initial row: %v %v", got, err)
-			}
 			if got, err := GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW"); err != nil || got != nil {
 				t.Fatalf("unexpected initial row: %v %v", got, err)
 			}
@@ -349,11 +332,7 @@ func TestLibraryMediaWritersInvalidateNegativeCache(t *testing.T) {
 			if err := writer.write(d, m); err != nil {
 				t.Fatal(err)
 			}
-			got, err := GetLibraryMediaByID(d, 1)
-			if err != nil || got == nil || got.TitleEnglish != "Created" {
-				t.Fatalf("negative PK cache retained: %v %v", got, err)
-			}
-			got, err = GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW")
+			got, err := GetLibraryMediaByTmdbIdAndType(d, 123, "SHOW")
 			if err != nil || got == nil || got.TitleEnglish != "Created" {
 				t.Fatalf("negative TMDB cache retained: %v %v", got, err)
 			}

@@ -459,9 +459,6 @@ impl WindowManager {
             return; // ya revelada (o cerrada por crash / tray)
         }
         if self.open_in_background.load(Ordering::SeqCst) {
-            if let Some(splash) = app_handle.get_webview_window("splash") {
-                let _ = splash.destroy();
-            }
             info!("[WindowManager] Startup complete in background (tray only)");
             return;
         }
@@ -476,11 +473,8 @@ impl WindowManager {
     }
 
     pub fn show_crash_screen<R: Runtime>(&self, app_handle: &AppHandle<R>, message: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // El crash reemplaza a todo: ni splash ni main tienen sentido ya.
+        // El crash reemplaza a todo: main no tiene sentido ya.
         self.splash_closed.store(true, Ordering::SeqCst);
-        if let Some(splash) = app_handle.get_webview_window("splash") {
-            let _ = splash.destroy();
-        }
         if let Some(main) = app_handle.get_webview_window("main") {
             let _ = main.destroy();
         }
@@ -508,38 +502,20 @@ impl WindowManager {
         if let Some(main) = app_handle.get_webview_window("main") {
             let _ = main.eval(&script);
         }
-        if let Some(splash) = app_handle.get_webview_window("splash") {
-            let _ = splash.eval(&script);
-        }
     }
 
     pub fn show_main_window<R: Runtime>(&self, app_handle: &AppHandle<R>) {
-        // Si la principal todavía no existe (arranque muy temprano), el splash
-        // sigue siendo lo único que mostrar.
         if app_handle.get_webview_window("main").is_none() {
-            if let Some(splash) = app_handle.get_webview_window("splash") {
-                let _ = splash.set_focus();
-            }
             return;
         }
         // La principal todavía está en about:blank (la interfaz del sidecar no se ha navegado):
-        // mostrarla ahora dejaría una pantalla en blanco. Sigue viéndose el splash.
+        // mostrarla ahora dejaría una pantalla en blanco.
         if let Some(main) = app_handle.get_webview_window("main") {
             if main.url().map(|u| is_blank_url(&u)).unwrap_or(false) {
-                if let Some(splash) = app_handle.get_webview_window("splash") {
-                    let _ = splash.set_focus();
-                }
                 return;
             }
         }
-        // Si el usuario fuerza la ventana (tray / segunda instancia) durante el
-        // arranque, el splash ya cumplió: se cierra y se muestra la principal
-        // aunque el handshake aún no terminó (React muestra su propio loader).
-        if !self.splash_closed.swap(true, Ordering::SeqCst) {
-            if let Some(splash) = app_handle.get_webview_window("splash") {
-                let _ = splash.destroy();
-            }
-        }
+        self.splash_closed.store(true, Ordering::SeqCst);
         if let Some(window) = app_handle.get_webview_window("main") {
             let settings = self.settings_manager.load(app_handle);
 
@@ -662,12 +638,6 @@ impl WindowManager {
                 warn!("[WindowManager] Failed to debounce-save window state: {}", e);
             }
         });
-    }
-}
-
-impl Default for WindowManager {
-    fn default() -> Self {
-        Self::new(Arc::new(SettingsManager::new()))
     }
 }
 

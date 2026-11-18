@@ -96,8 +96,7 @@
       "\t@desc This creates a new LibraryCollection struct and returns it.",
       "\t@desc This is used to get the main anime collection of the user.",
       "\t@desc It uses the cached platform anime collection for the GET method.",
-      "\t@desc It refreshes the platform anime collection if the POST method is used.",
-      "\t@route /api/v1/library/collection [GET,POST]",
+      "\t@route /api/v1/library/collection [GET]",
       "\t@returns anime.LibraryCollection",
       ""
     ],
@@ -108,13 +107,11 @@
       "descriptions": [
         "This creates a new LibraryCollection struct and returns it.",
         "This is used to get the main anime collection of the user.",
-        "It uses the cached platform anime collection for the GET method.",
-        "It refreshes the platform anime collection if the POST method is used."
+        "It uses the cached platform anime collection for the GET method."
       ],
       "endpoint": "/api/v1/library/collection",
       "methods": [
-        "GET",
-        "POST"
+        "GET"
       ],
       "params": [],
       "bodyFields": [],
@@ -266,6 +263,50 @@
     ],
     "filepath": "internal/handlers/anime_enrichment.go",
     "filename": "anime_enrichment.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "resolvePendingAnimeEntry",
+    "trimmedName": "resolvePendingAnimeEntry",
+    "comments": [
+      "Poll the shared metadata result, not the whole entry. Rebuilding a pending",
+      "entry repeats SQLite reads, filler hydration and every episode constructor.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_enrichment.go",
+    "filename": "anime_enrichment.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "publishAnimeEntry",
+    "trimmedName": "publishAnimeEntry",
+    "comments": [
+      "Both foreground builds and background enrichment may finish after a scan or",
+      "progress/source change. A retired snapshot must never repopulate the cache.",
+      ""
+    ],
+    "filepath": "internal/handlers/anime_entries.go",
+    "filename": "anime_entries.go",
     "api": {
       "summary": "",
       "descriptions": [],
@@ -490,6 +531,50 @@
     }
   },
   {
+    "name": "HandleAuthSession",
+    "trimmedName": "AuthSession",
+    "comments": [
+      "HandleAuthSession exchanges an authenticated request for bounded credentials.",
+      "The route uses OptionalAuthMiddleware, including its failed-attempt budget.",
+      ""
+    ],
+    "filepath": "internal/handlers/auth.go",
+    "filename": "auth.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "sessionWSRequest",
+    "trimmedName": "sessionWSRequest",
+    "comments": [
+      "sessionWSRequest excludes query parameters: full API sessions must never be",
+      "accepted from URLs, histories or Referer headers.",
+      ""
+    ],
+    "filepath": "internal/handlers/auth.go",
+    "filename": "auth.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleGetCacheStats",
     "trimmedName": "GetCacheStats",
     "comments": [
@@ -521,7 +606,7 @@
     "trimmedName": "ClearSystemCache",
     "comments": [
       "HandleClearSystemCache clears disk caches and memory caches according to target.",
-      "Supports target: \"thumbnails\", \"videofiles\", \"keyframes\", \"fingerprints\", \"images\", \"metadata\", \"drive\" or \"all\" (default).",
+      "Supports target: \"thumbnails\", \"videofiles\", \"keyframes\", \"fingerprints\", \"images\", \"metadata\", \"storyboards\", \"drive\" or \"all\" (default).",
       "\"all\" does not clear the Drive block cache (\"drive\"): refilling it spends Drive's daily download quota.",
       "",
       "\t@summary clears system and thumbnail caches",
@@ -830,6 +915,28 @@
     }
   },
   {
+    "name": "TestLibraryCollectionFixtureLatency",
+    "trimmedName": "TestLibraryCollectionFixtureLatency",
+    "comments": [
+      "Exercises the actual collection handler and response serialization against a",
+      "private SQLite library, with no metadata service, credentials or user files.",
+      ""
+    ],
+    "filepath": "internal/handlers/collection_latency_test.go",
+    "filename": "collection_latency_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleUpdateContinuityWatchHistoryItem",
     "trimmedName": "UpdateContinuityWatchHistoryItem",
     "comments": [
@@ -982,6 +1089,28 @@
     ],
     "filepath": "internal/handlers/cross_origin_guard.go",
     "filename": "cross_origin_guard.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "writeDiagnosticsArchive",
+    "trimmedName": "writeDiagnosticsArchive",
+    "comments": [
+      "All archive work belongs to the requesting handler. A failed write or a",
+      "cancelled request stops subsequent snapshots and directory walks immediately.",
+      ""
+    ],
+    "filepath": "internal/handlers/diagnostics.go",
+    "filename": "diagnostics.go",
     "api": {
       "summary": "",
       "descriptions": [],
@@ -1215,9 +1344,8 @@
     "name": "validateDriveCache",
     "trimmedName": "validateDriveCache",
     "comments": [
-      "validateDriveCache compara, una vez por archivo y arranque, el tamaño en",
-      "Drive (metadata: no gasta cuota de descarga) con el cacheado, en segundo",
-      "plano para no demorar la reproducción.",
+      "validateDriveCache refreshes the immutable block namespace before a reader",
+      "opens cached data. Metadata lookups are deduplicated with a short TTL.",
       ""
     ],
     "filepath": "internal/handlers/drive.go",
@@ -1296,6 +1424,190 @@
       "methods": [
         "POST"
       ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "startDriveScan",
+    "trimmedName": "startDriveScan",
+    "comments": [
+      "startDriveScan lanza en segundo plano un escaneo de la carpeta configurada. Lo usan el botón de",
+      "escanear, el selector de carpeta y la sincronización automática (automatic=true, sin avisos).",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "applyDriveConfig",
+    "trimmedName": "applyDriveConfig",
+    "comments": [
+      "applyDriveConfig reconstruye el cliente de Drive con los ajustes efectivos. Parte de GetSettings",
+      "y no de los ajustes guardados: las credenciales provisionadas por entorno no están en la base.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive.go",
+    "filename": "drive.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "startDriveAutoSync",
+    "trimmedName": "startDriveAutoSync",
+    "comments": [
+      "startDriveAutoSync arranca una única vez el bucle que escanea Drive sola: al arrancar la app,",
+      "al cambiar de carpeta, al reintentar tras un fallo y cada intervalo configurado.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_autosync.go",
+    "filename": "drive_autosync.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveAutoSyncTick",
+    "trimmedName": "driveAutoSyncTick",
+    "comments": [
+      "driveAutoSyncTick escanea Drive si los ajustes y el estado del servicio lo piden.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_autosync.go",
+    "filename": "drive_autosync.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveClient",
+    "trimmedName": "driveClient",
+    "comments": [
+      "driveClient devuelve el cliente de Drive si la cuenta está conectada.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_folders.go",
+    "filename": "drive_folders.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveFolders",
+    "trimmedName": "DriveFolders",
+    "comments": [
+      "HandleDriveFolders lista las subcarpetas de una carpeta de Drive para elegir la de la biblioteca,",
+      "sin copiar identificadores a mano. Devuelve también la ruta hasta la carpeta (migas de pan).",
+      "",
+      "\t@summary lists the subfolders of a Google Drive folder for the folder picker.",
+      "\t@route /api/v1/drive/folders [GET]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_folders.go",
+    "filename": "drive_folders.go",
+    "api": {
+      "summary": "lists the subfolders of a Google Drive folder for the folder picker.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/folders",
+      "methods": [
+        "GET"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveSelectFolder",
+    "trimmedName": "DriveSelectFolder",
+    "comments": [
+      "HandleDriveSelectFolder guarda la carpeta de la biblioteca (elegida en el selector o pegada como",
+      "enlace), comprueba que sea una carpeta de la cuenta conectada y arranca un escaneo.",
+      "",
+      "\t@summary saves the Google Drive library folder and starts a scan.",
+      "\t@route /api/v1/drive/folder [PUT]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_folders.go",
+    "filename": "drive_folders.go",
+    "api": {
+      "summary": "saves the Google Drive library folder and starts a scan.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/folder",
+      "methods": [
+        "PUT"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "driveFolderHandler",
+    "trimmedName": "driveFolderHandler",
+    "comments": [
+      "driveFolderHandler devuelve un handler con Drive sin conectar: las rutas de carpetas deben",
+      "rechazar la petición antes de hablar con Google.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_folders_test.go",
+    "filename": "drive_folders_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -1746,6 +2058,57 @@
     }
   },
   {
+    "name": "driveSubtitleDirectSource",
+    "trimmedName": "driveSubtitleDirectSource",
+    "comments": [
+      "driveSubtitleDirectSource es driveSubtitleSource sin la caché de bloques: para leer unos",
+      "pocos bytes sueltos (un bloque de subtítulo ubicado por el índice del archivo) no conviene",
+      "bajar el bloque de 16 MiB que los contiene. La revisión ya la verificó quien abrió la sesión.",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "HandleDriveSubtitlesTitleCard",
+    "trimmedName": "DriveSubtitlesTitleCard",
+    "comments": [
+      "HandleDriveSubtitlesTitleCard busca la placa del título del episodio en los subtítulos",
+      "ASS embebidos: el reproductor la usa como fin del resumen que sigue al opening. Responde",
+      "cuando terminó de leer ese tramo (puede tardar lo que tarde Drive).",
+      "",
+      "\t@summary finds the episode title card in the embedded ASS subtitles of a Google Drive file.",
+      "\t@route /api/v1/drive/subtitles/title-card [POST]",
+      ""
+    ],
+    "filepath": "internal/handlers/drive_subtitles.go",
+    "filename": "drive_subtitles.go",
+    "api": {
+      "summary": "finds the episode title card in the embedded ASS subtitles of a Google Drive file.",
+      "descriptions": [],
+      "endpoint": "/api/v1/drive/subtitles/title-card",
+      "methods": [
+        "POST"
+      ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
     "name": "HandleDriveSubtitlesWindow",
     "trimmedName": "DriveSubtitlesWindow",
     "comments": [
@@ -1977,76 +2340,6 @@
     }
   },
   {
-    "name": "HandleGetHomeCurated",
-    "trimmedName": "GetHomeCurated",
-    "comments": [
-      "HandleGetHomeCurated returns the intelligent swimlanes for the home page.",
-      ""
-    ],
-    "filepath": "internal/handlers/home.go",
-    "filename": "home.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "HandleGetContinueWatching",
-    "trimmedName": "GetContinueWatching",
-    "comments": [
-      "HandleGetContinueWatching returns the \"Continue Watching\" items for the user.",
-      "",
-      "Fuente de verdad: el filecache de continuidad (el mismo que sirve",
-      "/continuity/history y consume la página de serie). watch_histories en DB es",
-      "solo un espejo asíncrono del TelemetryManager y puede ir hasta un flush atrás.",
-      "El filecache no distingue cuentas: válido mientras la instalación sea",
-      "single-user (ver currentAccountID).",
-      ""
-    ],
-    "filepath": "internal/handlers/home.go",
-    "filename": "home.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
-    "name": "continueWatchingHistory",
-    "trimmedName": "continueWatchingHistory",
-    "comments": [
-      "continueWatchingHistory convierte el historial del filecache (ya reducido a",
-      "la entrada más reciente por media) en filas ordenadas por recencia.",
-      ""
-    ],
-    "filepath": "internal/handlers/home.go",
-    "filename": "home.go",
-    "api": {
-      "summary": "",
-      "descriptions": [],
-      "endpoint": "",
-      "methods": null,
-      "params": [],
-      "bodyFields": [],
-      "returns": "bool",
-      "returnGoType": "bool",
-      "returnTypescriptType": "boolean"
-    }
-  },
-  {
     "name": "HandleRetagEpisodes",
     "trimmedName": "RetagEpisodes",
     "comments": [
@@ -2079,6 +2372,71 @@
     ],
     "filepath": "internal/handlers/identity.go",
     "filename": "identity.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestAsistenteInicialSoloEnPrimerArranque",
+    "trimmedName": "TestAsistenteInicialSoloEnPrimerArranque",
+    "comments": [
+      "/status pide el asistente inicial solo mientras el primer arranque no se haya",
+      "completado: con la fila nueva sí, y después de guardarlo ya no.",
+      ""
+    ],
+    "filepath": "internal/handlers/initial_setup_status_test.go",
+    "filename": "initial_setup_status_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestAsistenteInicialClienteNoAutorizado",
+    "trimmedName": "TestAsistenteInicialClienteNoAutorizado",
+    "comments": [
+      "Un cliente no autorizado recibe ajustes vacíos (ID 0): el asistente sigue pidiéndose.",
+      ""
+    ],
+    "filepath": "internal/handlers/initial_setup_status_test.go",
+    "filename": "initial_setup_status_test.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "TestAsistenteInicialNoCierraSiFallaElTranscoder",
+    "trimmedName": "TestAsistenteInicialNoCierraSiFallaElTranscoder",
+    "comments": [
+      "Si el transcoder falla, el asistente no debe quedar cerrado con la biblioteca guardada:",
+      "el reintento tiene que volver a pedir el asistente completo.",
+      ""
+    ],
+    "filepath": "internal/handlers/initial_setup_transcoder_test.go",
+    "filename": "initial_setup_transcoder_test.go",
     "api": {
       "summary": "",
       "descriptions": [],
@@ -2998,7 +3356,7 @@
       "\t@desc Deletes persisted TMDB/Jikan/AniList episode \u0026 media detail caches (all",
       "\t@desc language variants) so the next scan re-fetches them — e.g. after changing",
       "\t@desc the metadata language — and clears the in-memory metadata caches.",
-      "\t@desc Migration markers and raw TMDB API responses are preserved.",
+      "\t@desc Migration markers and user data are preserved.",
       "\t@route /api/v1/metadata/cache [DELETE]",
       "\t@returns bool",
       ""
@@ -3011,12 +3369,55 @@
         "Deletes persisted TMDB/Jikan/AniList episode \u0026 media detail caches (all",
         "language variants) so the next scan re-fetches them — e.g. after changing",
         "the metadata language — and clears the in-memory metadata caches.",
-        "Migration markers and raw TMDB API responses are preserved."
+        "Migration markers and user data are preserved."
       ],
       "endpoint": "/api/v1/metadata/cache",
       "methods": [
         "DELETE"
       ],
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "clearProviderMetadata",
+    "trimmedName": "clearProviderMetadata",
+    "comments": [
+      "Both manual entry points share the same namespace allowlist and barriers.",
+      ""
+    ],
+    "filepath": "internal/handlers/metadata.go",
+    "filename": "metadata.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "authorizeMusicDirectory",
+    "trimmedName": "authorizeMusicDirectory",
+    "comments": [
+      "Only the host may browse arbitrary folders. Remote players can access the",
+      "music root saved locally in settings (including its openings subdirectory).",
+      ""
+    ],
+    "filepath": "internal/handlers/music.go",
+    "filename": "music.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
       "params": [],
       "bodyFields": [],
       "returns": "bool",
@@ -3432,11 +3833,12 @@
     }
   },
   {
-    "name": "authRateLimitMiddleware",
-    "trimmedName": "authRateLimitMiddleware",
+    "name": "authorizeWithRateLimit",
+    "trimmedName": "authorizeWithRateLimit",
     "comments": [
-      "authRateLimitMiddleware limita los intentos de login por IP, incluso desde",
-      "loopback (un proceso local tampoco debería poder probar contraseñas a ritmo libre).",
+      "authorizeWithRateLimit applies the failure budget to real authentication",
+      "entry points (API, status and WS), including loopback. Successful requests",
+      "don't consume it, so HLS traffic doesn't exhaust a login-sized budget.",
       ""
     ],
     "filepath": "internal/handlers/routes.go",
@@ -3927,10 +4329,7 @@
     "name": "resolveLibraryMediaForSagas",
     "trimmedName": "resolveLibraryMediaForSagas",
     "comments": [
-      "resolveLibraryMediaForSagas finds the LibraryMedia for a route media ID",
-      "using the same resolution order as anime.NewSimpleEntry: try the ID as a",
-      "primary key first, then fall back to a TMDB ID lookup (with the +1,000,000",
-      "offset used for movie IDs in this app's normalized ID space).",
+      "resolveLibraryMediaForSagas uses the public identity carried by API routes.",
       ""
     ],
     "filepath": "internal/handlers/series_details.go",
@@ -4940,10 +5339,30 @@
     "name": "isLexicallyUnder",
     "trimmedName": "isLexicallyUnder",
     "comments": [
-      "thumbnailHash identifies one extracted frame: source path, mtime, size and optional offset.",
-      "The disk file, the memory LRU entry and the ETag all derive from it.",
       "isLexicallyUnder reports whether path is inside dir by path syntax alone,",
       "without touching the filesystem.",
+      ""
+    ],
+    "filepath": "internal/handlers/thumbnail.go",
+    "filename": "thumbnail.go",
+    "api": {
+      "summary": "",
+      "descriptions": [],
+      "endpoint": "",
+      "methods": null,
+      "params": [],
+      "bodyFields": [],
+      "returns": "bool",
+      "returnGoType": "bool",
+      "returnTypescriptType": "boolean"
+    }
+  },
+  {
+    "name": "thumbnailHash",
+    "trimmedName": "thumbnailHash",
+    "comments": [
+      "thumbnailHash identifies a frame by source path, mtime, size and offset.",
+      "The disk file, memory LRU entry and ETag all derive from it.",
       ""
     ],
     "filepath": "internal/handlers/thumbnail.go",
@@ -5329,6 +5748,24 @@
           "goType": "int",
           "usedStructType": "",
           "typescriptType": "number",
+          "required": true,
+          "descriptions": []
+        },
+        {
+          "name": "ExternalID",
+          "jsonName": "externalId",
+          "goType": "int",
+          "usedStructType": "",
+          "typescriptType": "number",
+          "required": true,
+          "descriptions": []
+        },
+        {
+          "name": "Provider",
+          "jsonName": "provider",
+          "goType": "string",
+          "usedStructType": "",
+          "typescriptType": "string",
           "required": true,
           "descriptions": []
         },

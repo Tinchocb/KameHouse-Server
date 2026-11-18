@@ -19,7 +19,6 @@ export function isNearEnd(total: number, curr: number, edStart?: number): boolea
 interface NextEpisodePolicy {
     mediaFormat?: string | null
     marathonMode: boolean
-    tvMode: boolean
     hasNextEpisode: boolean
     total: number
     curr: number
@@ -28,13 +27,13 @@ interface NextEpisodePolicy {
 
 /** Visibilidad del panel "Up next" + countdown. */
 export function shouldShowNextEpisode(p: NextEpisodePolicy): boolean {
-    // Maratón (también con modo TV): transición continua, sin tarjeta ni cuenta regresiva.
-    const nextThreshold = p.tvMode ? 3 : 15
+    // Maratón: transición continua, sin tarjeta ni cuenta regresiva.
+    const nextThreshold = 15
     return (
         p.mediaFormat?.toUpperCase() !== "MOVIE" &&
         !p.marathonMode &&
         p.hasNextEpisode &&
-        ((p.total > 0 && p.total - p.curr <= nextThreshold) || (!p.tvMode && p.inEdWindow))
+        ((p.total > 0 && p.total - p.curr <= nextThreshold) || p.inEdWindow)
     )
 }
 

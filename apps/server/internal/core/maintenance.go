@@ -26,7 +26,13 @@ func (a *App) startMaintenanceScheduler() {
 		Interval:     24 * time.Hour,
 		InitialDelay: 5 * time.Minute,
 		Run: func(ctx context.Context) {
-			deleted, err := db.DeleteExpiredMetadataCache(a.Database)
+			if ctx.Err() != nil {
+				return
+			}
+			deleted, err := db.DeleteExpiredMetadataCacheContext(ctx, a.Database)
+			if ctx.Err() != nil {
+				return
+			}
 			if err != nil {
 				failures := atomic.AddUint32(&metadataSweepFailures, 1)
 				a.Logger.Error().Err(err).Uint32("consecutiveFailures", failures).Msg("maintenance: Failed to sweep metadata cache")
@@ -49,13 +55,19 @@ func (a *App) startMaintenanceScheduler() {
 		Interval:     24 * time.Hour,
 		InitialDelay: 15 * time.Minute,
 		Run: func(ctx context.Context) {
+			if ctx.Err() != nil {
+				return
+			}
 			activeHashes := a.MediastreamRepository.ActiveVideoFileHashes()
 			inUse := func(hash string) bool {
 				_, exists := activeHashes[hash]
 				return exists
 			}
 
-			freedBytes, err := a.FileCacher.PruneMediastreamVideoFilesByAge(7*24*time.Hour, inUse)
+			freedBytes, err := a.FileCacher.PruneMediastreamVideoFilesByAge(ctx, 7*24*time.Hour, inUse)
+			if ctx.Err() != nil {
+				return
+			}
 			if err != nil {
 				a.Logger.Error().Err(err).Msg("maintenance: Failed to prune videofiles cache")
 			} else if freedBytes > 100*1024*1024 { // Notify only if > 100 MiB freed
@@ -65,7 +77,7 @@ func (a *App) startMaintenanceScheduler() {
 			}
 
 			// Clean legacy per-hash mediastream_mediainfo_<hash>.cache buckets
-			_ = a.FileCacher.RemoveAllBy(func(filename string) bool {
+			_ = a.FileCacher.RemoveAllByContext(ctx, func(filename string) bool {
 				return strings.HasPrefix(filename, "mediastream_mediainfo_")
 			})
 		},
@@ -77,7 +89,10 @@ func (a *App) startMaintenanceScheduler() {
 		Interval:     24 * time.Hour,
 		InitialDelay: 30 * time.Minute,
 		Run: func(ctx context.Context) {
-			TrimLogEntries(a.Config.Logs.Dir, a.Logger)
+			if ctx.Err() != nil {
+				return
+			}
+			TrimLogEntriesContext(ctx, a.Config.Logs.Dir, a.Logger)
 		},
 	})
 
@@ -87,8 +102,11 @@ func (a *App) startMaintenanceScheduler() {
 		Interval:     7 * 24 * time.Hour,
 		InitialDelay: 1 * time.Hour,
 		Run: func(ctx context.Context) {
-			a.Database.RunDatabaseCleanup()
-			a.Database.Checkpoint()
+			if ctx.Err() != nil {
+				return
+			}
+			a.Database.RunDatabaseCleanupContext(ctx)
+			a.Database.CheckpointContext(ctx)
 		},
 	})
 
@@ -105,28 +123,43 @@ func (a *App) startMaintenanceScheduler() {
 		Interval:     cleanupInterval,
 		InitialDelay: 10 * time.Minute,
 		Run: func(ctx context.Context) {
+			if ctx.Err() != nil {
+				return
+			}
 			thumbnailDir := filepath.Join(a.Config.Cache.Dir, "thumbnails")
 			maxAge := time.Duration(a.Config.Cache.Thumbnails.DiskTTLHours) * time.Hour
 			maxSizeBytes := a.Config.Cache.Thumbnails.DiskMaxSizeMB * 1024 * 1024
 
-			freedBytes, count, err := cache.PruneDiskCache(thumbnailDir, maxAge, maxSizeBytes)
+			freedBytes, count, err := cache.PruneDirectoryContext(ctx, thumbnailDir, ".jpg", maxAge, maxSizeBytes)
+			if ctx.Err() != nil {
+				return
+			}
 			if err != nil {
 				a.Logger.Error().Err(err).Msg("maintenance: Failed to prune thumbnail cache")
 			}
 
 			// Podar keyframes (TTL 30 días, tope 1GB)
 			keyframeDir := filepath.Join(a.Config.Cache.Dir, "keyframes")
-			kfFreed, kfCount, _ := cache.PruneDirectory(keyframeDir, ".json", maxAge, 1024*1024*1024)
+			kfFreed, kfCount, _ := cache.PruneDirectoryContext(ctx, keyframeDir, ".json", maxAge, 1024*1024*1024)
+			if ctx.Err() != nil {
+				return
+			}
 
 			// Podar skipdetect audio fingerprints (TTL 30 días, tope 512MB)
 			fpDir := filepath.Join(a.Config.Cache.Dir, "skipdetect", "fp")
-			fpFreed, fpCount, _ := cache.PruneDirectory(fpDir, ".json", maxAge, 512*1024*1024)
+			fpFreed, fpCount, _ := cache.PruneDirectoryContext(ctx, fpDir, ".json", maxAge, 512*1024*1024)
+			if ctx.Err() != nil {
+				return
+			}
 
 			// Podar image-proxy con TTL propio (30 días, tope 1GB): desacoplado del
 			// TTL de thumbnails para que desactivarlo (0) no deje images sin poda.
 			const imageProxyMaxAge = 30 * 24 * time.Hour
 			imgDir := filepath.Join(a.Config.Cache.Dir, "images")
-			imgFreed, imgCount, _ := cache.PruneDirectory(imgDir, ".cache", imageProxyMaxAge, 1024*1024*1024)
+			imgFreed, imgCount, _ := cache.PruneDirectoryContext(ctx, imgDir, ".cache", imageProxyMaxAge, 1024*1024*1024)
+			if ctx.Err() != nil {
+				return
+			}
 
 			totalFreed := freedBytes + kfFreed + fpFreed + imgFreed
 			totalCount := count + kfCount + fpCount + imgCount

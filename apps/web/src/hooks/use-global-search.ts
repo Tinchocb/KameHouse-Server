@@ -33,8 +33,6 @@ interface SemanticSearchResult {
         episodes?: string
         badgeLabel: string
     }
-    score: number
-    matchLabel: string
 }
 
 interface SearchResultMedia {
@@ -111,9 +109,10 @@ export function useGlobalSearch(enabled = true) {
     const { data: unlinkedFiles, isLoading: isLoadingUnlinked } = useGetUnlinkedFiles({ enabled })
 
     useEffect(() => {
-        const t = setTimeout(() => setDebouncedQuery(query), 300)
+        if (debouncedQuery === query) return
+        const t = setTimeout(() => setDebouncedQuery(query), enabled ? 300 : 0)
         return () => clearTimeout(t)
-    }, [query])
+    }, [query, enabled, debouncedQuery])
 
     const [volumes, setVolumes] = useState<VolumeData[] | null>(volumesCache)
     useEffect(() => {
@@ -126,7 +125,7 @@ export function useGlobalSearch(enabled = true) {
     // Prefijo «@»: busca solo en la cronología (personaje, saga, esferas, lapso…).
     const isChronoMode = debouncedQuery.startsWith("@")
     const chronoQuery = isChronoMode ? debouncedQuery.slice(1).trim() : ""
-    const isSearchActive = isChronoMode ? chronoQuery.length >= 1 : debouncedQuery.length >= 2
+    const isSearchActive = enabled && (isChronoMode ? chronoQuery.length >= 1 : debouncedQuery.length >= 2)
     // La paleta usa prefijo ">" para comandos: no disparar búsqueda semántica.
     const isSemanticEnabled = isSearchActive && !isChronoMode && !debouncedQuery.startsWith(">")
 
@@ -145,16 +144,35 @@ export function useGlobalSearch(enabled = true) {
     })
 
     // En modo «@» solo importan los lapsos (se cargan al abrir el buscador).
-    const isLoading = isChronoMode
+    const isLoading = enabled && (isChronoMode
         ? !volumes
-        : isLoadingCol || isLoadingUnlinked || (isSemanticEnabled && isLoadingSemantic)
+        : isLoadingCol || isLoadingUnlinked || (isSemanticEnabled && isLoadingSemantic))
 
     const allEntries = useMemo(() => {
-        return getSafeCollectionEntries(collection)
-    }, [collection])
+        return enabled ? getSafeCollectionEntries(collection) : []
+    }, [collection, enabled])
+
+    const indexedEntries = useMemo(() => {
+        return allEntries
+            .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+            .map((entry) => {
+                const e = entry as IntelligentEntry
+                const media = e?.media
+                const vibes = e.vibes?.join(" ") || ""
+                const searchText = media
+                    ? `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""} ${media.titleSpanish || ""} ${vibes}`.toLowerCase()
+                    : `desconocido ${e.mediaId} ${vibes}`.toLowerCase()
+                return { entry, searchText }
+            })
+    }, [allEntries])
+
+    const volumeById = useMemo(
+        () => new Map((volumes ?? []).map((v) => [v.id, v])),
+        [volumes],
+    )
 
     const syntheticUnlinked = useMemo(() => {
-        if (!unlinkedFiles) return []
+        if (!enabled || !unlinkedFiles) return []
         return unlinkedFiles.filter(f => !f.userResolved).map(file => {
             const filename = (file.path ?? "").split(/[\\/]/).pop() || file.path || "Archivo huérfano"
             return {
@@ -172,9 +190,10 @@ export function useGlobalSearch(enabled = true) {
                 }
             }
         })
-    }, [unlinkedFiles])
+    }, [unlinkedFiles, enabled])
 
     const results = useMemo<GlobalSearchResultItem[]>(() => {
+        if (!enabled) return []
         // «@» sin texto todavía: no hay nada que mostrar (la paleta explica qué escribir).
         if (isChronoMode && !isSearchActive) return []
 
@@ -186,7 +205,6 @@ export function useGlobalSearch(enabled = true) {
         const q = debouncedQuery.toLowerCase().trim()
 
         const chronologyMatches: GlobalSearchResultItem[] = []
-        const volumeById = new Map((volumes ?? []).map((v) => [v.id, v]))
         for (const hit of searchTimeline(volumes ?? [], isChronoMode ? chronoQuery : q, isChronoMode ? CHRONO_MODE_LIMIT : 4)) {
             const vol = volumeById.get(hit.volumeId)
             if (!vol) continue
@@ -236,17 +254,10 @@ export function useGlobalSearch(enabled = true) {
             }
         })
 
-        const filteredEntries = allEntries.filter(entry => {
-            if (!entry) return false
-            const e = entry as IntelligentEntry
-            const media = e?.media
-            const vibes = e.vibes?.join(" ") || ""
-            const title = media 
-                ? `${media.titleRomaji || ""} ${media.titleEnglish || ""} ${media.titleOriginal || ""} ${media.titleSpanish || ""} ${vibes}`.toLowerCase()
-                : `desconocido ${e.mediaId} ${vibes}`
-            
-            return title.includes(q)
-        })
+        const filteredEntries: GlobalSearchResultItem[] = []
+        for (const item of indexedEntries) {
+            if (item.searchText.includes(q)) filteredEntries.push(item.entry)
+        }
 
         // Combine: Chronology spans, Semantic lore entities, matching library media entries, unlinked
         const combined: GlobalSearchResultItem[] = [
@@ -257,7 +268,7 @@ export function useGlobalSearch(enabled = true) {
         ]
 
         return combined.slice(0, 12)
-    }, [allEntries, syntheticUnlinked, semanticResults, debouncedQuery, isSearchActive, isChronoMode, chronoQuery, volumes])
+    }, [enabled, allEntries, indexedEntries, syntheticUnlinked, semanticResults, debouncedQuery, isSearchActive, isChronoMode, chronoQuery, volumes, volumeById])
 
     return {
         query,

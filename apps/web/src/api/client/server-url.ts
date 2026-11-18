@@ -8,10 +8,6 @@ declare global {
     }
 }
 
-function devOrProd(dev: string, prod: string): string {
-    return import.meta.env.MODE === "development" ? dev : prod
-}
-
 let cachedClientId: string | null = null
 function getWebClientId(): string {
     if (typeof window === "undefined") return "0"
@@ -120,12 +116,5 @@ export function getServerBaseUrl(removeProtocol: boolean = false): string {
 
     // For standard web environments (dev proxy or production self-hosted),
     // relative paths are preferred because the server and client share an origin.
-    if (import.meta.env.MODE === "development") {
-        return ""
-    }
-
-    const ret = typeof window !== "undefined"
-        ? (devOrProd("", "")) // Use relative implicitly for web
-        : ""
-    return ret
+    return ""
 }

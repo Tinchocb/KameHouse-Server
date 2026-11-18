@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useMemo, useState } from "react"
-import { Check, Cloud, FileVideo, Film, HardDrive, Search, Trash2, Tv, X } from "lucide-react"
+import { Cloud, FileVideo, Film, HardDrive, Search, Tv, X } from "lucide-react"
 import { cn } from "@/components/ui/core/styling"
 import { Button } from "@/components/ui/button"
 import { IconButton } from "@/components/ui/button/icon-button"
@@ -10,8 +10,6 @@ const FEED_ICONS: Record<ScanFeedIcon, { icon: React.ElementType; className: str
     episode: { icon: Tv, className: "text-brand-accent", label: "Episodio" },
     movie: { icon: Film, className: "text-status-warning", label: "Película" },
     file: { icon: FileVideo, className: "text-brand-accent", label: "Archivo" },
-    pruned: { icon: Trash2, className: "text-status-warning", label: "Eliminado" },
-    done: { icon: Check, className: "text-status-success", label: "Listo" },
 }
 
 /** Filas renderizadas a la vez; el resto se alcanza con el buscador o los filtros. */
@@ -69,7 +67,7 @@ export function ScanFileList({ views }: { views: ScanLiveView[] }) {
     const chips = view.chips ?? []
 
     return (
-        <section aria-label="Archivos escaneados" className="rounded-2xl border border-[var(--neutral-separator)] bg-[var(--neutral-elev-2)] overflow-hidden">
+        <section aria-label="Archivos escaneados" className="rounded-2xl border border-[var(--neutral-separator)] border-t-[var(--glass-border-top)] bg-[var(--neutral-elev-2)] shadow-[shadow:var(--double-bezel-shadow)] overflow-hidden">
             {/* Encabezado: título, contador, origen y buscador */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 sm:px-5 py-3 border-b border-[var(--neutral-separator)]">
                 <div className="flex items-center gap-2 min-w-0">
@@ -153,7 +151,7 @@ export function ScanFileList({ views }: { views: ScanLiveView[] }) {
                         <li
                             key={item.id}
                             className={cn(
-                                "flex items-center gap-3 px-4 sm:px-5 py-2 min-w-0 hover:bg-[var(--neutral-elev-3)]",
+                                "[content-visibility:auto] [contain-intrinsic-size:auto_56px] flex items-center gap-3 px-4 sm:px-5 py-2 min-w-0 hover:bg-[var(--neutral-elev-3)]",
                                 item.id === newestId && "bg-brand-accent/[0.08] animate-in fade-in slide-in-from-top-1 duration-200",
                             )}
                         >

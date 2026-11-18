@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { MovieLoreDefinition } from "@/lib/config/dragonball_movies_lore"
-import { getMovieSynopsis, looksEnglish, getMovieProgress, getMovieStatus, getEntryDecade, parseMoviesPrefs, gridHeading } from "./movies-utils"
+import { getMovieSynopsis, looksEnglish, getMovieProgress, getMovieStatus, parseMoviesPrefs, gridHeading } from "./movies-utils"
 
 const lore: MovieLoreDefinition = {
     id: "test",
@@ -70,18 +70,9 @@ describe('getMovieProgress / getMovieStatus', () => {
     })
 })
 
-describe('getEntryDecade', () => {
-    it('groups by decade and returns null without year', () => {
-        expect(getEntryDecade({ media: { year: 1989 } } as never)).toBe(1980)
-        expect(getEntryDecade({ media: { year: 2018 } } as never)).toBe(2010)
-        expect(getEntryDecade({ media: { year: 0 } } as never)).toBeNull()
-        expect(getEntryDecade({ media: null })).toBeNull()
-    })
-})
-
 describe('parseMoviesPrefs', () => {
     it('keeps valid values and drops the rest', () => {
-        expect(parseMoviesPrefs(JSON.stringify({ sort: 'year_desc', estado: 'watched', decada: 1990 }))).toEqual({ sort: 'year_desc', estado: 'watched', decada: 1990 })
+        expect(parseMoviesPrefs(JSON.stringify({ sort: 'year_desc', estado: 'watched', decada: 1990 }))).toEqual({ sort: 'year_desc' })
         expect(parseMoviesPrefs(JSON.stringify({ sort: 'nope', estado: 'all', decada: 'x' }))).toEqual({})
     })
 
