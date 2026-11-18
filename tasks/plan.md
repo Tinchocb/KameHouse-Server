@@ -1,5 +1,5 @@
 # Plan de implementación: optimización del frontend de KameHouse (`apps/web`)
-
+ 
 **Estado:** aprobado por el usuario el 2026-11-17.
 **Tareas detalladas:** [`tasks/todo.md`](todo.md).
 **Origen:** plan de planificación en `C:\Users\marti\.claude\plans\fancy-imagining-swan.md`.

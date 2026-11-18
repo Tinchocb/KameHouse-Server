@@ -22,6 +22,9 @@ export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) =
         retryOnError: true,
         reconnectAttempts: 20,
         reconnectInterval: 3000,
+        // Nadie lee lastMessage: sin esto, cada mensaje del socket compartido re-renderizaba el componente
+        // que usa el hook. onMessage corre antes del filtro, así que sigue recibiendo todos los mensajes.
+        filter: () => false,
         onMessage: (event) => {
             try {
                 const parsed: unknown = JSON.parse(event.data)

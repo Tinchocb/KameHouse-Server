@@ -91,8 +91,10 @@ export const useAppStore = create<CombinedState>()(
                 {
                     name: "kamehouse-app-settings",
                     storage: createDeduplicatedJSONStorage(),
-                    version: 1,
+                    version: 2,
                     migrate: (persisted, version) => {
+                        // Desde la v2 el espejo no guarda nada (partialize vacío): lo viejo se descarta (DT-05).
+                        if (version < 2) return {} as CombinedState
                         const p = (persisted ?? {}) as Partial<CombinedState>
                         if (version < 1) {
                             // Limpia colas/índices potencialmente obsoletos de versiones sin versionado
@@ -123,41 +125,9 @@ export const useAppStore = create<CombinedState>()(
                         }
                         return { ...currentState, ...p }
                     },
-                    partialize: (state) => ({
-                        // UI state
-                        bgMusicEnabled: state.bgMusicEnabled,
-                        bgMusicVolume: state.bgMusicVolume,
-                        bgMusicDir: state.bgMusicDir,
-                        bgMusicTracks: state.bgMusicTracks,
-                        uiSoundsEnabled: state.uiSoundsEnabled,
-                        uiSoundsVolume: state.uiSoundsVolume,
-                        seriesSoundtrackMode: state.seriesSoundtrackMode,
-                        dynamicBackdropEnabled: state.dynamicBackdropEnabled,
-                        dynamicBackdropMotionEnabled: state.dynamicBackdropMotionEnabled,
-                        themeVisual: state.themeVisual,
-                        hideAudienceScore: state.hideAudienceScore,
-                        // Player state
-                        playerVolume: state.playerVolume,
-                        autoSkipIntro: state.autoSkipIntro,
-                        autoSkipOutro: state.autoSkipOutro,
-                        skipStepSeconds: state.skipStepSeconds,
-                        playbackRate: state.playbackRate,
-                        preferredAudioProfile: state.preferredAudioProfile,
-                        preferredAudioLang: state.preferredAudioLang,
-                        preferredAudioTrackIndex: state.preferredAudioTrackIndex,
-                        preferredSubtitleLang: state.preferredSubtitleLang,
-                        subtitlesEnabled: state.subtitlesEnabled,
-                        autoDisableSubtitlesWhenDubbed: state.autoDisableSubtitlesWhenDubbed,
-                        aspectRatio: state.aspectRatio,
-                        aspectRatioBySeries: state.aspectRatioBySeries,
-                        subtitleSize: state.subtitleSize,
-                        loopEnabled: state.loopEnabled,
-                        marathonMode: state.marathonMode,
-                        // Queue state
-                        playlistQueue: Array.isArray(state.playlistQueue) ? state.playlistQueue.slice(0, 50) : [],
-                        currentQueueIndex: typeof state.currentQueueIndex === 'number' ? Math.min(state.currentQueueIndex, 49) : -1,
-                        queueRepeatMode: state.queueRepeatMode,
-                    }),
+                    // Sin datos propios: cada campo ya lo persiste su sub-store (ui, player o queue).
+                    // Un espejo persistido podía pisar al sub-store al hidratar (DT-05).
+                    partialize: () => ({}),
                 }
             )
         )

@@ -24,7 +24,16 @@ Plan: [`tasks/plan.md`](plan.md). Convención: `[ ]` pendiente, `[x]` hecho, `[~
   - Renders (medianas): cambio de orden −34 %, hover −53 %, Inicio → Películas −36 %. La escritura no cambia porque es el buscador global, no Películas.
   - LCP: sin mejora. Sube entre 8 y 60 ms en seis de las siete rutas, probablemente ruido de medición; no se atribuye a estos cambios.
   - Pendiente: el shell no entra en el top 12 de renders, así que T2.1 sobre el shell no está verificado. Falta la pasada manual con teclado.
-- **Checkpoint 2:** listo para revisión humana.
+- **Checkpoint 2:** aprobado por el usuario (2026-11-18).
+- **Fase 3 aplicada (2026-11-18):**
+  - T3.1 + T3.2: `requests.ts` reintenta 502/503/504 solo con `Retry-After`. `ApiError` lleva `retryAfterMs` y `client-providers.tsx` reintenta a nivel de consulta solo con esa señal. Medido con inyección de 503: sagas de la ficha 48 → 2 peticiones; miniaturas de cronología 192 → 4 (una por miniatura).
+  - T3.3: logs del servidor, selector de carpetas y búsquedas semánticas excluidos de la caché, con test.
+  - T3.4: decisión pendiente de tu revisión. Las fichas de anime son el 88 % de la caché persistida (2,27 MB de 2,57 MB). Recomiendo mantenerlas: la ficha se muestra desde la caché restaurada sin ir a red.
+  - T3.5: `useAppStore` ya no persiste nada propio. La versión 2 descarta el espejo antiguo. Las escrituras duplicadas eran 0 en el recorrido antes del cambio; lo que se elimina es el riesgo de que el espejo pise a los sub-stores.
+  - T3.6: `filter: () => false` en el hook compartido. Test: 20 mensajes provocaban 20 renders; ahora no provocan ninguno. Afecta también al reproductor (`player-core`, `use-mpv-player`), que no lee `lastMessage`, así que no cambia su comportamiento.
+  - Suite completa: solo falla el guardián de Cronología que ya existía.
+- **Checkpoint 3:** aprobado por el usuario (2026-11-18). T3.4 decidida: se mantienen las fichas de anime en la caché persistida.
+- **Estado de commits (2026-11-18):** `HEAD` es `8ea2329`, un commit de otra sesión con 965 archivos. Incluye casi todo lo de las fases 1 a 3. Sin commitear quedan T3.5, T3.6 y los tests nuevos. Ese commit también incluye un temporal de verificación mío, `apps/web/rsbuild.fase3-build.config.ts`: está borrado del disco y su eliminación preparada en el índice, sin commitear. No he tocado el historial.
 - **Hallazgos de la medición:** CT-06 no se confirma (el LCP de las fichas es texto). Hay 48 a 69 peticiones directas a `image.tmdb.org` por carga, también en `/settings` (origen por confirmar), y `<img>` a TMDB directo en cuatro rutas. Son candidatos a tareas nuevas.
 - **Hallazgos nuevos frente al plan:** `lint:tokens` pasa, así que QA-07 no reproduce (T5.2 queda por confirmar). `RootComponent` ya compila (CT-02 parcial). Hay un fallo preexistente en `design-series.guard.test.ts` (Cronología), que no se relaja.
 
