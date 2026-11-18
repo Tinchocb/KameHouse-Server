@@ -3,7 +3,7 @@ import React, { useState } from "react"
 import { type Control, Controller, useFormContext } from "react-hook-form"
 import { AnimatePresence, m } from "framer-motion"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
-import { type SettingsFormValues } from "../index"
+import { type SettingsFormInput } from "../index"
 import { usePlayerStore, useUIStore, type BackgroundMusicTrack } from "@/lib/store"
 import { ApiError, buildApiQuery } from "@/api/client/requests"
 import { useWebSocket } from "@/hooks/use-websocket"
@@ -32,7 +32,7 @@ import { useShallow } from "zustand/react/shallow"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 
 interface PlaybackTabProps {
-    control: Control<SettingsFormValues>
+    control: Control<SettingsFormInput>
 }
 
 const BATCH_SCAN_MEDIA_ID = -1
@@ -205,7 +205,7 @@ export const PlaybackTab = React.memo(function PlaybackTab({ control }: Playback
         }))
     )
 
-    const { setValue, getValues } = useFormContext<SettingsFormValues>()
+    const { setValue, getValues } = useFormContext<SettingsFormInput>()
     const [isScanningMusic, setIsScanningMusic] = useState(false)
 
     const handleScanMusic = async () => {

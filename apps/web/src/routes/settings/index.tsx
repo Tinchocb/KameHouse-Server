@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { AppErrorBoundary } from "@/components/shared/app-error-boundary"
-export type { SettingsFormValues } from "@/lib/server/settings"
+export type { SettingsFormInput, SettingsFormValues } from "@/lib/server/settings"
 
 interface SettingsSearchParams {
     tab?: string

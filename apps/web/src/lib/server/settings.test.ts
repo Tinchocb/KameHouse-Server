@@ -1,6 +1,35 @@
 import { describe, expect, it } from "vitest"
 import type { Models_Settings } from "@/api/generated/types"
+import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 import { buildGettingStartedPayload, findIgnoredBinaryPaths, settingsSchema } from "./settings"
+
+/**
+ * Guardián de tipos (QA-04): cada campo que settingsSchema declara tiene que existir en el modelo
+ * generado de PATCH /settings. Si el backend renombra o quita uno, `pnpm typecheck` falla aquí.
+ * No exige lo contrario: el modelo tiene campos que el formulario no edita (p. ej. `tvMode`, o
+ * id/createdAt/updatedAt de la entidad) y `mediaPlayer` es un mapa libre.
+ */
+type Expect<T extends true> = T
+type DeclaredFieldsExist<Shape, Model> = [Exclude<keyof Shape, keyof NonNullable<Model>>] extends [never] ? true : false
+/** Forma de una sección de settingsSchema sin el envoltorio de default ni de transform. */
+type SectionShape<Z> = Z extends { shape: infer S }
+    ? S
+    : Z extends { removeDefault(): infer I }
+      ? SectionShape<I>
+      : Z extends { innerType(): infer I }
+        ? SectionShape<I>
+        : never
+
+export type SettingsSchemaMatchesGeneratedModel = [
+    Expect<DeclaredFieldsExist<typeof settingsSchema.shape, SaveSettings_Variables>>,
+    Expect<DeclaredFieldsExist<SectionShape<typeof settingsSchema.shape.library>, SaveSettings_Variables["library"]>>,
+    Expect<DeclaredFieldsExist<SectionShape<typeof settingsSchema.shape.mediaPlayer>, SaveSettings_Variables["mediaPlayer"]>>,
+    Expect<DeclaredFieldsExist<SectionShape<typeof settingsSchema.shape.mediastream>, SaveSettings_Variables["mediastream"]>>,
+    Expect<DeclaredFieldsExist<SectionShape<typeof settingsSchema.shape.theme>, SaveSettings_Variables["theme"]>>,
+    Expect<DeclaredFieldsExist<SectionShape<typeof settingsSchema.shape.notifications>, SaveSettings_Variables["notifications"]>>,
+    Expect<DeclaredFieldsExist<SectionShape<typeof settingsSchema.shape.platform>, SaveSettings_Variables["platform"]>>,
+    Expect<DeclaredFieldsExist<SectionShape<typeof settingsSchema.shape.googleDrive>, SaveSettings_Variables["googleDrive"]>>,
+]
 
 describe("theme settings persistence", () => {
     it("saves legacy Neutro as Por era without changing disabled effects", () => {

@@ -169,11 +169,15 @@ export function useSeriesData({
                         progressNumber: epNum,
                         isDownloaded: true,
                         isInvalid: false,
+                        // Sin archivo adjunto a propósito: resolveLocalFileForEpisode y lfMap lo buscan por
+                        // número con metadata primero, mientras aquí el episodio sale de parsedInfo primero.
+                        // Adjuntar `lf` podría cambiar el archivo elegido si ambos no coinciden.
+                        localFile: null,
+                        fileMetadata: null,
                         episodeMetadata: {
-                            episodeNumber: epNum,
                             image: entry.media?.posterImage || entry.media?.bannerImage || "",
                         },
-                    } as unknown as Anime_Episode)
+                    } satisfies Anime_Episode)
                 }
             })
 

@@ -3,7 +3,7 @@ import React, { useEffect } from "react"
 import { type Control, Controller, useFormContext, useFormState, useWatch } from "react-hook-form"
 import { m } from "framer-motion"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
-import { type SettingsFormValues } from "../index"
+import { type SettingsFormInput } from "../index"
 import { usePerformanceStore, type PerformanceProfile } from "@/lib/hardware/performance-store"
 import { useShallow } from "zustand/react/shallow"
 import { useGetFFmpegStatus, useInstallFFmpeg } from "@/api/hooks/mediastream.hooks"
@@ -28,7 +28,7 @@ import { OsToggle, DirtyOsSelect, DirtyOsInput, DirtyPill } from "../components"
 import { useSpringPreset } from "@/components/ui/kinetics/hooks"
 
 interface PerformanceTabProps {
-    control: Control<SettingsFormValues>
+    control: Control<SettingsFormInput>
 }
 
 const PROFILES: { id: PerformanceProfile; label: string; desc: string; icon: React.ElementType; badge: string }[] = [
@@ -68,7 +68,7 @@ const POLICY_OPTIONS: { value: PlaybackPolicy; label: string; desc: string; badg
     { value: "transcode-strict", label: "Siempre convertido", desc: "Convierte siempre a H.264 para que funcione en cualquier dispositivo.", badge: "Convertido" },
 ]
 
-type MediastreamValues = SettingsFormValues["mediastream"] | undefined
+type MediastreamValues = SettingsFormInput["mediastream"] | undefined
 
 function policyOf(m: MediastreamValues): PlaybackPolicy {
     if (m?.directPlayOnly) return "direct-only"
@@ -403,9 +403,9 @@ export const PerformanceTab = React.memo(function PerformanceTab({ control }: Pe
     )
 })
 
-function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormValues> }) {
+function PlaybackPolicyPicker({ control }: { control: Control<SettingsFormInput> }) {
     const reduceMotion = useReducedMotion()
-    const { setValue } = useFormContext<SettingsFormValues>()
+    const { setValue } = useFormContext<SettingsFormInput>()
     const mediastream = useWatch({ control, name: "mediastream" })
     const current = policyOf(mediastream)
     const cardSpring = useSpringPreset("entrance")

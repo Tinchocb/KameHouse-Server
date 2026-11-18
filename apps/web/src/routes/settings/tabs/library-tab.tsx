@@ -1,7 +1,7 @@
 import { errorText } from "@/api/client/error-messages"
 import React, { useState } from "react"
 import { type Control, Controller, useFormContext, useWatch } from "react-hook-form"
-import { type SettingsFormValues } from "../index"
+import { type SettingsFormInput } from "../index"
 import { PathList, OsToggle, OsSelect } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
 import {
@@ -33,11 +33,11 @@ const GoogleDriveCard = React.lazy(() =>
 )
 
 interface LibraryTabProps {
-    control: Control<SettingsFormValues>
+    control: Control<SettingsFormInput>
 }
 
 export const LibraryTab = React.memo(function LibraryTab({ control }: LibraryTabProps) {
-    const { setValue, getValues } = useFormContext<SettingsFormValues>()
+    const { setValue, getValues } = useFormContext<SettingsFormInput>()
     const queryClient = useQueryClient()
     const { mutate: scanLibrary } = useScanLocalFiles()
     const [showFullPath, setShowFullPath] = useState<boolean>(() => {

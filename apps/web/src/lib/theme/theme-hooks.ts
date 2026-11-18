@@ -41,7 +41,7 @@ type ThemeSettings = Omit<Models_Theme, "id" | "createdAt" | "updatedAt">
  * For backward compatibility: legacy "classic" (Neutro) and "advanced" are converted
  * to "era" with Universo DB, preserving transparency and visual effects.
  */
-export function resolveThemeMode(t: Pick<ThemeSettings, "themeMode" | "themeEra" | "themeEnableBlurringEffects">): ThemeMode {
+export function resolveThemeMode(t: Partial<Pick<ThemeSettings, "themeMode" | "themeEra" | "themeEnableBlurringEffects">>): ThemeMode {
     return normalizeThemePreference(t).themeMode
 }
 

@@ -1,7 +1,8 @@
 import { useServerQuery, useServerMutation } from "@/api/client/requests"
 import { Models_Settings, Status } from "@/api/generated/types"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
-import { SaveSettings_Variables, GettingStarted_Variables } from "@/api/generated/endpoint.types"
+import { GettingStarted_Variables } from "@/api/generated/endpoint.types"
+import type { SettingsPatch } from "@/lib/server/settings-patch"
 import { useQueryClient } from "@tanstack/react-query"
 
 export function useGetStatus(options?: { enabled?: boolean }) {
@@ -42,7 +43,7 @@ export function useGetSettings() {
 
 export function useSaveSettings() {
     const queryClient = useQueryClient()
-    return useServerMutation<Models_Settings, SaveSettings_Variables>({
+    return useServerMutation<Models_Settings, SettingsPatch>({
         endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
         method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0],
         mutationKey: [API_ENDPOINTS.SETTINGS.SaveSettings.key],

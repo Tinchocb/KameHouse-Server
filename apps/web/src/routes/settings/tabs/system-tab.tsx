@@ -2,10 +2,11 @@ import { errorText } from "@/api/client/error-messages"
 import React, { useState } from "react"
 import { type Control, Controller, useFormContext, useWatch } from "react-hook-form"
 import { AnimatePresence, m } from "framer-motion"
-import { type SettingsFormValues } from "../index"
+import { type SettingsFormInput } from "../index"
 import { toast } from "sonner"
 import { useBackupDatabase, useDownloadDatabaseBackup } from "@/api/hooks/system.hooks"
 import { useGetSettings, useSaveSettings } from "@/api/hooks/settings.hooks"
+import type { SettingsPatch } from "@/lib/server/settings-patch"
 import { settingsSchema } from "@/lib/server/settings"
 import { useAppStore, usePlayerStore, useQueueStore, useUIStore } from "@/lib/store"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
@@ -27,10 +28,9 @@ import { Button } from "@/components/ui/button"
 import { IconUiKey, IconUiRotate, IconUiSpinner, IconStatusArchive, IconUiTrash, IconUiAlert, IconMediaStop, IconUiCheck } from "@/components/ui/icons";
 import { OsToggle } from "../components"
 import { SectionBar } from "@/components/ui/sectionbar"
-import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 
 interface SystemTabProps {
-    control: Control<SettingsFormValues>
+    control: Control<SettingsFormInput>
 }
 
 function resetStore<T>(store: { getInitialState: () => T; setState: (state: T, replace: true) => unknown }) {
@@ -115,7 +115,7 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
     const { download: downloadBackup, isDownloading: isDownloadingBackup } = useDownloadDatabaseBackup()
     const { mutateAsync: saveSettings } = useSaveSettings()
     const { data: serverSettings } = useGetSettings()
-    const { reset, setValue, getValues } = useFormContext<SettingsFormValues>()
+    const { reset, setValue, getValues } = useFormContext<SettingsFormInput>()
     const queryClient = useQueryClient()
     const collapseSpring = useSpringPreset("tabContent")
     // Con el interruptor general activo, el del escáner no tiene efecto (el notificador corta antes).
@@ -185,8 +185,9 @@ export const SystemTab = React.memo(function SystemTab({ control }: SystemTabPro
                 serverSettings?.library?.seriesPaths ?? []
             defaultSettings.library.moviePaths =
                 serverSettings?.library?.moviePaths ?? []
-            await saveSettings(defaultSettings as unknown as SaveSettings_Variables)
-            reset(defaultSettings as unknown as SettingsFormValues)
+            // El reinicio manda el esquema completo. Su `lastScanAt` es unknown y el servidor lo ignora (es suyo).
+            await saveSettings(defaultSettings as SettingsPatch)
+            reset(defaultSettings)
             // Ajustes locales a fábrica. rehydrate() con el storage vacío no toca la
             // memoria, así que se reemplaza el estado por el inicial y persist lo
             // vuelve a escribir. La cola y los tiempos de salto son datos, no ajustes.

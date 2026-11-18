@@ -13,7 +13,7 @@ import { cn } from "@/components/ui/core/styling"
 import { Button, IconButton } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
 import { useCardMotionProps } from "@/components/ui/kinetics/hooks"
-import type { SettingsFormValues } from "../index"
+import type { SettingsFormInput } from "../index"
 
 import {
     DRAGON_BALL_SCANNER_SERIES as DRAGON_BALL_SERIES,
@@ -45,7 +45,7 @@ export function DragonBallScannerLive() {
     const { mutate: scanDrive, isPending: isDrivePending } = useTriggerDriveScan()
 
     // El disco local solo se puede escanear si está conectado y hay carpetas cargadas.
-    const { watch } = useFormContext<SettingsFormValues>()
+    const { watch } = useFormContext<SettingsFormInput>()
     const localDisconnected = Boolean(watch("library.disableLocalScanning"))
     const localPathCount = (watch("library.seriesPaths")?.length ?? 0) + (watch("library.moviePaths")?.length ?? 0)
     const canScanLocal = !localDisconnected && localPathCount > 0

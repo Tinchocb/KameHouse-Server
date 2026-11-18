@@ -3,7 +3,7 @@ import { errorText } from "@/api/client/error-messages"
 import { createLazyFileRoute, Link, useBlocker } from "@tanstack/react-router"
 import React, { useEffect, useState, useMemo, useRef, Suspense } from "react"
 import { useIntelligenceStore } from "@/hooks/use-home-intelligence"
-import { useForm, FormProvider, type Resolver } from "react-hook-form"
+import { useForm, FormProvider } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { LoadingOverlayWithLogo } from "@/components/shared/loading-overlay-with-logo"
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button"
 import { IconUiPalette, IconMediaPlay, IconNavigationLibrary, IconStatusZap, IconUiSettings, IconUiCheck, IconUiAdmin } from "@/components/ui/icons"
 import { useReducedMotion, useSpringPreset } from "@/components/ui/kinetics/hooks"
 import { useSound } from "@/hooks/use-sound"
-import type { SaveSettings_Variables } from "@/api/generated/endpoint.types"
 
 // Consolidación de los 5 Pilares de Configuración con lazy loading y prewarming
 const tabLoaders = {
@@ -31,12 +30,13 @@ const LibraryTab = React.lazy(() => tabLoaders.library().then(m => ({ default: m
 const PerformanceTab = React.lazy(() => tabLoaders.performance().then(m => ({ default: m.PerformanceTab })))
 const SystemTab = React.lazy(() => tabLoaders.system().then(m => ({ default: m.SystemTab })))
 
-import { findIgnoredBinaryPaths, settingsSchema, type SettingsFormValues } from "@/lib/server/settings"
+import { findIgnoredBinaryPaths, settingsSchema, type SettingsFormInput, type SettingsFormValues } from "@/lib/server/settings"
 import { ApiError, buildApiQuery } from "@/api/client/requests"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import type { Models_Settings } from "@/api/generated/types"
 import { getEffectiveSettings, syncStoresWithSettings } from "@/lib/server/settings-state"
-import { changedSettings } from "@/lib/server/settings-patch"
+import { SettingsLoadError } from "@/components/settings/settings-load-error"
+import { applySettingsPatch, changedSettings } from "@/lib/server/settings-patch"
 import { useQueryClient } from "@tanstack/react-query"
 
 
@@ -144,10 +144,15 @@ function SettingsTabSkeleton() {
     )
 }
 
+/** Nodo de FieldErrors: objeto con mensaje (hoja) o con más errores (sección). */
+function isErrorNode(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null
+}
+
 function SettingsPage() {
     const { playSound } = useSound()
     const queryClient = useQueryClient()
-    const { data: serverSettings, isLoading } = useGetSettings()
+    const { data: serverSettings, isLoading, isError, refetch } = useGetSettings()
     const { mutateAsync: saveSettings, isPending: isSaving } = useSaveSettings()
     const search = Route.useSearch()
     const navigate = Route.useNavigate()
@@ -184,7 +189,7 @@ function SettingsPage() {
                 .finally(() => {
                     if (isCancelled || currentIndex >= loaders.length) return
                     if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-                        idleHandle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+                        idleHandle = window
                             .requestIdleCallback(loadNext, { timeout: 3000 })
                     } else {
                         timeoutHandle = setTimeout(loadNext, 200)
@@ -193,7 +198,7 @@ function SettingsPage() {
         }
 
         if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-            idleHandle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+            idleHandle = window
                 .requestIdleCallback(loadNext, { timeout: 3000 })
         } else {
             timeoutHandle = setTimeout(loadNext, 500)
@@ -202,7 +207,7 @@ function SettingsPage() {
         return () => {
             isCancelled = true
             if (idleHandle !== undefined && typeof window !== "undefined" && "cancelIdleCallback" in window) {
-                (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleHandle)
+                window.cancelIdleCallback(idleHandle)
             }
             if (timeoutHandle !== undefined) {
                 clearTimeout(timeoutHandle)
@@ -217,9 +222,9 @@ function SettingsPage() {
         return () => { setBackdropUrl(null) }
     }, [setBackdropUrl])
 
-    const form = useForm<SettingsFormValues>({
-        resolver: zodResolver(settingsSchema) as unknown as Resolver<SettingsFormValues>,
-        defaultValues: getEffectiveSettings(serverSettings as unknown as SettingsFormValues),
+    const form = useForm<SettingsFormInput, unknown, SettingsFormValues>({
+        resolver: zodResolver(settingsSchema),
+        defaultValues: getEffectiveSettings(serverSettings),
         mode: "onBlur",
         shouldUnregister: false,
     })
@@ -232,7 +237,7 @@ function SettingsPage() {
 
     useEffect(() => {
         if (serverSettings) {
-            const effective = getEffectiveSettings(serverSettings as unknown as SettingsFormValues)
+            const effective = getEffectiveSettings(serverSettings)
             reset(effective, { keepDirtyValues: true })
             syncStoresWithSettings(form.getValues())
         }
@@ -247,19 +252,15 @@ function SettingsPage() {
         }
         try {
             const submitted = structuredClone(form.getValues())
-            await saveSettings(changedSettings(data, settingsSchema.parse(defaultValues)) as SaveSettings_Variables)
+            await saveSettings(changedSettings(data, settingsSchema.parse(defaultValues)))
             const fresh = queryClient.getQueryData<Models_Settings>([API_ENDPOINTS.SETTINGS.GetSettings.key])
-            const effective = getEffectiveSettings((fresh ?? data) as SettingsFormValues)
+            const effective = getEffectiveSettings(fresh ?? data)
             const pending = changedSettings(form.getValues(), submitted)
             playSound("category", 0.4)
             setIsSaveSuccess(Object.keys(pending).length === 0)
             reset(effective)
-            // Las ediciones hechas durante el guardado siguen pendientes.
-            for (const [section, values] of Object.entries(pending)) {
-                for (const [key, value] of Object.entries(values as Record<string, unknown>)) {
-                    form.setValue(`${section}.${key}` as import("react-hook-form").FieldPath<SettingsFormValues>, value as never, { shouldDirty: true })
-                }
-            }
+            // Las ediciones hechas durante el guardado siguen pendientes: se reaplican sobre lo guardado y quedan sucias.
+            reset(applySettingsPatch(effective, pending), { keepDefaultValues: true })
             syncStoresWithSettings(form.getValues())
             toast.success("Ajustes guardados")
             void warnIgnoredBinaryPaths(data)
@@ -301,20 +302,20 @@ function SettingsPage() {
 
     const handleDiscard = () => {
         playSound("hover", 0.3)
-        const effective = getEffectiveSettings(serverSettings as unknown as SettingsFormValues)
+        const effective = getEffectiveSettings(serverSettings)
         reset(effective)
         syncStoresWithSettings(effective)
     }
 
-    const onFormError = (errors: import("react-hook-form").FieldErrors<SettingsFormValues>) => {
+    const onFormError = (errors: import("react-hook-form").FieldErrors<SettingsFormInput>) => {
         const failedFields: string[] = []
         const extractErrors = (obj: Record<string, unknown> | undefined | null, prefix = "") => {
             if (!obj) return
             for (const key of Object.keys(obj)) {
-                const errorObj = obj[key] as Record<string, unknown> | undefined
-                if (errorObj && errorObj.message) {
+                const errorObj = obj[key]
+                if (isErrorNode(errorObj) && errorObj.message) {
                     failedFields.push(`${prefix}${key}: ${errorObj.message}`)
-                } else if (errorObj && typeof errorObj === "object") {
+                } else if (isErrorNode(errorObj)) {
                     extractErrors(errorObj, `${prefix}${key}.`)
                 }
             }
@@ -354,6 +355,8 @@ function SettingsPage() {
 
     // Loader y contenido se alternan con AnimatePresence (mode="wait"): el loader sale con su fundido antes de entrar el contenido.
     const showLoader = isLoading && !serverSettings
+    // Sin configuración del servidor no hay formulario: no se edita ni se guarda sobre valores por defecto (QA-01).
+    const loadFailed = isError && !serverSettings
 
     const content = (
         // overflow-clip (no hidden): hidden crea un contenedor de scroll propio y el sidebar sticky
@@ -599,7 +602,7 @@ function SettingsPage() {
 
     return (
         <AnimatePresence mode="wait" initial={false}>
-            {showLoader ? <LoadingOverlayWithLogo key="loader" /> : content}
+            {showLoader ? <LoadingOverlayWithLogo key="loader" /> : loadFailed ? <SettingsLoadError key="load-error" onRetry={() => void refetch()} /> : content}
         </AnimatePresence>
     )
 }

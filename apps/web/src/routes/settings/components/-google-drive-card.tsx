@@ -21,7 +21,7 @@ import {
     type DriveStatusResponse,
 } from "@/lib/drive-status"
 import { OsSelect, OsToggle } from "../components"
-import type { SettingsFormValues } from "../index"
+import type { SettingsFormInput } from "../index"
 import { GoogleDriveFolderBrowser } from "./-google-drive-folder-browser"
 
 function extractFolderId(input: string): string {
@@ -87,7 +87,7 @@ function describeSync(status: DriveStatusResponse, now: number): { text: string;
  * El escaneo también se sigue desde la sección "Escáner y catálogo en vivo".
  */
 export function GoogleDriveCard() {
-    const { watch, setValue, formState } = useFormContext<SettingsFormValues>()
+    const { watch, setValue, formState } = useFormContext<SettingsFormInput>()
     const queryClient = useQueryClient()
     const [rawIsConnecting, setRawIsConnecting] = useState(false)
     const [rawManualAuthUrl, setRawManualAuthUrl] = useState<string>("")

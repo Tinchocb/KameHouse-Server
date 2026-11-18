@@ -1,9 +1,10 @@
-import type { SettingsFormValues } from "./settings"
+import type { SettingsFormInput, SettingsFormValues } from "./settings"
+import type { Models_Settings } from "@/api/generated/types"
 import { usePlayerStore, useUIStore } from "@/lib/store"
 import { usePerformanceStore } from "@/lib/hardware/performance-store"
 import { normalizeThemePreference } from "@/lib/theme/themes-registry"
 
-export function syncStoresWithSettings(data: Partial<SettingsFormValues>) {
+export function syncStoresWithSettings(data: Partial<SettingsFormInput>) {
     if (!data) return
     const playerState = usePlayerStore.getState()
     const uiState = useUIStore.getState()
@@ -103,7 +104,7 @@ export function syncStoresWithSettings(data: Partial<SettingsFormValues>) {
     }
 }
 
-export function getEffectiveSettings(server: Partial<SettingsFormValues> | null | undefined): SettingsFormValues {
+export function getEffectiveSettings(server: Partial<SettingsFormValues> | Models_Settings | null | undefined): SettingsFormValues {
     const playerState = usePlayerStore.getState()
     const uiState = useUIStore.getState()
     const perfState = usePerformanceStore.getState()

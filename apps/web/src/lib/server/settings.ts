@@ -100,6 +100,8 @@ export const settingsSchema = z.object({
     }).passthrough().default({}),
 }).passthrough()
 
+/** Valores tal como los guarda el formulario (antes de los defaults y transforms de zod). */
+export type SettingsFormInput = z.input<typeof settingsSchema>
 export type SettingsFormValues = z.infer<typeof settingsSchema>
 
 const gettingStartedSchema = _gettingStartedSchema.extend({

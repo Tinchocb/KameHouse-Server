@@ -3,7 +3,7 @@ import React from "react"
 import { CLASSIC_MINIMALIST_THEME, ERA_THEME, ERA_THEME_PRESETS } from "@/lib/theme/themes-registry"
 import { type Control, Controller, useFormContext, useWatch } from "react-hook-form"
 import { m, AnimatePresence } from "framer-motion"
-import { type SettingsFormValues } from "../index"
+import { type SettingsFormInput } from "../index"
 import { useSound } from "@/hooks/use-sound"
 import { cn } from "@/components/ui/core/styling"
 import { Button } from "@/components/ui/button"
@@ -31,7 +31,7 @@ import { SagaCarousel } from "./-saga-carousel"
 const RADIO_FOCUS = "outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
 
 interface AppearanceTabProps {
-    control: Control<SettingsFormValues>
+    control: Control<SettingsFormInput>
 }
 
 // ─── Modos Principales (Temas) ────────────────────────────────────────────────
@@ -59,7 +59,7 @@ export const AppearanceTab = React.memo(function AppearanceTab({ control }: Appe
     const { playSound } = useSound()
     const reduceMotion = useReducedMotion()
     const canHover = useMediaQuery("(hover: hover) and (pointer: fine)")
-    const { setValue, getValues } = useFormContext<SettingsFormValues>()
+    const { setValue, getValues } = useFormContext<SettingsFormInput>()
     // Dual-write: el form marca dirty (para Guardar) y el store aplica al instante.
     const setThemeVisual = useUIStore((s) => s.setThemeVisual)
     const setHideAudienceScore = useUIStore((s) => s.setHideAudienceScore)

@@ -1,3 +1,4 @@
+import { toast } from "sonner"
 import { API_ENDPOINTS } from "@/api/generated/endpoints"
 import { buildApiQuery } from "@/api/client/requests"
 
@@ -23,6 +24,17 @@ function patchSettingsCache(section: "library" | "theme", patch: Record<string, 
 }
 
 /**
+ * Si el servidor no guardó el cambio, se avisa y la caché de Ajustes vuelve a la verdad del servidor.
+ * Antes el error se tragaba: el valor quedaba en pantalla y se perdía al recargar (QA-02).
+ */
+function revertSettingsPatch(): void {
+    toast.error("No se pudo guardar el ajuste")
+    void import("@/app/client-providers")
+        .then(({ queryClient }) => queryClient.invalidateQueries({ queryKey: [API_ENDPOINTS.SETTINGS.GetSettings.key] }))
+        .catch(() => {})
+}
+
+/**
  * Persiste flags de Biblioteca al servidor sin pasar por el form de Ajustes
  * (fire-and-forget). Los toggles fuera de Ajustes (maratón) solo
  * tocaban el store local y el servidor quedaba divergente: al visitar
@@ -35,7 +47,7 @@ export function persistLibraryPatch(patch: Record<string, unknown>): void {
             endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
             method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0] as "PATCH",
             data: { library: patch },
-        }).catch(() => {})
+        }).catch(revertSettingsPatch)
     } catch {}
 }
 
@@ -52,6 +64,6 @@ export function persistThemePatch(patch: Record<string, unknown>): void {
             endpoint: API_ENDPOINTS.SETTINGS.SaveSettings.endpoint,
             method: API_ENDPOINTS.SETTINGS.SaveSettings.methods[0] as "PATCH",
             data: { theme: patch },
-        }).catch(() => {})
+        }).catch(revertSettingsPatch)
     } catch {}
 }
