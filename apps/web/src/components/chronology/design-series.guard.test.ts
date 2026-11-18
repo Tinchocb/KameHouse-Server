@@ -84,7 +84,8 @@ describe("zona Series: sin blur repetido por fila o badge (§2, §9)", () => {
         const compacta = linea(VOLUME_CARD, "items-stretch overflow-hidden rounded-xl")
         expect(compacta).not.toContain("sectionbar")
         expect(compacta).not.toContain("backdrop")
-        expect(compacta).toContain("bg-surface-container-lowest")
+        // La fila usa el fondo de superficie de contenido desde 8ea2329; el guardián sigue vigilando que no tenga blur.
+        expect(compacta).toContain("bg-[var(--surface-content)]")
     })
 
     it("el acordeón móvil usa una superficie sin blur para la contralateral dentro de la tarjeta en foco", () => {
